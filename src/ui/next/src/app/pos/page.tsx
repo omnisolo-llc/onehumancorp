@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PlusCircle, ShoppingCart, Wifi, WifiOff } from "lucide-react";
+import { FiPlusCircle, FiShoppingCart, FiWifi, FiWifiOff } from "react-icons/fi";
 
 interface Product {
   id: string;
@@ -157,9 +157,9 @@ export default function POSPage() {
         <h1 className="text-xl font-bold text-gray-800">POS Terminal</h1>
         <div className="flex items-center space-x-2">
            {isOnline ? (
-               <span className="flex items-center text-green-600 text-sm font-medium"><Wifi className="w-4 h-4 mr-1"/> Online</span>
+               <span className="flex items-center text-green-600 text-sm font-medium"><FiWifi aria-hidden="true" className="w-4 h-4 mr-1"/> Online</span>
            ) : (
-               <span className="flex items-center text-amber-600 text-sm font-medium"><WifiOff className="w-4 h-4 mr-1"/> Offline Mode</span>
+               <span className="flex items-center text-amber-600 text-sm font-medium"><FiWifiOff aria-hidden="true" className="w-4 h-4 mr-1"/> Offline Mode</span>
            )}
         </div>
       </header>
@@ -176,7 +176,7 @@ export default function POSPage() {
             <span className="font-medium text-gray-800">{p.name}</span>
             <div className="flex items-center">
                 <span className="text-gray-600 mr-3">${p.price.toFixed(2)}</span>
-                <PlusCircle className="text-blue-600 w-5 h-5" />
+                <FiPlusCircle aria-hidden="true" className="text-blue-600 w-5 h-5" />
             </div>
           </button>
         ))}
@@ -186,7 +186,7 @@ export default function POSPage() {
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden sticky bottom-0">
         <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
              <div className="flex items-center text-gray-700 font-medium">
-                 <ShoppingCart className="w-5 h-5 mr-2" />
+                 <FiShoppingCart aria-hidden="true" className="w-5 h-5 mr-2" />
                  Cart ({cart.reduce((acc, c) => acc + c.quantity, 0)})
              </div>
              <span className="text-xl font-bold text-gray-900">${total.toFixed(2)}</span>

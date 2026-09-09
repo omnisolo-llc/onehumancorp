@@ -1,5 +1,5 @@
-use ::server_ohc::orchestration::org_service_server::OrgService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::org_service_server::OrgService;
+use ::server_omnisolo::orchestration::*;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tonic::{Request, Response, Status};
@@ -36,7 +36,7 @@ impl MyOrgService {
 impl OrgService for MyOrgService {
     async fn get_domains(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<::server_omnisolo::orchestration::EmptyRequest>,
     ) -> Result<Response<DomainsResponse>, Status> {
         let cache_key = "org_domains".to_string();
         let cache = DOMAINS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
@@ -76,7 +76,7 @@ impl OrgService for MyOrgService {
 
     async fn get_settings(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<::server_omnisolo::orchestration::EmptyRequest>,
     ) -> Result<Response<SettingsResponse>, Status> {
         let settings = self.settings.read().unwrap();
         Ok(Response::new(settings.clone()))
@@ -95,7 +95,7 @@ impl OrgService for MyOrgService {
 
     async fn get_marketplace_items(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<::server_omnisolo::orchestration::EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
         let cache_key = "org_marketplace_items".to_string();
         let cache =
@@ -129,7 +129,7 @@ impl OrgService for MyOrgService {
 
     async fn get_analytics(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<::server_omnisolo::orchestration::EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
         let org_id = _request
             .metadata()
@@ -376,20 +376,20 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let mut request1 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let mut request1 = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         request1.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/system/test".parse().unwrap(),
+            "spiffe://omnisolo.io/system/test".parse().unwrap(),
         );
 
         let start = std::time::Instant::now();
         let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
         let _elapsed1 = start.elapsed();
 
-        let mut request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let mut request2 = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         request2.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/system/test".parse().unwrap(),
+            "spiffe://omnisolo.io/system/test".parse().unwrap(),
         );
 
         let start2 = std::time::Instant::now();
@@ -417,13 +417,13 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let request = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let request = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         let res = service.get_domains(request).await.unwrap().into_inner();
         assert!(!res.domains.is_empty());
         assert_eq!(res.domains[0].id, "software_company");
 
         // Cache coverage call
-        let request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let request2 = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         let _res2 = service.get_domains(request2).await.unwrap().into_inner();
     }
 
@@ -444,7 +444,7 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let request = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let request = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         let _res = service.get_settings(request).await.unwrap().into_inner();
         let mut extras = HashMap::new();
         extras.insert("key1".to_string(), "val1".to_string());
@@ -461,7 +461,7 @@ mod tests {
         assert_eq!(updated_res.minimax_api_key, "new_key");
         assert_eq!(updated_res.extras.get("key1").unwrap(), "val1");
 
-        let request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let request2 = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         let res2 = service.get_settings(request2).await.unwrap().into_inner();
         assert_eq!(res2.minimax_api_key, "new_key");
         assert_eq!(res2.extras.get("key1").unwrap(), "val1");
@@ -484,7 +484,7 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let request = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let request = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         let res = service
             .get_marketplace_items(request)
             .await
@@ -493,7 +493,7 @@ mod tests {
         assert!(!res.items.is_empty());
         assert_eq!(res.items[0].id, "git-mcp");
 
-        let request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let request2 = Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         let _res2 = service
             .get_marketplace_items(request2)
             .await

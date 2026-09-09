@@ -19,7 +19,7 @@ describe('PreOrderWidgetPage', () => {
     render(<PreOrderWidgetPage />);
 
     // Click checkbox
-    const checkbox = screen.getByLabelText('Remove "Powered by OHC" branding');
+    const checkbox = screen.getByLabelText('Remove "Powered by OmniSolo" branding');
     fireEvent.click(checkbox);
 
     // Check if soft paywall shows up
@@ -36,14 +36,14 @@ describe('PreOrderWidgetPage', () => {
     render(<PreOrderWidgetPage />);
 
     // Initially, branding should be present
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined();
 
     // Open Modal
     fireEvent.click(screen.getByText('Get Widget Embed Code'));
 
     // Check embed code in modal
-    let embedContainer = screen.getByText(/<script src="https:\/\/assets\.onehumancorp\.com\/widgets\/pre-order\.js" async><\/script>/);
-    expect(embedContainer.parentElement?.textContent).toContain('Powered by OHC');
+    let embedContainer = screen.getByText(/<script src="https:\/\/cloud\.omnisolo\.co\/widgets\/pre-order\.js" async><\/script>/);
+    expect(embedContainer.parentElement?.textContent).toContain('Powered by OmniSolo');
   });
 
   it('renders the configuration form correctly', () => {

@@ -12,33 +12,33 @@ reject_file_pattern() {
   fi
 }
 
-grep -q '^harnessWorkers:' "$repo_root/deploy/helm/ohc/values.yaml"
-grep -q '^modelRuntimeWorkers:' "$repo_root/deploy/helm/ohc/values.yaml"
-grep -q 'kind: Deployment' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'kind: Service' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'kind: HorizontalPodAutoscaler' "$repo_root/deploy/helm/ohc/templates/harness-workers-hpa.yaml"
-grep -q 'kind: Deployment' "$repo_root/deploy/helm/ohc/templates/model-runtime-workers.yaml"
-grep -q 'kind: Service' "$repo_root/deploy/helm/ohc/templates/model-runtime-workers.yaml"
-grep -q 'kind: HorizontalPodAutoscaler' "$repo_root/deploy/helm/ohc/templates/model-runtime-workers-hpa.yaml"
-grep -q 'path: /healthz' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'path: /readyz' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'terminationGracePeriodSeconds:' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'terminationGracePeriodSeconds: 120' "$repo_root/deploy/helm/ohc/values.yaml"
-grep -q 'secretKeyRef:' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'emptyDir:' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'OMNISOLO_MODEL_RUNTIME_RUNTIME_ID' "$repo_root/deploy/helm/ohc/templates/model-runtime-workers.yaml"
+grep -q '^harnessWorkers:' "$repo_root/deploy/helm/omnisolo/values.yaml"
+grep -q '^modelRuntimeWorkers:' "$repo_root/deploy/helm/omnisolo/values.yaml"
+grep -q 'kind: Deployment' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'kind: Service' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'kind: HorizontalPodAutoscaler' "$repo_root/deploy/helm/omnisolo/templates/harness-workers-hpa.yaml"
+grep -q 'kind: Deployment' "$repo_root/deploy/helm/omnisolo/templates/model-runtime-workers.yaml"
+grep -q 'kind: Service' "$repo_root/deploy/helm/omnisolo/templates/model-runtime-workers.yaml"
+grep -q 'kind: HorizontalPodAutoscaler' "$repo_root/deploy/helm/omnisolo/templates/model-runtime-workers-hpa.yaml"
+grep -q 'path: /healthz' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'path: /readyz' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'terminationGracePeriodSeconds:' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'terminationGracePeriodSeconds: 120' "$repo_root/deploy/helm/omnisolo/values.yaml"
+grep -q 'secretKeyRef:' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'emptyDir:' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'OMNISOLO_MODEL_RUNTIME_RUNTIME_ID' "$repo_root/deploy/helm/omnisolo/templates/model-runtime-workers.yaml"
 
 harnesses=(omnisolo codex opencode deepseek pi kimi openhands openharness aider goose open-interpreter plandex)
 for harness in "${harnesses[@]}"; do
   grep -q "harness-$harness:" "$repo_root/deploy/docker-compose.yml"
-  grep -q -- "- id: $harness" "$repo_root/deploy/helm/ohc/values.yaml"
+  grep -q -- "- id: $harness" "$repo_root/deploy/helm/omnisolo/values.yaml"
 done
 
 for harness in aider goose open-interpreter plandex; do
   grep -q "OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim" "$repo_root/deploy/docker-compose.yml"
   grep -q "OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim" "$repo_root/deploy/docker-compose.yml"
-  grep -q "OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim" "$repo_root/deploy/helm/ohc/values.yaml"
-  grep -q "OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim" "$repo_root/deploy/helm/ohc/values.yaml"
+  grep -q "OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim" "$repo_root/deploy/helm/omnisolo/values.yaml"
+  grep -q "OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim" "$repo_root/deploy/helm/omnisolo/values.yaml"
 done
 grep -q 'COPY --chmod=0755 src/server/harness/sidecars/openai_compatible_shim.py /usr/local/bin/omnisolo-openai-shim' "$repo_root/deploy/docker/Dockerfile.harness-worker"
 
@@ -58,21 +58,21 @@ worker_images=(
 )
 for image in "${worker_images[@]}"; do
   grep -q "$image" "$repo_root/deploy/docker-compose.yml"
-  grep -q "$image" "$repo_root/deploy/helm/ohc/values.yaml"
+  grep -q "$image" "$repo_root/deploy/helm/omnisolo/values.yaml"
 done
 reject_file_pattern 'omnisolo/harness-worker[^ }]*:latest' "$repo_root/deploy/docker-compose.yml"
-reject_file_pattern 'omnisolo/harness-worker[^ ]*:latest' "$repo_root/deploy/helm/ohc/values.yaml"
+reject_file_pattern 'omnisolo/harness-worker[^ ]*:latest' "$repo_root/deploy/helm/omnisolo/values.yaml"
 
 test "$(grep -c '^  harness-[a-z].*:$' "$repo_root/deploy/docker-compose.yml")" -eq 12
 test "$(grep -c 'stop_grace_period:.*OMNISOLO_HARNESS_STOP_GRACE_PERIOD' "$repo_root/deploy/docker-compose.yml")" -eq 12
-test "$(grep -c '^    - id: \(omnisolo\|codex\|opencode\|deepseek\|pi\|kimi\|openhands\|openharness\|aider\|goose\|open-interpreter\|plandex\)$' "$repo_root/deploy/helm/ohc/values.yaml")" -eq 12
+test "$(grep -c '^    - id: \(omnisolo\|codex\|opencode\|deepseek\|pi\|kimi\|openhands\|openharness\|aider\|goose\|open-interpreter\|plandex\)$' "$repo_root/deploy/helm/omnisolo/values.yaml")" -eq 12
 grep -q 'COPY --chmod=0755 src/server/harness/sidecars/kimi_acp_bridge.py /usr/local/bin/omnisolo-kimi-acp' \
   "$repo_root/deploy/docker/Dockerfile.harness-worker"
 grep -q 'OMNISOLO_HARNESS_EXECUTABLE: omnisolo-kimi-acp' "$repo_root/deploy/docker-compose.yml"
-grep -q 'OMNISOLO_HARNESS_EXECUTABLE: omnisolo-kimi-acp' "$repo_root/deploy/helm/ohc/values.yaml"
+grep -q 'OMNISOLO_HARNESS_EXECUTABLE: omnisolo-kimi-acp' "$repo_root/deploy/helm/omnisolo/values.yaml"
 grep -q 'executables=.*omnisolo-kimi-acp' "$repo_root/scripts/test-live-harness-matrix.sh"
 grep -q 'OMNISOLO_HARNESS_EXECUTABLE: openhands-agent-server' "$repo_root/deploy/docker-compose.yml"
-grep -q 'OMNISOLO_HARNESS_EXECUTABLE: openhands-agent-server' "$repo_root/deploy/helm/ohc/values.yaml"
+grep -q 'OMNISOLO_HARNESS_EXECUTABLE: openhands-agent-server' "$repo_root/deploy/helm/omnisolo/values.yaml"
 grep -q 'executables=.*openhands-agent-server' "$repo_root/scripts/test-live-harness-matrix.sh"
 awk '/^  harness-openhands:/{found=1} found && /- \/tmp:/{print; exit}' \
   "$repo_root/deploy/docker-compose.yml" | grep -q '/tmp:exec,mode=1777'
@@ -85,8 +85,8 @@ grep -q 'command -v openhands-agent-server' "$repo_root/deploy/docker/Dockerfile
 grep -q 'openhands-agent-server --help' "$repo_root/deploy/docker/Dockerfile.harness-worker"
 test "$(grep -c '/workspace:mode=0700,uid=1000,gid=1000' "$repo_root/deploy/docker-compose.yml")" -eq 12
 test "$(grep -c '/home/omnisolo:mode=0700,uid=1000,gid=1000' "$repo_root/deploy/docker-compose.yml")" -eq 12
-grep -q 'mountPath: /workspace' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
-grep -q 'mountPath: /home/omnisolo' "$repo_root/deploy/helm/ohc/templates/harness-workers.yaml"
+grep -q 'mountPath: /workspace' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
+grep -q 'mountPath: /home/omnisolo' "$repo_root/deploy/helm/omnisolo/templates/harness-workers.yaml"
 grep -q '^WORKDIR /workspace$' "$repo_root/deploy/docker/Dockerfile.harness-worker"
 
 # The native OpenCode adapter owns `serve` and loopback-port arguments. Worker
@@ -95,9 +95,9 @@ grep -q '^WORKDIR /workspace$' "$repo_root/deploy/docker/Dockerfile.harness-work
 awk '/^  harness-opencode:/{found=1} found && /OMNISOLO_HARNESS_ARGS_JSON:/{print; exit}' \
   "$repo_root/deploy/docker-compose.yml" | grep -q '\[\]'
 awk '/^    - id: opencode$/{found=1} found && /OMNISOLO_HARNESS_ARGS_JSON:/{print; exit}' \
-  "$repo_root/deploy/helm/ohc/values.yaml" | grep -q "'\[\]'"
+  "$repo_root/deploy/helm/omnisolo/values.yaml" | grep -q "'\[\]'"
 
-for file in "$repo_root/deploy/docker-compose.yml" "$repo_root/deploy/helm/ohc/values.yaml"; do
+for file in "$repo_root/deploy/docker-compose.yml" "$repo_root/deploy/helm/omnisolo/values.yaml"; do
   grep -q 'OPENAI_API_KEY' "$file"
   grep -q 'OPENAI_API_BASE_URL' "$file"
   grep -q 'OPENAI_MODEL' "$file"
@@ -149,7 +149,7 @@ done
 test ! -e "$repo_root/deploy/harness/openhands/requirements.in"
 test ! -e "$repo_root/deploy/harness/openhands/requirements.lock"
 
-grep -q 'DSH_CORDIS_CONFIG' "$repo_root/deploy/helm/ohc/values.yaml"
+grep -q 'DSH_CORDIS_CONFIG' "$repo_root/deploy/helm/omnisolo/values.yaml"
 grep -q "@deepseek-ai/dsh-llm-pi-ai" "$repo_root/deploy/harness/deepseek/cordis.yml"
 grep -q 'apiKeyEnv: OPENAI_API_KEY' "$repo_root/deploy/harness/deepseek/cordis.yml"
 grep -q "api: openai-responses" "$repo_root/deploy/harness/deepseek/cordis.yml"
@@ -157,8 +157,8 @@ grep -q 'maxBytes:' "$repo_root/deploy/harness/deepseek/cordis.yml"
 reject_file_pattern 'toolBash: false' "$repo_root/deploy/harness/deepseek/cordis.yml"
 reject_file_pattern 'skills:.*false|enabled: false' "$repo_root/deploy/harness/deepseek/cordis.yml"
 grep -q 'COPY deploy/harness/deepseek/cordis.yml /etc/omnisolo/deepseek/cordis.yml' "$repo_root/deploy/docker/Dockerfile.harness-worker"
-grep -q 'secretName:' "$repo_root/deploy/helm/ohc/values.yaml"
-grep -q 'autoscaling:' "$repo_root/deploy/helm/ohc/values.yaml"
+grep -q 'secretName:' "$repo_root/deploy/helm/omnisolo/values.yaml"
+grep -q 'autoscaling:' "$repo_root/deploy/helm/omnisolo/values.yaml"
 grep -q 'model-runtime-default:' "$repo_root/deploy/docker-compose.yml"
 test -f "$repo_root/deploy/docker/Dockerfile.harness-worker"
 test -f "$repo_root/.dockerignore"

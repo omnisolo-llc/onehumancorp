@@ -10,7 +10,7 @@
 - **Compatibility**: Cloud, Standalone (via OAuth / Graph API).
 **Design Doc**:
 - User authenticates via Microsoft OAuth.
-- For online service bookings, OHC calls the Microsoft Graph API to create an online meeting.
+- For online service bookings, OmniSolo calls the Microsoft Graph API to create an online meeting.
 - The Teams meeting link is retrieved and embedded into calendar invites and customer confirmation emails.
 **Implementation Prompt**: Create an OAuth integration with Microsoft Graph API. When a user books an online service, automatically generate a Teams meeting link via the API and include it in the booking confirmation details.
 **Priority**: P2

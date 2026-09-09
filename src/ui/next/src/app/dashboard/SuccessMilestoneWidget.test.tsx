@@ -23,8 +23,8 @@ describe('SuccessMilestoneWidget', () => {
       ok: true,
       json: () => Promise.resolve({
         title: "100th Order Delivered! 🎉",
-        subtitle: "You're growing fast. Share your success to unlock $50 in OHC credits.",
-        shareText: "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
+        subtitle: "You're growing fast. Share your success to unlock $50 in OmniSolo credits.",
+        shareText: "I just hit my 100th order using OmniSolo OneHumanCorp to run my business! 🚀 Check them out and get $50 off your first month:",
         reward: "$50 Credit"
       }),
     } as any);
@@ -56,10 +56,10 @@ describe('SuccessMilestoneWidget', () => {
     fireEvent.click(copyButton!);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('https://ohc.app/onboarding?ref=test-tenant&source=milestone_share')
+      expect.stringContaining('https://cloud.omnisolo.co/onboarding?ref=test-tenant&source=milestone_share')
     );
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('Powered by OHC')
+      expect.stringContaining('Powered by OmniSolo')
     );
 
     expect(await screen.findByText(/Copied to Clipboard!/i)).toBeDefined();
@@ -78,6 +78,6 @@ describe('SuccessMilestoneWidget', () => {
     const twitterLink = screen.getByRole('link', { name: /Share on X/i });
     expect(twitterLink.getAttribute('href')).toContain('https://twitter.com/intent/tweet?text=');
     expect(twitterLink.getAttribute('href')).toContain('test-tenant');
-    expect(twitterLink.getAttribute('href')).toContain('Powered%20by%20OHC');
+    expect(twitterLink.getAttribute('href')).toContain('Powered%20by%20OmniSolo');
   });
 });

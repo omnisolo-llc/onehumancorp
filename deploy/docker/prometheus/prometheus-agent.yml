@@ -3,12 +3,12 @@ global:
 remote_write:
   - url: "http://localhost:9090/api/v1/write"
 scrape_configs:
-  - job_name: 'ohc-standalone'
+  - job_name: 'omnisolo-standalone'
     static_configs:
       - targets: ['server:8080']
-  - job_name: 'ohc-core-standalone'
+  - job_name: 'omnisolo-core-standalone'
     static_configs:
-      - targets: ['ohc-core:18789']
+      - targets: ['omnisolo-core:18789']
   - job_name: 'pushgateway-standalone'
     static_configs:
       - targets: ['pushgateway:9091']

@@ -12,8 +12,8 @@ vi.mock('../../components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 vi.mock('../components/ViralTrialExtensionWidget', () => ({
@@ -145,11 +145,11 @@ describe('PricingPage', () => {
     consoleSpy.mockRestore();
   });
 
-  it('renders the PoweredByOHC component', async () => {
+  it('renders the PoweredByOmniSolo component', async () => {
     await act(async () => {
       render(<PricingPage />);
     });
-    expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
+    expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
   });
 
   it('renders the ViralTrialExtensionWidget when plan is Free', async () => {

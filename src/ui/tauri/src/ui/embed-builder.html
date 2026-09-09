@@ -37,7 +37,7 @@
     </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive Embed Builder | OHC</title>
+  <title>Interactive Embed Builder | OmniSolo OneHumanCorp</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -217,7 +217,7 @@
   <div class="container glassmorphism">
     <div class="builder-panel">
       <h2>Configure your Widget</h2>
-      <p style="color: #666; font-size: 14px; margin-bottom: 24px;">Generate a snippet you can paste into WordPress, Webflow, or any HTML site to capture demand directly into OHC.</p>
+      <p style="color: #666; font-size: 14px; margin-bottom: 24px;">Generate a snippet you can paste into WordPress, Webflow, or any HTML site to capture demand directly into OmniSolo.</p>
 
       <div class="form-group">
         <label>Widget Type</label>
@@ -250,7 +250,7 @@
       <h2>Live Preview</h2>
       <div class="preview-container">
         <iframe id="previewIframe" title="Preview" src=""></iframe>
-        <a href="#" id="previewPoweredBy" class="powered-by" target="_blank">⚡ Powered by OHC</a>
+        <a href="#" id="previewPoweredBy" class="powered-by" target="_blank">⚡ OmniSolo</a>
       </div>
     </div>
   </div>
@@ -284,9 +284,9 @@
         previewIframe.src = embedUrl;
 
         // Update Code Snippet
-        const snippet = `<div class="ohc-embed-container" style="width: 100%; max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+        const snippet = `<div class="omnisolo-embed-container" style="width: 100%; max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
   <iframe src="${embedUrl}" width="100%" height="400" style="border:none; border-radius:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"></iframe>
-  <a href="${window.location.origin}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}" target="_blank" style="margin-top: 12px; font-size: 12px; color: #86868b; text-decoration: none; font-family: sans-serif; font-weight: 600;">⚡ Powered by OHC</a>
+  <a href="${window.location.origin}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}" target="_blank" style="margin-top: 12px; font-size: 12px; color: #86868b; text-decoration: none; font-family: sans-serif; font-weight: 600;">⚡ OmniSolo</a>
 </div>`;
 
         embedCodeEl.textContent = snippet;

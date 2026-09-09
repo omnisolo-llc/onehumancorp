@@ -9,7 +9,7 @@
 Without the "autoDream" memory consolidation pipeline, the swarm forgets architectural insights and contextual knowledge across sessions, reducing long-term efficiency and autonomy. The autoDream engine is an asynchronous daemon that periodically sweeps completed `shared_tasks` and `swarm_memory` and securely consolidates them into long-term vector embeddings.
 
 ## 2. Technical Implementation Details
-The autoDream engine interfaces directly with the OHC Central Database.
+The autoDream engine interfaces directly with the OmniSolo Central Database.
 
 ### Database Support:
 - **Cloud-Native**: Native `pgvector` on PostgreSQL provides robust similarity search over 1536-dimensional vectors.
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 4. During subsequent sessions, sub-agents can query the `autodream_memories` table to retrieve relevant architectural insights via cosine similarity.
 
 ---
-*Powered by OHC-SIP (Swarm Intelligence Protocol)*
+*OmniSolo-SIP (Swarm Intelligence Protocol)*
 *Display settings: Premium Glassmorphism UI*
 
 </div>

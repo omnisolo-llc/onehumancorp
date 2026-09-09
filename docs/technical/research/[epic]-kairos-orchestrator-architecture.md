@@ -5,7 +5,7 @@
 This epic synthesizes the architectural decisions and GitHub issues generated to fulfill the "Shared Task List Decomposition", "Realtime Teammate Mesh APIs", and "AutoDream Data Pipelines" feature requirements for the KAIROS OS.
 
 ## Overview
-The **One Human Corp (OHC) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
+The **OmniSolo (OmniSolo) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OmniSolo "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
 
 ## 1. Shared Task List Decomposition
 
@@ -46,15 +46,15 @@ Polling the database is too slow and resource-intensive for immediate state chan
   - `POST /mesh/publish`
   - `GET /mesh/subscribe (WebSocket upgrade)`
 
-## 3. AutoDream Data Pipelines for OHC VectorDB
+## 3. AutoDream Data Pipelines for OmniSolo VectorDB
 
-### GitHub Issue: [backend] Implement AutoDream Data Pipelines for OHC VectorDB (#5052)
+### GitHub Issue: [backend] Implement AutoDream Data Pipelines for OmniSolo VectorDB (#5052)
 
 **Problem Statement**
 The OS loses context over time as agent sessions cycle. We need a persistent architectural memory to inform future swarm actions.
 
 **Research Report**
-By extracting UltraPlans and closed Tasks, embedding them via LLMs, and indexing them using pgvector, we can provide a semantic search API that acts as OHC's long-term memory (AutoDream).
+By extracting UltraPlans and closed Tasks, embedding them via LLMs, and indexing them using pgvector, we can provide a semantic search API that acts as OmniSolo's long-term memory (AutoDream).
 
 **Storage Configuration**
 ```sql

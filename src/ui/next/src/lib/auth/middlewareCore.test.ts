@@ -15,7 +15,7 @@ const config: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
   backendOrigin: "https://api.example.com",
   localDev: false,
-  cookieName: "__Host-ohc_session",
+  cookieName: "__Host-omnisolo_session",
   secureCookie: true,
   sessionAudience: "https://app.example.com",
 };
@@ -28,8 +28,8 @@ async function dependencies(): Promise<MiddlewareDependencies> {
   return {
     config,
     ring: await parseSessionKeyRing({
-      OHC_WEB_SESSION_KEY_ID: "test-v1",
-      OHC_WEB_SESSION_SECRET: base64url(Uint8Array.from([
+      OMNISOLO_WEB_SESSION_KEY_ID: "test-v1",
+      OMNISOLO_WEB_SESSION_SECRET: base64url(Uint8Array.from([
         91, 14, 203, 72, 177, 39, 244, 6, 128, 55, 162, 19, 230, 76, 9, 211,
         33, 170, 84, 237, 117, 8, 194, 61, 156, 225, 42, 99, 188, 5, 215, 66,
       ])),
@@ -154,8 +154,8 @@ describe("protected-by-default auth middleware", () => {
   it("treats tampered, duplicate, and expired sessions as absent and deletes them", async () => {
     const deps = await dependencies();
     for (const cookieHeader of [
-      "__Host-ohc_session=not-a-jwe",
-      "__Host-ohc_session=one; __Host-ohc_session=two",
+      "__Host-omnisolo_session=not-a-jwe",
+      "__Host-omnisolo_session=one; __Host-omnisolo_session=two",
       await cookie(deps, { exp: NOW - 1, iat: NOW - 3_600 }),
     ]) {
       const outcome = await evaluateAuthMiddleware(request("/dashboard", {}, cookieHeader), deps);

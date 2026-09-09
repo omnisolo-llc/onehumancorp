@@ -32,8 +32,8 @@ mod tests {
 
     #[test]
     fn test_generate_audit_report_passed() {
-        if std::path::Path::new(".ohc-local-data").exists() {
-            fs::remove_dir_all(".ohc-local-data").unwrap();
+        if std::path::Path::new(".omnisolo-local-data").exists() {
+            fs::remove_dir_all(".omnisolo-local-data").unwrap();
         }
         provisioner::provision_environment(false).unwrap();
 
@@ -41,13 +41,13 @@ mod tests {
         assert!(report.contains("PASSED"));
         assert!(report.contains("backdrop-filter: blur(20px) saturate(200%)"));
 
-        fs::remove_dir_all(".ohc-local-data").unwrap();
+        fs::remove_dir_all(".omnisolo-local-data").unwrap();
     }
 
     #[test]
     fn test_generate_audit_report_failed() {
-        if std::path::Path::new(".ohc-cloud-data").exists() {
-            fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        if std::path::Path::new(".omnisolo-cloud-data").exists() {
+            fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
         }
 
         let report = generate_audit_report(true);

@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-The CEO Experience refers to the unified frontend dashboard and interaction models that empower a single user to manage the entire AI workforce. It provides the core Command Center for One Human Corp.
+The CEO Experience refers to the unified frontend dashboard and interaction models that empower a single user to manage the entire AI workforce. It provides the core Command Center for OmniSolo.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

@@ -53,7 +53,7 @@ export default function MenuGeneratorPage() {
 
   const handleCopy = () => {
     if (navigator.clipboard && menuLink) {
-      navigator.clipboard.writeText(`${menuLink}\n\n⚡ Powered by OHC`);
+      navigator.clipboard.writeText(`${menuLink}\n\n⚡ Powered by OmniSolo`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -170,14 +170,13 @@ export default function MenuGeneratorPage() {
         )}
 
         <div className="mt-6 text-center">
-          <a href="/onboarding?ref=menu" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
+          <a href="/onboarding?ref=menu" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OmniSolo</a>
         </div>
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
+        .font-inter { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+        .font-outfit { font-family: Outfit, Inter, ui-sans-serif, system-ui, sans-serif; }
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
       `}} />

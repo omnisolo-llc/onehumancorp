@@ -166,7 +166,7 @@ test.describe('real data contract', () => {
         /\b(?:publicAuthDependencies|proxyPublicAuthentication|registerAndSealSession)\b/,
         /\bPool\b|\bpg\b|\bsqlx\b/i,
         /process\.env\.[A-Z0-9_]*(URL|DSN|ENDPOINT|HOST)/,
-        /BACKEND_URL|OHC_BACKEND_URL|OHC_API_URL/,
+        /BACKEND_URL|OMNISOLO_BACKEND_URL|OMNISOLO_API_URL/,
       ].some((pattern) => pattern.test(source));
       const failsClosed = /status:\s*(501|503)|\bunavailableAuthenticationResponse\b/.test(source);
 

@@ -14,7 +14,7 @@
   - **Shopify:** Utilizes a vast global CDN (Cloudflare) to cache read-only storefront content but struggles with complex personalized dynamic content at the edge without heavy app integrations.
   - **Vercel/Next.js & Netlify:** Offer ISR (Incremental Static Regeneration) and edge functions, but these are developer tools requiring substantial configuration, not out-of-the-box solutions for zero-knowledge users.
   - **Wix/Squarespace:** Rely heavily on basic CDN caching for static assets. Their dynamic storefront capabilities can suffer under heavy traffic spikes (e.g., a viral TikTok product drop) due to backend database reliance.
-- **OHC Opportunity:** OHC must deliver "instant" loading (sub-100ms Time to First Byte - TTFB) globally while maintaining 100% dynamic capabilities (e.g., "Sold Out" state synchronizing within milliseconds to prevent overselling). Furthermore, "The Promoter" AI agent must autonomously manage SEO without the user ever touching a meta tag.
+- **OmniSolo Opportunity:** OmniSolo must deliver "instant" loading (sub-100ms Time to First Byte - TTFB) globally while maintaining 100% dynamic capabilities (e.g., "Sold Out" state synchronizing within milliseconds to prevent overselling). Furthermore, "The Promoter" AI agent must autonomously manage SEO without the user ever touching a meta tag.
 
 ## 3. Architectural Design
 
@@ -32,7 +32,7 @@ graph TD
     end
 
     subgraph Central Origin
-        E --> F(OHC Go API Gateway);
+        E --> F(OmniSolo Go API Gateway);
         F --> G[Storefront Service];
         G --> H[(PostgreSQL Read Replica)];
 

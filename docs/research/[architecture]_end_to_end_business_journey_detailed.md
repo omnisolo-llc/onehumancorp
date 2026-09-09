@@ -1,8 +1,8 @@
 ### Title
-Architectural Mapping of the End-to-End Business Journey for OHC Personas
+Architectural Mapping of the End-to-End Business Journey for OmniSolo Personas
 
 ## Problem Statement
-The OHC platform must serve a diverse set of real-world small business owners (e.g., Maya the Baker, Carlos the Handyman, Priya the Boutique Owner, Leo the Music Tutor, and Fatima the Food Cart Operator) who share a common goal: launching and growing their business entirely from a mobile device without technical expertise. Currently, the overarching business journeys—from initial acquisition to sustainable revenue generation and referral loops—are fragmented. We need a unified architectural map of the end-to-end user journeys for these personas to ensure that the system naturally supports their progression through Acquisition, Onboarding, Activation, Retention, Revenue generation, and Referral, while identifying critical friction points where non-technical users might abandon the platform.
+The OmniSolo platform must serve a diverse set of real-world small business owners (e.g., Maya the Baker, Carlos the Handyman, Priya the Boutique Owner, Leo the Music Tutor, and Fatima the Food Cart Operator) who share a common goal: launching and growing their business entirely from a mobile device without technical expertise. Currently, the overarching business journeys—from initial acquisition to sustainable revenue generation and referral loops—are fragmented. We need a unified architectural map of the end-to-end user journeys for these personas to ensure that the system naturally supports their progression through Acquisition, Onboarding, Activation, Retention, Revenue generation, and Referral, while identifying critical friction points where non-technical users might abandon the platform.
 
 ## Research Report
 ### Context and Personas
@@ -41,30 +41,30 @@ The business journey is evaluated against the following core personas:
 sequenceDiagram
     actor Maya
     participant Ad as Instagram Ad
-    participant OHC as OHC App
+    participant OmniSolo as OmniSolo App
     participant AI_Mark as Marketing Agent
     participant AI_Ops as Operations Agent
     participant Cust as Customer
     participant Stripe as Stripe API
 
     Maya->>Ad: Clicks "Launch Bakery in 5 mins"
-    Maya->>OHC: Downloads App & Opens
-    OHC->>AI_Mark: Trigger Onboarding Wizard
+    Maya->>OmniSolo: Downloads App & Opens
+    OmniSolo->>AI_Mark: Trigger Onboarding Wizard
     AI_Mark->>Maya: Asks "What do you sell?"
     Maya->>AI_Mark: "Custom vegan cakes"
-    AI_Mark->>OHC: Generates Storefront & Menu
-    OHC->>Maya: Storefront Live! (Activation)
-    Cust->>OHC: Messages via IG DM "Vegan?"
-    OHC->>AI_Ops: Drafts Reply
+    AI_Mark->>OmniSolo: Generates Storefront & Menu
+    OmniSolo->>Maya: Storefront Live! (Activation)
+    Cust->>OmniSolo: Messages via IG DM "Vegan?"
+    OmniSolo->>AI_Ops: Drafts Reply
     AI_Ops-->>Cust: "Yes, we do vegan cakes!"
-    Cust->>OHC: Places Order & Pays Deposit
-    OHC->>Stripe: Process Payment
-    Stripe-->>OHC: Success
-    OHC->>Maya: Push Notification "New Order Paid!" (Retention)
-    Maya->>OHC: Clicks "Upgrade to Starter" (Revenue)
-    OHC->>Stripe: Setup Recurring Billing
-    Maya->>OHC: Shares Store Link with Friend (Referral)
-    OHC->>Maya: Credit "Bakery Credit" for Referral
+    Cust->>OmniSolo: Places Order & Pays Deposit
+    OmniSolo->>Stripe: Process Payment
+    Stripe-->>OmniSolo: Success
+    OmniSolo->>Maya: Push Notification "New Order Paid!" (Retention)
+    Maya->>OmniSolo: Clicks "Upgrade to Starter" (Revenue)
+    OmniSolo->>Stripe: Setup Recurring Billing
+    Maya->>OmniSolo: Shares Store Link with Friend (Referral)
+    OmniSolo->>Maya: Credit "Bakery Credit" for Referral
 ```
 
 #### 2. Carlos (The Handyman) Journey
@@ -72,26 +72,26 @@ sequenceDiagram
 sequenceDiagram
     actor Carlos
     participant WoM as Word of Mouth
-    participant OHC as OHC Web App
+    participant OmniSolo as OmniSolo Web App
     participant AI_Mark as Marketing Agent
     participant AI_Sales as Sales Agent
     participant Cust as Customer
 
-    Carlos->>WoM: Hears about OHC
-    Carlos->>OHC: Visits website on Android
-    OHC->>AI_Mark: Trigger Onboarding
+    Carlos->>WoM: Hears about OmniSolo
+    Carlos->>OmniSolo: Visits website on Android
+    OmniSolo->>AI_Mark: Trigger Onboarding
     AI_Mark->>Carlos: Asks "What services do you offer?"
     Carlos->>AI_Mark: "Plumbing, Painting"
-    AI_Mark->>OHC: Generates Service Listings & Booking Calendar
-    OHC->>Carlos: Booking Page Live! (Activation)
-    Cust->>OHC: Requests Quote for "Leaky Pipe"
-    OHC->>AI_Sales: Analyze Request
+    AI_Mark->>OmniSolo: Generates Service Listings & Booking Calendar
+    OmniSolo->>Carlos: Booking Page Live! (Activation)
+    Cust->>OmniSolo: Requests Quote for "Leaky Pipe"
+    OmniSolo->>AI_Sales: Analyze Request
     AI_Sales->>Carlos: Drafts Quote for Review
     Carlos->>AI_Sales: Approves 1-tap
     AI_Sales-->>Cust: Sends Official Quote
-    Cust->>OHC: Books Time & Pays Deposit
-    OHC->>Carlos: Notification "Job Booked" (Retention)
-    Carlos->>OHC: Taps "Earn $50: Refer a Pro" (Referral)
+    Cust->>OmniSolo: Books Time & Pays Deposit
+    OmniSolo->>Carlos: Notification "Job Booked" (Retention)
+    Carlos->>OmniSolo: Taps "Earn $50: Refer a Pro" (Referral)
     Carlos->>Cust: Taps "Send 10% Discount to Friend" (Viral Loop)
 ```
 
@@ -100,23 +100,23 @@ sequenceDiagram
 sequenceDiagram
     actor Priya
     participant Search as Google Search
-    participant OHC as OHC App
+    participant OmniSolo as OmniSolo App
     participant AI_Mark as Marketing Agent
     participant AI_Adv as Advisory Agent
     participant POS as In-Store POS (Tap-to-pay)
 
     Priya->>Search: Searches "Easy online store for boutique"
-    Priya->>OHC: Signs up
-    OHC->>AI_Mark: Trigger Onboarding
+    Priya->>OmniSolo: Signs up
+    OmniSolo->>AI_Mark: Trigger Onboarding
     AI_Mark->>Priya: Syncs initial inventory
-    AI_Mark->>OHC: Generates Storefront with variants
-    OHC->>Priya: Storefront Live! (Activation)
+    AI_Mark->>OmniSolo: Generates Storefront with variants
+    OmniSolo->>Priya: Storefront Live! (Activation)
     Priya->>POS: Processes in-store sale via phone
-    POS->>OHC: Update Inventory
-    OHC->>Priya: Daily Analytics Report (Retention)
+    POS->>OmniSolo: Update Inventory
+    OmniSolo->>Priya: Daily Analytics Report (Retention)
     AI_Adv->>Priya: "Inventory low. Upgrade tier for automated re-order alerts." (Revenue)
-    Priya->>OHC: Selects "Pro Plan" (Revenue)
-    OHC->>Priya: Enables Multi-Store Sync
+    Priya->>OmniSolo: Selects "Pro Plan" (Revenue)
+    OmniSolo->>Priya: Enables Multi-Store Sync
 ```
 
 #### 4. Leo (The Music Tutor) Journey
@@ -124,21 +124,21 @@ sequenceDiagram
 sequenceDiagram
     actor Leo
     participant Social as TikTok Link-in-bio
-    participant OHC as OHC App
+    participant OmniSolo as OmniSolo App
     participant AI_Mark as Marketing Agent
     participant AI_Ops as Operations Agent
     participant Student as Student
 
-    Leo->>Social: Adds OHC link to TikTok bio
-    Leo->>OHC: Configures App
-    OHC->>AI_Mark: Generates Profile & Subscriptions
-    OHC->>Leo: Profile Live! (Activation)
+    Leo->>Social: Adds OmniSolo link to TikTok bio
+    Leo->>OmniSolo: Configures App
+    OmniSolo->>AI_Mark: Generates Profile & Subscriptions
+    OmniSolo->>Leo: Profile Live! (Activation)
     Student->>Social: Clicks Link
-    Student->>OHC: Subscribes to 4 lessons/mo
-    OHC->>AI_Ops: Sync Calendar & Generate Zoom Links
+    Student->>OmniSolo: Subscribes to 4 lessons/mo
+    OmniSolo->>AI_Ops: Sync Calendar & Generate Zoom Links
     AI_Ops-->>Student: Sends Schedule
-    OHC->>Leo: Notification "New Subscriber!" (Retention)
-    Leo->>OHC: Uses Referral code to invite another tutor (Referral)
+    OmniSolo->>Leo: Notification "New Subscriber!" (Retention)
+    Leo->>OmniSolo: Uses Referral code to invite another tutor (Referral)
 ```
 
 #### 5. Fatima (The Food Cart Operator) Journey
@@ -146,21 +146,21 @@ sequenceDiagram
 sequenceDiagram
     actor Fatima
     participant Local as Local Signage
-    participant OHC as OHC App (Arabic/English)
+    participant OmniSolo as OmniSolo App (Arabic/English)
     participant AI_Mark as Marketing Agent
-    participant OHC_UI as Simplified Mobile UI
+    participant OMNISOLO_UI as Simplified Mobile UI
     participant Cust as Customer
 
     Fatima->>Local: Shows QR Code
-    Fatima->>OHC: Opens App
-    OHC->>AI_Mark: Fast menu creation (Photos + Prices)
-    AI_Mark->>OHC: Generates Bilingual Menu
-    OHC->>Fatima: Menu Live! (Activation)
-    Cust->>OHC: Scans QR, views menu, places pre-order
-    OHC->>OHC_UI: Loud Audio Notification + Simple Order Card
-    Fatima->>OHC_UI: Taps "Preparing"
-    OHC_UI->>Cust: Updates Status
-    Fatima->>OHC_UI: Prints Daily Summary (Retention)
+    Fatima->>OmniSolo: Opens App
+    OmniSolo->>AI_Mark: Fast menu creation (Photos + Prices)
+    AI_Mark->>OmniSolo: Generates Bilingual Menu
+    OmniSolo->>Fatima: Menu Live! (Activation)
+    Cust->>OmniSolo: Scans QR, views menu, places pre-order
+    OmniSolo->>OMNISOLO_UI: Loud Audio Notification + Simple Order Card
+    Fatima->>OMNISOLO_UI: Taps "Preparing"
+    OMNISOLO_UI->>Cust: Updates Status
+    Fatima->>OMNISOLO_UI: Prints Daily Summary (Retention)
 ```
 
 ### Mobile UX Flow Notes

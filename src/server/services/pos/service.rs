@@ -1,5 +1,5 @@
-use ::server_ohc::app::pos_service_server::PosService;
-use ::server_ohc::app::{
+use ::server_omnisolo::app::pos_service_server::PosService;
+use ::server_omnisolo::app::{
     EndTerminalSessionRequest, EndTerminalSessionResponse, StartTerminalSessionRequest,
     StartTerminalSessionResponse, SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
     UpdateTerminalSessionStatusRequest, UpdateTerminalSessionStatusResponse,
@@ -18,7 +18,7 @@ impl MyPosService {
 
     pub async fn reconcile_crdt_payloads(
         &self,
-        payloads: Vec<::server_ohc::orchestration::PosCrdtPayload>,
+        payloads: Vec<::server_omnisolo::orchestration::PosCrdtPayload>,
         tenant_id: &str,
     ) -> Result<(), String> {
         let pool = crate::db::get_pool();
@@ -68,7 +68,7 @@ impl MyPosService {
         };
 
         let _ = hub
-            .publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+            .publish_mesh_event(::server_omnisolo::orchestration::MeshEvent {
                 event_id: uuid::Uuid::new_v4().to_string(),
                 topic: "pos_sales".to_string(),
                 payload: serde_json::to_vec(&evt).unwrap_or_default(),
@@ -81,7 +81,7 @@ impl MyPosService {
 
     pub async fn handle_incoming_crdt_delta(
         &self,
-        delta: ::server_ohc::orchestration::CrdtDelta,
+        delta: ::server_omnisolo::orchestration::CrdtDelta,
         peer_spiffe_id: &str,
     ) -> Result<(), String> {
         // Validate SPIFFE ID and extract tenant context to ensure Zero-Trust Mesh Security
@@ -92,7 +92,7 @@ impl MyPosService {
             return Err("missing tenant identity in peer connection".to_string());
         }
 
-        let payloads_result: Result<::server_ohc::orchestration::PosCrdtPayload, _> =
+        let payloads_result: Result<::server_omnisolo::orchestration::PosCrdtPayload, _> =
             prost::Message::decode(delta.delta_payload.as_slice());
 
         if let Ok(payloads_msg) = payloads_result {
@@ -532,7 +532,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_offline_transactions() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -546,7 +546,7 @@ mod tests {
         let req = SyncOfflineTransactionsRequest {
             tenant_id: "test_tenant".to_string(),
             client_id: "test_client".to_string(),
-            transactions: vec![::server_ohc::app::PosOfflineTransaction {
+            transactions: vec![::server_omnisolo::app::PosOfflineTransaction {
                 id: "tx_1".to_string(),
                 tenant_id: "test_tenant".to_string(),
                 client_id: "test_client".to_string(),
@@ -576,7 +576,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reconcile_crdt_payloads() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -601,7 +601,7 @@ mod tests {
         .await
         .unwrap();
 
-        let payload = ::server_ohc::orchestration::PosCrdtPayload {
+        let payload = ::server_omnisolo::orchestration::PosCrdtPayload {
             r#type: "inventory".to_string(),
             item_id: item_id.clone(),
             quantity_delta: -3,
@@ -635,7 +635,7 @@ mod tests {
 
         let service = MyPosService::new(db.clone());
 
-        let delta = ::server_ohc::orchestration::CrdtDelta {
+        let delta = ::server_omnisolo::orchestration::CrdtDelta {
             resource_id: "res".to_string(),
             delta_payload: vec![],
             timestamp: 100,

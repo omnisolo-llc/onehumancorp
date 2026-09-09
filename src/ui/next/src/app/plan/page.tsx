@@ -81,7 +81,7 @@ export default function MyPlanPage() {
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 justify-center items-center p-4">
-        <div className="flex flex-col items-center justify-center p-8 app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/10 border border-white/20 shadow-lg rounded-2xl w-full max-w-sm animate-pulse">
+        <div className="flex flex-col items-center justify-center p-8 app-card omnisolo-growth-card glass-card backdrop-blur-xl bg-white/10 border border-white/20 shadow-lg rounded-2xl w-full max-w-sm animate-pulse">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           <p className="mt-6 text-gray-600 font-medium">Loading your plan data...</p>
         </div>
@@ -114,7 +114,7 @@ export default function MyPlanPage() {
         )}
 
         {/* Status Snapshot */}
-        <section className="app-card ohc-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 rounded-2xl">
+        <section className="app-card omnisolo-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 rounded-2xl">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Current Usage Section */}
-        <section className="app-card ohc-growth-card glass-panel glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-2xl transition-all duration-300 mt-4 rounded-2xl overflow-hidden">
+        <section className="app-card omnisolo-growth-card glass-panel glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-2xl transition-all duration-300 mt-4 rounded-2xl overflow-hidden">
           <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>
@@ -193,10 +193,10 @@ export default function MyPlanPage() {
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        /* The .ohc-growth-card styles are now managed globally in globals.css for design token consistency */
+        /* The .omnisolo-growth-card styles are now managed globally in globals.css for design token consistency */
       `}} />
     </div>
   );

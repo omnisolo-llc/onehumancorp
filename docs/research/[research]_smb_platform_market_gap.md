@@ -1,7 +1,7 @@
-# OHC Research: The SMB Platform Gap & Agentic Solutions
+# OmniSolo Research: The SMB Platform Gap & Agentic Solutions
 
 ## Problem Statement
-Small business owners—from bakers like Maya to handymen like Carlos—are blocked by the technical complexity, operational fatigue, and high setup costs of current e-commerce platforms. Despite recent AI advancements, major competitors treat AI as a reactive tool ("chatbots" or "co-pilots") rather than an autonomous business manager. OHC has a critical opportunity to disrupt the market by replacing complex dashboards with invisible, proactive AI agents that handle the backend operations seamlessly from a mobile device.
+Small business owners—from bakers like Maya to handymen like Carlos—are blocked by the technical complexity, operational fatigue, and high setup costs of current e-commerce platforms. Despite recent AI advancements, major competitors treat AI as a reactive tool ("chatbots" or "co-pilots") rather than an autonomous business manager. OmniSolo has a critical opportunity to disrupt the market by replacing complex dashboards with invisible, proactive AI agents that handle the backend operations seamlessly from a mobile device.
 
 ---
 
@@ -60,10 +60,10 @@ We selected **Shopify** for a deep dive, as it represents the highest bar for e-
 
 ---
 
-## 3. OHC Gap & Pain Point Identification
+## 3. OmniSolo Gap & Pain Point Identification
 
-### OHC Feature Audit vs. Shopify
-| Feature | Shopify | OHC Current | OHC Agentic Vision |
+### OmniSolo Feature Audit vs. Shopify
+| Feature | Shopify | OmniSolo Current | OmniSolo Agentic Vision |
 | :--- | :--- | :--- | :--- |
 | **Setup** | Manual (Hours/Days) | Guided Setup Wizard | **Zero-Touch Setup** (AI generates store from 1 photo) |
 | **AI Integration** | Reactive (Copilot) | Proactive Agents (Ambassador) | **Fully Autonomous Departments** |
@@ -71,8 +71,8 @@ We selected **Shopify** for a deep dive, as it represents the highest bar for e-
 | **Ecosystem** | Paid App Store | Built-in Swarm | **Unified Invisible Stack** (No 3rd party fees) |
 | **Booking/Services** | Requires 3rd Party Apps | API Stubs | **Native Unified Booking & Quoting Engine** |
 
-### Unresolved Pain Points in OHC (The Gaps)
-1. **The "Cold Start" Problem:** Maya (baker) still has to manually input variants and pricing when starting on OHC.
+### Unresolved Pain Points in OmniSolo (The Gaps)
+1. **The "Cold Start" Problem:** Maya (baker) still has to manually input variants and pricing when starting on OmniSolo.
 2. **Service Commerce Friction:** Carlos (handyman) lacks an integrated way to turn a conversational quote into a booked calendar slot and a deposit invoice instantly.
 3. **Inventory Sync Paralysis:** Priya (boutique) struggles with omnichannel sync; if she taps-to-pay in person, her online catalog isn't reliably auto-updating without manual intervention.
 
@@ -92,7 +92,7 @@ graph TD
     E --> G[Draft Customer Invoice]
     F --> H((1-Tap Approval via Mobile Feed))
     G --> H
-    H -->|Approved| I[Live on OHC Platform]
+    H -->|Approved| I[Live on OmniSolo Platform]
 ```
 
 ### Issue Brief A: The Invisible Catalog Manager
@@ -103,7 +103,7 @@ graph TD
 
 ### Issue Brief B: Conversational Quote-to-Cash Engine
 - **Problem:** Service workers like Carlos lose leads while on the job because quoting and booking are disconnected.
-- **Solution:** A unified engine where the "Ambassador Agent" fields a customer text, negotiates the scope of work, checks Carlos's calendar, and sends a booking link with a deposit requirement. Carlos only gets notified when the money is in the OHC Wallet.
+- **Solution:** A unified engine where the "Ambassador Agent" fields a customer text, negotiates the scope of work, checks Carlos's calendar, and sends a booking link with a deposit requirement. Carlos only gets notified when the money is in the OmniSolo Wallet.
 - **Priority:** P0
 - **Scope:** Medium
 

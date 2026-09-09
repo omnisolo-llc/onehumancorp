@@ -2,7 +2,7 @@
 
 # CUJ: Extensible Skill Import Framework
 
-**Persona:** Human CEO | **Context:** Evolving "One Human Corp" from a Software Company into a Digital Marketing Agency by importing a custom Skill Blueprint.
+**Persona:** Human CEO | **Context:** Evolving "OmniSolo" from a Software Company into a Digital Marketing Agency by importing a custom Skill Blueprint.
 **Success Metrics:** Sub-minute ingestion of the YAML blueprint, automated generation of an org chart, successful tool binding, and dynamic scaling of the new department.
 
 ## 1. User Journey Overview
@@ -14,7 +14,7 @@ The CEO wants to expand their business into Digital Marketing. Instead of waitin
 |------|-------------|----------------|-----------------|--------------|
 | 1 | Navigate to "Settings > Import Skills" | Dashboard opens upload modal | File selector displayed | UI renders correctly |
 | 2 | Upload `digital_marketing.yaml` | Hub parses JSON/YAML | Schema validated; DAG checked | `Status: Validating...` |
-| 3 | Confirm Import | Hub calls `ohc-operator` | `RoleProfile` CRDs created | Roles saved to Postgres |
+| 3 | Confirm Import | Hub calls `omnisolo-operator` | `RoleProfile` CRDs created | Roles saved to Postgres |
 | 4 | Resolve Missing Tools | Hub checks MCP Registry | Alerts CEO if `mcp://tools/hubspot` is missing | Setup wizard appears |
 | 5 | Allocate Compute (Hire) | CEO clicks "Hire" on Growth Hacker | `TeamMember` pods spun up | Agents visible in Org Chart |
 | 6 | Assign Task | CEO prompts Marketing Director | Virtual Meeting Room initialized | Transcripts stream to Dashboard |

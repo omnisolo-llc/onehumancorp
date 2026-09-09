@@ -9,7 +9,7 @@ pub mod mcp_gateway;
 pub mod mercadopago;
 pub use ::server_integrations_chromadb as chromadb;
 pub mod google_calendar;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod google_workspace;
 pub mod meta;
 pub use ::server_integrations_cal_com as cal_com;
@@ -27,23 +27,23 @@ pub use ::server_integrations_jitsi as jitsi;
 pub use ::server_integrations_listmonk as listmonk;
 pub use ::server_integrations_shipday as shipday;
 pub mod alipay;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod salesforce;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod slack;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub use ::server_integrations_hubspot as hubspot;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod asana;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod jira;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod quickbooks;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod shopify;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod xero;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod zendesk;
 
 pub use ::server_integrations_manychat as manychat;
@@ -52,15 +52,15 @@ pub use ::server_integrations_resend as resend;
 pub use ::server_integrations_restic as restic;
 pub use ::server_integrations_task_scheduler as task_scheduler;
 
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod github_api;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod google_analytics;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod outlook_calendar;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod trello;
-#[cfg(ohc_bazel)]
+#[cfg(omnisolo_bazel)]
 pub use ::server_integrations_whatsapp_cloud as whatsapp_cloud;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 pub mod whatsapp_cloud;

@@ -15,7 +15,7 @@ This report outlines the discrepancies identified between the canonical end-to-e
 3.  **`/website-builder`**:
     -   **Issue**: The heading text has drifted.
     -   **Expected**: The test expects `page.getByRole('heading', { name: '10-Minute Setup Wizard' })`.
-    -   **Actual**: The current heading is "Welcome to OHC Smart Builder" or "Your business, live in minutes.".
+    -   **Actual**: The current heading is "Welcome to OmniSolo Smart Builder" or "Your business, live in minutes.".
 
 4.  **`/integrations`**:
     -   **Issue**: The heading text has drifted, and a section is missing.

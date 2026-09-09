@@ -6,8 +6,8 @@
 # bootstrap, making this retry idempotent without separate marker state.
 #
 # Environment variables consumed:
-#   SERVER_URL                  — base URL of the OHC server (default: http://server:8080)
-#   OHC_SETUP_TOKEN / _FILE           — one-time setup bearer token
+#   SERVER_URL                  — base URL of the OmniSolo server (default: http://server:8080)
+#   OMNISOLO_SETUP_TOKEN / _FILE           — one-time setup bearer token
 #   SETUP_ADMIN_INIT_USERNAME         — desired admin username
 #   SETUP_ADMIN_INIT_EMAIL            — desired admin email
 #   SETUP_ADMIN_INIT_PASSWORD / _FILE — desired admin password
@@ -56,19 +56,19 @@ read_secret() {
     printf '%s' "$direct_value"
 }
 
-OHC_SETUP_TOKEN="$(read_secret OHC_SETUP_TOKEN OHC_SETUP_TOKEN_FILE)"
+OMNISOLO_SETUP_TOKEN="$(read_secret OMNISOLO_SETUP_TOKEN OMNISOLO_SETUP_TOKEN_FILE)"
 PASSWORD="$(read_secret SETUP_ADMIN_INIT_PASSWORD SETUP_ADMIN_INIT_PASSWORD_FILE)"
 
-if [ "$(printf '%s' "$OHC_SETUP_TOKEN" | wc -c | tr -d '[:space:]')" -lt 32 ]; then
-    echo "[bootstrap] ERROR: OHC_SETUP_TOKEN must contain at least 32 bytes." >&2
+if [ "$(printf '%s' "$OMNISOLO_SETUP_TOKEN" | wc -c | tr -d '[:space:]')" -lt 32 ]; then
+    echo "[bootstrap] ERROR: OMNISOLO_SETUP_TOKEN must contain at least 32 bytes." >&2
     exit 1
 fi
 contains_control_character() {
     [ "$(printf '%s' "$1" | tr -d '[:cntrl:]')" != "$1" ]
 }
 
-if contains_control_character "$OHC_SETUP_TOKEN"; then
-    echo "[bootstrap] ERROR: OHC_SETUP_TOKEN must not contain control characters." >&2
+if contains_control_character "$OMNISOLO_SETUP_TOKEN"; then
+    echo "[bootstrap] ERROR: OMNISOLO_SETUP_TOKEN must not contain control characters." >&2
     exit 1
 fi
 
@@ -100,11 +100,11 @@ json_escape() {
     printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
-REQUEST_FILE="$(mktemp /tmp/ohc-bootstrap-request.XXXXXX)"
-RESPONSE_FILE="$(mktemp /tmp/ohc-bootstrap-response.XXXXXX)"
-HEADER_FILE="$(mktemp /tmp/ohc-bootstrap-headers.XXXXXX)"
-LOGIN_REQUEST_FILE="$(mktemp /tmp/ohc-bootstrap-login-request.XXXXXX)"
-LOGIN_RESPONSE_FILE="$(mktemp /tmp/ohc-bootstrap-login-response.XXXXXX)"
+REQUEST_FILE="$(mktemp /tmp/omnisolo-bootstrap-request.XXXXXX)"
+RESPONSE_FILE="$(mktemp /tmp/omnisolo-bootstrap-response.XXXXXX)"
+HEADER_FILE="$(mktemp /tmp/omnisolo-bootstrap-headers.XXXXXX)"
+LOGIN_REQUEST_FILE="$(mktemp /tmp/omnisolo-bootstrap-login-request.XXXXXX)"
+LOGIN_RESPONSE_FILE="$(mktemp /tmp/omnisolo-bootstrap-login-response.XXXXXX)"
 cleanup_private_files() {
     rm -f "$REQUEST_FILE" "$RESPONSE_FILE" "$HEADER_FILE" \
         "$LOGIN_REQUEST_FILE" "$LOGIN_RESPONSE_FILE"
@@ -118,7 +118,7 @@ printf '{"username":"%s","email":"%s","password":"%s","organizationId":"%s"}' \
     "$(json_escape "$ORGANIZATION_ID")" > "$REQUEST_FILE"
 printf '%s\n' \
     'Content-Type: application/json' \
-    "Authorization: Bearer ${OHC_SETUP_TOKEN}" > "$HEADER_FILE"
+    "Authorization: Bearer ${OMNISOLO_SETUP_TOKEN}" > "$HEADER_FILE"
 printf '{"username":"%s","password":"%s","organization_id":"%s"}' \
     "$(json_escape "$USERNAME")" \
     "$(json_escape "$PASSWORD")" \

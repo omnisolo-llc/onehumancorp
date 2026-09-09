@@ -7,7 +7,7 @@ test.describe('Cloud-Bridge Referral Loop', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ invite_link: 'https://ohc.app/invite/mock-123' })
+        body: JSON.stringify({ invite_link: 'https://omnisolo.co/invite/mock-123' })
       });
     });
 
@@ -19,7 +19,7 @@ test.describe('Cloud-Bridge Referral Loop', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ invite_link: 'https://ohc.app/invite/mock-123' })
+        body: JSON.stringify({ invite_link: 'https://omnisolo.co/invite/mock-123' })
       });
     });
 
@@ -39,7 +39,7 @@ test.describe('Cloud-Bridge Referral Loop', () => {
 
     // Check generated link input and action buttons
     const linkInput = page.locator('#cloud-bridge-invite-link');
-    await expect(linkInput).toHaveValue(/^https:\/\/ohc\.app\/invite\//);
+    await expect(linkInput).toHaveValue(/^https:\/\/cloud.omnisolo.co\/invite\//);
 
     const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await expect(copyBtn).toBeVisible();
@@ -56,7 +56,7 @@ test.describe('Cloud-Bridge Referral Loop', () => {
     // Verify the clipboard content includes the link
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
     if (clipboardText) {
-      expect(clipboardText).toContain('https://ohc.app/invite/');
+      expect(clipboardText).toContain('https://omnisolo.co/invite/');
     }
 
     // Verify Embed section

@@ -22,6 +22,8 @@ interface Quote {
   line_items?: LineItem[];
 }
 
+const QUOTE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export default function QuoteReviewPage() {
   const params = useParams();
   const router = useRouter();
@@ -33,6 +35,13 @@ export default function QuoteReviewPage() {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
+    if (!QUOTE_ID_PATTERN.test(id)) {
+      setQuote(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     async function fetchQuote() {
       try {
         const res = await fetch(`/api/v1/quotes/${id}`);

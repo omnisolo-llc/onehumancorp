@@ -23,7 +23,7 @@
 
 <div class="premium-card">
 <h2 class="premium-title">Overview</h2>
-The Universal Agent Harness Transport Bridge is a core architectural component of the OHC-HA (Hybrid Architecture). It solves the rigid environment lock-in problem observed in competing systems (like Claude Code's SdkControlTransport) by dynamically wiring the transport layer based on the execution mode (Cloud vs. Standalone).
+The Universal Agent Harness Transport Bridge is a core architectural component of the OmniSolo-HA (Hybrid Architecture). It solves the rigid environment lock-in problem observed in competing systems (like Claude Code's SdkControlTransport) by dynamically wiring the transport layer based on the execution mode (Cloud vs. Standalone).
 </div>
 
 <div class="premium-card">

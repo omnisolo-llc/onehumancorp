@@ -31,7 +31,7 @@ test.describe('Documentation Flows', () => {
     await page.waitForTimeout(600); // 500ms for long press
 
     // Verify the tooltip loads with expected content from our backend
-    const tooltipText = page.getByText(/Start an interactive guide to learn how to use OHC./i).last();
+    const tooltipText = page.getByText(/Start an interactive guide to learn how to use OmniSolo./i).last();
     await expect(tooltipText).toBeVisible({ timeout: 10000 });
   });
 });

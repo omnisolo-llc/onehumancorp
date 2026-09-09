@@ -2,7 +2,7 @@
 
 # Hybrid Swarm-Aware Telemetry Mesh: Visual Walkthrough
 
-This guide explains how OHC ensures Full-Spectrum Observability by capturing telemetry in Standalone Mode and synchronizing it securely with Cloud metrics.
+This guide explains how OmniSolo ensures Full-Spectrum Observability by capturing telemetry in Standalone Mode and synchronizing it securely with Cloud metrics.
 
 ## 1. Zero-Trust Telemetry Pipeline
 
@@ -10,7 +10,7 @@ The telemetry mesh leverages SPIFFE/SPIRE for mTLS validation when transferring 
 
 ```mermaid
 graph TD
-    A[Standalone OHC Agent] -->|Logs Metrics locally| B(Local SQLite SIPDB)
+    A[Standalone OmniSolo Agent] -->|Logs Metrics locally| B(Local SQLite SIPDB)
     A -->|SPIFFE/SPIRE SVID| C[Local mTLS Proxy]
     B -.->|Background MCP Sync| D{Cloud MCP Gateway}
     C -.->|Auth Handshake| D

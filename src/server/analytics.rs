@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_analytics_pii_redaction_cross_mode() {
-        temp_env::with_vars([("OHC_STANDALONE_MODE", Some("true"))], || {
+        temp_env::with_vars([("OMNISOLO_STANDALONE_MODE", Some("true"))], || {
             let tracker = Tracker::new();
             let mut props = HashMap::new();
             props.insert("user_id".to_string(), "12345".to_string());

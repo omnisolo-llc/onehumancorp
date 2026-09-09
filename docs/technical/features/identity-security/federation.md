@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-As OHC scales to global enterprises, a single Kubernetes cluster becomes a single point of failure and a latency bottleneck. This design extends the Hub to support **Multi-Cluster Federation**, allowing agents to collaborate across disparate geographic regions (e.g., `us-east-1` and `eu-central-1`) while maintaining a unified identity and state model.
+As OmniSolo scales to global enterprises, a single Kubernetes cluster becomes a single point of failure and a latency bottleneck. This design extends the Hub to support **Multi-Cluster Federation**, allowing agents to collaborate across disparate geographic regions (e.g., `us-east-1` and `eu-central-1`) while maintaining a unified identity and state model.
 
 ## 2. Technical Architecture
 
@@ -69,7 +69,7 @@ struct FederatedAgent {
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

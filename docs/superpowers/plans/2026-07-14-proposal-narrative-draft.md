@@ -63,7 +63,7 @@ Register `.route("/draft", post(draft_narrative))` without changing
 
 ```bash
 cargo test --lib api::proposals::tests -- --nocapture
-cargo check -p ohc-mono --lib
+cargo check -p omnisolo --lib
 ```
 
 Expected: proposal tests and compile pass.

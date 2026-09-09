@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { useProPlan } from '../components/useProPlan';
 
 export default function TestimonialWidgetGenerator() {
@@ -22,7 +22,7 @@ export default function TestimonialWidgetGenerator() {
     setIsClient(true);
   }, []);
 
-  const embedUrl = `https://ohc.app/api/v1/growth/testimonial/embed?tenant=${encodeURIComponent(tenant)}&authorName=${encodeURIComponent(authorName)}&reviewText=${encodeURIComponent(reviewText)}&rating=${rating}&theme=${theme}&branding=${!hideBranding}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/testimonial/embed?tenant=${encodeURIComponent(tenant)}&authorName=${encodeURIComponent(authorName)}&reviewText=${encodeURIComponent(reviewText)}&rating=${rating}&theme=${theme}&branding=${!hideBranding}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="250" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -43,7 +43,7 @@ export default function TestimonialWidgetGenerator() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Head>
-        <title>Testimonial Widget Builder | OHC</title>
+        <title>Testimonial Widget Builder | OmniSolo OneHumanCorp</title>
       </Head>
 
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
@@ -144,7 +144,7 @@ export default function TestimonialWidgetGenerator() {
                         className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
                     <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2 cursor-pointer">
-                        Remove "Powered by OHC" Badge
+                        Remove "Powered by OmniSolo" Badge
                         {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                     </label>
                 </div>
@@ -192,7 +192,7 @@ export default function TestimonialWidgetGenerator() {
 
                         {!hideBranding && (
                             <div className={`mt-5 pt-4 border-t flex justify-center ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
-                                <PoweredByOHC tenantId={tenant} />
+                                <PoweredByOmniSolo tenantId={tenant} />
                             </div>
                         )}
                     </div>
@@ -279,7 +279,7 @@ export default function TestimonialWidgetGenerator() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
 
             <button
@@ -294,7 +294,7 @@ export default function TestimonialWidgetGenerator() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism {

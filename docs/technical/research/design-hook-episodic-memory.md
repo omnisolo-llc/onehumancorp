@@ -5,10 +5,10 @@
 ## Executive Summary
 Current mainstream AI orchestration frameworks suffer from "Agent Amnesia"—a failure to maintain long-term, token-efficient state across disjointed sessions. As operations scale, injecting massive historical contexts into LLM prompts leads to unacceptable token burn rates, latency spikes, and eventual context collapse.
 
-This document proposes a radical "OHC Advantage" implementation: **Stateful Episodic Memory & Checkpointing**, driven entirely by LangGraph event streams backed by Kubernetes CSI Snapshotting and robust Vector databases.
+This document proposes a radical "OmniSolo Advantage" implementation: **Stateful Episodic Memory & Checkpointing**, driven entirely by LangGraph event streams backed by Kubernetes CSI Snapshotting and robust Vector databases.
 
 ## The Architecture
-OHC's Agentic OS functions as a "Universal Bus" for multi-framework AI swarms. We will replace massive in-memory chat arrays with an append-only, distributed event log architecture and semantic similarity retrieval.
+OmniSolo's Agentic OS functions as a "Universal Bus" for multi-framework AI swarms. We will replace massive in-memory chat arrays with an append-only, distributed event log architecture and semantic similarity retrieval.
 
 ### Component 1: LangGraph Checkpointers
 1. **The Checkpointer Store**: We deploy a dedicated LangGraph Checkpointer connected to a persistent PostgreSQL backend.

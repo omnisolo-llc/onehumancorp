@@ -64,13 +64,13 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
             return Ok(());
         }
 
-        let cloud_url = std::env::var("OHC_CLOUD_URL")
-            .unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let cloud_url = std::env::var("OMNISOLO_CLOUD_URL")
+            .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
         let sync_url = format!("{}/api/v1/sync/autodream", cloud_url);
 
         let client = reqwest::Client::new();
-        // In tests, if OHC_TEST_BYPASS_HTTP is set, we bypass HTTP and assume success.
-        let mut sync_successful = std::env::var("OHC_TEST_BYPASS_HTTP").is_ok();
+        // In tests, if OMNISOLO_TEST_BYPASS_HTTP is set, we bypass HTTP and assume success.
+        let mut sync_successful = std::env::var("OMNISOLO_TEST_BYPASS_HTTP").is_ok();
 
         if !sync_successful {
             match client.post(&sync_url).json(&payloads).send().await {
@@ -205,7 +205,7 @@ mod tests {
     #[tokio::test]
     async fn test_autodream_sync_process_forecast_tick() {
         unsafe {
-            std::env::set_var("OHC_TEST_BYPASS_HTTP", "1");
+            std::env::set_var("OMNISOLO_TEST_BYPASS_HTTP", "1");
         }
 
         let pool = SqlitePoolOptions::new()

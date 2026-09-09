@@ -1,10 +1,10 @@
 # [frontend] Glassmorphism Agent Audit Dashboard
 
 ## Problem Statement
-Administrators and users need a "Premium" visual interface to monitor the OHC swarm. The dashboard should display agent health, recent violations, and real-time execution logs with OHC's signature aesthetic.
+Administrators and users need a "Premium" visual interface to monitor the OmniSolo swarm. The dashboard should display agent health, recent violations, and real-time execution logs with OmniSolo's signature aesthetic.
 
 ## Research Report
-- **Competitive Analysis**: Most competitors use CLI-only or basic web TUIs. OHC aims for a "Mission Control" experience.
+- **Competitive Analysis**: Most competitors use CLI-only or basic web TUIs. OmniSolo aims for a "Mission Control" experience.
 - **Visual Mandate**: Glassmorphism, 20px blur, Outfit/Inter typography, and smooth animations (Framer Motion/Slint).
 
 ## Design Doc

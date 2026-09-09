@@ -2,7 +2,7 @@
 
 # Master Design Doc: KAIROS AI OS Orchestration
 
-This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
+This document serves as the final premium design doc synthesizing the OmniSolo Hybrid AI OS Orchestration layer.
 
 ## 1. The Shared Task List (The Brain)
 The Shared Task List handles task decomposition into a DAG (Directed Acyclic Graph) and avoids worker collisions.

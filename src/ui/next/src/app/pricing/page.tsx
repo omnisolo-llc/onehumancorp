@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
 import { PricingCard } from './PricingCard';
 
@@ -113,7 +113,7 @@ export default function PricingPage() {
         </div>
 
         {/* My Plan Section */}
-        <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-xl rounded-2xl w-full">
+        <div className="mb-8 p-6 app-card omnisolo-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-xl rounded-2xl w-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {currentPlan || 'Free'}</h2>
@@ -201,7 +201,7 @@ export default function PricingPage() {
             <p className="text-xs md:text-sm text-gray-500 px-2">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
         </div>
 
-        <div className="p-6 app-card ohc-growth-card glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 w-full mt-2 rounded-2xl">
+        <div className="p-6 app-card omnisolo-growth-card glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 w-full mt-2 rounded-2xl">
             <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Frequently Asked Questions</h2>
             <div className="space-y-4">
               <div>
@@ -217,15 +217,15 @@ export default function PricingPage() {
         </div>
 
         <div className="flex justify-center mt-4">
-          <PoweredByOHC tenantId="ohc" />
+          <PoweredByOmniSolo tenantId="omnisolo" />
         </div>
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        /* The .ohc-growth-card styles are now managed globally in globals.css for design token consistency */
+        /* The .omnisolo-growth-card styles are now managed globally in globals.css for design token consistency */
       `}} />
     </div>
   );

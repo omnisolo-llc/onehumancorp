@@ -1,25 +1,25 @@
-use ::server_ohc::app::dashboard_service_server::DashboardService;
-use ::server_ohc::app::*;
+use ::server_omnisolo::app::dashboard_service_server::DashboardService;
+use ::server_omnisolo::app::*;
 use ::server_utils::cache::HybridCache;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use tonic::{Request, Response, Status};
 
-static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> =
+static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::organization::Product>>> =
     OnceLock::new();
-static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
-static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Booking>>> = OnceLock::new();
-static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> =
+static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Order>>> = OnceLock::new();
+static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Booking>>> = OnceLock::new();
+static ORG_CACHE: OnceLock<HybridCache<Option<::server_omnisolo::organization::Organization>>> =
     OnceLock::new();
-static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> =
+static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::orchestration::Agent>>> =
     OnceLock::new();
-static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> =
+static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_omnisolo::orchestration::MeetingRoom>>>> =
     OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> =
     OnceLock::new();
 pub static DASHBOARD_SNAPSHOT_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
 pub static ONBOARDING_STATE_CACHE: OnceLock<
-    HybridCache<::server_ohc::app::GetOnboardingStateResponse>,
+    HybridCache<::server_omnisolo::app::GetOnboardingStateResponse>,
 > = OnceLock::new();
 
 #[derive(Clone)]
@@ -43,7 +43,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+    ) -> Result<Vec<::server_omnisolo::orchestration::Agent>, String> {
         let hub = self.hub.clone();
         let org_id_clone = org_id.to_string();
         let mut agents = tokio::spawn(async move { hub.get_agents_by_org(&org_id_clone).await })
@@ -64,7 +64,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+    ) -> Result<Vec<::server_omnisolo::orchestration::Agent>, String> {
         let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
         let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
@@ -90,7 +90,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+    ) -> Result<Arc<Vec<::server_omnisolo::orchestration::MeetingRoom>>, String> {
         let org_meetings = self.hub.get_meetings_by_org(org_id).await;
 
         if !mobile_optimized {
@@ -99,7 +99,7 @@ impl MyDashboardService {
 
         let mut filtered = Vec::new();
         for m in org_meetings.iter() {
-            filtered.push(::server_ohc::orchestration::MeetingRoom {
+            filtered.push(::server_omnisolo::orchestration::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
                 transcript: Vec::new(),
@@ -114,7 +114,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+    ) -> Result<Arc<Vec<::server_omnisolo::orchestration::MeetingRoom>>, String> {
         let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
         let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
@@ -193,7 +193,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::organization::Product>, String> {
+    ) -> Result<Vec<::server_omnisolo::organization::Product>, String> {
         let q = if mobile_optimized {
             "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
         } else {
@@ -205,7 +205,7 @@ impl MyDashboardService {
             crate::db::DbStore::Postgres => {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
-                        let p = ::server_ohc::organization::Product {
+                        let p = ::server_omnisolo::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
@@ -240,7 +240,7 @@ impl MyDashboardService {
             crate::db::DbStore::Sqlite(pool) => {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                     for r in rows {
-                        let p = ::server_ohc::organization::Product {
+                        let p = ::server_omnisolo::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
@@ -282,7 +282,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::organization::Product>, String> {
+    ) -> Result<Vec<::server_omnisolo::organization::Product>, String> {
         let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
         let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
@@ -308,7 +308,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Order>, String> {
+    ) -> Result<Vec<::server_omnisolo::app::Order>, String> {
         let q = if mobile_optimized {
             "SELECT id, '' as tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
         } else {
@@ -321,7 +321,7 @@ impl MyDashboardService {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                        let o = ::server_ohc::app::Order {
+                        let o = ::server_omnisolo::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: if mobile_optimized {
                                 String::new()
@@ -346,7 +346,7 @@ impl MyDashboardService {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                        let o = ::server_ohc::app::Order {
+                        let o = ::server_omnisolo::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: if mobile_optimized {
                                 String::new()
@@ -377,7 +377,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Order>, String> {
+    ) -> Result<Vec<::server_omnisolo::app::Order>, String> {
         let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
         let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
@@ -403,7 +403,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Booking>, String> {
+    ) -> Result<Vec<::server_omnisolo::app::Booking>, String> {
         let q = if mobile_optimized {
             "SELECT id, '' as tenant_id, customer_id, product_id, start_time, end_time, '' as status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
         } else {
@@ -420,7 +420,7 @@ impl MyDashboardService {
                         let start_time: DateTime<Utc> =
                             r.try_get("start_time").unwrap_or_else(|_| Utc::now());
                         let end_time: Option<DateTime<Utc>> = r.try_get("end_time").ok();
-                        let b = ::server_ohc::app::Booking {
+                        let b = ::server_omnisolo::app::Booking {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: if mobile_optimized {
                                 String::new()
@@ -458,7 +458,7 @@ impl MyDashboardService {
                                 .ok()
                         });
 
-                        let b = ::server_ohc::app::Booking {
+                        let b = ::server_omnisolo::app::Booking {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: if mobile_optimized {
                                 String::new()
@@ -489,7 +489,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Booking>, String> {
+    ) -> Result<Vec<::server_omnisolo::app::Booking>, String> {
         let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
         let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
@@ -515,7 +515,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Option<::server_ohc::organization::Organization>, String> {
+    ) -> Result<Option<::server_omnisolo::organization::Organization>, String> {
         let q = if mobile_optimized {
             "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
         } else {
@@ -530,7 +530,7 @@ impl MyDashboardService {
                     .fetch_optional(&self.db.pool)
                     .await
                 {
-                    org = Some(::server_ohc::organization::Organization {
+                    org = Some(::server_omnisolo::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
                         domain: "".to_string(),
@@ -544,7 +544,7 @@ impl MyDashboardService {
             }
             crate::db::DbStore::Sqlite(pool) => {
                 if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
-                    org = Some(::server_ohc::organization::Organization {
+                    org = Some(::server_omnisolo::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
                         domain: "".to_string(),
@@ -566,7 +566,7 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<Option<::server_ohc::organization::Organization>, String> {
+    ) -> Result<Option<::server_omnisolo::organization::Organization>, String> {
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
         let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
@@ -706,7 +706,7 @@ impl DashboardService for MyDashboardService {
                 } else {
                     m.transcript
                         .iter()
-                        .map(|msg| ::server_ohc::agent::AgentMessage {
+                        .map(|msg| ::server_omnisolo::agent::AgentMessage {
                             id: msg.id.clone(),
                             from_agent_id: msg.from_agent.clone(),
                             to_agent_id: msg.to_agent.clone(),
@@ -718,7 +718,7 @@ impl DashboardService for MyDashboardService {
                         .collect()
                 };
 
-                ::server_ohc::app::MeetingRoom {
+                ::server_omnisolo::app::MeetingRoom {
                     id: m.id.clone(),
                     participants: m.participants.clone(),
                     transcript,
@@ -738,18 +738,18 @@ impl DashboardService for MyDashboardService {
             .iter()
             .map(|a| {
                 let status_val = match a.status.to_uppercase().as_str() {
-                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
-                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
-                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
-                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
-                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                    "IDLE" => ::server_omnisolo::common::AgentStatus::Idle as i32,
+                    "ACTIVE" => ::server_omnisolo::common::AgentStatus::Active as i32,
+                    "IN_MEETING" => ::server_omnisolo::common::AgentStatus::InMeeting as i32,
+                    "BLOCKED" => ::server_omnisolo::common::AgentStatus::Blocked as i32,
+                    _ => ::server_omnisolo::common::AgentStatus::Idle as i32,
                 };
 
                 let role_val = match a.role.to_uppercase().as_str() {
-                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
-                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
-                    "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
-                    _ => ::server_ohc::common::Role::Unspecified as i32,
+                    "SOFTWARE_ENGINEER" => ::server_omnisolo::common::Role::SoftwareEngineer as i32,
+                    "QA_TESTER" => ::server_omnisolo::common::Role::QaTester as i32,
+                    "OPERATIONS_MANAGER" => ::server_omnisolo::common::Role::OperationsManager as i32,
+                    _ => ::server_omnisolo::common::Role::Unspecified as i32,
                 };
 
                 let orig_len = a.name.len();
@@ -767,7 +767,7 @@ impl DashboardService for MyDashboardService {
                     compressed
                 };
 
-                ::server_ohc::agent::Agent {
+                ::server_omnisolo::agent::Agent {
                     id: a.id.clone(),
                     name,
                     role: role_val,
@@ -809,7 +809,7 @@ impl DashboardService for MyDashboardService {
 
             let mut agent_summaries = Vec::new();
             for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
-                agent_summaries.push(::server_ohc::billing::AgentCostSummary {
+                agent_summaries.push(::server_omnisolo::billing::AgentCostSummary {
                     agent_id,
                     cost_usd,
                     token_used: tokens_used,
@@ -824,7 +824,7 @@ impl DashboardService for MyDashboardService {
                 });
             }
 
-            final_cost_summary = Some(::server_ohc::billing::CostSummary {
+            final_cost_summary = Some(::server_omnisolo::billing::CostSummary {
                 organization_id: (*org_id).clone(),
                 total_cost_usd: total_cost,
                 total_tokens: optimized_total_tokens,
@@ -947,8 +947,8 @@ impl DashboardService for MyDashboardService {
                 title: "How to add your first product".to_string(),
                 description: "A quick 60-second guide to listing items in your store.".to_string(),
                 duration_sec: 60,
-                url: "https://ohc-video.example.com/tutorials/add_product.mp4".to_string(),
-                thumbnail_url: "https://ohc-video.example.com/thumbnails/add_product.jpg"
+                url: "https://omnisolo-video.example.com/tutorials/add_product.mp4".to_string(),
+                thumbnail_url: "https://omnisolo-video.example.com/thumbnails/add_product.jpg"
                     .to_string(),
             },
             VideoMetadata {
@@ -956,8 +956,8 @@ impl DashboardService for MyDashboardService {
                 description: "Learn how to let AI handle your customer emails and social media."
                     .to_string(),
                 duration_sec: 120,
-                url: "https://ohc-video.example.com/tutorials/ai_helpers.mp4".to_string(),
-                thumbnail_url: "https://ohc-video.example.com/thumbnails/ai_helpers.jpg"
+                url: "https://omnisolo-video.example.com/tutorials/ai_helpers.mp4".to_string(),
+                thumbnail_url: "https://omnisolo-video.example.com/thumbnails/ai_helpers.jpg"
                     .to_string(),
             },
         ];
@@ -1083,8 +1083,8 @@ impl DashboardService for MyDashboardService {
 mod tests {
     use super::*;
     use ::server_auth::orchestration::AuthInfo;
-    use ::server_ohc::app::GetDashboardRequest;
-    use ::server_ohc::app::dashboard_service_server::DashboardService;
+    use ::server_omnisolo::app::GetDashboardRequest;
+    use ::server_omnisolo::app::dashboard_service_server::DashboardService;
     use std::sync::Arc;
     use tonic::Request;
     use uuid::Uuid;
@@ -1121,7 +1121,7 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
         // Add agents
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: "agent_1".to_string(),
             name: "A detailed assistant that is very helpful and provides lots of information about everything".to_string(), // Redundant words to test compression
             role: "assistant".to_string(),
@@ -1140,7 +1140,7 @@ mod tests {
         .await;
         let _ = hub
             .clone()
-            .publish(::server_ohc::orchestration::Message {
+            .publish(::server_omnisolo::orchestration::Message {
                 id: "msg_1".to_string(),
                 from_agent: "agent_1".to_string(),
                 to_agent: "all".to_string(),
@@ -1384,7 +1384,7 @@ mod tests {
         let service = setup_test_dashboard_service().await;
         let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(service.hub.redis_client()));
 
-        let agents = vec![::server_ohc::orchestration::Agent {
+        let agents = vec![::server_omnisolo::orchestration::Agent {
             id: "test".to_string(),
             name: "test".to_string(),
             role: "test".to_string(),
@@ -1452,7 +1452,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_video_tutorials_mobile_optimized() {
         let service = setup_test_dashboard_service().await;
-        let request = Request::new(::server_ohc::app::GetVideoTutorialsRequest {
+        let request = Request::new(::server_omnisolo::app::GetVideoTutorialsRequest {
             mobile_optimized: true,
         });
 

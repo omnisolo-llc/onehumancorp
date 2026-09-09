@@ -1,9 +1,9 @@
 # Agent Feed Deep Dive
 
-This document details the architecture and implementation strategy for the Agent Feed, a core component of the OHC platform that brings the "Invisible AI Automation" vision to life.
+This document details the architecture and implementation strategy for the Agent Feed, a core component of the OmniSolo platform that brings the "Invisible AI Automation" vision to life.
 
 ## Overview
-The Agent Feed is the central nervous system for business owners using OHC. Unlike traditional dashboards that require the user to seek out information or initiate actions, the Agent Feed proactively pushes critical updates, suggested actions, and drafted communications directly to the user's mobile device for review and approval.
+The Agent Feed is the central nervous system for business owners using OmniSolo. Unlike traditional dashboards that require the user to seek out information or initiate actions, the Agent Feed proactively pushes critical updates, suggested actions, and drafted communications directly to the user's mobile device for review and approval.
 
 ## Key Components
 
@@ -22,11 +22,11 @@ The Agent Feed is the central nervous system for business owners using OHC. Unli
 
 ## Example Workflow: The Ambassador
 1. Customer DMs Maya on Instagram asking about vegan cake availability.
-2. Instagram Graph API webhook triggers an event in the OHC backend.
+2. Instagram Graph API webhook triggers an event in the OmniSolo backend.
 3. Event is processed: Intent classified as "availability inquiry".
 4. System queries Maya's inventory: Vegan cakes are in stock.
 5. LLM drafts response: "Yes, we have vegan cakes available! Would you like to order?"
-6. Action Card is pushed to Maya's OHC app feed.
+6. Action Card is pushed to Maya's OmniSolo app feed.
 7. Maya taps "Approve" -> Response sent to customer via Instagram Graph API.
 
 ## Implementation Priorities

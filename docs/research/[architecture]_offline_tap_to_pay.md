@@ -1,12 +1,12 @@
 # Research Report: Offline Tap-to-Pay Architecture
 
 **Problem Statement:**
-Non-technical business owners (like Carlos the handyman and Fatima the food cart operator) often operate in areas with poor or zero internet connectivity (basements, crowded street corners). Currently, OneHumanCorp (OHC) requires an active internet connection to process payments. If the connection drops, they cannot accept payments, directly causing lost revenue and customer frustration.
+Non-technical business owners (like Carlos the handyman and Fatima the food cart operator) often operate in areas with poor or zero internet connectivity (basements, crowded street corners). Currently, OmniSolo (OmniSolo) requires an active internet connection to process payments. If the connection drops, they cannot accept payments, directly causing lost revenue and customer frustration.
 
 **Research Findings:**
 - Competitors like Square POS offer robust offline mode capabilities where transactions are queued locally and synced when connectivity is restored.
 - Stripe Terminal supports offline mode, allowing Tap-to-Pay on iPhone/Android to function without immediate internet access, securely storing encrypted payment data.
-- OHC's current architecture lacks a local CRDT-based queue for transactions and relies entirely on synchronous API calls to `src/server/integrations/stripe/routing.rs` and the Stripe API.
+- OmniSolo's current architecture lacks a local CRDT-based queue for transactions and relies entirely on synchronous API calls to `src/server/integrations/stripe/routing.rs` and the Stripe API.
 
 **Design Document:**
 - Introduce an Offline Transaction Queue in the Flutter PWA/Mobile App using SQLite/Isar.

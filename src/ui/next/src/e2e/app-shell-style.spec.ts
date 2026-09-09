@@ -119,7 +119,7 @@ async function navigateToSettledApplicationPage(page: Page, route: string): Prom
       const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
       if (!response) throw new Error('navigation did not return a document response');
       if (response.status() < 500) {
-        await page.locator(isPublicRoute ? '[data-auth-shell]' : '.app-main')
+        await page.locator(route === '/healthz' ? 'main' : isPublicRoute ? '[data-auth-shell]' : '.app-main')
           .waitFor({ state: 'visible', timeout: 30_000 });
         await page.evaluate(() => new Promise<void>((resolve) => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
@@ -236,7 +236,10 @@ test.describe('App shell visual consistency', () => {
       const response = await navigateToSettledApplicationPage(page, route);
 
       expect(response?.status(), `${route} returned an HTTP error`).toBeLessThan(500);
-      if (publicApplicationRoutes.has(route)) {
+      if (route === '/healthz') {
+        await expect(page.locator('main')).toHaveText('ok');
+        await expect(page.locator('[data-auth-shell], .app-sidebar, .app-topbar, .app-main')).toHaveCount(0);
+      } else if (publicApplicationRoutes.has(route)) {
         await expect(page.locator('[data-auth-shell]')).toHaveCount(1);
         await expect(page.locator('.app-sidebar')).toHaveCount(0);
         await expect(page.locator('.app-topbar')).toHaveCount(0);
@@ -445,7 +448,7 @@ test.describe('Mobile global controls', () => {
         await navigateToSettledApplicationPage(page, route);
 
         const controlSelector = [
-          '#ohc-floating-help-btn',
+          '#omnisolo-floating-help-btn',
           '#ai-chat-trigger-btn',
           '[data-voice-assistant-surface="trigger"]',
         ].join(',');

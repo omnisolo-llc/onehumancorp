@@ -7,8 +7,8 @@ use server_harness::middleware::local_services::{
     LocalServiceKind, LocalServiceRegistry, LocalServiceScopeContext,
 };
 use server_harness::middleware::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
-use server_ohc::harness_middleware::harness_worker_service_server::HarnessWorkerService;
-use server_ohc::harness_middleware::{
+use server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerService;
+use server_omnisolo::harness_middleware::{
     AttemptCommandEnvelope, SessionOperationEnvelope, WorkerControlEnvelope,
     WorkerExchangeEnvelope, WorkerHealthRequest,
 };
@@ -1207,8 +1207,8 @@ done
 #[allow(dead_code)]
 fn service_is_tonic_server_compatible<T: HarnessWorkerService>(
     service: T,
-) -> server_ohc::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer<T> {
-    server_ohc::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer::new(
+) -> server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer<T> {
+    server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer::new(
         service,
     )
 }

@@ -8,8 +8,8 @@ One of the most complex tasks for a non-technical small business owner (like May
     *   *Shopify:* Has improved native domain buying, but connecting external domains still requires manual DNS configuration (A records to IP, CNAME to shops.myshopify.com). Users frequently get stuck here.
     *   *Wix/Squarespace:* Similar friction. They offer in-house registrars but external connections involve technical documentation.
     *   *GoDaddy:* Owns the registrar market but their platform is cluttered with upsells.
-*   **OHC Advantage:** As a platform managing the entire stack via AI agents, OHC can leverage automated ACME challenges (Let's Encrypt) and cloud-native ingress controllers (like Traefik or Caddy) to handle multi-tenant routing dynamically. The Marketing & Advertising Agent can guide the user conversationally, abstracting the technical mechanics.
-*   **Identified Gap:** OHC currently lacks an autonomous architectural layer designed specifically for multi-tenant, edge-cached domain mapping and zero-touch SSL certificate lifecycle management.
+*   **OmniSolo Advantage:** As a platform managing the entire stack via AI agents, OmniSolo can leverage automated ACME challenges (Let's Encrypt) and cloud-native ingress controllers (like Traefik or Caddy) to handle multi-tenant routing dynamically. The Marketing & Advertising Agent can guide the user conversationally, abstracting the technical mechanics.
+*   **Identified Gap:** OmniSolo currently lacks an autonomous architectural layer designed specifically for multi-tenant, edge-cached domain mapping and zero-touch SSL certificate lifecycle management.
 
 ## Design Doc
 ### Architecture Diagram
@@ -17,17 +17,17 @@ One of the most complex tasks for a non-technical small business owner (like May
 sequenceDiagram
     participant User (Maya)
     participant Marketing Agent
-    participant OHC Ingress Controller (Traefik/Caddy)
+    participant OmniSolo Ingress Controller (Traefik/Caddy)
     participant Let's Encrypt
     participant Postgres (Tenant Ledger)
 
     User (Maya)->>Marketing Agent: "I want to use mayascakes.com"
     Marketing Agent->>Postgres (Tenant Ledger): Register Domain Intent
-    Marketing Agent-->>User (Maya): "Great! Just point your nameservers to ns1.ohc.com"
-    Note over OHC Ingress Controller, Let's Encrypt: Automated ACME Challenge (HTTP-01/DNS-01)
-    OHC Ingress Controller->>Let's Encrypt: Request SSL Cert for mayascakes.com
-    Let's Encrypt-->>OHC Ingress Controller: Issue SSL Cert
-    OHC Ingress Controller->>Postgres (Tenant Ledger): Update Domain Status (Active, Secure)
+    Marketing Agent-->>User (Maya): "Great! Just point your nameservers to ns1.omnisolo.co"
+    Note over OmniSolo Ingress Controller, Let's Encrypt: Automated ACME Challenge (HTTP-01/DNS-01)
+    OmniSolo Ingress Controller->>Let's Encrypt: Request SSL Cert for mayascakes.com
+    Let's Encrypt-->>OmniSolo Ingress Controller: Issue SSL Cert
+    OmniSolo Ingress Controller->>Postgres (Tenant Ledger): Update Domain Status (Active, Secure)
 ```
 
 ### Core Capabilities

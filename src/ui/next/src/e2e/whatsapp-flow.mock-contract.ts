@@ -24,7 +24,7 @@ test.describe('WhatsApp Flow CUJ', () => {
     await expect(page.getByText(/WhatsApp Cloud API connected/i)).toBeVisible();
 
     // 4. Trigger inbound message via webhook
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
     const webhookPayload = {
       "object": "whatsapp_business_account",
       "entry": [{
@@ -94,7 +94,7 @@ test.describe('WhatsApp Flow CUJ', () => {
     await expect(page.getByText(/WhatsApp Cloud API connected/i)).toBeVisible();
 
     // 3. Trigger inbound message via webhook with media
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
     const webhookPayload = {
       "object": "whatsapp_business_account",
       "entry": [{

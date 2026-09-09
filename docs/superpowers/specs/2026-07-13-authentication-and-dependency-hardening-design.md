@@ -67,7 +67,7 @@ Invalid, expired, undecryptable, or structurally incomplete sessions are identic
 
 Use a single host-only cookie with these properties:
 
-- Name: `__Host-ohc_session` in every production deployment. A development-only name may be used only in an explicit loopback-bound local mode when HTTP prevents the `__Host-` contract; forwarded headers or request host values cannot enable that downgrade.
+- Name: `__Host-omnisolo_session` in every production deployment. A development-only name may be used only in an explicit loopback-bound local mode when HTTP prevents the `__Host-` contract; forwarded headers or request host values cannot enable that downgrade.
 - `HttpOnly` so browser JavaScript cannot read the backend token.
 - `Secure` outside an explicit local-development environment.
 - `SameSite=Lax` to block ordinary cross-site form submission while preserving top-level return navigation.
@@ -81,7 +81,7 @@ Session material must never be written to `localStorage`, `sessionStorage`, clie
 
 Use the maintained, Edge-compatible `jose` implementation with compact JWE, direct encryption (`alg=dir`), and AES-256-GCM (`enc=A256GCM`). The library generates a fresh cryptographically random 96-bit nonce for every session. The JWE protected header and validated payload bind the cookie name, format version, deployment environment/audience, and key ID so a token cannot be moved between environments or session purposes.
 
-`OHC_WEB_SESSION_SECRET` is separate from the backend JWT signing key and decodes to exactly 32 random bytes. The implementation must not silently truncate, pad, repeat, or hash an empty/weak value into an accepted key. Secret values are read only by server/Edge code, use no `NEXT_PUBLIC_` name, and are never serialized into client bundles, source maps, build output, or logs; source and bundle regressions enforce this.
+`OMNISOLO_WEB_SESSION_SECRET` is separate from the backend JWT signing key and decodes to exactly 32 random bytes. The implementation must not silently truncate, pad, repeat, or hash an empty/weak value into an accepted key. Secret values are read only by server/Edge code, use no `NEXT_PUBLIC_` name, and are never serialized into client bundles, source maps, build output, or logs; source and bundle regressions enforce this.
 
 Production runtime and readiness behavior must fail closed when the web-session secret is absent, malformed, or below the entropy requirement. The secret must not be required during a static build step that could embed or expose it in an artifact. Tests may inject a deterministic test-only secret; explicit local development uses a separately named opt-in configuration and is accepted only while the server is loopback-bound. No production fallback or checked-in secret is allowed.
 
@@ -102,7 +102,7 @@ Roles and organization metadata in this local session are display and routing hi
 
 `POST /api/v1/auth/login` accepts username, password, and optional organization ID, validates an exact JSON content type, enforces a platform-level body limit before parsing, validates bounded field lengths, and forwards the request server-to-server to `POST /api/v1/auth/login` on the Rust backend. The backend request has a short explicit timeout, cancellation propagation, a bounded response body, and redirect following disabled. It must not reveal whether a username, tenant, or password was the failing element.
 
-Cloud/multitenant login must receive the organization from an explicit field or a trusted hostname-to-tenant lookup. The backend's current `e2e-tenant` fallback is permitted only in explicit test/local mode and must fail closed in production. A single-tenant production deployment may use an explicitly configured `OHC_DEFAULT_TENANT_ID`; it may not silently inherit a test identifier.
+Cloud/multitenant login must receive the organization from an explicit field or a trusted hostname-to-tenant lookup. The backend's current `e2e-tenant` fallback is permitted only in explicit test/local mode and must fail closed in production. A single-tenant production deployment may use an explicitly configured `OMNISOLO_DEFAULT_TENANT_ID`; it may not silently inherit a test identifier.
 
 The Rust handler will perform a dummy password-hash verification when no matching active user exists so obvious response timing does not disclose account presence. Login attempts are rate limited at the server-facing boundary with bounded state, a deployment-aware trusted-client-IP policy, a generic `429`, and `Retry-After`. The limiter combines independent source and normalized-account buckets so an attacker cannot lock out an account indefinitely from one address or bypass limits by rotating only one dimension. Keys are privacy-preserving, credentials are never logged, entries expire/evict deterministically, and tests cover spoofed forwarding headers. Distributed deployments must use a shared limiter or explicitly document and enforce the capacity of a local per-instance layer plus an upstream limit.
 
@@ -228,7 +228,7 @@ Some prior findings require authority outside the repository. The project will p
 - Revoking and rotating the previously tracked remote-cache/BES credentials.
 - Assessing Git history, CI logs, remote-cache logs, and access logs for exposure or misuse.
 - Rotating the production backend JWT secret if exposure cannot be excluded, with a rollout that intentionally invalidates existing sessions.
-- Provisioning `OHC_WEB_SESSION_SECRET` through the deployment secret manager and documenting rotation behavior.
+- Provisioning `OMNISOLO_WEB_SESSION_SECRET` through the deployment secret manager and documenting rotation behavior.
 - Enabling authoritative dependency/security scanning in remote CI.
 
 Repository changes may remove credentials and prevent recurrence, but must not claim an external credential was revoked, a secret was provisioned, or logs were reviewed without evidence from the owning system. These are reported as operational blockers until performed by an authorized operator.

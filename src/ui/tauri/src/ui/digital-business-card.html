@@ -36,7 +36,7 @@
 
     <label style="display: flex; align-items: center; margin-bottom: 20px;">
       <input type="checkbox" id="input-remove-branding" style="margin-right: 10px;">
-      Remove Powered by OHC branding
+      Remove OmniSolo branding
     </label>
 
     <button id="btn-generate">Generate Shareable Link</button>
@@ -62,7 +62,7 @@
     document.getElementById('input-remove-branding').addEventListener('change', (e) => {
       if (e.target.checked) {
         // Only show if not already unlocked
-        if (localStorage.getItem('ohc_dbc_shared') !== 'true') {
+        if (localStorage.getItem('omnisolo_dbc_shared') !== 'true') {
           document.getElementById('paywall-modal').style.display = 'flex';
           e.target.checked = false; // Revert immediately, require pro
         }
@@ -79,13 +79,13 @@
     });
 
     document.getElementById('btn-share-to-unlock').addEventListener('click', () => {
-      const shareText = "I just created my free Digital Business Card using OHC! Build yours here:";
-      const shareUrl = "https://ohc.app";
+      const shareText = "I just created my free Digital Business Card using OmniSolo OneHumanCorp! Build yours here:";
+      const shareUrl = "https://omnisolo.co";
       const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
       window.open(intentUrl, '_blank');
 
       // Set unlock state
-      localStorage.setItem('ohc_dbc_shared', 'true');
+      localStorage.setItem('omnisolo_dbc_shared', 'true');
       document.getElementById('input-remove-branding').checked = true;
       document.getElementById('paywall-modal').style.display = 'none';
     });
@@ -97,7 +97,7 @@
       const phone = encodeURIComponent(document.getElementById('input-phone').value || '+1 (555) 123-4567');
       const hideBranding = document.getElementById('input-remove-branding').checked ? '1' : '0';
 
-      const baseUrl = window.location.origin.includes("localhost") || window.location.origin.includes("tauri://") ? "https://app.onehumancorp.com" : window.location.origin;
+      const baseUrl = window.location.origin.includes("localhost") || window.location.origin.includes("tauri://") ? "https://cloud.omnisolo.co" : window.location.origin;
       const url = `${baseUrl}/digital-business-card/card.html?n=${name}&t=${title}&c=${company}&p=${phone}&h=${hideBranding}`;
 
       document.getElementById('generated-url').value = url;

@@ -300,7 +300,7 @@ mod db_tests {
 
     #[tokio::test]
     async fn test_sync_and_get_config() {
-        let url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "".to_string());
+        let url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "".to_string());
         if !url.starts_with("postgres") {
             return;
         }

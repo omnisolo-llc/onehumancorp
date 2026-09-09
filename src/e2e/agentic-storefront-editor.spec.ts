@@ -8,7 +8,7 @@ test.describe('Agentic Storefront Editor', () => {
     await page.goto('/storefront-builder');
 
     // Wait for the page to load
-    await expect(page.locator('text=Welcome to OHC Smart Builder')).toBeVisible();
+    await expect(page.locator('text=Welcome to OmniSolo Smart Builder')).toBeVisible();
 
     // Enter bio
     await page.fill('textarea[placeholder="e.g. I run a mobile dog grooming service in Portland"]', 'Maya the home baker, I bake custom vegan cakes.');

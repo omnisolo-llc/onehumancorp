@@ -25,7 +25,7 @@ rust_library(
         "retry.rs",
         "types.rs",
     ],
-    crate_name = "ohc_builtin_agent_core",
+    crate_name = "omnisolo_builtin_agent_core",
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -51,7 +51,7 @@ rust_library(
 
 # Main agent library.
 rust_library(
-    name = "ohc_builtin_agent_lib",
+    name = "omnisolo_builtin_agent_lib",
     srcs = [
         "actor_model.rs",
         "agent.rs",
@@ -126,7 +126,7 @@ rust_library(
         "visual_workflow.rs",
         "visual_workflow_client.rs",
     ],
-    crate_name = "ohc_builtin_agent",
+    crate_name = "omnisolo_builtin_agent",
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-recursion",
@@ -141,7 +141,7 @@ rust_library(
         "//src/proto:common_prost",
         "//src/proto:hub_prost",
         "//src/proto:interop_prost",
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "//src/server/pricing:server_pricing",
         "//src/server/telemetry:server_telemetry",
         "//src/server/harness:server_harness",
@@ -188,7 +188,7 @@ rust_library(
 )
 
 rust_binary(
-    name = "ohc-builtin-agent",
+    name = "omnisolo-builtin-agent",
     srcs = ["main.rs"],
     edition = "2024",
     proc_macro_deps = [
@@ -198,7 +198,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":core",
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
     ] + [
         "@crates//:base64",
         "@crates//:chrono",
@@ -242,7 +242,7 @@ rust_binary(
     ],
     deps = [
         ":core",
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:tokio",
@@ -286,10 +286,10 @@ AGENT_UNIT_TEST_FILTERS = [
 ]
 
 rust_test(
-    name = "ohc_builtin_agent_lib_unit_test",
+    name = "omnisolo_builtin_agent_lib_unit_test",
     size = "large",
     args = AGENT_UNIT_TEST_FILTERS,
-    crate = ":ohc_builtin_agent_lib",
+    crate = ":omnisolo_builtin_agent_lib",
     edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -304,7 +304,7 @@ rust_test(
         name = module + "_unit_test",
         size = "small",
         args = [module],
-        crate = ":ohc_builtin_agent_lib",
+        crate = ":omnisolo_builtin_agent_lib",
         edition = "2024",
         tags = ["manual"],
         target_compatible_with = select({
@@ -328,7 +328,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
         "@crates//:dashmap",
         "@crates//:serde_json",
         "@crates//:tokio",
@@ -348,7 +348,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
         "@crates//:dashmap",
         "@crates//:serde_json",
         "@crates//:tokio",
@@ -372,7 +372,7 @@ rust_test(
     name = "tool_executor_engine_tests",
     srcs = ["tool_executor_engine_tests.rs"],
     deps = [
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin/tools:tools",
         "@crates//:tokio",
@@ -399,7 +399,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin/llm",
         "@crates//:serde_json",
@@ -420,7 +420,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
         "//src/agents/builtin:core",
         "@crates//:tokio",
         "@crates//:tracing",
@@ -441,7 +441,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":ohc_builtin_agent_lib",
+        ":omnisolo_builtin_agent_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin/llm",
         "@crates//:tokio",

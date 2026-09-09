@@ -12,8 +12,10 @@ test.describe("Help Center E2E", () => {
 
     // Help Chat
     const chatButton = page.locator('button[aria-label="Open help chat"]');
+    await expect(chatButton).toHaveCount(1);
     await expect(chatButton).toBeVisible();
     await chatButton.click();
-    await expect(page.locator("h3", { hasText: "Ask anything" })).toBeVisible();
+    await page.getByRole("button", { name: "Ask anything" }).click();
+    await expect(page.getByPlaceholder("Ask anything...")).toBeVisible();
   });
 });

@@ -3,7 +3,7 @@
 # Core User Journey: B2B Agent Exchange
 
 ## 1. Overview
-This document outlines the user journey for establishing and utilizing a Cross-Org Collaboration (B2B Agent Exchange) between two independent One Human Corp organizations.
+This document outlines the user journey for establishing and utilizing a Cross-Org Collaboration (B2B Agent Exchange) between two independent OmniSolo organizations.
 
 ## 2. Persona
 - **Procurement Manager (Human Operator):** Desires to automate software or resource procurement from external vendors using AI agents.
@@ -11,7 +11,7 @@ This document outlines the user journey for establishing and utilizing a Cross-O
 
 ## 3. Scenario: Automated Procurement via Inter-Org Room
 - **Pre-condition:** `acme.corp` (Buyer) wants to purchase cloud resources from `globex.com` (Vendor).
-- **Action 1 (Setup):** Administrators from both organizations navigate to the "B2B Collaboration" settings in their OHC dashboards. They mutually exchange their OIDC JWKS URLs and define `TrustAgreement` objects. `acme.corp` whitelists the "Buyer Agent" role; `globex.com` whitelists the "Sales Agent" role.
+- **Action 1 (Setup):** Administrators from both organizations navigate to the "B2B Collaboration" settings in their OmniSolo dashboards. They mutually exchange their OIDC JWKS URLs and define `TrustAgreement` objects. `acme.corp` whitelists the "Buyer Agent" role; `globex.com` whitelists the "Sales Agent" role.
 - **System Response 1:** The `b2b-gateway` establishes trust.
 - **Action 2 (Execution):** The `acme.corp` CEO instructs their Buyer Agent: "[Feature: b2b-collaboration] Procure 100 compute instances from globex.com."
 - **System Response 2:** The Buyer Agent initiates a cross-org message through the Hub. The Hub detects the `TrustAgreement`, encapsulates the message, and tunnels it over mTLS to `globex.com`.

@@ -1,16 +1,16 @@
 # Tool Integration Research Report Q4
 
 ## Executive Summary
-This report summarizes research into critical tool integrations for the One Human Corp (OHC) platform, specifically targeting the needs of non-technical small business owners. The objective is to evaluate tools across seven key categories that directly solve operational pain points, reducing context switching and manual data entry.
+This report summarizes research into critical tool integrations for the OmniSolo (OmniSolo) platform, specifically targeting the needs of non-technical small business owners. The objective is to evaluate tools across seven key categories that directly solve operational pain points, reducing context switching and manual data entry.
 
-The research evaluated each category through the lens of user experience (UX), competitor parity, pricing, and technical viability across both OHC's Cloud (multi-tenant) and Standalone (local) deployment modes.
+The research evaluated each category through the lens of user experience (UX), competitor parity, pricing, and technical viability across both OmniSolo's Cloud (multi-tenant) and Standalone (local) deployment modes.
 
 ## Category Findings
 
 ### 1. Social Media Integration
 *   **Target Tools:** Meta API (Instagram, Facebook, WhatsApp), TikTok For Business.
 *   **Problem Solved:** Fragmented communication across multiple apps leading to missed inquiries and delayed responses.
-*   **Proposed Solution:** A Unified Inbox within OHC.
+*   **Proposed Solution:** A Unified Inbox within OmniSolo.
 *   **Key Risks/Challenges:** Managing complex OAuth flows, handling webhooks securely in Standalone mode.
 *   **Priority:** P0
 
@@ -23,7 +23,7 @@ The research evaluated each category through the lens of user experience (UX), c
 
 ### 3. Email Marketing
 *   **Target Tools:** Mailgun, SendGrid, Amazon SES.
-*   **Problem Solved:** The friction of exporting OHC customer data to external platforms (like Mailchimp) to send newsletters.
+*   **Problem Solved:** The friction of exporting OmniSolo customer data to external platforms (like Mailchimp) to send newsletters.
 *   **Proposed Solution:** A native, simplified WYSIWYG email broadcast tool leveraging the existing CRM data.
 *   **Key Risks/Challenges:** Protecting shared IP reputation in Cloud mode from spam; handling unsubscribes securely.
 *   **Priority:** P1
@@ -38,7 +38,7 @@ The research evaluated each category through the lens of user experience (UX), c
 ### 5. Shipping & Logistics
 *   **Target Tools:** Shippo, EasyPost.
 *   **Problem Solved:** The manual, error-prone process of copying addresses, comparing rates, and printing labels across different carrier portals.
-*   **Proposed Solution:** One-click label generation and rate comparison directly from the OHC order screen.
+*   **Proposed Solution:** One-click label generation and rate comparison directly from the OmniSolo order screen.
 *   **Key Risks/Challenges:** Handling complex customs documentation for international shipments (initially deferring to simple domestic flows).
 *   **Priority:** P2
 
@@ -58,5 +58,5 @@ The research evaluated each category through the lens of user experience (UX), c
 
 ## Proposed Next Steps
 1.  **Prioritization Review:** Engineering leadership should review the P0 items (Unified Inbox and Automated Scheduling) for inclusion in the upcoming sprint planning.
-2.  **Standalone Architecture Spike:** A technical spike is required to establish a standardized pattern for receiving external webhooks (essential for Payments and Messaging) in Standalone deployments (e.g., utilizing a centralized OHC tunneling service).
+2.  **Standalone Architecture Spike:** A technical spike is required to establish a standardized pattern for receiving external webhooks (essential for Payments and Messaging) in Standalone deployments (e.g., utilizing a centralized OmniSolo tunneling service).
 3.  **Detailed Implementation Design:** Implementers should take the drafted issue briefs (located in `docs/research/`) and begin drafting specific technical design documents (SQL schemas, API endpoints) for the chosen P0 features.

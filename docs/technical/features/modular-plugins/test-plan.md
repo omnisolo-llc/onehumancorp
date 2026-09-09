@@ -19,7 +19,7 @@ Validate the dynamic ingestion, registration, usage of external capability plugi
    - *Action*: Execute a plugin capability that requires high-risk approvals (e.g., large ad-spend allocation via the new tool).
    - *Expected*: The system successfully pauses execution and triggers the Confidence Gating UI for the CEO's review and approval.
 5. **Aesthetic Compliance**:
-   - *Action*: Run Playwright verification scripts against the updated OHC dashboard.
+   - *Action*: Run Playwright verification scripts against the updated OmniSolo dashboard.
    - *Expected*: Ensure UI elements for plugin management conform to the Glassmorphism tokens (`backdrop-filter: blur(20px)`, semi-transparent backgrounds, subtle borders) mandated in the `design-doc.md`.
 
 </div>

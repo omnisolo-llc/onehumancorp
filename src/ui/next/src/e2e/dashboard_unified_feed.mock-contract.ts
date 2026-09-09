@@ -1,6 +1,6 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
-test.describe('Real-Time Multi-Tenant Edge Notifications & Sync via WebSocket', () => {
+test.describe('Real-Time Multi-Tenant Edge Notifications & Sync via authenticated HTTP', () => {
   test('Dashboard Unified Feed receives real-time approval_request event', async ({ page }) => {
     // Navigate to login
     await page.goto('/login');
@@ -13,7 +13,7 @@ test.describe('Real-Time Multi-Tenant Edge Notifications & Sync via WebSocket', 
 
     const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'e2e-tenant');
 
-    const uniqueId = `e2e-ws-test-${Date.now()}`;
+    const uniqueId = `e2e-http-polling-test-${Date.now()}`;
 
     const resCreate = await page.request.post(`/api/v1/agent-feed?tenant_id=${tenantId}`, {
       headers: {
@@ -22,7 +22,7 @@ test.describe('Real-Time Multi-Tenant Edge Notifications & Sync via WebSocket', 
       },
       data: {
         event_source: 'e2e-test',
-        context_payload: { description: 'WS Real-Time Test Item' },
+        context_payload: { description: 'HTTP polling real-time test item' },
         proposed_action: { draft_reply: 'Yes, this is real-time!', action_type: uniqueId }
       }
     });

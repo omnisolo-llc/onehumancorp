@@ -73,7 +73,7 @@ describe('ViralGoalTrackerPage', () => {
 
   it('shows paywall when removing branding without pro', () => {
     render(<ViralGoalTrackerPage />);
-    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo" Badge/i });
     fireEvent.click(checkbox);
     expect(screen.getAllByText('Upgrade to Remove Branding').length).toBeGreaterThan(0);
   });

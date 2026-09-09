@@ -1,5 +1,5 @@
 use super::server::EdgeOffloadMcpServer;
-use ::server_ohc::orchestration::McpInvokeRequest;
+use ::server_omnisolo::orchestration::McpInvokeRequest;
 
 #[tokio::test]
 async fn test_edge_offload_mcp_server_local_route_sensitive() {
@@ -10,7 +10,7 @@ async fn test_edge_offload_mcp_server_local_route_sensitive() {
         action: "invoke".to_string(),
         params: r#"{"prompt":"hello","is_sensitive":true,"complexity":"high"}"#.to_string(),
         agent_id: "agent-1".to_string(),
-        spiffe_id: "spiffe://onehumancorp.io/org-1/agent-1".to_string(),
+        spiffe_id: "spiffe://omnisolo.io/org-1/agent-1".to_string(),
     };
 
     let resp = server.invoke_tool(&req).await.unwrap();
@@ -29,7 +29,7 @@ async fn test_edge_offload_mcp_server_unknown_tool() {
         action: "invoke".to_string(),
         params: r#"{}"#.to_string(),
         agent_id: "agent-1".to_string(),
-        spiffe_id: "spiffe://onehumancorp.io/org-1/agent-1".to_string(),
+        spiffe_id: "spiffe://omnisolo.io/org-1/agent-1".to_string(),
     };
 
     let err = server.invoke_tool(&req).await.unwrap_err();
@@ -46,7 +46,7 @@ async fn test_edge_offload_mcp_server_local_route_low_complexity() {
         action: "invoke".to_string(),
         params: r#"{"prompt":"hello","is_sensitive":false,"complexity":"low"}"#.to_string(),
         agent_id: "agent-1".to_string(),
-        spiffe_id: "spiffe://onehumancorp.io/org-1/agent-1".to_string(),
+        spiffe_id: "spiffe://omnisolo.io/org-1/agent-1".to_string(),
     };
 
     let resp = server.invoke_tool(&req).await.unwrap();
@@ -65,7 +65,7 @@ async fn test_edge_offload_mcp_server_cloud_route() {
         action: "invoke".to_string(),
         params: r#"{"prompt":"hello","is_sensitive":false,"complexity":"high"}"#.to_string(),
         agent_id: "agent-1".to_string(),
-        spiffe_id: "spiffe://onehumancorp.io/org-1/agent-1".to_string(),
+        spiffe_id: "spiffe://omnisolo.io/org-1/agent-1".to_string(),
     };
 
     let resp = server.invoke_tool(&req).await.unwrap();
@@ -103,7 +103,7 @@ async fn test_edge_offload_mcp_server_cloud_route_force_fallback() {
         action: "invoke".to_string(),
         params: r#"{"prompt":"hello","is_sensitive":false,"complexity":"high","force_fallback":true}"#.to_string(),
         agent_id: "agent-1".to_string(),
-        spiffe_id: "spiffe://onehumancorp.io/org-1/agent-1".to_string(),
+        spiffe_id: "spiffe://omnisolo.io/org-1/agent-1".to_string(),
     };
 
     let resp = server.invoke_tool(&req).await.unwrap();

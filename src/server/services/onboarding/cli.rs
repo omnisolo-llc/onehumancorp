@@ -12,7 +12,7 @@ pub fn run_cli(mut writer: impl Write, is_cloud: bool) -> Result<(), String> {
         "Standalone"
     };
 
-    writeln!(writer, "OHC Interactive Setup ({})", mode).map_err(|e| e.to_string())?;
+    writeln!(writer, "OmniSolo Interactive Setup ({})", mode).map_err(|e| e.to_string())?;
     writeln!(writer, "Configuration Options:").map_err(|e| e.to_string())?;
 
     let sorted_config: BTreeMap<_, _> = config.iter().collect();
@@ -35,7 +35,7 @@ mod tests {
         assert!(res.is_ok());
 
         let output = String::from_utf8(buf).unwrap();
-        assert!(output.contains("OHC Interactive Setup (Cloud-native)"));
+        assert!(output.contains("OmniSolo Interactive Setup (Cloud-native)"));
         assert!(output.contains("mode: cloud"));
     }
 
@@ -46,7 +46,7 @@ mod tests {
         assert!(res.is_ok());
 
         let output = String::from_utf8(buf).unwrap();
-        assert!(output.contains("OHC Interactive Setup (Standalone)"));
+        assert!(output.contains("OmniSolo Interactive Setup (Standalone)"));
         assert!(output.contains("mode: standalone"));
     }
 }

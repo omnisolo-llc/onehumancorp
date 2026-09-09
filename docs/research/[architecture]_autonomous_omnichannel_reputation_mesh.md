@@ -4,7 +4,7 @@
 **Autonomous Omnichannel Reputation Mesh: Zero-Effort Review Generation and Management**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC)’s core personas—like **Carlos (handyman, 42)** and **Leo (music tutor, 22)**—reputation is everything. Their businesses run on word-of-mouth, but actively soliciting, monitoring, and replying to reviews across Google Maps, Yelp, Facebook, and specialized directories is an exhausting, fragmented process.
+For OmniSolo (OmniSolo)’s core personas—like **Carlos (handyman, 42)** and **Leo (music tutor, 22)**—reputation is everything. Their businesses run on word-of-mouth, but actively soliciting, monitoring, and replying to reviews across Google Maps, Yelp, Facebook, and specialized directories is an exhausting, fragmented process.
 Small business owners often feel they are at the mercy of the occasional unhappy customer because they lack the time and automated tooling to consistently capture positive reviews from happy customers. They do not have the technical knowledge to integrate multi-platform API webhooks or set up email-based "review funnels". The lack of a unified reputation system causes an "Invisible Discovery" gap, suppressing their local search ranking (SEO) and hurting revenue.
 
 ## 3. Research Report
@@ -19,7 +19,7 @@ Small business owners often feel they are at the mercy of the occasional unhappy
 *   "Communication Lag" and "Marketing Dread" are top 10 SMB pain points. Owners know they need to ask for reviews but consistently forget to do so after closing a sale or finishing a service.
 
 ### The Opportunity
-By unifying the transactional layer (payments, bookings) with a zero-configuration Autonomous Reputation Mesh, OHC can instantly trigger review requests exactly when customer satisfaction is highest, aggregate those reviews, and use AI to draft personalized responses, completely eliminating the mental overhead for the owner.
+By unifying the transactional layer (payments, bookings) with a zero-configuration Autonomous Reputation Mesh, OmniSolo can instantly trigger review requests exactly when customer satisfaction is highest, aggregate those reviews, and use AI to draft personalized responses, completely eliminating the mental overhead for the owner.
 
 ## 4. Design Doc
 
@@ -89,8 +89,8 @@ graph TD
 1.  Carlos completes a handyman job and marks the invoice as "Paid" in his app.
 2.  The system waits 24 hours (configurable default) and sends an automated, polite SMS to the customer asking for a review.
 3.  The customer leaves a 5-star Google review.
-4.  The OHC system ingests the review, and the AI Support Agent drafts a personalized reply.
-5.  Carlos opens his OHC app, sees a single notification, taps "Approve", and the reply is posted to Google.
+4.  The OmniSolo system ingests the review, and the AI Support Agent drafts a personalized reply.
+5.  Carlos opens his OmniSolo app, sees a single notification, taps "Approve", and the reply is posted to Google.
 
 **Acceptance Criteria:**
 - Define a scalable, tenant-isolated data entity for storing cross-platform reviews.

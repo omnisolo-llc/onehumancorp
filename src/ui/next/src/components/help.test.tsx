@@ -2,18 +2,24 @@ import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HelpWidget, WalkthroughProvider } from './help';
+import { HelpWidget, WalkthroughProvider, shouldShowMobileHelpLauncher } from './help';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TooltipProvider } from './TooltipRegistry';
 
+const navigationMocks = vi.hoisted(() => ({
+  pathname: '/builder',
+  push: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-  }),
+  useRouter: () => ({ push: navigationMocks.push }),
+  usePathname: () => navigationMocks.pathname,
 }));
 
 describe('HelpWidget', () => {
   beforeEach(() => {
+    navigationMocks.pathname = '/builder';
+    navigationMocks.push.mockReset();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.includes('/api/v1/walkthrough/store-setup')) {
@@ -88,6 +94,34 @@ describe('HelpWidget', () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['/website-builder', '/login', '/agent-marketplace', '/integrations', '/agents', '/inbox'])(
+    'hides the mobile launcher on collision route %s',
+    (pathname) => {
+      navigationMocks.pathname = pathname;
+      render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+
+      expect(screen.getByRole('button', { name: 'Open help chat' }).parentElement?.parentElement).toHaveClass('hidden', 'sm:block');
+    },
+  );
+
+  it('keeps the mobile launcher available on the Help Center route', () => {
+    expect(shouldShowMobileHelpLauncher('/help')).toBe(true);
+    expect(shouldShowMobileHelpLauncher('/login')).toBe(false);
+  });
+
+  it('does not fetch optional help content on the public login route', async () => {
+    navigationMocks.pathname = '/login';
+
+    await act(async () => {
+      render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+      await new Promise(r => setTimeout(r, 20));
+    });
+
+    const requestedUrls = (global.fetch as any).mock.calls.map(([url]: [string]) => url);
+    expect(requestedUrls).not.toContain('/api/v1/help');
+    expect(requestedUrls).not.toContain('/api/v1/videos');
+  });
+
   it('renders the help widget', async () => {
     await act(async () => {
       render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
@@ -103,7 +137,7 @@ describe('HelpWidget', () => {
         <div id="pos-keypad">Mock Target 1.5</div>
         <div id="generate-btn-tooltip">Mock Target 2</div>
         <div id="ai-chat-trigger">Mock Target 3</div>
-        <div id="ohc-help-input-area">Mock Target 4</div>
+        <div id="omnisolo-help-input-area">Mock Target 4</div>
         <div id="help-widget-container">Mock Target 5</div>
         <TooltipProvider>
           <WalkthroughProvider>
@@ -132,6 +166,42 @@ describe('HelpWidget', () => {
     await user.click(helpBtn);
     const tourBtn5 = screen.getByText('Tour: KAIROS AI OS Orchestration');
     await user.click(tourBtn5);
+  });
+
+  it('moves the store setup tour to its target route before showing it', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <TooltipProvider>
+        <WalkthroughProvider>
+          <>
+            <div id="bio-input-tooltip">Target</div>
+            <HelpWidget />
+          </>
+        </WalkthroughProvider>
+      </TooltipProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByText('Tour: Set up your store'));
+
+    expect(navigationMocks.push).toHaveBeenCalledWith('/storefront-builder');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    navigationMocks.pathname = '/storefront-builder';
+    rerender(
+      <TooltipProvider>
+        <WalkthroughProvider>
+          <>
+            <div id="bio-input-tooltip">Target</div>
+            <HelpWidget />
+          </>
+        </WalkthroughProvider>
+      </TooltipProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toHaveTextContent('Test Content');
+    });
   });
 
   it('switches to the Ask anything tab and submits a message', async () => {
@@ -290,6 +360,8 @@ describe('HelpWidget', () => {
     await waitFor(() => {
         expect(screen.getByText('Test Article')).toBeInTheDocument();
         expect(screen.getByText('Another Article')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Test Category' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Other' })).toBeInTheDocument();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help...');
@@ -299,6 +371,20 @@ describe('HelpWidget', () => {
         expect(screen.queryByText('Test Article')).not.toBeInTheDocument();
         expect(screen.queryByText('Another Article')).not.toBeInTheDocument();
     });
+  });
+
+  it('preserves the tutorial URL when opening the video player', async () => {
+    const user = userEvent.setup();
+    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByRole('button', { name: 'Videos' }));
+    await user.click(await screen.findByText('Test Video'));
+
+    expect(screen.getByRole('dialog').querySelector('video')).toHaveAttribute(
+      'src',
+      'http://example.com/video.mp4',
+    );
   });
 
   it('closes the help widget when clicking close button', async () => {

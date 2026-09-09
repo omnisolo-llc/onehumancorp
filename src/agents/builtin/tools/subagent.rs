@@ -1,10 +1,10 @@
 #![allow(clippy::needless_borrow)]
 use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
 use crate::Tool;
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
-use server_ohc::agent::service::SubAgentResponse;
+use server_omnisolo::agent::service::SubAgentResponse;
 use std::sync::Arc;
 
 #[derive(Deserialize)]
@@ -17,7 +17,7 @@ struct SubagentArgs {
 
 pub struct SubagentExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
-    pub llm: Option<Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
+    pub llm: Option<Arc<dyn omnisolo_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
 }
 
 impl SubagentExecutor {
@@ -33,10 +33,10 @@ impl SubagentExecutor {
         // If the output is already small enough, optionally summarize if it's over 1000 chars, else return it.
         if raw_output.len() <= TARGET_CHARS_MAX {
             if raw_output.len() > 1000 {
-                let req = ohc_builtin_agent_core::types::ChatRequest {
+                let req = omnisolo_builtin_agent_core::types::ChatRequest {
                     model: "gpt-4o-mini".to_string(),
                     system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                    messages: vec![ohc_builtin_agent_core::types::Message::user(
+                    messages: vec![omnisolo_builtin_agent_core::types::Message::user(
                         raw_output.to_string(),
                     )],
                     tools: vec![],
@@ -61,10 +61,10 @@ impl SubagentExecutor {
             let end = std::cmp::min(i + CHUNK_SIZE_CHARS, chars.len());
             let chunk: String = chars[i..end].iter().collect();
 
-            let req = ohc_builtin_agent_core::types::ChatRequest {
+            let req = omnisolo_builtin_agent_core::types::ChatRequest {
                 model: "gpt-4o-mini".to_string(),
                 system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
+                messages: vec![omnisolo_builtin_agent_core::types::Message::user(chunk)],
                 tools: vec![],
                 max_tokens: 2000,
                 temperature: 0.0,
@@ -86,10 +86,10 @@ impl SubagentExecutor {
         // If the combined summary is still too large, do one final pass
         let mut final_text = joined_chunks.clone();
         if joined_chunks.len() > TARGET_CHARS_MAX {
-            let req = ohc_builtin_agent_core::types::ChatRequest {
+            let req = omnisolo_builtin_agent_core::types::ChatRequest {
                 model: "gpt-4o-mini".to_string(),
                 system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                messages: vec![ohc_builtin_agent_core::types::Message::user(joined_chunks)],
+                messages: vec![omnisolo_builtin_agent_core::types::Message::user(joined_chunks)],
                 tools: vec![],
                 max_tokens: 2000,
                 temperature: 0.0,
@@ -148,14 +148,14 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
             let parent_context_file = args.parent_context_file.clone().unwrap_or_default();
 
             let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
+            if let Ok(addr) = std::env::var("OMNISOLO_AGENT_ADDRESS") {
+                envs.push(("OMNISOLO_AGENT_ADDRESS".to_string(), addr));
             }
 
             let output = self
                 .runner
                 .run(
-                    "ohc_builtin_agent",
+                    "omnisolo_builtin_agent",
                     &[
                         "--task",
                         &task,
@@ -248,14 +248,14 @@ When finished or if you need to report progress, write your final summary to {}.
             };
 
             let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
+            if let Ok(addr) = std::env::var("OMNISOLO_AGENT_ADDRESS") {
+                envs.push(("OMNISOLO_AGENT_ADDRESS".to_string(), addr));
             }
 
             tokio::spawn(async move {
                 let output = runner_clone
                     .run(
-                        "ohc_builtin_agent",
+                        "omnisolo_builtin_agent",
                         &["--task", &teammate_task, "--mailbox", &mailbox_dir_clone],
                         None,
                         envs,
@@ -358,14 +358,14 @@ Final Result: {}",
 
             // Spawn the subagent in the new worktree directory
             let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
+            if let Ok(addr) = std::env::var("OMNISOLO_AGENT_ADDRESS") {
+                envs.push(("OMNISOLO_AGENT_ADDRESS".to_string(), addr));
             }
 
             let output = self
                 .runner
                 .run(
-                    "ohc_builtin_agent",
+                    "omnisolo_builtin_agent",
                     &["--task", &task],
                     Some(std::path::Path::new(&worktree_dir)),
                     envs,
@@ -435,7 +435,7 @@ Final Result: {}",
 
 pub fn subagent_tool(
     runner: Arc<dyn crate::runner::CommandRunner>,
-    llm: Option<Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
+    llm: Option<Arc<dyn omnisolo_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
 ) -> Tool {
     Tool {
         name: "spawn_subagent".to_string(),
@@ -540,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_subagent_teammate_mode() {
-        temp_env::with_vars(vec![("OHC_AGENT_ADDRESS", Some("127.0.0.1:0"))], || {
+        temp_env::with_vars(vec![("OMNISOLO_AGENT_ADDRESS", Some("127.0.0.1:0"))], || {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
@@ -613,7 +613,7 @@ mod tests {
             "Preparing worktree",
             "",
         )));
-        // Mock successful ohc_builtin_agent run
+        // Mock successful omnisolo_builtin_agent run
         runner.push_response(Ok(crate::runner::mock::mock_output(
             0,
             "I completed the worktree task",
@@ -656,16 +656,16 @@ mod tests {
         struct BadLlmClient;
 
         #[async_trait::async_trait]
-        impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for BadLlmClient {
+        impl omnisolo_builtin_agent_core::expert_team::ExpertTeamLlmClient for BadLlmClient {
             async fn chat(
                 &self,
-                _req: ohc_builtin_agent_core::types::ChatRequest,
+                _req: omnisolo_builtin_agent_core::types::ChatRequest,
             ) -> Result<
-                ohc_builtin_agent_core::types::ChatResponse,
+                omnisolo_builtin_agent_core::types::ChatResponse,
                 Box<dyn std::error::Error + Send + Sync>,
             > {
-                let message = ohc_builtin_agent_core::types::Message {
-                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                let message = omnisolo_builtin_agent_core::types::Message {
+                    role: omnisolo_builtin_agent_core::types::Role::Assistant,
                     content: "a".repeat(9000), // always returns > 8000
                     tool_calls: vec![],
                     tool_results: vec![],
@@ -673,7 +673,7 @@ mod tests {
                     previous_response_id: None,
                 };
 
-                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                Ok(omnisolo_builtin_agent_core::types::ChatResponse {
                     message,
                     usage: Default::default(),
                     response_id: None,

@@ -19,7 +19,7 @@ test.describe('Fulfillment Hub - Offline Sync', () => {
     await page.goto('/login');
     await page.evaluate((tenant) => {
         localStorage.setItem('tenant_id', tenant);
-        localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+        localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     }, tenantId);
 
     // 3. Navigate to fulfillment hub
@@ -47,7 +47,7 @@ test.describe('Fulfillment Hub - Offline Sync', () => {
     // Verify it's in the IndexedDB offline queue
     const queueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');
@@ -69,7 +69,7 @@ test.describe('Fulfillment Hub - Offline Sync', () => {
     await page.waitForTimeout(5000);
     const updatedQueueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');

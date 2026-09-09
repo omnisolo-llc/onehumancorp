@@ -15,7 +15,7 @@ Currently, they must take the full payment from the customer, manually calculate
 *   **Stripe Connect:** Powerful developer API, but requires writing code. Too technical for Carlos or Priya to set up on their own.
 
 ### Opportunity
-OneHumanCorp (OHC) can completely eliminate this friction by offering an invisible, zero-config split payment engine. When Priya adds a consignment product or Carlos drafts an invoice, they simply tag the sub-contractor. The AI Agents automatically handle the ledger splits, issue localized receipts, and route funds directly to the partner's account, removing the primary business owner entirely from the payout burden.
+OmniSolo (OmniSolo) can completely eliminate this friction by offering an invisible, zero-config split payment engine. When Priya adds a consignment product or Carlos drafts an invoice, they simply tag the sub-contractor. The AI Agents automatically handle the ledger splits, issue localized receipts, and route funds directly to the partner's account, removing the primary business owner entirely from the payout burden.
 
 ## Design Doc
 
@@ -70,7 +70,7 @@ sequenceDiagram
 Your task is to build the "Invisible Multi-Party Split Payments & Consignment Ledger" capability.
 
 **Core User Journey (CUJ):**
-Priya opens the OHC mobile app, creates a new product listing, taps "Split this payment", and allocates 70% to a contact ("Sarah"). When a customer buys the product, the system automatically splits the funds at the ledger level, notifying both Priya and Sarah of their respective cuts, without Priya doing any manual math or transfers.
+Priya opens the OmniSolo mobile app, creates a new product listing, taps "Split this payment", and allocates 70% to a contact ("Sarah"). When a customer buys the product, the system automatically splits the funds at the ledger level, notifying both Priya and Sarah of their respective cuts, without Priya doing any manual math or transfers.
 
 **Acceptance Criteria:**
 *   **Mobile-First UX:** The Split Configurator must be a smooth, native-feeling bottom-sheet interaction on a 375px screen.

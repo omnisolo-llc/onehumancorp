@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 export default function ViralWaitlistGeneratorPage() {
   const router = useRouter();
@@ -23,16 +23,16 @@ export default function ViralWaitlistGeneratorPage() {
   }, []);
 
   const handleGenerate = () => {
-    let code = `<!-- OHC Waitlist Widget -->
-<div id="ohc-waitlist-widget"></div>
+    let code = `<!-- OmniSolo Waitlist Widget -->
+<div id="omnisolo-waitlist-widget"></div>
 <script>
   (function() {
-    const container = document.getElementById('ohc-waitlist-widget');
+    const container = document.getElementById('omnisolo-waitlist-widget');
     container.innerHTML = \`
       <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; text-align: center; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
         <h3 style="margin-top: 0; color: #111827; font-size: 20px; font-weight: bold;">${productName.replace(/"/g, '&quot;')}</h3>
         <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">${description.replace(/"/g, '&quot;')}</p>
-        <form action="https://ohc.app/api/v1/growth/waitlist" method="POST" style="display: flex; gap: 8px;">
+        <form action="https://cloud.omnisolo.co/api/v1/growth/waitlist" method="POST" style="display: flex; gap: 8px;">
           <input type="hidden" name="tenant" value="${tenant}" />
           <input type="email" name="email" required placeholder="Enter your email" style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;" />
           <button type="submit" style="background: #0066ff; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">Join</button>
@@ -43,7 +43,7 @@ export default function ViralWaitlistGeneratorPage() {
       code += `
     container.innerHTML += \`
         <div style="margin-top: 16px; font-size: 12px;">
-          <a href="https://ohc.app/onboarding?ref=${tenant}&source=waitlist_widget" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a>
+          <a href="https://cloud.omnisolo.co/onboarding?ref=${tenant}&source=waitlist_widget" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OmniSolo</a>
         </div>\`;`;
     }
 
@@ -141,7 +141,7 @@ export default function ViralWaitlistGeneratorPage() {
 
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 mt-4">
                      <div>
-                        <p className="font-medium text-gray-900 text-sm">Remove OHC Branding</p>
+                        <p className="font-medium text-gray-900 text-sm">Remove OmniSolo Branding</p>
                         <p className="text-xs text-gray-500">Requires Pro plan</p>
                      </div>
                      <div className="relative inline-flex items-center">
@@ -182,7 +182,7 @@ export default function ViralWaitlistGeneratorPage() {
 
                 {!hasPro && (
                     <div className="mt-6 text-center relative z-10" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <PoweredByOHC tenantId={tenant} />
+                        <PoweredByOmniSolo tenantId={tenant} />
                     </div>
                 )}
            </div>
@@ -254,7 +254,7 @@ export default function ViralWaitlistGeneratorPage() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Remove OHC branding and make the waitlist widget fully yours. Upgrade to Pro today!
+              Remove OmniSolo branding and make the waitlist widget fully yours. Upgrade to Pro today!
             </p>
 
             <button

@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-20
 
 ## 1. Overview
-The Extensible Skill Import Framework (Phase 3) evolves One Human Corp from a hardcoded "Software Company" into a dynamic system capable of modeling any business domain. It allows the CEO to upload "Skill Blueprints" (JSON/YAML) or describe a new business area in natural language to instantly generate specialized agent roles, organizational hierarchies, and MCP tool bindings.
+The Extensible Skill Import Framework (Phase 3) evolves OmniSolo from a hardcoded "Software Company" into a dynamic system capable of modeling any business domain. It allows the CEO to upload "Skill Blueprints" (JSON/YAML) or describe a new business area in natural language to instantly generate specialized agent roles, organizational hierarchies, and MCP tool bindings.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -23,7 +23,7 @@ The Extensible Skill Import Framework (Phase 3) evolves One Human Corp from a ha
 ## 3. Implementation Details
 
 ### 3.1 Skill Blueprint Schema
-Users define domains using a strict JSON/YAML schema ingested by the `ohc-operator`:
+Users define domains using a strict JSON/YAML schema ingested by the `omnisolo-operator`:
 ```yaml
 domain: "Legal Consulting"
 roles:
@@ -38,7 +38,7 @@ roles:
 ```
 
 ### 3.2 Dynamic Organization Generation
-The OHC Hub processes the `SkillBlueprint` and automatically instantiates the requisite `RoleProfile` Custom Resource Definitions (CRDs). The `ohc-operator` reconciliation loop watches these CRDs and spins up specialized K8s pods tailored to the new roles, complete with their designated SPIFFE SVIDs for tool access.
+The OmniSolo Hub processes the `SkillBlueprint` and automatically instantiates the requisite `RoleProfile` Custom Resource Definitions (CRDs). The `omnisolo-operator` reconciliation loop watches these CRDs and spins up specialized K8s pods tailored to the new roles, complete with their designated SPIFFE SVIDs for tool access.
 
 ### 3.3 Dynamic Scaling ("Hire/Fire" UI)
 The CEO Dashboard is updated with a real-time scaling panel. As demand fluctuates, the CEO can adjust the replica count of any dynamically generated role (e.g., scale "Associate Agents" from 2 to 5).

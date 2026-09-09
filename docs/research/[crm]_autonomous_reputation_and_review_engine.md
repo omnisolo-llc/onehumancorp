@@ -10,7 +10,7 @@ Small business owners (like Carlos the handyman or Maya the baker) know that pub
 - **Competitive Audit**:
   - **Shopify / Wix**: Offer basic review collection but mostly for on-site product reviews. They lack native, proactive syndication to Google Local or Yelp.
   - **Podium / BirdEye**: Powerful reputation management tools, but they are expensive, standalone SaaS platforms that add significant "Cost Creep" and require manual context switching for the business owner.
-  - **OHC Advantage**: By integrating directly into the KAIROS Teammate Mesh, OHC can leverage the exact moment a service is completed or a product is delivered to trigger an autonomous review request. Furthermore, AI agents can draft context-aware replies to incoming reviews by accessing the `Customer360` memory, making the process effortless.
+  - **OmniSolo Advantage**: By integrating directly into the KAIROS Teammate Mesh, OmniSolo can leverage the exact moment a service is completed or a product is delivered to trigger an autonomous review request. Furthermore, AI agents can draft context-aware replies to incoming reviews by accessing the `Customer360` memory, making the process effortless.
 - **Key Findings**:
   - 92% of consumers read online reviews before choosing a local business.
   - Businesses that reply to reviews see a 12% increase in review volume and higher search rankings.
@@ -32,7 +32,7 @@ erDiagram
         uuid id
         int rating
         string content
-        string platform "Google, Yelp, Facebook, OHC"
+        string platform "Google, Yelp, Facebook, OmniSolo"
         string sentiment "AI-inferred (Positive, Neutral, Negative)"
         timestamp published_at
     }
@@ -50,7 +50,7 @@ The engine coordinates between observing the interaction timeline and external p
 
 ```mermaid
 sequenceDiagram
-    participant Event as OHC Event Mesh
+    participant Event as OmniSolo Event Mesh
     participant Engine as Reputation Engine
     participant Publicist as The Publicist (Agent)
     participant Platform as Google/Yelp API
@@ -72,14 +72,14 @@ sequenceDiagram
 3. **Rate Limiting & Safety**: The system must enforce strict rate limits on review requests (e.g., no more than one request per customer per 30 days) to prevent spamming and adhere to platform compliance.
 
 ### Mobile-First UX & Wireframes (375px First)
-Every screen and interaction adheres to the OHC Visual Mandate: Translucent Glass materials, clean modular dashboard cards, and zero jargon.
+Every screen and interaction adheres to the OmniSolo Visual Mandate: Translucent Glass materials, clean modular dashboard cards, and zero jargon.
 
 1. **Dashboard: Reputation Pulse Card**
    - **Visual**: A translucent glass card displaying the average rating (e.g., "⭐️ 4.8") and "2 Replies Needed".
    - **Interaction**: Tapping opens the Unified Review Inbox.
 2. **The "1-Tap Review Reply" Flow**
    - **Notification**: "The Publicist drafted a reply to John's 5-star Google review 🌟"
-   - **Approval Screen**: A 375px wide bottom sheet with a blurred background. Displays the original review, the drafted context-aware reply, and a large "Approve & Post" button in OHC Primary Green.
+   - **Approval Screen**: A 375px wide bottom sheet with a blurred background. Displays the original review, the drafted context-aware reply, and a large "Approve & Post" button in OmniSolo Primary Green.
 3. **Review Request Automation Settings**
    - **Layout**: Simple toggle switches hidden behind an "Advanced Settings" menu. E.g., "Automatically ask for a review 1 day after order delivery."
 

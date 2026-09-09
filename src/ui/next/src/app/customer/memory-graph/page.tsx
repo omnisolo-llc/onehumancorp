@@ -2,7 +2,7 @@
 import { Suspense } from "react";
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PoweredByOHC } from '../../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
 import { FaInstagram, FaRegEnvelope, FaStore, FaCalendarCheck, FaGlobe, FaRobot } from 'react-icons/fa';
 
 function CustomerMemoryGraphContent() {
@@ -115,7 +115,7 @@ function CustomerMemoryGraphContent() {
                   </div>
                   <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 shadow-sm rounded-xl">
                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-sm">{interaction.channel || (interaction.type === 'agent_reply' ? 'OHC Agent' : 'Customer')}</span>
+                        <span className="font-bold text-sm">{interaction.channel || (interaction.type === 'agent_reply' ? 'OmniSolo Agent' : 'Customer')}</span>
                         <time className="text-xs text-gray-500">{interaction.date || (interaction.created_at ? new Date(interaction.created_at).toLocaleString() : '')}</time>
                      </div>
                      <p className="text-sm text-gray-600 dark:text-gray-300">{interaction.description || interaction.raw_content}</p>
@@ -133,7 +133,7 @@ function CustomerMemoryGraphContent() {
 
       </div>
       <div className="fixed bottom-4 left-0 right-0 flex justify-center z-50">
-          <PoweredByOHC tenantId={tenantId} />
+          <PoweredByOmniSolo tenantId={tenantId} />
       </div>
     </div>
   );

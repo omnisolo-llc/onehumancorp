@@ -24,7 +24,7 @@ test.describe('Global Help Widget', () => {
     await walkBtn.click();
 
     // The walkthrough overlay should appear
-    const overlay = page.locator('.ohc-walkthrough-overlay');
+    const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
   });
 

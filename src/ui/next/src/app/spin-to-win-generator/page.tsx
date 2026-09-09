@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 export default function SpinToWinGeneratorPage() {
   const router = useRouter();
@@ -26,10 +26,10 @@ export default function SpinToWinGeneratorPage() {
   const handleGenerate = () => {
     const prizes = discounts.split(',').map(d => d.trim()).filter(d => d);
     const prizeListStr = encodeURIComponent(JSON.stringify(prizes));
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
     const iframeSrc = `${origin}/api/v1/growth/spin-to-win/embed?campaign=${encodeURIComponent(campaignName)}&reward=${encodeURIComponent(reward)}&tenant=${encodeURIComponent(tenant)}`;
 
-    let code = `<!-- OHC Spin to Win Widget -->
+    let code = `<!-- OmniSolo Spin to Win Widget -->
 <iframe src="${iframeSrc}" style="border: none; width: 100%; max-width: 400px; height: 350px;"></iframe>`;
 
     setEmbedCode(code);
@@ -53,7 +53,7 @@ export default function SpinToWinGeneratorPage() {
   };
 
   const claimTrialExtension = () => {
-    const text = `I'm using an OHC Spin to Win widget. Learn more: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OHC`;
+    const text = `I'm using an OmniSolo Spin to Win widget. Learn more: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OmniSolo`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
     setShowSoftPaywall(false);
   };
@@ -110,7 +110,7 @@ export default function SpinToWinGeneratorPage() {
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 mt-4">
                         <div>
-                            <p className="text-sm font-semibold text-gray-900">Remove OHC Branding</p>
+                            <p className="text-sm font-semibold text-gray-900">Remove OmniSolo Branding</p>
                             <p className="text-xs text-gray-500">Requires Pro subscription</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -144,7 +144,7 @@ export default function SpinToWinGeneratorPage() {
 
                 {!hasPro && (
                     <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <PoweredByOHC tenantId={tenant} />
+                        <PoweredByOmniSolo tenantId={tenant} />
                     </div>
                 )}
             </div>
@@ -210,7 +210,7 @@ export default function SpinToWinGeneratorPage() {
             <div className="text-5xl mb-4">✨</div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Removing OHC branding is a Pro feature. Upgrade to our Pro plan to customize your widgets.
+              Removing OmniSolo branding is a Pro feature. Upgrade to our Pro plan to customize your widgets.
             </p>
 
             <button

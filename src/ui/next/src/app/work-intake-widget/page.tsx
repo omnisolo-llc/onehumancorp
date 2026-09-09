@@ -18,12 +18,12 @@ export default function WorkIntakeWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
-    document.title = "Embed Work Intake | OHC";
+    document.title = "Embed Work Intake | OmniSolo OneHumanCorp";
   }, []);
 
   const encodedTenant = encodeURIComponent(tenant);
-  const embedUrl = `https://ohc.app/api/v1/growth/work-intake/embed?tenant=${encodedTenant}&theme=${theme}&title=${encodeURIComponent(title)}`;
-  const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/work-intake/embed?tenant=${encodedTenant}&theme=${theme}&title=${encodeURIComponent(title)}`;
+  const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -116,7 +116,7 @@ export default function WorkIntakeWidgetPage() {
                           }}
                             className="w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
                         />
-                        <span className="text-sm text-gray-700">Remove "Powered by OHC" branding</span>
+                        <span className="text-sm text-gray-700">Remove "Powered by OmniSolo" branding</span>
                     </label>
                     <p className="text-xs text-gray-500 mt-1 ml-6">Requires Pro plan or higher.</p>
                 </div>
@@ -155,7 +155,7 @@ export default function WorkIntakeWidgetPage() {
 
                     <div className="text-left flex-1 max-w-sm hidden lg:block">
                         <h3 className="text-3xl font-bold mb-4 text-gray-800">Ready to start?</h3>
-                        <p className="text-gray-600 mb-6">Drop your information in the form and we'll get right back to you. This form connects directly to your OHC workspace.</p>
+                        <p className="text-gray-600 mb-6">Drop your information in the form and we'll get right back to you. This form connects directly to your OmniSolo OneHumanCorp workspace.</p>
                         <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
                         <div className="h-4 w-48 bg-gray-200 rounded"></div>
                     </div>
@@ -172,7 +172,7 @@ export default function WorkIntakeWidgetPage() {
                         />
                         {!removeBranding && (
                             <div style={{ fontFamily: 'sans-serif', textAlign: 'center', fontSize: '12px', marginTop: '8px' }}>
-                                <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OHC</a>
+                                <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OmniSolo</a>
                             </div>
                         )}
                     </div>
@@ -201,7 +201,7 @@ export default function WorkIntakeWidgetPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
 
             <button
@@ -270,7 +270,7 @@ export default function WorkIntakeWidgetPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
 

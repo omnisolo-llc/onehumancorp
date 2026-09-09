@@ -6,7 +6,7 @@ The onboarding friction for most ecommerce platforms is too high. Even a 10-minu
 ## Research Report
 - **Durable Benchmark:** Claims "Get online in 30 seconds."
 - **Wix Harmony:** Uses "vibe coding" to generate designs instantly from a single prompt.
-- **OHC Current State:** The SetupWizard is detailed but requires multiple steps.
+- **OmniSolo Current State:** The SetupWizard is detailed but requires multiple steps.
 - **Target:** Reduce the "Time to Live" for the most basic storefront to under 60 seconds by using AI to guess and fill 80% of the required fields.
 
 ## Instant Build Flow

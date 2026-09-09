@@ -22,8 +22,8 @@ export default function ShareAndSaveWidgetPage() {
   }, []);
 
   const handleShareOnTwitter = () => {
-    const text = "I'm checking out this amazing store on OHC! Discover more at:";
-    const url = `https://ohc.app/store/${tenantId}`;
+    const text = "I'm checking out this amazing store on OmniSolo OneHumanCorp! Discover more at:";
+    const url = `https://cloud.omnisolo.co/store/${tenantId}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
 
     setShareOpened(true);
@@ -54,7 +54,7 @@ export default function ShareAndSaveWidgetPage() {
       </div>
 
       {/* Widget Container */}
-      <div className="ohc-growth-card w-full max-w-md p-8 rounded-[24px] backdrop-blur-[30px] saturate-[210%] bg-white/60 shadow-xl border border-white/50 dark:bg-black/40 dark:border-white/10 flex flex-col items-center text-center">
+      <div className="omnisolo-growth-card w-full max-w-md p-8 rounded-[24px] backdrop-blur-[30px] saturate-[210%] bg-white/60 shadow-xl border border-white/50 dark:bg-black/40 dark:border-white/10 flex flex-col items-center text-center">
 
         {/* Header Icon */}
         <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-lg shadow-indigo-500/30">
@@ -96,14 +96,14 @@ export default function ShareAndSaveWidgetPage() {
               onChange={handleBrandingToggle}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
-            Remove "Powered by OHC" Badge
+            Remove "Powered by OmniSolo" Badge
             {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ml-1">PRO</span>}
           </label>
 
           {!removeBranding && (
             <div className="text-center">
               <a href={`/onboarding?ref=${tenantId}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                ⚡ Powered by OHC
+                ⚡ Powered by OmniSolo
               </a>
             </div>
           )}
@@ -129,7 +129,7 @@ export default function ShareAndSaveWidgetPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Share and Save Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Share and Save Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

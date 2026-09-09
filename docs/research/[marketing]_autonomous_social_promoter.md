@@ -9,7 +9,7 @@ Marketing Paralysis: The "Blank Page" problem extends beyond initial setup. Smal
 ## Research Report
 - **Competitor Landscape**: Platforms like Shopify and Wix require the user to manually craft social media posts or use separate, reactive AI tools to generate copy after the fact.
 - **User Needs**: Users need marketing to happen automatically as a byproduct of their regular business operations (like adding a new cake to the menu).
-- **AI Differentiation**: OHC shifts from reactive assistance to autonomous, background infrastructure. The Autonomous Social Promoter acts as a dedicated marketing employee, instantly leveraging new business events into promotional content.
+- **AI Differentiation**: OmniSolo shifts from reactive assistance to autonomous, background infrastructure. The Autonomous Social Promoter acts as a dedicated marketing employee, instantly leveraging new business events into promotional content.
 
 ## Design Doc
 ### High-Level Architecture

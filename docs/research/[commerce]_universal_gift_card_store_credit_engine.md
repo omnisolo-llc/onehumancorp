@@ -4,7 +4,7 @@
 Build Universal Omnichannel Gift Card & Store Credit Engine
 
 ## Problem Statement
-Small business owners like Priya (boutique) and Maya (baker) rely heavily on gift cards for holiday sales and customer retention. Currently, OHC lacks a unified system for selling, issuing, and redeeming digital gift cards or managing store credit. When a customer wants a refund for an in-store purchase or wants to buy a gift card for a friend online, the business owner must use external, disconnected tools or write it down on paper. This breaks the multi-channel experience and requires manual reconciliation, leading to lost revenue and bad customer experiences.
+Small business owners like Priya (boutique) and Maya (baker) rely heavily on gift cards for holiday sales and customer retention. Currently, OmniSolo lacks a unified system for selling, issuing, and redeeming digital gift cards or managing store credit. When a customer wants a refund for an in-store purchase or wants to buy a gift card for a friend online, the business owner must use external, disconnected tools or write it down on paper. This breaks the multi-channel experience and requires manual reconciliation, leading to lost revenue and bad customer experiences.
 
 ## Research Report
 **Market Analysis & Competitor Benchmarks:**
@@ -12,8 +12,8 @@ Small business owners like Priya (boutique) and Maya (baker) rely heavily on gif
 - **Square:** Dominates in-person gift cards. Seamless integration with their POS, but less flexible for cross-platform online/offline blending without complex API work.
 - **Wix/Squarespace:** Gift card features exist but often feel bolted on, with separate flows for physical vs. digital.
 
-**OHC Opportunity:**
-By building a native, multi-tenant Ledger for Gift Cards and Store Credit, OHC can instantly enable business owners to offer Apple Wallet/Google Wallet compatible digital gift cards. AI agents can autonomously handle the entire lifecycle: sending the gift card via SMS/email, tracking usage, and issuing automatic store credit for returns via the omnichannel inbox, requiring zero manual configuration by the business owner.
+**OmniSolo Opportunity:**
+By building a native, multi-tenant Ledger for Gift Cards and Store Credit, OmniSolo can instantly enable business owners to offer Apple Wallet/Google Wallet compatible digital gift cards. AI agents can autonomously handle the entire lifecycle: sending the gift card via SMS/email, tracking usage, and issuing automatic store credit for returns via the omnichannel inbox, requiring zero manual configuration by the business owner.
 
 ## Design Doc
 
@@ -70,14 +70,14 @@ sequenceDiagram
 ```
 
 ### UI wireframes or screen flow description
-- **Dashboard & Creation:** Priya opens the OHC app and taps the "Gift Cards" card on the modular dashboard. A clean, translucent glass-styled screen shows active gift cards and a prominent "+ Issue New" button. The design uses standard OneHumanCorp design tokens (rounded corners, soft drop shadows, UniFi modular card layouts).
+- **Dashboard & Creation:** Priya opens the OmniSolo app and taps the "Gift Cards" card on the modular dashboard. A clean, translucent glass-styled screen shows active gift cards and a prominent "+ Issue New" button. The design uses standard OmniSolo design tokens (rounded corners, soft drop shadows, UniFi modular card layouts).
 - **Refund to Credit:** During a return flow on the app, the UI presents a massive, easily tappable "Issue Store Credit" button alongside "Refund to Original Payment". No complex dropdowns.
 - **Customer View:** The gift card receipt sent via SMS/Email opens a mobile-optimized webpage with a single "Add to Apple Wallet" / "Add to Google Wallet" button. No complex logins needed.
 
 ### Mobile UX flow
 - **375px First Focus:** All interfaces prioritize a 375px mobile viewport.
 - **Grandmother Test:** If Fatima the food cart owner or Maya the baker can't figure out how to issue a gift card in 30 seconds, the flow fails.
-- **Interactions:** Tap "+ Issue New", enter amount (e.g. $50), enter customer phone number. The OHC Assistant handles the rest in the background. The app instantly confirms with a large green checkmark.
+- **Interactions:** Tap "+ Issue New", enter amount (e.g. $50), enter customer phone number. The OmniSolo Assistant handles the rest in the background. The app instantly confirms with a large green checkmark.
 
 ### AI agent integration points
 - **Finance Department:** Monitors the append-only ledger for anomalies and reconciles gift card liabilities (unredeemed balances) for accounting without owner intervention.

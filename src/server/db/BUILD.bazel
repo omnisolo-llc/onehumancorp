@@ -1,5 +1,5 @@
 exports_files(
-    ["sql_middleware.rs"],
+    ["harness_middleware_schema.rs", "sql_middleware.rs"],
     visibility = ["//visibility:public"],
 )
 

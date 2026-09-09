@@ -4,12 +4,12 @@
 Small business owners like Priya (boutique owner) and Carlos (handyman) execute operations that require complex, long-running, or delayed background tasks—such as bulk-syncing 1,000 product images to an Instagram Shop, or sending an automated follow-up SMS to a client 48 hours after a quote is sent. Current monolithic architectures or synchronous API calls cause the mobile app to freeze, drain battery, or lose tasks completely if the user's phone loses connection (e.g., Carlos driving through a dead zone). They need an invisible, highly resilient background operations engine that guarantees no task, message, or sync is ever dropped, regardless of their device's state.
 
 ## Research Report
-*   **Current Architecture Limits:** OHC's current synchronous event handling or basic cron jobs lack robust retry mechanisms, dead-letter queues, and multi-tenant isolation for high-volume background tasks. If a third-party API (like Instagram or an email provider) rate-limits us, the task might silently fail, leading to unsent quotes or out-of-sync inventory.
+*   **Current Architecture Limits:** OmniSolo's current synchronous event handling or basic cron jobs lack robust retry mechanisms, dead-letter queues, and multi-tenant isolation for high-volume background tasks. If a third-party API (like Instagram or an email provider) rate-limits us, the task might silently fail, leading to unsent quotes or out-of-sync inventory.
 *   **Competitor Analysis:**
     *   *Shopify:* Utilizes robust background job processing (Sidekiq/Kafka) but exposes too much complexity to developers when building apps. The native merchant experience doesn't autonomously resolve failed background syncs without manual intervention.
     *   *Wix:* Often experiences "silent failures" in app integrations where a user is unaware an inventory sync failed until a customer complains.
     *   *Stripe:* Sets the gold standard with idempotent webhooks and guaranteed delivery, but this is tailored for developers, not a non-technical SMB owner's operational tasks.
-*   **Discovery:** OHC requires a high-throughput, distributed background job queue and orchestration engine designed specifically for AI Agents. When an Agent schedules a task (like "follow up in 2 days" or "sync catalog"), the engine must guarantee execution, handle exponential backoffs autonomously, and only alert the business owner if a human decision is strictly required.
+*   **Discovery:** OmniSolo requires a high-throughput, distributed background job queue and orchestration engine designed specifically for AI Agents. When an Agent schedules a task (like "follow up in 2 days" or "sync catalog"), the engine must guarantee execution, handle exponential backoffs autonomously, and only alert the business owner if a human decision is strictly required.
 
 ## Design Doc
 
@@ -27,7 +27,7 @@ erDiagram
 ```
 
 ### UI Wireframes & Mobile UX Flow (375px)
-*   **Customer/Merchant View (OHC Mobile App - 375px):**
+*   **Customer/Merchant View (OmniSolo Mobile App - 375px):**
     *   **Action:** Priya uploads 50 new dress photos. She instantly sees a success checkmark and can close the app.
     *   **Operations Center Card:** A clean, Unifi-style modular card on the dashboard titled "Background Tasks" or "Agent Activity". It shows a subtle progress ring: "AI is optimizing 50 images and syncing to Instagram Shop."
     *   **Error Resolution Flow (Grandmother Test):** If Instagram's API goes down, the app does NOT show a JSON error or "HTTP 500". Instead, a Translucent Glass notification appears: "Instagram is temporarily unavailable. Your Operations Agent will keep trying in the background and notify you when it's done." No action required from Priya.

@@ -41,8 +41,8 @@ impl SubscriptionHealthJob {
                             transaction.commit().await
                         }
                         .await;
-                        if let Err(error) = result {
-                            tracing::warn!("subscription health job failed: {}", error);
+                        if result.is_err() {
+                            tracing::warn!("subscription health job failed");
                         }
                     }
                     crate::db::DbStore::Sqlite(sqlite_pool) => {

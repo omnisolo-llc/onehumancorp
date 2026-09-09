@@ -1,8 +1,8 @@
-use ohc_builtin_agent::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent::llm::LlmClient;
-use ohc_builtin_agent::tools::{Tool, ToolExecutor};
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Role, ToolError, Usage};
-use ohc_builtin_agent_core::request_profile::{RequestProfile, profile_request};
+use omnisolo_builtin_agent::agent::{Agent, AgentRunConfig};
+use omnisolo_builtin_agent::llm::LlmClient;
+use omnisolo_builtin_agent::tools::{Tool, ToolExecutor};
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Role, ToolError, Usage};
+use omnisolo_builtin_agent_core::request_profile::{RequestProfile, profile_request};
 use serde::Serialize;
 use std::sync::{
     Arc, Mutex,
@@ -216,7 +216,7 @@ async fn main() {
 #[cfg(test)]
 mod tests {
     use super::{MEASURED_TURNS, WARMUP_TURNS, percentile, run_benchmark, validate_request};
-    use ohc_builtin_agent::types::{ChatRequest, Message, ToolDefinition};
+    use omnisolo_builtin_agent::types::{ChatRequest, Message, ToolDefinition};
 
     fn request_with_messages(messages: Vec<Message>) -> ChatRequest {
         ChatRequest {

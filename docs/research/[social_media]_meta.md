@@ -5,14 +5,14 @@
 Small business owners like Maya (Home Baker) and Priya (Boutique) are overwhelmed by repetitive direct messages on Instagram and Facebook (e.g., "Do you do vegan?", "Is this in stock?"). Replying manually takes away from their actual work, and missing DMs means losing sales. They need an automated way to handle these inquiries without touching any code or configuring complex webhook flows.
 **Research Report**:
 - **Tool**: Meta Graph API (Instagram Direct & Messenger) or a managed wrapper like ManyChat.
-- **Evaluation**: The Meta API allows full programmatic access to read and reply to DMs. By integrating this, OHC's "Customer Success" AI agent can draft and send replies based on the business's existing catalog, FAQs, and business hours.
+- **Evaluation**: The Meta API allows full programmatic access to read and reply to DMs. By integrating this, OmniSolo's "Customer Success" AI agent can draft and send replies based on the business's existing catalog, FAQs, and business hours.
 - **Ease of Use**: Very easy for the user. They simply click "Log in with Facebook/Instagram" to grant permissions. No API keys to manage.
 - **Pricing**: Free to use the Meta API, though WhatsApp integration has per-conversation pricing.
-- **Cloud vs. Standalone**: Works perfectly in Cloud mode (OHC manages the Meta App and Webhooks). In Standalone mode, it would be complex as the user would need to create their own Meta App.
+- **Cloud vs. Standalone**: Works perfectly in Cloud mode (OmniSolo manages the Meta App and Webhooks). In Standalone mode, it would be complex as the user would need to create their own Meta App.
 **Design Doc**:
 - The user navigates to a "Social Inbox" tab and clicks "Connect Instagram".
-- Uses OAuth to grant OHC permission to read/write messages.
-- OHC registers a centralized webhook for the tenant.
+- Uses OAuth to grant OmniSolo permission to read/write messages.
+- OmniSolo registers a centralized webhook for the tenant.
 - Incoming messages are routed to the AI Agent (Customer Success).
 - The agent formulates a response based on the tenant's context (products, availability) and sends it back via the Meta API.
 **Implementation Prompt**:

@@ -6,11 +6,11 @@
 
 ## Executive Summary
 
-A comprehensive evaluation of Replit Agent, Claude Code, and OpenClaw highlights a missing link in their Local-Cloud file operations. OHC-HA's Hybrid FS MCP protocol bridges this by treating file paths universally.
+A comprehensive evaluation of Replit Agent, Claude Code, and OpenClaw highlights a missing link in their Local-Cloud file operations. OmniSolo-HA's Hybrid FS MCP protocol bridges this by treating file paths universally.
 
 ## Comparative Market Analysis
 
-| Feature Area | Claude Code | OpenClaw | Replit Agent | **OHC Vision (OHC-HA)** |
+| Feature Area | Claude Code | OpenClaw | Replit Agent | **OmniSolo Vision (OmniSolo-HA)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **FS Context** | Local only | Cloud only | Cloud only | **Universal (Local+Cloud Sync)** |
 | **Offline State** | Fails entirely | Fails | Ephemeral loss | **Standalone Storage** |

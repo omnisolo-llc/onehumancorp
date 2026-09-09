@@ -9,7 +9,7 @@
 ## Research Report
 Based on the Top 10 SMB User Pain Points, users abandon platforms like Shopify due to the technical jargon. Durable offers a 30-second site generation, but it lacks operational depth. We can provide a conversational setup flow that synthesizes website structure, copy, and product catalogs in under a minute without jargon.
 
-Users want to skip the "building" phase and go straight to "selling". OHC uses AI as a "Department" that builds the store for you to approve, not just a "Copilot".
+Users want to skip the "building" phase and go straight to "selling". OmniSolo uses AI as a "Department" that builds the store for you to approve, not just a "Copilot".
 
 ## Design Doc
 ### High-Level Architecture

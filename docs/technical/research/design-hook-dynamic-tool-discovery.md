@@ -5,7 +5,7 @@
 ## Executive Summary
 Agents in existing AI frameworks (like AutoGen and CrewAI) are tightly coupled to a static list of tools injected at initialization. When a novel problem arises that requires a new tool, the agent fails out, creating a high-friction loop.
 
-This design proposes a native "Just-In-Time" tool synthesis workflow via One Human Corp's K8s/LangGraph architecture, leveraging the Model Context Protocol (MCP) Gateway and Zero-Trust SPIFFE/SPIRE authentication.
+This design proposes a native "Just-In-Time" tool synthesis workflow via OmniSolo's K8s/LangGraph architecture, leveraging the Model Context Protocol (MCP) Gateway and Zero-Trust SPIFFE/SPIRE authentication.
 
 ## The Architecture
 We will migrate our static Switchboard gateway to a dynamically queryable registry pattern.

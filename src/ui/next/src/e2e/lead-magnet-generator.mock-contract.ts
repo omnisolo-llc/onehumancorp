@@ -39,7 +39,7 @@ test.describe('Lead Magnet Generator Growth Loop', () => {
     await removeBrandingCheckbox.check();
 
     // 3. Soft paywall appears
-    const upgradeHeader = page.locator('h3', { hasText: 'Upgrade to OHC Pro' });
+    const upgradeHeader = page.locator('h3', { hasText: 'Upgrade to OmniSolo Pro' });
     await expect(upgradeHeader).toBeVisible();
 
     // 4. Click Keep Branding

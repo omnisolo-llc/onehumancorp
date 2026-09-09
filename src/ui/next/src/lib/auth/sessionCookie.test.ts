@@ -12,7 +12,7 @@ const production: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
   backendOrigin: "https://api.example.com",
   localDev: false,
-  cookieName: "__Host-ohc_session",
+  cookieName: "__Host-omnisolo_session",
   secureCookie: true,
   sessionAudience: "https://app.example.com",
 };
@@ -20,7 +20,7 @@ const production: AuthRuntimeConfig = {
 describe("web session cookie policy", () => {
   it("sets a host-only HttpOnly production cookie bounded by backend expiry", () => {
     expect(cookieForSession(production, "ciphertext", 1_000, 1_500)).toEqual({
-      name: "__Host-ohc_session",
+      name: "__Host-omnisolo_session",
       value: "ciphertext",
       options: {
         httpOnly: true,
@@ -43,7 +43,7 @@ describe("web session cookie policy", () => {
 
   it("deletes with the same security scope", () => {
     expect(cookieDeletion(production)).toEqual({
-      name: "__Host-ohc_session",
+      name: "__Host-omnisolo_session",
       value: "",
       options: {
         httpOnly: true,
@@ -58,32 +58,32 @@ describe("web session cookie policy", () => {
 
   it("serializes issuance and deletion without a Domain attribute", () => {
     expect(serializeSessionCookie(cookieForSession(production, "ciphertext", 1_000, 1_500))).toBe(
-      "__Host-ohc_session=ciphertext; Path=/; Max-Age=500; HttpOnly; Secure; SameSite=Lax",
+      "__Host-omnisolo_session=ciphertext; Path=/; Max-Age=500; HttpOnly; Secure; SameSite=Lax",
     );
     expect(serializeSessionCookie(cookieDeletion(production))).toBe(
-      "__Host-ohc_session=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax",
+      "__Host-omnisolo_session=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax",
     );
   });
 
   it("binds encryption to the deployment origin and cookie purpose", () => {
     expect(sessionCodecContext(production)).toEqual({
       audience: "https://app.example.com",
-      purpose: "__Host-ohc_session",
+      purpose: "__Host-omnisolo_session",
     });
   });
 
   it("parses exactly one raw bounded session cookie", () => {
-    expect(parseSessionCookieHeader("a=1; __Host-ohc_session=one.two; b=2", production)).toEqual({
+    expect(parseSessionCookieHeader("a=1; __Host-omnisolo_session=one.two; b=2", production)).toEqual({
       value: "one.two",
       invalid: false,
     });
     expect(parseSessionCookieHeader(null, production)).toEqual({ value: null, invalid: false });
     expect(
       parseSessionCookieHeader(
-        "__Host-ohc_session=one; __Host-ohc_session=two",
+        "__Host-omnisolo_session=one; __Host-omnisolo_session=two",
         production,
       ),
     ).toEqual({ value: null, invalid: true });
-    expect(parseSessionCookieHeader("__Host-ohc_session=bad value", production).invalid).toBe(true);
+    expect(parseSessionCookieHeader("__Host-omnisolo_session=bad value", production).invalid).toBe(true);
   });
 });

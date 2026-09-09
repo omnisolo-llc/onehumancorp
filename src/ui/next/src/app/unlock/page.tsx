@@ -15,7 +15,7 @@ function UnlockContent() {
   const isUnlocked = false;
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
-  const encodedMessage = encodeURIComponent(`${shareMessage} https://ohc.app/unlock?tenant=${tenant}&title=${encodeURIComponent(campaignTitle)}&reward=${encodeURIComponent(reward)}&code=${encodeURIComponent(hiddenCode)}&msg=${encodeURIComponent(shareMessage)}`);
+  const encodedMessage = encodeURIComponent(`${shareMessage} https://cloud.omnisolo.co/unlock?tenant=${tenant}&title=${encodeURIComponent(campaignTitle)}&reward=${encodeURIComponent(reward)}&code=${encodeURIComponent(hiddenCode)}&msg=${encodeURIComponent(shareMessage)}`);
 
   const handleShareX = () => {
     window.open(`https://twitter.com/intent/tweet?text=${encodedMessage}`, '_blank', 'width=550,height=420');
@@ -98,13 +98,13 @@ function UnlockContent() {
 
             <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
                 <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide hover:underline opacity-70 hover:opacity-100 transition-opacity" style={{ color: '#6b7280' }}>
-                    ⚡ Powered by OHC
+                    ⚡ Powered by OmniSolo
                 </a>
             </div>
         </div>
 
         <style dangerouslySetInnerHTML={{__html: `
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
             .font-inter { font-family: 'Inter', sans-serif; }
             .font-outfit { font-family: 'Outfit', sans-serif; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

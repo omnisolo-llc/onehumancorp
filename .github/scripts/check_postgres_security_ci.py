@@ -19,6 +19,7 @@ class ContractError(AssertionError):
 
 EXPECTED_REQUIRED_RESULT_LINES = (
     "set -euo pipefail",
+    'echo "dependency-audit: ${DEPENDENCY_AUDIT_RESULT}"',
     'echo "check-changes: ${CHECK_CHANGES_RESULT}"',
     'echo "bazel-build: ${BAZEL_BUILD_RESULT}"',
     'echo "bazel-test: ${BAZEL_TEST_RESULT}"',
@@ -49,12 +50,14 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     'allow_success_or_skipped "bazel-build" "$BAZEL_BUILD_RESULT"',
     "fi",
     'if [[ "$MARKDOWN_ONLY" == "true" ]]; then',
+    'allow_success_or_skipped "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"',
     'allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"',
     'allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
     'allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"',
     'allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"',
     'allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"',
     "else",
+    'require_success "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"',
     'require_success "bazel-test" "$BAZEL_TEST_RESULT"',
     'require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
     'require_success "kind-e2e" "$KIND_E2E_RESULT"',
@@ -77,8 +80,8 @@ EXPECTED_POSTGRES_TOOLCHAIN_LINES = (
     "sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
 )
 
-ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
-APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
+ADMIN_PSQL_HEREDOC = 'psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
+APP_PSQL_HEREDOC = 'psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 EXPECTED_WORKFLOW_DEFAULTS = ("defaults:", "  run:", "    shell: bash")
 EXPECTED_WORKFLOW_ENV = ("env:", '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"')
 EXPECTED_POSTGRES_JOB_KEYS = (
@@ -95,14 +98,15 @@ EXPECTED_REQUIRED_JOB_KEYS = ("name", "needs", "if", "runs-on", "timeout-minutes
 EXPECTED_CHANGES_JOB_KEYS = ("name", "runs-on", "timeout-minutes", "outputs", "steps")
 EXPECTED_POSTGRES_ENV = (
     "    env:",
-    '      OHC_REQUIRE_POSTGRES_TESTS: "1"',
-    "      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security",
-    "      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
+    '      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"',
+    "      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security",
+    "      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
 )
 EXPECTED_REQUIRED_ENV = (
     "        env:",
     "          EVENT_NAME: ${{ github.event_name }}",
     "          MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}",
+    "          DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}",
     "          CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}",
     "          BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}",
     "          BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}",
@@ -391,9 +395,9 @@ def check_workflow(path: Path) -> None:
         ("    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}", "markdown-only skip policy"),
         ("    services:", "PostgreSQL service"),
         ("        image: pgvector/pgvector:pg16", "pgvector image"),
-        ('      OHC_REQUIRE_POSTGRES_TESTS: "1"', "required test environment"),
-        ("      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security", "admin URL"),
-        ("      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security", "application-role URL"),
+        ('      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"', "required test environment"),
+        ("      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security", "admin URL"),
+        ("      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security", "application-role URL"),
     ):
         require_active(security, exact, context)
     postgres_env = mapping_block(security, "env", 4)
@@ -447,6 +451,7 @@ def check_workflow(path: Path) -> None:
     if suite_style != "scalar" or suite_run != quoted_suite:
         raise ContractError(f"exact multitenancy suite must be active quoted scalar `run: {quoted_suite}`")
 
+    require_active(required, "      - dependency-audit", "ci-required dependency audit")
     require_active(required, "      - postgres-security", "ci-required dependency")
     require_active(required, "    if: ${{ always() }}", "ci-required always-run policy")
     require_active(

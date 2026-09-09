@@ -11,17 +11,17 @@ use super::{
 type CommandResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 pub fn database_url_from_environment() -> CommandResult<DatabaseUrl> {
-    let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
-    let legacy_direct = std::env::var_os("OHC_DATABASE_URL").is_some();
-    if canonical_direct && legacy_direct {
-        return Err("DATABASE_URL and OHC_DATABASE_URL cannot both be set".into());
+    let configured = ["DATABASE_URL", "OMNISOLO_DATABASE_URL", "OHC_DATABASE_URL"]
+        .into_iter()
+        .filter(|name| std::env::var_os(name).is_some())
+        .collect::<Vec<_>>();
+    if configured.len() > 1 {
+        return Err(
+            "DATABASE_URL, OMNISOLO_DATABASE_URL, and OHC_DATABASE_URL are mutually exclusive"
+                .into(),
+        );
     }
-
-    let value_environment_variable = if legacy_direct {
-        "OHC_DATABASE_URL"
-    } else {
-        "DATABASE_URL"
-    };
+    let value_environment_variable = configured.first().copied().unwrap_or("DATABASE_URL");
     ::server_common::secret_source::load_optional_secret(
         value_environment_variable,
         "DATABASE_URL_FILE",
@@ -35,10 +35,10 @@ pub fn database_url_from_environment() -> CommandResult<DatabaseUrl> {
 pub async fn connect_from_environment() -> CommandResult<AppDatabase> {
     let url = database_url_from_environment()?;
     if url.expose_for_connection().starts_with("sqlite:") {
-        let key = std::env::var("OHC_SQLITE_KEY")
-            .map_err(|_| "OHC_SQLITE_KEY is required for encrypted SQLite storage")?;
+        let key = std::env::var("OMNISOLO_SQLITE_KEY")
+            .map_err(|_| "OMNISOLO_SQLITE_KEY is required for encrypted SQLite storage")?;
         if key.trim().is_empty() {
-            return Err("OHC_SQLITE_KEY cannot be empty for encrypted SQLite storage".into());
+            return Err("OMNISOLO_SQLITE_KEY cannot be empty for encrypted SQLite storage".into());
         }
         return Ok(
             AppDatabase::connect_with_sqlcipher_key(url.expose_for_connection(), &key).await?,

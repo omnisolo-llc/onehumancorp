@@ -10,8 +10,8 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use omnisolo_builtin_agent::gpt_researcher::ResearcherLlmClient;
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Proposal {

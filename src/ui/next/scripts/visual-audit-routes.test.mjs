@@ -9,6 +9,7 @@ import {
 test("converts static and dynamic page files into deterministic routes", () => {
   expect(routeFromPageFile("page.tsx")).toBe("/");
   expect(routeFromPageFile("dashboard/page.tsx")).toBe("/dashboard");
+  expect(routeFromPageFile("(main)/shifts/page.tsx")).toBe("/shifts");
   expect(routeFromPageFile("bio/[tenant]/page.tsx")).toBe("/bio/visual-audit-business");
   expect(routeFromPageFile("help/[articleId]/page.tsx")).toBe("/help/visual-audit-article");
 });

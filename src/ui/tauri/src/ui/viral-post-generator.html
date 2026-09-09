@@ -186,7 +186,7 @@
 
     <div class="branding-toggle">
         <input type="checkbox" id="remove-branding" />
-        <label for="remove-branding">Remove "Powered by OHC" branding (Pro)</label>
+        <label for="remove-branding">Remove "OmniSolo" branding (Pro)</label>
     </div>
 
     <button id="generate-btn" class="primary-btn">
@@ -206,7 +206,7 @@
       <button class="modal-close" id="close-paywall" style="position:absolute; right:16px; top:16px; background:transparent; border:none; font-size:20px; cursor:pointer;">&times;</button>
       <div style="font-size:40px; margin-bottom:10px;">🚀</div>
       <h2 class="modal-title" style="font-family:'Outfit'">Upgrade to Pro</h2>
-      <p class="modal-desc" style="color:#666; font-size:14px;">Make the post 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+      <p class="modal-desc" style="color:#666; font-size:14px;">Make the post 100% white-labeled. Upgrade to Pro to remove the "OmniSolo" watermark.</p>
 
       <button class="primary-btn" id="upgrade-btn">Upgrade to Pro</button>
       <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #000; color:white;">Share on X to Unlock for Free</button>
@@ -244,7 +244,7 @@
       shareToUnlockBtn.addEventListener('click', async () => {
           let tenantId = "demo";
           try { tenantId = localStorage.getItem('tenant') || "demo"; } catch(e) {}
-          const message = `I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://app.onehumancorp.com/setup.html?ref=${tenantId}`;
+          const message = `I just unlocked powerful AI tools for my business on OmniSolo OneHumanCorp! Start your own business today: https://cloud.omnisolo.co/setup.html?ref=${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           window.open(shareUrl, '_blank');
@@ -345,7 +345,7 @@
                 card.className = 'variant-card';
                 let contentWithBranding = v.content;
                 if (!isBrandingRemoved) {
-                    contentWithBranding += `\n\n⚡ Powered by OHC`;
+                    contentWithBranding += `\n\n⚡ OmniSolo`;
                 }
 
                 card.innerHTML = `
@@ -372,12 +372,12 @@
             }
           } else {
             // fallback if api fails (like in test environments without API key)
-            const fallbackContent = `Just dropped something special! 🚀 Introducing the new ${name}. If you've been looking for ${desc}, this is for you.\n\nShop now: https://${tenantId}.ohc.app`;
+            const fallbackContent = `Just dropped something special! 🚀 Introducing the new ${name}. If you've been looking for ${desc}, this is for you.\n\nShop now: https://${tenantId}.cloud.omnisolo.co`;
             const card = document.createElement('div');
             card.className = 'variant-card';
             let contentWithBranding = fallbackContent;
             if (!isBrandingRemoved) {
-                contentWithBranding += `\n\n⚡ Powered by OHC`;
+                contentWithBranding += `\n\n⚡ OmniSolo`;
             }
             card.innerHTML = `
                   <span class="platform-badge">Generated</span>

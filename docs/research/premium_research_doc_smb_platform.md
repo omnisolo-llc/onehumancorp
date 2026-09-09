@@ -1,7 +1,7 @@
 # Premium Research Doc: The SMB Platform Gap
 
 ## Executive Summary
-This research report analyzes the global small business platform landscape, focusing on non-technical users and evaluating competitors like Shopify, Wix, Squarespace, and GoDaddy. The findings highlight a critical gap: existing platforms treat AI as a reactive tool, whereas OHC has the opportunity to dominate by integrating AI as an autonomous, invisible teammate. Small business owners (SMBs) are overwhelmed by setup complexity, operational fatigue, and marketing dread. Our platform must serve as an invisible operations, marketing, and SEO teammate.
+This research report analyzes the global small business platform landscape, focusing on non-technical users and evaluating competitors like Shopify, Wix, Squarespace, and GoDaddy. The findings highlight a critical gap: existing platforms treat AI as a reactive tool, whereas OmniSolo has the opportunity to dominate by integrating AI as an autonomous, invisible teammate. Small business owners (SMBs) are overwhelmed by setup complexity, operational fatigue, and marketing dread. Our platform must serve as an invisible operations, marketing, and SEO teammate.
 
 ## Persona Mappings
 - **Maya (baker, 28)**: Currently sells via Instagram DMs. Overwhelmed by Shopify. Pain: complex setup, no built-in AI help, can't manage from phone easily.
@@ -14,7 +14,7 @@ This research report analyzes the global small business platform landscape, focu
 - **Total Addressable Market (TAM)**: Millions of non-employer small businesses globally currently have no online presence or are dissatisfied with their current solution.
 - **Beachhead Market**: The immediate opportunity is solopreneurs (like Maya and Carlos) who currently run their business via Instagram DMs and word-of-mouth. They have the highest density of underserved users.
 - **Geographic Expansion**: Following English-speaking markets, expansion into Spanish/LATAM and Hindi/India will be key to dominating the global solopreneur market.
-- **Vertical Expansion**: After establishing horizontal stability, building vertical depth (e.g., OHC for Food Businesses, OHC for Service Pros) will drive high retention.
+- **Vertical Expansion**: After establishing horizontal stability, building vertical depth (e.g., OmniSolo for Food Businesses, OmniSolo for Service Pros) will drive high retention.
 
 ## Deep Competitor Audit
 - **Shopify**: Industry standard but overly complex for beginners. AI (Sidekick) is reactive. Mobile app is strong for existing stores but poor for setup.
@@ -25,7 +25,7 @@ This research report analyzes the global small business platform landscape, focu
 
 ## AI Differentiation Manifesto: From Tools to Teammates
 Competitors treat AI as a **Tool** (Reactive, requires a prompt, creates work).
-OHC treats AI as a **Teammate** (Proactive, event-driven, reduces work).
+OmniSolo treats AI as a **Teammate** (Proactive, event-driven, reduces work).
 
 ```mermaid
 graph LR
@@ -35,7 +35,7 @@ graph LR
     User -->|Edit/Send| Action[Final Action]
     end
 
-    subgraph OHC_Teammate
+    subgraph OMNISOLO_Teammate
     Event[Business Event] -->|Trigger| Agent[Autonomous Agent]
     Agent -->|Execute/Queue| Dashboard[Action Feed]
     Dashboard -->|1-Tap Approve| Live[Live Change]
@@ -50,7 +50,7 @@ graph LR
 5. **The Business Advisor (Advisory)**: Daily human-language briefings instead of complex charts.
 
 ## Feature Gap Matrix
-| Feature | **Shopify** | **Wix** | **Durable** | **OHC (Goal)** |
+| Feature | **Shopify** | **Wix** | **Durable** | **OmniSolo (Goal)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Agent Autonomy** | Reactive (Sidekick) | None | Limited | **Autonomous Depts** |
 | **Onboarding** | 30m+ (High friction) | 20m+ (Moderate) | < 1m (Instant) | **< 1m (Instant Build)** |
@@ -64,7 +64,7 @@ quadrantChart
     title Small Business Platform Landscape
     x-axis Low Autonomy --> High Autonomy
     y-axis High Complexity --> Radical Simplicity
-    quadrant-1 "Leapfrog Zone (OHC)"
+    quadrant-1 "Leapfrog Zone (OmniSolo)"
     quadrant-2 "Legacy Leaders (Shopify, Wix)"
     quadrant-3 "Niche Builders"
     quadrant-4 "AI Toys (Durable)"
@@ -72,14 +72,14 @@ quadrantChart
     "Wix": [0.35, 0.4]
     "Squarespace": [0.2, 0.45]
     "Durable": [0.7, 0.8]
-    "OHC (Current)": [0.6, 0.7]
-    "OHC (Target)": [0.95, 0.95]
+    "OmniSolo (Current)": [0.6, 0.7]
+    "OmniSolo (Target)": [0.95, 0.95]
 ```
 
 ## Top 10 SMB Pain Points (2024-2025 Audit)
 Based on a synthesis of Reddit (r/smallbusiness, r/ecommerce, r/Etsy), Trustpilot, and App Store reviews for Shopify, Wix, and Squarespace.
 
-| Rank | Pain Point | Frequency (Est.) | Description | OHC Mapping | Evidence Source |
+| Rank | Pain Point | Frequency (Est.) | Description | OmniSolo Mapping | Evidence Source |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | **Setup Complexity** | 73% | Users feel overwhelmed when asked about DNS or complex shipping zones. | **SetupWizard (Conversational)** | [r/shopify: "Why do I need to know what a CNAME record is just to sell a t-shirt?"](https://reddit.com/r/shopify) |
 | 2 | **Operational Fatigue** | 68% | The "never-ending inbox" - responding to the same 5 questions on 3 different apps. | **Proactive Agents (The Ambassador)** | [Trustpilot: Shopify Reviews - 1 star complaints on time spent managing apps](https://trustpilot.com/review/shopify.com) |

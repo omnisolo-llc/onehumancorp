@@ -5,7 +5,7 @@
    **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 
    ## Overview
-   Architect and Implement the Shared Task List (Teammate Mesh & AutoDream) for OHC.
+   Architect and Implement the Shared Task List (Teammate Mesh & AutoDream) for OmniSolo.
 
    ## Shared Task List Architecture
    To support both Cloud-Native and Standalone Desktop modes, the Shared Task List relies on a hybrid DB schema `shared_tasks`.

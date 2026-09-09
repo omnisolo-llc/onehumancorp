@@ -1,7 +1,7 @@
 # Teammate Mesh Interoperability Protocol
 
 ## Overview
-The OHC Swarm requires a durable database schema and microservices mapping to decompose high-level feature requests for the agent team. The Teammate Mesh is the highly available low-latency communication layer.
+The OmniSolo Swarm requires a durable database schema and microservices mapping to decompose high-level feature requests for the agent team. The Teammate Mesh is the highly available low-latency communication layer.
 
 This document describes the protocol that governs how jobs are dispatched, status is reported, and context is synchronized between Cloud and Standalone modes.
 

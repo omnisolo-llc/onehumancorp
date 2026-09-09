@@ -25,21 +25,21 @@ macOS signing and notarization:
 
 The desktop matrix publishes:
 
-- `OHC-vX.Y.Z-Windows.msi`
-- `OHC-vX.Y.Z-Windows.msi.sig`
-- `OHC-vX.Y.Z-Windows-Portable.zip`
-- `OHC-vX.Y.Z-macOS.dmg`
-- `OHC-vX.Y.Z-macOS.zip`
-- `OHC-vX.Y.Z-macOS.tar.gz`
-- `OHC-vX.Y.Z-macOS.tar.gz.sig`
-- `OHC-vX.Y.Z-Linux-x86_64.AppImage`
-- `OHC-vX.Y.Z-Linux-x86_64.AppImage.sig`
-- `OHC-vX.Y.Z-Linux-x86_64.deb`
-- `OHC-vX.Y.Z-Linux-x86_64.rpm`
-- `OHC-vX.Y.Z-Linux-arm64.AppImage`
-- `OHC-vX.Y.Z-Linux-arm64.AppImage.sig`
-- `OHC-vX.Y.Z-Linux-arm64.deb`
-- `OHC-vX.Y.Z-Linux-arm64.rpm`
+- `OmniSolo-vX.Y.Z-Windows.msi`
+- `OmniSolo-vX.Y.Z-Windows.msi.sig`
+- `OmniSolo-vX.Y.Z-Windows-Portable.zip`
+- `OmniSolo-vX.Y.Z-macOS.dmg`
+- `OmniSolo-vX.Y.Z-macOS.zip`
+- `OmniSolo-vX.Y.Z-macOS.tar.gz`
+- `OmniSolo-vX.Y.Z-macOS.tar.gz.sig`
+- `OmniSolo-vX.Y.Z-Linux-x86_64.AppImage`
+- `OmniSolo-vX.Y.Z-Linux-x86_64.AppImage.sig`
+- `OmniSolo-vX.Y.Z-Linux-x86_64.deb`
+- `OmniSolo-vX.Y.Z-Linux-x86_64.rpm`
+- `OmniSolo-vX.Y.Z-Linux-arm64.AppImage`
+- `OmniSolo-vX.Y.Z-Linux-arm64.AppImage.sig`
+- `OmniSolo-vX.Y.Z-Linux-arm64.deb`
+- `OmniSolo-vX.Y.Z-Linux-arm64.rpm`
 
 After the GitHub Release is created, the workflow uploads `latest.json` for the
 Tauri updater. macOS uses the signed `.tar.gz`, Windows uses the `.msi`, and

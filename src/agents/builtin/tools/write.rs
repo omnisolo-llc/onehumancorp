@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -42,7 +42,7 @@ impl WriteExecutor {
                     "--emit=metadata",
                     "--edition=2021",
                     "--crate-name",
-                    "ohc_write_check",
+                    "omnisolo_write_check",
                     "-o",
                     &metadata_path_string,
                     &temp_path_string,

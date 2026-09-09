@@ -13,12 +13,12 @@ pub struct FactoryConfig {
 impl Default for FactoryConfig {
     fn default() -> Self {
         Self {
-            is_multitenant: env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string())
+            is_multitenant: env::var("OMNISOLO_MULTITENANT").unwrap_or_else(|_| "false".to_string())
                 == "true",
             is_standalone: crate::is_standalone_runtime(),
-            mount_point: env::var("OHC_CLOUD_FS_MOUNT")
+            mount_point: env::var("OMNISOLO_CLOUD_FS_MOUNT")
                 .unwrap_or_else(|_| "/mnt/data/tenant_volumes".to_string()),
-            workspace: env::var("OHC_LOCAL_WORKSPACE")
+            workspace: env::var("OMNISOLO_LOCAL_WORKSPACE")
                 .unwrap_or_else(|_| "./workspace".to_string()),
         }
     }

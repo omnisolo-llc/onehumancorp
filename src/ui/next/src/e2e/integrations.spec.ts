@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Integrations Loop', () => {
-    test('Integrations loop connects Mercado Pago and Zoom', async ({ page }) => {
+    test('Integrations require verified providers before showing connected state', async ({ page }) => {
         await page.goto('/integrations');
 
         // Verify all 10 integrations exist with their respective names and descriptions
@@ -17,36 +17,34 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Front")')).toBeVisible();
         await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
 
-        // Let's connect Mercado Pago
         const mercadoCard = page.locator('h3', { hasText: 'Mercado Pago' }).locator('..');
         const connectMercadoPagoButton = mercadoCard.getByRole('button', { name: 'Connect' });
-
-        // Mock window alert
-        page.on('dialog', dialog => dialog.accept());
         await connectMercadoPagoButton.click();
+        await expect(page.getByRole('status')).toHaveText(
+          'Mercado Pago connection is unavailable until secure provider verification is configured.',
+        );
+        await expect(mercadoCard.getByRole('button', { name: 'Manage' })).toHaveCount(0);
 
-        // Verify state changed
-        await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
-
-        // Let's connect Zoom
         const zoomCard = page.locator('h3', { hasText: 'Zoom' }).locator('..');
         const connectZoomButton = zoomCard.getByRole('button', { name: 'Connect' });
         await connectZoomButton.click();
-
-        // Verify state changed
-        await expect(zoomCard.locator('button:has-text("Manage")')).toBeVisible();
-
+        await expect(page.getByRole('status')).toHaveText(
+          'Zoom connection is unavailable until secure provider verification is configured.',
+        );
+        await expect(zoomCard.getByRole('button', { name: 'Manage' })).toHaveCount(0);
     });
 
-    test('Checkout page displays Mercado Pago', async ({ page }) => {
-        await page.goto('/checkout');
-        const mercadoPagoButton = page.locator('button:has-text("Pay with Mercado Pago")');
-        await expect(mercadoPagoButton).toBeVisible();
+    test('Checkout verifies catalog product details before offering payment', async ({ page }) => {
+        await page.goto('/checkout?product_id=e2e-product-cake&quantity=2');
+        await expect(page.getByRole('heading', { name: 'Vegan Celebration Cake' })).toBeVisible();
+        await expect(page.getByText('$79.98')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
     });
 
-    test('Calendar page displays Join Meeting for appointments with link', async ({ page }) => {
+    test('Calendar displays database-backed product bookings', async ({ page }) => {
         await page.goto('/calendar');
         await expect(page.getByRole('heading', { name: 'Calendar & Bookings' })).toBeVisible();
-        await expect(page.getByText(/Upcoming Appointments|Join Meeting/).first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Cake Decorating Class' })).toBeVisible();
+        await expect(page.getByText('Failed to load appointments. Please try again later.')).toHaveCount(0);
     });
 });

@@ -7,7 +7,7 @@ edition = "2024"
 axum = "0.8.1"
 server_common = { path = "../common" }
 server_telemetry = { path = "../telemetry" }
-server_ohc = { path = "../ohc" }
+server_omnisolo = { path = "../omnisolo" }
 async-trait = "0.1"
 prost = { workspace = true }
 tonic = { workspace = true }

@@ -24,7 +24,7 @@ describe('App', () => {
     const { lastFrame } = render(<App />);
     await delay(10);
     const frame = lastFrame()!;
-    expect(frame).toContain('OHC');
+    expect(frame).toContain('OmniSolo');
     expect(frame).toContain('Select an action');
     expect(frame).toContain('Ask Agent >');
   });

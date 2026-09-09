@@ -3,13 +3,13 @@
 # PowerSync Integration: SQLite to Postgres State Sync
 
 ## Problem Statement
-The OHC Hybrid Agentic OS requires seamless synchronization between local single-user SQLite instances (Standalone Mode) and the multi-tenant PostgreSQL Cloud Gateway (Cloud-Native Mode). Currently, there is a capability gap in maintaining a robust, low-latency, and conflict-free bidirectional sync of RAG state and agent contexts across these environments.
+The OmniSolo Hybrid Agentic OS requires seamless synchronization between local single-user SQLite instances (Standalone Mode) and the multi-tenant PostgreSQL Cloud Gateway (Cloud-Native Mode). Currently, there is a capability gap in maintaining a robust, low-latency, and conflict-free bidirectional sync of RAG state and agent contexts across these environments.
 
 ## Research Report
 **Market Analysis:** Several tools exist for local-to-cloud synchronization, notably ElectricSQL and PowerSync.
 - **ElectricSQL:** Focuses on active-active replication but has had significant architecture shifts recently.
 - **PowerSync:** Provides robust SQLite-to-Postgres synchronization with out-of-the-box support for offline-first applications and high concurrency. It aligns perfectly with our need to sync local RAG contexts with the Cloud Gateway over mutually authenticated TLS.
-**Recommendation:** Integrate PowerSync as the core sync engine for OHC-SIP to handle the local SQLite to cloud PostgreSQL synchronization.
+**Recommendation:** Integrate PowerSync as the core sync engine for OmniSolo-SIP to handle the local SQLite to cloud PostgreSQL synchronization.
 
 ## Design Doc
 **Architecture:**
@@ -20,7 +20,7 @@ The OHC Hybrid Agentic OS requires seamless synchronization between local single
 
 ## Implementation Prompt
 **Task:** Implement the PowerSync integration bridging local SQLite and cloud PostgreSQL.
-1. Deploy the PowerSync service via Helm or Kubernetes manifests, configuring it to connect to the central OHC PostgreSQL database and applying necessary RLS policies for tenant isolation.
+1. Deploy the PowerSync service via Helm or Kubernetes manifests, configuring it to connect to the central OmniSolo PostgreSQL database and applying necessary RLS policies for tenant isolation.
 2. Integrate the PowerSync client SDK into the Go standalone daemon (`src/server/orchestration/hybrid_sync/hybrid_sync.go` and `src/server/auth/powersync.go`), ensuring it syncs the SQLite database locally to the cloud.
 3. Use SPIFFE/SPIRE certificates for authenticating the sync connection.
 4. Create E2E tests validating bidirectional sync of a mock RAG context record.

@@ -10,21 +10,21 @@ export const TEST_NOW = 1_800_000_000;
 const TEST_SECRET = "Ww7LSLEn9AaAN6IT5kwJ0yGqVO11CMI9nOEqi7wF10I";
 
 export function stubAuthEnvironment(): void {
-  vi.stubEnv("OHC_WEB_CANONICAL_ORIGIN", TEST_WEB_ORIGIN);
+  vi.stubEnv("OMNISOLO_WEB_CANONICAL_ORIGIN", TEST_WEB_ORIGIN);
   vi.stubEnv("BACKEND_URL", TEST_BACKEND_ORIGIN);
-  vi.stubEnv("OHC_WEB_SESSION_KEY_ID", "test-v1");
-  vi.stubEnv("OHC_WEB_SESSION_SECRET", TEST_SECRET);
+  vi.stubEnv("OMNISOLO_WEB_SESSION_KEY_ID", "test-v1");
+  vi.stubEnv("OMNISOLO_WEB_SESSION_SECRET", TEST_SECRET);
   vi.spyOn(Date, "now").mockReturnValue(TEST_NOW * 1_000);
 }
 
 export async function authenticatedCookie(): Promise<string> {
   const config = parseAuthRuntimeConfig({
-    OHC_WEB_CANONICAL_ORIGIN: TEST_WEB_ORIGIN,
+    OMNISOLO_WEB_CANONICAL_ORIGIN: TEST_WEB_ORIGIN,
     BACKEND_URL: TEST_BACKEND_ORIGIN,
   });
   const ring = await parseSessionKeyRing({
-    OHC_WEB_SESSION_KEY_ID: "test-v1",
-    OHC_WEB_SESSION_SECRET: TEST_SECRET,
+    OMNISOLO_WEB_SESSION_KEY_ID: "test-v1",
+    OMNISOLO_WEB_SESSION_SECRET: TEST_SECRET,
   });
   const expiresAt = TEST_NOW + 3_600;
   const compact = await sealSession(

@@ -1,11 +1,11 @@
-use super::ohc_job_queue::{OHCJob, OHCJobQueue};
+use super::omnisolo_job_queue::{OmniSoloJob, OmniSoloJobQueue};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 
 pub trait JobHandler: Send + Sync {
-    fn handle(&self, job: OHCJob) -> tokio::task::JoinHandle<Result<(), String>>;
+    fn handle(&self, job: OmniSoloJob) -> tokio::task::JoinHandle<Result<(), String>>;
 }
 
 pub struct WorkerPool {
@@ -15,7 +15,7 @@ pub struct WorkerPool {
 
 impl WorkerPool {
     pub fn new(
-        queue: Arc<OHCJobQueue>,
+        queue: Arc<OmniSoloJobQueue>,
         num_workers: usize,
         job_types: Vec<String>,
         handler: Arc<dyn JobHandler>,
@@ -24,7 +24,7 @@ impl WorkerPool {
     }
 
     pub fn new_with_timeout(
-        queue: Arc<OHCJobQueue>,
+        queue: Arc<OmniSoloJobQueue>,
         num_workers: usize,
         job_types: Vec<String>,
         handler: Arc<dyn JobHandler>,

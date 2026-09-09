@@ -4,9 +4,6 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
-    "//src/server/services:chat/mod.rs",
-    "//src/server/services:chat/models.rs",
-    "//src/server/services:chat/service.rs",
     "health_test.rs",
     "analytics.rs",
     "autodream_sync.rs",
@@ -19,6 +16,7 @@ SERVER_RS_SRCS = [
     "chaos_network_test.rs",
     "crypto.rs",
     "db.rs",
+    "//src/server/db:harness_middleware_schema.rs",
     "//src/server/db:sql_middleware.rs",
     "hub.rs",
     "lib.rs",
@@ -55,6 +53,7 @@ SERVER_RS_SRCS = [
     "//src/server/agents/mcp:proxy/tests.rs",
     "//src/server/api:autodream.rs",
     "//src/server/api:assistant.rs",
+    "//src/server/api:collective.rs",
     "//src/server/api:terminal_api.rs",
     "//src/server/api:payment_ledger.rs",
     "//src/server/api:billing_api.rs",
@@ -136,7 +135,7 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:pydantic.rs",
     "//src/server/api/onboarding:mod.rs",
     "//src/server/api/inbox:srcs",
-    "//src/server/api/ohc_job_queue:srcs",
+    "//src/server/api/omnisolo_job_queue:srcs",
     "//src/server/autodream:mod.rs",
     "//src/server/autodream_pipeline:llm_client.rs",
     "//src/server/autodream_pipeline:mod.rs",
@@ -267,11 +266,11 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration/queue:queue_test.rs",
     "//src/server/orchestration/queue:redis_queue.rs",
     "//src/server/orchestration/queue:sqlite_queue.rs",
-    "//src/server/orchestration/queue:ohc_job_queue.rs",
-    "//src/server/orchestration/queue:ohc_universal_ledger.rs",
+    "//src/server/orchestration/queue:omnisolo_job_queue.rs",
+    "//src/server/orchestration/queue:omnisolo_universal_ledger.rs",
     "//src/server/orchestration/queue:worker_pool.rs",
     "//src/server/orchestration/queue:redis_lock.rs",
-    "//src/server/orchestration/queue:ohc_job_queue_test.rs",
+    "//src/server/orchestration/queue:omnisolo_job_queue_test.rs",
     "//src/server/orchestration/queue:pg_queue_test.rs",
     "//src/server/orchestration/state:cloud.rs",
     "//src/server/orchestration/state:mod.rs",
@@ -304,6 +303,9 @@ SERVER_RS_SRCS = [
     "//src/server/services/campaign:activation_routing.rs",
     "//src/server/services/campaign:mod.rs",
     "//src/server/services/campaign:service.rs",
+    "//src/server/services:chat/mod.rs",
+    "//src/server/services:chat/models.rs",
+    "//src/server/services:chat/service.rs",
     "//src/server/services/dashboard:mod.rs",
     "//src/server/services/dashboard:service.rs",
     "//src/server/services/growth:experiments.rs",
@@ -451,13 +453,14 @@ rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
     compile_data = [
+        "main.rs",
         "//:CHANGELOG.md",
         "//src/server/migrations",
         "//src/server/db:embedsrcs",
     ],
     data = ["//src/server/migrations", "//src/server/db:embedsrcs"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -467,7 +470,7 @@ rust_library(
 
         ":minimax",
         "//src/agents/builtin:core",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",
@@ -510,7 +513,7 @@ rust_library(
         "//src/server/integrations/taxjar:server_integrations_taxjar",
         "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/integrations/google_calendar:server_integrations_google_calendar",
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
         "//src/server/services/b2b:server_services_b2b",
@@ -571,9 +574,9 @@ rust_test(
         "tools::hybridfsmcp",
     ],
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -602,7 +605,7 @@ rust_test(
     args = ["setup::tests::"],
     crate = ":server_lib",
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -621,7 +624,7 @@ rust_test(
     args = ["db::tests::database_url_"],
     crate = ":server_lib",
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -646,6 +649,23 @@ rust_test(
         "@crates//:serde",
         "@crates//:tempfile",
         "@crates//:tokio",
+    ],
+)
+
+sh_test(
+    name = "production_feature_contract_test",
+    size = "small",
+    srcs = ["production_feature_contract_test.sh"],
+    data = [
+        "lib.rs",
+        "db.rs",
+        "//src/server/api:catalog.rs",
+        "//src/server/api:collective.rs",
+        "//src/server/api:docs.rs",
+        "//src/server/api:payment_ledger.rs",
+        "//src/server/api:pos.rs",
+        "//src/server/api:local_seo.rs",
+        "//src/server/services/collective:service.rs",
     ],
 )
 
@@ -715,7 +735,7 @@ rust_binary(
         "@crates//:libc",
 
         ":server_lib",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "@crates//:tokio",
@@ -797,7 +817,6 @@ SERVER_LIB_SUBCRATE_TESTS = [
     "//src/server/orchestration:server_orchestration_unit_test",
     "//src/server/services:server_services_unit_test",
     "//src/server/services/billing:server_services_billing_unit_test",
-
     "//src/server/services/dashboard:server_services_dashboard_unit_test",
     "//src/server/services/growth:server_services_growth_unit_test",
     "//src/server/services/mcp:server_services_mcp_unit_test",
@@ -822,9 +841,9 @@ SERVER_LIB_SPLIT_TESTS = [
         size = "large",
         args = filters,
         crate = ":server_lib",
-        data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+        data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
         edition = "2021",
-        rustc_flags = ["--cfg=ohc_bazel"],
+        rustc_flags = ["--cfg=omnisolo_bazel"],
         env = {
             "RUST_TEST_THREADS": "1",
         },
@@ -857,9 +876,9 @@ rust_test(
     size = "large",
     args = SERVER_LIB_TEST_GROUPS["core"],
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -913,9 +932,9 @@ test_suite(
             module,
         ],
         crate = ":server_lib",
-        data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+        data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
         edition = "2021",
-        rustc_flags = ["--cfg=ohc_bazel"],
+        rustc_flags = ["--cfg=omnisolo_bazel"],
         env = {
             "RUST_TEST_THREADS": "1",
         },
@@ -1008,7 +1027,7 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:uuid",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
     ],
 )
 
@@ -1016,7 +1035,7 @@ rust_test(
     name = "telemetry_test",
     size = "large",
     srcs = ["telemetry_test.rs"],
-    data = ["//deploy/scripts:ohc-standalone.sh"] + SERVER_RS_SRCS,
+    data = ["//deploy/scripts:omnisolo-standalone.sh"] + SERVER_RS_SRCS,
     edition = "2021",
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -1044,9 +1063,9 @@ rust_test(
         "power_sync",
     ],
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -1095,6 +1114,7 @@ rust_test(
 exports_files([
     "Cargo.toml",
     "Cargo.lock",
+    "lib.rs",
 ])
 
 rust_test(
@@ -1105,9 +1125,9 @@ rust_test(
         "hybrid_sync",
     ],
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -1134,9 +1154,9 @@ rust_test(
     size = "large",
     args = ["api::growth"],
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -1164,9 +1184,9 @@ rust_test(
         "tools::config_sync",
     ],
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -1197,9 +1217,9 @@ rust_test(
         "agents",
     ],
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:omnisolo-standalone.sh"],
     edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },

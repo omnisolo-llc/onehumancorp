@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. User Journey Overview
-A high-level view of how the human CEO navigates the "One Human Corp" Marketplace to find, import, and deploy a specialized community-created AI agent template.
+A high-level view of how the human CEO navigates the "OmniSolo" Marketplace to find, import, and deploy a specialized community-created AI agent template.
 
 ## 2. Detailed Step-by-Step Breakdown
 
@@ -19,7 +19,7 @@ A high-level view of how the human CEO navigates the "One Human Corp" Marketplac
 | 4 | Confirm Import | UI confirms successful validation | New agents registered in Hub DB | Agents visible in Org Chart |
 
 ## 3. Implementation Details
-- **Architecture**: A centralized index of `SkillBlueprints` (JSON) that the `ohc-operator` fetches and provisions as `RoleProfile` CRDs in the local Kubernetes cluster.
+- **Architecture**: A centralized index of `SkillBlueprints` (JSON) that the `omnisolo-operator` fetches and provisions as `RoleProfile` CRDs in the local Kubernetes cluster.
 - **Stack**: Rust backend serving Next.js frontend pages. External Marketplace Index via HTTP APIs.
 - **Security Check**: The downloaded payload is parsed for malicious scripts and strictly validated against the internal schema before being saved to Postgres.
 

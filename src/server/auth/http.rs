@@ -294,7 +294,7 @@ struct ErrorResponse {
 /// one backend instance or an upstream gateway enforces equivalent bounds.
 pub fn router(store: Arc<Store>) -> Result<Router, String> {
     let deployment = rate_limit_deployment(
-        std::env::var("OHC_AUTH_RATE_LIMIT_DEPLOYMENT")
+        std::env::var("OMNISOLO_AUTH_RATE_LIMIT_DEPLOYMENT")
             .ok()
             .as_deref(),
         ::server_config::get().multitenant,
@@ -422,7 +422,7 @@ async fn generate_api_key(
     let key_id = uuid::Uuid::new_v4().to_string();
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -480,7 +480,7 @@ async fn generate_api_key(
 
 async fn list_api_keys(Extension(claims): Extension<::server_common::Claims>) -> Response {
     let mut api_keys = Vec::new();
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -552,7 +552,7 @@ async fn revoke_api_key(
     Extension(claims): Extension<::server_common::Claims>,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Response {
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -638,7 +638,7 @@ async fn list_member_usage_analytics(
     }
 
     let mut analytics = Vec::new();
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
     if has_db {
@@ -1432,7 +1432,7 @@ async fn login(
             return error(StatusCode::BAD_REQUEST, "invalid request");
         }
     };
-    let default_tenant = std::env::var("OHC_DEFAULT_TENANT_ID").ok();
+    let default_tenant = std::env::var("OMNISOLO_DEFAULT_TENANT_ID").ok();
     let organization = resolve_organization(
         payload.organization_id.as_deref(),
         default_tenant.as_deref(),
@@ -1615,7 +1615,7 @@ fn rate_limit_deployment(value: Option<&str>, cloud: bool) -> Result<RateLimitDe
     match value {
         Some("single-instance") => Ok(RateLimitDeployment::SingleInstance),
         Some("upstream-bounded") => Ok(RateLimitDeployment::UpstreamBounded),
-        _ => Err("cloud authentication requires OHC_AUTH_RATE_LIMIT_DEPLOYMENT=single-instance or upstream-bounded".into()),
+        _ => Err("cloud authentication requires OMNISOLO_AUTH_RATE_LIMIT_DEPLOYMENT=single-instance or upstream-bounded".into()),
     }
 }
 
@@ -1716,7 +1716,7 @@ fn request_source(
 }
 
 fn trusted_proxies_from_env() -> Result<HashSet<IpAddr>, String> {
-    let Some(value) = std::env::var_os("OHC_AUTH_TRUSTED_PROXY_IPS") else {
+    let Some(value) = std::env::var_os("OMNISOLO_AUTH_TRUSTED_PROXY_IPS") else {
         return Ok(HashSet::new());
     };
     let value = value
@@ -1854,7 +1854,7 @@ mod tests {
             .unwrap();
 
         let has_db =
-            std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+            std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
         if has_db {
             let _ = crate::postgres_test_support::postgres_security_pool(10).await;
             let pool = crate::db::get_pool();
@@ -3180,7 +3180,7 @@ mod tests {
                 organization_id: org_id.clone(),
             });
         }
-        if std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok() {
+        if std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok() {
             let _ = crate::postgres_test_support::postgres_security_pool(10).await;
             let pool = crate::db::get_pool();
             let mut tx_opt = None;

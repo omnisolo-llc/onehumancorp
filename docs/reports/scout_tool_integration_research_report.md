@@ -1,7 +1,7 @@
 # 🔍 Scout: Tool Integration Research Report
 
 ## Executive Summary
-This report summarizes the research and evaluation of seven tool integration categories designed to expand OneHumanCorp's (OHC) capabilities for small business owners. The focus is on tools that directly address pain points for non-technical users, ensuring high usability, fair pricing, and clear benefits across multiple business personas.
+This report summarizes the research and evaluation of seven tool integration categories designed to expand OmniSolo's (OmniSolo) capabilities for small business owners. The focus is on tools that directly address pain points for non-technical users, ensuring high usability, fair pricing, and clear benefits across multiple business personas.
 
 ---
 
@@ -10,17 +10,17 @@ This report summarizes the research and evaluation of seven tool integration cat
 **Tool Evaluated:** Meta Graph API (Instagram/Facebook) + WhatsApp Business API
 **Market Context:** Unified inboxes are standard in expensive enterprise tools (like HubSpot) but often too complex for micro-businesses.
 **Ease of Use (Persona Lens):**
-- **Pros:** Business owners authenticate once via OAuth. All incoming DMs and comments appear in the OHC "Customer Success" unified inbox. AI can draft replies automatically.
+- **Pros:** Business owners authenticate once via OAuth. All incoming DMs and comments appear in the OmniSolo "Customer Success" unified inbox. AI can draft replies automatically.
 - **Cons:** Meta's OAuth process can be intimidating due to multiple permission screens.
 **Pricing:** API access is generally free for standard usage; WhatsApp charges per conversation.
-**Deployment Modes:** Cloud (OAuth via OHC), Standalone (User provided App credentials).
+**Deployment Modes:** Cloud (OAuth via OmniSolo), Standalone (User provided App credentials).
 **Design Doc:**
 - User clicks "Connect Social Media" in the Operations department.
 - Authenticates with Meta.
-- Inbound messages trigger notifications in OHC.
-- OHC "Customer Success" agent reads messages and suggests replies.
+- Inbound messages trigger notifications in OmniSolo.
+- OmniSolo "Customer Success" agent reads messages and suggests replies.
 **Implementation Prompt:**
-- **User-Facing Outcome:** Integrate Meta platforms so users can manage all customer chats in one OHC inbox.
+- **User-Facing Outcome:** Integrate Meta platforms so users can manage all customer chats in one OmniSolo inbox.
 - **Acceptance Criteria:** OAuth connection works, incoming messages sync to inbox, replies send correctly.
 **Priority:** P0 (Critical)
 **Estimated Scope:** Large
@@ -56,7 +56,7 @@ This report summarizes the research and evaluation of seven tool integration cat
 **Ease of Use (Persona Lens):**
 - **Pros:** Invisible to the user. The "Marketing" AI drafts the email content and sends it to the customer list automatically.
 - **Cons:** Requires domain authentication (SPF/DKIM) which is highly technical.
-**Pricing:** Pay per email volume. Can be bundled into OHC Pro tiers.
+**Pricing:** Pay per email volume. Can be bundled into OmniSolo Pro tiers.
 **Deployment Modes:** Cloud (Managed SendGrid), Standalone (Bring Your Own API Key).
 **Design Doc:**
 - "Marketing & Advertising" agent suggests a campaign.
@@ -71,7 +71,7 @@ This report summarizes the research and evaluation of seven tool integration cat
 ---
 
 ## 4. Payment Processing (LATAM Focus)
-**Problem Statement:** Stripe is not widely used or supported in many Latin American countries, limiting OHC's global reach.
+**Problem Statement:** Stripe is not widely used or supported in many Latin American countries, limiting OmniSolo's global reach.
 **Tool Evaluated:** Mercado Pago API
 **Market Context:** Mercado Pago dominates LATAM e-commerce, offering local payment methods like Pix (Brazil) and OXXO (Mexico).
 **Ease of Use (Persona Lens):**
@@ -105,7 +105,7 @@ This report summarizes the research and evaluation of seven tool integration cat
 - At checkout, Shippo API calculates shipping cost.
 - In Operations dashboard, owner clicks "Print Label", Shippo generates the PDF.
 **Implementation Prompt:**
-- **User-Facing Outcome:** Merchants can get live shipping rates and print labels without leaving OHC.
+- **User-Facing Outcome:** Merchants can get live shipping rates and print labels without leaving OmniSolo.
 - **Acceptance Criteria:** Shipping rates fetch correctly at checkout, label PDF is generated and downloadable.
 **Priority:** P1 (High)
 **Estimated Scope:** Large
@@ -120,7 +120,7 @@ This report summarizes the research and evaluation of seven tool integration cat
 - **Pros:** Completely automated. Order status changes trigger SMS instantly.
 - **Cons:** Complex regulatory compliance (e.g., A2P 10DLC registration) must be completely abstracted.
 **Pricing:** Per message segment. Must be metered or included in premium tiers.
-**Deployment Modes:** Cloud (OHC managed Twilio), Standalone (User provides Twilio SID/Auth).
+**Deployment Modes:** Cloud (OmniSolo managed Twilio), Standalone (User provides Twilio SID/Auth).
 **Design Doc:**
 - Owner enables SMS notifications.
 - Customers opt-in at checkout.

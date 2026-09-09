@@ -14,7 +14,7 @@
 **Research Report:** Cal.com is an open-source scheduling tool with a robust API and embeddable booking pages. It is significantly more developer-friendly than building a scheduling engine from scratch and handles timezone complexity.
 **Next Steps:**
 - Provision Cal.com API tokens securely per tenant.
-- Integrate Cal.com scheduling embed into the OHC frontend.
+- Integrate Cal.com scheduling embed into the OmniSolo frontend.
 
 ## 3. Email Marketing: Campaign Manager
 **Title:** Integrate Resend for Transactional and Marketing Emails

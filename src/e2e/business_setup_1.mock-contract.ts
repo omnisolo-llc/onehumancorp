@@ -6,7 +6,7 @@ test.describe('Business Setup Wizard', () => {
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('ohc_wizard_state');
+      localStorage.removeItem('omnisolo_wizard_state');
       localStorage.removeItem('onboardingState');
     }, id);
     await page.goto('/website-builder');
@@ -54,7 +54,7 @@ test.describe('Business Setup Wizard', () => {
     await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: 'Modern' }).click();
     await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
+    await page.getByRole('button', { name: /Free OmniSolo Domain/ }).click();
     await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 

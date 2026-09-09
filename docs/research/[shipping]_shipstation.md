@@ -10,9 +10,9 @@
 - **Compatibility**: Cloud, Standalone (via API).
 **Design Doc**:
 - User authenticates via API keys/OAuth to connect ShipStation.
-- OHC automatically pushes new orders to ShipStation.
-- When an order is fulfilled in ShipStation, ShipStation sends a webhook to OHC.
-- OHC updates the order status and stores the tracking number, notifying the customer.
-**Implementation Prompt**: Build a two-way sync with ShipStation. Create a mechanism to push paid orders from OHC to ShipStation automatically. Implement webhook endpoints to receive fulfillment notifications and tracking numbers from ShipStation, updating the order state in OHC.
+- OmniSolo automatically pushes new orders to ShipStation.
+- When an order is fulfilled in ShipStation, ShipStation sends a webhook to OmniSolo.
+- OmniSolo updates the order status and stores the tracking number, notifying the customer.
+**Implementation Prompt**: Build a two-way sync with ShipStation. Create a mechanism to push paid orders from OmniSolo to ShipStation automatically. Implement webhook endpoints to receive fulfillment notifications and tracking numbers from ShipStation, updating the order state in OmniSolo.
 **Priority**: P1
 **Estimated Scope**: Large

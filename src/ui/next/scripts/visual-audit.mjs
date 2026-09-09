@@ -4,15 +4,17 @@ import { chromium } from '@playwright/test';
 import {
   HYDRATION_FAILURE_PATTERN,
   classifyConsoleError,
+  expectedShellCounts,
   failureReasons,
   isCoverageComplete,
   PUBLIC_AUTH_ROUTES,
   shouldFailAudit,
 } from './visual-audit-policy.mjs';
+import { loginForVisualAudit } from './visual-audit-auth.mjs';
 import { discoverPageRoutes, shardAuditCases } from './visual-audit-routes.mjs';
 
 const baseUrl = process.env.VISUAL_AUDIT_BASE_URL || 'http://127.0.0.1:3000';
-const outputDir = process.env.VISUAL_AUDIT_OUTPUT_DIR || '/tmp/ohc-visual-audit';
+const outputDir = process.env.VISUAL_AUDIT_OUTPUT_DIR || '/tmp/omnisolo-visual-audit';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const captureBodyText = process.env.VISUAL_AUDIT_CAPTURE_BODY_TEXT === '1';
 const allowNoSandbox = process.env.VISUAL_AUDIT_ALLOW_NO_SANDBOX === '1';
@@ -40,33 +42,39 @@ function base64url(value) {
 }
 
 async function createAuditSessionCookie() {
-  const keyId = process.env.OHC_WEB_SESSION_KEY_ID;
-  const encodedSecret = process.env.OHC_WEB_SESSION_SECRET;
+  const keyId = process.env.OMNISOLO_WEB_SESSION_KEY_ID;
+  const encodedSecret = process.env.OMNISOLO_WEB_SESSION_SECRET;
   if (!keyId || !encodedSecret) {
-    throw new Error('OHC_WEB_SESSION_KEY_ID and OHC_WEB_SESSION_SECRET are required for authenticated visual auditing');
+    throw new Error('OMNISOLO_WEB_SESSION_KEY_ID and OMNISOLO_WEB_SESSION_SECRET are required for authenticated visual auditing');
   }
   const keyBytes = Buffer.from(encodedSecret, 'base64url');
   if (keyBytes.byteLength !== 32) throw new Error('visual audit session secret must contain 32 bytes');
+  const authOrigin = process.env.VISUAL_AUDIT_AUTH_URL
+    || process.env.OMNISOLO_BACKEND_URL
+    || process.env.BACKEND_URL;
+  const auditSession = await loginForVisualAudit({
+    authOrigin,
+    username: process.env.VISUAL_AUDIT_USERNAME,
+    password: process.env.VISUAL_AUDIT_PASSWORD,
+    organizationId: process.env.VISUAL_AUDIT_ORGANIZATION_ID,
+  });
   const origin = new URL(baseUrl).origin;
-  const cookieName = new URL(origin).protocol === 'https:' ? '__Host-ohc_session' : 'ohc_session';
+  const cookieName = new URL(origin).protocol === 'https:' ? '__Host-omnisolo_session' : 'omnisolo_session';
   const now = Math.floor(Date.now() / 1000);
+  const expiresAt = Math.min(now + 3_600, auditSession.expiresAt);
+  if (expiresAt <= now) throw new Error('visual audit login returned an already expired token');
   const protectedSegment = base64url(JSON.stringify({
     alg: 'dir',
     enc: 'A256GCM',
-    typ: 'ohc-session+jwe',
+    typ: 'omnisolo-session+jwe',
     kid: keyId,
   }));
   const payload = Buffer.from(JSON.stringify({
     version: 1,
     iat: now,
-    exp: now + 3_600,
-    accessToken: 'visual-audit-backend-token',
-    user: {
-      id: 'visual-audit-user',
-      username: 'Visual Audit',
-      roles: ['ADMIN'],
-      organizationId: 'visual-audit-organization',
-    },
+    exp: expiresAt,
+    accessToken: auditSession.accessToken,
+    user: auditSession.user,
     aud: origin,
     purpose: cookieName,
   }));

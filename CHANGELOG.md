@@ -1,7 +1,5 @@
 ## v0.4.48 (Cloud) / v0.4.48+1 (Standalone)
 
-![New Dashboard UI](https://via.placeholder.com/600x400)
-
 ### Cloud Scaling Improvements
 - Optimize Multi-Environment Promotion capabilities for multi-tenant K8s to better support high-load environments.
 
@@ -61,7 +59,7 @@
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
 - Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
 
-# OHC Hybrid Agentic OS - Changelog
+# OmniSolo Hybrid Agentic OS - Changelog
 
 ## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
 
@@ -78,7 +76,7 @@
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
 ### Privacy/Offline Improvements
-- Implement offline-first local vector embeddings cache for the OHC Swarm.
+- Implement offline-first local vector embeddings cache for the OmniSolo Swarm.
 
 
 ## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
@@ -376,7 +374,7 @@
 ## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
 ### Cloud Scaling Improvements
 - Parallel execution for SyncMissions and SyncContextSync.
-- Optimize OHC-SIP synchronization latency.
+- Optimize OmniSolo-SIP synchronization latency.
 
 ### Privacy/Offline Improvements
 - Add Agent Harness architecture research report.
@@ -435,7 +433,7 @@
 - Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.
 
 ### Privacy/Offline Improvements
-- Added interop.ValidateSPIFFEID validation to all realtime mesh broadcast and capability advertisements ensuring compliance with OHC Hybrid Architecture protocols.
+- Added interop.ValidateSPIFFEID validation to all realtime mesh broadcast and capability advertisements ensuring compliance with OmniSolo Hybrid Architecture protocols.
 
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 ### Cloud Scaling Improvements

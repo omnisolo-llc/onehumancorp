@@ -49,7 +49,117 @@ where
         )
         .route("/skills", get(list_skills).patch(mutate_skill))
         .route("/connectors", get(list_connectors).patch(mutate_connector))
+        .route(
+            "/settings",
+            get(get_assistant_settings).patch(update_assistant_settings),
+        )
         .layer(Extension(db))
+}
+
+fn assistant_setting_key(tenant_id: &str) -> String {
+    format!("assistant.agent_name:{tenant_id}")
+}
+
+async fn get_assistant_settings(
+    Extension(db): Extension<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id =
+        ::server_common::auth_utils::signed_tenant_id(&claims).ok_or(StatusCode::UNAUTHORIZED)?;
+    let key = assistant_setting_key(&tenant_id);
+    let value = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        sqlx::query_scalar::<_, String>("SELECT value FROM application_settings WHERE `key` = ?")
+            .bind(&key)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|error| {
+                tracing::error!("Failed to read MySQL assistant settings: {error}");
+                StatusCode::SERVICE_UNAVAILABLE
+            })?
+    } else {
+        match &db.store {
+            DbStore::Postgres => sqlx::query_scalar::<_, String>(
+                "SELECT value FROM application_settings WHERE key = $1",
+            )
+            .bind(&key)
+            .fetch_optional(&db.pool)
+            .await
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?,
+            DbStore::Sqlite(pool) => sqlx::query_scalar::<_, String>(
+                "SELECT value FROM application_settings WHERE key = ?",
+            )
+            .bind(&key)
+            .fetch_optional(pool)
+            .await
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?,
+        }
+    };
+    Ok(Json(serde_json::json!({
+        "settings": value.map(|agent_name| serde_json::json!({ "agentName": agent_name })).unwrap_or_else(|| serde_json::json!({})),
+    })))
+}
+
+async fn update_assistant_settings(
+    Extension(db): Extension<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id =
+        ::server_common::auth_utils::signed_tenant_id(&claims).ok_or(StatusCode::UNAUTHORIZED)?;
+    let agent_name = payload
+        .get("agentName")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && value.chars().count() <= 100)
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let key = assistant_setting_key(&tenant_id);
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        sqlx::query(
+            "INSERT INTO application_settings (`key`, value, updated_at, updated_by)
+             VALUES (?, ?, CURRENT_TIMESTAMP, ?) ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP, updated_by = VALUES(updated_by)",
+        )
+        .bind(&key)
+        .bind(agent_name)
+        .bind(&claims.sub)
+        .execute(&pool)
+        .await
+        .map_err(|error| {
+            tracing::error!("Failed to write MySQL assistant settings: {error}");
+            StatusCode::SERVICE_UNAVAILABLE
+        })?;
+    } else {
+        match &db.store {
+            DbStore::Postgres => {
+                sqlx::query(
+                    "INSERT INTO application_settings (key, value, updated_at, updated_by)
+                     VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+                     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP, updated_by = EXCLUDED.updated_by",
+                )
+                .bind(&key)
+                .bind(agent_name)
+                .bind(&claims.sub)
+                .execute(&db.pool)
+                .await
+                .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO application_settings (key, value, updated_at, updated_by)
+                     VALUES (?, ?, CURRENT_TIMESTAMP, ?)
+                     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by",
+                )
+                .bind(&key)
+                .bind(agent_name)
+                .bind(&claims.sub)
+                .execute(pool)
+                .await
+                .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+            }
+        }
+    }
+    Ok(Json(serde_json::json!({
+        "settings": { "agentName": agent_name },
+    })))
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -2571,9 +2681,9 @@ mod real_feature_state_tests {
     }
 
     async fn isolated_postgres_pool() -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {
-        let database_url = std::env::var("OHC_TEST_POSTGRES_URL")
+        let database_url = std::env::var("OMNISOLO_TEST_POSTGRES_URL")
             .ok()
-            .or_else(|| std::env::var("OHC_DATABASE_URL").ok())?;
+            .or_else(|| std::env::var("OMNISOLO_DATABASE_URL").ok())?;
         if !database_url.starts_with("postgres") {
             return None;
         }
@@ -3175,7 +3285,7 @@ async fn synthesize_customer_memory(
 
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
-    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+    let llm_res = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
         Ok("gemini") => {
             crate::minimax::LocalLLMClient::new()
                 .reason(&compressed_prompt)

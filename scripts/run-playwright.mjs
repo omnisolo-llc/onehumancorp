@@ -68,26 +68,26 @@ async function main() {
 
   const serverBin = process.env.SERVER_BIN || path.join(ROOT, 'bazel-bin/src/server/server');
   const agentBin = resolveExistingPath(
-    process.env.OHC_BUILTIN_AGENT_BINARY,
+    process.env.OMNISOLO_BUILTIN_AGENT_BINARY,
     process.env.AGENT_BIN,
-    path.join(ROOT, 'bazel-bin/src/agents/builtin/ohc-builtin-agent'),
-    path.join(ROOT, 'src/agents/builtin/ohc-builtin-agent'),
+    path.join(ROOT, 'bazel-bin/src/agents/builtin/omnisolo-builtin-agent'),
+    path.join(ROOT, 'src/agents/builtin/omnisolo-builtin-agent'),
   );
   if (agentBin) {
-    process.env.OHC_BUILTIN_AGENT_BINARY = agentBin;
-  } else if (process.env.OHC_BUILTIN_AGENT_BINARY && !fs.existsSync(process.env.OHC_BUILTIN_AGENT_BINARY)) {
-    delete process.env.OHC_BUILTIN_AGENT_BINARY;
+    process.env.OMNISOLO_BUILTIN_AGENT_BINARY = agentBin;
+  } else if (process.env.OMNISOLO_BUILTIN_AGENT_BINARY && !fs.existsSync(process.env.OMNISOLO_BUILTIN_AGENT_BINARY)) {
+    delete process.env.OMNISOLO_BUILTIN_AGENT_BINARY;
   }
   if (process.env.MINIMAX_API_KEY) {
-    process.env.OHC_LLM_PROVIDER = process.env.OHC_LLM_PROVIDER || 'minimax';
-    process.env.OHC_LLM_MODEL = process.env.OHC_LLM_MODEL || 'MiniMax-M3';
+    process.env.OMNISOLO_LLM_PROVIDER = process.env.OMNISOLO_LLM_PROVIDER || 'minimax';
+    process.env.OMNISOLO_LLM_MODEL = process.env.OMNISOLO_LLM_MODEL || 'MiniMax-M3';
     process.env.MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M3';
   }
-  process.env.OHC_AGENT_TASK_TIMEOUT_SECS = process.env.OHC_AGENT_TASK_TIMEOUT_SECS || '240';
-  process.env.OHC_LLM_TIMEOUT_SECS = process.env.OHC_LLM_TIMEOUT_SECS || '180';
+  process.env.OMNISOLO_AGENT_TASK_TIMEOUT_SECS = process.env.OMNISOLO_AGENT_TASK_TIMEOUT_SECS || '240';
+  process.env.OMNISOLO_LLM_TIMEOUT_SECS = process.env.OMNISOLO_LLM_TIMEOUT_SECS || '180';
 
-  process.env.OHC_AGENT_AUTH_DISABLED = process.env.OHC_AGENT_AUTH_DISABLED || 'true';
-  process.env.OHC_ENV = process.env.OHC_ENV || 'test';
+  process.env.OMNISOLO_AGENT_AUTH_DISABLED = process.env.OMNISOLO_AGENT_AUTH_DISABLED || 'true';
+  process.env.OMNISOLO_ENV = process.env.OMNISOLO_ENV || 'test';
 
   console.log(`[run-playwright] Starting server at ${serverBin}...`);
   const server = spawn(serverBin, [], {
@@ -97,11 +97,11 @@ async function main() {
       ...process.env,
       DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://ohc:ohc@localhost:5432/ohc',
       REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
-      OHC_DEFAULT_TENANT_ID: process.env.OHC_DEFAULT_TENANT_ID ?? 'e2e-tenant',
+      OMNISOLO_DEFAULT_TENANT_ID: process.env.OMNISOLO_DEFAULT_TENANT_ID ?? 'e2e-tenant',
     },
   });
 
-  const appReady = await waitForPort(Number(process.env.OHC_PORT ?? 18789), 60);
+  const appReady = await waitForPort(Number(process.env.OMNISOLO_PORT ?? 18789), 60);
   if (!appReady) {
     server.kill();
     throw new Error('App server did not become ready.');

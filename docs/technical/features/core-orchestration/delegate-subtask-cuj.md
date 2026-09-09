@@ -28,7 +28,7 @@ graph TD;
     Thread --> Execute[Publish Instruction];
     Execute --> Success[Caller Receives Success];
 
-    %% Premium OHC Glassmorphism Tokens
+    %% Premium OmniSolo Glassmorphism Tokens
     style Agent fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
     style Hub fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
     style Reject fill:rgba(255, 0, 0, 0.1),stroke:rgba(255, 0, 0, 0.3)

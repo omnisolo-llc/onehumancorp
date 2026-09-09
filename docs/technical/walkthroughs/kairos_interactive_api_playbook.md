@@ -2,7 +2,7 @@
 
 # KAIROS Interactive API Playbook Walkthrough
 
-Welcome to the interactive walkthrough for the KAIROS Orchestration APIs. This guide provides the ground-truth technical specifications for the OHC Hybrid Agentic OS.
+Welcome to the interactive walkthrough for the KAIROS Orchestration APIs. This guide provides the ground-truth technical specifications for the OmniSolo Hybrid Agentic OS.
 
 ## Teammate Mesh Architecture
 
@@ -86,7 +86,7 @@ sequenceDiagram
     participant LLM as Embedding Model
     participant DB as pgvector
 
-    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
+    Worker->>FS: Writes Session Context to OMNISOLO_MEMORY_DIR
     AutoDream->>FS: Polling/Manual Sync Trigger
     AutoDream->>LLM: Pass text to Minimax/Ada
     LLM-->>AutoDream: Return 1536-dim Embedding
@@ -123,7 +123,7 @@ sequenceDiagram
     participant LLM as Embedding Model
     participant DB as pgvector
 
-    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
+    Worker->>FS: Writes Session Context to OMNISOLO_MEMORY_DIR
     AutoDream->>FS: Polling/Manual Sync Trigger
     AutoDream->>LLM: Pass text to Minimax/Ada
     LLM-->>AutoDream: Return 1536-dim Embedding

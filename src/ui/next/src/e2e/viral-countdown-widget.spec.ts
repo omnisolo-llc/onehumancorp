@@ -8,7 +8,7 @@ test.describe('Viral Countdown Widget', () => {
 
     // Verify we are on the widget page
     await expect(page).toHaveURL(/\/viral-countdown-widget/);
-    await expect(page.getByRole('heading', { name: 'Viral Countdown Widget', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Viral Countdown Widget', exact: true }).first()).toBeVisible();
 
     // Set custom event name
     const customEventName = 'Super Awesome Summer Sale';
@@ -31,11 +31,12 @@ test.describe('Viral Countdown Widget', () => {
     expect(codeText).toContain('branding=true');
 
     // Remove branding should trigger paywall if not pro (adminPage doesn't have pro by default)
-    const removeBrandingCheckbox = page.getByLabel(/Remove "Powered by OHC" Badge/);
-    await removeBrandingCheckbox.check();
+    const removeBrandingCheckbox = page.getByLabel(/Remove "Powered by OmniSolo" Badge/);
+    await removeBrandingCheckbox.click();
 
     // Ensure soft paywall appears
     await expect(page.getByText('Upgrade to Remove Branding')).toBeVisible();
+    await expect(removeBrandingCheckbox).not.toBeChecked();
     await page.getByRole('button', { name: 'Close paywall' }).click();
 
     // Simulate copying
@@ -59,6 +60,6 @@ test.describe('Viral Countdown Widget', () => {
 
     // Should have dark mode color and branding
     expect(text).toContain('#111827');
-    expect(text).toContain('Powered by OHC');
+    expect(text).toContain('OmniSolo');
   });
 });

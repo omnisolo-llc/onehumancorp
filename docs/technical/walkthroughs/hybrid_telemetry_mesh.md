@@ -2,15 +2,15 @@
 
 # Hybrid Swarm-Aware MCP Telemetry Mesh Walkthrough
 
-Welcome to the Hybrid Swarm-Aware MCP Telemetry Mesh interactive walkthrough. This guide explains how OHC achieves full-spectrum observability across both Standalone SQLite and Cloud PostgreSQL deployments.
+Welcome to the Hybrid Swarm-Aware MCP Telemetry Mesh interactive walkthrough. This guide explains how OmniSolo achieves full-spectrum observability across both Standalone SQLite and Cloud PostgreSQL deployments.
 
 ## 1. Architectural Overview
 
-Unlike competitors that lock telemetry within cloud silos or lack persistent telemetry entirely, OHC leverages its Hybrid Architecture (OHC-HA) to seamlessly synchronize local SQLite-based metrics with Cloud PostgreSQL-based observability.
+Unlike competitors that lock telemetry within cloud silos or lack persistent telemetry entirely, OmniSolo leverages its Hybrid Architecture (OmniSolo-HA) to seamlessly synchronize local SQLite-based metrics with Cloud PostgreSQL-based observability.
 
 ```mermaid
 graph TD
-    A[Standalone OHC Agent] -->|Logs Metrics locally| B(Local SQLite SIPDB)
+    A[Standalone OmniSolo Agent] -->|Logs Metrics locally| B(Local SQLite SIPDB)
     A -->|SPIFFE/SPIRE SVID| C[Local mTLS Proxy]
     B -.->|Background MCP Sync| D{Cloud MCP Gateway}
     C -.->|Auth Handshake| D

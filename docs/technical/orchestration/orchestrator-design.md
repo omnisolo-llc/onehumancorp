@@ -6,7 +6,7 @@
 **Version:** 2.1.0
 
 ## 1. Overview
-The OHC Hybrid Agentic OS requires an autonomous, resilient backbone to seamlessly decompose massive human goals into isolated, parallel agentic workflows. **KAIROS Orchestration** is this unified architecture, driving "Shared Task Lists", "Teammate Mesh", "Sub-Agent Queues", "Distributed State Machines", and "AutoDream" pipelines across both Kubernetes/PostgreSQL clouds and local SQLite standalone footprints.
+The OmniSolo Hybrid Agentic OS requires an autonomous, resilient backbone to seamlessly decompose massive human goals into isolated, parallel agentic workflows. **KAIROS Orchestration** is this unified architecture, driving "Shared Task Lists", "Teammate Mesh", "Sub-Agent Queues", "Distributed State Machines", and "AutoDream" pipelines across both Kubernetes/PostgreSQL clouds and local SQLite standalone footprints.
 
 ## 2. Phase 1: Shared Task List, DAG Dependencies, and State Machines (Decomposition)
 To prevent agents from stepping on each other and to manage complex, multi-agent DAG flows, we deploy a robust distributed state machine backed by the database.
@@ -46,7 +46,7 @@ CREATE INDEX idx_sm_entity ON state_machine_transitions(entity_id, entity_type);
 ```mermaid
 sequenceDiagram
     participant CEO as Human CEO
-    participant API as OHC API
+    participant API as OmniSolo API
     participant DB as Shared Task List (PG/SQLite)
     participant Planner as Orchestrator Agent
     participant Queue as Sub-Agent Queue
@@ -87,7 +87,7 @@ Agents interact with the Mesh using standard HTTP POSTs and updated gRPC contrac
 Agents lack long-term coherence. AutoDream runs passively to translate ephemeral thoughts into durable truth, preventing context window overflows.
 
 ### 4.1 Data Pipeline Architecture
-*   **Data Sources**: Ephemeral context streams into `agent_session_data` and optional runtime memory files under `OHC_MEMORY_DIR`.
+*   **Data Sources**: Ephemeral context streams into `agent_session_data` and optional runtime memory files under `OMNISOLO_MEMORY_DIR`.
 *   **Background Consolidation**: The `AutoDreamPipeline` orchestrator worker consumes these sources, chunking and compressing the context via the Rust LLM client layer under `src/agents/builtin/llm/`.
 *   **Vector Storage Schema (pgvector)**:
     ```sql
@@ -105,7 +105,7 @@ Agents lack long-term coherence. AutoDream runs passively to translate ephemeral
 *   **Vector Querying**: `pgvector` enables exact Nearest Neighbor (`ORDER BY embedding <-> $1`). SQLite gracefully falls back to recency sorts in standalone mode.
 
 ## 5. Visual Excellence
-Adhering to OHC Core Values, the UI components tracking the KAIROS Orchestration will feature:
+Adhering to OmniSolo Core Values, the UI components tracking the KAIROS Orchestration will feature:
 *   **Glassmorphism**: `backdrop-filter: blur(20px) saturate(200%)`
 *   **Dark-Mode Base**: `background: rgba(255, 255, 255, 0.03)`
 *   **Typography**: `font-family: 'Outfit', 'Inter', sans-serif`

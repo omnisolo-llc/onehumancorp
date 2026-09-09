@@ -1,9 +1,9 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# OHC Chaos Engineering Resilience Architecture
+# OmniSolo Chaos Engineering Resilience Architecture
 
 **Overview**
-The OHC Hybrid Agentic OS guarantees stability through relentless failure simulation. Our chaos engineering strategy systematically injects faults to ensure absolute autonomy and resilience across Cloud, Standalone, and Thin Client modes. This architecture is designed to continuously inject controlled failures into the Agent Harness and cluster orchestrator, allowing the system to self-heal and adapt to market reality.
+The OmniSolo Hybrid Agentic OS guarantees stability through relentless failure simulation. Our chaos engineering strategy systematically injects faults to ensure absolute autonomy and resilience across Cloud, Standalone, and Thin Client modes. This architecture is designed to continuously inject controlled failures into the Agent Harness and cluster orchestrator, allowing the system to self-heal and adapt to market reality.
 
 ## Chaos Injection Framework
 

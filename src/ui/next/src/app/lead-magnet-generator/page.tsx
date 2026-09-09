@@ -24,8 +24,8 @@ export default function LeadMagnetGeneratorPage() {
     }
   }, []);
 
-  const embedUrl = `https://ohc.app/api/v1/growth/lead-magnet/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}&buttonText=${encodeURIComponent(buttonText)}&hideBranding=${removeBranding}`;
-  const embedCode = `<iframe src="${embedUrl}" width="100%" height="350" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/lead-magnet/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}&buttonText=${encodeURIComponent(buttonText)}&hideBranding=${removeBranding}`;
+  const embedCode = `<iframe src="${embedUrl}" width="100%" height="350" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -121,7 +121,7 @@ export default function LeadMagnetGeneratorPage() {
                     onChange={handleBrandingToggle}
                     className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Branding</span>
+                  <span className="text-sm font-medium text-gray-700">Remove "Powered by OmniSolo" Branding</span>
                   {!hasPro && (
                     <span className="text-[10px] uppercase font-bold tracking-wider bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Pro</span>
                   )}
@@ -171,8 +171,8 @@ export default function LeadMagnetGeneratorPage() {
                 </div>
                 {!removeBranding && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                    <a href={`https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} className={`text-xs font-semibold no-underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                      ⚡ Powered by OHC
+                    <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} className={`text-xs font-semibold no-underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      ⚡ Powered by OmniSolo
                     </a>
                   </div>
                 )}
@@ -189,9 +189,9 @@ export default function LeadMagnetGeneratorPage() {
             <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">✨</span>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 font-outfit mb-2">Upgrade to OHC Pro</h3>
+            <h3 className="text-xl font-bold text-gray-900 font-outfit mb-2">Upgrade to OmniSolo Pro</h3>
             <p className="text-gray-600 text-sm mb-6">
-              Remove the "Powered by OHC" branding and get access to premium templates, advanced analytics, and custom domains.
+              Remove the "Powered by OmniSolo" branding and get access to premium templates, advanced analytics, and custom domains.
             </p>
             <div className="space-y-3">
               <button

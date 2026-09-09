@@ -94,7 +94,24 @@ def assert_real_yaml_parser_rejects_nested_duplicates() -> None:
     raise AssertionError("real YAML parser accepted a recursively duplicated key")
 
 
+def assert_dependency_audit_blocks_required_check() -> None:
+    import yaml
+    required = yaml.safe_load(WORKFLOW.read_text())["jobs"]["ci-required"]
+    assert "dependency-audit" in required["needs"], "CI Required must wait for dependency audit"
+    step = required["steps"][0]
+    assert step["env"].get("DEPENDENCY_AUDIT_RESULT") == "${{ needs.dependency-audit.result }}"
+    for markdown in ("false", "true"):
+        for audit in ("success", "failure", "cancelled", "skipped"):
+            environment = {key: "success" for key in step["env"]}
+            environment.update(EVENT_NAME="push", MARKDOWN_ONLY=markdown, DEPENDENCY_AUDIT_RESULT=audit)
+            result = subprocess.run(["bash", "--noprofile", "--norc", "-c", step["run"]],
+                                    env=environment, capture_output=True, text=True)
+            expected = audit == "success" or (markdown == "true" and audit == "skipped")
+            assert (result.returncode == 0) == expected, (markdown, audit, result.stdout, result.stderr)
+
+
 def main() -> None:
+    assert_dependency_audit_blocks_required_check()
     assert_bash_env_can_preempt_a_step()
     assert_real_yaml_parser_rejects_unquoted_colon_space()
     assert_parser_absence_fails_closed()
@@ -123,10 +140,10 @@ def main() -> None:
             "workflow BASH_ENV override",
         ),
         ("pgvector/pgvector:pg16", "postgres:16", "pgvector service"),
-        ("OHC_REQUIRE_POSTGRES_TESTS: \"1\"", "OHC_REQUIRE_POSTGRES_TESTS: \"0\"", "required mode"),
+        ("OMNISOLO_REQUIRE_POSTGRES_TESTS: \"1\"", "OMNISOLO_REQUIRE_POSTGRES_TESTS: \"0\"", "required mode"),
         (
-            "      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
-            '      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security\n      PATH: "/tmp/fake-bin"',
+            "      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
+            '      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security\n      PATH: "/tmp/fake-bin"',
             "postgres-security job PATH override",
         ),
         ("AND NOT rolbypassrls", "OR rolbypassrls", "NOBYPASSRLS assertion"),
@@ -150,8 +167,8 @@ def main() -> None:
             "commented role assertions",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          if false; then\n            psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          if false; then\n            psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "unreachable role proof",
         ),
         (
@@ -165,38 +182,38 @@ def main() -> None:
             "unreachable required-result enforcement",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          exit 0\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          exit 0\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result direct early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          if true; then exit 0; fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          if true; then exit 0; fi\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result guarded early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          true; exit 0\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          true; exit 0\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result compound early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          if :; then exit 0; fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          if :; then exit 0; fi\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result colon-guarded early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          if [[ 1 -eq 1 ]]; then\n            exit 0\n          fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          if [[ 1 -eq 1 ]]; then\n            exit 0\n          fi\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result multiline early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          exit 00\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          exit 00\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result alternate-zero early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          exec /bin/true\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          exec /bin/true\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result exec replacement",
         ),
         (
@@ -245,33 +262,33 @@ def main() -> None:
             "check-changes exec replacement",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          exit 00\n          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          exit 00\n          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "application-role proof early success",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "          true <<'SQL'",
             "inert admin SQL heredoc owner",
         ),
         (
-            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "          true <<'SQL'",
             "inert application-role SQL heredoc owner",
         ),
         (
-            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          "$(printf psql)" "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          "$(printf psql)" "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "substituted application-role SQL owner",
         ),
         (
-            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          command psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          command psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "wrapped application-role SQL owner",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          exec /bin/true\n          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          exec /bin/true\n          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "application-role proof exec replacement",
         ),
         (
@@ -291,12 +308,12 @@ def main() -> None:
         ),
         (
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
-            '      - name: Run PostgreSQL tenant-isolation suite\n        env:\n          OHC_REQUIRE_POSTGRES_TESTS: "0"\n          OHC_DATABASE_URL: ""\n        run:',
+            '      - name: Run PostgreSQL tenant-isolation suite\n        env:\n          OMNISOLO_REQUIRE_POSTGRES_TESTS: "0"\n          OMNISOLO_DATABASE_URL: ""\n        run:',
             "suite optional-skip environment",
         ),
         (
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
-            '      - name: Run PostgreSQL tenant-isolation suite\n        ? env\n        :\n          OHC_REQUIRE_POSTGRES_TESTS: "0"\n          OHC_DATABASE_URL: ""\n        run:',
+            '      - name: Run PostgreSQL tenant-isolation suite\n        ? env\n        :\n          OMNISOLO_REQUIRE_POSTGRES_TESTS: "0"\n          OMNISOLO_DATABASE_URL: ""\n        run:',
             "explicit-key suite optional-skip environment",
         ),
         (

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Role};
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Role};
 
 #[async_trait]
 pub trait LlmClient: Send + Sync {
@@ -131,7 +131,7 @@ pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{Message, Role, ToolResult};
+    use omnisolo_builtin_agent_core::types::{Message, Role, ToolResult};
 
     #[test]
     fn test_minify_json_string() {

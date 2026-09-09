@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   classifyConsoleError,
+  expectedShellCounts,
   failureReasons,
   isCoverageComplete,
   PUBLIC_AUTH_ROUTES,
@@ -73,6 +74,14 @@ describe('visual audit policy', () => {
     })).toBe('unexpected');
   });
 
+  it('does not hide browser WebSocket failures as expected service noise', () => {
+    expect(classifyConsoleError({
+      message: "WebSocket connection to 'ws://127.0.0.1:18789/api/v1/feed/ws' failed",
+      locationUrl: 'http://127.0.0.1:3000/_next/static/chunks/app/dashboard/page.js',
+      pageUrl: 'http://127.0.0.1:3000/dashboard',
+    })).toBe('unexpected');
+  });
+
   it('allows exact page-data fallbacks while the local backend is unavailable', () => {
     for (const [status, pathname] of [
       [404, '/api/v1/ledger/entries'],
@@ -87,6 +96,28 @@ describe('visual audit policy', () => {
         pageUrl: 'http://192.168.8.35:3000/dashboard',
       }), pathname).toBe('expected-service');
     }
+  });
+
+  it('does not classify retired dashboard API contracts as expected service noise', () => {
+    for (const pathname of [
+      '/api/v1/mesh/v2/collective',
+      '/api/v1/ledger/accounts',
+      '/api/v1/user/usage',
+    ]) {
+      expect(classifyConsoleError({
+        message: 'Failed to load resource: the server responded with a status of 404 (Not Found)',
+        locationUrl: `http://127.0.0.1:3000${pathname}`,
+        pageUrl: 'http://127.0.0.1:3000/dashboard',
+      }), pathname).toBe('unexpected');
+    }
+  });
+
+  it('allows the optional assistant settings endpoint to report not implemented', () => {
+    expect(classifyConsoleError({
+      message: 'Failed to load resource: the server responded with a status of 501 (Not Implemented)',
+      locationUrl: 'http://127.0.0.1:3000/api/v1/assistant/settings',
+      pageUrl: 'http://127.0.0.1:3000/assistant',
+    })).toBe('expected-service');
   });
 
   it('classifies hydration signatures independently', () => {
@@ -137,6 +168,15 @@ describe('visual audit policy', () => {
 
     complete[1].screenshotWritten = false;
     expect(isCoverageComplete(complete, expectedCases)).toBe(false);
+  });
+
+  it('models standalone login pages without requiring the dashboard shell', () => {
+    expect(expectedShellCounts('/login')).toEqual({ sidebar: 0, topbar: 0, main: 0 });
+    expect(expectedShellCounts('/dashboard')).toEqual({ sidebar: 1, topbar: 1, main: 1 });
+
+    const login = healthyResult('/login', 'desktop');
+    login.shellCounts = { auth: 1, sidebar: 0, topbar: 0, main: 0 };
+    expect(failureReasons(login)).toEqual([]);
   });
 
   it('fails pages that silently redirect to the login screen', () => {

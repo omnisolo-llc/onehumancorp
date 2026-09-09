@@ -25,11 +25,11 @@ export async function GET(request: Request) {
     const jsCode = `
 (function() {
     // Prevent multiple initializations
-    if (document.getElementById('ohc-referral-fab')) return;
+    if (document.getElementById('omnisolo-referral-fab')) return;
 
     // Create wrapper
     const wrapper = document.createElement('div');
-    wrapper.id = 'ohc-referral-fab';
+    wrapper.id = 'omnisolo-referral-fab';
     wrapper.style.position = 'fixed';
     wrapper.style.bottom = '24px';
     wrapper.style.right = '24px';
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
 
     const brandingHtml = ${removeBranding} ? '' : \`
         <div style="margin-top: 12px; text-align: center; font-size: 11px; font-weight: 500;">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OmniSolo</a>
         </div>
     \`;
 
@@ -84,17 +84,17 @@ export async function GET(request: Request) {
         <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 16px; font-weight: 700;">Get ${escapedReward}</h3>
         <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 14px; line-height: 1.4;">Give a friend ${escapedReward} off their first order, and get ${escapedReward} when they buy!</p>
 
-        <form id="ohc-referral-form" style="display: flex; flex-direction: column; gap: 12px; margin: 0;">
-            <input type="email" id="ohc-referral-email" placeholder="Enter your email" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; box-sizing: border-box; background: #f9fafb;" />
+        <form id="omnisolo-referral-form" style="display: flex; flex-direction: column; gap: 12px; margin: 0;">
+            <input type="email" id="omnisolo-referral-email" placeholder="Enter your email" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; box-sizing: border-box; background: #f9fafb;" />
             <button type="submit" style="width: 100%; padding: 10px; background-color: ${escapedThemeColor}; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: opacity 0.2s;">
                 Get Share Link
             </button>
         </form>
 
-        <div id="ohc-referral-success" style="display: none; flex-direction: column; gap: 12px;">
+        <div id="omnisolo-referral-success" style="display: none; flex-direction: column; gap: 12px;">
             <div style="color: #10b981; font-weight: 500; font-size: 14px;">Here is your link!</div>
-            <input type="text" id="ohc-referral-link" readonly value="https://ohc.app/share?ref=${encodedTenant}_xyz" style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; box-sizing: border-box; background: #f3f4f6; color: #374151;" />
-            <button id="ohc-copy-btn" style="width: 100%; padding: 10px; background-color: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background-color 0.2s;">
+            <input type="text" id="omnisolo-referral-link" readonly value="https://cloud.omnisolo.co/share?ref=${encodedTenant}_xyz" style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; box-sizing: border-box; background: #f3f4f6; color: #374151;" />
+            <button id="omnisolo-copy-btn" style="width: 100%; padding: 10px; background-color: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background-color 0.2s;">
                 Copy Link
             </button>
         </div>
@@ -128,14 +128,14 @@ export async function GET(request: Request) {
     });
 
     // Form logic
-    const form = document.getElementById('ohc-referral-form');
-    const successDiv = document.getElementById('ohc-referral-success');
-    const copyBtn = document.getElementById('ohc-copy-btn');
-    const linkInput = document.getElementById('ohc-referral-link');
+    const form = document.getElementById('omnisolo-referral-form');
+    const successDiv = document.getElementById('omnisolo-referral-success');
+    const copyBtn = document.getElementById('omnisolo-copy-btn');
+    const linkInput = document.getElementById('omnisolo-referral-link');
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const email = document.getElementById('ohc-referral-email').value;
+        const email = document.getElementById('omnisolo-referral-email').value;
         if (email) {
             fetch('/api/v1/growth/referrals/generate', {
                 method: 'POST',

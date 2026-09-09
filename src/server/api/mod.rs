@@ -1,4 +1,5 @@
 pub mod autodream;
+pub mod collective;
 pub mod mesh_handler;
 pub mod oauth;
 pub mod offline_sync;
@@ -54,7 +55,7 @@ pub mod agent_orchestrate;
 pub mod agent_stream;
 pub mod checkout_api;
 pub mod field_ops;
-pub mod ohc_job_queue;
+pub mod omnisolo_job_queue;
 pub mod proposals;
 pub mod realtime;
 pub mod storefront_delivery;

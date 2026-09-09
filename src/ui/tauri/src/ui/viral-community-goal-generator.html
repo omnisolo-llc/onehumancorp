@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Viral Community Goal Generator - OHC</title>
+  <title>Viral Community Goal Generator - OmniSolo OneHumanCorp</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -220,7 +220,7 @@
 
     function getHostUrl() {
         if (window.location.protocol === 'file:' || window.location.hostname === 'tauri.localhost') {
-             return 'https://ohc.network';
+             return 'https://cloud.omnisolo.co';
         }
         return window.location.origin;
     }
@@ -251,7 +251,7 @@
 
         const iframeUrl = `${hostUrl}/api/v1/growth/community-goal/embed?tenant=${tenantId}&target=${target}&reward=${reward}`;
 
-        const snippet = `<!-- OHC Viral Community Goal Widget -->
+        const snippet = `<!-- OmniSolo Viral Community Goal Widget -->
 <iframe src="${iframeUrl}" style="width:100%; max-width:400px; height:250px; border:none; border-radius:12px; display:block; margin:0 auto;" scrolling="no"></iframe>`;
 
         document.getElementById('embed-code').textContent = snippet;

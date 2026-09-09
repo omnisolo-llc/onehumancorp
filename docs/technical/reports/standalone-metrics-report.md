@@ -7,15 +7,15 @@
 
 ## Executive Summary
 
-As OHC pursues market dominance in the Hybrid Agentic OS sector against competitors like Replit Agent, OpenClaw, and Claude Code, a significant observability gap has emerged. While cloud-first agents enjoy rich Prometheus/Grafana telemtry, local-first architectures (Claude Code) treat telemetry as an afterthought or ignore it entirely.
+As OmniSolo pursues market dominance in the Hybrid Agentic OS sector against competitors like Replit Agent, OpenClaw, and Claude Code, a significant observability gap has emerged. While cloud-first agents enjoy rich Prometheus/Grafana telemtry, local-first architectures (Claude Code) treat telemetry as an afterthought or ignore it entirely.
 
-OHC's "Unfair Advantage" is its ability to run robust, local Standalone modes (SQLite) that gracefully degrade from Cloud dependencies. However, without a dedicated Standalone Metric Buffering & Cloud Sync mechanism, our Swarm Intelligence Protocol (OHC-SIP) cannot fully observe and optimize local agent execution.
+OmniSolo's "Unfair Advantage" is its ability to run robust, local Standalone modes (SQLite) that gracefully degrade from Cloud dependencies. However, without a dedicated Standalone Metric Buffering & Cloud Sync mechanism, our Swarm Intelligence Protocol (OmniSolo-SIP) cannot fully observe and optimize local agent execution.
 
 This report outlines the design for a **Standalone Metric Buffer and Cloud Sync** protocol that bridges this gap.
 
 ## Competitive Market Audit
 
-| Feature Area | Claude Code / Replit | OpenClaw | **OHC Vision (Hybrid Observability)** |
+| Feature Area | Claude Code / Replit | OpenClaw | **OmniSolo Vision (Hybrid Observability)** |
 | :--- | :--- | :--- | :--- |
 | **Local Execution Telemetry** | Ephemeral or non-existent | Fails Offline (Cloud only) | **Persistent Local Buffer (SQLite)** |
 | **Cloud Synchronization** | None | Real-time only | **Batched, PII-scrubbed Cloud Sync** |
@@ -23,11 +23,11 @@ This report outlines the design for a **Standalone Metric Buffer and Cloud Sync*
 
 ## The "Blue Ocean" Delta
 
-Competitors force users to choose between unobservable local execution or fully monitored (but less private) cloud execution. OHC will introduce a Hybrid Observability pattern:
+Competitors force users to choose between unobservable local execution or fully monitored (but less private) cloud execution. OmniSolo will introduce a Hybrid Observability pattern:
 
-1. **Local Buffering**: When operating in `OHC_STANDALONE=true` mode, all agent execution metrics (token usage, time-to-first-token, tool execution latency) are written to a local SQLite buffer.
+1. **Local Buffering**: When operating in `OMNISOLO_STANDALONE=true` mode, all agent execution metrics (token usage, time-to-first-token, tool execution latency) are written to a local SQLite buffer.
 2. **PII Scrubbing**: Before metrics are buffered or synced, they must pass through a strict `telemetry.RedactInterfacePII` filter to ensure data sovereignty.
-3. **Batched Cloud Sync**: A background daemon periodically flushes these scrubbed metrics to the central OHC Cloud, allowing centralized Grafana dashboards to visualize the performance of the entire decentralized swarm.
+3. **Batched Cloud Sync**: A background daemon periodically flushes these scrubbed metrics to the central OmniSolo Cloud, allowing centralized Grafana dashboards to visualize the performance of the entire decentralized swarm.
 
 ## Visualizing the Hybrid Observability
 

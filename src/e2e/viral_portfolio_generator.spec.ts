@@ -32,9 +32,10 @@ test.describe('Viral Portfolio Generator Widget', () => {
     await expect(embedCode).toContainText('Graphic Designer');
     await expect(embedCode).toContainText('I design cool things.');
 
-    // Verify "Powered by OHC" branding is visible by default
-    await expect(embedCode).toContainText('Powered by OHC');
-    await expect(embedCode).toContainText('ohc.network/invite/');
+    // Verify "Powered by OmniSolo" branding is visible by default
+    await expect(embedCode).toContainText('Powered by OmniSolo');
+    await expect(embedCode).toContainText('https://cloud.omnisolo.co/invite/');
+    await expect(embedCode).not.toContainText('ohc.network');
 
     // Click "Copy Code"
     const copyBtn = page.locator('#copy-btn');
@@ -50,7 +51,7 @@ test.describe('Viral Portfolio Generator Widget', () => {
         });
         expect(clipboardText).toContain('Alice');
         expect(clipboardText).toContain('Graphic Designer');
-        expect(clipboardText).toContain('Powered by OHC');
+        expect(clipboardText).toContain('OmniSolo');
     } catch (e) {
         console.warn('Clipboard read failed (expected in some headless environments): ', e);
     }
@@ -63,7 +64,7 @@ test.describe('Viral Portfolio Generator Widget', () => {
     await page.locator('#p-name').fill('Alice');
 
     // Toggle the "Remove branding" checkbox
-    await page.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
+    await page.locator('label', { hasText: 'Remove "OmniSolo" Badge' }).click();
 
     // Click "Generate Embed Code"
     await page.locator('#generate-btn').click();
@@ -73,7 +74,7 @@ test.describe('Viral Portfolio Generator Widget', () => {
 
     // Verify the branding footer is hidden
     const embedCode = page.locator('#embed-code');
-    await expect(embedCode).not.toContainText('Powered by OHC');
+    await expect(embedCode).not.toContainText('OmniSolo');
   });
 
   test('should navigate back to dashboard', async ({ page }) => {

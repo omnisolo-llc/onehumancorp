@@ -154,7 +154,7 @@ export default function EmailSignatureGeneratorPage() {
                             className="mt-1 w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
                         />
                         <div>
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "Powered by OHC" branding</span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "Powered by OmniSolo" branding</span>
                             <p className="text-xs text-gray-500 mt-1">Requires Pro plan or higher.</p>
                         </div>
                     </label>
@@ -218,7 +218,7 @@ export default function EmailSignatureGeneratorPage() {
                                     <tr>
                                         <td colSpan={2} style={{ paddingTop: '16px' }}>
                                             <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px', fontSize: '11px', color: '#9ca3af' }}>
-                                                Create your own free signature with <a href={`https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#0066FF', textDecoration: 'none', fontWeight: 600 }}>One Human Corp</a>.
+                                                Create your own free signature with <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#0066FF', textDecoration: 'none', fontWeight: 600 }}>OmniSolo</a>.
                                             </div>
                                         </td>
                                     </tr>
@@ -273,7 +273,7 @@ export default function EmailSignatureGeneratorPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-              Make the Email Signature 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the Email Signature 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
 
             <button
@@ -287,7 +287,7 @@ export default function EmailSignatureGeneratorPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

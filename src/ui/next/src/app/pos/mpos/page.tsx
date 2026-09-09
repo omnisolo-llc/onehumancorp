@@ -22,17 +22,23 @@ function POSTerminalMobileContent() {
 
     // Load from local cache or API
     const loadCatalog = async () => {
-      const cached = localStorage.getItem('ohc_catalog_cache');
+      const cached = localStorage.getItem('omnisolo_catalog_cache');
       if (cached) {
         setCatalog(JSON.parse(cached));
       }
       if (navigator.onLine) {
         try {
-          const res = await fetch('/api/v1/catalog/product');
+          const res = await fetch('/api/v1/catalog/products');
           const data = await res.json();
           if (data && Array.isArray(data)) {
-            setCatalog(data);
-            localStorage.setItem('ohc_catalog_cache', JSON.stringify(data));
+            const products = data.map((product) => ({
+              id: product.id,
+              name: product.title ?? product.name,
+              price: typeof product.price_cents === 'number' ? product.price_cents / 100 : product.price,
+              image: product.image_url ?? product.image,
+            })).filter((product) => typeof product.id === 'string' && typeof product.name === 'string' && Number.isFinite(product.price));
+            setCatalog(products);
+            localStorage.setItem('omnisolo_catalog_cache', JSON.stringify(products));
           }
         } catch (e) {
           console.error("Failed to fetch catalog:", e);
@@ -158,7 +164,7 @@ function POSTerminalMobileContent() {
 
 export default function POSTerminalMobile() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" aria-label="Loading point of sale" />}>
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" aria-label="Loading point of sale">Loading mPOS...</div>}>
       <POSTerminalMobileContent />
     </Suspense>
   );

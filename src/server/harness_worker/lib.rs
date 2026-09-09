@@ -17,7 +17,7 @@ use server_harness::middleware::harness::{HarnessProtocolKind, ProcessHarnessSpe
 use server_harness::middleware::provider_facade::ProviderFacade;
 use server_harness::middleware::provider_facade::ProviderFacadeConfig;
 use server_harness::middleware::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
-use server_ohc::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer;
+use server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer;
 use tokio::net::TcpListener;
 use tonic::transport::Server;
 

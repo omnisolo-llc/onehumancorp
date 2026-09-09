@@ -68,4 +68,4 @@
 
 - Scaling (Cloud): Formalized the real-time teammate mesh APIs using Redis Pub/Sub for horizontal scalability.
 - Privacy and Offline (Standalone): Implemented MemoryMeshTransport so the teammate mesh runs without external dependencies.
-- Scaling (Cloud): Architected the shared task list and OHC core systems for agent coordination.
+- Scaling (Cloud): Architected the shared task list and OmniSolo core systems for agent coordination.

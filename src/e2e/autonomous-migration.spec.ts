@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Autonomous Competitor Migration', () => {
-    test('Maya migrates her Shopify store to OHC', async ({ page }) => {
+    test('Maya migrates her Shopify store to OmniSolo', async ({ page }) => {
         // Business Persona: Maya (Home Baker)
         // She wants to import her 42 cakes from her old Shopify store via URL.
 

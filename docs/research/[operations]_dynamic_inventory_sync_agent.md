@@ -15,7 +15,7 @@ According to reviews on G2 Crowd and TrustRadius, Shopify and Wix provide invent
 
 ## Implementation Prompt
 Create a unified inventory synchronization workflow. Integrate a webhook from the POS terminal to trigger a stock decrement. Add a real-time UI update to the mobile dashboard using WebSockets. When a product hits zero stock, the `Operations Manager` should automatically hide it from the public storefront and send a push notification to the owner.
-The design should use the OHC Glassmorphism design tokens.
+The design should use the OmniSolo Glassmorphism design tokens.
 
 ## Priority
 P1

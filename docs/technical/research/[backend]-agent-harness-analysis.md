@@ -1,7 +1,7 @@
-# [Backend] OHC Agent Harness vs Market Standards
+# [Backend] OmniSolo Agent Harness vs Market Standards
 
 ## Problem Statement
-OHC currently lacks a robust execution harness for isolated agent actions, limiting our ability to safely execute terminal commands, modify arbitrary files, and manage background tasks without host interference or security risks. We need an advanced isolation and telemetry layer comparable to top tier AI agent frameworks.
+OmniSolo currently lacks a robust execution harness for isolated agent actions, limiting our ability to safely execute terminal commands, modify arbitrary files, and manage background tasks without host interference or security risks. We need an advanced isolation and telemetry layer comparable to top tier AI agent frameworks.
 
 ## Research Report
 ### Market Standard Analysis: Claude Code (Leaked v2.1.88)
@@ -21,8 +21,8 @@ Based on analyzing the Claude Code source tree (`@anthropic-ai/sandbox-runtime` 
    - Comprehensive cost tracking (`cost-tracker.ts`).
    - Local task management with backgrounding capabilities (`LocalShellTask.js`).
 
-### OHC Gap Analysis
-OHC currently runs commands natively without a protective virtualization layer or tight network control for AI agents.
+### OmniSolo Gap Analysis
+OmniSolo currently runs commands natively without a protective virtualization layer or tight network control for AI agents.
 
 ## Design Doc
 ### Architecture
@@ -37,9 +37,9 @@ Introduce `ohc-harness` service module.
 
 ```mermaid
 graph TD
-    A[Agent Bash Tool] --> B[OHC Harness AST Parser]
+    A[Agent Bash Tool] --> B[OmniSolo Harness AST Parser]
     B -->|Validation Pass| C[bwrap Sandbox]
-    B -->|Validation Fail| D[Violation Store / OHC-SIP]
+    B -->|Validation Fail| D[Violation Store / OmniSolo-SIP]
     C --> E[Execution]
     C -.-> F[SOCKS Proxy Injector]
     F --> G[Network Control & OTEL]
@@ -54,7 +54,7 @@ graph TD
 
 ### API Contracts
 ```typescript
-interface OHCSandboxConfig {
+interface OmniSoloSandboxConfig {
     readPaths: string[];
     writePaths: string[];
     networkPolicies: NetworkPolicy[];
@@ -62,7 +62,7 @@ interface OHCSandboxConfig {
 ```
 
 <style>
-/* Premium Feel OHC Tokens */
+/* Premium Feel OmniSolo Tokens */
 body {
     font-family: 'Outfit', 'Inter', sans-serif;
     backdrop-filter: blur(20px) saturate(200%);
@@ -84,7 +84,7 @@ th {
 </style>
 
 ### Comparative Table
-| Feature | OHC Current | Claude Code Harness | Target OHC Harness |
+| Feature | OmniSolo Current | Claude Code Harness | Target OmniSolo Harness |
 |---------|-------------|----------------------|--------------------|
 | **Execution** | Native Shell | bwrap / MacOS Sandbox | bwrap / gVisor |
 | **Network** | Unrestricted | Proxied & Filtered | SOCKS5 + OTEL |

@@ -64,14 +64,14 @@ impl LocalServiceBackend for SelectedMemoryBackend {
     }
 }
 
-/// Workspace, artifact and cache bytes use the configured OHCMemory provider.
+/// Workspace, artifact and cache bytes use the configured OmniSoloMemory provider.
 /// Keys are content-independent opaque identifiers, never caller-controlled paths.
 pub struct ExistingBlobBackend {
-    selected: Arc<dyn crate::memory_store::OHCMemory>,
+    selected: Arc<dyn crate::memory_store::OmniSoloMemory>,
     kind: LocalServiceKind,
 }
 impl ExistingBlobBackend {
-    pub fn new(selected: Arc<dyn crate::memory_store::OHCMemory>, kind: LocalServiceKind) -> Self {
+    pub fn new(selected: Arc<dyn crate::memory_store::OmniSoloMemory>, kind: LocalServiceKind) -> Self {
         Self { selected, kind }
     }
 }
@@ -507,7 +507,7 @@ mod tests {
 pub fn gateway_for_agent_run(
     run: &crate::agent::AgentRunConfig,
     registry: server_harness::middleware::local_services::LocalServiceRegistry,
-    blobs: Option<Arc<dyn crate::memory_store::OHCMemory>>,
+    blobs: Option<Arc<dyn crate::memory_store::OmniSoloMemory>>,
 ) -> LocalServiceGateway {
     let identity = serde_json::json!({
         "memory": run.long_term_memory.as_ref().map(|memory|memory.service_configuration_identity()),

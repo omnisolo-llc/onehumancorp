@@ -13,7 +13,7 @@ rust_library(
         "openai.rs",
     ],
     crate_root = "mod.rs",
-    crate_name = "ohc_builtin_agent_llm",
+    crate_name = "omnisolo_builtin_agent_llm",
 
     edition = "2024",
     visibility = ["//visibility:public"],

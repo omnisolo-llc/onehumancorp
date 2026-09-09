@@ -37,7 +37,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Assert the transaction was written to IndexedDB
     const queuedTxs = await memberPage.evaluate(() => {
       return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const db = req.result;
@@ -74,7 +74,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Wait for the sync to complete and the IndexedDB to be cleared
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {
@@ -96,7 +96,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
       return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const db = req.result;
@@ -205,7 +205,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Inject failed payment mock directly into IndexedDB Offline Queue
     await memberPage.evaluate(async () => {
-      const dbName = 'OHC_Offline_Queue';
+      const dbName = 'OMNISOLO_Offline_Queue';
       const storeName = 'actions';
       const getDB = () => new Promise<IDBDatabase>((resolve, reject) => {
         const req = window.indexedDB.open(dbName, 1);
@@ -248,7 +248,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Wait for the sync to complete and the IndexedDB to be cleared
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {
@@ -280,7 +280,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Navigate to local API directly to set up origin to allow localstorage modification
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+      localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
         id: 'staff_1',
         name: 'Priya',
         role: 'Manager',

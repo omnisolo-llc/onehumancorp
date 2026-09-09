@@ -1,6 +1,6 @@
 #![allow(clippy::collapsible_if)]
-use ohc_builtin_agent_core::types::ToolError;
-use ohc_builtin_agent_llm::LlmClient;
+use omnisolo_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_llm::LlmClient;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -33,7 +33,7 @@ struct LlmJudgeExecutor {
 #[async_trait::async_trait]
 impl PydanticToolExecutor<LlmJudgeArgs> for LlmJudgeExecutor {
     async fn execute_typed(&self, args: LlmJudgeArgs) -> Result<String, ToolError> {
-        use ohc_builtin_agent_core::types::{ChatRequest, Message};
+        use omnisolo_builtin_agent_core::types::{ChatRequest, Message};
 
         let prompt = format!(
             "You are an LLM Judge.\n\nTask Description:\n{}\n\nOutput to Evaluate:\n{}\n\nEvaluate the output against the task description. Is it acceptable and correct?",
@@ -53,12 +53,12 @@ impl PydanticToolExecutor<LlmJudgeArgs> for LlmJudgeExecutor {
             llm: Arc<dyn LlmClient>,
         }
         #[async_trait::async_trait]
-        impl ohc_builtin_agent_core::output_parser::LlmClientForParser for ParserAdapter {
+        impl omnisolo_builtin_agent_core::output_parser::LlmClientForParser for ParserAdapter {
             async fn chat(
                 &self,
                 req: ChatRequest,
             ) -> Result<
-                ohc_builtin_agent_core::types::ChatResponse,
+                omnisolo_builtin_agent_core::types::ChatResponse,
                 Box<dyn std::error::Error + Send + Sync>,
             > {
                 self.llm.chat(req).await
@@ -67,9 +67,9 @@ impl PydanticToolExecutor<LlmJudgeArgs> for LlmJudgeExecutor {
         let parser_client = Arc::new(ParserAdapter {
             llm: self.llm.clone(),
         })
-            as Arc<dyn ohc_builtin_agent_core::output_parser::LlmClientForParser>;
+            as Arc<dyn omnisolo_builtin_agent_core::output_parser::LlmClientForParser>;
 
-        match ohc_builtin_agent_core::output_parser::parse_structured_output::<JudgeEvaluation>(
+        match omnisolo_builtin_agent_core::output_parser::parse_structured_output::<JudgeEvaluation>(
             &parser_client,
             req,
             3,
@@ -134,7 +134,7 @@ pub fn llm_judge_tool(llm: Arc<dyn LlmClient>, model: String) -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 
     struct MockLlmClient {
         response_text: String,
@@ -146,7 +146,7 @@ mod tests {
             &self,
             _req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let tool_call = ohc_builtin_agent_core::types::ToolCall {
+            let tool_call = omnisolo_builtin_agent_core::types::ToolCall {
                 id: "call_1".to_string(),
                 name: "structured_output".to_string(),
                 arguments: serde_json::json!({

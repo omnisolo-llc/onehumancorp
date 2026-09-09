@@ -11,7 +11,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct FieldOpsState {
     pub pool: PgPool,
-    pub mesh: std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
+    pub mesh: std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -276,7 +276,7 @@ pub async fn update_appointment(
         .await
         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+    let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
         agent_id: "system".into(),
         action: "job:status_changed".into(),
         status: "ok".into(),
@@ -518,7 +518,7 @@ pub async fn running_late(
 
 pub fn router<S: Clone + Send + Sync + 'static>(
     pool: PgPool,
-    mesh: std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
+    mesh: std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
 ) -> Router<S> {
     let state = Arc::new(FieldOpsState { pool, mesh });
     Router::new()
@@ -542,8 +542,8 @@ mod tests {
         // Use connect_lazy so it doesn't fail immediately, then it hits the query and fails
         let pool =
             sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
-        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
-            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let app = router(pool, mesh);
         let req = Request::builder()
             .uri("/appointments?tenant_id=t1")
@@ -561,8 +561,8 @@ mod tests {
         // but we verify the parallel setup doesn't break basic request handling.
         let pool =
             sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
-        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
-            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let app = router(pool, mesh);
 
         let payload = serde_json::json!({

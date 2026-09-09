@@ -1,11 +1,11 @@
 # [architecture] Unified Multilingual Hybrid Translation Mesh
 
 ## Problem Statement
-Fatima, who runs a food cart and speaks limited English, needs to operate her entire business interface in Arabic while allowing customers to order in English, Spanish, or any local language. OHC currently lacks a globally consistent, real-time localized mesh that instantly translates storefronts, invoices, receipts, SMS notifications, and agent interactions without forcing the user to install a 3rd party localization plugin (which legacy competitors like Shopify and Wix require).
+Fatima, who runs a food cart and speaks limited English, needs to operate her entire business interface in Arabic while allowing customers to order in English, Spanish, or any local language. OmniSolo currently lacks a globally consistent, real-time localized mesh that instantly translates storefronts, invoices, receipts, SMS notifications, and agent interactions without forcing the user to install a 3rd party localization plugin (which legacy competitors like Shopify and Wix require).
 
 ## Research Report
 - **Competitor Analysis:** Shopify uses third-party plugins (e.g., Langify) which creates fragmented UI states and slows down page loads. Wix has a multi-lingual tool but it is manual and doesn't handle real-time conversational agent translations.
-- **OHC Advantage:** With the KAIROS underlying orchestration engine and LLM providers already embedded, OHC can dynamically translate the UI, product descriptions, and chat logs at the edge or locally (via standalone offline capabilities) without external plugin bloat.
+- **OmniSolo Advantage:** With the KAIROS underlying orchestration engine and LLM providers already embedded, OmniSolo can dynamically translate the UI, product descriptions, and chat logs at the edge or locally (via standalone offline capabilities) without external plugin bloat.
 - **Market Context:** The LATAM and MENA markets represent huge growth potential. Native, zero-configuration multilingual support allows immediate deployment in non-English native contexts.
 
 ## Design Doc
@@ -16,7 +16,7 @@ graph TD;
         Storefront[Storefront/Mobile App] -->|Locale Header| Gateway;
     end
 
-    subgraph OHC Server
+    subgraph OmniSolo Server
         Gateway[API Gateway] --> TranslationCache[(Redis / Local Cache)];
         Gateway --> TranslationService[Translation Mesh Service];
         TranslationService -->|Miss| TranslationQueue[Sub-Agent Queue];
@@ -50,7 +50,7 @@ graph TD;
 **Acceptance Criteria:**
 - Unit test coverage MUST be 100%.
 - Ensure no external data leaks between tenants.
-- Follow the exact OHC standard for Postgres/SQLite hybrid database structures.
+- Follow the exact OmniSolo standard for Postgres/SQLite hybrid database structures.
 
 ## Priority
 P1

@@ -1,0 +1,19 @@
+[package]
+name = "server_omnisolo"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[lib]
+path = "mod.rs"
+
+[dependencies]
+prost = { workspace = true }
+serde = { workspace = true }
+tonic = { workspace = true }
+
+[build-dependencies]
+tonic-build = "0.12"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(omnisolo_bazel)', 'cfg(omnisolo_bazel_package)', 'cfg(omnisolo_bazel_tauri_context)'] }

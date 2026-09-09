@@ -22,28 +22,28 @@ pub async fn handle_proposal_action(
     Ok(())
 }
 
-use ohc_builtin_agent::llm::LlmClient;
+use omnisolo_builtin_agent::llm::LlmClient;
 use std::sync::Arc;
 
 fn build_estimator_llm_client() -> Option<Arc<dyn LlmClient>> {
     let key = std::env::var("GEMINI_API_KEY")
         .or_else(|_| std::env::var("OPENAI_API_KEY"))
         .ok()?;
-    let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gemini-pro".to_string());
-    let endpoint = std::env::var("OHC_LLM_ENDPOINT").ok();
+    let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "gemini-pro".to_string());
+    let endpoint = std::env::var("OMNISOLO_LLM_ENDPOINT").ok();
 
     let mut config = if let Some(endpoint) = endpoint {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
+        omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
             key,
             endpoint,
             Some(model.clone()),
         )
     } else {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
+        omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
     };
     config.default_model = Some(model);
     Some(Arc::new(
-        ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config),
+        omnisolo_builtin_agent::llm::openai::OpenAIClient::from_config(config),
     ))
 }
 
@@ -89,9 +89,9 @@ Task: Extract the scope of work and identify the closest matching service from t
             catalog_json, inquiry_text
         );
 
-        let req = ohc_builtin_agent::types::ChatRequest {
-            messages: vec![ohc_builtin_agent::types::Message::user(&prompt)],
-            model: std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gemini-pro".to_string()),
+        let req = omnisolo_builtin_agent::types::ChatRequest {
+            messages: vec![omnisolo_builtin_agent::types::Message::user(&prompt)],
+            model: std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "gemini-pro".to_string()),
             temperature: 0.0,
             max_tokens: 256,
             system: "You are an Estimator Agent. Parse scopes of work and match with service catalog. Output pure JSON.".to_string(),

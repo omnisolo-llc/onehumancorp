@@ -6,7 +6,7 @@ use crate::db::DB;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::mesh::CentrifugeNode;
 use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
-use ohc_builtin_agent::mesh::transport::InProcessTransport;
+use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
 use std::sync::Arc;
 
 #[test]

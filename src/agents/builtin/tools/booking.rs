@@ -1,7 +1,7 @@
 use super::Tool;
 use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
 use crate::tenant::TenantContext;
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -16,7 +16,7 @@ impl BookingStore {
     pub async fn get_pool(&self) -> Result<&sqlx::PgPool, ToolError> {
         self.pool
             .get_or_try_init(|| async {
-                let database_url = std::env::var("OHC_DATABASE_URL")
+                let database_url = std::env::var("OMNISOLO_DATABASE_URL")
                     .unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
                 sqlx::PgPool::connect(&database_url)
                     .await

@@ -14,7 +14,7 @@ An audit of `src/server/orchestration/ultraplan.go` shows that the `UltraPlanMan
 - The `critiques` list in the `StateMachine` is a JSON array, making it hard to query via Prometheus without explicit instrumentation.
 - There is no counter for the total number of revision loops.
 - Agent contribution is stored in the DB but not exposed as real-time observability.
-This gap prevents OHC from identifying "infinite loops" in agent deliberation and optimizing the swarm's consensus protocols.
+This gap prevents OmniSolo from identifying "infinite loops" in agent deliberation and optimizing the swarm's consensus protocols.
 
 ## Design Doc
 1. **New Prometheus Metrics in `src/server/telemetry`**:

@@ -4,7 +4,7 @@ export type AuthRuntimeConfig = Readonly<{
   canonicalOrigin: string;
   backendOrigin: string;
   localDev: boolean;
-  cookieName: "__Host-ohc_session" | "ohc_session";
+  cookieName: "__Host-omnisolo_session" | "omnisolo_session";
   secureCookie: boolean;
   sessionAudience: string;
 }>;
@@ -15,7 +15,7 @@ const LOCAL_BACKEND_ORIGIN = "http://127.0.0.1:18789";
 function localDevFlag(value: string | undefined): boolean {
   if (value === undefined || value === "false") return false;
   if (value === "true") return true;
-  throw new Error("OHC_WEB_LOCAL_DEV must be true or false");
+  throw new Error("OMNISOLO_WEB_LOCAL_DEV must be true or false");
 }
 
 function isLoopback(hostname: string): boolean {
@@ -61,11 +61,11 @@ function exactOrigin(value: string, label: string): URL {
 }
 
 export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
-  const localDev = localDevFlag(env.OHC_WEB_LOCAL_DEV);
-  const canonicalValue = env.OHC_WEB_CANONICAL_ORIGIN ?? (localDev ? LOCAL_CANONICAL_ORIGIN : undefined);
+  const localDev = localDevFlag(env.OMNISOLO_WEB_LOCAL_DEV);
+  const canonicalValue = env.OMNISOLO_WEB_CANONICAL_ORIGIN ?? (localDev ? LOCAL_CANONICAL_ORIGIN : undefined);
   const backendValue = env.BACKEND_URL ?? (localDev ? LOCAL_BACKEND_ORIGIN : undefined);
   if (canonicalValue === undefined || canonicalValue === "") {
-    throw new Error("OHC_WEB_CANONICAL_ORIGIN is required");
+    throw new Error("OMNISOLO_WEB_CANONICAL_ORIGIN is required");
   }
   if (backendValue === undefined || backendValue === "") throw new Error("BACKEND_URL is required");
 
@@ -83,7 +83,7 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
     isPrivateLanIp(backend.hostname) ||
     !backend.hostname.includes(".") ||
     backend.hostname.endsWith(".cluster.local") ||
-    backend.hostname.includes("onehumancorp");
+    backend.hostname.includes("omnisolo");
   if (backend.protocol !== "https:" && !(backend.protocol === "http:" && isInternalBackend)) {
     throw new Error("backend origin must use HTTPS or loopback HTTP");
   }
@@ -94,7 +94,7 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
     canonicalOrigin,
     backendOrigin: backend.origin,
     localDev,
-    cookieName: secureCookie ? "__Host-ohc_session" : "ohc_session",
+    cookieName: secureCookie ? "__Host-omnisolo_session" : "omnisolo_session",
     secureCookie,
     sessionAudience: canonicalOrigin,
   };

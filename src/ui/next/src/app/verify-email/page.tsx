@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { PublicAuthShell } from "@/app/components/PublicAuthShell";
 
-const CHALLENGE_STORAGE_KEY = "ohc-registration-challenge";
-const TICKET_STORAGE_KEY = "ohc-registration-ticket";
+const CHALLENGE_STORAGE_KEY = "omnisolo-registration-challenge";
+const TICKET_STORAGE_KEY = "omnisolo-registration-ticket";
 
 type Challenge = Readonly<{ challengeId: string; email: string }>;
 

@@ -30,7 +30,7 @@ export default function StoreWrapPage() {
   }, []);
 
   const referralLink = `${origin}/onboarding`;
-  const shareText = `My OHC dashboard reports $${metrics.sales.toLocaleString()} in recorded revenue. ${referralLink}`;
+  const shareText = `My OmniSolo OneHumanCorp dashboard reports $${metrics.sales.toLocaleString()} in recorded revenue. ${referralLink}`;
 
   const slides = [
     {
@@ -163,7 +163,7 @@ export default function StoreWrapPage() {
             </div>
 
             <div className="absolute bottom-8 text-white/60 text-sm font-semibold tracking-widest uppercase">
-              Powered by OHC
+              Powered by OmniSolo
             </div>
           </div>
         ))}
@@ -190,7 +190,7 @@ export default function StoreWrapPage() {
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

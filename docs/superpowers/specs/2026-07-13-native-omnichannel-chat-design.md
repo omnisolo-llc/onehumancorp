@@ -2,9 +2,9 @@
 
 ## Objective
 
-Remove Chatwoot completely and replace it with an OHC-native, tenant-safe omnichannel support platform that works in cloud and desktop deployments. The replacement covers the operator inbox, customer widget, core messaging and voice channels, reliable delivery, AI-first support, granular administration, campaigns, automations, knowledge, surveys, reporting, and compliance controls.
+Remove Chatwoot completely and replace it with an OmniSolo-native, tenant-safe omnichannel support platform that works in cloud and desktop deployments. The replacement covers the operator inbox, customer widget, core messaging and voice channels, reliable delivery, AI-first support, granular administration, campaigns, automations, knowledge, surveys, reporting, and compliance controls.
 
-There is no production or real-customer Chatwoot data to migrate. Chatwoot removal therefore requires no compatibility bridge, archive, dual write, or database import. Native OHC inbox data still receives forward-compatible schema migration and verification.
+There is no production or real-customer Chatwoot data to migrate. Chatwoot removal therefore requires no compatibility bridge, archive, dual write, or database import. Native OmniSolo inbox data still receives forward-compatible schema migration and verification.
 
 Quality, tenant isolation, delivery correctness, and recoverability take priority over feature velocity. The application must never report a message as sent merely because work was queued, and AI must not derive authority from customer content or model output.
 
@@ -240,7 +240,7 @@ The operator application includes:
 - Call events, consent, recordings, transcripts, summaries, and follow-ups.
 - Campaign, automation, knowledge, survey, and reporting administration.
 
-The UI keeps the universal OHC shell, accessibility contract, bounded surfaces, and responsive behavior. It must not create a competing page shell, document overflow, hydration replacement, or controls obscured by voice/help actions.
+The UI keeps the universal OmniSolo shell, accessibility contract, bounded surfaces, and responsive behavior. It must not create a competing page shell, document overflow, hydration replacement, or controls obscured by voice/help actions.
 
 ## Customer Widget
 
@@ -253,7 +253,7 @@ The customer widget is a small public application surface, not the full operator
 - Tenant branding and locale.
 - Keyboard, screen-reader, contrast, reduced-motion, and mobile accessibility.
 
-Each widget installation declares exact allowed embedding origins. The bootstrap script may load only from the OHC widget origin and creates a sandboxed iframe served with a tenant-specific `Content-Security-Policy: frame-ancestors ...`. Widget APIs use an exact CORS allowlist with credentials disabled for bearer-capability fallback; wildcard origin plus credentials is forbidden. The parent/iframe handshake validates `event.origin`, `event.source`, protocol version, widget ID, and a fresh nonce on every `postMessage`.
+Each widget installation declares exact allowed embedding origins. The bootstrap script may load only from the OmniSolo widget origin and creates a sandboxed iframe served with a tenant-specific `Content-Security-Policy: frame-ancestors ...`. Widget APIs use an exact CORS allowlist with credentials disabled for bearer-capability fallback; wildcard origin plus credentials is forbidden. The parent/iframe handshake validates `event.origin`, `event.source`, protocol version, widget ID, and a fresh nonce on every `postMessage`.
 
 Capabilities are scoped to one tenant, widget, embedding origin, contact/conversation context, allowed operation, and short expiry. Bootstrap uses a one-time code bound to the embedding origin. The iframe exchanges it for a rotated capability delivered in the response body and kept only in iframe memory, so operation does not depend on third-party cookies. Where supported, an additional `Secure; HttpOnly; SameSite=None; Partitioned` cookie may improve continuity but is not the sole authority. Capabilities never appear in query strings, referrers, parent-page storage, logs, or analytics; they are rate limited, revocable, and never accepted as operator authorization.
 
@@ -353,8 +353,8 @@ Attachments are size limited, checksum verified, content sniffed, malware scanne
 Delete:
 
 - `src/server/integrations/chatwoot/`.
-- `deploy/helm/ohc/templates/chatwoot.yaml`.
-- `deploy/helm/ohc/templates/chatwoot-service.yaml`.
+- `deploy/helm/omnisolo/templates/chatwoot.yaml`.
+- `deploy/helm/omnisolo/templates/chatwoot-service.yaml`.
 
 Remove Chatwoot references from:
 
@@ -362,7 +362,7 @@ Remove Chatwoot references from:
 - `src/server/integrations/mod.rs`.
 - `src/ui/tauri/BUILD.bazel`.
 - `deploy/BUILD.bazel`.
-- `deploy/helm/ohc/values.yaml`.
+- `deploy/helm/omnisolo/values.yaml`.
 - Backend deployment environment variables.
 - HPA, network policy, ServiceMonitor, Docker Compose, Postgres multi-database, and Prometheus configuration.
 - Kind deployment tests.

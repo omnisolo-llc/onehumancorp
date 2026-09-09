@@ -4,6 +4,7 @@ import { resolveShellRoute } from "./shellRoutes";
 describe("resolveShellRoute", () => {
   test.each([
     "/onboarding",
+    "/settings/global-commerce",
     "/booking-widget",
     "/client-portal",
     "/storefront-widget",
@@ -95,13 +96,20 @@ describe("resolveShellRoute", () => {
   });
 
   test.each([
-    ["/login", "Login", "Access your business workspace."],
     ["/onboarding", "Setup", "Configure your business workspace."],
   ])("uses explicit metadata for %s", (pathname, title, subtitle) => {
     expect(resolveShellRoute(pathname)).toEqual({
       owner: pathname === "/login" ? "public" : "guard",
       title,
       subtitle,
+    });
+  });
+
+  test("keeps login metadata on its standalone public surface", () => {
+    expect(resolveShellRoute("/login")).toEqual({
+      owner: "public",
+      title: "Login",
+      subtitle: "Access your business workspace.",
     });
   });
 

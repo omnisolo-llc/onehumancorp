@@ -9,7 +9,7 @@ Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth
 ## Research Report
 - **Strategy**: Direct integration with Cal.com
 - **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box. Self-serve booking links perfectly align with OHC.
+- **Advantages**: Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box. Self-serve booking links perfectly align with OmniSolo.
 - **Risks**: Reliance on an external API for core scheduling logic.
 - **Pricing**: Team plans available. Great free tier for individuals.
 - **Compatibility**: Cloud (easy). Standalone (perfectly supports self-hosting, keeping excellent privacy).
@@ -17,7 +17,7 @@ Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth
 ## Design Doc
 - "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
 - Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
+- When a customer books a slot on the OmniSolo public page, Cal.com manages the calendar event and conflict resolution transparently.
 
 ## Implementation Prompt
 Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.

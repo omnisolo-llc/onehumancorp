@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Once;
 use url::{Host, Url};
@@ -42,12 +42,12 @@ fn blocked_ip(ip: IpAddr) -> bool {
 
 /// Returns whether the explicit private-network escape hatch is enabled.
 pub fn private_network_allowed() -> bool {
-    let allowed = std::env::var("OHC_AGENT_ALLOW_PRIVATE_NETWORK")
+    let allowed = std::env::var("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK")
         .is_ok_and(|value| value.eq_ignore_ascii_case("true"));
     if allowed {
         PRIVATE_NETWORK_WARNING.call_once(|| {
             tracing::warn!(
-                "OHC_AGENT_ALLOW_PRIVATE_NETWORK is enabled; outbound agent requests may access private networks"
+                "OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK is enabled; outbound agent requests may access private networks"
             );
         });
     }

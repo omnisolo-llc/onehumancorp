@@ -6,7 +6,7 @@ test.describe('AI Review Campaign Builder', () => {
     await page.goto('/review-campaign');
 
     // Verify we are on the right page
-    await expect(page.locator('h1')).toContainText('AI Review Campaign Builder');
+    await expect(page.getByRole('heading', { name: 'AI Review Campaign Builder', exact: true })).toBeVisible();
 
     // Fill in the form details
     const customerNameInput = page.locator('input#customerName');
@@ -23,7 +23,7 @@ test.describe('AI Review Campaign Builder', () => {
     // Wait for the generation to complete and the preview to appear
     await expect(page.locator('text=Email Draft Preview')).toBeVisible();
 
-    // Verify the generated email contains the inputs and OHC branding
+    // Verify the generated email contains the inputs and OmniSolo branding
     const textarea = page.locator('textarea');
     await expect(textarea).toBeVisible({ timeout: 10000 });
     const emailContent = await textarea.inputValue();
@@ -32,6 +32,6 @@ test.describe('AI Review Campaign Builder', () => {
     expect(emailContent).toContain('Maya');
     expect(emailContent).toContain('Vegan Chocolate Cake');
     expect(emailContent).toContain('ORD-12345');
-    expect(emailContent).toContain('⚡ Powered by OHC');
+    expect(emailContent).toContain('⚡ OmniSolo');
   });
 });

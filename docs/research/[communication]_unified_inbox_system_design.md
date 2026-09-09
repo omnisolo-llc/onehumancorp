@@ -9,7 +9,7 @@ Small business owners (our core personas like Maya, Carlos, Priya, Leo, and Fati
     *   **Shopify Inbox**: Primarily focused on web chat and basic email. Social channel integration often requires clunky third-party apps with distinct UIs.
     *   **Wix**: Basic consolidated inbox but lacks deep, autonomous AI integration that actively drafts persona-aware responses based on real-time business context.
     *   **GoDaddy**: Disjointed messaging tools that don't effectively normalize data across different social graph APIs.
-*   **OHC Differentiation**: OHC's Unified Inbox is not just an aggregator; it is the central nervous system for the "Customer Success Agent." Messages are not just displayed; they are normalized, identity-resolved against the CRM, and pre-processed by AI to provide 1-tap reply drafts before the owner even opens the app.
+*   **OmniSolo Differentiation**: OmniSolo's Unified Inbox is not just an aggregator; it is the central nervous system for the "Customer Success Agent." Messages are not just displayed; they are normalized, identity-resolved against the CRM, and pre-processed by AI to provide 1-tap reply drafts before the owner even opens the app.
 
 ## Design Doc
 
@@ -20,7 +20,7 @@ The Omni-Channel Inbox operates through a pipeline of Ingestion, Normalization, 
 sequenceDiagram
     participant Customer
     participant Channel API (IG/WA/SMS)
-    participant OHC Ingress Gateway
+    participant OmniSolo Ingress Gateway
     participant Normalization Engine
     participant Identity Resolution
     participant KAIROS Orchestrator
@@ -28,8 +28,8 @@ sequenceDiagram
     participant Mobile UI (Owner)
 
     Customer->>Channel API: Sends message ("How much?")
-    Channel API->>OHC Ingress Gateway: Webhook Payload
-    OHC Ingress Gateway->>Normalization Engine: Raw Event
+    Channel API->>OmniSolo Ingress Gateway: Webhook Payload
+    OmniSolo Ingress Gateway->>Normalization Engine: Raw Event
     Normalization Engine->>Identity Resolution: Extract Handle/Phone
     Identity Resolution-->>Normalization Engine: Return/Create `customer_id`
     Normalization Engine->>KAIROS Orchestrator: Publish `OmniMessage`

@@ -21,7 +21,7 @@ Add a blocking `LlmClient` whose `chat` future sets an atomic flag when dropped.
 
 - [x] **Step 2: Verify the current unbounded producer does not cancel**
 
-Run: `cargo test -p ohc_builtin_agent query_stops_when_receiver_is_dropped --lib`
+Run: `cargo test -p omnisolo_builtin_agent query_stops_when_receiver_is_dropped --lib`
 
 Expected: FAIL by timeout because the unbounded sender never observes receiver closure.
 
@@ -31,7 +31,7 @@ Change the return type to `tokio::sync::mpsc::Receiver<AgentEvent>`, construct `
 
 - [x] **Step 4: Run focused and stream regressions**
 
-Run: `cargo test -p ohc_builtin_agent query_stops_when_receiver_is_dropped --lib && cargo test -p ohc_builtin_agent stream_tests --lib`
+Run: `cargo test -p omnisolo_builtin_agent query_stops_when_receiver_is_dropped --lib && cargo test -p omnisolo_builtin_agent stream_tests --lib`
 
 Expected: all focused tests PASS.
 
@@ -53,7 +53,7 @@ Inject the same blocking/drop-observable LLM into `AgentServiceImpl`, call `run_
 
 - [x] **Step 2: Verify the current service producer keeps running**
 
-Run: `cargo test -p ohc_builtin_agent run_task_stops_when_receiver_is_dropped --lib`
+Run: `cargo test -p omnisolo_builtin_agent run_task_stops_when_receiver_is_dropped --lib`
 
 Expected: FAIL by timeout because `try_send` errors are discarded and retry execution never checks channel closure.
 
@@ -63,7 +63,7 @@ In the producer task, select `tx.closed()` against each timed `agent.run` attemp
 
 - [x] **Step 4: Run service and full agent regressions**
 
-Run: `cargo test -p ohc_builtin_agent run_task_stops_when_receiver_is_dropped --lib && cargo test -p ohc_builtin_agent --lib`
+Run: `cargo test -p omnisolo_builtin_agent run_task_stops_when_receiver_is_dropped --lib && cargo test -p omnisolo_builtin_agent --lib`
 
 Expected: all tests PASS.
 
@@ -81,11 +81,11 @@ git commit -m "perf: stop agent tasks when clients disconnect"
 
 - [x] **Step 1: Run targeted formatting and static checks**
 
-Format `agent.rs` and `service.rs` with child-module traversal disabled, then run `cargo check -p ohc_builtin_agent`.
+Format `agent.rs` and `service.rs` with child-module traversal disabled, then run `cargo check -p omnisolo_builtin_agent`.
 
 - [x] **Step 2: Run Bazel verification**
 
-Run: `bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test`
+Run: `bazel test //src/agents/builtin:omnisolo_builtin_agent_lib_unit_test`
 
 Expected: the target PASSes.
 

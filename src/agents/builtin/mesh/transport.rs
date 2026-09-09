@@ -1458,7 +1458,7 @@ pub async fn create_transport(
     }
 
     // Standalone fallback
-    if let Ok(db_url) = std::env::var("OHC_DATABASE_URL")
+    if let Ok(db_url) = std::env::var("OMNISOLO_DATABASE_URL")
         && db_url.starts_with("sqlite")
     {
         match sqlx::sqlite::SqlitePoolOptions::new()
@@ -1661,7 +1661,7 @@ Content-Length: 0
     use std::sync::atomic::{AtomicBool, Ordering};
 
     // Run explicitly against an isolated PostgreSQL database:
-    // OHC_TEST_PG_URL=postgres://... cargo test -p ohc_builtin_agent pg_notify -- --ignored
+    // OHC_TEST_PG_URL=postgres://... cargo test -p omnisolo_builtin_agent pg_notify -- --ignored
     #[tokio::test]
     #[ignore = "requires isolated PostgreSQL via OHC_TEST_PG_URL"]
     async fn test_pg_notify_durable_delivery_and_reconnect() {

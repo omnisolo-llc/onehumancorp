@@ -25,7 +25,7 @@ class LocalServices(unittest.TestCase):
         worker={'id':'test','harnessId':'codex','poolId':'test','autoscaling':{'enabled':False},'localServices':{'image':'daemon:test','configMap':'admitted-config','dataClaim':'service-data','controlSecretName':'service-control','controlSecretKey':'token'}}
         with tempfile.NamedTemporaryFile(mode='w',suffix='.yaml') as values:
             yaml.safe_dump({'backend':{'grpcTls':{'existingSecret':'tls'},'auth':{'existingSecret':'auth'}},'powersync':{'enabled':False},'harnessWorkers':{'enabled':True,'workers':[worker]}},values);values.flush()
-            output=subprocess.check_output(['helm','template','test',str(ROOT/'deploy/helm/ohc'),'-f',values.name,'--show-only','templates/harness-workers.yaml'],text=True)
+            output=subprocess.check_output(['helm','template','test',str(ROOT/'deploy/helm/omnisolo'),'-f',values.name,'--show-only','templates/harness-workers.yaml'],text=True)
         deployment=next(d for d in yaml.safe_load_all(output) if d['kind']=='Deployment')
         pod=deployment['spec']['template']['spec']; containers={c['name']:c for c in pod['containers']}
         self.assertEqual(set(containers),{'harness-worker','local-services'})

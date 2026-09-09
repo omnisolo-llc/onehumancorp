@@ -12,7 +12,7 @@ Coaches, tutors, and consultants have to manually create Zoom or Google Meet lin
 
 ## Design Doc
 *   **Integration Trigger**: An online meeting is booked.
-*   **Action**: OHC calls the video provider API to generate a unique room link and attaches it to the calendar invite and confirmation email.
+*   **Action**: OmniSolo calls the video provider API to generate a unique room link and attaches it to the calendar invite and confirmation email.
 *   **User Interface**: A "Join Call" button appears on the appointment details page for both the owner and the client.
 
 ## Implementation Prompt

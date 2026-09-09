@@ -2,11 +2,11 @@
 
 ## Objective
 
-Design a robust protocol for ensuring reliable communication and state handoff between the Cloud and Standalone modes of the OHC application, specifically over the Teammate Mesh layer, to ensure the main server and the builtin agent microservice stay in sync.
+Design a robust protocol for ensuring reliable communication and state handoff between the Cloud and Standalone modes of the OmniSolo application, specifically over the Teammate Mesh layer, to ensure the main server and the builtin agent microservice stay in sync.
 
 ## Overview
 
-The OHC platform operates in two deployment modes:
+The OmniSolo platform operates in two deployment modes:
 - **Cloud:** Distributed microservices leveraging Redis (Pub/Sub & Redlock) for communication and locking.
 - **Standalone:** Local execution using local IPC (Memory) for communication and locking.
 

@@ -2,7 +2,7 @@
 
 # Omni-Context Sub-Agent Routing: Visual Walkthrough
 
-The Omni-Context Sub-agent Routing feature eliminates context latency and grounding drift during sub-agent delegation. Unlike explicit file fetching, the KAIROS Orchestrator utilizes the Swarm Intelligence Protocol (OHC-SIP) to inject project grounding files directly into the `agent_missions` payload at the moment of task creation.
+The Omni-Context Sub-agent Routing feature eliminates context latency and grounding drift during sub-agent delegation. Unlike explicit file fetching, the KAIROS Orchestrator utilizes the Swarm Intelligence Protocol (OmniSolo-SIP) to inject project grounding files directly into the `agent_missions` payload at the moment of task creation.
 
 ## Orchestration Flow
 

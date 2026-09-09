@@ -1,6 +1,6 @@
 use crate::hub::Hub;
-use ::server_ohc::orchestration::ops_service_server::OpsService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::ops_service_server::OpsService;
+use ::server_omnisolo::orchestration::*;
 use ::server_utils::cache::HybridCache;
 use chrono::Utc;
 use std::pin::Pin;
@@ -500,7 +500,7 @@ impl OpsService for MyOpsService {
 mod tests {
     use super::*;
     use crate::hub::Hub;
-    use ::server_ohc::orchestration::{
+    use ::server_omnisolo::orchestration::{
         CreateBudgetAlertRequest, CreateComputeProfileRequest, CreateIncidentRequest,
         CreatePipelineRequest, EmptyRequest, GetClusterStatusRequest, IncidentStatusRequest,
         PipelinePromoteRequest, UpdatePipelineStatusRequest,

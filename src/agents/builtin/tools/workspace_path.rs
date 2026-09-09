@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use std::path::{Component, Path, PathBuf};
 
 fn path_error(action: &str, requested: &str, message: impl std::fmt::Display) -> ToolError {

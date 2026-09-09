@@ -7,21 +7,21 @@ use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
 
 fn get_crypto_key() -> [u8; 32] {
-    let key = std::env::var("OHC_SQLITE_KEY")
-        .or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY"))
+    let key = std::env::var("OMNISOLO_SQLITE_KEY")
+        .or_else(|_| std::env::var("OMNISOLO_SQLITE_ENCRYPTION_KEY"))
         .unwrap_or_else(|_| {
             let is_standalone = ::server_config::get().standalone
-                || std::env::var("OHC_STANDALONE_MODE")
+                || std::env::var("OMNISOLO_STANDALONE_MODE")
                     .map(|v| v == "true")
                     .unwrap_or(false)
-                || std::env::var("OHC_STANDALONE")
+                || std::env::var("OMNISOLO_STANDALONE")
                     .map(|v| v == "true")
                     .unwrap_or(false);
             if is_standalone {
                 tracing::warn!(
-                    "No OHC_SQLITE_KEY configured for standalone mode. \
+                    "No OMNISOLO_SQLITE_KEY configured for standalone mode. \
                      Generating ephemeral key. Data will NOT persist across restarts. \
-                     Set OHC_SQLITE_KEY for persistent encryption."
+                     Set OMNISOLO_SQLITE_KEY for persistent encryption."
                 );
                 use std::time::{SystemTime, UNIX_EPOCH};
                 let ts = SystemTime::now()
@@ -32,7 +32,7 @@ fn get_crypto_key() -> [u8; 32] {
                 format!("ephemeral-{}-{}", pid, ts)
             } else {
                 panic!(
-                    "CRITICAL: No OHC_SQLITE_KEY or OHC_SQLITE_ENCRYPTION_KEY configured. \
+                    "CRITICAL: No OMNISOLO_SQLITE_KEY or OMNISOLO_SQLITE_ENCRYPTION_KEY configured. \
                      Set one of these environment variables for production encryption."
                 );
             }
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_deterministic_encryption() {
-        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+        temp_env::with_vars(vec![("OMNISOLO_SQLITE_KEY", Some("test_key"))], || {
             let plaintext = "hello world";
             let ciphertext1 = encrypt_deterministic(plaintext);
             let ciphertext2 = encrypt_deterministic(plaintext);
@@ -139,18 +139,18 @@ mod tests {
     fn test_cloud_mode_panics_without_key() {
         temp_env::with_vars(
             vec![
-                ("OHC_SQLITE_KEY", None::<&str>),
-                ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
+                ("OMNISOLO_SQLITE_KEY", None::<&str>),
+                ("OMNISOLO_SQLITE_ENCRYPTION_KEY", None::<&str>),
             ],
             || {
                 let result = std::panic::catch_unwind(|| {
-                    temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+                    temp_env::with_vars(vec![("OMNISOLO_SQLITE_KEY", Some("test_key"))], || {
                         let _key = get_crypto_key();
                     });
                 });
                 assert!(
                     result.is_ok(),
-                    "Should not panic when OHC_SQLITE_KEY is set"
+                    "Should not panic when OMNISOLO_SQLITE_KEY is set"
                 );
             },
         );
@@ -160,10 +160,10 @@ mod tests {
     fn test_standalone_mode_generates_ephemeral_key() {
         temp_env::with_vars(
             vec![
-                ("OHC_STANDALONE_MODE", Some("true")),
-                ("OHC_SQLITE_KEY", None::<&str>),
-                ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
-                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OMNISOLO_STANDALONE_MODE", Some("true")),
+                ("OMNISOLO_SQLITE_KEY", None::<&str>),
+                ("OMNISOLO_SQLITE_ENCRYPTION_KEY", None::<&str>),
+                ("OMNISOLO_STANDALONE_MODE", Some("true")),
             ],
             || {
                 // Ephemeral key includes PID+timestamp, so each call generates a different key.
@@ -178,9 +178,9 @@ mod tests {
 
     #[test]
     fn test_different_keys_produce_different_crypto_keys() {
-        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("key_a"))], || {
+        temp_env::with_vars(vec![("OMNISOLO_SQLITE_KEY", Some("key_a"))], || {
             let key_a = get_crypto_key();
-            temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("key_b"))], || {
+            temp_env::with_vars(vec![("OMNISOLO_SQLITE_KEY", Some("key_b"))], || {
                 let key_b = get_crypto_key();
                 assert_ne!(
                     key_a, key_b,

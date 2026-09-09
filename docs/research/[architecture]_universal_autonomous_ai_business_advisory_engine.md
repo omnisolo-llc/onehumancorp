@@ -4,7 +4,7 @@
 
 Small business owners—whether it's Maya baking custom cakes, Carlos managing handyman jobs, or Priya running a local boutique—are domain experts, but they are rarely data analysts or financial strategists. They operate on intuition and lack the time to sift through complex analytics dashboards to figure out how to grow their revenue. They frequently miss subtle signals: a trending product, an underpriced service, a seasonal slump, or a drop in customer retention.
 
-While competitors like Shopify, Wix, and Square provide comprehensive reporting and charts, they place the cognitive burden entirely on the user to interpret the data. OHC must differentiate by offering an invisible, proactive AI "Business Advisor" that analyzes daily metrics and delivers simple, plain-language insights and one-tap actionable recommendations directly to the owner's mobile device.
+While competitors like Shopify, Wix, and Square provide comprehensive reporting and charts, they place the cognitive burden entirely on the user to interpret the data. OmniSolo must differentiate by offering an invisible, proactive AI "Business Advisor" that analyzes daily metrics and delivers simple, plain-language insights and one-tap actionable recommendations directly to the owner's mobile device.
 
 ## Research Report
 
@@ -12,12 +12,12 @@ We analyzed how leading SMB platforms handle business intelligence and analytics
 
 ### Competitive Analysis
 
-| Platform | Analytics Approach | Strengths | Weaknesses (The OHC Opportunity) |
+| Platform | Analytics Approach | Strengths | Weaknesses (The OmniSolo Opportunity) |
 |---|---|---|---|
 | **Shopify** | Shopify Analytics & Reports | Deep, customizable reports, live view. | Requires technical/analytical skills. The owner must find the insights themselves. |
 | **Wix** | Wix Analytics | Integrated with web traffic and basic sales. | Reactive dashboards. Lacks cross-department (finance + ops + marketing) synthesis. |
 | **Square** | Square Dashboard | Strong offline/POS data visualization. | Focused only on transactions. No proactive strategic advice. |
-| **OHC (Target)** | **Autonomous Advisory Agent** | **Proactive push notifications, 1-tap actions, plain-language summaries (e.g., "Increase cake price by $5").** | **Must ensure insights are accurate and not overwhelming.** |
+| **OmniSolo (Target)** | **Autonomous Advisory Agent** | **Proactive push notifications, 1-tap actions, plain-language summaries (e.g., "Increase cake price by $5").** | **Must ensure insights are accurate and not overwhelming.** |
 
 ### Persona Pain Points
 *   **Priya (Boutique):** "I have 200 items in my store. I don't know which ones are sitting dead on the shelves and costing me money until I do inventory twice a year."
@@ -91,14 +91,14 @@ Implement the asynchronous AI Business Advisory Engine pipeline and the mobile-f
 **Customer-User Journey (CUJ):**
 1. The system runs a nightly background job that aggregates sales, inventory, and customer message metrics for a given tenant.
 2. The AI Advisor agent processes these metrics and generates a plain-language summary and a structured, actionable recommendation (e.g., "Increase price of Product X").
-3. When the business owner opens the OHC app the next morning, they see a beautiful "Daily Briefing" translucent glass card on their dashboard.
+3. When the business owner opens the OmniSolo app the next morning, they see a beautiful "Daily Briefing" translucent glass card on their dashboard.
 4. The owner taps the recommendation, views the reasoning, and taps "Accept" to apply the change (e.g., updating the product price) with a single click.
 
 **Acceptance Criteria:**
 - Create the `AdvisoryInsight` and `ActionableSuggestion` data models.
 - Implement the background worker logic using the PostgreSQL `SKIP LOCKED` pattern to safely dequeue and process tenant metrics.
 - Integrate the LLM provider interface to generate insights based on a structured system prompt.
-- Build the 375px mobile UI for the Home Dashboard "Briefing" card and the "Insight Details" screen using the OHC premium design tokens (Glassmorphism, Outfit font).
+- Build the 375px mobile UI for the Home Dashboard "Briefing" card and the "Insight Details" screen using the OmniSolo premium design tokens (Glassmorphism, Outfit font).
 - Ensure that accepting a recommendation securely executes the corresponding state mutation (e.g., updating a product's price in the database).
 - Unit test coverage MUST be 100% for the new backend services and background workers. Provide Playwright E2E tests for the frontend briefing flow.
 

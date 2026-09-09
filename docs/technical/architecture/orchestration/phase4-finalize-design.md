@@ -3,13 +3,13 @@
 # KAIROS AI OS: Phase 4 Finalize Design Doc
 
 ## 1. Overview
-The Phase 4 Sub-Agent Orchestration Queue completes the KAIROS architecture, ensuring robust background worker execution for the OHC Hybrid AI OS. This finalized design details the implementation of all core AI OS features.
+The Phase 4 Sub-Agent Orchestration Queue completes the KAIROS architecture, ensuring robust background worker execution for the OmniSolo Hybrid AI OS. This finalized design details the implementation of all core AI OS features.
 
 ## 2. Phase 1: Shared Task List (Decomposition)
 The Shared Task List handles the DAG-based decomposition of features, utilizing PostgreSQL `FOR UPDATE SKIP LOCKED` for secure task claiming.
 
 ## 3. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communications run via Redis Pub/Sub channels `mesh:tasks` and `mesh:coordination`, fully OHC-SIP compliant.
+Realtime communications run via Redis Pub/Sub channels `mesh:tasks` and `mesh:coordination`, fully OmniSolo-SIP compliant.
 
 ## 4. Phase 3: autoDream (Memory Consolidation Pipeline)
 Background workers consolidate agent scratchpads into `autodream_memories` using `pgvector` for omni-context memory consolidation.

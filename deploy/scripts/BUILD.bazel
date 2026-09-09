@@ -1,6 +1,6 @@
 exports_files([
-    "ohc-agent-wizard.sh",
-    "ohc-seed-data.sh",
-    "ohc-standalone.sh",
+    "omnisolo-agent-wizard.sh",
+    "omnisolo-seed-data.sh",
+    "omnisolo-standalone.sh",
     "prepare-compose-env.sh",
 ])

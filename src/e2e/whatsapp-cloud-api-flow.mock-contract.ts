@@ -27,7 +27,7 @@ test.describe('WhatsApp Cloud API Flow CUJ', () => {
 
       // Because the real flow relies on `window.FB` which doesn't exist in Playwright without a mock,
       // we'll hit the connection endpoint directly as the UI would.
-      const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+      const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
 
       // Send the request with headers required by the backend
       const response = await page.request.post(`${apiBase}/api/v1/settings/integrations/whatsapp_cloud_api`, {
@@ -51,7 +51,7 @@ test.describe('WhatsApp Cloud API Flow CUJ', () => {
   });
 
   test('Owner receives a WhatsApp Cloud API text message and it appears in inbox', async ({ page, request }) => {
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
 
     // Send a mock Meta webhook
     const payload = {
@@ -91,7 +91,7 @@ test.describe('WhatsApp Cloud API Flow CUJ', () => {
   });
 
   test('Owner receives a WhatsApp Cloud API message with image media', async ({ page, request }) => {
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
 
     const payload = {
         "entry": [
@@ -132,7 +132,7 @@ test.describe('WhatsApp Cloud API Flow CUJ', () => {
   });
 
   test('Owner receives a WhatsApp Cloud API message with audio media', async ({ page, request }) => {
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
 
     const payload = {
         "entry": [

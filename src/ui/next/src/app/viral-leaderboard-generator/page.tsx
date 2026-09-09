@@ -21,7 +21,7 @@ export default function ViralLeaderboardGeneratorPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Viral Leaderboard Generator | OHC";
+    document.title = "Viral Leaderboard Generator | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,8 +31,8 @@ export default function ViralLeaderboardGeneratorPage() {
     }
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/viral-leaderboard/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}`;
-  const embedCode = `<div id="ohc-leaderboard"></div>\n<script src="https://ohc.app/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}"></script>`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-leaderboard/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}`;
+  const embedCode = `<div id="omnisolo-leaderboard"></div>\n<script src="https://cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}"></script>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -43,7 +43,7 @@ export default function ViralLeaderboardGeneratorPage() {
   if (!isClient) return null;
 
   return (
-    <div className="ohc-growth-card flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
+    <div className="omnisolo-growth-card flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-5xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
         <div className="flex-1 min-w-0 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Leaderboard Generator 🏆</h1>
@@ -77,7 +77,7 @@ export default function ViralLeaderboardGeneratorPage() {
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                 </label>
              </div>
@@ -120,7 +120,7 @@ export default function ViralLeaderboardGeneratorPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Viral Leaderboard 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Viral Leaderboard 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

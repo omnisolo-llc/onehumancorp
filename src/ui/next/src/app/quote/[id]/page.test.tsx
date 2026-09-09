@@ -45,6 +45,16 @@ describe("interactive quote", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Quote accepted");
   });
 
+  it("offers the returned secure deposit payment link after accepting", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(Response.json(quoteResponse))
+      .mockResolvedValueOnce(Response.json({ stripe_payment_link: "https://checkout.example.test/session" }));
+    render(<InteractiveQuotePage />);
+    await screen.findByText(/Site visit/);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Accept quote" }));
+    expect(await screen.findByRole("link", { name: "Continue to payment" })).toHaveAttribute("href", "https://checkout.example.test/session");
+  });
+
   it("does not fabricate quote data when the service is unavailable", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json({ error: "unavailable" }, { status: 503 }));
     render(<InteractiveQuotePage />);

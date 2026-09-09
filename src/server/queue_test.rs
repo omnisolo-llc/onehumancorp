@@ -78,9 +78,37 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_postgres_feature_parity_migration_covers_runtime_tables() {
+        let migration_path = get_workspace_dir()
+            .join("src/server/migrations/1009_postgres_feature_parity_tables.sql");
+        let migration = std::fs::read_to_string(&migration_path)
+            .expect("PostgreSQL feature parity migration should exist");
+
+        for required in [
+            "CREATE TABLE IF NOT EXISTS tool_integrations",
+            "CREATE TABLE IF NOT EXISTS proposals",
+            "CREATE TABLE IF NOT EXISTS proposal_line_items",
+            "CREATE TABLE IF NOT EXISTS fulfillment_batches",
+            "FORCE ROW LEVEL SECURITY",
+            "tenant_isolation_tool_integrations",
+            "tenant_isolation_proposals",
+            "tenant_isolation_fulfillment_batches",
+        ] {
+            assert!(migration.contains(required), "missing migration fragment: {required}");
+        }
+
+        let onboarding = std::fs::read_to_string(
+            get_workspace_dir().join("src/server/services/onboarding/onboarding_agent.rs"),
+        )
+        .expect("onboarding source should be readable");
+        assert!(onboarding.contains(".bind(sqlx::types::Json(payload))"));
+        assert!(!onboarding.contains(".bind(serde_json::to_string(&payload)"));
+    }
+
     #[tokio::test]
     async fn test_sub_agent_queue_isolation() {
-        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy(&db_url)
                 .unwrap();

@@ -28,7 +28,7 @@ async fn validate_pydantic(
     Json(payload): Json<PydanticValidateRequest>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use ohc_builtin_agent::types::format_pydantic_error;
+    use omnisolo_builtin_agent::types::format_pydantic_error;
 
     let mut err_msg = None;
     let mut is_recoverable = false;

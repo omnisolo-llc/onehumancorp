@@ -1,13 +1,13 @@
 # Title: Autonomous KYB/KYC & Instant Underwriting Engine
 
 ## Problem Statement
-Small business owners—like Maya the baker, Carlos the handyman, and Fatima the food cart operator—need to start accepting payments immediately when they set up their business. Traditional payment gateways require lengthy Know Your Business (KYB) and Know Your Customer (KYC) procedures. These often involve uploading multiple documents, waiting days for manual review, or suffering sudden "funds frozen" events. To deliver OneHumanCorp's promise of "zero → live business in under 10 minutes," we need an invisible, instant underwriting engine that securely handles compliance and risk without blocking the user's ability to make their first sale.
+Small business owners—like Maya the baker, Carlos the handyman, and Fatima the food cart operator—need to start accepting payments immediately when they set up their business. Traditional payment gateways require lengthy Know Your Business (KYB) and Know Your Customer (KYC) procedures. These often involve uploading multiple documents, waiting days for manual review, or suffering sudden "funds frozen" events. To deliver OmniSolo's promise of "zero → live business in under 10 minutes," we need an invisible, instant underwriting engine that securely handles compliance and risk without blocking the user's ability to make their first sale.
 
 ## Research Report
 - **Competitor Analysis**:
   - **Stripe & Square**: They utilize tiered verification. They allow instant onboarding with very low limits based on basic personal data, delaying full verification until transaction volume hits a certain threshold. However, their risk models often result in abrupt account holds that confuse non-technical users.
   - **Shopify Payments**: Streamlined but still requires significant upfront data entry.
-- **The OHC Opportunity**: Traditional models rely only on traditional financial data. OHC can leverage our AI agents to perform real-time, non-traditional underwriting. For example, by analyzing Maya's Instagram cake photos or Carlos's Google Local Services reviews, an AI agent can instantly build a "Provisional Trust Score" that grants immediate, safe payment processing limits while legal KYB completes invisibly in the background.
+- **The OmniSolo Opportunity**: Traditional models rely only on traditional financial data. OmniSolo can leverage our AI agents to perform real-time, non-traditional underwriting. For example, by analyzing Maya's Instagram cake photos or Carlos's Google Local Services reviews, an AI agent can instantly build a "Provisional Trust Score" that grants immediate, safe payment processing limits while legal KYB completes invisibly in the background.
 
 ## Design Doc
 
@@ -15,7 +15,7 @@ Small business owners—like Maya the baker, Carlos the handyman, and Fatima the
 ```mermaid
 sequenceDiagram
     participant User
-    participant App as OHC Mobile App
+    participant App as OmniSolo Mobile App
     participant Onboarding as Onboarding Service
     participant RiskEngine as AI Risk & Trust Engine
     participant Compliance as AI Compliance Agent
@@ -47,7 +47,7 @@ sequenceDiagram
 
 ### AI Agent Integration Points
 - **Legal & Finance Department**: An agent tasked with instantly scraping and cross-referencing public data (social media, local directories) to generate the initial Provisional Trust Score.
-- **Compliance & Operations Agent**: An agent that monitors transaction velocity and converses directly with the user via the unified OHC inbox to gather KYB/KYC documents (like an ID scan or utility bill) only when strictly necessary, rather than blocking the initial onboarding.
+- **Compliance & Operations Agent**: An agent that monitors transaction velocity and converses directly with the user via the unified OmniSolo inbox to gather KYB/KYC documents (like an ID scan or utility bill) only when strictly necessary, rather than blocking the initial onboarding.
 
 ### Key Design Decisions
 - **Tiered, AI-Scored Limits**: We prioritize instant activation over complete initial verification. The AI Trust Score allows us to take on calculated, small risks to ensure the 10-minute "live business" SLA.

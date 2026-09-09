@@ -1,6 +1,6 @@
 # Static UX Analysis: Onboarding Flows
 
-This document contains a static analysis of the legacy Next.js onboarding wizards, comparing them to the OHC Premium Token library design standards.
+This document contains a static analysis of the legacy Next.js onboarding wizards, comparing them to the OmniSolo Premium Token library design standards.
 
 ## Evaluated Surfaces
 
@@ -10,7 +10,7 @@ This document contains a static analysis of the legacy Next.js onboarding wizard
 - `src/ui/next/src/app/business-setup/page.tsx`
 - `src/server/services/onboarding/onboarding_agent.rs`
 
-## UX and UI Analysis against OHC Premium Standards
+## UX and UI Analysis against OmniSolo Premium Standards
 
 ### The Translucent Glass Mandate
 **Requirement**:

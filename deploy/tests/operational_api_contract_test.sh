@@ -3,16 +3,16 @@ set -euo pipefail
 
 for script in "$@"; do
   grep -Fq '/api/v1/' "$script" || {
-    echo "$script must call only versioned OHC APIs" >&2
+    echo "$script must call only versioned OmniSolo APIs" >&2
     exit 1
   }
   if grep -E '/api/(dev|agents)/' "$script" | grep -Fvq '/api/v1/'; then
-    echo "$script contains an unversioned OHC API call" >&2
+    echo "$script contains an unversioned OmniSolo API call" >&2
     exit 1
   fi
   for literal in \
-    OHC_ACCESS_TOKEN \
-    OHC_ACCESS_TOKEN_FILE \
+    OMNISOLO_ACCESS_TOKEN \
+    OMNISOLO_ACCESS_TOKEN_FILE \
     'Authorization: Bearer ${ACCESS_TOKEN}' \
     '--connect-timeout' \
     '--max-time' \

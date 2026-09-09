@@ -6,9 +6,9 @@ Traditional SEO (Search Engine Optimization) is becoming secondary to GEO (Gener
 ## Research Report
 - **Durable.co Advantage:** Offers a "Weekly AI visibility ranking" to show if ChatGPT is recommending the business.
 - **Market Trend:** Users are increasingly using LLMs to ask "What's the best bakery near me?" or "Who can fix my sink in Austin?"
-- **Opportunity:** OHC can provide a built-in "AI Discovery Agent" that ensures the business metadata is structured perfectly for LLM crawlers and generative search.
+- **Opportunity:** OmniSolo can provide a built-in "AI Discovery Agent" that ensures the business metadata is structured perfectly for LLM crawlers and generative search.
 
-| Strategy | Traditional SEO | OHC GEO Agent |
+| Strategy | Traditional SEO | OmniSolo GEO Agent |
 | :--- | :--- | :--- |
 | **Focus** | Keywords & Backlinks | Vibe, Clarity & Schema |
 | **Target** | Google Search Bot | LLM Crawlers (GPT-5, Gemini) |

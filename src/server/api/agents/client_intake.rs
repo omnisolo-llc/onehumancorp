@@ -44,8 +44,8 @@ where
         .with_state(state)
 }
 
-use ohc_builtin_agent::gpt_researcher::{PlannerAgent, ResearcherLlmClient};
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use omnisolo_builtin_agent::gpt_researcher::{PlannerAgent, ResearcherLlmClient};
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 
 // Let's use the real LLM here to match the inquiry against the pricing heuristics instead of basic keywords.
 struct LocalLlm;
@@ -65,7 +65,7 @@ impl ResearcherLlmClient for LocalLlm {
         let response_text = if is_test_mode {
             r#"{"service": "Plumbing Fix", "price": 250.0}"#.to_string()
         } else {
-            match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                 Ok("minimax") => {
                     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                     crate::minimax::MinimaxClient::new(api_key)

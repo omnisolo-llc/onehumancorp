@@ -35,7 +35,7 @@ export function ViralUpgradePaywallWidget({ tenantId = "default" }: { tenantId?:
 
   if (isLoading) {
     return (
-      <div className="ohc-growth-card p-6 border border-indigo-100 bg-white/50 animate-pulse rounded-xl">
+      <div className="omnisolo-growth-card p-6 border border-indigo-100 bg-white/50 animate-pulse rounded-xl">
         <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
         <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
         <div className="h-10 bg-gray-200 rounded"></div>
@@ -49,7 +49,7 @@ export function ViralUpgradePaywallWidget({ tenantId = "default" }: { tenantId?:
   const target = data.target;
   const progressPercent = Math.min(100, Math.max(0, (currentReferrals / target) * 100));
 
-  const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${tenantId}&source=upgrade_paywall` : `https://ohc.app/onboarding?ref=${tenantId}&source=upgrade_paywall`;
+  const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${tenantId}&source=upgrade_paywall` : `https://cloud.omnisolo.co/onboarding?ref=${tenantId}&source=upgrade_paywall`;
 
   const handleCopy = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {

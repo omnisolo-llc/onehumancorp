@@ -199,8 +199,8 @@
 
       <div id="api-docs-content" style="display: block;">
         <div class="header">
-            <h1 data-testid="api-docs-title"><span  data-tooltip="Direct API access is only for custom integrations." id="api-docs-tooltip" class="badge cursor-help inline-block relative" style="cursor: help;">Advanced:</span> OHC Advanced API Reference</h1>
-            <p class="subtitle">Integrate your custom checkout or external tools directly with OHC.</p>
+            <h1 data-testid="api-docs-title"><span  data-tooltip="Direct API access is only for custom integrations." id="api-docs-tooltip" class="badge cursor-help inline-block relative" style="cursor: help;">Advanced:</span> OmniSolo Advanced API Reference</h1>
+            <p class="subtitle">Integrate your custom checkout or external tools directly with OmniSolo.</p>
             <p>This section is for developers directly integrating with our APIs.</p>
         </div>
 
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
     const style = document.createElement('style');
     style.textContent = `
-        .ohc-tooltip {
+        .omnisolo-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(40px) saturate(220%);
@@ -251,12 +251,12 @@ document.addEventListener('DOMContentLoaded', () => {
             transition: opacity 0.2s ease, transform 0.2s ease;
             text-align: center;
         }
-        .ohc-tooltip.visible {
+        .omnisolo-tooltip.visible {
             opacity: 1;
             transform: translateY(0);
         }
         @media (prefers-color-scheme: dark) {
-            .ohc-tooltip {
+            .omnisolo-tooltip {
                 background: rgba(22, 22, 26, 0.7);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
@@ -265,9 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
+    tooltipEl.className = 'omnisolo-tooltip';
     document.body.appendChild(tooltipEl);
 
     let hideTimeout;
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = e.target;
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
             }, 500); // 500ms long press
         }
     });
@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 <style>
-.ohc-tooltip {
+.omnisolo-tooltip {
     position: fixed;
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(40px) saturate(220%);
@@ -407,15 +407,15 @@ document.addEventListener('DOMContentLoaded', () => {
     max-width: 250px;
     line-height: 1.4;
 }
-.ohc-tooltip.visible {
+.omnisolo-tooltip.visible {
     opacity: 1;
 }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
+    tooltipEl.className = 'omnisolo-tooltip';
     document.body.appendChild(tooltipEl);
 
     function showTooltip(e, text) {
@@ -459,14 +459,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -506,14 +506,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('omnisolo-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('omnisolo-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -522,8 +522,8 @@ function initWalkthrough() {
             const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .omnisolo-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'omnisolo-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -536,7 +536,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -580,8 +580,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .omnisolo-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'omnisolo-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
     const style = document.createElement('style');
     style.textContent = `
-        .ohc-tooltip {
+        .omnisolo-tooltip {
             position: absolute;
             background: rgba(22, 22, 26, 0.7);
             color: #f5f5f7;
@@ -619,12 +619,12 @@ document.addEventListener('DOMContentLoaded', () => {
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             border: 1px solid rgba(255, 255, 255, 0.4);
         }
-        .ohc-tooltip.visible {
+        .omnisolo-tooltip.visible {
             opacity: 1;
             transform: translateY(0);
         }
         @media (prefers-color-scheme: light) {
-            .ohc-tooltip {
+            .omnisolo-tooltip {
                 background: rgba(255, 255, 255, 0.2);
                 color: #1d1d1f;
                 border: 1px solid rgba(0,0,0,0.1);
@@ -635,13 +635,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch tooltips registry from API
     if (window.__TAURI__ && window.__TAURI__.core) {
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(console.error);
     } else {
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(console.error);
     }
 
     const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
+    tooltipEl.className = 'omnisolo-tooltip';
     document.body.appendChild(tooltipEl);
 
     function showTooltip(e, text) {
@@ -676,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseover', (e) => {
         const target = e.target && typeof e.target.closest === 'function' ? e.target.closest('[data-tooltip]') : null;
         if (target) {
-            const text = (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             showTooltip({target: target}, text);
         }
     });
@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
             }, 500); // 500ms long press
         }
     });

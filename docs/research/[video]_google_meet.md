@@ -16,7 +16,7 @@ For digital service providers like Leo (Music Tutor), manually creating video li
 
 ## Design Doc
 - When setting up a service, the user toggles "This is an online meeting".
-- When a customer books the service, the OHC backend creates a Google Calendar event.
+- When a customer books the service, the OmniSolo backend creates a Google Calendar event.
 - The calendar event is configured to auto-generate a Google Meet conference link.
 - The confirmation email sent to the customer includes this generated Meet link.
 

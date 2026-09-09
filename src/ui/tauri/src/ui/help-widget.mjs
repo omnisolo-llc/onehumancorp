@@ -1,16 +1,16 @@
 // --- Global Tooltip & Walkthrough Logic ---
 
     // Tooltips
-    if (!window.OHC_TOOLTIPS) {
-    window.OHC_TOOLTIPS = {};
+    if (!window.OMNISOLO_TOOLTIPS) {
+    window.OMNISOLO_TOOLTIPS = {};
     fetch("/api/v1/tooltips").then(r => r.json()).then(data => {
-        Object.assign(window.OHC_TOOLTIPS, data);
+        Object.assign(window.OMNISOLO_TOOLTIPS, data);
     }).catch(e => {
         console.error(e);
     });
 }
     const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
+    tooltipEl.className = 'omnisolo-tooltip';
     if (document.body) document.body.appendChild(tooltipEl);
     else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltipEl));
 
@@ -45,7 +45,7 @@
         const target = e.target.closest('[data-tooltip], [id]');
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
-            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 showTooltip(e, text);
             }
@@ -64,7 +64,7 @@
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
-            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -96,12 +96,12 @@
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('omnisolo-walkthrough-overlay');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('omnisolo-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);';
             bubble.classList.add('glassmorphism');
@@ -110,8 +110,8 @@
             function renderStep() {
                 const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } bubble.setAttribute('aria-label', (step.title || 'Tour') + ' walkthrough step');
 
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
+                document.querySelectorAll('.walkthrough-highlight, .omnisolo-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'omnisolo-walkthrough-highlight', 'glassmorphism');
                     el.style.position = '';
                     el.style.zIndex = '';
                 el.style.pointerEvents = '';
@@ -122,7 +122,7 @@
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" class="omnisolo-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -164,8 +164,8 @@
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
+                document.querySelectorAll('.walkthrough-highlight, .omnisolo-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'omnisolo-walkthrough-highlight', 'glassmorphism');
                     el.style.position = '';
                     el.style.zIndex = '';
                 el.style.pointerEvents = '';
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
-        #ohc-floating-help-btn {
+        #omnisolo-floating-help-btn {
             position: fixed;
             bottom: 24px;
             right: 24px;
@@ -202,12 +202,12 @@ document.addEventListener('DOMContentLoaded', () => {
             justify-content: center;
             transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
-        #ohc-floating-help-btn:hover {
+        #omnisolo-floating-help-btn:hover {
             transform: scale(1.05);
             background: rgba(255, 255, 255, 0.3);
             box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
         }
-        #ohc-floating-help-btn svg {
+        #omnisolo-floating-help-btn svg {
             width: 28px;
             height: 28px;
             fill: currentColor;
@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         /* Tooltip Styles */
-        .ohc-tooltip {
+        .omnisolo-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(30px) saturate(210%);
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             max-width: 250px;
             line-height: 1.4;
         }
-        .ohc-tooltip.visible {
+        .omnisolo-tooltip.visible {
             opacity: 1;
         }
 
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 box-sizing: border-box;
             }
         }
-        #ohc-floating-help-header {
+        #omnisolo-floating-help-header {
             padding: 16px;
             background: rgba(255, 255, 255, 0.1);
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
@@ -275,25 +275,25 @@ document.addEventListener('DOMContentLoaded', () => {
             justify-content: space-between;
             align-items: center;
         }
-        #ohc-floating-help-header h3 {
+        #omnisolo-floating-help-header h3 {
             margin: 0;
             font-size: 18px;
             font-weight: 600;
             color: #0f172a;
         }
-        #ohc-floating-help-close {
+        #omnisolo-floating-help-close {
             background: none;
             border: none;
             cursor: pointer;
             color: #64748b;
             padding: 4px;
         }
-        #ohc-floating-help-tabs {
+        #omnisolo-floating-help-tabs {
             display: flex;
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
             background: rgba(255, 255, 255, 0.1);
         }
-        .ohc-help-tab {
+        .omnisolo-help-tab {
             flex: 1;
             padding: 12px;
             text-align: center;
@@ -305,23 +305,23 @@ document.addEventListener('DOMContentLoaded', () => {
             border-bottom: 2px solid transparent;
             font-size: 14px;
         }
-        .ohc-help-tab.active {
+        .omnisolo-help-tab.active {
             color: #2563eb;
             border-bottom-color: #2563eb;
         }
-        .ohc-help-content {
+        .omnisolo-help-content {
             display: none;
             flex: 1;
             overflow-y: auto;
             padding: 16px;
         }
-        .ohc-help-content.active {
+        .omnisolo-help-content.active {
             display: flex;
             flex-direction: column;
         }
 
         /* Chat styles */
-        #ohc-help-chat-messages {
+        #omnisolo-help-chat-messages {
             flex: 1;
             overflow-y: auto;
             display: flex;
@@ -329,14 +329,14 @@ document.addEventListener('DOMContentLoaded', () => {
             gap: 12px;
             margin-bottom: 16px;
         }
-        .ohc-chat-msg {
+        .omnisolo-chat-msg {
             padding: 12px 16px;
             border-radius: 12px;
             max-width: 85%;
             font-size: 14px;
             line-height: 1.5;
         }
-        .ohc-chat-msg.user {
+        .omnisolo-chat-msg.user {
             background: #0066FF;
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             align-self: flex-end;
             border-bottom-right-radius: 4px;
         }
-        .ohc-chat-msg.agent {
+        .omnisolo-chat-msg.agent {
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -354,20 +354,20 @@ document.addEventListener('DOMContentLoaded', () => {
             align-self: flex-start;
             border-bottom-left-radius: 4px;
         }
-        .ohc-chat-msg a {
+        .omnisolo-chat-msg a {
             color: #2563eb;
             text-decoration: underline;
             font-weight: 500;
             display: block;
             margin-top: 4px;
         }
-        #ohc-help-chat-input-container {
+        #omnisolo-help-chat-input-container {
             display: flex;
             gap: 8px;
             padding-top: 12px;
             border-top: 1px solid rgba(226, 232, 240, 0.5);
         }
-        #ohc-help-chat-input {
+        #omnisolo-help-chat-input {
             flex: 1;
             padding: 10px 14px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-start;
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -378,10 +378,10 @@ document.addEventListener('DOMContentLoaded', () => {
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
         }
-        #ohc-help-chat-input:focus {
+        #omnisolo-help-chat-input:focus {
             border-color: #2563eb;
         }
-        #ohc-help-chat-send {
+        #omnisolo-help-chat-send {
             background: #2563eb;
             color: white;
             border: none;
@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         /* Tours styles */
-        .ohc-tour-card {
+        .omnisolo-tour-card {
             padding: 16px;
             border: 1px solid rgba(226, 232, 240, 0.5);
             border-radius: 8px;
@@ -404,22 +404,22 @@ document.addEventListener('DOMContentLoaded', () => {
             -webkit-backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.4);
         }
-        .ohc-tour-card:hover {
+        .omnisolo-tour-card:hover {
             background: rgba(255, 255, 255, 0.4);
         }
-        .ohc-tour-card h4 {
+        .omnisolo-tour-card h4 {
             margin: 0 0 4px 0;
             font-size: 15px;
             color: #0f172a;
         }
-        .ohc-tour-card p {
+        .omnisolo-tour-card p {
             margin: 0;
             font-size: 13px;
             color: #64748b;
         }
 
         /* Tooltip Styles */
-        .ohc-tooltip {
+        .omnisolo-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(30px) saturate(210%);
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             max-width: 250px;
             line-height: 1.4;
         }
-        .ohc-tooltip.visible {
+        .omnisolo-tooltip.visible {
             opacity: 1;
         }
     `;
@@ -446,9 +446,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the button
     const btn = document.createElement('button');
-    btn.id = 'ohc-floating-help-btn';
+    btn.id = 'omnisolo-floating-help-btn';
     btn.setAttribute('aria-label', 'Open help chat');
-    btn.setAttribute('data-tooltip-id', 'ohc-floating-help-btn');
+    btn.setAttribute('data-tooltip-id', 'omnisolo-floating-help-btn');
     btn.setAttribute('data-tooltip', 'Open Help Center');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -458,26 +458,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const widget = document.createElement('div');
     widget.id = 'ai-chat-interface';
     widget.innerHTML = `
-        <div id="ohc-floating-help-header">
+        <div id="omnisolo-floating-help-header">
             <h3>Ask AI Help</h3>
-            <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
+            <button id="omnisolo-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
-        <div id="ohc-floating-help-tabs">
-            <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
-            <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
-            <button class="ohc-help-tab" data-target="tab-videos">Videos</button>
-            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
+        <div id="omnisolo-floating-help-tabs">
+            <button class="omnisolo-help-tab active" data-target="tab-articles">Articles</button>
+            <button class="omnisolo-help-tab" data-target="tab-tours">Interactive Tours</button>
+            <button class="omnisolo-help-tab" data-target="tab-videos">Videos</button>
+            <button class="omnisolo-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
         </div>
 
-        <div id="tab-articles" class="ohc-help-content active">
+        <div id="tab-articles" class="omnisolo-help-content active">
             <div style="margin-bottom: 16px;">
                 <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
             </div>
             <h4>Popular Articles</h4>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="omnisolo-help-articles-list">
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to OmniSolo OneHumanCorp</a></li>
                 <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
                 <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
@@ -489,26 +489,26 @@ document.addEventListener('DOMContentLoaded', () => {
                   </label>
                 </div>
                 <div id="help-widget-advanced-links" style="display: none;">
-                    <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
+                    <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OmniSolo Advanced API Reference</a>
                     <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
             </div>
         </div>
 
-        <div id="tab-tours" class="ohc-help-content">
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
+        <div id="tab-tours" class="omnisolo-help-content">
+            <div class="omnisolo-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
                 <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
                     <h4>Tour: Set up your store</h4>
                     <p>Learn how to add products and customize your storefront.</p>
                 </button>
             </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
+            <div class="omnisolo-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
                 <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
                     <h4>Tour: Accept your first payment</h4>
                     <p>Connect your account to start receiving money.</p>
                 </button>
             </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
+            <div class="omnisolo-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
                 <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
                     <h4>Tour: Activate your AI Support Agent</h4>
                     <p>Let AI handle customer queries for you.</p>
@@ -516,19 +516,19 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-                <div id="tab-videos" class="ohc-help-content">
+                <div id="tab-videos" class="omnisolo-help-content">
             <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
         </div>
 
-        <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
-            <div id="ohc-help-chat-messages">
-                <div class="ohc-chat-msg agent">
+        <div id="tab-chat" class="omnisolo-help-content" style="padding-bottom: 12px;">
+            <div id="omnisolo-help-chat-messages">
+                <div class="omnisolo-chat-msg agent">
                     Need help setting up your store? I am your AI Help Agent! How can I assist you today?
                 </div>
             </div>
-            <div id="ohc-help-chat-input-container">
-                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
-                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
+            <div id="omnisolo-help-chat-input-container">
+                <input type="text" id="omnisolo-help-chat-input" placeholder="Ask anything...">
+                <button id="omnisolo-help-chat-send" aria-label="Send message" disabled>Send</button>
             </div>
         </div>
     `;
@@ -544,12 +544,12 @@ document.addEventListener('DOMContentLoaded', () => {
         widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
     });
 
-    document.getElementById('ohc-floating-help-close').addEventListener('click', () => {
+    document.getElementById('omnisolo-floating-help-close').addEventListener('click', () => {
         widget.style.display = 'none';
     });
 
-    const tabs = widget.querySelectorAll('.ohc-help-tab');
-    const contents = widget.querySelectorAll('.ohc-help-content');
+    const tabs = widget.querySelectorAll('.omnisolo-help-tab');
+    const contents = widget.querySelectorAll('.omnisolo-help-content');
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -578,13 +578,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat Logic
-    const chatInput = document.getElementById('ohc-help-chat-input');
-    const chatSend = document.getElementById('ohc-help-chat-send');
-    const chatMessages = document.getElementById('ohc-help-chat-messages');
+    const chatInput = document.getElementById('omnisolo-help-chat-input');
+    const chatSend = document.getElementById('omnisolo-help-chat-send');
+    const chatMessages = document.getElementById('omnisolo-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {
         const msg = document.createElement('div');
-        msg.className = `ohc-chat-msg ${sender}`;
+        msg.className = `omnisolo-chat-msg ${sender}`;
         msg.innerHTML = text;
         if (link && link.url && link.title) {
             msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;

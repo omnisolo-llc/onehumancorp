@@ -209,11 +209,11 @@
         // Generate actual widget URL
         let baseUrl = window.location.origin;
         if (baseUrl === 'file://' || baseUrl.includes('localhost') || baseUrl === 'null') {
-          baseUrl = 'https://app.onehumancorp.com';
+          baseUrl = 'https://cloud.omnisolo.co';
         }
 
         const embedUrl = `${baseUrl}/ui/calculator-embed.html?tenant=${tenantId}&service=${encodeURIComponent(serviceName)}&base=${encodeURIComponent(basePrice)}`;
-        const embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; background: transparent;"></iframe>\n<div style="text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/setup.html?ref=${tenantId}" target="_blank" style="color: #888; text-decoration: none;">Powered by OHC - Get your own AI Pricing Calculator</a></div>`;
+        const embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; background: transparent;"></iframe>\n<div style="text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/setup.html?ref=${tenantId}" target="_blank" style="color: #888; text-decoration: none;">OmniSolo - Get your own AI Pricing Calculator</a></div>`;
 
         document.getElementById('embed-code').value = embedCode;
         document.getElementById('result-area').style.display = 'block';

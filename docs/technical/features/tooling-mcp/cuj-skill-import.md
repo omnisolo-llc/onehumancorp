@@ -39,7 +39,7 @@ The CEO wants to expand the company's capabilities by importing new skills, area
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

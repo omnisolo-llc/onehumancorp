@@ -2,15 +2,15 @@
 
 # AutoDream Data Pipelines
 
-The AutoDream Data Pipeline is the long-term memory consolidation engine of the KAIROS Orchestrator. It fulfills the Swarm Intelligence Protocol (OHC-SIP) mandate that all agents share memory by asynchronously processing ephemeral session data into queryable vector embeddings.
+The AutoDream Data Pipeline is the long-term memory consolidation engine of the KAIROS Orchestrator. It fulfills the Swarm Intelligence Protocol (OmniSolo-SIP) mandate that all agents share memory by asynchronously processing ephemeral session data into queryable vector embeddings.
 
 ## 1. The Need for AutoDream
 
-During task execution, agents generate significant amounts of context (`agent_session_data` and optional runtime memory `*.yml` files under `OHC_MEMORY_DIR`). To prevent context window overflow and enable long-term reasoning, AutoDream sweeps this data, prunes redundancies, and injects the consolidated "truth" into a durable vector database.
+During task execution, agents generate significant amounts of context (`agent_session_data` and optional runtime memory `*.yml` files under `OMNISOLO_MEMORY_DIR`). To prevent context window overflow and enable long-term reasoning, AutoDream sweeps this data, prunes redundancies, and injects the consolidated "truth" into a durable vector database.
 
 ## 2. Architecture and Storage
 
-AutoDream adapts its storage mechanism based on the OHC operating mode:
+AutoDream adapts its storage mechanism based on the OmniSolo operating mode:
 
 - **Cloud-Native Mode:** Utilizes PostgreSQL with the `pgvector` extension for exact Nearest Neighbor search on 1536-dimensional embeddings.
 - **Standalone Mode:** Degrades gracefully to SQLite. Embeddings are stored as JSON text blobs, with fallback search mechanisms if vector extensions are unavailable in the local SQLite distribution.

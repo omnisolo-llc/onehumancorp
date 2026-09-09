@@ -255,9 +255,9 @@ jobs:
               exit 1
             fi
           done
-          certificate_path="$RUNNER_TEMP/ohc-ios-signing.p12"
-          profile_path="$RUNNER_TEMP/ohc.mobileprovision"
-          keychain_path="$RUNNER_TEMP/ohc-signing.keychain-db"
+          certificate_path="$RUNNER_TEMP/omnisolo-ios-signing.p12"
+          profile_path="$RUNNER_TEMP/omnisolo.mobileprovision"
+          keychain_path="$RUNNER_TEMP/omnisolo-signing.keychain-db"
           echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
           echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
@@ -267,7 +267,7 @@ jobs:
           security list-keychain -d user -s "$keychain_path" $(security list-keychains -d user | sed s/\"//g)
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/ohc.mobileprovision"
+          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/omnisolo.mobileprovision"
 
       - name: Build Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
@@ -576,23 +576,23 @@ jobs:
       - name: Restore Docker image cache
         uses: actions/cache@v5
         with:
-          path: /tmp/ohc-kind-images
+          path: /tmp/omnisolo-kind-images
           key: ${{ runner.os }}-${{ runner.arch }}-kind-images-18d16372b840-94365b275456
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-kind-images-
 
       - name: Load and pull Docker images for Kind
         run: |
-          if [[ -f /tmp/ohc-kind-images/images.tar ]]; then
-            docker load -i /tmp/ohc-kind-images/images.tar
+          if [[ -f /tmp/omnisolo-kind-images/images.tar ]]; then
+            docker load -i /tmp/omnisolo-kind-images/images.tar
           fi
           docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
           docker pull valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
-          mkdir -p /tmp/ohc-kind-images
+          mkdir -p /tmp/omnisolo-kind-images
           docker save \
             pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
             valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885 \
-            -o /tmp/ohc-kind-images/images.tar
+            -o /tmp/omnisolo-kind-images/images.tar
 
       - name: Run Kind smoke test
         run: |
@@ -644,15 +644,15 @@ jobs:
       - name: Restore Docker Compose image cache
         uses: actions/cache@v5
         with:
-          path: /tmp/ohc-docker-compose-images
+          path: /tmp/omnisolo-docker-compose-images
           key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml', 'deploy/docker-compose.override.yml') }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-
 
       - name: Load Docker Compose image cache
         run: |
-          if [[ -f /tmp/ohc-docker-compose-images/images.tar ]]; then
-            docker load -i /tmp/ohc-docker-compose-images/images.tar
+          if [[ -f /tmp/omnisolo-docker-compose-images/images.tar ]]; then
+            docker load -i /tmp/omnisolo-docker-compose-images/images.tar
           fi
 
       - name: Pull Docker Compose images
@@ -661,12 +661,12 @@ jobs:
           docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
           docker pull valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
           docker pull curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b
-          mkdir -p /tmp/ohc-docker-compose-images
+          mkdir -p /tmp/omnisolo-docker-compose-images
           docker save \
             pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
             valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885 \
             curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b \
-            -o /tmp/ohc-docker-compose-images/images.tar
+            -o /tmp/omnisolo-docker-compose-images/images.tar
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -722,9 +722,9 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     env:
-      OHC_REQUIRE_POSTGRES_TESTS: "1"
-      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security
-      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security
+      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"
+      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security
+      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security
     steps:
       - uses: actions/checkout@v6
 
@@ -746,7 +746,7 @@ jobs:
 
       - name: Provision and verify non-superuser application role
         run: |
-          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<'SQL'
+          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_bypassrls') THEN
@@ -763,7 +763,7 @@ jobs:
           GRANT CONNECT ON DATABASE ohc_security TO ohc_security_test;
           SQL
 
-          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<'SQL'
+          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
             IF NOT EXISTS (
@@ -797,6 +797,7 @@ jobs:
     name: CI Required
     needs:
       - check-changes
+      - dependency-audit
       - bazel-build
       - bazel-test
       - bazel-test-e2e
@@ -811,6 +812,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}
+          DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}
           BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}
           BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}
@@ -821,6 +823,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "dependency-audit: ${DEPENDENCY_AUDIT_RESULT}"
           echo "check-changes: ${CHECK_CHANGES_RESULT}"
           echo "bazel-build: ${BAZEL_BUILD_RESULT}"
           echo "bazel-test: ${BAZEL_TEST_RESULT}"
@@ -856,12 +859,14 @@ jobs:
           fi
 
           if [[ "$MARKDOWN_ONLY" == "true" ]]; then
+            allow_success_or_skipped "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
             allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"
             allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
             allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"
             allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"
           else
+            require_success "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
             require_success "bazel-test" "$BAZEL_TEST_RESULT"
             require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             require_success "kind-e2e" "$KIND_E2E_RESULT"

@@ -63,7 +63,7 @@ impl Drop for MeshLockGuard {
 }
 
 pub fn state_manager_timeout() -> std::time::Duration {
-    std::env::var("OHC_STATE_MANAGER_TIMEOUT_MS")
+    std::env::var("OMNISOLO_STATE_MANAGER_TIMEOUT_MS")
         .ok()
         .and_then(|raw| raw.parse::<u64>().ok())
         .map(std::time::Duration::from_millis)

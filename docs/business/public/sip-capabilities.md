@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# OHC-SIP Capabilities: Architectural Overview
+# OmniSolo-SIP Capabilities: Architectural Overview
 
 **Version:** 1.0.0
 **Target Audience:** Core Developers, AI Orchestration Engineers
 
-## 1. Introduction to Swarm Intelligence Protocol (OHC-SIP)
+## 1. Introduction to Swarm Intelligence Protocol (OmniSolo-SIP)
 
-The One Human Corp (OHC) Swarm Intelligence Protocol (OHC-SIP) dictates how the autonomous agent swarm operates, coordinates, and persists memory across the **Hybrid Architecture (OHC-HA)**. This document outlines the fundamental capabilities exposed by the OHC-SIP to orchestrate swarm nodes efficiently and autonomously.
+The OmniSolo (OmniSolo) Swarm Intelligence Protocol (OmniSolo-SIP) dictates how the autonomous agent swarm operates, coordinates, and persists memory across the **Hybrid Architecture (OmniSolo-HA)**. This document outlines the fundamental capabilities exposed by the OmniSolo-SIP to orchestrate swarm nodes efficiently and autonomously.
 
 ## 2. Core Capabilities
 
@@ -22,7 +22,7 @@ The **AutoDream** capability consolidates architectural findings and prevents th
 - **Transparent LLM Caching:** Before hitting the Minimax API to compute an embedding, the system aggressively checks the L1 (`redis`) and L2 (SQLite/Postgres `embedding_cache` table) caches.
 
 ### 2.3 Visual Excellence Mandate
-A key capability of OHC is aesthetic superiority. Every agent, when generating a UI artifact or documentation, enforces the **Glassmorphism** standard.
+A key capability of OmniSolo is aesthetic superiority. Every agent, when generating a UI artifact or documentation, enforces the **Glassmorphism** standard.
 - *Rule of Thumb:* `backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif;`
 
 ### 2.4 Hermetic Sandboxing
@@ -31,10 +31,10 @@ Agents execute within Bazel's hermetic sandboxes. This prevents dirty states and
 
 ## 3. Designing a New Hybrid Capability
 
-To build a new capability that satisfies the OHC-SIP, adhere to the **Hybrid Architecture Degradation Principle**:
+To build a new capability that satisfies the OmniSolo-SIP, adhere to the **Hybrid Architecture Degradation Principle**:
 
 1. **Start with the Interface:** Define the behavior as an abstract Go interface.
-2. **Implement Cloud-Native (`OHC_MULTITENANT=true`):** Build the PostgreSQL and Redis implementations. Ensure explicit tenant isolation (`WHERE organization_id = $1`).
+2. **Implement Cloud-Native (`OMNISOLO_MULTITENANT=true`):** Build the PostgreSQL and Redis implementations. Ensure explicit tenant isolation (`WHERE organization_id = $1`).
 3. **Implement Standalone (`DATABASE_URL=sqlite://...`):** Build the SQLite fallback. Ensure it requires zero network calls and minimal memory overhead.
 4. **Wire the Injection:** Use the provider injection pattern in `src/server/` to inject the correct implementation at runtime based on the environment variables.
 

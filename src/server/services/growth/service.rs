@@ -1,9 +1,9 @@
-use ::server_ohc::orchestration::growth_service_server::GrowthService;
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::{CreateReferralRequest, EmptyRequest, GrowthIdRequest};
+use ::server_omnisolo::orchestration::growth_service_server::GrowthService;
+use ::server_omnisolo::orchestration::*;
+use ::server_omnisolo::orchestration::{CreateReferralRequest, EmptyRequest, GrowthIdRequest};
 use tonic::{Request, Response, Status};
 
-use ::server_ohc::orchestration::{
+use ::server_omnisolo::orchestration::{
     GetReputationRequest, GetReputationResponse, SubmitReviewRequest, SubmitReviewResponse,
 };
 use uuid::Uuid;
@@ -292,7 +292,7 @@ impl GrowthService for MyGrowthService {
 
         // Generate clean business URL for sharing
         let slug = ::server_utils::slug::slugify(&business_name);
-        let business_share_url = format!("ohc.app/b/{}", slug);
+        let business_share_url = format!("cloud.omnisolo.co/b/{}", slug);
 
         Ok(Response::new(ReferralStatsResponse {
             total_referrals,
@@ -366,7 +366,7 @@ impl GrowthService for MyGrowthService {
                 .split("&utm_source=")
                 .next()
                 .unwrap_or("")
-                .strip_prefix("ohc://join?ref=")
+                .strip_prefix("omnisolo://join?ref=")
                 .unwrap_or("error")
                 .to_string()
         } else {
@@ -468,7 +468,7 @@ impl GrowthService for MyGrowthService {
             .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
 
         // Implement Credit Attribution: "both get 14 days free Pro trial extension"
-        // In OHC, this is represented by upgrading to Pro and setting the has_claimed_trial_extension flag.
+        // In OmniSolo, this is represented by upgrading to Pro and setting the has_claimed_trial_extension flag.
         let _ = sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1::uuid OR id = (SELECT tenant_id::uuid FROM referrals WHERE id = $2)")
             .bind(&org_id)
             .bind(&req.id)
@@ -902,7 +902,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_referral_flow() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool_opts = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(500))
@@ -927,7 +927,7 @@ mod tests {
         });
         req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
+            "spiffe://omnisolo.io/org1/agent1".parse().unwrap(),
         );
 
         let resp = service.create_referral(req).await.unwrap().into_inner();
@@ -942,7 +942,7 @@ mod tests {
         });
         click_req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1"
+            "spiffe://omnisolo.io/00000000-0000-0000-0000-000000000001/agent1"
                 .parse()
                 .unwrap(),
         );
@@ -967,7 +967,7 @@ mod tests {
         });
         conv_req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1"
+            "spiffe://omnisolo.io/00000000-0000-0000-0000-000000000001/agent1"
                 .parse()
                 .unwrap(),
         );
@@ -990,7 +990,7 @@ mod tests {
         let mut list_req = Request::new(EmptyRequest {});
         list_req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
+            "spiffe://omnisolo.io/org1/agent1".parse().unwrap(),
         );
         let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
@@ -1006,7 +1006,7 @@ mod tests {
             Ok(p) => p,
             Err(_) => return,
         };
-        if std::env::var("OHC_DATABASE_URL")
+        if std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_default()
             .contains("localhost")
         {
@@ -1029,7 +1029,7 @@ mod tests {
         let mut req1 = Request::new(EmptyRequest {});
         req1.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
+            "spiffe://omnisolo.io/org-test-cache/agent1"
                 .parse()
                 .unwrap(),
         );
@@ -1042,7 +1042,7 @@ mod tests {
         let mut req2 = Request::new(EmptyRequest {});
         req2.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
+            "spiffe://omnisolo.io/org-test-cache/agent1"
                 .parse()
                 .unwrap(),
         );
@@ -1067,7 +1067,7 @@ mod tests {
             Ok(p) => p,
             Err(_) => return,
         };
-        if std::env::var("OHC_DATABASE_URL")
+        if std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_default()
             .contains("localhost")
         {
@@ -1093,7 +1093,7 @@ mod tests {
         });
         req1.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
+            "spiffe://omnisolo.io/org-test-cache/agent1"
                 .parse()
                 .unwrap(),
         );
@@ -1109,7 +1109,7 @@ mod tests {
         });
         req2.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
+            "spiffe://omnisolo.io/org-test-cache/agent1"
                 .parse()
                 .unwrap(),
         );
@@ -1126,7 +1126,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_review_and_reputation_flow() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool_opts = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(500))
@@ -1154,7 +1154,7 @@ mod tests {
         });
         req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
+            "spiffe://omnisolo.io/org1/agent1".parse().unwrap(),
         );
 
         // Ensure tenant isolation
@@ -1173,7 +1173,7 @@ mod tests {
         let mut get_req = Request::new(GetReputationRequest {});
         get_req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
+            "spiffe://omnisolo.io/org1/agent1".parse().unwrap(),
         );
         let get_res = service.get_reputation(get_req).await;
         if let Ok(resp) = get_res {
@@ -1185,11 +1185,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_quota_latency_benchmark() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .max_connections(5)
             .connect(&database_url)
@@ -1233,11 +1233,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_quota_mobile_payload_optimization() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .max_connections(5)
             .connect(&database_url)
@@ -1274,11 +1274,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_onboarding_metrics_mobile_payload_optimization() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .max_connections(5)
             .connect(&database_url)

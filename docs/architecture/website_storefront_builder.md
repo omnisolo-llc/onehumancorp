@@ -1,9 +1,9 @@
-# Architecture Findings: OHC Website & Storefront Builder
+# Architecture Findings: OmniSolo Website & Storefront Builder
 
-This document contains the required architecture findings and issue brief for the OHC Website & Storefront Builder as requested in GitHub Issue #8439.
+This document contains the required architecture findings and issue brief for the OmniSolo Website & Storefront Builder as requested in GitHub Issue #8439.
 
 ## 1. Overview
-This design document outlines the architecture for the OneHumanCorp (OHC) Website & Storefront Builder. The builder empowers non-technical small business owners (e.g., bakers, handymen, boutique owners) to create, customize, and publish professional, mobile-first storefronts and websites without any coding knowledge. AI agents assist in the background to handle design, layout, content generation, and SEO, abstracting away all complexity.
+This design document outlines the architecture for the OmniSolo (OmniSolo) Website & Storefront Builder. The builder empowers non-technical small business owners (e.g., bakers, handymen, boutique owners) to create, customize, and publish professional, mobile-first storefronts and websites without any coding knowledge. AI agents assist in the background to handle design, layout, content generation, and SEO, abstracting away all complexity.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -42,7 +42,7 @@ sequenceDiagram
     participant User
     participant App as Mobile/Web App
     participant Promoter as Promoter Agent
-    participant API as OHC API Layer
+    participant API as OmniSolo API Layer
     participant Storage as Storage (CDN/DB)
 
     User->>App: Request New Website (Answers Setup Wizard)
@@ -63,7 +63,7 @@ sequenceDiagram
 - **Drafting:** Changes are saved instantly to a draft state. Users can preview the mobile and desktop views.
 - **Publishing:** A 1-tap action that takes the draft live.
 - **Domain Assignment:**
-  - **Free Tier:** Assigned a subdomain (e.g., `mayascakes.ohc.store`).
+  - **Free Tier:** Assigned a subdomain (e.g., `mayascakes.cloud.omnisolo.co`).
   - **Paid Tiers:** Users can connect a custom domain or purchase one directly through the app.
 - **SSL & Routing:** The platform automatically provisions an SSL certificate and configures routing rules upon domain assignment.
 
@@ -79,7 +79,7 @@ The builder UI on mobile is optimized for touch:
 ```yaml
 issue_title: "[architecture] Implement Website & Storefront Builder Core"
 issue_priority: "P1"
-issue_description: "Implement the backend and frontend components for the Website Builder. The user must be able to initialize a site via the AI Promoter Agent, customize predefined content blocks (Hero, Product Grid, Booking Calendar), and publish the site to an OHC subdomain."
+issue_description: "Implement the backend and frontend components for the Website Builder. The user must be able to initialize a site via the AI Promoter Agent, customize predefined content blocks (Hero, Product Grid, Booking Calendar), and publish the site to an OmniSolo subdomain."
 issue_todo_list:
   - [ ] Develop the TypeScript mobile-first drag-and-drop editor interface.
   - [ ] Implement the backend endpoints in Rust to store and retrieve draft and live site configurations.

@@ -4,9 +4,9 @@ use std::path::Path;
 
 pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud {
-        ".ohc-cloud-data"
+        ".omnisolo-cloud-data"
     } else {
-        ".ohc-local-data"
+        ".omnisolo-local-data"
     };
 
     let dirs = vec![
@@ -31,9 +31,9 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
 
 pub fn check_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud {
-        ".ohc-cloud-data"
+        ".omnisolo-cloud-data"
     } else {
-        ".ohc-local-data"
+        ".omnisolo-local-data"
     };
 
     let dirs = vec![
@@ -54,9 +54,9 @@ pub fn check_environment(is_cloud: bool) -> Result<(), String> {
 
 pub fn cleanup_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud {
-        ".ohc-cloud-data"
+        ".omnisolo-cloud-data"
     } else {
-        ".ohc-local-data"
+        ".omnisolo-local-data"
     };
 
     if Path::new(base_dir).exists() {
@@ -83,16 +83,16 @@ mod tests {
         assert!(res.is_ok());
 
         let expected_dirs = vec![
-            ".ohc-local-data/db",
-            ".ohc-local-data/blob",
-            ".ohc-local-data/config",
+            ".omnisolo-local-data/db",
+            ".omnisolo-local-data/blob",
+            ".omnisolo-local-data/config",
         ];
 
         for dir in expected_dirs {
             assert!(Path::new(&dir).exists());
         }
 
-        fs::remove_dir_all(".ohc-local-data").unwrap();
+        fs::remove_dir_all(".omnisolo-local-data").unwrap();
     }
 
     #[test]
@@ -101,22 +101,22 @@ mod tests {
         assert!(res.is_ok());
 
         let expected_dirs = vec![
-            ".ohc-cloud-data/db",
-            ".ohc-cloud-data/blob",
-            ".ohc-cloud-data/config",
+            ".omnisolo-cloud-data/db",
+            ".omnisolo-cloud-data/blob",
+            ".omnisolo-cloud-data/config",
         ];
 
         for dir in expected_dirs {
             assert!(Path::new(&dir).exists());
         }
 
-        fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
     }
 
     #[test]
     fn test_check_environment_local() {
-        if std::path::Path::new(".ohc-local-data").exists() {
-            fs::remove_dir_all(".ohc-local-data").unwrap();
+        if std::path::Path::new(".omnisolo-local-data").exists() {
+            fs::remove_dir_all(".omnisolo-local-data").unwrap();
         }
 
         let res = check_environment(false);
@@ -126,13 +126,13 @@ mod tests {
         let res = check_environment(false);
         assert!(res.is_ok());
 
-        fs::remove_dir_all(".ohc-local-data").unwrap();
+        fs::remove_dir_all(".omnisolo-local-data").unwrap();
     }
 
     #[test]
     fn test_check_environment_cloud() {
-        if std::path::Path::new(".ohc-cloud-data").exists() {
-            fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        if std::path::Path::new(".omnisolo-cloud-data").exists() {
+            fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
         }
 
         let res = check_environment(true);
@@ -142,7 +142,7 @@ mod tests {
         let res = check_environment(true);
         assert!(res.is_ok());
 
-        fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
     }
 
     #[test]

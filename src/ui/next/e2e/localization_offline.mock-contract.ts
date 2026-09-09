@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 test('Global Offline-First Localization & Currency Toggle', async ({ page, context }) => {
   // Seed staff data for offline login simulation
   await page.addInitScript(() => {
-    localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+    localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
       id: 'fatima-1',
       name: 'Fatima',
       role: 'Manager',
@@ -22,7 +22,7 @@ test('Global Offline-First Localization & Currency Toggle', async ({ page, conte
     }]));
 
     // Seed FX rates for offline conversion
-    localStorage.setItem('ohc-localization-storage', JSON.stringify({
+    localStorage.setItem('omnisolo-localization-storage', JSON.stringify({
       state: {
         locale: 'en',
         currency: 'USD',

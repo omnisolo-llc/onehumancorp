@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
-use ohc_builtin_agent_core::pubsub::{SubagentBus, SubagentLifecycleEvent, SubagentEventType};
+use omnisolo_builtin_agent_core::pubsub::{SubagentBus, SubagentLifecycleEvent, SubagentEventType};
 
 use crate::db::{ScoutDb, ToolIntegration};
 
@@ -45,7 +45,7 @@ impl ScoutAgent {
             created_at: Utc::now(),
         };
 
-        // Step 3: Save to OHC-SIP
+        // Step 3: Save to OmniSolo-SIP
         self.db.save_integration(&integration).await?;
 
         // Step 4: Notify via bus

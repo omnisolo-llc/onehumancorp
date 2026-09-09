@@ -9,7 +9,7 @@ Creating content for social media is the #1 reason small businesses (like Priya 
 ## Research Report
 - **Competitor Landscape**: Platforms like Shopify and Wix offer basic social integrations or require third-party apps with subscription fees, leading to "Cost Creep".
 - **Pain Point Validation**: "Marketing Dread" impacts 55% of users. Without an active social media presence, stores fail to attract customers.
-- **AI Differentiation**: Competitors offer reactive AI writing assistants (e.g., "help me write a tweet"). OHC's approach is a proactive, autonomous "Generative Promoter" agent that drafts an entire 7-day calendar whenever a new event occurs (e.g., product addition, seasonal change) without requiring a prompt.
+- **AI Differentiation**: Competitors offer reactive AI writing assistants (e.g., "help me write a tweet"). OmniSolo's approach is a proactive, autonomous "Generative Promoter" agent that drafts an entire 7-day calendar whenever a new event occurs (e.g., product addition, seasonal change) without requiring a prompt.
 
 ## Design Doc
 ### High-Level Architecture

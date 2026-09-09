@@ -6,7 +6,7 @@ test.describe('Agent Profile Cloud Bridge Share', () => {
     await page.goto('/api/v1/ui/agent-profile.html');
 
     // Ensure the page has loaded by checking for the branding link or standard text
-    await expect(page.locator('text=Powered by OHC').first()).toBeVisible();
+    await expect(page.locator('text=OmniSolo').first()).toBeVisible();
 
     // Verify the Share Profile to Cloud Team button is present
     const shareBtn = page.locator('#cloud-bridge-share-btn');
@@ -23,7 +23,7 @@ test.describe('Agent Profile Cloud Bridge Share', () => {
 
     // The link should not be empty and should have the correct format
     const shareInput = page.locator('#cloud-bridge-invite-link');
-    await expect(shareInput).toHaveValue(/https:\/\/ohc\.app\/invite\/.+/);
+    await expect(shareInput).toHaveValue(/https:\/\/cloud.omnisolo.co\/invite\/.+/);
 
     // The copy button should work
     const copyBtn = page.locator('#cloud-bridge-copy-btn');

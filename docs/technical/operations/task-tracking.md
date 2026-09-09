@@ -7,7 +7,7 @@ GitHub issues are the only supported task tracker for this repository.
 - Open work belongs in GitHub issues.
 - Documentation, code, and release work should reference issue numbers when applicable.
 - Local `.agent-task` mission files are retired and should not be recreated.
-- `OHC_MISSIONS_DIR` is import-only and exists solely to support controlled migration or ingestion workflows.
+- `OMNISOLO_MISSIONS_DIR` is import-only and exists solely to support controlled migration or ingestion workflows.
 
 ## Recommended Labels
 
@@ -21,7 +21,7 @@ GitHub issues are the only supported task tracker for this repository.
 
 ## Terminal Workflow
 
-Use `deploy/scripts/ohc-swarm-status.sh` to query repository issues when `gh` is installed and authenticated.
+Use `deploy/scripts/omnisolo-swarm-status.sh` to query repository issues when `gh` is installed and authenticated.
 
 ## Documentation Gate
 

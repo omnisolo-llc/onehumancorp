@@ -70,7 +70,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
+            let res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
@@ -135,7 +135,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
+            let res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
                 let mut tx = self.pool.begin().await?;
 
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
@@ -216,7 +216,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
+            let res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
@@ -427,7 +427,7 @@ impl SipDB {
     }
 
     /// KAIROS Orchestrator Delegation Pipeline
-    /// Implements the Swarm Intelligence Protocol (OHC-SIP) Database layer.
+    /// Implements the Swarm Intelligence Protocol (OmniSolo-SIP) Database layer.
     /// By utilizing the agent_missions table, we natively inject complete project context
     /// into sub-agent payloads at the moment of creation, achieving hermetic,
     /// zero-latency Bazel-native context routing.
@@ -443,7 +443,7 @@ impl SipDB {
         let final_payload = self.enrich_payload_with_grounding_content(payload, &grounding_content);
         let is_standalone = crate::is_standalone_runtime();
 
-        let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
+        let res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
             let _permit = if is_standalone {
                 match get_sqlite_limiter().try_acquire() {
                     Ok(p) => Some(p),
@@ -493,7 +493,7 @@ impl SipDB {
         let is_standalone = crate::is_standalone_runtime();
 
         loop {
-            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
+            let res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
                 let _permit = if is_standalone {
                     match get_sqlite_limiter().try_acquire() {
                         Ok(p) => Some(p),
@@ -644,7 +644,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_mission_tc1_no_context_root() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -735,7 +735,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_mission_tc2_agents_md() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -806,7 +806,7 @@ mod tests {
     async fn test_delegate_mission_tc6_omni_context_resilience() {
         // A comprehensive test verifying the Omni-Context Sub-agent Routing feature's
         // resilience and correct context injection under simulated chaotic conditions.
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -873,7 +873,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_mission_tc3_claude_md_fallback() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -942,7 +942,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_mission_tc4_grounding_priority() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -1016,7 +1016,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_mission_tc5_missing_files() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -1097,7 +1097,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_logic_success() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -1211,9 +1211,9 @@ mod tests {
         assert!(res_dummy.is_err());
 
         // Now, if a real database is available, test the actual logic.
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
-            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
+            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OMNISOLO_DATABASE_URL
         };
 
         if let Ok(pool) = crate::db::secure_pg_pool_options()
@@ -1412,7 +1412,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cleanup_stagnant_missions() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -1555,7 +1555,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_drain_mission_queue_success() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };

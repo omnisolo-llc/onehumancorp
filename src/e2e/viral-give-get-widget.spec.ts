@@ -53,7 +53,7 @@ test.describe('Viral Give-Get Widget', () => {
       await expect(generateBtn).not.toBeDisabled();
       await expect(generateBtn).toHaveText('Generate Referral Link');
 
-      // Check share link generated correctly (the real endpoint returns ohc.app/ref/UUID format)
+      // Check share link generated correctly (the real endpoint returns cloud.omnisolo.co/ref/UUID format)
       const shareLink = page.locator('#share-link');
       await expect(shareLink).toHaveValue(/\/give-get\/join\?ref=.+/);
 

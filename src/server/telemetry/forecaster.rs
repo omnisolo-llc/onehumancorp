@@ -127,7 +127,7 @@ mod tests {
     use sqlx::PgPool;
 
     async fn setup_test_db() -> Result<PgPool, sqlx::Error> {
-        let db_url = std::env::var("OHC_DATABASE_URL")
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         PgPool::connect(&db_url).await
     }

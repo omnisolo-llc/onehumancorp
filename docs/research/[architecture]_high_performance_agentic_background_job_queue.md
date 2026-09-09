@@ -4,11 +4,11 @@
 High-Performance Agentic Background Job Queue
 
 ## Problem Statement
-The OHC Hybrid Agentic OS requires a robust, high-performance background job queue to reliably execute asynchronous tasks. Non-technical business owners expect instantaneous UI responses, but AI agent workflows (like the Customer Success "Ambassador" drafting a reply, or the Operations Agent synchronizing inventory) take time. Currently, the lack of a formalized, highly scalable queueing system with persistence, retries, and dead-letter queues limits the platform's ability to scale and guarantees job execution, leading to potential data inconsistencies and "lost" tasks.
+The OmniSolo Hybrid Agentic OS requires a robust, high-performance background job queue to reliably execute asynchronous tasks. Non-technical business owners expect instantaneous UI responses, but AI agent workflows (like the Customer Success "Ambassador" drafting a reply, or the Operations Agent synchronizing inventory) take time. Currently, the lack of a formalized, highly scalable queueing system with persistence, retries, and dead-letter queues limits the platform's ability to scale and guarantees job execution, leading to potential data inconsistencies and "lost" tasks.
 
 ## Research Report
 - **Market Baseline (Shopify/Stripe):** Leading platforms rely on distributed, durable job queues (e.g., Sidekiq, Celery) to ensure eventual consistency. Stripe extensively uses PostgreSQL-backed queues for transactional guarantees alongside business data.
-- **Current OHC Constraints:** The Go backend utilizes simple goroutines or basic channels which are not durable across server restarts and do not support complex multi-tenant isolation safely.
+- **Current OmniSolo Constraints:** The Go backend utilizes simple goroutines or basic channels which are not durable across server restarts and do not support complex multi-tenant isolation safely.
 - **Architectural Proposal:** Implement a PostgreSQL-backed job queue leveraging the `SKIP LOCKED` pattern. This provides ACID transactional guarantees, seamlessly integrates with our existing multi-tenant data model (enforcing Row Level Security), and avoids the operational complexity of introducing a new infrastructure component (like Kafka or RabbitMQ).
 
 ## Design Doc
@@ -47,10 +47,10 @@ The OHC Hybrid Agentic OS requires a robust, high-performance background job que
 ```mermaid
 graph TD;
     subgraph Mobile Client (375px)
-        App[OHC Mobile App] --> API[OHC API Gateway];
+        App[OmniSolo Mobile App] --> API[OmniSolo API Gateway];
     end
 
-    subgraph OHC Backend
+    subgraph OmniSolo Backend
         API --> ActionController[Action Controller];
         ActionController --> Queue[(Postgres agent_jobs)];
     end

@@ -30,14 +30,14 @@ test.describe('Viral Agent Card Growth Loop', () => {
     await expect(page.locator('#preview-role-el')).toHaveText('Sales Assistant');
     await expect(page.locator('#preview-desc-el')).toHaveText('Hello! How can I help you today?');
 
-    // Verify "Powered by OHC" branding is visible by default
+    // Verify "OmniSolo" branding is visible by default
     const brandingLink = page.locator('#branding-link');
     await expect(brandingLink).toBeVisible();
-    await expect(brandingLink).toContainText('Powered by OHC');
+    await expect(brandingLink).toContainText('OmniSolo');
     await expect(brandingLink).toHaveAttribute('href', /api\/v1\/growth\/referrals\/click/);
 
     // Toggle the "Remove branding" checkbox
-    await page.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
+    await page.locator('label', { hasText: 'Remove "OmniSolo" Badge' }).click();
 
     // Verify the branding footer is hidden
     await expect(page.locator('#preview-footer-el')).toBeHidden();

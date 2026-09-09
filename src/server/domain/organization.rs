@@ -1,7 +1,7 @@
-use ::server_ohc::common::Role;
-use ::server_ohc::organization::Organization;
-use ::server_ohc::organization::RoleProfile;
-use ::server_ohc::organization::TeamMember;
+use ::server_omnisolo::common::Role;
+use ::server_omnisolo::organization::Organization;
+use ::server_omnisolo::organization::RoleProfile;
+use ::server_omnisolo::organization::TeamMember;
 use chrono::{DateTime, Utc};
 
 pub fn new_software_company(

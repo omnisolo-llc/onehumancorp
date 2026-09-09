@@ -17,7 +17,7 @@ test.describe('Viral Mystery Offer Generator', () => {
 
       await expect(page.locator('#preview-title')).toHaveText('Scratch for a Winter Deal!');
       await expect(page.locator('#preview-desc')).toHaveText('Enter your email to win big this winter!');
-      await expect(page.locator('#preview-branding')).toHaveText('⚡ Powered by OHC');
+      await expect(page.locator('#preview-branding')).toHaveText('⚡ OmniSolo');
 
       const generateBtn = page.locator('#generate-btn');
       await generateBtn.click();

@@ -7,14 +7,14 @@ mod tests {
     use crate::orchestration::departments::sales_agent::SalesAgent;
     use crate::orchestration::departments::types::DepartmentEvent;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use tokio::sync::RwLock;
     use uuid::Uuid;
 
     #[tokio::test]
     async fn test_cross_department_flow() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -100,7 +100,7 @@ mod tests {
     async fn test_customer_success_message_handling() {
         #[allow(unused_imports)]
         use crate::orchestration::departments::orchestrator::Department;
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -130,7 +130,7 @@ mod tests {
         }
 
         // Add a memory record
-        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             agent_id: "customer_success_agent".to_string(),
@@ -217,7 +217,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_department_service_msgbus_integration() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -288,7 +288,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_marketing_job_completed_case_study() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -357,7 +357,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_marketing_product_created_social_post() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -427,7 +427,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sales_agent_quoting() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -506,7 +506,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_legal_agent_compliance_check_generates_review_draft() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -573,7 +573,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_business_advisory_agent_weekly_health_generates_review_draft() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -650,11 +650,11 @@ async fn test_predictive_restock_draft() {
     #[allow(unused_imports)]
     use crate::orchestration::departments::orchestrator::Department;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
@@ -728,11 +728,11 @@ async fn test_redlock_prevents_double_booking_during_quote() {
     use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
     use crate::orchestration::departments::types::DepartmentEvent;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use uuid::Uuid;
 
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return; // Skip if no DB config
     }
 

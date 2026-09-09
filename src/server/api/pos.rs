@@ -153,7 +153,7 @@ pub struct InventoryAdjustment {
     pub location_id: Option<String>,
 }
 
-async fn post_inventory_handler(
+pub async fn post_inventory_handler(
     axum::extract::State(_hub): axum::extract::State<Arc<Hub>>,
     claims: Option<Extension<::server_common::Claims>>,
     axum::Json(payloads): axum::Json<Vec<serde_json::Value>>,
@@ -163,6 +163,36 @@ async fn post_inventory_handler(
     };
     if payloads.len() > 100 {
         return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        for payload in payloads {
+            let Some(value) = payload.get("payload") else {
+                continue;
+            };
+            let Some(item_id) = value.get("item_id").and_then(|value| value.as_str()) else {
+                continue;
+            };
+            let quantity_change = value
+                .get("quantity_change")
+                .and_then(|value| value.as_i64())
+                .unwrap_or(0);
+            if let Err(error) = sqlx::query(
+                "UPDATE products
+                 SET inventory_count = GREATEST(0, COALESCE(inventory_count, 0) + ?)
+                 WHERE id = ? AND tenant_id = ?",
+            )
+            .bind(quantity_change)
+            .bind(item_id)
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+            {
+                tracing::error!("Failed to update MySQL inventory: {error}");
+                return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+            }
+        }
+        return Json(json!({"status": "ok"})).into_response();
     }
 
     let pool = crate::db::get_pool();
@@ -345,13 +375,46 @@ async fn get_orders_handler(
     Json(result).into_response()
 }
 
-async fn get_inventory_handler(
+pub async fn get_inventory_handler(
     State(_hub): State<Arc<Hub>>,
     claims: Option<Extension<::server_common::Claims>>,
 ) -> impl axum::response::IntoResponse {
     let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        let rows = match sqlx::query(
+            "SELECT id, title, description, price_cents, inventory_count
+             FROM products WHERE tenant_id = ? ORDER BY id ASC",
+        )
+        .bind(&tenant_id)
+        .fetch_all(&pool)
+        .await
+        {
+            Ok(rows) => rows,
+            Err(error) => {
+                tracing::error!("Failed to read MySQL inventory: {error}");
+                return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+            }
+        };
+        let inventory: Vec<Value> = rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.get::<String, _>("id"),
+                    "name": row.get::<String, _>("title"),
+                    "description": row.try_get::<Option<String>, _>("description").unwrap_or(None),
+                    "price_cents": row.try_get::<Option<i64>, _>("price_cents").unwrap_or(None).unwrap_or(0),
+                    "currency": "USD",
+                    "stock": row.try_get::<Option<i32>, _>("inventory_count").unwrap_or(None).unwrap_or(0),
+                    "is_subscribable": false,
+                    "subscription_discount_percent": 0,
+                    "subscription_frequency": "",
+                })
+            })
+            .collect();
+        return Json(json!({ "inventory": inventory })).into_response();
+    }
     let pool = crate::db::get_pool();
     let mut tx = match pool.begin().await {
         Ok(tx) => tx,
@@ -363,7 +426,7 @@ async fn get_inventory_handler(
     {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_subscribable, subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await;
@@ -405,6 +468,26 @@ mod tests {
         };
         assert_eq!(adj.item_id, "test_item");
         assert_eq!(adj.quantity_change, -1);
+    }
+
+    #[test]
+    fn postgres_inventory_query_columns_have_an_active_migration() {
+        let migration = include_str!("../migrations/1012_product_subscription_fields.sql");
+        for column in [
+            "is_subscribable",
+            "subscription_frequency",
+            "subscription_discount_percent",
+        ] {
+            assert!(
+                migration.contains(&format!("ADD COLUMN IF NOT EXISTS {column}")),
+                "missing PostgreSQL products migration for {column}"
+            );
+        }
+
+        let source = include_str!("pos.rs");
+        assert!(source.contains("COALESCE(price_cents, 0) AS price_cents"));
+        assert!(source.contains("COALESCE(currency, 'USD') AS currency"));
+        assert!(source.contains("COALESCE(inventory_count, 0) AS inventory_count"));
     }
 
     #[tokio::test]

@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::code_native::{CodeNativeTool, RichExecutionEnvironment};
+use omnisolo_builtin_agent_core::code_native::{CodeNativeTool, RichExecutionEnvironment};
 
 /// NativeMemoryStash tool
 /// Allows the agent to natively stash and retrieve complex context or large textual data
@@ -93,7 +93,7 @@ pub fn native_memory_stash_tool(
             },
             "required": ["action", "key"]
         }),
-        execute: std::sync::Arc::new(ohc_builtin_agent_core::code_native::CodeNativeAdapter {
+        execute: std::sync::Arc::new(omnisolo_builtin_agent_core::code_native::CodeNativeAdapter {
             env,
             tool: std::sync::Arc::new(NativeMemoryStashTool),
         }),

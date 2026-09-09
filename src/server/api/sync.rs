@@ -249,10 +249,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_ws_sync_handler() {
+        if crate::redis_pool::get_redis_client().is_none() {
+            return;
+        }
+
         if std::env::var("REDIS_URL").is_err() {
             unsafe {
                 std::env::set_var("REDIS_URL", "redis://127.0.0.1:6379");
-                std::env::set_var("OHC_STANDALONE_MODE", "false");
+                std::env::set_var("OMNISOLO_STANDALONE_MODE", "false");
             }
         }
         let app = Router::new().route("/ws", get(ws_sync_handler));
@@ -333,10 +337,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_ws_sync_batching() {
+        if crate::redis_pool::get_redis_client().is_none() {
+            return;
+        }
+
         if std::env::var("REDIS_URL").is_err() {
             unsafe {
                 std::env::set_var("REDIS_URL", "redis://127.0.0.1:6379");
-                std::env::set_var("OHC_STANDALONE_MODE", "false");
+                std::env::set_var("OMNISOLO_STANDALONE_MODE", "false");
             }
         }
         let app = Router::new().route("/ws", get(ws_sync_handler));

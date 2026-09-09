@@ -10,10 +10,10 @@ sha2 = "0.10"
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 reqwest = { workspace = true }
-ohc_builtin_agent = { path = "../../agents/builtin" }
+omnisolo_builtin_agent = { path = "../../agents/builtin" }
 axum = "0.8.1"
 server_harness = { path = "../harness" }
-server_ohc = { path = "../ohc" }
+server_omnisolo = { path = "../omnisolo" }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tonic = { workspace = true }

@@ -59,12 +59,12 @@ mod tests {
     use super::*;
     use crate::msgbus::MemoryBus;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_department_service_creation() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
         let db = Arc::new(crate::db::DB::new().await.unwrap());

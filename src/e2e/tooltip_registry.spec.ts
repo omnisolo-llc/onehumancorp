@@ -11,7 +11,7 @@ test.describe('Tooltip Registry', () => {
     await page.click('#add-btn');
 
     // Wait for the UI to show the success toast
-    await expect(page.locator('.ohc-toast')).toHaveText('Tooltip added successfully');
+    await expect(page.locator('.omnisolo-toast')).toHaveText('Tooltip added successfully');
 
     // Wait for the UI to update the table
     await page.waitForTimeout(1000); // UI may take a bit to fetch again
@@ -24,6 +24,6 @@ test.describe('Tooltip Registry', () => {
     await row.locator('button', { hasText: 'Save' }).click();
 
     // Wait for the UI to show the success toast for update
-    await expect(page.locator('.ohc-toast').last()).toHaveText('Tooltip updated successfully');
+    await expect(page.locator('.omnisolo-toast').last()).toHaveText('Tooltip updated successfully');
   });
 });

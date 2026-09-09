@@ -7,7 +7,7 @@ They need an invisible system that anticipates stockouts, automatically prepares
 
 ## Research Report
 - **Competitor Gap:** Shopify and Wix provide static ledgers that merely report numbers ("You have 2 items left"). They require paid 3rd party apps (like Stocky or Routific) to handle predictive reordering or delivery route optimization.
-- **OHC Solution:** By leveraging the `Operations (The Manager)` AI department, OHC can build an "Invisible Local Delivery & Inventory Mesh." This proactively monitors sales velocity across online and in-person (POS).
+- **OmniSolo Solution:** By leveraging the `Operations (The Manager)` AI department, OmniSolo can build an "Invisible Local Delivery & Inventory Mesh." This proactively monitors sales velocity across online and in-person (POS).
 - **Actionable Outcomes:** When stock drops below dynamic thresholds, the Operations Agent automatically drafts a reorder to the supplier and presents it for 1-tap approval in the mobile dashboard. For local deliveries, it automatically optimizes drop-off routes and texts customers ETAs via Twilio integration.
 
 ## Design Doc
@@ -28,7 +28,7 @@ erDiagram
 
 ### UI Wireframes / Screen Flow (375px)
 1. **Push Notification:** "You have 5 cake orders for tomorrow but only 2lbs of flour left."
-2. **Drafts for Review Card:** User taps notification, opens OHC app. A glassmorphism card displays: "Drafted email to Costco Business Delivery for 50lbs of Flour. Total: $45."
+2. **Drafts for Review Card:** User taps notification, opens OmniSolo app. A glassmorphism card displays: "Drafted email to Costco Business Delivery for 50lbs of Flour. Total: $45."
 3. **Approval:** A single large button: "Approve & Send".
 4. **Delivery Mode UI:** A "Start Deliveries" floating action button on the dashboard. Tapping it opens a distraction-free driving mode. Large text shows the next stop. A 1-tap button says "Notify customer I'm 10 mins away."
 

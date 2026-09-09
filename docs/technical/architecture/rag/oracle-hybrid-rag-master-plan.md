@@ -3,11 +3,11 @@
 # Hybrid MCP RAG Protocol Master Plan
 
 ## Executive Summary
-This document serves as the final Design Doc for the OHC Hybrid MCP RAG Protocol. By leveraging OHC's unique dual-mode architecture (Standalone SQLite vs Cloud-Native Postgres), we will disrupt the market with a Local-to-Cloud State Synchronizer.
+This document serves as the final Design Doc for the OmniSolo Hybrid MCP RAG Protocol. By leveraging OmniSolo's unique dual-mode architecture (Standalone SQLite vs Cloud-Native Postgres), we will disrupt the market with a Local-to-Cloud State Synchronizer.
 
 ## Competitive Market Audit
 
-| Feature Area | Claude Code / Replit | OpenClaw | **OHC Vision (Hybrid Observability)** |
+| Feature Area | Claude Code / Replit | OpenClaw | **OmniSolo Vision (Hybrid Observability)** |
 | :--- | :--- | :--- | :--- |
 | **Local Execution Telemetry** | Ephemeral or non-existent | Fails Offline (Cloud only) | **Persistent Local Buffer (SQLite)** |
 | **Cloud Synchronization** | None | Real-time only | **Batched, PII-scrubbed Cloud Sync** |
@@ -18,7 +18,7 @@ This document serves as the final Design Doc for the OHC Hybrid MCP RAG Protocol
 ```mermaid
 graph TD
     A[Standalone Desktop (SQLite)] -->|Private RAG & Local Execution| B(Local MCP Agent)
-    B -->|Task Requires Scaled Compute| C{OHC-SIP Cloud Sync}
+    B -->|Task Requires Scaled Compute| C{OmniSolo-SIP Cloud Sync}
     C -->|Sanitized Payload Injection| D[(Cloud Postgres: agent_missions)]
     D -->|K8s Pod Orchestration| E[Multi-Tenant Cloud Swarm]
     E -->|Computed Results| C

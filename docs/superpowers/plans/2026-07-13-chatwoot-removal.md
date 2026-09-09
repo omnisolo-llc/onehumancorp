@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Remove every active Chatwoot code, dependency, deployment, monitoring, catalog, and documentation reference while preserving the existing native OHC inbox.
+**Goal:** Remove every active Chatwoot code, dependency, deployment, monitoring, catalog, and documentation reference while preserving the existing native OmniSolo inbox.
 
 **Architecture:** Chatwoot is unused application/deployment scaffolding, so removal does not require a compatibility bridge or data migration. A fail-closed tracked-file residue test defines the boundary first; Rust, Compose, Helm, monitoring, and documentation are then removed in focused commits and verified with their native tools.
 
@@ -18,8 +18,8 @@
 - Delete `src/server/integrations/chatwoot/`: unused client/provider crate.
 - Modify root Rust/Bazel manifest inputs: `Cargo.toml`, `Cargo.lock`, `MODULE.bazel.lock`, `src/server/integrations/mod.rs`, `src/ui/tauri/BUILD.bazel`.
 - Modify Compose/monitoring: `deploy/docker-compose.yml`, `deploy/docker-compose.e2e.yml`, `deploy/docker/prometheus/prometheus.yml`, `deploy/docker/prometheus/prometheus-agent.yml`.
-- Delete Helm resources: `deploy/helm/ohc/templates/chatwoot.yaml`, `deploy/helm/ohc/templates/chatwoot-service.yaml`.
-- Modify Helm/deploy graph: `deploy/helm/ohc/values.yaml`, backend/HPA/network-policy/ServiceMonitor templates, `deploy/BUILD.bazel`, and `deploy/tests/kind_e2e_test.sh`.
+- Delete Helm resources: `deploy/helm/omnisolo/templates/chatwoot.yaml`, `deploy/helm/omnisolo/templates/chatwoot-service.yaml`.
+- Modify Helm/deploy graph: `deploy/helm/omnisolo/values.yaml`, backend/HPA/network-policy/ServiceMonitor templates, `deploy/BUILD.bazel`, and `deploy/tests/kind_e2e_test.sh`.
 - Modify active product/docs references and annotate three historical reports as superseded.
 - Modify `.github/workflows/ci.yml`: run the residue guard in CI.
 - Modify `docs/reports/production_agent_optimization_report.md`: record removal evidence without claiming unrun external checks.
@@ -148,8 +148,8 @@ Apply these removals:
 - "src/server/integrations/chatwoot",
 -[dependencies.server_integrations_chatwoot]
 -path = "src/server/integrations/chatwoot"
--#[cfg(ohc_bazel)]
--#[cfg(not(ohc_bazel))]
+-#[cfg(omnisolo_bazel)]
+-#[cfg(not(omnisolo_bazel))]
 -pub use ::server_integrations_chatwoot as chatwoot;
 -    "//src/server/integrations/chatwoot:Cargo.toml",
 ```
@@ -174,7 +174,7 @@ Run:
 ```bash
 ! rg -n -i 'chatwoot' Cargo.toml Cargo.lock src/server/integrations src/ui/tauri/BUILD.bazel
 ! cargo metadata --locked --format-version=1 --no-deps | rg -i 'chatwoot'
-cargo check -p ohc-mono
+cargo check -p omnisolo
 bazel test //src/server/integrations:server_integrations_unit_test --test_output=errors
 ```
 
@@ -253,13 +253,13 @@ git commit -m "deploy: remove Chatwoot containers and scrape jobs"
 ### Task 4: Remove Helm Resources and Network Access
 
 **Files:**
-- Delete: `deploy/helm/ohc/templates/chatwoot.yaml`
-- Delete: `deploy/helm/ohc/templates/chatwoot-service.yaml`
-- Modify: `deploy/helm/ohc/values.yaml:23-46`
-- Modify: `deploy/helm/ohc/templates/backend-deployment.yaml:66-77`
-- Modify: `deploy/helm/ohc/templates/hpa.yaml:93-137`
-- Modify: `deploy/helm/ohc/templates/network-policy.yaml:160-186,321,373`
-- Modify: `deploy/helm/ohc/templates/servicemonitor.yaml:48-62`
+- Delete: `deploy/helm/omnisolo/templates/chatwoot.yaml`
+- Delete: `deploy/helm/omnisolo/templates/chatwoot-service.yaml`
+- Modify: `deploy/helm/omnisolo/values.yaml:23-46`
+- Modify: `deploy/helm/omnisolo/templates/backend-deployment.yaml:66-77`
+- Modify: `deploy/helm/omnisolo/templates/hpa.yaml:93-137`
+- Modify: `deploy/helm/omnisolo/templates/network-policy.yaml:160-186,321,373`
+- Modify: `deploy/helm/omnisolo/templates/servicemonitor.yaml:48-62`
 - Modify: `deploy/BUILD.bazel:242-243,330-331`
 - Modify: `deploy/tests/kind_e2e_test.sh:135`
 
@@ -268,8 +268,8 @@ git commit -m "deploy: remove Chatwoot containers and scrape jobs"
 Run:
 
 ```bash
-helm template ohc deploy/helm/ohc >/tmp/ohc-before.yaml
-rg -n -i 'chatwoot' /tmp/ohc-before.yaml deploy/helm/ohc deploy/BUILD.bazel deploy/tests/kind_e2e_test.sh
+helm template ohc deploy/helm/omnisolo >/tmp/ohc-before.yaml
+rg -n -i 'chatwoot' /tmp/ohc-before.yaml deploy/helm/omnisolo deploy/BUILD.bazel deploy/tests/kind_e2e_test.sh
 ```
 
 Expected: rendered and source references include Chatwoot resources/configuration.
@@ -303,9 +303,9 @@ Delete the complete Chatwoot HPA document from `hpa.yaml`, Chatwoot ServiceMonit
 Run:
 
 ```bash
-helm lint deploy/helm/ohc
-helm template ohc deploy/helm/ohc >/tmp/ohc-after.yaml
-! rg -n -i 'chatwoot' /tmp/ohc-after.yaml deploy/helm/ohc deploy/BUILD.bazel deploy/tests/kind_e2e_test.sh
+helm lint deploy/helm/omnisolo
+helm template ohc deploy/helm/omnisolo >/tmp/ohc-after.yaml
+! rg -n -i 'chatwoot' /tmp/ohc-after.yaml deploy/helm/omnisolo deploy/BUILD.bazel deploy/tests/kind_e2e_test.sh
 bazel test //deploy:deploy_artifacts_test --test_output=errors
 ```
 
@@ -314,7 +314,7 @@ Expected: Helm lint/template and Bazel test PASS; no source or rendered Chatwoot
 - [ ] **Step 5: Commit Helm removal**
 
 ```bash
-git add deploy/BUILD.bazel deploy/helm/ohc deploy/tests/kind_e2e_test.sh
+git add deploy/BUILD.bazel deploy/helm/omnisolo deploy/tests/kind_e2e_test.sh
 git commit -m "deploy(helm): remove Chatwoot workload and access"
 ```
 
@@ -440,12 +440,12 @@ Run:
 ```bash
 bash deploy/tests/no_chatwoot_residue_test.sh
 cargo metadata --locked --format-version=1 --no-deps >/tmp/ohc-cargo-metadata-final.json
-cargo check -p ohc-mono
+cargo check -p omnisolo
 bazel test //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors
 docker compose -f deploy/docker-compose.yml config >/tmp/ohc-compose-final.yaml
 docker compose -f deploy/docker-compose.e2e.yml config >/tmp/ohc-compose-e2e-final.yaml
-helm lint deploy/helm/ohc
-helm template ohc deploy/helm/ohc >/tmp/ohc-helm-final.yaml
+helm lint deploy/helm/omnisolo
+helm template ohc deploy/helm/omnisolo >/tmp/ohc-helm-final.yaml
 ! rg -n -i 'chatwoot' /tmp/ohc-cargo-metadata-final.json /tmp/ohc-compose-final.yaml /tmp/ohc-compose-e2e-final.yaml /tmp/ohc-helm-final.yaml
 bazel query //... > /tmp/ohc-bazel-query.txt 2>/tmp/ohc-bazel-query.err
 ! rg -i 'chatwoot' /tmp/ohc-bazel-query.txt

@@ -14,7 +14,7 @@ Recurring revenue is the holy grail for small businesses, increasing lifetime va
 - **Squarespace**: Supports subscriptions, but only on the highest-tier Advanced Commerce plan. The mobile management for merchants is severely lacking.
 - **GoDaddy**: Basic subscription options exist, but lack AI-driven churn management or flexible pause/resume flows for customers.
 
-### OneHumanCorp Differentiation
+### OmniSolo Differentiation
 Our platform must provide an **invisible, native subscription engine**. A merchant should be able to toggle a switch on any product, service, or digital good to make it recurring. The AI Finance and Operations departments handle all the backend complexity: dunning (failed payment retries), customer notifications, automated pause/resume actions via SMS, and ledger reconciliation—with absolutely zero configuration from the user.
 
 ## Design Doc
@@ -38,7 +38,7 @@ erDiagram
 sequenceDiagram
     autonumber
     actor Customer
-    participant Storefront as OHC Storefront Edge
+    participant Storefront as OmniSolo Storefront Edge
     participant SubEngine as Zero-Config Subscription Engine
     participant FinanceAgent as AI Finance Dept
     participant CRM_Agent as AI CRM Dept

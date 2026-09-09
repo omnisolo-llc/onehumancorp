@@ -71,7 +71,7 @@ export function GrowBusinessCard() {
             </Link>
             <Link
               id="viral-widget-btn"
-              href="/viral-powered-by-ohc-widget"
+              href="/viral-powered-by-omnisolo-widget"
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
             >
               Viral Widget

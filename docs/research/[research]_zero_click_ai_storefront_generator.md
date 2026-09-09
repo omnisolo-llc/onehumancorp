@@ -1,4 +1,4 @@
-# OHC Small Business Platform Research Report: Zero-Click AI Storefront Generator
+# OmniSolo Small Business Platform Research Report: Zero-Click AI Storefront Generator
 
 ## Problem Statement
 Small business owners like Maya (baker) and Carlos (handyman) find traditional platforms like Shopify overwhelmingly complex. They abandon the setup process when confronted with shipping zones, tax configurations, and complex app ecosystems. They need a system that builds itself based on plain English input.
@@ -47,10 +47,10 @@ They excel at scaling. Once a business is set up, Shopify handles millions of tr
 - **Setup Complexity:** A common theme is overwhelm. "I spent weeks trying to figure out shipping zones and tax rates, I just want to sell my products."
 - **Trustpilot Insights:** While high-volume sellers rate it 5-stars for reliability, 1-star reviews consistently cite confusing backend UI for beginners and hidden costs.
 
-## Track 3: OHC Gap & Pain Point Identification
+## Track 3: OmniSolo Gap & Pain Point Identification
 
-### OHC Feature Audit vs Shopify Gap Matrix
-| Feature Area | Shopify | OHC (Current) | OHC Missing Gap |
+### OmniSolo Feature Audit vs Shopify Gap Matrix
+| Feature Area | Shopify | OmniSolo (Current) | OmniSolo Missing Gap |
 |---|---|---|---|
 | Onboarding | Manual configuration | Manual configuration via KAIROS | Zero-click AI intent parser |
 | Mobile UX | Complex desktop admin | In progress | 100% Mobile-first management |
@@ -108,22 +108,22 @@ quadrantChart
     "Squarespace": [0.3, 0.5]
     "Durable AI": [0.8, 0.3]
     "10Web": [0.7, 0.4]
-    "OHC Current": [0.5, 0.7]
-    "OHC Target (Zero-Click)": [0.95, 0.1]
+    "OmniSolo Current": [0.5, 0.7]
+    "OmniSolo Target (Zero-Click)": [0.95, 0.1]
 ```
 
 **Feature Gap Heatmap**
 ```mermaid
 gantt
     dateFormat  YYYY-MM-DD
-    title Feature Gap Heatmap: OHC vs Competitors
+    title Feature Gap Heatmap: OmniSolo vs Competitors
     axisFormat  %m-%d
     section Shopify
     App Store Ecosystem      :done,    des1, 2024-01-01, 2024-01-02
     Complex Tax/Shipping Config :done,  des2, 2024-01-01, 2024-01-02
     section AI Builders (Durable)
     Instant Landing Page Gen :active,  des3, 2024-01-01, 2024-01-02
-    section OHC Target
+    section OmniSolo Target
     Zero-Click Storefront Setup :crit, des4, 2024-01-01, 2024-01-02
     Invisible AI Config Logic   :crit, des5, 2024-01-01, 2024-01-02
     100% Mobile Management      :crit, des6, 2024-01-01, 2024-01-02
@@ -141,7 +141,7 @@ graph TD
     S6 --> S7[Launch Store]
     end
 
-    subgraph OHC Zero-Click AI Onboarding
+    subgraph OmniSolo Zero-Click AI Onboarding
     O1[Prompt: 'I sell custom cakes in Seattle'] --> O2(KAIROS Agents Generate Store, Products, Shipping, Taxes)
     O2 --> O3[Review and Tap Launch]
     end
