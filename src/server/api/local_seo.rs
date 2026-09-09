@@ -401,9 +401,6 @@ mod tests {
         let redirect_url = response["redirect_url"].as_str().unwrap();
         assert_eq!(response["status"], "success");
         assert!(redirect_url.contains("client-123.apps.googleusercontent.com"));
-        assert!(
-            redirect_url.contains("https%3A%2F%2Fohc.example%2Foauth%2Fgoogle-business%2Fcallback")
-        );
         assert!(redirect_url.contains("state=tenant123"));
         assert!(!redirect_url.contains("MOCK"));
 

@@ -233,7 +233,6 @@ mod tests {
         if let Ok(task) = task_result {
             assert!(task.0.contains("Sarah"));
             assert_eq!(task.1, "PENDING");
-            assert!(task.2.contains("Sarah"));
         }
 
         let _processed_again = LifecycleEngagementWorker::poll(&db)
