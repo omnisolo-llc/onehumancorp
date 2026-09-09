@@ -252,3 +252,6 @@ mod tests {
         >();
     }
 }
+
+#[path = "src/chat/mod.rs"]
+pub mod chat;

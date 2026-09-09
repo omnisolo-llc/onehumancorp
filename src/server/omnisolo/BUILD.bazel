@@ -4,7 +4,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_omnisolo",
-    srcs = glob(["src/**/*.rs", "mod.rs", "src/lib.rs", "src/chat/*.rs", "src/chat/**/*.rs"], allow_empty = True),
+    srcs = glob(["src/**/*.rs", "mod.rs", "src/chat/*.rs", "src/chat/**/*.rs"], allow_empty = True),
+    crate_root = "mod.rs",
     edition = "2024",
     rustc_flags = ["--cfg=omnisolo_bazel"],
     visibility = ["//visibility:public"],
@@ -32,6 +33,7 @@ rust_library(
         "@crates//:chrono",
         "@crates//:dashmap",
         "@crates//:axum",
+        "@crates//:prost",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -47,5 +49,6 @@ rust_test(
         "@crates//:tokio",
         "@crates//:uuid",
         "@crates//:chrono",
+        "@crates//:prost",
     ],
 )
