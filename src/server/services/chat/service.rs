@@ -133,11 +133,7 @@ mod tests {
     #[tokio::test]
     async fn test_chat_service_methods() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let maybe_pool = PgPool::connect(&database_url).await;
-        if maybe_pool.is_err() {
-            return;
-        }
-        let pool = maybe_pool.unwrap();
+        let pool = PgPool::connect(&database_url).await.expect("Failed to connect to database");
 
         let _ = sqlx::query("
             CREATE TABLE IF NOT EXISTS chat_inboxes (
@@ -155,7 +151,7 @@ mod tests {
             CREATE TABLE IF NOT EXISTS chat_messages (
                 id UUID PRIMARY KEY, tenant_id UUID NOT NULL, conversation_id UUID NOT NULL, sender_type TEXT, sender_id UUID, content TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
             );
-        ").execute(&pool).await;
+        ").execute(&pool).await.expect("Failed to create tables");
 
         let service = ChatService::new(pool);
         let tenant_id = Uuid::new_v4();
