@@ -40,7 +40,7 @@ We propose solving these issues by shifting from reactive tools to proactive, in
 
 ## Implementation Prompt
 Implement the backend architecture and mobile-first UI for the "Ambassador" and "Advisor" agents.
-- **Ambassador CUJ:** A user receives an Instagram DM asking about a product. The Ambassador agent detects the message, uses RAG to confirm stock, and drafts a reply with a checkout link. The user opens the OHC mobile app, sees the drafted reply in the Unified Inbox, and taps "Send".
+- **Ambassador CUJ:** A user receives an Instagram DM asking about a product. The Ambassador agent detects the message, uses RAG to confirm stock, and drafts a reply with a checkout link. The user opens the OmniSolo mobile app, sees the drafted reply in the Unified Inbox, and taps "Send".
 - **Advisor CUJ:** The Advisor agent detects a slow sales week. It drafts a promotional SMS to past customers. The user receives a push notification, opens the Action Center on their phone, reviews the proposed SMS, and taps "Approve & Send".
 - **Acceptance Criteria:** Ensure all UI layouts are responsive starting at 375px. All agent actions must be auditable and reversible where possible. Implement robust error handling for API integrations (e.g., Meta).
 

@@ -17,12 +17,13 @@ export function routeFromPageFile(relativeFile) {
     : normalized.slice(0, -"/page.tsx".length);
   const segments = directory === "" ? [] : directory.split("/");
   const resolved = segments.map((segment) => {
+    if (/^\([^/]+\)$/.test(segment)) return null;
     const match = /^\[([^\]]+)\]$/.exec(segment);
     if (match) return SAMPLE_SEGMENTS.get(match[1]) ?? "visual-audit-value";
     const catchAll = /^\[\.\.\.(.+)\]$/.exec(segment);
     if (catchAll) return SAMPLE_SEGMENTS.get(catchAll[1]) ?? "visual-audit-value";
     return segment;
-  });
+  }).filter((segment) => segment !== null);
   return `/${resolved.join("/")}`;
 }
 

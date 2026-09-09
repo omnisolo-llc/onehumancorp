@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 export default function LinkInBioGeneratorPage() {
   const router = useRouter();
   const [storeName, setStoreName] = useState('My Store');
   const [bio, setBio] = useState('Welcome to my storefront!');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://ohc.app' }]);
+  const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
   const [tenant, setTenant] = useState('my-store');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,7 +30,7 @@ export default function LinkInBioGeneratorPage() {
              setStoreName(data.store_name);
              setBio(data.bio || '');
              setTheme(data.theme || 'light');
-             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://ohc.app' }]);
+             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
              setRemoveBranding(data.remove_branding || false);
           }
         }
@@ -82,7 +82,7 @@ export default function LinkInBioGeneratorPage() {
     }
   };
 
-  const linkUrl = `https://ohc.app/bio/${tenant}`;
+  const linkUrl = `https://cloud.omnisolo.co/bio/${tenant}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(linkUrl);
@@ -187,7 +187,7 @@ export default function LinkInBioGeneratorPage() {
                   className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBrandingCheckbox" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Remove "Powered by OHC" branding
+                  Remove "Powered by OmniSolo" branding
                 </label>
               </div>
             </div>
@@ -255,7 +255,7 @@ export default function LinkInBioGeneratorPage() {
 
                         {!removeBranding && (
                           <div className="mt-auto pt-8 pb-4">
-                              <PoweredByOHC tenantId={tenant} />
+                              <PoweredByOmniSolo tenantId={tenant} />
                           </div>
                         )}
                     </div>

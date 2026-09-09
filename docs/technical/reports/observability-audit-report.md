@@ -6,7 +6,7 @@
 **Date:** 2026-04-01T12:00:00Z
 
 ## 1. Executive Summary
-This report details the systematic audit of OHC's Hybrid Architecture (OHC-HA) telemetry across both Cloud-Native and Standalone modes. Our focus is to guarantee Swarm self-correction by exposing role-specific inefficiencies and bridging observability gaps in our telemetry infrastructure.
+This report details the systematic audit of OmniSolo's Hybrid Architecture (OmniSolo-HA) telemetry across both Cloud-Native and Standalone modes. Our focus is to guarantee Swarm self-correction by exposing role-specific inefficiencies and bridging observability gaps in our telemetry infrastructure.
 
 ## 2. Hybrid Mode Throughput and Bottleneck Insights
 
@@ -34,7 +34,7 @@ While basic metrics exist (e.g., `ohc_token_usage_total`), a critical audit of `
 To address these inefficiencies, the following architectural changes are proposed and pushed as mission updates to the engineering queue:
 
 1.  **Token Burn Rate Forecasting Engine:** Implement a backend background worker in the Orchestration Hub that calculates the moving average burn rate using `ohc_token_usage_total` and emits predictive cost alerts, combined with a new Grafana dashboard panel.
-2.  **Standalone SQLite Concurrency Throttling:** Introduce a dynamic concurrency limiter in `DelegateMission` that parses `OHC_STANDALONE` status. In Standalone mode, it must strictly throttle parallel agent writes to SQLite, trading raw throughput for zero-error stability.
+2.  **Standalone SQLite Concurrency Throttling:** Introduce a dynamic concurrency limiter in `DelegateMission` that parses `OMNISOLO_STANDALONE` status. In Standalone mode, it must strictly throttle parallel agent writes to SQLite, trading raw throughput for zero-error stability.
 
 ### Architecture Adaptation Blueprint
 

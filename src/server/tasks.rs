@@ -30,8 +30,8 @@ pub struct SharedTask {
 }
 
 impl SharedTask {
-    pub fn into_proto(self) -> ::server_ohc::orchestration::SharedTask {
-        ::server_ohc::orchestration::SharedTask {
+    pub fn into_proto(self) -> ::server_omnisolo::orchestration::SharedTask {
+        ::server_omnisolo::orchestration::SharedTask {
             id: self.id,
             organization_id: self.organization_id,
             parent_plan_id: self.parent_plan_id,
@@ -64,11 +64,11 @@ pub enum ActionRisk {
 }
 
 impl ActionRisk {
-    pub fn to_proto(&self) -> ::server_ohc::orchestration::ActionRisk {
+    pub fn to_proto(&self) -> ::server_omnisolo::orchestration::ActionRisk {
         match self {
-            ActionRisk::Unspecified => ::server_ohc::orchestration::ActionRisk::Unspecified,
-            ActionRisk::Low => ::server_ohc::orchestration::ActionRisk::Low,
-            ActionRisk::High => ::server_ohc::orchestration::ActionRisk::High,
+            ActionRisk::Unspecified => ::server_omnisolo::orchestration::ActionRisk::Unspecified,
+            ActionRisk::Low => ::server_omnisolo::orchestration::ActionRisk::Low,
+            ActionRisk::High => ::server_omnisolo::orchestration::ActionRisk::High,
         }
     }
 }

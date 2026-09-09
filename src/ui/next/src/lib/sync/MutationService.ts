@@ -44,7 +44,7 @@ export class MutationService {
       // 3. Trigger sync via SyncManager
       const syncManager = SyncManager.getInstance();
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('ohc_queue_updated'));
+        window.dispatchEvent(new Event('omnisolo_queue_updated'));
       }
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         syncManager.sync();

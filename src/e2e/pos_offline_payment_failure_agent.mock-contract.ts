@@ -68,7 +68,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout - Payment Failure Agentic 
     // Wait for the sync to complete
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {

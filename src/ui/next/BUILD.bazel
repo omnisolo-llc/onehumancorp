@@ -74,6 +74,8 @@ sh_test(
         "src/**/*.ts",
         "src/**/*.tsx",
     ], allow_empty = True) + [
+        "//src/e2e:vitest_contract_sources",
+        "playwright.config.ts",
         "next-env.d.ts",
         "next.config.mjs",
         "package.json",

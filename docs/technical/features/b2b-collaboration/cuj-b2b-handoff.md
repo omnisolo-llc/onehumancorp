@@ -6,7 +6,7 @@
 **Status:** Approved
 **Last Updated:** 2026-03-19
 
-**Persona:** CEO / Partner Agent | **Context:** Negotiating a supply contract between two OHC-powered firms.
+**Persona:** CEO / Partner Agent | **Context:** Negotiating a supply contract between two OmniSolo-powered firms.
 **Success Metrics:** Secure mTLS link < 1s, Mutual identity verified, Agreement artifact generated.
 
 ## 1. User Journey Overview
@@ -38,7 +38,7 @@ The CEO of Acme Corp wants to purchase 100 server racks from Globex. Acme's "Pur
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

@@ -1,6 +1,6 @@
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
 use crate::tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolError};
+use omnisolo_builtin_agent_core::types::{ChatRequest, Message, ToolError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -211,26 +211,26 @@ impl PlanAndExecuteOrchestrator {
                     replace_in_json(&mut resolved_args, &st.results);
                     drop(st);
 
-                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2, &crate::agent::AgentRunConfig::default()).await;
+                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &omnisolo_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2, &crate::agent::AgentRunConfig::default()).await;
 
                     match res {
                         Ok(r) => Ok::<_, String>((task.task_id, r)),
-                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                        Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                             Ok::<_, String>((
                                 task.task_id,
-                                ohc_builtin_agent_core::types::format_llm_recoverable_error(
+                                omnisolo_builtin_agent_core::types::format_llm_recoverable_error(
                                     &task.tool_name,
                                     &msg,
                                 ),
                             ))
                         }
-                        Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                        Err(omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
                             Err(format!("USER_FIXABLE: {}", msg))
                         }
-                        Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
+                        Err(omnisolo_builtin_agent_core::types::ToolError::Fatal(msg)) => {
                             Err(format!("Fatal tool error: {}", msg))
                         }
-                        Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
+                        Err(omnisolo_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
                             Err(format!("Unexpected tool error: {}", msg))
                         }
                         Err(e) => Err(format!("Tool execution failed: {}", e)),
@@ -257,24 +257,24 @@ impl PlanAndExecuteOrchestrator {
                 replace_in_json(&mut resolved_args, &st.results);
                 drop(st);
 
-                let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2, &crate::agent::AgentRunConfig::default())
+                let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &omnisolo_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2, &crate::agent::AgentRunConfig::default())
                     .await;
 
                 let final_res = match res {
                     Ok(r) => r,
-                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                        ohc_builtin_agent_core::types::format_llm_recoverable_error(
+                    Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                        omnisolo_builtin_agent_core::types::format_llm_recoverable_error(
                             &task.tool_name,
                             &msg,
                         )
                     }
-                    Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                    Err(omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
                         return Err(format!("USER_FIXABLE: {}", msg));
                     }
-                    Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
+                    Err(omnisolo_builtin_agent_core::types::ToolError::Fatal(msg)) => {
                         return Err(format!("Fatal tool error: {}", msg));
                     }
-                    Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
+                    Err(omnisolo_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
                         return Err(format!("Unexpected tool error: {}", msg));
                     }
                     Err(e) => return Err(format!("Tool execution failed: {}", e)),
@@ -295,7 +295,7 @@ impl PlanAndExecuteOrchestrator {
 mod tests {
     use super::*;
     use crate::tools::ToolExecutor;
-    use ohc_builtin_agent_core::types::{ChatResponse, Role, ToolCall, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatResponse, Role, ToolCall, Usage};
 
     struct MockPlannerLlm {
         plan_json: String,

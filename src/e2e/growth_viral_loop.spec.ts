@@ -9,7 +9,7 @@ test.describe('Growth Viral Loop', () => {
     await expect(page.locator('h3:has-text("Four-Figure Club")')).toBeVisible();
 
     // Verify share payload contains the new incentive
-    await expect(page.locator('text=Join OHC & get 14 days of Pro free')).toBeVisible();
+    await expect(page.locator('text=Join OmniSolo & get 14 days of Pro free')).toBeVisible();
   });
 
   test('referral reward attribution', async ({ page }) => {

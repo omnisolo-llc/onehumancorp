@@ -35,7 +35,7 @@ export default function LoyaltyProgramPage() {
       });
 
       const data = await response.json();
-      setGeneratedDraft(`${data.message}\n\n⚡ Powered by OHC`);
+      setGeneratedDraft(`${data.message}\n\n⚡ Powered by OmniSolo`);
     } catch (error) {
       console.error("Failed to generate draft", error);
       setGeneratedDraft("Failed to generate email draft. Please try again.");
@@ -204,7 +204,7 @@ export default function LoyaltyProgramPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism {

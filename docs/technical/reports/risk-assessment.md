@@ -4,13 +4,13 @@
 
 ## Phase 1: Risk Assessment of Hybrid Environment Changes
 **Classifier Logic:** Claude-style "Security Risk Classifier"
-**Target:** `onehumancorp/mono` proposed tool uses and recent architectural shifts.
+**Target:** `omnisolo/mono` proposed tool uses and recent architectural shifts.
 
 | Subsystem / PR Topic | Risk Level | Rationale |
 |----------------------|------------|-----------|
-| **Local SQLite SIPDB vs PostgreSQL Parity** | **High** | Standalone mode relies on `.ohc/runtime/` storage conventions and `sync_daemon.go`. Any discrepancy in database locking or task execution directly compromises the local-to-cloud resilience. |
-| **Team Mesh (Pub/Sub) Migration** | **Medium** | Redis is optional for Standalone, but fallback runtime directories such as `.ohc/runtime/mailbox/` could introduce deadlocks if not gracefully handled during file lock contention (`.agent-lock/`). |
-| **Telemetry & Observability Heartbeats** | **Low** | Agents write to `.ohc/runtime/status/`. If this directory is read-only, it fails safe without crashing core logic, but breaks observability. |
+| **Local SQLite SIPDB vs PostgreSQL Parity** | **High** | Standalone mode relies on `.omnisolo/runtime/` storage conventions and `sync_daemon.go`. Any discrepancy in database locking or task execution directly compromises the local-to-cloud resilience. |
+| **Team Mesh (Pub/Sub) Migration** | **Medium** | Redis is optional for Standalone, but fallback runtime directories such as `.omnisolo/runtime/mailbox/` could introduce deadlocks if not gracefully handled during file lock contention (`.agent-lock/`). |
+| **Telemetry & Observability Heartbeats** | **Low** | Agents write to `.omnisolo/runtime/status/`. If this directory is read-only, it fails safe without crashing core logic, but breaks observability. |
 
 ## Phase 3: Parity Audit (ML-Resilience)
 * **Goal:** Ensure "ML-Resilience" rules apply equally to Cloud-native and Standalone environments.

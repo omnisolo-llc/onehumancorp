@@ -77,8 +77,8 @@ impl Department for MultilingualAgent {
                 target_language, message
             );
 
-            let raw_response = match std::env::var("OHC_TRANSLATION_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            let raw_response = match std::env::var("OMNISOLO_TRANSLATION_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                 .as_deref()
             {
                 Ok("minimax") => {

@@ -204,7 +204,7 @@ export default function DigitalBusinessCardGeneratorPage() {
                     className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                   />
                   <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "Powered by OHC" branding</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "Powered by OmniSolo" branding</span>
                     <p className="text-xs text-gray-500 mt-1">Make the card 100% white-labeled. Requires Pro plan.</p>
                   </div>
                 </label>
@@ -300,7 +300,7 @@ export default function DigitalBusinessCardGeneratorPage() {
                 {!removeBranding && (
                   <div className="mt-8 mb-4 text-center">
                     <span className="text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer">
-                      ⚡ Powered by OHC
+                      ⚡ Powered by OmniSolo
                     </span>
                   </div>
                 )}
@@ -361,7 +361,7 @@ export default function DigitalBusinessCardGeneratorPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8 text-sm leading-relaxed">
-              Make the Digital Business Card 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock full customization.
+              Make the Digital Business Card 100% white-labeled. Upgrade to Pro to remove the "Powered by OmniSolo" watermark and unlock full customization.
             </p>
 
             <button
@@ -385,7 +385,7 @@ export default function DigitalBusinessCardGeneratorPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

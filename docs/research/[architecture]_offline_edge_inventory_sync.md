@@ -1,7 +1,7 @@
 # Implement High-Performance Offline-First Edge Inventory Sync Architecture
 
 ## Problem Statement
-For mobile-first businesses operating in dynamic or constrained environments (e.g., Fatima the food cart owner at a crowded festival, Maya at a pop-up market, or Carlos out of cellular range in a client's basement), network reliability is a primary bottleneck. Currently, OHC requires a continuous connection to process inventory decrements, validate stock, and accept orders. When connection drops or slows, OHC becomes unresponsive. We need a robust architecture that allows point-of-sale actions, pre-orders, and critical catalog state updates to execute instantly on the edge (device/browser), optimistically reconciling with the backend when connection is restored, without losing data or overselling limited stock.
+For mobile-first businesses operating in dynamic or constrained environments (e.g., Fatima the food cart owner at a crowded festival, Maya at a pop-up market, or Carlos out of cellular range in a client's basement), network reliability is a primary bottleneck. Currently, OmniSolo requires a continuous connection to process inventory decrements, validate stock, and accept orders. When connection drops or slows, OmniSolo becomes unresponsive. We need a robust architecture that allows point-of-sale actions, pre-orders, and critical catalog state updates to execute instantly on the edge (device/browser), optimistically reconciling with the backend when connection is restored, without losing data or overselling limited stock.
 
 ## Research Report
 ### Target Capabilities
@@ -14,7 +14,7 @@ For mobile-first businesses operating in dynamic or constrained environments (e.
 ### Competitive Landscape
 - **Square/Stripe Terminal**: Excellent offline mode for in-person payments, but often decoupled from full inventory sync.
 - **Shopify POS**: Supports offline cash transactions and syncs later, but lacks deep autonomous reconciliation for complex variants without manual review.
-- **OHC Opportunity**: Deeply integrated edge-caching where AI agents handle the conflict resolution (e.g., automatically issuing apologies/store credit if a true oversell occurs due to prolonged offline state, rather than blocking the sale entirely).
+- **OmniSolo Opportunity**: Deeply integrated edge-caching where AI agents handle the conflict resolution (e.g., automatically issuing apologies/store credit if a true oversell occurs due to prolonged offline state, rather than blocking the sale entirely).
 
 ## Design Doc
 ### Architecture Diagram

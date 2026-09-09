@@ -29,7 +29,7 @@ test.describe('Viral Goal Tracker Widget', () => {
         // The preview section should load and display the branding
         await expect(page.getByText('Unlock: Awesome E2E Reward')).toBeVisible();
         await expect(page.getByText('25 target')).toBeVisible();
-        await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).toBeVisible();
+        await expect(page.locator('a', { hasText: '⚡ OmniSolo' })).toBeVisible();
 
         // Check the generated embed code
         const embedCode = await page.locator('pre').first().innerText();
@@ -84,6 +84,6 @@ test.describe('Viral Goal Tracker Widget', () => {
         expect(embedCode).toContain('hideBranding=true');
 
         // The preview branding should be hidden
-        await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
+        await expect(page.locator('a', { hasText: '⚡ OmniSolo' })).not.toBeVisible();
     });
 });

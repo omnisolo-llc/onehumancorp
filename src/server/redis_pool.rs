@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_returns_none_in_standalone_mode() {
-        const CHILD: &str = "OHC_REDIS_STANDALONE_TEST_CHILD";
+        const CHILD: &str = "OMNISOLO_REDIS_STANDALONE_TEST_CHILD";
         if std::env::var_os(CHILD).is_some() {
             assert!(get_redis_pool().is_none());
             return;
@@ -200,7 +200,7 @@ mod tests {
                 "redis_pool::tests::test_returns_none_in_standalone_mode",
             ])
             .env(CHILD, "1")
-            .env("OHC_STANDALONE_MODE", "true")
+            .env("OMNISOLO_STANDALONE_MODE", "true")
             .status()
             .unwrap();
         assert!(status.success());

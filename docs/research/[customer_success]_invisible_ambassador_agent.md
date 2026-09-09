@@ -10,7 +10,7 @@ A deep dive into Zendesk and Intercom reviews shows they are too expensive and c
 - **Architecture**: The native omnichannel domain connects directly to channel providers. The `Customer Success` agent acts as middleware, intercepting messages before notifying the owner.
 - **Data Model**: Embedded knowledge base (pgvector) populated from the user's business description, FAQs, and product catalog.
 - **UI/UX**:
-  - Unified Inbox view in the OHC app.
+  - Unified Inbox view in the OmniSolo app.
   - Messages that the AI is confident about are auto-drafted and await a 1-tap "Send" approval from the owner.
 
 ## Implementation Prompt

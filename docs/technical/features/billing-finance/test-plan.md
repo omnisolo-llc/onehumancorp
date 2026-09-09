@@ -43,7 +43,7 @@ A high-level summary of the testing strategy for the Billing & Finance Engine fe
 - **Ledger Immutability:** Verify that cost tracking logs are append-only.
 
 ## 6. Environment & Prerequisites
-- OHC Hub configured with local test database for the billing ledger.
+- OmniSolo Hub configured with local test database for the billing ledger.
 
 ## Implementation Details
 - **Architecture**: Tested via Rust table-driven tests that utilize gomock for the MCP Gateway middleware interceptor. The integration layer tests against an active, seeded PostgreSQL instance to verify token ledger persistence.

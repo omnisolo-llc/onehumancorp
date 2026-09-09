@@ -1,8 +1,8 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 
-use ohc_builtin_agent_tools::pydantic::{PydanticToolExecutor, PydanticAdapter};
-use ohc_builtin_agent_tools::ToolExecutor;
+use omnisolo_builtin_agent_tools::pydantic::{PydanticToolExecutor, PydanticAdapter};
+use omnisolo_builtin_agent_tools::ToolExecutor;
 
 #[derive(Deserialize)]
 struct NestedArgs {

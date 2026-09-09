@@ -4,7 +4,7 @@
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 
 ## Overview
-The OHC Swarm requires robust, distributed infrastructure to coordinate, track dependencies, and manage semantic memory across cloud-native (PostgreSQL/Redis) and standalone (SQLite) operating modes.
+The OmniSolo Swarm requires robust, distributed infrastructure to coordinate, track dependencies, and manage semantic memory across cloud-native (PostgreSQL/Redis) and standalone (SQLite) operating modes.
 
 ## Architecture
 ### Phase 1: Shared Task List (State Machine)

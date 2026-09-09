@@ -6,8 +6,8 @@ non-success responses, oversized bodies, oversized key sets, and ambiguous key
 IDs. DNS, connection, request, total-fetch, and single-flight wait times are
 bounded.
 
-Local development may use HTTP only when both `OHC_OIDC_ALLOW_HTTP=true` and
-`OHC_ALLOW_LOCAL_IPS=true` are set. Even then, HTTP targets must resolve to a
+Local development may use HTTP only when both `OMNISOLO_OIDC_ALLOW_HTTP=true` and
+`OMNISOLO_ALLOW_LOCAL_IPS=true` are set. Even then, HTTP targets must resolve to a
 loopback, private, or unique-local address; these settings cannot
 enable public cleartext authorities. Never set either exception in a shared or
 production environment.

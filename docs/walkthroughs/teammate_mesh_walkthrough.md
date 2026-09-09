@@ -2,7 +2,7 @@
 
 <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: 12px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 2rem;">
   <strong>Premium Walkthrough</strong><br>
-  Welcome to the interactive walkthrough for the Teammate Mesh Orchestration system. This guide illustrates how real-time communication flows between agents in the OHC Hybrid Agentic OS, using Redis Pub/Sub for Cloud Mode or local IPC for Standalone Mode.
+  Welcome to the interactive walkthrough for the Teammate Mesh Orchestration system. This guide illustrates how real-time communication flows between agents in the OmniSolo Hybrid Agentic OS, using Redis Pub/Sub for Cloud Mode or local IPC for Standalone Mode.
 </div>
 
 ## Architecture Overview

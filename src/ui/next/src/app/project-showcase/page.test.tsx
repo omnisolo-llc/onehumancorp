@@ -9,8 +9,8 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc">⚡ Powered by OHC</div>,
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo">⚡ Powered by OmniSolo</div>,
 }));
 
 describe('ProjectShowcasePage', () => {
@@ -19,10 +19,10 @@ describe('ProjectShowcasePage', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
-  it('renders Powered by OHC branding in preview by default', () => {
+  it('renders Powered by OmniSolo branding in preview by default', () => {
     render(<ProjectShowcasePage />);
 
-    const brandingElements = screen.getAllByTestId('powered-by-ohc');
+    const brandingElements = screen.getAllByTestId('powered-by-omnisolo');
     expect(brandingElements.length).toBeGreaterThan(0);
     expect(brandingElements[0]).toBeInTheDocument();
   });
@@ -35,7 +35,7 @@ describe('ProjectShowcasePage', () => {
 
     expect(screen.getByText('Upgrade to Pro')).toBeInTheDocument();
 
-    const brandingElements = screen.getAllByTestId('powered-by-ohc');
+    const brandingElements = screen.getAllByTestId('powered-by-omnisolo');
     expect(brandingElements[0]).toBeInTheDocument();
   });
 
@@ -49,6 +49,6 @@ describe('ProjectShowcasePage', () => {
     expect(toggle).toBeChecked();
 
     // PoweredBy should not be rendered
-    expect(screen.queryByTestId('powered-by-ohc')).toBeNull();
+    expect(screen.queryByTestId('powered-by-omnisolo')).toBeNull();
   });
 });

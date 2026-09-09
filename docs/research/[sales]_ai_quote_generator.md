@@ -9,7 +9,7 @@ Manual Quoting & Lead Loss: Service providers (like Carlos the Handyman) frequen
 ## Research Report
 - **Competitor Landscape**: Standard scheduling tools (Calendly, Acuity) only handle time-slots, not dynamic pricing or conversational quoting based on the specifics of a job.
 - **User Needs**: Solopreneurs need a system that can handle initial inquiries instantly, accurately estimating the scope of work and pricing without interrupting their current tasks.
-- **AI Differentiation**: Instead of just sending an auto-reply ("I'll get back to you"), OHC's AI Sales/Ops Dept proactively acts on the lead. It generates a customized quote and proposes a booking time automatically.
+- **AI Differentiation**: Instead of just sending an auto-reply ("I'll get back to you"), OmniSolo's AI Sales/Ops Dept proactively acts on the lead. It generates a customized quote and proposes a booking time automatically.
 
 ## Design Doc
 ### High-Level Architecture

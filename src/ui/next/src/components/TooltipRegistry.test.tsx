@@ -2,6 +2,13 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { TooltipProvider, WithTooltip, useTooltip } from './TooltipRegistry';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const navigationMocks = vi.hoisted(() => ({ pathname: '/' }));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => navigationMocks.pathname,
+}));
 
 vi.mock("framer-motion", () => {
   return {
@@ -16,8 +23,6 @@ vi.mock("framer-motion", () => {
   };
 });
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-
 const mockTooltipFetch = vi.fn((url) => {
     if (url && (url === '/api/v1/tooltips' || url.toString().includes('/api/v1/tooltips'))) {
         return Promise.resolve({ ok: true, json: async () => ({ "test-id": "Fetched tooltip text" }) });
@@ -27,6 +32,7 @@ const mockTooltipFetch = vi.fn((url) => {
 
 describe('TooltipRegistry', () => {
   beforeEach(() => {
+    navigationMocks.pathname = '/';
     mockTooltipFetch.mockClear();
     global.fetch = mockTooltipFetch as any;
   });
@@ -137,6 +143,17 @@ describe('TooltipRegistry', () => {
     expect(global.fetch).toHaveBeenCalled();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('does not fetch optional tooltips on the public login route', async () => {
+    navigationMocks.pathname = '/login';
+
+    await act(async () => {
+      render(<TooltipProvider><div>Login</div></TooltipProvider>);
+      await new Promise(r => setTimeout(r, 20));
+    });
+
+    expect(mockTooltipFetch).not.toHaveBeenCalled();
   });
 
   it('handles aborted fetch gracefully', async () => {

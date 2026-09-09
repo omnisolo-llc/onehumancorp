@@ -1,6 +1,6 @@
 use super::provider::{CloudFSProvider, FileSystemProvider, LocalFSProvider};
 use super::server::HybridFSMcpServer;
-use ::server_ohc::orchestration::McpInvokeRequest;
+use ::server_omnisolo::orchestration::McpInvokeRequest;
 use std::sync::Arc;
 use tempfile::tempdir;
 

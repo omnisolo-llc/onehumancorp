@@ -23,7 +23,7 @@ export default function ViralChallengeGeneratorPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Viral Challenge Generator | OHC";
+    document.title = "Viral Challenge Generator | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,7 +33,7 @@ export default function ViralChallengeGeneratorPage() {
     }
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/viral-challenge/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&duration=${encodeURIComponent(duration)}&reward=${encodeURIComponent(reward)}&branding=${!hasPro}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-challenge/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&duration=${encodeURIComponent(duration)}&reward=${encodeURIComponent(reward)}&branding=${!hasPro}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -82,7 +82,7 @@ export default function ViralChallengeGeneratorPage() {
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                 </label>
              </div>
@@ -145,7 +145,7 @@ export default function ViralChallengeGeneratorPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Viral Challenge 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Viral Challenge 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

@@ -9,7 +9,7 @@ Marketing Dread: Creating content for social media is a major barrier for small 
 ## Research Report
 - **Competitor Landscape**: Platforms like Shopify and Wix require the user to manually craft social media posts or use separate, reactive AI tools.
 - **User Needs**: Users need marketing to happen automatically as a byproduct of their regular business operations.
-- **AI Differentiation**: OHC shifts from reactive assistance to autonomous, background infrastructure. The Autonomous Social Promoter acts as a dedicated marketing employee, instantly leveraging new business events into promotional content across platforms.
+- **AI Differentiation**: OmniSolo shifts from reactive assistance to autonomous, background infrastructure. The Autonomous Social Promoter acts as a dedicated marketing employee, instantly leveraging new business events into promotional content across platforms.
 
 ## Design Doc
 ### High-Level Architecture

@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(1.213); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); font-family: 'Outfit', 'Inter', sans-serif; color: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);">
 
-# Market Audit & OHC Unfair Advantage: Omni-Context Sub-agent Routing
+# Market Audit & OmniSolo Unfair Advantage: Omni-Context Sub-agent Routing
 
 **Author**: Principal Product Architect & KAIROS Orchestrator (L7)
 **Date**: 2026-04-03
@@ -9,11 +9,11 @@
 
 Following a surgical audit of the global Agentic OS landscape—specifically benchmarking against OpenClaw, Claude Code, and Replit Agent—we've identified a recurring structural bottleneck: context latency and grounding drift during sub-agent delegation. Current models rely on explicitly fetching project rules (`CLAUDE.md`, `AGENTS.md`) at spawn time, increasing time-to-first-token and the risk of hallucination.
 
-OHC has an immediate "Blue Ocean" opportunity to deploy **Omni-Context Sub-agent Routing**. By utilizing our Swarm Intelligence Protocol (OHC-SIP) Database (`agent_missions`), we can natively inject complete project context into sub-agent payloads at the moment of creation.
+OmniSolo has an immediate "Blue Ocean" opportunity to deploy **Omni-Context Sub-agent Routing**. By utilizing our Swarm Intelligence Protocol (OmniSolo-SIP) Database (`agent_missions`), we can natively inject complete project context into sub-agent payloads at the moment of creation.
 
 ## Competitive Market Audit
 
-| Feature Area | Claude Code / Replit | OpenClaw | **OHC Vision (Omni-Context)** |
+| Feature Area | Claude Code / Replit | OpenClaw | **OmniSolo Vision (Omni-Context)** |
 | :--- | :--- | :--- | :--- |
 | **Grounding Strategy** | Explicit file read (Adds Latency) | Event-based state | **Pre-injected Database Payloads** |
 | **Sub-agent Delegation** | Ad-hoc CLI spawning | Configured routing rules | **Swarm-as-Code `agent_missions` row creation** |
@@ -21,7 +21,7 @@ OHC has an immediate "Blue Ocean" opportunity to deploy **Omni-Context Sub-agent
 
 ## The "Blue Ocean" Delta
 
-Instead of an agent needing to independently discover and fetch context via file system reads (e.g., calling `read_file` on `AGENTS.md`), the OHC orchestrator automatically appends the contents of these critical files into the system prompt payload *before* the sub-agent is even instantiated.
+Instead of an agent needing to independently discover and fetch context via file system reads (e.g., calling `read_file` on `AGENTS.md`), the OmniSolo orchestrator automatically appends the contents of these critical files into the system prompt payload *before* the sub-agent is even instantiated.
 
 **Business Impact:**
 - **Zero-Latency Context:** Sub-agents begin reasoning immediately with full architectural awareness.

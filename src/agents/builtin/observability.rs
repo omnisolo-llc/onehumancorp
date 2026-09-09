@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall};
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall};
 
 fn error_class(error: &str) -> &'static str {
     let normalized = error.to_ascii_lowercase();

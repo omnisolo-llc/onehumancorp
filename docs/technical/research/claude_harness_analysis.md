@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# OHC Market Research: Agent Harness Architecture Analysis
+# OmniSolo Market Research: Agent Harness Architecture Analysis
 **Target:** Leaked Claude Code (v2.1.88)
 **Analyst:** Principal Product Researcher & Oracle (L7)
 
 ## Executive Summary
-This report analyzes the core architectural patterns and "Agent Harness" design of the leaked Claude Code repository (v2.1.88) and compares them against One Human Corp's (OHC) current hybrid architecture (OHC-HA).
-The objective is to identify critical gaps and define actionable missions to elevate the OHC platform towards absolute autonomy and aesthetic excellence.
+This report analyzes the core architectural patterns and "Agent Harness" design of the leaked Claude Code repository (v2.1.88) and compares them against OmniSolo's (OmniSolo) current hybrid architecture (OmniSolo-HA).
+The objective is to identify critical gaps and define actionable missions to elevate the OmniSolo platform towards absolute autonomy and aesthetic excellence.
 
 ## 1. Claude Code: Architecture Deep Dive
 
@@ -23,29 +23,29 @@ The Claude Code repository is primarily written in TypeScript and utilizes a rob
 The Harness is designed for **stateful, interactive execution**.
 1.  **Isolation:** Tools execute commands, but the harness likely wraps them in safe execution boundaries (e.g., using specific shell contexts or sandboxes).
 2.  **Telemetry:** Built-in cost and history tracking ensure the user (and the agent) knows exactly what is happening and how much it costs.
-3.  **UI/UX:** The use of React-based CLI rendering (`main.tsx`, `interactiveHelpers.tsx`) demonstrates a commitment to a premium developer experience, aligning with OHC's Aesthetic Excellence mandate, albeit in a terminal.
+3.  **UI/UX:** The use of React-based CLI rendering (`main.tsx`, `interactiveHelpers.tsx`) demonstrates a commitment to a premium developer experience, aligning with OmniSolo's Aesthetic Excellence mandate, albeit in a terminal.
 
-## 2. OHC vs. Market Reality (Comparative Analysis)
+## 2. OmniSolo vs. Market Reality (Comparative Analysis)
 
-| Feature | OHC Hybrid Architecture (Current) | Claude Code Harness | Gap / Opportunity |
+| Feature | OmniSolo Hybrid Architecture (Current) | Claude Code Harness | Gap / Opportunity |
 | :--- | :--- | :--- | :--- |
-| **Tool Modularity** | Exists, but potentially less standardized. | Highly modular, strongly typed tool registry (`Tool.ts`). | **High**: OHC needs a unified, heavily typed tool registry for dynamic capability discovery. |
+| **Tool Modularity** | Exists, but potentially less standardized. | Highly modular, strongly typed tool registry (`Tool.ts`). | **High**: OmniSolo needs a unified, heavily typed tool registry for dynamic capability discovery. |
 | **Terminal/CLI UX** | Basic CLI or Web UI. | Rich, interactive React-based CLI (`ink`, `interactiveHelpers.tsx`). | **High**: Develop a "Glassmorphism" inspired terminal UI for the Standalone Desktop Mode. |
 | **Cost Awareness** | Likely backend/billing focused. | Real-time, in-harness cost tracking (`cost-tracker.ts`). | **Medium**: Agents must be aware of their own burn rate and optimize tool usage accordingly. |
-| **Context Management**| OHC-SIP (Central DB). | Local/Session based context (`history.ts`, `context/`). | **Low**: OHC's SIP is superior for swarm intelligence, but local harness context management needs to flawlessly sync with SIP. |
+| **Context Management**| OmniSolo-SIP (Central DB). | Local/Session based context (`history.ts`, `context/`). | **Low**: OmniSolo's SIP is superior for swarm intelligence, but local harness context management needs to flawlessly sync with SIP. |
 
 ## 3. Recommended Architectural Changes (AutoDream Consolidation)
 
-Based on this analysis, the OHC Agent Harness must evolve:
+Based on this analysis, the OmniSolo Agent Harness must evolve:
 1.  **Unified Tool Registry (UTR):** Implement a strict TypeScript interface for all tools, requiring self-documentation, expected input schemas (Zod/JSON Schema), and explicit error handling boundaries.
 2.  **Real-time Cost & Token Telemetry:** Inject a tracking layer into the core execution loop. Every tool call must emit OpenTelemetry spans detailing token usage and estimated cost.
-3.  **Interactive Terminal Harness (ITH):** For the Standalone mode, develop a React/Ink-based terminal UI that brings OHC's "Premium" aesthetic (blur effects, typography) to the command line, providing real-time feedback on agent reasoning.
+3.  **Interactive Terminal Harness (ITH):** For the Standalone mode, develop a React/Ink-based terminal UI that brings OmniSolo's "Premium" aesthetic (blur effects, typography) to the command line, providing real-time feedback on agent reasoning.
 
 ### Architectural Gap Visualization
 
 ```mermaid
 graph TD
-    subgraph OHC Current
+    subgraph OmniSolo Current
         O_Harness[Agent Harness] --> O_Tools[Basic Tools]
         O_Harness --> O_SIP[SIP State Sync]
     end
@@ -56,7 +56,7 @@ graph TD
         M_UTR --> M_Tools[Strongly Typed Tools]
     end
 
-    subgraph OHC Target Architecture
+    subgraph OmniSolo Target Architecture
         T_Harness[Interactive Terminal Harness - ITH]
         T_Harness --> T_Cost[Real-Time Cost & Token Telemetry]
         T_Harness --> T_SIP[SIP State Sync]
@@ -64,14 +64,14 @@ graph TD
         T_UTR --> T_Tools[Strongly Typed Tools]
     end
 
-    OHC Current -.->|Evolution Gap| OHC Target Architecture
-    Market Standard (Claude) -.->|Design Inspiration| OHC Target Architecture
+    OmniSolo Current -.->|Evolution Gap| OmniSolo Target Architecture
+    Market Standard (Claude) -.->|Design Inspiration| OmniSolo Target Architecture
 ```
 
 ---
 ## 4. Actionable Missions (GitHub Issues)
 
-The following missions have been extracted and submitted to the OHC GitHub repository.
+The following missions have been extracted and submitted to the OmniSolo GitHub repository.
 
 ### Mission 1: [harness] Implement Unified Tool Registry (UTR) with Strong Typing
 *   **Priority:** P0 (Critical)

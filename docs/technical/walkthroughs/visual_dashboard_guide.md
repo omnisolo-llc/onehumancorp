@@ -1,6 +1,6 @@
 # Visual Vitality Dashboard Guide
 
-This guide provides a walkthrough of the OHC Vitality Dashboard.
+This guide provides a walkthrough of the OmniSolo Vitality Dashboard.
 
 The dashboard utilizes Glassmorphism and Outfit/Inter typography for a premium aesthetic.
 

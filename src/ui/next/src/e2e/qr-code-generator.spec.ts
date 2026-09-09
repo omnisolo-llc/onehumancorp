@@ -22,7 +22,7 @@ test.describe('QR Code Generation Widget', () => {
 
         // Change text and see if it updates
         const input = page.locator('input[type="text"]').first();
-        await input.fill('https://ohc.app');
+        await input.fill('https://omnisolo.co');
 
         // Check for download button
         const downloadBtn = page.locator('button', { hasText: 'Download' });

@@ -2,7 +2,7 @@ title: Multi-Tenant Agentic Context Memory Layer
 status: completed
 summary: >
   Research report detailing the architectural design for a multi-tenant
-  pgvector-based agentic context memory layer in OHC.
+  pgvector-based agentic context memory layer in OmniSolo.
 details:
   - "Objective: Architect a robust, multi-tenant memory layer to provide AI agents with long-term context while strictly enforcing data isolation."
   - "Storage Layer: Utilize PostgreSQL with the `pgvector` extension in Cloud mode, and fallback to SQLite/Rust for standalone deployments."

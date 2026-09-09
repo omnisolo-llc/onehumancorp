@@ -7,25 +7,25 @@
 **Last Updated:** 2026-03-22
 
 ## 1. Overview
-The "Ecosystem Interoperability" feature establishes the One Human Corp (OHC) "Agentic OS" control plane as the Universal Bus for AI agent swarms. It introduces native framework adapters allowing agents from heterogeneous platforms (OpenClaw, AutoGen, CrewAI, Semantic Kernel) to collaborate seamlessly within a unified OHC environment.
+The "Ecosystem Interoperability" feature establishes the OmniSolo (OmniSolo) "Agentic OS" control plane as the Universal Bus for AI agent swarms. It introduces native framework adapters allowing agents from heterogeneous platforms (OpenClaw, AutoGen, CrewAI, Semantic Kernel) to collaborate seamlessly within a unified OmniSolo environment.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
 - **Framework Agnosticism**: Provide native adapters for OpenClaw, AutoGen, CrewAI, and Semantic Kernel.
 - **Unified State Management**: Synchronize agent states across frameworks using LangGraph checkpointers, enabling true multi-framework swarms.
 - **Identity & Security**: Secure all intra-swarm and inter-framework communications via cryptographically verified SPIFFE/SPIRE identities.
-- **Universal Tooling**: Enable third-party framework agents to consume tools seamlessly via the OHC MCP Switchboard.
+- **Universal Tooling**: Enable third-party framework agents to consume tools seamlessly via the OmniSolo MCP Switchboard.
 
 ### 2.2 Non-Goals
 - Native execution environments for Python-based frameworks (adapters act as a bridge, relying on external API hooks or sidecar containers for non-Go execution).
 
 ## 3. Detailed Architecture
 ### 3.1 Universal Interface (`src/interop/types.go`)
-The core OHC control plane exposes a `UniversalAgent` interface. Every supported framework has a corresponding adapter that translates framework-specific constructs into OHC events.
+The core OmniSolo control plane exposes a `UniversalAgent` interface. Every supported framework has a corresponding adapter that translates framework-specific constructs into OmniSolo events.
 
 ### 3.2 Framework Adapters
 - **OpenClaw Adapter (`openclaw_adapter.go`)**: Syncs real-time state check-pointing via append-only K8s custom resources and LangGraph event streams.
-- **AutoGen Adapter (`autogen_adapter.go`)**: Maps AutoGen's multi-agent conversational model to OHC's event-driven pub/sub architecture.
+- **AutoGen Adapter (`autogen_adapter.go`)**: Maps AutoGen's multi-agent conversational model to OmniSolo's event-driven pub/sub architecture.
 - **CrewAI Adapter (`crewai_adapter.go`)**: Translates CrewAI roles, tasks, and team assignments into LangGraph states.
 - **Semantic Kernel Adapter (`semantickernel_adapter.go`)**: Integrates SK's function calling and prompt orchestration directly into the shared state manager and agent command executor.
 

@@ -9,8 +9,8 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 describe('SocialProofNudgePage', () => {
@@ -58,7 +58,7 @@ describe('SocialProofNudgePage', () => {
   it('shows the soft paywall when trying to remove branding without Pro', () => {
     render(<SocialProofNudgePage />);
 
-    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/i);
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/i);
     fireEvent.click(removeBrandingCheckbox);
 
     // Expect the paywall modal to appear
@@ -70,7 +70,7 @@ describe('SocialProofNudgePage', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
     render(<SocialProofNudgePage />);
 
-    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/i);
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/i);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
     fireEvent.click(removeBrandingCheckbox);
 

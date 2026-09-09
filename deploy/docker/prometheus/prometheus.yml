@@ -2,12 +2,12 @@ global:
   scrape_interval: 10s
 
 scrape_configs:
-  - job_name: 'ohc-backend'
+  - job_name: 'omnisolo-backend'
     static_configs:
       - targets: ['server:8080']
-  - job_name: 'ohc-core'
+  - job_name: 'omnisolo-core'
     static_configs:
-      - targets: ['ohc-core:18789']
+      - targets: ['omnisolo-core:18789']
   - job_name: 'pushgateway'
     static_configs:
       - targets: ['pushgateway:9091']

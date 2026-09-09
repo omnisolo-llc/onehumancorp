@@ -4,7 +4,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct OHCLedgerEntry {
+pub struct OmniSoloLedgerEntry {
     pub id: String,
     pub tenant_id: String,
     pub event_type: String,
@@ -21,7 +21,7 @@ use crate::orchestration::departments::types::{
     ActionRisk, ApprovalRequest, ApprovalStatus, DepartmentConfig, DepartmentEvent, DepartmentType,
 };
 use crate::orchestration::mesh::TeammateMesh;
-use ohc_builtin_agent::memory_store::VectorRepository;
+use omnisolo_builtin_agent::memory_store::VectorRepository;
 use opentelemetry::KeyValue;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
@@ -240,7 +240,7 @@ impl DepartmentOrchestrator {
                         for _ in 0..3 {
                             let fut = dep.read().await;
                             let res = tokio::time::timeout(
-                                ohc_builtin_agent::agent::agent_task_timeout(),
+                                omnisolo_builtin_agent::agent::agent_task_timeout(),
                                 fut.handle_event(&event),
                             )
                             .await;
@@ -256,7 +256,7 @@ impl DepartmentOrchestrator {
                                 Err(_) => {
                                     last_err = format!(
                                         "AI timeout: Event handling exceeded {} seconds",
-                                        ohc_builtin_agent::agent::agent_task_timeout().as_secs()
+                                        omnisolo_builtin_agent::agent::agent_task_timeout().as_secs()
                                     );
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
@@ -804,7 +804,7 @@ impl DepartmentOrchestrator {
         &self,
         tenant_id: &str,
         limit: i64,
-    ) -> Result<Vec<OHCLedgerEntry>, String> {
+    ) -> Result<Vec<OmniSoloLedgerEntry>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -831,7 +831,7 @@ impl DepartmentOrchestrator {
                     let payload_val: serde_json::Value =
                         row.try_get("payload").unwrap_or(serde_json::Value::Null);
                     let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
-                    entries.push(OHCLedgerEntry {
+                    entries.push(OmniSoloLedgerEntry {
                         id: row.get("id"),
                         tenant_id: row.get("tenant_id"),
                         event_type: row.get("event_type"),
@@ -2291,7 +2291,7 @@ impl DepartmentOrchestrator {
 
     pub async fn write_long_term_memory(
         &self,
-        record: ohc_builtin_agent::memory_store::EmbeddingRecord,
+        record: omnisolo_builtin_agent::memory_store::EmbeddingRecord,
     ) -> Result<(), String> {
         self.memory_repo
             .upsert(&record)
@@ -2751,11 +2751,11 @@ impl DepartmentOrchestrator {
 mod tests {
     use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
         let db = Arc::new(crate::db::DB::new().await.unwrap());

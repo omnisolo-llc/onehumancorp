@@ -44,7 +44,7 @@ mod tests {
 
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pg_pool = match tokio::time::timeout(
@@ -241,7 +241,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
 
     sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                tenant_id TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
@@ -282,8 +282,8 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
     let _lock = ENV_MUTEX.lock().unwrap();
     temp_env::with_vars(
         [
-            ("OHC_TELEMETRY_ENABLED", Some("false")),
-            ("OHC_STANDALONE_MODE", Some("true")),
+            ("OMNISOLO_TELEMETRY_ENABLED", Some("false")),
+            ("OMNISOLO_STANDALONE_MODE", Some("true")),
         ],
         || {
             // We must block on the async task since temp_env runs synchronously
@@ -332,7 +332,7 @@ async fn test_hybrid_sync_clears_error_on_success() {
     .await
     .unwrap();
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
@@ -432,7 +432,7 @@ async fn test_hybrid_sync_pos_offline_transactions() {
 
     sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
@@ -489,7 +489,7 @@ async fn test_hybrid_sync_pos_offline_transactions_chaos_degradation() {
 
     sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
     let pg_pool = match tokio::time::timeout(
         std::time::Duration::from_millis(50),
@@ -541,7 +541,7 @@ async fn test_prune_stuck_missions_and_queue() {
 
     sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
@@ -699,7 +699,7 @@ async fn test_prune_stuck_queued_items() {
 
     sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
@@ -826,7 +826,7 @@ async fn test_agent_mission_failure_categorization() {
 
     sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(

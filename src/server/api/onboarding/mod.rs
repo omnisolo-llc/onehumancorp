@@ -1,5 +1,5 @@
 use crate::services::onboarding::onboarding_agent::OnboardingAgent;
-use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+use ::server_omnisolo::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 use axum::{
     Router,
     extract::{Extension, Json, State},
@@ -26,7 +26,7 @@ fn valid_optional_url(value: Option<&str>) -> bool {
 pub fn router(
     agent: Arc<OnboardingAgent>,
     auth_store: Arc<::server_auth::Store>,
-) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+) -> Router<Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
         .route("/start_zero_click", post(start_zero_click))
@@ -177,7 +177,7 @@ struct AuthenticatedStartOnboardingRequest {
     location: String,
     target_audience: String,
     #[serde(default)]
-    initial_products: Vec<::server_ohc::orchestration::IntakeProductProto>,
+    initial_products: Vec<::server_omnisolo::orchestration::IntakeProductProto>,
     #[serde(default)]
     ai_agents: Vec<String>,
     #[serde(default)]
@@ -395,7 +395,7 @@ async fn start_zero_click(
         .map(|p| p.price.clone())
         .unwrap_or_else(|| "10.00".to_string());
 
-    let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
+    let start_req = ::server_omnisolo::orchestration::StartOnboardingRequest {
         business_type: if intake_data.business_type.is_empty() {
             "Other".to_string()
         } else {
@@ -425,7 +425,7 @@ async fn start_zero_click(
         initial_products: intake_data
             .initial_products
             .into_iter()
-            .map(|p| ::server_ohc::orchestration::IntakeProductProto {
+            .map(|p| ::server_omnisolo::orchestration::IntakeProductProto {
                 name: p.name,
                 price: p.price,
                 description: p.description.unwrap_or_default(),
@@ -433,7 +433,7 @@ async fn start_zero_click(
                     .variants
                     .unwrap_or_default()
                     .into_iter()
-                    .map(|v| ::server_ohc::orchestration::IntakeProductVariantProto {
+                    .map(|v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
                         name: v.name,
                         price_modifier: v.price_modifier,
                     })
@@ -678,8 +678,8 @@ mod tests {
             .await
             .unwrap();
         let token = auth_store.issue_token(&viewer).unwrap();
-        let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
-            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let app = router(agent, auth_store).with_state(transport);
 
         let forged = app
@@ -725,8 +725,8 @@ mod tests {
         let agent = Arc::new(OnboardingAgent::new(db, hub));
         let auth_store = Arc::new(::server_auth::Store::new());
 
-        let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
-            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let app = router(agent, auth_store).with_state(transport);
 
         // 1. Request without key is rejected with 401

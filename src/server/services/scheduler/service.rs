@@ -1,10 +1,10 @@
 use crate::hub::Hub;
-#[cfg(not(ohc_bazel_package))]
+#[cfg(not(omnisolo_bazel_package))]
 use crate::scheduler::{Schedule, ScheduleType, Task, TaskStatus};
-#[cfg(ohc_bazel_package)]
+#[cfg(omnisolo_bazel_package)]
 use ::server_lib::scheduler::{Schedule, ScheduleType, Task, TaskStatus};
-use ::server_ohc::orchestration::scheduler_service_server::SchedulerService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::scheduler_service_server::SchedulerService;
+use ::server_omnisolo::orchestration::*;
 use chrono::{TimeZone, Utc};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};

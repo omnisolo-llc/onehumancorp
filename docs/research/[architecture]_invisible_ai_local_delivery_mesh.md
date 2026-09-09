@@ -12,7 +12,7 @@ Currently, their options are:
 3. **Manual courier dispatching**: Using services like Uber Direct or DoorDash Drive manually requires jumping between apps, copy-pasting addresses, manually calculating delivery fees, and fielding phone calls from lost drivers.
 
 **The Non-Technical User Pain Point:**
-Maya just wants to toggle a switch that says "Offer Local Delivery." When a customer buys a cake, she wants a courier to magically appear at the right time to pick it up, and the customer to receive tracking links via SMS, without Maya ever leaving her OHC dashboard or typing an address into a courier app.
+Maya just wants to toggle a switch that says "Offer Local Delivery." When a customer buys a cake, she wants a courier to magically appear at the right time to pick it up, and the customer to receive tracking links via SMS, without Maya ever leaving her OmniSolo dashboard or typing an address into a courier app.
 
 ## 3. Research Report
 **Market Context & Competitor Gaps:**
@@ -20,8 +20,8 @@ Maya just wants to toggle a switch that says "Offer Local Delivery." When a cust
 - **Wix**: Basic local delivery zones, but no native, invisible third-party courier dispatching without apps.
 - **Delivery as a Service (DaaS)**: Uber Direct, DoorDash Drive, Relay, Nash, and Stuart offer API-driven white-label delivery. They provide the drivers, the merchant keeps the customer and pays a flat fee per delivery (e.g., $6-$9).
 
-**Opportunity for OHC:**
-By integrating DaaS providers invisibly into the OHC order flow, we can provide immediate, white-labeled local delivery to every OHC merchant out-of-the-box. We can use AI to dynamically quote delivery fees at checkout, automatically dispatch the best/cheapest courier based on size/time, and use our AI Inbox to intercept and resolve courier issues (e.g., driver texting "gate code?") without waking up the merchant.
+**Opportunity for OmniSolo:**
+By integrating DaaS providers invisibly into the OmniSolo order flow, we can provide immediate, white-labeled local delivery to every OmniSolo merchant out-of-the-box. We can use AI to dynamically quote delivery fees at checkout, automatically dispatch the best/cheapest courier based on size/time, and use our AI Inbox to intercept and resolve courier issues (e.g., driver texting "gate code?") without waking up the merchant.
 
 ## 4. Design Doc
 ### Architecture Diagram
@@ -52,7 +52,7 @@ erDiagram
 - **Fee Setting:**
   - Option A: "Pass delivery cost to customer" (AI calculates live at checkout).
   - Option B: "Flat fee" (e.g., $5).
-- **No API keys or courier selection.** OHC handles the routing behind the scenes.
+- **No API keys or courier selection.** OmniSolo handles the routing behind the scenes.
 
 **Screen 2: Checkout (Customer View)**
 - Customer enters their address.
@@ -71,9 +71,9 @@ erDiagram
 - **AI Inbox (CS Dept)**: If the courier texts "I'm outside but don't see the house," the AI intercepts the SMS, looks at customer notes, and replies "It's the blue house with the red door, leave on porch" without bothering Maya.
 
 ### Key Design Decisions
-- **Zero Configuration**: We abstract away the specific courier networks. Merchants do not create Uber Direct or DoorDash Drive accounts. OHC holds the master accounts and acts as the marketplace router.
+- **Zero Configuration**: We abstract away the specific courier networks. Merchants do not create Uber Direct or DoorDash Drive accounts. OmniSolo holds the master accounts and acts as the marketplace router.
 - **Predictive Dispatching**: For food (like Fatima's cart), dispatching a driver too early results in cold food; too late results in angry customers. The system will use ML on average prep times to schedule the driver pickup precisely.
-- **Unified Liability**: OHC handles driver disputes invisibly.
+- **Unified Liability**: OmniSolo handles driver disputes invisibly.
 
 ## 5. Implementation Prompt
 **Context:** Implement the Invisible AI Local Delivery Mesh.

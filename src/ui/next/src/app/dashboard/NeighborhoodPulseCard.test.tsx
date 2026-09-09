@@ -23,6 +23,7 @@ describe('NeighborhoodPulseCard', () => {
 
   it('renders nothing when there are no neighbors', async () => {
     (global.fetch as any).mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ neighbors: [] })
     });
 
@@ -48,6 +49,7 @@ describe('NeighborhoodPulseCard', () => {
 
   it('renders correctly with neighbors and asserts visual styles', async () => {
     (global.fetch as any).mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ neighbors: ['neighbor_one', 'neighbor_two'] })
     });
 
@@ -55,7 +57,7 @@ describe('NeighborhoodPulseCard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Neighborhood Pulse')).toBeInTheDocument();
-      expect(screen.getByText(/There are 2 OHC businesses/)).toBeInTheDocument();
+      expect(screen.getByText(/There are 2 OmniSolo businesses/)).toBeInTheDocument();
       expect(screen.getByText('Neighbor One')).toBeInTheDocument();
       expect(screen.getByText('Neighbor Two')).toBeInTheDocument();
     });
@@ -70,11 +72,13 @@ describe('NeighborhoodPulseCard', () => {
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
         });
       }
       if (url.includes('/api/v1/mesh/v2/collective')) {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve({ success: true })
         });
       }
@@ -95,7 +99,8 @@ describe('NeighborhoodPulseCard', () => {
         method: 'POST',
         body: JSON.stringify({ action: 'invite', target_tenant_id: 'neighbor_one' })
       }));
-      expect(window.alert).toHaveBeenCalledWith('Invitation sent successfully!');
+      expect(screen.getByRole('status')).toHaveTextContent('Invitation sent successfully!');
+      expect(window.alert).not.toHaveBeenCalled();
     });
   });
 
@@ -103,11 +108,13 @@ describe('NeighborhoodPulseCard', () => {
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
         });
       }
       if (url.includes('/api/v1/mesh/v2/collective')) {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve({ success: false })
         });
       }
@@ -124,7 +131,8 @@ describe('NeighborhoodPulseCard', () => {
     fireEvent.click(inviteBtn);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Failed to send invitation');
+      expect(screen.getByRole('status')).toHaveTextContent('Failed to send invitation');
+      expect(window.alert).not.toHaveBeenCalled();
     });
   });
 
@@ -132,6 +140,7 @@ describe('NeighborhoodPulseCard', () => {
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
         });
       }
@@ -154,12 +163,14 @@ describe('NeighborhoodPulseCard', () => {
 
     await waitFor(() => {
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(window.alert).toHaveBeenCalledWith('Error occurred while inviting');
+      expect(screen.getByRole('status')).toHaveTextContent('Error occurred while inviting');
+      expect(window.alert).not.toHaveBeenCalled();
     });
   });
 
   it('handles missing neighbors data', async () => {
     (global.fetch as any).mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ not_neighbors: [] })
     });
 

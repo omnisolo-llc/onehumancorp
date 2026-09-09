@@ -85,9 +85,9 @@ impl KairosOrchestrator {
     }
 
     fn get_mode(&self) -> &'static str {
-        if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" {
+        if std::env::var("OMNISOLO_MULTITENANT").unwrap_or_default() == "true" {
             "cloud"
-        } else if std::env::var("OHC_HEADLESS").unwrap_or_default() == "true" {
+        } else if std::env::var("OMNISOLO_HEADLESS").unwrap_or_default() == "true" {
             "headless"
         } else {
             "standalone"

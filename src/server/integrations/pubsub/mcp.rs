@@ -1,5 +1,5 @@
-use ::server_ohc::orchestration::TeammateMeshEvent;
-use ohc_builtin_agent::mesh::transport::MeshTransport;
+use ::server_omnisolo::orchestration::TeammateMeshEvent;
+use omnisolo_builtin_agent::mesh::transport::MeshTransport;
 use std::sync::Arc;
 
 pub struct PubSubManager {
@@ -16,7 +16,7 @@ impl PubSubManager {
     }
 
     pub fn from_env(transport: Arc<dyn MeshTransport>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
+        let is_cloud = std::env::var("OMNISOLO_MULTITENANT").unwrap_or_default() == "true";
         Self::new(transport, is_cloud)
     }
 
@@ -37,7 +37,7 @@ impl PubSubManager {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
         use prost::Message as ProstMessage;
-        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "mcp".to_string(),
             action: "publish".to_string(),
             status: "ok".to_string(),
@@ -47,7 +47,7 @@ impl PubSubManager {
         let mut buf = Vec::new();
         let _ = event.encode(&mut buf);
 
-        let message = ::server_ohc::orchestration::TeammateMeshEvent {
+        let message = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "mcp".to_string(),
             action: formatted_topic.clone(),
             status: "ok".to_string(),
@@ -68,7 +68,7 @@ impl PubSubManager {
         let wrapped_handler = Box::new(move |msg: TeammateMeshEvent| {
             use prost::Message as _;
             if let Ok(event) =
-                ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..])
+                ::server_omnisolo::orchestration::TeammateMeshEvent::decode(&msg.payload[..])
             {
                 let mut new_msg = msg.clone();
                 new_msg.payload = event.payload;
@@ -147,7 +147,7 @@ impl PubSubManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
 

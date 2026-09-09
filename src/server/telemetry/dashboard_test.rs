@@ -26,7 +26,7 @@ fn test_hybrid_telemetry_drift() {
                     "deploy/docker/grafana/provisioning/dashboards/{}",
                     filename
                 )),
-                root.join(format!("deploy/helm/ohc/dashboards/{}", filename)),
+                root.join(format!("deploy/helm/omnisolo/dashboards/{}", filename)),
             ];
 
             for mirror in mirror_paths {

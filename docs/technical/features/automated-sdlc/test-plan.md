@@ -50,7 +50,7 @@ A high-level summary of the testing strategy for the Automated Implementation Pi
 - Verify sub-minute rebuild times using cached BuildBuddy instances.
 
 ## 6. Environment & Prerequisites
-- OHC Hub configured with local test cluster.
+- OmniSolo Hub configured with local test cluster.
 - Bazel runner pool available.
 
 ## Implementation Details

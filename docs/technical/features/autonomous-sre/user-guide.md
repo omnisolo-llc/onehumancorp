@@ -3,10 +3,10 @@
 # User Guide: Autonomous SRE
 
 ## 1. Introduction & Value Proposition
-Autonomous SRE features allow One Human Corp to maintain the operational health of its AI workforce and underlying infrastructure automatically. This significantly reduces the CEO's burden by mitigating system failures, auto-scaling resources, and auto-repairing K8s deployments without human intervention. The expected ROI is near-zero downtime for critical workstreams and optimized compute usage.
+Autonomous SRE features allow OmniSolo to maintain the operational health of its AI workforce and underlying infrastructure automatically. This significantly reduces the CEO's burden by mitigating system failures, auto-scaling resources, and auto-repairing K8s deployments without human intervention. The expected ROI is near-zero downtime for critical workstreams and optimized compute usage.
 
 ## 2. Prerequisites & Requirements
-- **Hardware/Software**: OHC running on a Kubernetes cluster with administrative access for the operator.
+- **Hardware/Software**: OmniSolo running on a Kubernetes cluster with administrative access for the operator.
 - **Permissions**: CEO or System Admin role for configuring auto-scaling thresholds.
 - **Dependencies**: The SRE Engine and telemetry stack (Prometheus/OpenTelemetry) must be active.
 

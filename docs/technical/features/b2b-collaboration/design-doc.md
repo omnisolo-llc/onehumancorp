@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-The B2B Collaboration feature provides a secure, auditable, and isolated environment for agents from multiple "One Human Corp" deployments (or different external organizations) to communicate, negotiate, and execute workflows jointly.
+The B2B Collaboration feature provides a secure, auditable, and isolated environment for agents from multiple "OmniSolo" deployments (or different external organizations) to communicate, negotiate, and execute workflows jointly.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

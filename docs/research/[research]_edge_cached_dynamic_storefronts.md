@@ -7,7 +7,7 @@ Small business owners like Maya (baker) and Priya (boutique owner) need their st
 ### Competitive Analysis
 *   **Shopify:** Uses a globally distributed CDN and Edge computing for fast storefront delivery, but deeper personalization often requires app integrations that add latency.
 *   **Wix & Squarespace:** Rely heavily on CDN caching for static assets but can struggle with the performance of highly dynamic, data-driven storefronts.
-*   **OHC Opportunity:** By pushing not just static assets, but dynamic rendering and lightweight AI personalization (e.g., sorting products based on local trends or browsing history) to the edge (e.g., Cloudflare Workers or similar edge compute), OHC can achieve sub-100ms time-to-interactive for all storefronts globally.
+*   **OmniSolo Opportunity:** By pushing not just static assets, but dynamic rendering and lightweight AI personalization (e.g., sorting products based on local trends or browsing history) to the edge (e.g., Cloudflare Workers or similar edge compute), OmniSolo can achieve sub-100ms time-to-interactive for all storefronts globally.
 
 ### Findings
 1.  **Latency is Revenue:** Every 100ms delay in page load time correlates with a measurable drop in conversion rates.
@@ -46,7 +46,7 @@ graph TD
 *   **The Operations Manager:** Manages the synchronization of inventory data between the central database and the Edge KV store.
 
 ## Implementation Prompt
-**Goal:** Implement a distributed edge architecture for OHC storefronts to achieve sub-100ms loading times globally, including dynamic inventory and personalized product sorting.
+**Goal:** Implement a distributed edge architecture for OmniSolo storefronts to achieve sub-100ms loading times globally, including dynamic inventory and personalized product sorting.
 
 **Acceptance Criteria:**
 1.  All storefront requests route through an Edge Network proxy.

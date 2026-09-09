@@ -34,15 +34,15 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     await page.goto('/login');
     await page.evaluate((tenant) => {
         localStorage.setItem('tenant_id', tenant);
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
             id: 'staff_1',
             name: 'Priya',
             role: 'Manager',
             pin_hash: '1234',
             tenant_id: tenant
         }]));
-        localStorage.setItem('ohc_offline_events', JSON.stringify([]));
-        localStorage.setItem('ohc_pos_device_id', 'test_device_123');
+        localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
+        localStorage.setItem('omnisolo_pos_device_id', 'test_device_123');
     }, tenantId);
 
     // 3. Navigate to POS terminal
@@ -82,7 +82,7 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     // Verify it's in the IndexedDB offline queue
     const queueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');
@@ -104,7 +104,7 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     await page.waitForTimeout(5000);
     const updatedQueueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');

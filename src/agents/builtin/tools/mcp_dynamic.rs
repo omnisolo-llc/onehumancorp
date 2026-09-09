@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Duration;
@@ -10,7 +10,7 @@ use super::{
     pydantic::{PydanticAdapter, PydanticToolExecutor},
 };
 use serde::Deserialize;
-use server_ohc::agent::service::{McpServerConfig, McpTransportType};
+use server_omnisolo::agent::service::{McpServerConfig, McpTransportType};
 
 // Simulated MCP Client Gateway
 struct McpGatewayClient {
@@ -326,7 +326,7 @@ async fn list_stdio_tools(server: &McpServerConfig) -> Result<Vec<Value>, String
                 "params": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "ohc-builtin-agent", "version": "1.0.0"}
+                    "clientInfo": {"name": "omnisolo-builtin-agent", "version": "1.0.0"}
                 }
             }),
             json!({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}),
@@ -353,7 +353,7 @@ async fn call_stdio_tool(
                 "params": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "ohc-builtin-agent", "version": "1.0.0"}
+                    "clientInfo": {"name": "omnisolo-builtin-agent", "version": "1.0.0"}
                 }
             }),
             json!({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}),

@@ -20,7 +20,7 @@ test.describe('Autonomous Voice Dispatch Agent', () => {
             feature_type: 'booking_draft',
             summary: 'Caller wants to fix a leaky pipe tomorrow at 2 PM.',
             caller_phone: callerPhone,
-            deposit_link: 'https://pay.ohc.com/deposit/voice'
+            deposit_link: 'https://cloud.omnisolo.co/deposit/voice'
         });
 
         await pool.query(

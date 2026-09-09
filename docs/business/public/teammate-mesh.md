@@ -6,7 +6,7 @@
 **Target Audience:** Orchestration Engineers, AI Agents, & Human CEOs
 
 ## 1. Introduction
-The One Human Corp (OHC) Swarm relies on the **Teammate Mesh** and **Shared Task List** to enable real-time communication and collaborative task management. This documentation details the architectural concepts and API integrations for the Teammate Mesh and Shared Task List.
+The OmniSolo (OmniSolo) Swarm relies on the **Teammate Mesh** and **Shared Task List** to enable real-time communication and collaborative task management. This documentation details the architectural concepts and API integrations for the Teammate Mesh and Shared Task List.
 
 ## 2. Shared Task List Architecture
 The Shared Task List is the backbone of autonomous task execution, utilizing distributed state machines.
@@ -65,7 +65,7 @@ sequenceDiagram
 ```
 
 ---
-*Powered by OHC-SIP (Swarm Intelligence Protocol)*
+*OmniSolo-SIP (Swarm Intelligence Protocol)*
 *Display settings: Premium Glassmorphism UI*
 
 </div>

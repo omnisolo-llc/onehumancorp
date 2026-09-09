@@ -383,7 +383,7 @@ async fn revoke(
 }
 
 async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Error> {
-    use ohc_builtin_agent::{
+    use omnisolo_builtin_agent::{
         agent::AgentRunConfig,
         local_service_adapters::{
             ExistingBlobBackend, ExistingToolBackend, ScreenshotBrowserBackend,
@@ -409,7 +409,7 @@ async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Err
         );
     }
     if let Some(memory) = &config.memory {
-        use ohc_builtin_agent::local_service_adapters::{
+        use omnisolo_builtin_agent::local_service_adapters::{
             ServiceMemoryConfiguration, selected_memory_backend,
         };
         let selected: ServiceMemoryConfiguration = serde_json::from_value(memory.clone())
@@ -422,7 +422,7 @@ async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Err
         {
             return Err("vector memory tenant must match admitted scopes".into());
         }
-        let embedding: Option<Arc<dyn ohc_builtin_agent::llm::LlmClient>> = if let Some(embedding) =
+        let embedding: Option<Arc<dyn omnisolo_builtin_agent::llm::LlmClient>> = if let Some(embedding) =
             &config.embedding
         {
             let base = embedding
@@ -452,12 +452,12 @@ async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Err
                 return Err("invalid embedding credential".into());
             }
             let mut selected =
-                ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
+                omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
                     key, base, None,
                 );
             selected.embedding_model = model.to_owned();
             Some(Arc::new(
-                ohc_builtin_agent::llm::openai::OpenAIClient::from_config(selected),
+                omnisolo_builtin_agent::llm::openai::OpenAIClient::from_config(selected),
             ))
         } else {
             None
@@ -494,13 +494,13 @@ async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Err
             let project = format!("{:x}", Sha256::digest(serde_json::to_vec(&key)?));
             let directory = root.join(project);
             tokio::fs::create_dir_all(&directory).await?;
-            let service = ohc_builtin_agent::service::AgentServiceImpl::new_for_tenant(
+            let service = omnisolo_builtin_agent::service::AgentServiceImpl::new_for_tenant(
                 "local-service-catalog",
                 Default::default(),
-                ohc_builtin_agent::auth::AuthMode::Spiffe {
+                omnisolo_builtin_agent::auth::AuthMode::Spiffe {
                     allowed_id: "spiffe://omnisolo/local-service-daemon".into(),
                 },
-                ohc_builtin_agent::tools::tenant::TenantContext::new(&scope.tenant_id)
+                omnisolo_builtin_agent::tools::tenant::TenantContext::new(&scope.tenant_id)
                     .map_err(std::io::Error::other)?,
             );
             let mut names = config.allowed_tools.clone();

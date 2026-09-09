@@ -2,7 +2,7 @@ use crate::{
     Tool,
     pydantic::{PydanticAdapter, PydanticToolExecutor},
 };
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -101,7 +101,7 @@ impl WorkflowExecutor {
 
         let shard_bundle = shard_reports.join("\n\n");
         let verification_prompt = format!(
-            "You are the adversarial verifier for an OHC built-in agent workflow.\n\
+            "You are the adversarial verifier for an OmniSolo built-in agent workflow.\n\
              Workflow task: {}\n\n\
              Cross-check these shard reports. Reject duplicates, vague claims, unsupported claims, and findings that do not identify a concrete file and line. \
              Keep only actionable findings. Return a concise verified finding list plus rejected-findings notes.\n\n{}",
@@ -111,7 +111,7 @@ impl WorkflowExecutor {
             run_builtin_agent(self.runner.clone(), &verification_prompt, false).await?;
 
         let synthesis_prompt = format!(
-            "You are the synthesizer for an OHC built-in agent workflow.\n\
+            "You are the synthesizer for an OmniSolo built-in agent workflow.\n\
              Produce the final branch review report from the verified findings.\n\n\
              Rules:\n\
              - Put blocker and high severity findings first.\n\
@@ -188,7 +188,7 @@ impl WorkflowExecutor {
 
         let shard_bundle = shard_reports.join("\n\n");
         let verification_prompt = format!(
-            "You are the verifier for an OHC business swarm.\n\
+            "You are the verifier for an OmniSolo business swarm.\n\
              Business objective: {}\n\n\
              Cross-check these specialist reports. Remove unsupported claims, duplicated recommendations, and actions that are not specific enough to execute. \
              Keep recommendations that are concrete, measurable, and useful to a small business operator. Return verified findings, rejected notes, and missing data.\n\n{}",
@@ -198,7 +198,7 @@ impl WorkflowExecutor {
             run_builtin_agent(self.runner.clone(), &verification_prompt, true).await?;
 
         let synthesis_prompt = format!(
-            "You are the operating chief of staff for a small business using OHC agents.\n\
+            "You are the operating chief of staff for a small business using OmniSolo agents.\n\
              Produce a concise operating plan from the verified specialist findings.\n\n\
              Rules:\n\
              - Start with the highest leverage actions.\n\
@@ -225,7 +225,7 @@ impl WorkflowExecutor {
 
 fn review_prompt(task: &str, shard: &WorkflowShard) -> String {
     format!(
-        "You are running as an OHC built-in workflow shard reviewer.\n\n\
+        "You are running as an OmniSolo built-in workflow shard reviewer.\n\n\
          Workflow task: {}\n\
          Shard: {}\n\
          Scope: {}\n\n\
@@ -239,7 +239,7 @@ fn review_prompt(task: &str, shard: &WorkflowShard) -> String {
 
 fn business_prompt(task: &str, shard: &BusinessShard) -> String {
     format!(
-        "You are running as an OHC business specialist agent.\n\n\
+        "You are running as an OmniSolo business specialist agent.\n\n\
          Business objective: {}\n\
          Specialist: {}\n\
          Focus: {}\n\n\
@@ -255,19 +255,19 @@ async fn run_builtin_agent(
     task: &str,
     disable_tools: bool,
 ) -> Result<String, ToolError> {
-    let program = std::env::var("OHC_BUILTIN_AGENT_BINARY")
-        .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
-        .unwrap_or_else(|_| "ohc_builtin_agent".to_string());
+    let program = std::env::var("OMNISOLO_BUILTIN_AGENT_BINARY")
+        .or_else(|_| std::env::var("OMNISOLO_AGENT_BINARY"))
+        .unwrap_or_else(|_| "omnisolo_builtin_agent".to_string());
 
     let mut envs = Vec::new();
     for key in [
-        "OHC_AGENT_ADDRESS",
-        "OHC_AGENT_WORKSPACE",
-        "OHC_LLM_PROVIDER",
-        "OHC_LLM_MODEL",
-        "OHC_LLM_BASE_URL",
-        "OHC_LLM_ENDPOINT",
-        "OHC_LLM_API_KEY",
+        "OMNISOLO_AGENT_ADDRESS",
+        "OMNISOLO_AGENT_WORKSPACE",
+        "OMNISOLO_LLM_PROVIDER",
+        "OMNISOLO_LLM_MODEL",
+        "OMNISOLO_LLM_BASE_URL",
+        "OMNISOLO_LLM_ENDPOINT",
+        "OMNISOLO_LLM_API_KEY",
         "OPENAI_API_KEY",
         "OPENAI_BASE_URL",
         "ANTHROPIC_API_KEY",
@@ -275,20 +275,20 @@ async fn run_builtin_agent(
         "MINIMAX_API_KEY",
         "MINIMAX_MODEL",
         "MINIMAX_BASE_URL",
-        "OHC_LOCAL_LLM_ENDPOINT",
+        "OMNISOLO_LOCAL_LLM_ENDPOINT",
     ] {
         if let Ok(value) = std::env::var(key) {
             envs.push((key.to_string(), value));
         }
     }
     if disable_tools {
-        envs.push(("OHC_AGENT_DISABLE_TOOLS".to_string(), "true".to_string()));
-        envs.push(("OHC_AGENT_TASK_TIMEOUT_SECS".to_string(), "240".to_string()));
-        envs.push(("OHC_LLM_TIMEOUT_SECS".to_string(), "180".to_string()));
-        envs.push(("OHC_MAX_TOKENS".to_string(), "1200".to_string()));
+        envs.push(("OMNISOLO_AGENT_DISABLE_TOOLS".to_string(), "true".to_string()));
+        envs.push(("OMNISOLO_AGENT_TASK_TIMEOUT_SECS".to_string(), "240".to_string()));
+        envs.push(("OMNISOLO_LLM_TIMEOUT_SECS".to_string(), "180".to_string()));
+        envs.push(("OMNISOLO_MAX_TOKENS".to_string(), "1200".to_string()));
         if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
             envs.push((
-                "OHC_AGENT_SPECIALIST_EXIT_HOLD_SECS".to_string(),
+                "OMNISOLO_AGENT_SPECIALIST_EXIT_HOLD_SECS".to_string(),
                 "20".to_string(),
             ));
         }
@@ -328,7 +328,7 @@ fn truncate_report(report: String) -> String {
 pub fn workflow_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "RunWorkflow".to_string(),
-        description: "Run an OHC built-in multi-agent workflow. The workflow coordinates phases, spawns subagents, verifies findings, and returns one final report.".to_string(),
+        description: "Run an OmniSolo built-in multi-agent workflow. The workflow coordinates phases, spawns subagents, verifies findings, and returns one final report.".to_string(),
         is_read_only: false,
         parameters: json!({
             "type": "object",

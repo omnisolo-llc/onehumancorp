@@ -4,12 +4,12 @@ mod tests {
     use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
     use crate::orchestration::departments::types::{ActionRisk, DepartmentType};
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_approvals_workflow() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 

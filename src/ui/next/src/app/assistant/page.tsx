@@ -433,7 +433,7 @@ export default function AssistantPage() {
             <section className={styles.panel}>
               <h2 className={styles.sectionTitle}>New Task</h2>
               <div className={styles.fieldGrid}>
-                <WalkthroughTarget id="ohc-help-input-area">
+                <WalkthroughTarget id="omnisolo-help-input-area">
                   <label className={styles.fieldLabel}>
                     Task prompt
                     <textarea aria-label="Task prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} className={styles.textarea} />

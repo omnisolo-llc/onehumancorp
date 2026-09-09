@@ -51,10 +51,10 @@ test.describe('Documentation full suite', () => {
     await expect(walkBtn).toBeVisible();
     await walkBtn.click();
 
-    const overlay = page.locator('.ohc-walkthrough-overlay');
+    const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
 
-    const bubble = page.locator('.ohc-walkthrough-bubble');
+    const bubble = page.locator('.omnisolo-walkthrough-bubble');
     await expect(bubble).toBeVisible();
     await expect(bubble).toContainText('Business Analytics');
   });

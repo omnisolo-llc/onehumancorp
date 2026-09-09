@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-The **Autonomous SRE Engine** introduces a class of agents specialized in system reliability. Unlike traditional monitoring, these agents can "reason" about logs and metrics, formulate a repair plan, and execute it (e.g., restarting a pod, rolling back a GitOps commit) within the standard OHC safety framework.
+The **Autonomous SRE Engine** introduces a class of agents specialized in system reliability. Unlike traditional monitoring, these agents can "reason" about logs and metrics, formulate a repair plan, and execute it (e.g., restarting a pod, rolling back a GitOps commit) within the standard OmniSolo safety framework.
 
 ## 2. Technical Architecture
 
@@ -18,7 +18,7 @@ A dedicated MCP server provides agents with tools to query:
 - **Kubernetes**: `describe_resource(type, name)`, `get_events()`.
 
 ### 2.2 Incident Response Workflow
-1. **Trigger**: An AlertManager webhook hits the OHC `Hub`.
+1. **Trigger**: An AlertManager webhook hits the OmniSolo `Hub`.
 2. **Room Creation**: A "War Room" is dynamically created.
 3. **Agent Assignment**: An `SRE_AGENT` and `DEVOPS_AGENT` are assigned.
 4. **Diagnosis**: SRE Agent queries logs, identifies a "Memory Leak" in `billing-tracker`.
@@ -51,7 +51,7 @@ struct Incident {
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

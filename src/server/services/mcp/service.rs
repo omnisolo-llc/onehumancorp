@@ -2,8 +2,8 @@ use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::config_sync::server::ConfigSyncServer;
 use crate::tools::hybridfsmcp::factory;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
-use ::server_ohc::orchestration::mcp_service_server::McpService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::mcp_service_server::McpService;
+use ::server_omnisolo::orchestration::*;
 use std::sync::{Arc, RwLock};
 use tonic::{Request, Response, Status};
 
@@ -475,7 +475,7 @@ impl McpService for MyMcpService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_ohc::orchestration::{SyncContextRequest, SyncMissionsRequest};
+    use ::server_omnisolo::orchestration::{SyncContextRequest, SyncMissionsRequest};
     use tonic::Request;
 
     #[tokio::test]
@@ -487,7 +487,7 @@ mod tests {
         let pool = pool_opts
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if std::env::var("OHC_DATABASE_URL")
+        if std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_default()
             .contains("localhost")
         {
@@ -526,7 +526,7 @@ mod tests {
         let pool = pool_opts
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if std::env::var("OHC_DATABASE_URL")
+        if std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_default()
             .contains("localhost")
         {
@@ -567,7 +567,7 @@ mod tests {
         let pool = pool_opts
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if std::env::var("OHC_DATABASE_URL")
+        if std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_default()
             .contains("localhost")
         {
@@ -599,7 +599,7 @@ mod tests {
             });
         req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap(),
+            "spiffe://omnisolo.io/org-1/agent-1".parse().unwrap(),
         );
 
         let resp = service.sync_missions(req).await;
@@ -617,7 +617,7 @@ mod tests {
         let pool = pool_opts
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        if std::env::var("OHC_DATABASE_URL")
+        if std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_default()
             .contains("localhost")
         {
@@ -651,7 +651,7 @@ mod tests {
             });
         req.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap(),
+            "spiffe://omnisolo.io/org-1/agent-1".parse().unwrap(),
         );
 
         // This will attempt an insert into DB, but since test env may not be running PG properly, it might fail internal, but at least not unauthenticated

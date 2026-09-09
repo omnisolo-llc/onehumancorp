@@ -10,7 +10,7 @@ Small business owners like Priya (boutique owner) and Leo (music tutor) need to 
 *   **Shopify:** Has basic invoicing, but complex B2B or localized invoicing often requires expensive third-party apps.
 *   **Wix/Squarespace:** Invoicing is present but rudimentary; localizing for different tax jurisdictions is largely a manual setup process.
 *   **Stripe Invoicing:** Powerful but developer-focused. The UI is complex for a non-technical user.
-*   **OHC Differentiation:** The Finance & Payments agent handles this invisibly. It observes an order or a quote approval, determines the customer's location, applies the correct local tax rules (VAT, GST, State Sales Tax), and instantly generates a localized invoice with a payment link, all recorded seamlessly into the underlying multi-tenant ledger.
+*   **OmniSolo Differentiation:** The Finance & Payments agent handles this invisibly. It observes an order or a quote approval, determines the customer's location, applies the correct local tax rules (VAT, GST, State Sales Tax), and instantly generates a localized invoice with a payment link, all recorded seamlessly into the underlying multi-tenant ledger.
 
 ## Design Doc
 
@@ -51,7 +51,7 @@ erDiagram
 1. **Trigger:** Leo finishes a lesson and taps "Send Invoice" for his student.
 2. **Review:** The agent has already drafted the invoice with the correct amount, currency, and local tax based on the student's profile. Leo reviews it in a frosted glass card.
 3. **Action:** Leo taps "Approve".
-4. **Fulfillment:** The customer receives a localized email with a secure payment link. The transaction is recorded in Leo's OHC ledger.
+4. **Fulfillment:** The customer receives a localized email with a secure payment link. The transaction is recorded in Leo's OmniSolo ledger.
 
 ### AI Agent Integration Points
 *   **Finance Department:** Handles the generation, tax calculation, and ledger recording.

@@ -172,7 +172,7 @@ async fn execute_publish_site_job(
 
     if let Some(s) = site {
         if let Some(domain) = s.domain {
-            if !domain.ends_with(".ohc.store") {
+            if !domain.ends_with(".cloud.omnisolo.co") {
                 let config = CdnPublishConfig::from_env()?;
                 let receipt = provision_cdn_and_ssl(&config, tenant_id, site_id, &domain).await?;
                 info!(
@@ -212,10 +212,10 @@ pub struct CdnPublishReceipt {
 
 impl CdnPublishConfig {
     pub fn from_env() -> Result<Self, String> {
-        let api_url = required_env("OHC_CDN_API_URL")?;
-        let api_token = required_env("OHC_CDN_API_TOKEN")?;
-        let zone_id = required_env("OHC_CDN_ZONE_ID")?;
-        let edge_origin = required_env("OHC_EDGE_ORIGIN_URL")?;
+        let api_url = required_env("OMNISOLO_CDN_API_URL")?;
+        let api_token = required_env("OMNISOLO_CDN_API_TOKEN")?;
+        let zone_id = required_env("OMNISOLO_CDN_ZONE_ID")?;
+        let edge_origin = required_env("OMNISOLO_EDGE_ORIGIN_URL")?;
         Ok(Self {
             api_url,
             api_token,
@@ -314,11 +314,11 @@ mod publish_tests {
 
     #[test]
     fn required_env_fails_closed_when_key_is_absent() {
-        let result = required_env("OHC_TEST_CDN_KEY_THAT_SHOULD_NOT_EXIST");
+        let result = required_env("OMNISOLO_TEST_CDN_KEY_THAT_SHOULD_NOT_EXIST");
         assert!(
             result
                 .unwrap_err()
-                .contains("OHC_TEST_CDN_KEY_THAT_SHOULD_NOT_EXIST")
+                .contains("OMNISOLO_TEST_CDN_KEY_THAT_SHOULD_NOT_EXIST")
         );
     }
 }

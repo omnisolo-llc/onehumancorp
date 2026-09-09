@@ -1,13 +1,13 @@
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# OHC Oracle Research Report: Agent Harness & Execution Isolation
+# OmniSolo Oracle Research Report: Agent Harness & Execution Isolation
 
 **Date:** 2026-04-18
 **Target Analyzed:** Claude Code (v2.1.88)
 **Focus Area:** Agent Harness Environment, Sandboxing, Shell Execution Lifecycle
 
 ## 1. Executive Summary
-This research investigates the operational harness of *Claude Code*, a leading CLI-based AI agent, to identify structural gaps in OHC's local and hybrid execution models. The findings highlight immediate opportunities to harden OHC's execution environment using deep OS-level sandboxing, granular AST bash parsing, and robust network proxies.
+This research investigates the operational harness of *Claude Code*, a leading CLI-based AI agent, to identify structural gaps in OmniSolo's local and hybrid execution models. The findings highlight immediate opportunities to harden OmniSolo's execution environment using deep OS-level sandboxing, granular AST bash parsing, and robust network proxies.
 
 ## 2. Competitive Architectural Analysis
 
@@ -23,9 +23,9 @@ Claude Code uses a sophisticated **Sandbox Adapter** wrapping an external `@anth
 - **Stateful REPL Simulation:** Agents need context across commands. Claude writes environment (`declare -p`) and path snapshots (`pwd -P`) to temporary files, `source`ing them before new commands.
 - **TMPDIR Jailing:** Every spawned shell process uses an overridden, securely permissioned (`0700`) temporary directory specific to that session. Security flags like `shopt -u extglob` are explicitly injected.
 
-## 3. OHC vs. Market Reality
+## 3. OmniSolo vs. Market Reality
 
-| Feature | OHC (Current State) | Market Standard (Claude Code) | Gap Impact |
+| Feature | OmniSolo (Current State) | Market Standard (Claude Code) | Gap Impact |
 | :--- | :--- | :--- | :--- |
 | **Command Execution** | Raw `exec.Command` | Wrapped via `ShellProvider` & AST Validation | High |
 | **State Persistence** | Stateless per command | Snapshot/Restore (`source` + `pwd`) | High |
@@ -43,7 +43,7 @@ graph TD;
     E -->|Allowed| F((Internet/Intranet));
     E -->|Denied| G[Drop & Log Telemetry];
     D -->|Stdout/Stderr| H[OpenTelemetry Span Exporter];
-    H --> I[(OHC Central Database)];
+    H --> I[(OmniSolo Central Database)];
     G --> I;
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);

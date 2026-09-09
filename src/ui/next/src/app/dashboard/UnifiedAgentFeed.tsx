@@ -37,7 +37,7 @@ type ApprovalsResponse = {
   next_cursor?: string | null;
 };
 
-type OHCLedgerEntry = {
+type OmniSoloLedgerEntry = {
   id: string;
   tenant_id: string;
   event_type: string;
@@ -47,7 +47,7 @@ type OHCLedgerEntry = {
 };
 
 type LedgerResponse = {
-  entries: OHCLedgerEntry[];
+  entries: OmniSoloLedgerEntry[];
 };
 
 type ApprovalRequest = {
@@ -137,7 +137,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     };
     updateOfflineCount();
 
-    window.addEventListener("ohc_queue_updated", updateOfflineCount);
+    window.addEventListener("omnisolo_queue_updated", updateOfflineCount);
 
     setIsOffline(!navigator.onLine);
 
@@ -176,7 +176,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener("ohc_queue_updated", updateOfflineCount);
+      window.removeEventListener("omnisolo_queue_updated", updateOfflineCount);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
@@ -185,18 +185,23 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   useEffect(() => {
     let mounted = true;
 
-    async function fetchAll() {
+    async function fetchAll(refresh = false) {
       try {
-        setLoading(true);
-        setActivityLoading(true);
+        if (!refresh) {
+          setLoading(true);
+          setActivityLoading(true);
+        }
         let unifiedData = initialData;
 
-        if (!unifiedData) {
+        if (refresh || !unifiedData) {
           const unifiedRes = await fetch("/api/v1/agent-feed");
           if (!unifiedRes.ok) {
             throw new Error("Failed to load agent feed");
           }
-          unifiedData = await unifiedRes.json();
+          const refreshedData = await unifiedRes.json();
+          unifiedData = initialData
+            ? { ...initialData, items: refreshedData.items || [] }
+            : refreshedData;
         }
 
         if (mounted) {
@@ -420,157 +425,28 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
         }
       } catch (err: any) {
-        if (mounted) {
+        if (mounted && !refresh) {
           setError(err.message || "Failed to load feed");
         }
         console.error("Failed to load activity", err);
       } finally {
-        if (mounted) {
+        if (mounted && !refresh) {
           setLoading(false);
           setActivityLoading(false);
         }
       }
     }
 
-    const cleanup = fetchAll();
+    void fetchAll();
+    const refreshTimer = window.setInterval(() => {
+      void fetchAll(true);
+    }, 5_000);
+
     return () => {
       mounted = false;
-      cleanup.then((fn: any) => fn && typeof fn === "function" && fn());
+      window.clearInterval(refreshTimer);
     };
   }, [initialData]);
-
-  useEffect(() => {
-    let ws: WebSocket;
-    let reconnectTimeout: NodeJS.Timeout;
-
-    const connect = () => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const isLocalhost =
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1";
-      // In production, Next.js proxy doesn't support WS well so we route directly to backend. Local dev also hits backend directly.
-      const wsUrl = isLocalhost
-        ? `ws://127.0.0.1:18789/api/v1/feed/ws`
-        : `${protocol}//${window.location.host}/api/v1/feed/ws`;
-      if (
-        typeof process.env.VITEST !== "undefined" ||
-        process.env.NODE_ENV === "test"
-      )
-        return;
-      ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.error) {
-            console.error("Agent feed WS error:", data.error);
-            return;
-          }
-
-          // Depending on your message structure from agent-feed:
-          // The redis pub/sub payload is currently just the AgentFeedItem JSON.
-          const item = data;
-
-          if (!item?.id) return;
-
-          // If it's PENDING_APPROVAL add to the feed
-          if (
-            String(item.lifecycle_state || "").toUpperCase() ===
-            "PENDING_APPROVAL"
-          ) {
-            setItems((current) => [
-              item,
-              ...current.filter((existing) => existing.id !== item.id),
-            ]);
-
-            // Also map and remove from activities if it somehow got back to pending (unlikely)
-            setActivities((current) =>
-              current.filter((existing) => existing.id !== item.id),
-            );
-          } else if (
-            String(item.lifecycle_state || "").toUpperCase() === "APPROVED" ||
-            String(item.lifecycle_state || "").toUpperCase() === "DISMISSED"
-          ) {
-            // It's an activity event (Approved, Rejected, etc.)
-            setActivities((current) => {
-              const mappedActivity = {
-                id: item.id,
-                tenant_id: item.tenant_id || "default",
-                event_type: item.lifecycle_state,
-                department: item.event_source || "system",
-                payload:
-                  typeof item.proposed_action === "object"
-                    ? JSON.stringify({ original_payload: item.proposed_action })
-                    : item.proposed_action,
-                created_at: new Date().toISOString(),
-              };
-              return [
-                mappedActivity,
-                ...current.filter((existing) => existing.id !== item.id),
-              ];
-            });
-            // Also remove from approvals
-            setItems((current) =>
-              current.filter((existing) => existing.id !== item.id),
-            );
-          } else {
-            // Fallback for legacy SSE structure matching
-            if (
-              String(item.status || "").toUpperCase() === "DRAFT" ||
-              String(item.status || "").toUpperCase() === "PENDING"
-            ) {
-              setItems((current) => [
-                item,
-                ...current.filter((existing) => existing.id !== item.id),
-              ]);
-            } else if (item.status) {
-              setActivities((current) => {
-                const mappedActivity = {
-                  id: item.id,
-                  tenant_id: item.tenant_id || "default",
-                  event_type: item.status,
-                  department: item.department,
-                  payload:
-                    typeof item.payload === "object"
-                      ? JSON.stringify({ original_payload: item.payload })
-                      : item.payload,
-                  created_at: new Date().toISOString(),
-                };
-                return [
-                  mappedActivity,
-                  ...current.filter((existing) => existing.id !== item.id),
-                ];
-              });
-              setItems((current) =>
-                current.filter((existing) => existing.id !== item.id),
-              );
-            }
-          }
-        } catch (err) {
-          console.error("Failed to parse websocket feed event:", err);
-        }
-      };
-
-      ws.onclose = () => {
-        // Attempt to reconnect
-        reconnectTimeout = setTimeout(connect, 3000);
-      };
-
-      ws.onerror = (err) => {
-        console.error("Websocket error:", err);
-      };
-    };
-
-    connect();
-
-    return () => {
-      clearTimeout(reconnectTimeout);
-      if (ws) {
-        ws.onclose = null; // Prevent reconnection on unmount
-        ws.close();
-      }
-    };
-  }, []);
 
   const badgeTone = (priority?: string) => {
     const p = (priority || "").toLowerCase();
@@ -779,12 +655,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <div className="glassmorphism w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]" data-testid="activity-feed-loading">
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center">
+              <div className="glassmorphism w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center" data-testid="activity-feed-empty">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
@@ -794,7 +670,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               {activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                  className="glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                  data-testid="activity-feed-entry"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">

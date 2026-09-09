@@ -1,7 +1,7 @@
-use ohc_builtin_agent::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent::llm::LlmClient;
-use ohc_builtin_agent::tools::{Tool, ToolExecutor};
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
+use omnisolo_builtin_agent::agent::{Agent, AgentRunConfig};
+use omnisolo_builtin_agent::llm::LlmClient;
+use omnisolo_builtin_agent::tools::{Tool, ToolExecutor};
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
 use std::sync::{Arc, Mutex};
 
 #[derive(Default)]

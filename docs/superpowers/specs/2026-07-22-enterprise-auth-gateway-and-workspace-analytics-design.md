@@ -5,7 +5,7 @@
 ### 1.1 Config Toggle
 - We add `registration_enabled` (`bool`) to `AppConfig` in `src/server/config/mod.rs`.
 - Defaults to `false` in default config.
-- Can be overridden via env var `OHC_REGISTRATION_ENABLED=true` or configuration files.
+- Can be overridden via env var `OMNISOLO_REGISTRATION_ENABLED=true` or configuration files.
 
 ### 1.2 HTTP Registration Endpoint
 - We expose `POST /api/v1/auth/register` in `src/server/auth/http.rs`.

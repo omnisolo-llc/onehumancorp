@@ -9,7 +9,7 @@ To verify the secure establishment of Trust Agreements, the routing of messages 
 This test plan covers the `TrustAgreement` lifecycle, the `b2b-gateway` message tunneling over mTLS, role-based filtering, and memory segregation.
 
 ## 3. Test Environments
-- **Federated Test Cluster:** Two isolated K8s namespaces (`acme-ns`, `globex-ns`), each running a full OHC stack including independent SPIRE servers and Postgres instances.
+- **Federated Test Cluster:** Two isolated K8s namespaces (`acme-ns`, `globex-ns`), each running a full OmniSolo stack including independent SPIRE servers and Postgres instances.
 
 ## 4. Test Cases
 

@@ -1,4 +1,4 @@
-use ::server_ohc::app::dashboard_service_server::DashboardService;
+use ::server_omnisolo::app::dashboard_service_server::DashboardService;
 
 // Benchmark Results from Optimization Run:
 // Parallel Fetch Dashboard: p50: 181 us, p95: 250 us, p99: 307 us
@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 pub async fn bench_queue_latency() {
     let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new()
@@ -94,7 +94,7 @@ pub async fn bench_hybrid_cache_lfu_eviction() {
 }
 
 pub async fn bench_db_query_time() {
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let iterations = std::env::var("BENCH_ITERATIONS")
@@ -164,14 +164,14 @@ pub async fn bench_db_query_time() {
 }
 
 pub async fn bench_api_response_time() {
-    if std::env::var("OHC_DATABASE_URL")
+    if std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_default()
         .contains("nonexistent")
     {
         return;
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
     let iterations = std::env::var("BENCH_ITERATIONS")
         .unwrap_or_else(|_| "10".to_string())
@@ -208,7 +208,7 @@ pub async fn bench_api_response_time() {
         for _ in 0..iterations {
             let dashboard_service = dashboard_service_cloud.clone();
             cloud_handles.push(tokio::spawn(async move {
-                let req = ::server_ohc::app::GetDashboardRequest {
+                let req = ::server_omnisolo::app::GetDashboardRequest {
                     organization_id: "test_org".to_string(),
                     mobile_optimized: false,
                 };
@@ -279,7 +279,7 @@ pub async fn bench_api_response_time() {
     for _ in 0..iterations {
         let dashboard_service = dashboard_service_standalone.clone();
         standalone_handles.push(tokio::spawn(async move {
-            let req = ::server_ohc::app::GetDashboardRequest {
+            let req = ::server_omnisolo::app::GetDashboardRequest {
                 organization_id: "test_org".to_string(),
                 mobile_optimized: false,
             };
@@ -312,7 +312,7 @@ pub async fn bench_api_response_time() {
     for _ in 0..iterations {
         let dashboard_service = dashboard_service_standalone.clone();
         standalone_mobile_handles.push(tokio::spawn(async move {
-            let req = ::server_ohc::app::GetDashboardRequest {
+            let req = ::server_omnisolo::app::GetDashboardRequest {
                 organization_id: "test_org".to_string(),
                 mobile_optimized: true,
             };
@@ -350,7 +350,7 @@ pub async fn bench_agent_snapshot() {
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
     tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
@@ -392,7 +392,7 @@ pub async fn bench_agent_snapshot() {
     )
     .await;
     for i in 0..50 {
-        let msg = ::server_ohc::orchestration::Message {
+        let msg = ::server_omnisolo::orchestration::Message {
             id: format!("msg-{}", i),
             from_agent: "test_agent".to_string(),
             to_agent: "all".to_string(),
@@ -403,7 +403,7 @@ pub async fn bench_agent_snapshot() {
         };
         let _ = hub
             .clone()
-            .publish(::server_ohc::orchestration::Message {
+            .publish(::server_omnisolo::orchestration::Message {
                 id: msg.id,
                 from_agent: msg.from_agent,
                 to_agent: msg.to_agent,
@@ -416,7 +416,7 @@ pub async fn bench_agent_snapshot() {
     }
 
     for i in 0..50 {
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
@@ -432,22 +432,22 @@ pub async fn bench_agent_snapshot() {
 
         let agent_service =
             crate::services::agent::service::MyAgentManagerService::new(hub.clone());
-        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let mut request = tonic::Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         request
             .extensions_mut()
             .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+                spiffe_id: "spiffe://omnisolo.io/test_org/test".to_string(),
                 org_id: "test_org".to_string(),
                 agent_id: "test".to_string(),
             });
         request.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/test_org/agent/test"
+            "spiffe://omnisolo.io/org/test_org/agent/test"
                 .parse()
                 .unwrap_or_else(|e| panic!("Error: {:?}", e)),
         );
 
-        use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+        use ::server_omnisolo::orchestration::agent_manager_service_server::AgentManagerService;
         let _res = agent_service
             .get_dashboard_snapshot(request)
             .await
@@ -470,17 +470,17 @@ pub async fn bench_agent_snapshot() {
         let start = Instant::now();
         let agent_service =
             crate::services::agent::service::MyAgentManagerService::new(hub.clone());
-        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let mut request = tonic::Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         request
             .extensions_mut()
             .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+                spiffe_id: "spiffe://omnisolo.io/test_org/test".to_string(),
                 org_id: "test_org".to_string(),
                 agent_id: "test".to_string(),
             });
         request.metadata_mut().insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/test_org/agent/test"
+            "spiffe://omnisolo.io/org/test_org/agent/test"
                 .parse()
                 .unwrap_or_else(|e| panic!("Error: {:?}", e)),
         );
@@ -488,7 +488,7 @@ pub async fn bench_agent_snapshot() {
             "x-mobile-optimized",
             "true".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)),
         );
-        use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+        use ::server_omnisolo::orchestration::agent_manager_service_server::AgentManagerService;
         let _res = agent_service
             .get_dashboard_snapshot(request)
             .await
@@ -510,7 +510,7 @@ pub async fn bench_dashboard_snapshot() {
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
     let bg_handle = tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
@@ -561,7 +561,7 @@ pub async fn bench_dashboard_snapshot() {
     )
     .await;
     for i in 0..5 {
-        let msg = ::server_ohc::orchestration::Message {
+        let msg = ::server_omnisolo::orchestration::Message {
             id: format!("msg-{}", i),
             from_agent: "test_agent".to_string(),
             to_agent: "all".to_string(),
@@ -572,7 +572,7 @@ pub async fn bench_dashboard_snapshot() {
         };
         let _ = hub
             .clone()
-            .publish(::server_ohc::orchestration::Message {
+            .publish(::server_omnisolo::orchestration::Message {
                 id: msg.id,
                 from_agent: msg.from_agent,
                 to_agent: msg.to_agent,
@@ -585,7 +585,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for i in 0..5 {
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
@@ -599,7 +599,7 @@ pub async fn bench_dashboard_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let req_desktop = ::server_ohc::app::GetDashboardRequest {
+        let req_desktop = ::server_omnisolo::app::GetDashboardRequest {
             organization_id: "test_org".to_string(),
             mobile_optimized: false,
         };
@@ -611,7 +611,7 @@ pub async fn bench_dashboard_snapshot() {
         request
             .extensions_mut()
             .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+                spiffe_id: "spiffe://omnisolo.io/test_org/test".to_string(),
                 org_id: "test_org".to_string(),
                 agent_id: "test".to_string(),
             });
@@ -633,11 +633,11 @@ pub async fn bench_dashboard_snapshot() {
         fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
     );
 
-    let req_mobile = ::server_ohc::app::GetDashboardRequest {
+    let req_mobile = ::server_omnisolo::app::GetDashboardRequest {
         organization_id: "test_org".to_string(),
         mobile_optimized: true,
     };
-    let req_desktop = ::server_ohc::app::GetDashboardRequest {
+    let req_desktop = ::server_omnisolo::app::GetDashboardRequest {
         organization_id: "test_org".to_string(),
         mobile_optimized: false,
     };
@@ -650,7 +650,7 @@ pub async fn bench_dashboard_snapshot() {
     req_mobile_t
         .extensions_mut()
         .insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+            spiffe_id: "spiffe://omnisolo.io/test_org/test".to_string(),
             org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
@@ -658,7 +658,7 @@ pub async fn bench_dashboard_snapshot() {
     req_desktop_t
         .extensions_mut()
         .insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+            spiffe_id: "spiffe://omnisolo.io/test_org/test".to_string(),
             org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
@@ -805,7 +805,7 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
 pub async fn bench_get_analytics() {
     tracing::info!("Benchmarking MyOrgService get_analytics...");
 
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
@@ -831,7 +831,7 @@ pub async fn bench_get_analytics() {
     // Pre-populate some agents and meetings for the analytics calculation
     let org_id = "benchmark_org";
     for i in 0..10 {
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
@@ -857,15 +857,15 @@ pub async fn bench_get_analytics() {
         .unwrap_or(10);
 
     // First run (cold start, no cache)
-    let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+    let mut request_cold = tonic::Request::new(::server_omnisolo::orchestration::EmptyRequest {});
     request_cold.metadata_mut().insert(
         "x-spiffe-id",
-        format!("spiffe://onehumancorp.io/{}/test", org_id)
+        format!("spiffe://omnisolo.io/{}/test", org_id)
             .parse()
             .unwrap_or_else(|e| panic!("Error: {:?}", e)),
     );
     let start_cold = std::time::Instant::now();
-    use ::server_ohc::orchestration::org_service_server::OrgService;
+    use ::server_omnisolo::orchestration::org_service_server::OrgService;
     let _ = org_service.get_analytics(request_cold).await;
     tracing::info!(
         "get_analytics Cold Start: {} us",
@@ -875,10 +875,10 @@ pub async fn bench_get_analytics() {
     // Warm runs (hot start, hits hybrid cache)
     let mut fetch_times = Vec::new();
     for _ in 0..iterations {
-        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let mut request = tonic::Request::new(::server_omnisolo::orchestration::EmptyRequest {});
         request.metadata_mut().insert(
             "x-spiffe-id",
-            format!("spiffe://onehumancorp.io/{}/test", org_id)
+            format!("spiffe://omnisolo.io/{}/test", org_id)
                 .parse()
                 .unwrap_or_else(|e| panic!("Error: {:?}", e)),
         );
@@ -1084,7 +1084,7 @@ mod tests {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
 
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
         if database_url.starts_with("postgres") {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new()
@@ -1100,7 +1100,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn test_ml_resilience_60s_timeout_rule() {
         // Enforce the specific 60-second ML Resilience timeout rule using the agent's actual timeout function
-        let timeout_duration = ohc_builtin_agent::agent::agent_task_timeout();
+        let timeout_duration = omnisolo_builtin_agent::agent::agent_task_timeout();
         assert_eq!(
             timeout_duration.as_secs(),
             60,
@@ -1152,7 +1152,7 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
     tracing::info!(
         "Benchmarking ui_dashboard_analytics_briefing_handler (Parallel Execution Optimization)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     // Test that two parallel DB queries execute concurrently faster than sequentially
@@ -1279,7 +1279,7 @@ pub async fn bench_hybrid_latency() {
 
 pub async fn bench_field_service_routing_latency() {
     tracing::info!("Benchmarking Field Service Routing Latency...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| {
         format!(
             "sqlite:file:{}?mode=memory&cache=shared",
             uuid::Uuid::new_v4()
@@ -1327,7 +1327,7 @@ pub async fn bench_field_service_routing_latency() {
 
 pub async fn bench_field_service_routing_mobile_payload() {
     tracing::info!("Benchmarking Field Service Routing Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -1409,7 +1409,7 @@ pub async fn bench_field_service_routing_mobile_payload() {
 
 pub async fn bench_ui_dashboard_unified_agent_feed_mobile_payload() {
     tracing::info!("Benchmarking Unified Agent Feed Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -1465,7 +1465,7 @@ pub async fn bench_ui_triage_latency() {
     tracing::info!(
         "Benchmarking list_ui_triage_handler (Parallel Execution Optimization / Hybrid Cache)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -1526,7 +1526,7 @@ pub async fn bench_ui_supply_latency() {
     tracing::info!(
         "Benchmarking list_ui_supply_handler (Parallel Execution Optimization / Hybrid Cache)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -1568,7 +1568,7 @@ async fn test_bench_crm_opportunities_latency() {
 
 pub async fn bench_crm_opportunities_latency() {
     tracing::info!("Benchmarking list_opportunities_handler (Parallel Execution Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -1665,7 +1665,7 @@ pub async fn bench_ai_token_efficiency() {
 pub async fn bench_billing_api_response_time() {
     tracing::info!("Benchmarking Billing API Response Time...");
     // Skip if nonexistent DB
-    if std::env::var("OHC_DATABASE_URL")
+    if std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_default()
         .contains("nonexistent")
     {
@@ -1673,7 +1673,7 @@ pub async fn bench_billing_api_response_time() {
     }
 
     let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = std::env::var("BENCH_ITERATIONS")
         .unwrap_or_else(|_| "10".to_string())
         .parse()
@@ -1750,7 +1750,7 @@ pub async fn bench_billing_api_response_time() {
 
 pub async fn bench_time_savings_latency() {
     tracing::info!("Benchmarking Time Savings API Response Time (Parallel Execution)...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -1786,7 +1786,7 @@ pub async fn bench_time_savings_latency() {
 
 pub async fn bench_advisory_insights_latency() {
     tracing::info!("Benchmarking advisory_insights_handler (Parallel Execution)...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
     let tenant_id = "test_tenant";
 
@@ -1869,7 +1869,7 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
     tracing::info!(
         "Benchmarking ui_dashboard_unified_feed_handler (Parallel vs Sequential Execution)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -1975,7 +1975,7 @@ pub async fn bench_dashboard_analytics_chat_latency() {
     tracing::info!(
         "Benchmarking ui_dashboard_analytics_chat_handler (Parallel Execution Optimization)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     // Test that two parallel DB queries execute concurrently faster than sequentially
@@ -2014,7 +2014,7 @@ pub async fn bench_ui_omni_inbox_latency() {
     tracing::info!(
         "Benchmarking list_ui_omni_inbox_handler (Parallel Execution Optimization / Hybrid Cache)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2049,7 +2049,7 @@ pub async fn bench_ui_inbox_latency() {
     tracing::info!(
         "Benchmarking list_ui_inbox_handler (Parallel Execution Optimization / Hybrid Cache)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2082,7 +2082,7 @@ pub async fn bench_ui_inbox_latency() {
 
 pub async fn bench_ai_job_dispatch_latency() {
     tracing::info!("Benchmarking AI Job Dispatch Latency...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     use crate::orchestration::queue::{Job, pg_queue::PgTaskQueue};
@@ -2175,7 +2175,7 @@ pub async fn bench_ai_job_dispatch_latency() {
 pub async fn bench_ui_orders_latency() {
     tracing::info!("Benchmarking list_ui_orders_handler (Mobile Payload Optimization)...");
     let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -2210,7 +2210,7 @@ pub async fn bench_ui_orders_latency() {
 
 pub async fn bench_ui_bookings_latency() {
     tracing::info!("Benchmarking list_ui_bookings_handler (Payload Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2254,7 +2254,7 @@ pub async fn bench_list_jobs_latency() {
     tracing::info!(
         "Benchmarking list_jobs (Parallel Execution Optimization / Mobile Payload Optimization / Hybrid Cache)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2312,7 +2312,7 @@ pub async fn bench_docs_mobile_payload() {
 
 pub async fn bench_supply_mobile_payload() {
     tracing::info!("Benchmarking Supply Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2359,7 +2359,7 @@ pub async fn bench_supply_mobile_payload() {
 
 pub async fn bench_assistant_mobile_payload() {
     tracing::info!("Benchmarking Assistant Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2392,7 +2392,7 @@ pub async fn bench_assistant_mobile_payload() {
 pub async fn bench_get_completed_tasks_latency() {
     tracing::info!("Benchmarking get_completed_tasks (Parallel Execution Optimization)...");
     let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -2428,7 +2428,7 @@ pub async fn bench_ui_ledger_latency() {
     tracing::info!(
         "Benchmarking ui_ledger_handler (Parallel Execution Optimization / Hybrid Cache)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2463,7 +2463,7 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
     tracing::info!(
         "Benchmarking ui_dashboard_unified_agent_feed_handler (Parallel Execution Optimization)..."
     );
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2559,7 +2559,7 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
 
 pub async fn bench_ui_priority_tasks_latency() {
     tracing::info!("Benchmarking Priority Tasks Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2613,7 +2613,7 @@ pub async fn bench_ui_priority_tasks_latency() {
 
 pub async fn bench_get_daily_work_latency() {
     tracing::info!("Benchmarking get_daily_work_handler (Parallel Execution Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2721,7 +2721,7 @@ pub async fn bench_get_daily_work_latency() {
 
 pub async fn bench_ui_triage_mobile_payload() {
     tracing::info!("Benchmarking UI Triage Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2779,7 +2779,7 @@ pub async fn bench_ui_triage_mobile_payload() {
 
 pub async fn bench_ui_ledger_mobile_payload() {
     tracing::info!("Benchmarking UI Ledger Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
@@ -2833,7 +2833,7 @@ pub async fn bench_ui_ledger_mobile_payload() {
 
 pub async fn bench_ui_omni_inbox_mobile_payload() {
     tracing::info!("Benchmarking UI Omni Inbox Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| {
         format!(
             "sqlite:file:{}?mode=memory&cache=shared",
             uuid::Uuid::new_v4()
@@ -2891,7 +2891,7 @@ pub async fn bench_ui_omni_inbox_mobile_payload() {
 
 pub async fn bench_ui_inbox_mobile_payload() {
     tracing::info!("Benchmarking UI Inbox Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| {
         format!(
             "sqlite:file:{}?mode=memory&cache=shared",
             uuid::Uuid::new_v4()
@@ -2948,7 +2948,7 @@ pub async fn bench_ui_inbox_mobile_payload() {
 }
 pub async fn bench_ui_invoices_mobile_payload() {
     tracing::info!("Benchmarking UI Invoices Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {

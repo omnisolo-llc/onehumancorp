@@ -15,7 +15,7 @@ impl AuthConfig {
         // Enforce SPIFFE mode (Zero Secrets)
         AuthConfig {
             mode: AuthMode::SPIFFE {
-                allowed_id: std::env::var("OHC_AGENT_SPIFFE_ID").ok(),
+                allowed_id: std::env::var("OMNISOLO_AGENT_SPIFFE_ID").ok(),
             },
         }
     }
@@ -101,7 +101,7 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let domain = parts[0];
 
     match domain {
-        "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
+        "omnisolo.io" | "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
         _ if domain.ends_with(".ohc.global") => {}
         _ => {
             return Err(Status::permission_denied(format!(
@@ -127,6 +127,7 @@ mod tests {
 
     #[test]
     fn test_validate_spiffe_id() {
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org/org-1/agent/agent-1").is_ok());
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/agent-1").is_ok());
         assert!(validate_spiffe_id("spiffe://ohc.local/org/org-2/agent/agent-2").is_ok());
         assert!(validate_spiffe_id("spiffe://ohc.os/org/org-3/agent/agent-3").is_ok());
@@ -134,20 +135,20 @@ mod tests {
 
         assert!(validate_spiffe_id("invalid").is_err());
         assert!(validate_spiffe_id("spiffe://invalid.com/x").is_err());
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/../bad").is_err());
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org-1/agent-1").is_err()); // Missing /org/ and /agent/ structure
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org//agent/agent-1").is_err()); // Empty org_id
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/").is_err()); // Empty agent_id
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/../bad").is_err());
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org-1/agent-1").is_err()); // Missing /org/ and /agent/ structure
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org//agent/agent-1").is_err()); // Empty org_id
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org/org-1/agent/").is_err()); // Empty agent_id
     }
 
     #[test]
     fn parse_spiffe_id_rejects_empty_and_untrusted_identities() {
         for id in [
             "spiffe://evil.example/org/acme/agent/a1",
-            "spiffe://onehumancorp.io/org//agent/a1",
-            "spiffe://onehumancorp.io/org/acme/agent/",
-            "spiffe://onehumancorp.io/org/acme/agent/a1/extra",
-            "spiffe://onehumancorp.io/org/acme%2Fother/agent/a1",
+            "spiffe://omnisolo.io/org//agent/a1",
+            "spiffe://omnisolo.io/org/acme/agent/",
+            "spiffe://omnisolo.io/org/acme/agent/a1/extra",
+            "spiffe://omnisolo.io/org/acme%2Fother/agent/a1",
         ] {
             assert!(crate::parse_spiffe_id(id).is_err(), "accepted {id}");
         }

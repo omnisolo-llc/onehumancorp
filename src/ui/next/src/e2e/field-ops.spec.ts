@@ -11,29 +11,43 @@ test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
   }) => {
     const tenantId = seedData.tenant.id;
     const customerId = seedData.customer.id;
+    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const jobTemplateId = `jt-routing-${runId}`;
 
     await test.step('Seed job templates and appointments', async () => {
         const jtRes = await e2eDbQuery(
-            `INSERT INTO job_templates (id, tenant_id, name, estimated_duration_mins, base_price_cents)
-             VALUES ('jt-routing-1', $1, 'Sink Repair', 60, 15000) RETURNING id`,
-             [tenantId]
+            `INSERT INTO job_templates (id, tenant_id, name)
+             VALUES ($1, $2, 'Sink Repair') RETURNING id`,
+             [jobTemplateId, tenantId]
         );
-        const jtId = jtRes.rows[0].id;
+        const jtId = jtRes[0].id;
 
         await e2eDbQuery(
             `INSERT INTO appointments (id, tenant_id, customer_id, job_template_id, status, scheduled_start_time, scheduled_end_time, location_address, location_lat, location_lng)
-             VALUES ('appt-routing-1', $1, $2, $3, 'Scheduled', NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours', '123 Main St', 40.7128, -74.0060)`,
-             [tenantId, customerId, jtId]
+             VALUES ($1, $2, $3, $4, 'Scheduled', NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours', '123 Main St', 40.7128, -74.0060)`,
+             [`appt-routing-${runId}-1`, tenantId, customerId, jtId]
         );
 
         await e2eDbQuery(
             `INSERT INTO appointments (id, tenant_id, customer_id, job_template_id, status, scheduled_start_time, scheduled_end_time, location_address, location_lat, location_lng)
-             VALUES ('appt-routing-2', $1, $2, $3, 'Requested', NOW() + INTERVAL '2 hour', NOW() + INTERVAL '3 hours', '124 Main St', 40.7128, -74.0060)`,
-             [tenantId, customerId, jtId]
+             VALUES ($1, $2, $3, $4, 'Requested', NOW() + INTERVAL '2 hour', NOW() + INTERVAL '3 hours', '124 Main St', 40.7128, -74.0060)`,
+             [`appt-routing-${runId}-2`, tenantId, customerId, jtId]
         );
     });
 
     await loginAs(page, adminUser);
+
+    const scheduleErrors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error' && /load appointments|schedule request failed/i.test(message.text())) {
+        scheduleErrors.push(message.text());
+      }
+    });
+    page.on('response', (response) => {
+      if (response.url().includes('/api/v1/auth/powersync_token') && response.status() >= 400) {
+        scheduleErrors.push(`PowerSync token request failed with HTTP ${response.status()}`);
+      }
+    });
 
     // Navigate to the field ops page
     await page.goto("/field-ops/jobs");
@@ -58,5 +72,6 @@ test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
     await jobDoneBtn.click();
 
     await expect(page.locator('span:has-text("COMPLETED")').first()).toBeVisible({ timeout: 5000 });
+    expect(scheduleErrors).toEqual([]);
   });
 });

@@ -10,7 +10,7 @@ Use a one-time `/api/v1/setup/admin` endpoint protected by a deployment-supplied
 
 ## Server contract
 
-- The endpoint is enabled only when `OHC_SETUP_TOKEN` is at least 32 bytes.
+- The endpoint is enabled only when `OMNISOLO_SETUP_TOKEN` is at least 32 bytes.
 - Requests use `Authorization: Bearer <setup-token>` and are compared without leaking token contents.
 - The request accepts `username`, `email`, `password`, and `organizationId`; the server assigns the fixed `ADMIN` role.
 - The server creates the tenant when absent, creates the first admin transactionally, and returns conflict once an admin exists.

@@ -38,7 +38,7 @@ export default function FlashSaleGeneratorPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/flash-sale/embed?tenant=${tenant}&title=${encodeURIComponent(saleTitle)}&code=${encodeURIComponent(discountCode)}&percent=${encodeURIComponent(discountPercent)}&end=${encodeURIComponent(endDate)}&theme=${theme}" width="100%" height="250" style="border:none; border-radius:16px; overflow:hidden;"></iframe>`;
+  const embedCode = `<iframe src="https://cloud.omnisolo.co/api/v1/growth/flash-sale/embed?tenant=${tenant}&title=${encodeURIComponent(saleTitle)}&code=${encodeURIComponent(discountCode)}&percent=${encodeURIComponent(discountPercent)}&end=${encodeURIComponent(endDate)}&theme=${theme}" width="100%" height="250" style="border:none; border-radius:16px; overflow:hidden;"></iframe>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -235,7 +235,7 @@ export default function FlashSaleGeneratorPage() {
 
                 <div className="mt-4 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-                        ⚡ Powered by OHC
+                        ⚡ Powered by OmniSolo
                     </a>
                 </div>
             </div>
@@ -295,7 +295,7 @@ export default function FlashSaleGeneratorPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism {

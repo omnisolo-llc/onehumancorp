@@ -11,7 +11,7 @@ type PublicSettings = Readonly<{
   email_verification_required: true;
 }>;
 
-const CHALLENGE_STORAGE_KEY = "ohc-registration-challenge";
+const CHALLENGE_STORAGE_KEY = "omnisolo-registration-challenge";
 
 export default function RegisterPage() {
   const router = useRouter();

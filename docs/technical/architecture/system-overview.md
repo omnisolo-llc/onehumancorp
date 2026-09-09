@@ -38,13 +38,13 @@ Realtime communication flows through `src/server/orchestration/mesh.rs` and the 
 - **Standalone Mode:** Uses local in-process transport without requiring Redis.
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
-Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
+Background workers consolidate `agent_session_data` and optional `OMNISOLO_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
 
 ## 4. Phase 4: Sub-Agent Orchestration Queue
 Background worker system with Redis or SQLite implementations for spawning isolated sub-agents.
 
 ## 5. Visual Excellence Mandate
-All associated UI components must represent the OHC "Premium Feel".
+All associated UI components must represent the OmniSolo "Premium Feel".
 - Backdrop Filter: `blur(20px) saturate(200%)`
 - Background: `rgba(255, 255, 255, 0.03)`
 - Typography: `'Outfit', 'Inter', sans-serif`

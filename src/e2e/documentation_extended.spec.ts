@@ -26,13 +26,13 @@ test.describe('Extended Documentation & Help Features', () => {
     await walkBtn.click();
 
     // Verify walkthrough bubble appears showing the first step
-    await expect(page.locator('.ohc-walkthrough-bubble')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.ohc-walkthrough-bubble')).toContainText('Welcome');
+    await expect(page.locator('.omnisolo-walkthrough-bubble')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.omnisolo-walkthrough-bubble')).toContainText('Welcome');
 
     // Ensure the close button works
-    const closeBtn = page.locator('.ohc-walkthrough-close');
+    const closeBtn = page.locator('.omnisolo-walkthrough-close');
     await closeBtn.click();
-    await expect(page.locator('.ohc-walkthrough-bubble')).not.toBeVisible();
+    await expect(page.locator('.omnisolo-walkthrough-bubble')).not.toBeVisible();
   });
 
   test('Advanced Persona: Can load Swagger UI in API Documentation page', async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe('Extended Documentation & Help Features', () => {
 
     // Check that Swagger UI rendered the primary container and title
     await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('OHC Advanced API Reference')).toBeVisible();
+    await expect(page.getByText('OmniSolo Advanced API Reference')).toBeVisible();
   });
 
 });

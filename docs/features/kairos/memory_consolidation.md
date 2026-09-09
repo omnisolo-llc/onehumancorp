@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Memory Consolidation System is responsible for giving OHC AI agents long-term persistent memory across sessions. When an AI processes customer interactions or business events, relevant context is embedded and stored.
+The Memory Consolidation System is responsible for giving OmniSolo AI agents long-term persistent memory across sessions. When an AI processes customer interactions or business events, relevant context is embedded and stored.
 
 ## System Design
 

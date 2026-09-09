@@ -4,7 +4,7 @@
 Current systems lack a unified orchestration layer to manage complex, multi-agent workflows across hybrid environments (Cloud-Native vs. Standalone). We need the KAIROS engine to enable dynamic task decomposition, real-time agent coordination, and long-term memory consolidation, ensuring graceful degradation and a premium visual experience.
 
 ## Research Report
-- **Competitor Analysis:** Claude Code and Replit Agent rely on single-agent loops. OHC's Swarm Intelligence requires shared state and distributed coordination.
+- **Competitor Analysis:** Claude Code and Replit Agent rely on single-agent loops. OmniSolo's Swarm Intelligence requires shared state and distributed coordination.
 - **Core Requirements:**
   - A Shared Task List with deterministic transitions (`FOR UPDATE SKIP LOCKED` for Postgres, mutexed for SQLite).
   - A Teammate Mesh for real-time pub/sub (`CentrifugeNode`, Redis/Memory).
@@ -34,7 +34,7 @@ Current systems lack a unified orchestration layer to manage complex, multi-agen
 - **Storage:** Persist to `pgvector` (Cloud) or JSON blobs (Standalone, degrading gracefully).
 
 ### UI Constraints
-Ensure all related UI components strictly adhere to the OHC Premium Feel defined by the wrapper `div` styles.
+Ensure all related UI components strictly adhere to the OmniSolo Premium Feel defined by the wrapper `div` styles.
 </div>
 
 ## Implementation Prompt

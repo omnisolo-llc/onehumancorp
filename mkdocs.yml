@@ -1,9 +1,9 @@
-site_name: One Human Corp Docs
-site_description: Markdown-first product, architecture, and operations documentation for the OHC monorepo.
+site_name: OmniSolo OneHumanCorp Docs
+site_description: Markdown-first product, architecture, and operations documentation for OmniSolo OneHumanCorp, a product by OmniSolo.
 docs_dir: docs
 site_dir: site
-repo_name: onehumancorp/mono
-repo_url: https://github.com/onehumancorp/mono
+repo_name: omnisolo/mono
+repo_url: https://github.com/omnisolo-llc/omnisolo
 exclude_docs: |
     /README.md
     /user_guide.md
@@ -73,17 +73,18 @@ nav:
       - Research: technical/research/index.md
       - Universal Edge-Cached Dynamic Storefront: technical/research/universal_edge_cached_dynamic_storefront_agentic_seo_pre_rendering_architecture.md
   - Reports:
-      - SMB Platform Research Report: reports/ohc_smb_platform_research_report.md
-      - Global SMB Market Research Report: reports/ohc_global_smb_market_research_report.md
-      - Small Business Platform Strategic Research Report: reports/ohc_small_business_platform_strategic_research_report.md
-      - Market Research Report: reports/ohc_market_research_report.md
-      - Market Dominance Agentic Workflows Report: reports/ohc_market_dominance_agentic_workflows_vs_traditional_platforms_research_report.md
-      - Market Dominance & AI Differentiation Strategic Report: reports/ohc_market_dominance_ai_differentiation_strategic_report.md
-      - Market Research & AI Differentiation Report: reports/ohc_market_research_ai_differentiation_report.md
+      - OmniSolo SMB Market Research Report: business/market_research/omnisolo_smb_market_report.md
+      - Global SMB Market Research Report: reports/omnisolo_global_smb_market_research_report.md
+      - SMB Platform Research Report: reports/omnisolo_smb_platform_research_report.md
+      - Small Business Platform Strategic Research Report: reports/omnisolo_small_business_platform_strategic_research_report.md
+      - Market Research Report: reports/omnisolo_market_research_report.md
+      - OmniSolo Market Dominance & SMB Research Report: reports/omnisolo_market_dominance_agentic_workflows_vs_traditional_platforms_research_report.md
+      - Market Dominance & AI Differentiation Strategic Report: reports/omnisolo_market_dominance_ai_differentiation_strategic_report.md
+      - Market Research & AI Differentiation Report: reports/omnisolo_market_research_ai_differentiation_report.md
       - Tool Integration Research Report: reports/tool_integration_research_report.md
       - Scout Tool Integration Research Report (Q2 2024): reports/scout_tool_integration_research_report_q2_2024.md
       - Third-Party Integration Research Report (Q3): reports/third_party_integration_research_report_q3.md
       - Tool Integration Research Report (Q4): reports/tool_integration_research_report_q4.md
-      - OHC Product Research Small Business Platform Dominance: reports/ohc_product_research_small_business_platform_dominance.md
+      - OmniSolo Product Research Small Business Platform Dominance: reports/omnisolo_product_research_small_business_platform_dominance.md
       - Scout Tool Integration Research Report (Q4): reports/scout_tool_integration_research_report_q4.md
-      - OHC Tool Integration Research Report: reports/ohc_tool_integration_research_report.md
+      - OmniSolo Tool Integration Research Report: reports/omnisolo_tool_integration_research_report.md

@@ -1,5 +1,5 @@
 -- +goose Up
--- Migration 008: Data Model Architecture for OneHumanCorp
+-- Migration 008: Data Model Architecture for OmniSolo
 
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

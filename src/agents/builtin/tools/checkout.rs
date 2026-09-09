@@ -2,7 +2,7 @@ use super::{
     Tool,
     pydantic::{PydanticAdapter, PydanticToolExecutor},
 };
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -36,7 +36,7 @@ impl PydanticToolExecutor<ConversationalCheckoutArgs> for ConversationalCheckout
         // For real persistence, we'd hit a webhook/API or insert into the DB via an injected client.
         // For now, we perform a direct DB insertion assuming standard sqlx connection.
 
-        let db_url = std::env::var("OHC_DATABASE_URL")
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::PgPool::connect(&db_url)

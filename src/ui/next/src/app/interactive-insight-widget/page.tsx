@@ -13,7 +13,7 @@ export default function InteractiveInsightWidgetPage() {
   const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
-  const [origin, setOrigin] = useState('https://ohc.app');
+  const [origin, setOrigin] = useState('https://cloud.omnisolo.co');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -23,7 +23,7 @@ export default function InteractiveInsightWidgetPage() {
         if (storedTenant) setTenant(storedTenant);
       }
     }
-    document.title = "Insight Widget | OHC";
+    document.title = "Insight Widget | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +72,7 @@ export default function InteractiveInsightWidgetPage() {
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                 </label>
              </div>
@@ -98,7 +98,7 @@ export default function InteractiveInsightWidgetPage() {
                 {!hasPro && (
                   <div className="mt-4 pt-4 border-t border-gray-100/10 text-center">
                     <a href={`${origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`} target="_blank" rel="noreferrer" className={`text-xs font-semibold no-underline hover:underline opacity-80 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-500'}`}>
-                      ⚡ Powered by OHC
+                      ⚡ Powered by OmniSolo
                     </a>
                   </div>
                 )}
@@ -125,7 +125,7 @@ export default function InteractiveInsightWidgetPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Insight Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Insight Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
@@ -145,7 +145,7 @@ export default function InteractiveInsightWidgetPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

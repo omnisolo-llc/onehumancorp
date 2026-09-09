@@ -52,3 +52,33 @@ for required_pattern in \
     exit 1
   fi
 done
+
+runtime_schema_migration="${migration_dir}/222_field_ops_and_global_commerce.sql"
+for required_pattern in \
+  'CREATE TABLE IF NOT EXISTS job_locations' \
+  'ALTER TABLE tenants' \
+  'ADD COLUMN IF NOT EXISTS base_currency' \
+  'ADD COLUMN IF NOT EXISTS enabled_currencies' \
+  'ALTER TABLE job_locations FORCE ROW LEVEL SECURITY' \
+  'CREATE POLICY tenant_isolation_job_locations'; do
+  if ! grep -Fq "${required_pattern}" "${runtime_schema_migration}"; then
+    echo "runtime schema migration is missing required contract: ${required_pattern} (${runtime_schema_migration})" >&2
+    exit 1
+  fi
+done
+
+initial_schema="${migration_dir}/001_initial.sql"
+for required_pattern in \
+  'id TEXT PRIMARY KEY' \
+  'member_id TEXT NOT NULL REFERENCES users(id)' \
+  'user_id TEXT NOT NULL REFERENCES users(id)'; do
+  case "${required_pattern}" in
+    'id TEXT PRIMARY KEY') schema_file="${initial_schema}" ;;
+    'member_id TEXT NOT NULL REFERENCES users(id)') schema_file="${migration_dir}/1006_api_keys_and_usage_logs.sql" ;;
+    'user_id TEXT NOT NULL REFERENCES users(id)') schema_file="${migration_dir}/1007_user_usage_logs.sql" ;;
+  esac
+  if ! grep -Fq "${required_pattern}" "${schema_file}"; then
+    echo "PostgreSQL identity schema contract is missing: ${required_pattern} (${schema_file})" >&2
+    exit 1
+  fi
+done

@@ -40,7 +40,7 @@ fn generate_cloud_invite() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    format!("https://cloud.ohc.network/invite/ref-{}", ts)
+    format!("https://cloud.omnisolo.co/invite/ref-{}", ts)
 }
 
 #[tauri::command]
@@ -49,7 +49,7 @@ fn generate_cloud_bridge_invite() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    format!("https://cloud.ohc.network/invite/cb-{}", ts)
+    format!("https://cloud.omnisolo.co/invite/cb-{}", ts)
 }
 
 #[tauri::command]
@@ -168,11 +168,11 @@ async fn test_ai_provider(config: AiProviderConfig) -> Result<AiProviderTestResu
 }
 
 fn ai_provider_config_path() -> std::path::PathBuf {
-    std::env::var("OHC_LLM_CONFIG_PATH")
+    std::env::var("OMNISOLO_LLM_CONFIG_PATH")
         .ok()
         .filter(|value| !value.trim().is_empty())
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::PathBuf::from(".ohc/ai-provider.json"))
+        .unwrap_or_else(|| std::path::PathBuf::from(".omnisolo/ai-provider.json"))
 }
 
 fn read_ai_provider_config() -> Result<AiProviderConfig, String> {
@@ -377,22 +377,22 @@ async fn setup_health_check(mode: Option<String>) -> Result<serde_json::Value, S
     }
 }
 
-#[cfg(ohc_bazel_tauri_context)]
+#[cfg(omnisolo_bazel_tauri_context)]
 macro_rules! tauri_build_context {
     () => {
         include!("../tauri-build-context.rs");
     };
 }
 
-#[cfg(ohc_bazel_tauri_context)]
+#[cfg(omnisolo_bazel_tauri_context)]
 tauri_build_context!();
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    #[cfg(ohc_bazel_tauri_context)]
+    #[cfg(omnisolo_bazel_tauri_context)]
     let context = tauri_context();
 
-    #[cfg(not(ohc_bazel_tauri_context))]
+    #[cfg(not(omnisolo_bazel_tauri_context))]
     let context = tauri::generate_context!();
 
     tauri::Builder::default()
@@ -414,7 +414,7 @@ pub fn run() {
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
-            window.set_title("OHC").unwrap();
+            window.set_title("OmniSolo").unwrap();
             Ok(())
         })
         .run(context)

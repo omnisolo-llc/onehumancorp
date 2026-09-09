@@ -4,7 +4,7 @@
 Fix PII redaction leaks before JSON marshaling in telemetry and event logging.
 
 ## Problem Statement
-The OHC codebase enforces strict PII redaction across the multi-tenant architecture. Specifically, "In telemetry or logging code, always apply `redact_interface_pii` (or an equivalent redaction function) to payload maps before calling `serde_json::to_string` or passing values along to prevent PII leakage in multi-tenant environments."
+The OmniSolo codebase enforces strict PII redaction across the multi-tenant architecture. Specifically, "In telemetry or logging code, always apply `redact_interface_pii` (or an equivalent redaction function) to payload maps before calling `serde_json::to_string` or passing values along to prevent PII leakage in multi-tenant environments."
 However, historically there were multiple code paths violating this rule in the legacy codebase.
 
 Currently, the Rust implementation ensures robust PII redaction natively in the core telemetry and orchestration pipelines. Specifically:

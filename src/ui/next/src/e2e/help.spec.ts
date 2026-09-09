@@ -77,11 +77,11 @@ test.describe("Help Center", () => {
     // Find and click the floating Ask anything button
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
-    await chatButton.dispatchEvent("click");
+    await chatButton.click();
 
-    // Wait for the chat to open and be visible
-    const chatHeader = page.locator("#ohc-floating-help-header");
-    await expect(chatHeader).toBeVisible();
+    const widget = page.locator("#omnisolo-floating-help-widget");
+    await expect(widget).toBeVisible();
+    await widget.getByRole("button", { name: "Ask anything" }).click();
 
     // Check if the chat input is present
     const chatInput = page.locator('input[placeholder="Ask anything..."]');
@@ -92,16 +92,15 @@ test.describe("Help Center", () => {
     await chatInput.fill(testMessage);
     const sendButton = page.locator('button[aria-label="Send message"]');
     await expect(sendButton).toBeVisible();
-    await sendButton.dispatchEvent("click");
+    await sendButton.click();
 
     // Assert that the message appears in the chat
     const sentMessage = page.locator("div", { hasText: testMessage }).last();
     await expect(sentMessage).toBeVisible();
 
     // Close the chat
-    const closeButton = page.locator('button[aria-label="Close"]');
-    await closeButton.dispatchEvent("click");
-    await expect(chatHeader).not.toBeVisible();
+    await widget.getByRole("button", { name: "Close Help Widget" }).click();
+    await expect(widget).not.toBeVisible();
   });
 
   test("should render the Help widget with macOS translucent glass styling", async ({ page }) => {
@@ -118,11 +117,11 @@ test.describe("Help Center", () => {
     // Open the chat
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
-    await chatButton.dispatchEvent("click");
+    await chatButton.click();
 
-    // Verify the blur style
-    const chatHeader = page.locator("#ohc-floating-help-header");
-    await expect(chatHeader).toBeVisible();
+    const widget = page.locator("#omnisolo-floating-help-widget");
+    await expect(widget).toBeVisible();
+    await expect(widget).toHaveCSS("backdrop-filter", /blur\(40px\).*saturate\(2\.1\)/);
   });
 
   test("should handle responsive layout properly on mobile", async ({ page }) => {
@@ -130,6 +129,7 @@ test.describe("Help Center", () => {
     await page.goto("/help");
 
     await expect(page.locator("h1", { hasText: "In-App Help Center" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open help chat" })).toBeVisible();
   });
 
   test("should have accessible inputs for screen readers", async ({ page }) => {
@@ -144,13 +144,12 @@ test.describe("Help Center", () => {
 
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
-    await chatButton.dispatchEvent("click");
+    await chatButton.click();
 
-    const chatHeader = page.locator("#ohc-floating-help-header");
-    await expect(chatHeader).toBeVisible();
+    const widget = page.locator("#omnisolo-floating-help-widget");
+    await expect(widget).toBeVisible();
 
-    const closeButton = page.locator('button[aria-label="Close"]');
-    await closeButton.dispatchEvent("click");
-    await expect(chatHeader).not.toBeVisible();
+    await widget.getByRole("button", { name: "Close Help Widget" }).click();
+    await expect(widget).not.toBeVisible();
   });
 });

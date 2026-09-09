@@ -166,7 +166,7 @@ pub async fn run_lead_recovery_scan_once(
 pub fn spawn_lead_recovery_background_workers(pool: Arc<PgPool>) {
     let scan_pool = pool.clone();
     tokio::spawn(async move {
-        let interval_seconds = std::env::var("OHC_LEAD_RECOVERY_SCAN_INTERVAL_SECONDS")
+        let interval_seconds = std::env::var("OMNISOLO_LEAD_RECOVERY_SCAN_INTERVAL_SECONDS")
             .ok()
             .and_then(|value| value.parse::<u64>().ok())
             .unwrap_or(300)

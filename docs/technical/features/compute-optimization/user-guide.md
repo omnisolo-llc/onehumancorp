@@ -3,7 +3,7 @@
 # User Guide: Compute Optimization
 
 ## 1. Introduction & Value Proposition
-Compute Optimization ensures that One Human Corp's AI workforce is resource-efficient and cost-effective. By dynamically scheduling workloads to the most appropriate hardware (e.g., CPU, GPU, TPU), this feature maximizes throughput and minimizes hardware costs for the CEO, particularly during peak LLM processing times.
+Compute Optimization ensures that OmniSolo's AI workforce is resource-efficient and cost-effective. By dynamically scheduling workloads to the most appropriate hardware (e.g., CPU, GPU, TPU), this feature maximizes throughput and minimizes hardware costs for the CEO, particularly during peak LLM processing times.
 
 ## 2. Prerequisites & Requirements
 - **Hardware/Software**: A Kubernetes cluster with heterogeneous nodes (e.g., standard VMs alongside GPU instances).

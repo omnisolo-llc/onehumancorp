@@ -210,7 +210,7 @@ export function HelpChat() {
         {!isOpen && (
           <WalkthroughTarget id="ai-chat-trigger">
             <button
-              id="ohc-floating-help-btn"
+              id="omnisolo-floating-help-btn"
               onClick={() => setIsOpen(true)}
               className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
               aria-label="Open help chat"
@@ -331,9 +331,9 @@ export function HelpChat() {
             onSubmit={handleSend}
             className="p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex gap-2 items-center"
           >
-            <WalkthroughTarget id="ohc-help-input-area" className="flex-1 flex">
+            <WalkthroughTarget id="omnisolo-help-input-area" className="flex-1 flex">
             <input
-              id="ohc-help-input-area"
+              id="omnisolo-help-input-area"
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}

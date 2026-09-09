@@ -15,7 +15,7 @@ export function PromoterCard() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900 font-outfit">The Promoter Agent</h3>
-              <p className="text-sm text-gray-600 mt-1">Let OHC's AI write engaging social media posts to drive traffic to your storefront.</p>
+              <p className="text-sm text-gray-600 mt-1">Let OmniSolo's AI write engaging social media posts to drive traffic to your storefront.</p>
             </div>
           </div>
           <Link

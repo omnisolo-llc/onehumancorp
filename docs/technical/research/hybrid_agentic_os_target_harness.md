@@ -18,7 +18,7 @@
 # 🔮 Oracle: Architecture Research for Hybrid Agentic OS Target Harness
 
 ## Problem Statement
-The OHC Hybrid Architecture needs a formal, published research report detailing its competitive edge against market leaders (AI coding assistant, OpenClaw, Hermes) specifically regarding the Agent Harness execution environment. This provides the blueprint for Implementer agents to build our enterprise-grade bwrap sandbox and proxy bridge.
+The OmniSolo Hybrid Architecture needs a formal, published research report detailing its competitive edge against market leaders (AI coding assistant, OpenClaw, Hermes) specifically regarding the Agent Harness execution environment. This provides the blueprint for Implementer agents to build our enterprise-grade bwrap sandbox and proxy bridge.
 
 ## Research Report & Core Findings
 Our synthesis of the market reveals that robust, production-ready local agents rely on specific isolation and instrumentation primitives:
@@ -46,9 +46,9 @@ sequenceDiagram
     Exec-->>Agent: Task Output
 ```
 
-## Comparative Matrix: OHC vs Market
+## Comparative Matrix: OmniSolo vs Market
 
-| Feature Area | AI Coding Assistant | OpenClaw | Hermes | OHC Target Harness | Gap Assessment |
+| Feature Area | AI Coding Assistant | OpenClaw | Hermes | OmniSolo Target Harness | Gap Assessment |
 |--------------|---------------------|----------|--------|--------------------|----------------|
 | **Isolation** | `bwrap` OS sandboxes | Docker | Varied | `bwrap --unshare-net` | Must implement strict OS boundaries |
 | **Network** | Bridge API | Native | Native | `socat` Proxy Bridging | Critical for controlled egress |

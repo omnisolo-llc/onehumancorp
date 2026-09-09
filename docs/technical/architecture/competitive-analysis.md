@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
 
-# 🔬 OHC Hybrid Agentic OS: Competitive Analysis & Disruptive Strategy
+# 🔬 OmniSolo Hybrid Agentic OS: Competitive Analysis & Disruptive Strategy
 **Author**: Principal Product Researcher & Oracle (L7)
 **Date**: 2026-04-14T05:37:17Z
 **Classification**: CONFIDENTIAL - INTERNAL USE ONLY
 
 ## 1. Executive Summary
 
-This report provides a definitive competitive audit of the current Agentic platform landscape, specifically analyzing **Claude Code**, **OpenClaw**, and **Replit Agent** against the **OHC Hybrid Architecture (OHC-HA)**. The analysis identifies a critical "Blue Ocean" opportunity: the seamless, secure transition between air-gapped local execution (Standalone Desktop Mode) and highly scalable cloud coordination (Cloud-Native Mode).
+This report provides a definitive competitive audit of the current Agentic platform landscape, specifically analyzing **Claude Code**, **OpenClaw**, and **Replit Agent** against the **OmniSolo Hybrid Architecture (OmniSolo-HA)**. The analysis identifies a critical "Blue Ocean" opportunity: the seamless, secure transition between air-gapped local execution (Standalone Desktop Mode) and highly scalable cloud coordination (Cloud-Native Mode).
 
 Competitors fundamentally rely on massive cloud infrastructures or pure local CLI wrappers. They lack a zero-friction, bidirectional sync capability powered by a single cohesive identity layer (SPIFFE/SPIRE).
 
@@ -28,13 +28,13 @@ Competitors fundamentally rely on massive cloud infrastructures or pure local CL
 - **Strengths**: Instant zero-setup environment, seamless web deployment.
 - **Weaknesses**: Completely locks users into the Replit ecosystem. No local resource utilization. Extremely high cost at scale for compute-heavy agent swarms.
 
-### 2.4 One Human Corp (OHC) - Hybrid Architecture
+### 2.4 OmniSolo (OmniSolo) - Hybrid Architecture
 - **Model**: Triple-Mode (Cloud-Native, Standalone Desktop, Thin Client).
 - **Strengths**: Unmatched flexibility. Degrades gracefully to SQLite. Utilizes local compute for privacy-sensitive tasks, scales to K8s/Redis for heavy orchestration. Zero-trust SPIFFE/SPIRE identity mesh across all modes.
 
 ## 3. Comparative Feature Matrix
 
-| Feature / Platform | OHC (Hybrid) | Claude Code | OpenClaw | Replit Agent |
+| Feature / Platform | OmniSolo (Hybrid) | Claude Code | OpenClaw | Replit Agent |
 | :--- | :---: | :---: | :---: | :---: |
 | **Air-Gapped Standalone Mode** | 🟢 Native (SQLite) | 🔴 No | 🟢 Yes | 🔴 No |
 | **K8s Cloud Scaling** | 🟢 Native (Postgres/Redis) | 🟡 API-based | 🔴 Manual | 🟢 Yes |
@@ -44,7 +44,7 @@ Competitors fundamentally rely on massive cloud infrastructures or pure local CL
 
 ## 4. Architectural Disruption: Hybrid Local-Private RAG
 
-The core disruption vector identified is **Hybrid Local-Private RAG with MCP & SPIRE Cloud Sync**. This feature leverages the OHC-HA to allow:
+The core disruption vector identified is **Hybrid Local-Private RAG with MCP & SPIRE Cloud Sync**. This feature leverages the OmniSolo-HA to allow:
 
 1. **Local Ingestion & Indexing**: Sensitive documents are vectorized locally on the user's host machine using SQLite and local embedding models.
 2. **Cloud Vector Sync (Opt-in)**: Authorized vectors are synchronized via mTLS to the Cloud-Native Postgres/pgvector instance for swarm-wide intelligence.
@@ -58,7 +58,7 @@ graph TD
         LocalSQLite -.->|Offline Mode| LocalAgent
     end
 
-    subgraph OHC Zero-Trust Mesh [SPIFFE/SPIRE mTLS Network]
+    subgraph OmniSolo Zero-Trust Mesh [SPIFFE/SPIRE mTLS Network]
         SyncWorker[Hybrid Sync Worker]
     end
 
@@ -76,7 +76,7 @@ graph TD
 
 ## 5. Strategic Roadmap
 
-To capitalize on this Blue Ocean, OHC must immediately prioritize the following mission:
+To capitalize on this Blue Ocean, OmniSolo must immediately prioritize the following mission:
 *   **Mission**: Implement the "Hybrid Local-Private RAG Worker".
 *   **Action**: A GitHub issue should be opened from the repository task template for immediate implementation by the Engineering Swarm.
 

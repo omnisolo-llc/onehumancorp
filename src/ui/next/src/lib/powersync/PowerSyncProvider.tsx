@@ -10,11 +10,7 @@ class BackendConnector {
       throw new Error(`Failed to get token: ${res.status}`);
     }
     const body = await res.json();
-    return {
-      endpoint: body.powersync_url,
-      token: body.token,
-      expiresAt: body.expires_at || new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    };
+    return normalizePowerSyncCredentials(body);
   }
   async uploadData(database: any) {
     // Offline mutations handle local changes queue directly
@@ -31,6 +27,35 @@ function browserSupportsPowerSync() {
 }
 
 import { getPowerSyncDB } from './db';
+
+type PowerSyncCredentials = {
+  endpoint: string;
+  token: string;
+  expiresAt?: Date;
+};
+
+export function normalizePowerSyncCredentials(body: unknown): PowerSyncCredentials | null {
+  if (body === null || typeof body !== 'object') return null;
+
+  const response = body as Record<string, unknown>;
+  const endpoint = typeof response.powersync_url === 'string'
+    ? response.powersync_url.trim()
+    : '';
+  const token = typeof response.token === 'string' ? response.token.trim() : '';
+  if (!endpoint || !token) return null;
+
+  const expiresAtValue = response.expires_at;
+  let expiresAt: Date | undefined;
+  if (typeof expiresAtValue === 'number' && Number.isFinite(expiresAtValue)) {
+    const candidate = new Date(expiresAtValue * 1000);
+    if (!Number.isNaN(candidate.getTime())) expiresAt = candidate;
+  } else if (typeof expiresAtValue === 'string' && expiresAtValue.trim()) {
+    const candidate = new Date(expiresAtValue);
+    if (!Number.isNaN(candidate.getTime())) expiresAt = candidate;
+  }
+
+  return expiresAt ? { endpoint, token, expiresAt } : { endpoint, token };
+}
 
 export const PowerSyncProvider = ({
   children,

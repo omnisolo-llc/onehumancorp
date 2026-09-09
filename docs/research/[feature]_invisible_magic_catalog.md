@@ -4,7 +4,7 @@
 **Invisible Magic Catalog: Autonomous Zero-Click Catalog Generation via AI Agents**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC)'s core personas—especially **Maya (baker, 28)** and **Priya (boutique owner, 35)**—adding new inventory to an online store is historically one of the most agonizing, high-friction points of running a business. They must take photos, crop them, write compelling product descriptions, decide on pricing, configure variants (size/color), and manage SEO metadata. This creates a massive "Content Creation Block" (identified in our top 10 SMB pain points).
+For OmniSolo (OmniSolo)'s core personas—especially **Maya (baker, 28)** and **Priya (boutique owner, 35)**—adding new inventory to an online store is historically one of the most agonizing, high-friction points of running a business. They must take photos, crop them, write compelling product descriptions, decide on pricing, configure variants (size/color), and manage SEO metadata. This creates a massive "Content Creation Block" (identified in our top 10 SMB pain points).
 Currently, competitors like Shopify offer "AI writing assistants" that require prompting and editing. We need a solution that feels like magic: an invisible "Teammate" that takes a raw photo sent from a phone and completely creates the live product listing autonomously, reducing the setup time from hours to seconds.
 
 ## 3. Research Report
@@ -32,7 +32,7 @@ sequenceDiagram
     participant VisionAgent as The Visualizer (Vision AI)
     participant WriterAgent as The Promoter (Marketing AI)
     participant ManagerAgent as The Vigilant Manager (Ops AI)
-    participant ActionFeed as OHC Dashboard Feed
+    participant ActionFeed as OmniSolo Dashboard Feed
     participant Storefront as Edge-Cached Storefront
 
     User->>Edge: Uploads raw image of custom cake
@@ -94,7 +94,7 @@ A user on a mobile device (375px viewport) clicks "Add Product", uploads a singl
 *(Note: You are free to design the exact database schemas, API endpoints, and function signatures required to fulfill this CUJ. Ensure strict multi-tenant isolation and secure identity validation are maintained throughout the event flow.)*
 
 ## 6. Priority
-`P0` (Critical - This is a core differentiator for OHC's "Zero -> Live" mandate)
+`P0` (Critical - This is a core differentiator for OmniSolo's "Zero -> Live" mandate)
 
 ## 7. Estimated Scope
 Large

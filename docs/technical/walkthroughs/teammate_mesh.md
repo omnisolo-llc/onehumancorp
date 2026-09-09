@@ -2,7 +2,7 @@
 
 # Teammate Mesh Walkthrough
 
-Welcome to the Teammate Mesh visual guide! This document explains how agents inside the One Human Corp (OHC) Hybrid Architecture communicate seamlessly via the Pub/Sub workflow.
+Welcome to the Teammate Mesh visual guide! This document explains how agents inside the OmniSolo (OmniSolo) Hybrid Architecture communicate seamlessly via the Pub/Sub workflow.
 
 ## 1. Overview
 

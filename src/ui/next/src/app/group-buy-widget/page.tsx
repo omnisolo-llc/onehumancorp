@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import Link from 'next/link';
 
 export default function GroupBuyWidgetPage() {
@@ -27,7 +27,7 @@ export default function GroupBuyWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Group Buy Widget Builder | OHC";
+    document.title = "Group Buy Widget Builder | OmniSolo OneHumanCorp";
   }, []);
 
   const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,7 +40,7 @@ export default function GroupBuyWidgetPage() {
   };
 
   const embedUrl = `/api/v1/growth/group-buy-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&originalPrice=${encodeURIComponent(originalPrice)}&groupPrice=${encodeURIComponent(groupPrice)}&requiredBuyers=${encodeURIComponent(requiredBuyers)}&timeLimit=${encodeURIComponent(timeLimit)}&theme=${theme}&branding=${!hideBranding}`;
-  const absoluteEmbedUrl = `https://ohc.app/api/v1/growth/group-buy-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&originalPrice=${encodeURIComponent(originalPrice)}&groupPrice=${encodeURIComponent(groupPrice)}&requiredBuyers=${encodeURIComponent(requiredBuyers)}&timeLimit=${encodeURIComponent(timeLimit)}&theme=${theme}&branding=${!hideBranding}`;
+  const absoluteEmbedUrl = `https://cloud.omnisolo.co/api/v1/growth/group-buy-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&originalPrice=${encodeURIComponent(originalPrice)}&groupPrice=${encodeURIComponent(groupPrice)}&requiredBuyers=${encodeURIComponent(requiredBuyers)}&timeLimit=${encodeURIComponent(timeLimit)}&theme=${theme}&branding=${!hideBranding}`;
 
   const embedCode = `<iframe src="${absoluteEmbedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
@@ -160,7 +160,7 @@ export default function GroupBuyWidgetPage() {
             <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
-                  <span className="block text-sm font-medium text-gray-900 dark:text-white">Remove OHC Branding</span>
+                  <span className="block text-sm font-medium text-gray-900 dark:text-white">Remove OmniSolo Branding</span>
                   <span className="block text-xs text-gray-500">Requires Pro plan</span>
                 </div>
                 <div className="relative">
@@ -251,7 +251,7 @@ export default function GroupBuyWidgetPage() {
 
               {!hideBranding && (
                 <div className={`py-3 text-center border-t ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-                  <PoweredByOHC tenantId={tenant} className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} />
+                  <PoweredByOmniSolo tenantId={tenant} className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} />
                 </div>
               )}
             </div>
@@ -268,7 +268,7 @@ export default function GroupBuyWidgetPage() {
             </div>
             <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2 font-outfit">Upgrade to Pro</h3>
             <p className="text-gray-600 dark:text-gray-400 text-center mb-8">
-              Removing OHC branding from widgets is a Pro feature. Upgrade to unlock this and other advanced growth tools.
+              Removing OmniSolo branding from widgets is a Pro feature. Upgrade to unlock this and other advanced growth tools.
             </p>
             <div className="space-y-3">
               <Link

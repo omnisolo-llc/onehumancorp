@@ -7,8 +7,8 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
 
     // Setup local storage for offline staff, rules, and inventory
     await page.evaluate(() => {
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Manager', pin_hash: '1234' }]));
-        localStorage.setItem('ohc_offline_rules', JSON.stringify([
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Manager', pin_hash: '1234' }]));
+        localStorage.setItem('omnisolo_offline_rules', JSON.stringify([
             {
                 id: 'rule_1',
                 trigger_product_id: 'prod_shawarma',
@@ -17,7 +17,7 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
                 prompt_message: 'Make it a combo? +$3.00 for Drink and Fries.',
             }
         ]));
-        localStorage.setItem('ohc_offline_inventory', JSON.stringify([
+        localStorage.setItem('omnisolo_offline_inventory', JSON.stringify([
             { id: 'prod_shawarma', name: 'Chicken Shawarma', inventory_count: 50, price_cents: 800 },
             { id: 'prod_drink_fries', name: 'Drink and Fries', inventory_count: 5, price_cents: 500 }
         ]));

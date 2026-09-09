@@ -33,7 +33,18 @@ beforeEach(() => {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
     }
     if (url.includes('/api/v1/agents/approvals')) {
-      return Promise.resolve({ ok: true, json: async () => ({ pending_approvals: [], next_cursor: null }) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          pending_approvals: [{
+            id: 'evt-1',
+            department: 'sales',
+            description: 'Draft quote for priority lead',
+            status: 'Draft',
+          }],
+          next_cursor: null,
+        }),
+      });
     }
     if (url.includes('/api/v1/memory')) {
       return Promise.resolve({ ok: true, json: async () => ([]) });
@@ -188,22 +199,48 @@ test('covers every Workbuddy efficient-tip feature surface', async () => {
   expect(screen.getByText('Unshare queue')).toBeDefined();
 });
 
-test('preserves approvals and activity feed operations', async () => {
+test('preserves approvals and activity feed operations without an unauthenticated socket', async () => {
+  mockFetch.mockImplementation((url: string) => {
+    if (url.includes('/api/v1/agents/approvals/activity')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          pending_approvals: [{
+            id: 'evt-1',
+            department: 'sales',
+            description: 'Draft quote for priority lead',
+            status: 'Draft',
+          }],
+        }),
+      });
+    }
+    if (url.includes('/api/v1/agents/approvals')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          pending_approvals: [{
+            id: 'evt-1',
+            department: 'sales',
+            description: 'Draft quote for priority lead',
+            status: 'Draft',
+          }],
+          next_cursor: null,
+        }),
+      });
+    }
+    if (url.includes('/api/v1/agents/workflows')) {
+      return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({}) });
+  });
+
   await act(async () => { render(<TooltipProvider><AgentsPage /></TooltipProvider>); });
 
   await waitFor(() => {
-    expect(eventSources[0]?.url).toBe('ws://127.0.0.1:18789/api/v1/feed/ws');
+    expect(eventSources).toHaveLength(0);
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Activity Feed' }));
-  act(() => {
-    eventSources[0].emit({
-      id: 'evt-1',
-      department: 'sales',
-      description: 'Draft quote for priority lead',
-      status: 'Draft',
-    });
-  });
   expect(await screen.findByText('Draft quote for priority lead')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: /Needs Approval/i }));

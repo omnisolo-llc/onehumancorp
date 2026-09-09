@@ -40,7 +40,7 @@ hide:
 
 # KAIROS Central Orchestration CLI Guide
 
-The KAIROS Orchestrator CLI (`ohc-cli`) is the central tool for orchestrating your swarm of agents in the One Human Corp (OHC) ecosystem. It provides a powerful command-line interface for interacting with the OHC Hybrid Architecture, allowing direct command-line interactions for initializing the hybrid architecture, delegating tasks, and observing the real-time teammate mesh.
+The KAIROS Orchestrator CLI (`ohc-cli`) is the central tool for orchestrating your swarm of agents in the OmniSolo (OmniSolo) ecosystem. It provides a powerful command-line interface for interacting with the OmniSolo Hybrid Architecture, allowing direct command-line interactions for initializing the hybrid architecture, delegating tasks, and observing the real-time teammate mesh.
 
 ## Playbook: Getting Started with KAIROS CLI
 

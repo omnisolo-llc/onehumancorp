@@ -2,11 +2,11 @@
 
 # Sub-Agent Orchestration Queue: Visual Walkthrough
 
-This guide details the architectural flow of the Sub-Agent Orchestration Queue. It provides a robust background execution runtime that enables the OHC Swarm to scale and execute delegated tasks gracefully.
+This guide details the architectural flow of the Sub-Agent Orchestration Queue. It provides a robust background execution runtime that enables the OmniSolo Swarm to scale and execute delegated tasks gracefully.
 
 ## 1. Overview of the Orchestration Queue
 
-As the OHC Swarm handles more complex workloads, we require a distributed execution framework. It must handle sub-agent task routing, retries, exponential backoffs, and execution timeouts. The Sub-Agent Orchestration Queue provides this by seamlessly transitioning between Redis-backed (Cloud mode) and SQLite-backed (Standalone mode) queues.
+As the OmniSolo Swarm handles more complex workloads, we require a distributed execution framework. It must handle sub-agent task routing, retries, exponential backoffs, and execution timeouts. The Sub-Agent Orchestration Queue provides this by seamlessly transitioning between Redis-backed (Cloud mode) and SQLite-backed (Standalone mode) queues.
 
 ### Architecture Comparison
 

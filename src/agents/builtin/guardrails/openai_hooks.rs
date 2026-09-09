@@ -1,6 +1,6 @@
 #![allow(clippy::empty_line_after_doc_comments)]
 use crate::guardrails::{InputGuardrail, OutputGuardrail, ToolGuardrail};
-use ohc_builtin_agent_core::types::ToolCall;
+use omnisolo_builtin_agent_core::types::ToolCall;
 
 /// OpenAI Mechanic: 3 distinct hooks for guardrails
 /// 1. Input Validator

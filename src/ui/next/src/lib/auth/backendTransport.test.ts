@@ -19,14 +19,14 @@ async function dependencies(
   overrides: Partial<BackendTransportDependencies> = {},
 ): Promise<BackendTransportDependencies> {
   const config = parseAuthRuntimeConfig({
-    OHC_WEB_CANONICAL_ORIGIN: "https://app.example.com",
+    OMNISOLO_WEB_CANONICAL_ORIGIN: "https://app.example.com",
     BACKEND_URL: "https://api.example.com",
   });
   return {
     config,
     ring: await parseSessionKeyRing({
-      OHC_WEB_SESSION_KEY_ID: "test-v1",
-      OHC_WEB_SESSION_SECRET: SECRET,
+      OMNISOLO_WEB_SESSION_KEY_ID: "test-v1",
+      OMNISOLO_WEB_SESSION_SECRET: SECRET,
     }),
     now: () => NOW,
     fetchImpl,
@@ -86,7 +86,7 @@ describe("server-only authenticated backend transport", () => {
     const deps = await dependencies(fetchImpl);
     const missing = new Request("https://app.example.com/api/v1/orders");
     const malformed = new Request("https://app.example.com/api/v1/orders", {
-      headers: { cookie: "__Host-ohc_session=malformed" },
+      headers: { cookie: "__Host-omnisolo_session=malformed" },
     });
     const expired = new Request("https://app.example.com/api/v1/orders", {
       headers: {

@@ -2,7 +2,7 @@
 #![allow(clippy::all)]
 use crate::agent::AgentRunConfig;
 use crate::human_in_loop::HumanInLoopManager;
-use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+use omnisolo_builtin_agent_core::types::{ToolCall, ToolError};
 
 /// ToolGater implements the Anthropic Mechanic: 3-Stage Tool Gating.
 /// Trust establishment at project load -> Permission check before each tool call -> Explicit user confirmation for high-risk operations.
@@ -70,7 +70,7 @@ impl ToolGater {
 mod tests {
     use super::*;
     // use crate::types::PermissionArchitecture;
-    use ohc_builtin_agent_core::types::HumanInLoopSpectrum;
+    use omnisolo_builtin_agent_core::types::HumanInLoopSpectrum;
 
     fn create_tool_call(id: &str, name: &str) -> ToolCall {
         ToolCall {

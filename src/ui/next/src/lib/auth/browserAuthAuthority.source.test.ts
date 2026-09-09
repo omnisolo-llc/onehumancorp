@@ -13,7 +13,7 @@ const SERVER_ONLY_FILES = new Set([
   join(process.cwd(), "src/lib/auth/serverSession.ts"),
 ]);
 const BROWSER_IDENTITY =
-  /localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|ohc_token|organization_id|roles|spiffe_id|tenant|tenant_id|token|user_id)["']\s*\)/;
+  /localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|omnisolo_token|organization_id|roles|spiffe_id|tenant|tenant_id|token|user_id)["']\s*\)/;
 const BROWSER_IDENTITY_HEADER =
   /["']?(?:authorization|x-spiffe-id|x-tenant-id|x-user-id|x-user-roles)["']?\s*:/i;
 

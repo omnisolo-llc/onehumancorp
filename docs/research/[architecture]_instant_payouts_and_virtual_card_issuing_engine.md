@@ -4,7 +4,7 @@
 Instant Localized Payouts and Virtual Card Issuing Engine
 
 ## Problem Statement
-Small business owners—like Maya the baker or Fatima the food cart operator—often rely on deposits or daily sales to buy the very supplies they need to fulfill orders. Traditional payment processors (and leading platform competitors) hold funds for 2-5 business days before paying out to an external bank account. This artificial delay creates a cash flow choke point that stifles business growth and limits daily operations for micro-merchants. OneHumanCorp needs to bypass this latency entirely by issuing a platform-native Virtual Wallet and Business Debit Card, providing true instant liquidity the second a transaction clears.
+Small business owners—like Maya the baker or Fatima the food cart operator—often rely on deposits or daily sales to buy the very supplies they need to fulfill orders. Traditional payment processors (and leading platform competitors) hold funds for 2-5 business days before paying out to an external bank account. This artificial delay creates a cash flow choke point that stifles business growth and limits daily operations for micro-merchants. OmniSolo needs to bypass this latency entirely by issuing a platform-native Virtual Wallet and Business Debit Card, providing true instant liquidity the second a transaction clears.
 
 ## Research Report
 ### Competitive Analysis
@@ -14,16 +14,16 @@ Small business owners—like Maya the baker or Fatima the food cart operator—o
 - **GoDaddy:** Basic POS integration with external banks. Instant payouts usually carry a 1-2% extra penalty fee.
 
 ### Findings
-If OneHumanCorp (OHC) acts as the ledger of record (in partnership with an embedded finance provider like Stripe Issuing or Unit), we can instantly clear funds to an internal OHC Wallet balance. Users get an immediate virtual card (Apple Pay / Google Pay ready) to spend those funds on supplies with zero delay and zero transfer fees, establishing immense platform stickiness.
+If OmniSolo (OmniSolo) acts as the ledger of record (in partnership with an embedded finance provider like Stripe Issuing or Unit), we can instantly clear funds to an internal OmniSolo Wallet balance. Users get an immediate virtual card (Apple Pay / Google Pay ready) to spend those funds on supplies with zero delay and zero transfer fees, establishing immense platform stickiness.
 
 ## Design Doc
 
 ### Architecture Diagram
 ```mermaid
 erDiagram
-    TENANT ||--o{ OHC_WALLET : owns
-    OHC_WALLET ||--o{ VIRTUAL_CARD : provisions
-    OHC_WALLET ||--o{ LEDGER_ENTRY : contains
+    TENANT ||--o{ OMNISOLO_WALLET : owns
+    OMNISOLO_WALLET ||--o{ VIRTUAL_CARD : provisions
+    OMNISOLO_WALLET ||--o{ LEDGER_ENTRY : contains
     TRANSACTION }|--|| LEDGER_ENTRY : generates
     VIRTUAL_CARD }|--|| SPEND_TRANSACTION : authorizes
 
@@ -31,7 +31,7 @@ erDiagram
         string id
         string status
     }
-    OHC_WALLET {
+    OMNISOLO_WALLET {
         string id
         string tenant_id
         decimal available_balance
@@ -69,7 +69,7 @@ sequenceDiagram
 2. **Virtual Card Reveal Flow:**
    - User taps `[View Card]`.
    - Biometric prompt (FaceID/Fingerprint) intercepts.
-   - OHC branded virtual card flips over in 3D using macOS-style smooth motion.
+   - OmniSolo branded virtual card flips over in 3D using macOS-style smooth motion.
    - Button below card: `[Add to Apple Wallet / GPay]`.
 3. **Spend Notification (Grandmother Test passed):**
    - Clean, large typography push notification: "Cha-ching! Maya, $50 deposit from Sarah just landed. Tap here to use it now."
@@ -80,12 +80,12 @@ sequenceDiagram
 
 ### Key Design Decisions
 - **Zero-Trust SPIFFE/SPIRE Isolation:** Wallet and ledger services must have strictly enforced mTLS and multi-tenant separation. Tenant A cannot ever query Tenant B's ledger.
-- **Embedded Finance Abstraction:** Do not build raw ACH pipes. Use a BaaS (Banking as a Service) integration but entirely obscure it from the user. To them, it's just "OHC Cash".
+- **Embedded Finance Abstraction:** Do not build raw ACH pipes. Use a BaaS (Banking as a Service) integration but entirely obscure it from the user. To them, it's just "OmniSolo Cash".
 - **Mobile First Spending:** The virtual card is provisioned in the first 10 minutes of onboarding and instantly pushed to native OS wallets. Physical cards are opt-in only.
 
 ## Implementation Prompt
-**Objective:** Build the OHC Virtual Wallet and Ledger synchronization engine.
-**User Journey (CUJ):** Maya receives a $100 deposit for a custom cake. Instantly, her OHC mobile app notifies her of the funds. She goes to the supermarket, taps her phone (using the OHC Virtual Card via Apple Pay), and spends $40 on flour and sugar.
+**Objective:** Build the OmniSolo Virtual Wallet and Ledger synchronization engine.
+**User Journey (CUJ):** Maya receives a $100 deposit for a custom cake. Instantly, her OmniSolo mobile app notifies her of the funds. She goes to the supermarket, taps her phone (using the OmniSolo Virtual Card via Apple Pay), and spends $40 on flour and sugar.
 **Acceptance Criteria:**
 - Implement a strictly isolated ledger data model ensuring zero cross-tenant contamination.
 - Build a generic issuing interface that provisions a tokenized virtual card upon tenant activation.

@@ -4,7 +4,7 @@
 
 **Goal:** Ensure built-in agent tools and memory can access only the organization assigned to the agent process, never a tenant selected by model output or mutable process state during a task.
 
-**Architecture:** Add an immutable, validated `TenantContext` to the tools crate and inject it into every tenant-aware tool and `AgentServiceImpl`. Standalone mode may explicitly use the local `system` tenant, while cloud/cluster startup must receive a non-system `OHC_ORGANIZATION_ID`. Booking and quote transactions set their PostgreSQL tenant context from this capability, and memory lookup/write use the same captured value.
+**Architecture:** Add an immutable, validated `TenantContext` to the tools crate and inject it into every tenant-aware tool and `AgentServiceImpl`. Standalone mode may explicitly use the local `system` tenant, while cloud/cluster startup must receive a non-system `OMNISOLO_ORGANIZATION_ID`. Booking and quote transactions set their PostgreSQL tenant context from this capability, and memory lookup/write use the same captured value.
 
 **Tech Stack:** Rust 2024, Tokio, Tonic, SQLx/PostgreSQL, Serde, Cargo, Bazel.
 
@@ -25,7 +25,7 @@ Add tests proving `TenantContext::new` trims and rejects empty IDs, and a pure s
 
 - [x] **Step 2: Run tests to verify the capability API is missing**
 
-Run: `cargo test -p ohc_builtin_agent_tools tenant --lib`
+Run: `cargo test -p omnisolo_builtin_agent_tools tenant --lib`
 
 Expected: FAIL because `tenant` and `TenantContext` do not exist.
 
@@ -35,7 +35,7 @@ Implement a cloneable `TenantContext` with a private `Arc<str>`, `new`, `system`
 
 - [x] **Step 4: Run focused tests and verify they pass**
 
-Run: `cargo test -p ohc_builtin_agent_tools tenant --lib && cargo test -p ohc_builtin_agent resolve_process_tenant --lib`
+Run: `cargo test -p omnisolo_builtin_agent_tools tenant --lib && cargo test -p omnisolo_builtin_agent resolve_process_tenant --lib`
 
 Expected: all focused tests PASS.
 
@@ -59,7 +59,7 @@ Add unit tests that build all six booking tools and the quote tool with `TenantC
 
 - [x] **Step 2: Run tests to verify model-visible tenant fields still exist**
 
-Run: `cargo test -p ohc_builtin_agent_tools tenant_aware_tool_schemas --lib`
+Run: `cargo test -p omnisolo_builtin_agent_tools tenant_aware_tool_schemas --lib`
 
 Expected: FAIL because current booking and quote schemas expose and require `tenant_id`.
 
@@ -69,7 +69,7 @@ Remove `tenant_id` from every booking and quote argument struct. Add `TenantCont
 
 - [x] **Step 4: Run schema and tools-crate tests**
 
-Run: `cargo test -p ohc_builtin_agent_tools tenant_aware_tool_schemas --lib && cargo test -p ohc_builtin_agent_tools --lib`
+Run: `cargo test -p omnisolo_builtin_agent_tools tenant_aware_tool_schemas --lib && cargo test -p omnisolo_builtin_agent_tools --lib`
 
 Expected: all tests PASS.
 
@@ -87,21 +87,21 @@ git commit -m "security: remove tenant selection from agent tools"
 
 - [x] **Step 1: Write failing service tenant tests**
 
-Add tests constructing `AgentServiceImpl::new_for_tenant(..., "org-a")` and asserting both run configuration memory queries and completion records source their tenant from the service capability rather than `OHC_ORGANIZATION_ID`. Extract the record construction into a pure helper so the write-side assertion does not require PostgreSQL.
+Add tests constructing `AgentServiceImpl::new_for_tenant(..., "org-a")` and asserting both run configuration memory queries and completion records source their tenant from the service capability rather than `OMNISOLO_ORGANIZATION_ID`. Extract the record construction into a pure helper so the write-side assertion does not require PostgreSQL.
 
 - [x] **Step 2: Run tests to verify service memory still reads the environment**
 
-Run: `cargo test -p ohc_builtin_agent service_uses_captured_tenant --lib`
+Run: `cargo test -p omnisolo_builtin_agent service_uses_captured_tenant --lib`
 
-Expected: FAIL because the service currently reads `OHC_ORGANIZATION_ID` during each task.
+Expected: FAIL because the service currently reads `OMNISOLO_ORGANIZATION_ID` during each task.
 
 - [x] **Step 3: Replace task-time environment reads**
 
-Use `self.tenant.as_str()` for semantic search. Clone the immutable context before spawning the task and build `EmbeddingRecord.tenant_id` from it. Do not read `OHC_ORGANIZATION_ID` anywhere in `service.rs`.
+Use `self.tenant.as_str()` for semantic search. Clone the immutable context before spawning the task and build `EmbeddingRecord.tenant_id` from it. Do not read `OMNISOLO_ORGANIZATION_ID` anywhere in `service.rs`.
 
 - [x] **Step 4: Run focused and regression verification**
 
-Run: `cargo test -p ohc_builtin_agent service_uses_captured_tenant --lib && cargo test -p ohc_builtin_agent --lib && bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test`
+Run: `cargo test -p omnisolo_builtin_agent service_uses_captured_tenant --lib && cargo test -p omnisolo_builtin_agent --lib && bazel test //src/agents/builtin:omnisolo_builtin_agent_lib_unit_test`
 
 Expected: all tests PASS.
 
@@ -119,13 +119,13 @@ git commit -m "security: scope agent memory to its tenant capability"
 
 - [x] **Step 1: Run formatting and static checks**
 
-Run targeted `rustfmt` on the changed Rust files, then run `cargo check -p ohc_builtin_agent_tools -p ohc_builtin_agent`.
+Run targeted `rustfmt` on the changed Rust files, then run `cargo check -p omnisolo_builtin_agent_tools -p omnisolo_builtin_agent`.
 
 Expected: formatting succeeds and both crates check successfully.
 
 - [x] **Step 2: Run final tenant-boundary searches**
 
-Run: `rg -n 'OHC_ORGANIZATION_ID|pub tenant_id|"tenant_id"' src/agents/builtin/service.rs src/agents/builtin/tools/booking.rs src/agents/builtin/tools/quote.rs`
+Run: `rg -n 'OMNISOLO_ORGANIZATION_ID|pub tenant_id|"tenant_id"' src/agents/builtin/service.rs src/agents/builtin/tools/booking.rs src/agents/builtin/tools/quote.rs`
 
 Expected: no task-time environment reads and no model argument/schema tenant fields; tenant IDs may remain only in trusted SQL/result fields.
 

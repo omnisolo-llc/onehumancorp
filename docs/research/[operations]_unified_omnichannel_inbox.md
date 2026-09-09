@@ -12,7 +12,7 @@ Small business owners (like Maya the baker and Carlos the handyman) suffer from 
     *   **Shopify:** Requires third-party apps (e.g., Gorgias, Inbox) which have complex setups and lack proactive, deep AI business context (they act as simple chatbots or macro repliers).
     *   **Wix:** Has a unified inbox, but it is passive. It requires the user to manually read and type responses.
     *   **GoDaddy:** Basic messaging integration, but no autonomous agents.
-*   **OHC Advantage:** Shift from an AI *Copilot* (requires prompt) to an AI *Teammate*. The AI watches the event mesh of incoming messages, uses the business's memory (inventory, pricing, policies), drafts the perfect reply, and queues it in an "Action Feed" for a 1-tap approval.
+*   **OmniSolo Advantage:** Shift from an AI *Copilot* (requires prompt) to an AI *Teammate*. The AI watches the event mesh of incoming messages, uses the business's memory (inventory, pricing, policies), drafts the perfect reply, and queues it in an "Action Feed" for a 1-tap approval.
 
 ## Design Doc
 
@@ -55,7 +55,7 @@ graph TD
         Email[Email Inbound]
     End
 
-    subgraph OHC Event Mesh
+    subgraph OmniSolo Event Mesh
         Ingress[Webhook Ingress API]
         Queue[NATS Hybrid Event Mesh]
     End
@@ -72,7 +72,7 @@ graph TD
     End
 
     subgraph Client
-        Mobile[OHC Mobile App - 375px]
+        Mobile[OmniSolo Mobile App - 375px]
     End
 
     IG --> Ingress
@@ -117,7 +117,7 @@ graph TD
     *   **Payload Size:** Webhook payloads to the external channels should be strictly optimized and < 25KB to maintain performance on low-end mobile networks.
 
 ## Implementation Prompt
-**Context:** We are building the Omnichannel Unified Inbox for OneHumanCorp.
+**Context:** We are building the Omnichannel Unified Inbox for OmniSolo.
 **Task:** Implement the backend event ingestion, the Unified Inbox data model, and the AI drafting coordination pipeline.
 **Acceptance Criteria:**
 1. System can ingest messages from at least two mocked external providers (e.g., IG, SMS).

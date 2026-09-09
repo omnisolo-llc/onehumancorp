@@ -1,8 +1,8 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# Swarm Intelligence Protocol (OHC-SIP)
+# Swarm Intelligence Protocol (OmniSolo-SIP)
 
-The Swarm Intelligence Protocol (OHC-SIP) is the core architectural pillar enabling shared memory and continuous orchestration across the One Human Corp Swarm.
+The Swarm Intelligence Protocol (OmniSolo-SIP) is the core architectural pillar enabling shared memory and continuous orchestration across the OmniSolo Swarm.
 
 ```mermaid
 sequenceDiagram
@@ -12,7 +12,7 @@ sequenceDiagram
     participant VectorDB as PgVector
 
     Worker->>Mesh: 1. Broadcast Event
-    Worker->>Worker: 2. Write to OHC_MEMORY_DIR
+    Worker->>Worker: 2. Write to OMNISOLO_MEMORY_DIR
     AutoDream->>Worker: 3. Read Memory
     AutoDream->>VectorDB: 4. Upsert Context
 ```

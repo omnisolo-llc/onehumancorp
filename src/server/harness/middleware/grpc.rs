@@ -5,8 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
 use serde_json::Value;
-use server_ohc::harness_middleware::harness_worker_service_server::HarnessWorkerService;
-use server_ohc::harness_middleware::{
+use server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerService;
+use server_omnisolo::harness_middleware::{
     AttemptCommandEnvelope as WireAttemptCommand, EventDeliveryEnvelope,
     SessionOperationEnvelope as WireSessionOperation, SessionOperationResponse,
     WorkerControlEnvelope as WireWorkerControl, WorkerControlResponse, WorkerExchangeEnvelope,

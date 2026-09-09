@@ -78,7 +78,7 @@ function SubscriptionsPortalContent() {
     return (
       <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
         <Head>
-          <title>Manage Subscription | OHC</title>
+          <title>Manage Subscription | OmniSolo OneHumanCorp</title>
         </Head>
 
         <div className="max-w-2xl w-full">
@@ -132,7 +132,7 @@ function SubscriptionsPortalContent() {
     return (
       <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
         <Head>
-          <title>Manage Subscription | OHC</title>
+          <title>Manage Subscription | OmniSolo OneHumanCorp</title>
         </Head>
 
         <div className="max-w-2xl w-full">
@@ -152,7 +152,7 @@ function SubscriptionsPortalContent() {
   return (
     <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
       <Head>
-        <title>Manage Subscriptions | OHC</title>
+        <title>Manage Subscriptions | OmniSolo OneHumanCorp</title>
       </Head>
 
       <div className="max-w-2xl w-full">

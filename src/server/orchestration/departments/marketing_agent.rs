@@ -25,7 +25,7 @@ pub enum MarketingCopyBackend {
 
 impl MarketingCopyBackend {
     pub fn from_env() -> Self {
-        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 if api_key.trim().is_empty() {
@@ -77,11 +77,11 @@ struct RuntimeMarketingImageOptimizer {
 impl RuntimeMarketingImageOptimizer {
     fn from_env() -> Self {
         Self {
-            api_url: std::env::var("OHC_VISION_API_URL")
+            api_url: std::env::var("OMNISOLO_VISION_API_URL")
                 .ok()
                 .map(|value| value.trim().trim_end_matches('/').to_string())
                 .filter(|value| !value.is_empty()),
-            api_key: std::env::var("OHC_VISION_API_KEY")
+            api_key: std::env::var("OMNISOLO_VISION_API_KEY")
                 .ok()
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty()),
@@ -835,11 +835,11 @@ mod tests {
 
     #[test]
     fn marketing_copy_backend_falls_back_to_local_without_minimax_key() {
-        let old_provider = std::env::var("OHC_LLM_PROVIDER").ok();
+        let old_provider = std::env::var("OMNISOLO_LLM_PROVIDER").ok();
         let old_key = std::env::var("MINIMAX_API_KEY").ok();
 
         unsafe {
-            std::env::set_var("OHC_LLM_PROVIDER", "minimax");
+            std::env::set_var("OMNISOLO_LLM_PROVIDER", "minimax");
             std::env::remove_var("MINIMAX_API_KEY");
         }
 
@@ -850,8 +850,8 @@ mod tests {
 
         unsafe {
             match old_provider {
-                Some(value) => std::env::set_var("OHC_LLM_PROVIDER", value),
-                None => std::env::remove_var("OHC_LLM_PROVIDER"),
+                Some(value) => std::env::set_var("OMNISOLO_LLM_PROVIDER", value),
+                None => std::env::remove_var("OMNISOLO_LLM_PROVIDER"),
             }
             match old_key {
                 Some(value) => std::env::set_var("MINIMAX_API_KEY", value),
@@ -862,11 +862,11 @@ mod tests {
 
     #[test]
     fn marketing_copy_backend_captures_minimax_key_at_construction() {
-        let old_provider = std::env::var("OHC_LLM_PROVIDER").ok();
+        let old_provider = std::env::var("OMNISOLO_LLM_PROVIDER").ok();
         let old_key = std::env::var("MINIMAX_API_KEY").ok();
 
         unsafe {
-            std::env::set_var("OHC_LLM_PROVIDER", "minimax");
+            std::env::set_var("OMNISOLO_LLM_PROVIDER", "minimax");
             std::env::set_var("MINIMAX_API_KEY", "configured-key");
         }
 
@@ -879,8 +879,8 @@ mod tests {
 
         unsafe {
             match old_provider {
-                Some(value) => std::env::set_var("OHC_LLM_PROVIDER", value),
-                None => std::env::remove_var("OHC_LLM_PROVIDER"),
+                Some(value) => std::env::set_var("OMNISOLO_LLM_PROVIDER", value),
+                None => std::env::remove_var("OMNISOLO_LLM_PROVIDER"),
             }
             match old_key {
                 Some(value) => std::env::set_var("MINIMAX_API_KEY", value),

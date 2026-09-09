@@ -6,13 +6,13 @@ Autonomous AI Cashflow Forecasting and Proactive Health Engine
 ## 2. Problem Statement
 Cashflow management is the #1 reason small businesses fail. For non-technical business owners like Priya (Boutique owner) or Carlos (Freelance Handyman), navigating financial software to predict cash gaps is virtually impossible. They rely on "gut feeling" or simply checking their bank balance. When big expenses hit (e.g., restocking inventory or paying a quarterly tax bill) and revenue is delayed (e.g., unpaid invoices), they face sudden crises.
 
-Competitors like QuickBooks offer forecasting, but it requires manual categorization, data entry, and understanding complex accounting reports. OHC users need an invisible "Accountant" that monitors their entire business context (pending invoices, inventory needs, past seasonality) and simply tells them: *"Carlos, you have a $400 tax bill next week and 3 pending invoices. Do you want me to automatically follow up with those clients today?"*
+Competitors like QuickBooks offer forecasting, but it requires manual categorization, data entry, and understanding complex accounting reports. OmniSolo users need an invisible "Accountant" that monitors their entire business context (pending invoices, inventory needs, past seasonality) and simply tells them: *"Carlos, you have a $400 tax bill next week and 3 pending invoices. Do you want me to automatically follow up with those clients today?"*
 
 ## 3. Research Report
 ### Competitive Analysis
 *   **QuickBooks/Xero:** Provide cashflow dashboards, but require active engagement and financial literacy. They are passive tools.
 *   **Square/Stripe:** Provide excellent real-time snapshots but limited predictive capabilities based on external factors like inventory or payroll.
-*   **OHC Differentiation:** As the unified platform handling Operations, Marketing, and Finance, OHC's AI agents have access to the complete business context. The AI knows what inventory is running low (Operations), how much marketing spend is converting (Marketing), and what payments are pending (Finance). It can synthesize this into simple, actionable push notifications instead of complex charts.
+*   **OmniSolo Differentiation:** As the unified platform handling Operations, Marketing, and Finance, OmniSolo's AI agents have access to the complete business context. The AI knows what inventory is running low (Operations), how much marketing spend is converting (Marketing), and what payments are pending (Finance). It can synthesize this into simple, actionable push notifications instead of complex charts.
 
 ### Market Validation
 *   SMBs cite "managing cash flow" as their primary operational stressor.

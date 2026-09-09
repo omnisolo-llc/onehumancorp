@@ -30,6 +30,6 @@ test.describe('Viral Receipt Lottery Generator', () => {
 
     // 8. Check that preview URL updated
     const previewUrl = page.locator('#preview-url');
-    await expect(previewUrl).toHaveText(/ohc.app\/win\/[\w-]+/);
+    await expect(previewUrl).toHaveText(/cloud.omnisolo.co\/win\/[\w-]+/);
   });
 });

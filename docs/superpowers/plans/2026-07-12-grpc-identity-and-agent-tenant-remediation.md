@@ -144,12 +144,12 @@ Assert standalone binds `127.0.0.1`, cloud binds `0.0.0.0`, standalone returns `
 
 - [ ] **Step 2: Run the tests and verify red**
 
-Run: `cargo test -p ohc-mono --lib grpc_tls_config`  
+Run: `cargo test -p omnisolo --lib grpc_tls_config`
 Expected: FAIL because the helpers do not exist.
 
 - [ ] **Step 3: Enable Tonic TLS and configure the server**
 
-Enable Tonic's `tls` feature. In cloud mode, read `OHC_GRPC_TLS_CERT_PATH`, `OHC_GRPC_TLS_KEY_PATH`, and `OHC_GRPC_CLIENT_CA_PATH` before database initialization, construct `Identity::from_pem` and `Certificate::from_pem`, then call:
+Enable Tonic's `tls` feature. In cloud mode, read `OMNISOLO_GRPC_TLS_CERT_PATH`, `OMNISOLO_GRPC_TLS_KEY_PATH`, and `OMNISOLO_GRPC_CLIENT_CA_PATH` before database initialization, construct `Identity::from_pem` and `Certificate::from_pem`, then call:
 
 ```rust
 ServerTlsConfig::new()
@@ -168,8 +168,8 @@ Change `spiffe_interceptor` to accept a mutable request. In cloud mode require a
 Run:
 
 ```bash
-cargo test -p ohc-mono --lib grpc_tls_config
-cargo test -p ohc-mono --lib spiffe_interceptor
+cargo test -p omnisolo --lib grpc_tls_config
+cargo test -p omnisolo --lib spiffe_interceptor
 bazel build //src/server:server_lib
 ```
 
@@ -207,7 +207,7 @@ Also assert identities, skills, and snapshots created under `org-b` are absent f
 
 - [ ] **Step 2: Run the negative tests and verify red**
 
-Run: `cargo test -p ohc-mono --lib services::agent::service::tests::cross_org -- --nocapture`  
+Run: `cargo test -p omnisolo --lib services::agent::service::tests::cross_org -- --nocapture`
 Expected: FAIL because current vectors and Hub mutations are global.
 
 - [ ] **Step 3: Centralize authenticated organization extraction**
@@ -237,7 +237,7 @@ Before `fire_agent`, fetch the agent and require `agent.organization_id == org`.
 Run:
 
 ```bash
-cargo test -p ohc-mono --lib services::agent -- --nocapture
+cargo test -p omnisolo --lib services::agent -- --nocapture
 cargo test -p server_auth
 bazel build //src/server:server_lib
 git diff --check

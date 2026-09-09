@@ -21,7 +21,7 @@ export default function WhatsAppLinkGeneratorPage() {
     }
   }, []);
 
-  const brandingText = `⚡ Powered by OHC`;
+  const brandingText = `⚡ Powered by OmniSolo`;
 
   const finalMessage = React.useMemo(() => {
     let finalStr = message.trim();
@@ -37,7 +37,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
   const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
   const generatedLink = cleanPhoneNumber
-    ? `https://wa.me/${cleanPhoneNumber}?text=${encodeURIComponent(finalMessage)}\n\nhttps://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`
+    ? `https://wa.me/${cleanPhoneNumber}?text=${encodeURIComponent(finalMessage)}\n\nhttps://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`
     : '';
 
   const handleCopy = async () => {
@@ -69,7 +69,7 @@ export default function WhatsAppLinkGeneratorPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 font-inter">
       <Head>
-        <title>WhatsApp Link Generator | OHC</title>
+        <title>WhatsApp Link Generator | OmniSolo OneHumanCorp</title>
       </Head>
 
       <nav className="p-6 border-b border-gray-100 bg-white/80 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-10">
@@ -78,7 +78,7 @@ export default function WhatsAppLinkGeneratorPage() {
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-600/20">
                     O
                 </div>
-                <span className="font-outfit font-bold text-xl tracking-tight">OHC</span>
+                <span className="font-outfit font-bold text-xl tracking-tight">OmniSolo</span>
             </div>
             <a href="/dashboard" className="text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors">
                 Back to Dashboard
@@ -134,7 +134,7 @@ export default function WhatsAppLinkGeneratorPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Badge (Pro)</span>
+                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OmniSolo" Badge (Pro)</span>
                     </label>
                 </div>
 
@@ -274,13 +274,13 @@ export default function WhatsAppLinkGeneratorPage() {
 
                 <h2 className="text-2xl font-bold font-outfit mb-3 text-gray-900">Upgrade to Pro</h2>
                 <p className="text-gray-600 mb-6 leading-relaxed">
-                    Make your links 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock advanced analytics.
+                    Make your links 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark and unlock advanced analytics.
                 </p>
 
                 <div className="space-y-4 mb-8">
                     <div className="flex items-center gap-3 text-sm text-gray-700">
                         <svg className="w-5 h-5 text-[#34C759] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                        Remove OHC branding
+                        Remove OmniSolo branding
                     </div>
                     <div className="flex items-center gap-3 text-sm text-gray-700">
                         <svg className="w-5 h-5 text-[#34C759] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
@@ -304,14 +304,13 @@ export default function WhatsAppLinkGeneratorPage() {
       {/* Persistent Footer Growth Loop */}
       <footer className="mt-12 py-8 border-t border-gray-200 text-center">
           <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}  target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
-              <span className="text-base">⚡</span> Powered by OHC
+              <span className="text-base">⚡</span> Powered by OmniSolo
           </a>
       </footer>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
+        .font-inter { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+        .font-outfit { font-family: Outfit, Inter, ui-sans-serif, system-ui, sans-serif; }
       `}} />
     </div>
   );

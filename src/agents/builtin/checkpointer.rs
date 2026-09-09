@@ -120,7 +120,7 @@ impl GitCheckpointer {
         }
 
         let err_out = StdCommand::new("git")
-            .args(["config", "user.email", "agent@ohc.local"])
+            .args(["config", "user.email", "agent@omnisolo.local"])
             .current_dir(&repo_path)
             .output()
             .expect("Failed to execute git config user.email");

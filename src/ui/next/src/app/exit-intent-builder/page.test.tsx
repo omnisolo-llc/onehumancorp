@@ -45,7 +45,7 @@ describe("ExitIntentBuilder", () => {
     const toggleButton = screen.getByRole("switch");
     await userEvent.click(toggleButton);
 
-    expect(screen.getAllByText("Remove OHC Branding").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Remove OmniSolo Branding").length).toBeGreaterThan(0);
     expect(screen.getByText("Upgrade to Pro")).toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Upgrade to Pro"));

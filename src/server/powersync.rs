@@ -3,6 +3,7 @@ use serde_json::json;
 use ed25519_dalek::{SigningKey, Signer};
 use base64::{Engine as _, engine::general_purpose};
 use chrono::{Utc, Duration};
+use rand::RngCore;
 
 static POWER_SYNC_KEY: RwLock<Option<(SigningKey, ed25519_dalek::VerifyingKey)>> = RwLock::new(None);
 
@@ -12,7 +13,7 @@ fn get_powersync_keys() -> (SigningKey, ed25519_dalek::VerifyingKey) {
         return keys.clone();
     }
 
-    let keys = if let Ok(seed_b64) = std::env::var("OHC_POWERSYNC_PRIV_KEY") {
+    let keys = if let Ok(seed_b64) = std::env::var("OMNISOLO_POWERSYNC_PRIV_KEY") {
         if let Ok(seed) = general_purpose::STANDARD.decode(seed_b64) {
             if seed.len() == 32 {
                 let mut seed_arr = [0u8; 32];
@@ -35,8 +36,9 @@ fn get_powersync_keys() -> (SigningKey, ed25519_dalek::VerifyingKey) {
 }
 
 fn generate_random_keys() -> (SigningKey, ed25519_dalek::VerifyingKey) {
-    let mut cspring = rand::rngs::OsRng;
-    let signing_key = SigningKey::generate(&mut cspring);
+    let mut seed = [0u8; 32];
+    rand::rngs::OsRng.fill_bytes(&mut seed);
+    let signing_key = SigningKey::from_bytes(&seed);
     let verifying_key = signing_key.verifying_key();
     (signing_key, verifying_key)
 }
@@ -65,7 +67,7 @@ pub fn generate_powersync_token(sub: &str, org_id: &str) -> Result<String, Strin
     let exp = (now + Duration::hours(24)).timestamp();
 
     let claims = json!({
-        "iss": "ohc-backend",
+        "iss": "omnisolo-backend",
         "sub": sub,
         "aud": "powersync",
         "iat": now.timestamp(),
@@ -94,6 +96,25 @@ pub fn generate_powersync_token(sub: &str, org_id: &str) -> Result<String, Strin
     Ok(token)
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PowerSyncCredentials {
+    pub powersync_url: String,
+    pub token: String,
+    pub expires_at: i64,
+}
+
+pub fn generate_powersync_credentials(
+    sub: &str,
+    org_id: &str,
+    powersync_url: &str,
+) -> Result<PowerSyncCredentials, String> {
+    Ok(PowerSyncCredentials {
+        powersync_url: powersync_url.to_string(),
+        token: generate_powersync_token(sub, org_id)?,
+        expires_at: (Utc::now() + Duration::hours(24)).timestamp(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,5 +138,37 @@ mod tests {
         
         let parts: Vec<&str> = token.split('.').collect();
         assert_eq!(parts.len(), 3);
+
+        let payload = general_purpose::URL_SAFE_NO_PAD
+            .decode(parts[1])
+            .expect("PowerSync token payload should be base64url");
+        let claims: serde_json::Value =
+            serde_json::from_slice(&payload).expect("PowerSync token should contain JSON claims");
+        assert_eq!(claims.get("iss").and_then(|value| value.as_str()), Some("omnisolo-backend"));
+    }
+
+    #[test]
+    fn test_generate_powersync_credentials_are_scoped_to_the_authenticated_user() {
+        let credentials = generate_powersync_credentials(
+            "user-1",
+            "org-1",
+            "https://sync.example.com",
+        )
+        .expect("PowerSync credentials should be generated");
+
+        assert_eq!(credentials.powersync_url, "https://sync.example.com");
+        assert!(!credentials.token.is_empty());
+        assert!(credentials.expires_at > Utc::now().timestamp());
+
+        let payload = general_purpose::URL_SAFE_NO_PAD
+            .decode(credentials.token.split('.').nth(1).expect("token payload"))
+            .expect("PowerSync token payload should be base64url");
+        let claims: serde_json::Value =
+            serde_json::from_slice(&payload).expect("PowerSync token should contain JSON claims");
+        assert_eq!(claims.get("sub").and_then(|value| value.as_str()), Some("user-1"));
+        assert_eq!(
+            claims.get("organization_id").and_then(|value| value.as_str()),
+            Some("org-1")
+        );
     }
 }

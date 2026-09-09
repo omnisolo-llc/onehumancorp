@@ -1,7 +1,7 @@
 # Automated Cart Recovery via Agents
 
 ## Overview
-This report analyzes the architectural gap and proposes a solution for an "Automated Cart Recovery Agent" within the OneHumanCorp platform. This addresses a critical business need for small businesses (Pain Point #5: "Abandoned Carts / Lack of Follow-up").
+This report analyzes the architectural gap and proposes a solution for an "Automated Cart Recovery Agent" within the OmniSolo platform. This addresses a critical business need for small businesses (Pain Point #5: "Abandoned Carts / Lack of Follow-up").
 
 ## Business Need
 Users frequently abandon shopping carts, representing significant lost revenue for SMBs. The platform currently lacks a native, automated mechanism to re-engage these users without requiring complex third-party integrations (like Klaviyo), which alienates non-technical users.

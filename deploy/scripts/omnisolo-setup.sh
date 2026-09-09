@@ -1,0 +1,96 @@
+#!/bin/bash
+# OmniSolo Hybrid Developer Setup Script
+
+set -eo pipefail
+
+RESET="\033[0m"
+BOLD="\033[1m"
+DIM="\033[2m"
+BLUE="\033[38;5;39m"
+CYAN="\033[38;5;87m"
+GREEN="\033[38;5;120m"
+PURPLE="\033[38;5;141m"
+
+echo -e "${BOLD}${BLUE}===============================================${RESET}"
+echo -e "${BOLD}${CYAN}   🚀 OmniSolo Hybrid Agentic OS Developer Setup    ${RESET}"
+echo -e "${BOLD}${BLUE}===============================================${RESET}"
+
+# Check requirements
+if ! command -v bazelisk >/dev/null 2>&1; then echo -e "${PURPLE}Bazelisk is required but not installed. Aborting.${RESET}"; false; fi
+if ! command -v docker >/dev/null 2>&1; then echo -e "${PURPLE}Docker is required but not installed. Aborting.${RESET}"; false; fi
+if ! command -v xvfb-run >/dev/null 2>&1; then echo -e "${PURPLE}xvfb-run is required for headless UI tests. Please install it.${RESET}"; fi
+
+echo -e "${DIM}[1/5] Checking environment configuration...${RESET}"
+if [ ! -f .env ]; then
+  echo "Creating default .env file..."
+  cat << 'ENV' > .env
+# Default Local Config
+LOG_LEVEL=info
+LOG_FORMAT=json
+PORT=8080
+OMNISOLO_MULTITENANT=false
+OMNISOLO_HEADLESS=false
+OMNISOLO_SOURCE_MODE=standalone
+OMNISOLO_RUNTIME_DIR=.omnisolo/runtime
+OMNISOLO_MEMORY_DIR=.omnisolo/runtime/memory
+OMNISOLO_STATUS_DIR=.omnisolo/runtime/status
+ENV
+  chmod 0600 .env
+fi
+
+echo -e "${DIM}[2/5] Verifying Standalone Mode...${RESET}"
+export OMNISOLO_MULTITENANT=false
+export OMNISOLO_HEADLESS=false
+export OMNISOLO_SOURCE_MODE=standalone
+bazelisk test //src/server/api/...
+
+echo -e "${DIM}[3/5] Verifying Cloud Mode...${RESET}"
+export OMNISOLO_MULTITENANT=true
+export OMNISOLO_HEADLESS=false
+export OMNISOLO_SOURCE_MODE=cloud
+bazelisk test //src/server/api/...
+
+echo -e "${DIM}[X] Verifying .env setup...${RESET}"
+bash deploy/scripts/omnisolo-verify-setup.sh || { echo -e "${PURPLE}Verification failed.${RESET}"; false; }
+
+echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
+if [ -f deploy/scripts/omnisolo-audit-day-one.sh ]; then
+    bash deploy/scripts/omnisolo-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
+else
+    echo -e "${DIM}Audit script not found, skipping.${RESET}"
+fi
+
+echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
+RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-.omnisolo/runtime}"
+MEMORY_DIR="${OMNISOLO_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
+STATUS_DIR="${OMNISOLO_STATUS_DIR:-${RUNTIME_DIR}/status}"
+mkdir -p "${MEMORY_DIR}" "${STATUS_DIR}"
+TIMESTAMP=$(date +%s)
+
+cat << MEM > "${MEMORY_DIR}/setup-${TIMESTAMP}.yml"
+type: memory
+metadata:
+  role: Developer Setup
+  timestamp: ${TIMESTAMP}
+observations:
+  - Developer executed omnisolo-setup.sh
+actions_taken:
+  - Verified local environment
+  - Ran Day One audits
+resolution: Developer environment successfully initialized.
+MEM
+
+cat << STAT > "${STATUS_DIR}/${TIMESTAMP}.yml"
+type: status
+metadata:
+  role: Developer Setup
+  timestamp: ${TIMESTAMP}
+health: ok
+observations:
+  - omnisolo-setup.sh completed successfully.
+STAT
+
+echo -e "${BOLD}${BLUE}===============================================${RESET}"
+echo -e "${BOLD}${GREEN}   ✅ Setup Complete!                          ${RESET}"
+echo -e "${DIM}   Use 'source deploy/scripts/omnisolo-mode.sh' to switch contexts.${RESET}"
+echo -e "${BOLD}${BLUE}===============================================${RESET}"

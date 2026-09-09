@@ -14,7 +14,7 @@ vi.mock("../../components/TooltipRegistry", () => ({
   WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("../components/PoweredByOHC", () => ({ PoweredByOHC: () => null }));
+vi.mock("../components/PoweredByOmniSolo", () => ({ PoweredByOmniSolo: () => null }));
 vi.mock("../components/OneTapReferral", () => ({ OneTapReferral: () => null }));
 vi.mock("../components/PostPurchaseShareWidget", () => ({ PostPurchaseShareWidget: () => null }));
 vi.mock("../components/ShareAndSaveWidget", () => ({ ShareAndSaveWidget: () => null }));

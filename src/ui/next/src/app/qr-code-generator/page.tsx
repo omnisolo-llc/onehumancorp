@@ -5,14 +5,14 @@ import Link from 'next/link';
 
 export default function QRCodeGeneratorPage() {
   const [tenantId, setTenantId] = useState('my-store');
-  const [url, setUrl] = useState('https://ohc.app/my-store');
+  const [url, setUrl] = useState('https://cloud.omnisolo.co/my-store');
   const [qrColor, setQrColor] = useState('#111827');
   const [qrSize, setQrSize] = useState(256);
 
   useEffect(() => {
     const tenant = localStorage.getItem('business_display_name') || 'my-store';
     setTenantId(tenant);
-    setUrl(`https://ohc.app/${tenant}`);
+    setUrl(`https://cloud.omnisolo.co/${tenant}`);
   }, []);
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(url)}&color=${qrColor.replace('#', '')}&bgcolor=ffffff`;
@@ -24,7 +24,7 @@ export default function QRCodeGeneratorPage() {
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `ohc-qr-code-${tenantId}.png`;
+      a.download = `omnisolo-qr-code-${tenantId}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -50,7 +50,7 @@ export default function QRCodeGeneratorPage() {
           </div>
           <h2 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 mb-4 tracking-tight">Connect Offline to Online</h2>
           <p className="text-gray-600 text-lg leading-relaxed">
-            Generate a custom QR code for your physical store, flyers, or business cards. Scan it to instantly open your OHC storefront.
+            Generate a custom QR code for your physical store, flyers, or business cards. Scan it to instantly open your OmniSolo storefront.
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export default function QRCodeGeneratorPage() {
                  </div>
 
                  <div className="flex items-center justify-center gap-2 text-sm font-medium text-gray-500">
-                    <span>⚡ Powered by OHC</span>
+                    <span>⚡ Powered by OmniSolo</span>
                  </div>
              </div>
           </div>
@@ -136,7 +136,7 @@ export default function QRCodeGeneratorPage() {
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

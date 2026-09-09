@@ -19,8 +19,8 @@ Existing solutions (like Square or Shopify POS) are point-of-sale focused but do
 - **Shopify:** QR codes can link to products, but Shopify does not treat physical endpoints (NFC/QR) as first-class, dynamic entities that can spawn contextual AI agent sessions (e.g., "scan this to chat about your warranty").
 - **Linktree / Link-in-bio:** Often used as a crutch for physical businesses (QR to Linktree), but lacks deep integration with booking, ordering, or AI support.
 
-**The OHC Opportunity:**
-OHC can treat "Physical Tags" (NFC stickers, printed QR codes) as dynamic, contextual endpoints linked to the multi-tenant SaaS. A tag is not just a URL; it is an entry point into a specialized AI agent workflow (reorder, tipping, warranty chat, line-busting preorder).
+**The OmniSolo Opportunity:**
+OmniSolo can treat "Physical Tags" (NFC stickers, printed QR codes) as dynamic, contextual endpoints linked to the multi-tenant SaaS. A tag is not just a URL; it is an entry point into a specialized AI agent workflow (reorder, tipping, warranty chat, line-busting preorder).
 
 ## Design Doc
 
@@ -56,9 +56,9 @@ erDiagram
 sequenceDiagram
     actor Customer
     participant Mobile_Device as Customer Phone (375px)
-    participant Edge_Router as OHC Edge / CDN
+    participant Edge_Router as OmniSolo Edge / CDN
     participant Tag_Service as Physical Tag Mesh
-    participant AI_Agent as OHC AI Department
+    participant AI_Agent as OmniSolo AI Department
 
     Customer->>Mobile_Device: Scans QR / Taps NFC on Cake Box
     Mobile_Device->>Edge_Router: GET /t/{tag_id}
@@ -73,7 +73,7 @@ sequenceDiagram
 ### Mobile UX & UI Wireframes (375px First)
 
 **Merchant Experience (Zero-Config Generation):**
-1. Carlos opens OHC app and goes to a past repair invoice or a specific service.
+1. Carlos opens OmniSolo app and goes to a past repair invoice or a specific service.
 2. Taps "Create Smart Tag".
 3. The UI presents a beautiful, translucent glass card with options: "QR Code" or "Write to NFC Tag".
 4. If QR, it instantly generates a printable, branded sticker template (passing the "grandmother test" — just hit print).
@@ -93,7 +93,7 @@ sequenceDiagram
 ### Key Design Decisions
 1. **Tags as Contextual Pointers, Not Hardcoded URLs:** A tag ID resolves server-side to its destination. This allows Carlos to update what a tag does *after* he leaves it at a customer's house, without changing the physical sticker.
 2. **Frictionless Customer Entry:** The destination must be an edge-cached PWA or Chat Interface. No app downloads required for the customer.
-3. **Hardware Agnostic:** Works with cheap, generic NFC tags off Amazon or standard thermal/inkjet printed QR codes. No proprietary OHC hardware required.
+3. **Hardware Agnostic:** Works with cheap, generic NFC tags off Amazon or standard thermal/inkjet printed QR codes. No proprietary OmniSolo hardware required.
 
 ## Implementation Prompt
 

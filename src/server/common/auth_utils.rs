@@ -13,7 +13,7 @@ where
     E: Executor<'a, Database = Postgres>,
 {
     let is_multitenant = ::server_config::get().multitenant
-        || std::env::var("OHC_MULTITENANT")
+        || std::env::var("OMNISOLO_MULTITENANT")
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
 

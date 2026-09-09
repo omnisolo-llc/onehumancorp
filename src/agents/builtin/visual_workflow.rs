@@ -391,22 +391,22 @@ impl WorkflowExecutor {
                             .find(|t| &t.name == tool_name)
                             .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                        let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2, &crate::agent::AgentRunConfig::default()).await;
+                        let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &omnisolo_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2, &crate::agent::AgentRunConfig::default()).await;
 
                         let result_str = match result {
                             Ok(res) => res,
-                            Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                                ohc_builtin_agent_core::types::format_llm_recoverable_error(
+                            Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                                omnisolo_builtin_agent_core::types::format_llm_recoverable_error(
                                     &tool_name, &msg,
                                 )
                             }
-                            Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                            Err(omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE: {}", msg));
                             }
-                            Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
+                            Err(omnisolo_builtin_agent_core::types::ToolError::Fatal(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
                             }
-                            Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
+                            Err(omnisolo_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
                                 return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(e) => {

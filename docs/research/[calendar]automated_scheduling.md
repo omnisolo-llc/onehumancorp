@@ -6,13 +6,13 @@ Service-based small business owners spend too much time going back and forth wit
 ## Research Report
 *   **Tool Candidates**: Calendly API, Cal.com, Google Calendar API direct.
 *   **Evaluation**: Cal.com is open-source, highly customizable, and offers a white-label API. Calendly is the industry standard but less flexible for white-labeling. Direct Google Calendar integration requires building the scheduling logic from scratch.
-*   **Ease of Use**: Cal.com API allows us to embed the booking flow seamlessly into OHC so the business owner just sees "Availability Settings".
+*   **Ease of Use**: Cal.com API allows us to embed the booking flow seamlessly into OmniSolo so the business owner just sees "Availability Settings".
 *   **Pricing**: Cal.com has team plans; direct Google API is free but high development cost.
 *   **Modes**: Cloud (easy). Standalone (requires managing OAuth tokens locally).
 
 ## Design Doc
 *   **Integration Trigger**: User sets their working hours and connects their Google/Outlook calendar.
-*   **Action**: OHC generates a public booking link. When a client books, it creates an event on the owner's connected calendar and blocks that time in OHC.
+*   **Action**: OmniSolo generates a public booking link. When a client books, it creates an event on the owner's connected calendar and blocks that time in OmniSolo.
 *   **User Interface**: An "Availability" settings page, and a generated public-facing booking page for clients.
 
 ## Implementation Prompt

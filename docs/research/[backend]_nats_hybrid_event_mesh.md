@@ -4,10 +4,10 @@
 NATS 🚀 (Hybrid Event Mesh Integration)
 
 ## Problem Statement
-The OHC Hybrid Architecture requires a robust and high-performance eventing system to handle real-time communication between Cloud-Native and Standalone Desktop nodes. Currently, there is a gap in achieving low-latency, scalable, and decentralized event routing that works seamlessly across multi-tenant cloud environments (K8s) and local desktop instances (SQLite-backed). We need an event mesh capable of bridging these distinct environments without heavy dependencies on centralized brokers in offline-first scenarios.
+The OmniSolo Hybrid Architecture requires a robust and high-performance eventing system to handle real-time communication between Cloud-Native and Standalone Desktop nodes. Currently, there is a gap in achieving low-latency, scalable, and decentralized event routing that works seamlessly across multi-tenant cloud environments (K8s) and local desktop instances (SQLite-backed). We need an event mesh capable of bridging these distinct environments without heavy dependencies on centralized brokers in offline-first scenarios.
 
 ## Research Report
-- **Goal**: Integrate NATS (and JetStream) as the primary Hybrid Event Mesh to facilitate real-time messaging, KV storage, and event streaming across the OHC ecosystem.
+- **Goal**: Integrate NATS (and JetStream) as the primary Hybrid Event Mesh to facilitate real-time messaging, KV storage, and event streaming across the OmniSolo ecosystem.
 - **Capabilities**:
   - **Decentralized Pub/Sub**: High-throughput message routing with support for dynamic topologies (leaf nodes for desktop clients).
   - **JetStream Persistence**: Durable message queues for reliable delivery, enabling offline-first operations where events are cached locally and synchronized upon reconnection.

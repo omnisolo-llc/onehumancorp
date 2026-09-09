@@ -1,7 +1,7 @@
 # In-App Help Center Design
 
 ## Overview
-We need to implement an In-App Help Center for the non-technical owners using OHC. This will include a searchable help portal, contextual tooltips, interactive walkthroughs, an AI-powered help chat, embedded video tutorials, API documentation for advanced users, and release notes/changelogs.
+We need to implement an In-App Help Center for the non-technical owners using OmniSolo. This will include a searchable help portal, contextual tooltips, interactive walkthroughs, an AI-powered help chat, embedded video tutorials, API documentation for advanced users, and release notes/changelogs.
 
 ## Approach
 1. **Help Center Portal**: A slide-out or full-page modal accessible from a "?" button, organized by categories (Getting Started, My Store, etc.).

@@ -2,7 +2,7 @@
 
 Date: 2026-06-06
 
-This manifest records the first 50 open issues reviewed from `onehumancorp/mono` and how this branch handles them.
+This manifest records the first 50 open issues reviewed from `omnisolo/mono` and how this branch handles them.
 
 ## Code-Resolved In This Branch
 
@@ -139,7 +139,7 @@ These issues are research reports, generated report placeholders, or architectur
 - #24285: Research/report placeholder.
 - #24279: Research/report placeholder.
 - #24266: SMB platform market research report.
-- #24256: OHC SMB market research report.
+- #24256: OmniSolo SMB market research report.
 - #24254: Backend agent logic, LLM prompting layer, and persistence follow-up.
 
 ## Reviewer Notes

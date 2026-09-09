@@ -80,8 +80,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await expect(generateBtn).toBeDisabled();
   });
 
-  test('Powered by OHC link is visible on step 0', async ({ page }) => {
-    const poweredLink = page.getByRole('link', { name: /Powered by OHC/i });
+  test('OmniSolo link is visible on step 0', async ({ page }) => {
+    const poweredLink = page.getByRole('link', { name: /OmniSolo/i });
     await expect(poweredLink).toBeVisible();
     await expect(poweredLink).toHaveAttribute('href', '/api/v1/growth/referrals/click?target=/onboarding&ref=website-builder');
   });

@@ -5,7 +5,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use crate::hub::Hub;
-use ::server_ohc::orchestration::Message;
+use ::server_omnisolo::orchestration::Message;
 use axum::extract::{Extension, Path, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
@@ -250,7 +250,7 @@ mod tests {
     async fn stream_rejects_agent_from_another_organization() {
         use tower::ServiceExt;
         let hub = make_hub();
-        hub.register_agent(server_ohc::orchestration::Agent {
+        hub.register_agent(server_omnisolo::orchestration::Agent {
             id: "private-agent".into(),
             organization_id: "private-org".into(),
             ..Default::default()
@@ -279,9 +279,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn router_builds_with_axum_named_path_captures() {
+        let _router = router::<()>(make_hub());
+    }
+
+    #[tokio::test]
     async fn test_stream_agent_returns_sse_content_type() {
         let hub = make_hub();
-        hub.register_agent(server_ohc::orchestration::Agent {
+        hub.register_agent(server_omnisolo::orchestration::Agent {
             id: "test-agent".into(),
             organization_id: "test-org".into(),
             ..Default::default()
@@ -308,7 +313,7 @@ mod tests {
     #[tokio::test]
     async fn test_stream_agent_sets_cache_control() {
         let hub = make_hub();
-        hub.register_agent(server_ohc::orchestration::Agent {
+        hub.register_agent(server_omnisolo::orchestration::Agent {
             id: "test-agent".into(),
             organization_id: "test-org".into(),
             ..Default::default()
@@ -335,7 +340,7 @@ mod tests {
     #[tokio::test]
     async fn test_stream_agent_sets_connection() {
         let hub = make_hub();
-        hub.register_agent(server_ohc::orchestration::Agent {
+        hub.register_agent(server_omnisolo::orchestration::Agent {
             id: "test-agent".into(),
             organization_id: "test-org".into(),
             ..Default::default()

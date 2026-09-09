@@ -3,7 +3,7 @@
 # KAIROS AI OS: Phase 4 Premium Design Doc - Sub-Agent Orchestration Queue
 
 ## 1. Overview
-The Phase 4 Sub-Agent Orchestration Queue is a critical background worker system that enables the OHC Hybrid AI OS to spawn, manage, and monitor isolated sub-agents executing background tasks. This ensures high availability, vertical/horizontal scalability, and robust state management for autonomous agent workloads.
+The Phase 4 Sub-Agent Orchestration Queue is a critical background worker system that enables the OmniSolo Hybrid AI OS to spawn, manage, and monitor isolated sub-agents executing background tasks. This ensures high availability, vertical/horizontal scalability, and robust state management for autonomous agent workloads.
 
 ## 2. Architecture & Hybrid Strategy
 The queue utilizes a state-machine driven backend to coordinate jobs.

@@ -137,7 +137,7 @@ function validateHeader(value: unknown): asserts value is PlainObject & { kid: s
     !hasExactKeys(value, ["alg", "enc", "typ", "kid"]) ||
     value.alg !== "dir" ||
     value.enc !== "A256GCM" ||
-    value.typ !== "ohc-session+jwe" ||
+    value.typ !== "omnisolo-session+jwe" ||
     typeof value.kid !== "string"
   ) {
     invalid();
@@ -171,7 +171,7 @@ export async function sealSession(
         JSON.stringify({
           alg: "dir",
           enc: "A256GCM",
-          typ: "ohc-session+jwe",
+          typ: "omnisolo-session+jwe",
           kid: ring.active.id,
         }),
       ),

@@ -7,9 +7,9 @@ vi.mock('next/navigation', () => ({
   useParams: () => ({ id: 'sub_123' }),
 }));
 
-// Mock PoweredByOHC
-vi.mock('../../../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+// Mock PoweredByOmniSolo
+vi.mock('../../../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 describe('CustomerSubscriptionPortal', () => {

@@ -12,7 +12,7 @@ test.describe('Hybrid Setup Health Check Endpoint', () => {
   });
 
   test('returns error for unprovisioned cloud mode', async ({ request }) => {
-    // We expect cloud mode to return an error locally since .ohc-cloud-data isn't fully created
+    // We expect cloud mode to return an error locally since .omnisolo-cloud-data isn't fully created
     // Or at least it handles the check endpoint gracefully.
     const response = await request.get((process.env.BASE_URL || 'http://127.0.0.1:18789') + '/api/v1/onboarding/setup-health?mode=cloud');
     expect(response.status()).toBe(200);

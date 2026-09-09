@@ -4,16 +4,16 @@
 **The Co-Host: Autonomous Live-Stream Commerce & Interactive Video Host Engine**
 
 ## 2. Problem Statement
-Small business owners like **Maya (baker)** and **Priya (boutique owner)** are missing out on the high-conversion world of live-stream selling (TikTok Live, Instagram Live, OHC Storefront Live) because it is operationally exhausting. A single-person operation cannot simultaneously film themselves, monitor a high-velocity chat for "SOLD" keywords, manage inventory levels in real-time, send payment links, and answer repetitive customer questions.
+Small business owners like **Maya (baker)** and **Priya (boutique owner)** are missing out on the high-conversion world of live-stream selling (TikTok Live, Instagram Live, OmniSolo Storefront Live) because it is operationally exhausting. A single-person operation cannot simultaneously film themselves, monitor a high-velocity chat for "SOLD" keywords, manage inventory levels in real-time, send payment links, and answer repetitive customer questions.
 
-They suffer from "Live-Sale Paralysis": they want the revenue of a live event but cannot afford a 3-person production team. Current platforms treat live-streaming as a passive video player. OHC needs an active "AI Co-Host" that handles the logistics of the sale in real-time, allowing the owner to focus entirely on their products and personality.
+They suffer from "Live-Sale Paralysis": they want the revenue of a live event but cannot afford a 3-person production team. Current platforms treat live-streaming as a passive video player. OmniSolo needs an active "AI Co-Host" that handles the logistics of the sale in real-time, allowing the owner to focus entirely on their products and personality.
 
 ## 3. Research Report
 ### Market Landscape & Competitor Analysis
 *   **CommentSold**: The industry leader for boutiques. Highly successful but requires a complex desktop setup, manual product mapping, and expensive monthly subscriptions. It is a "tool," not a "teammate."
-*   **TikTok Shop / Instagram Shopping**: Robust built-in tools but siloed. If Priya sells out of a dress on TikTok Live, her OHC web store and in-person POS might not update instantly, leading to overselling.
+*   **TikTok Shop / Instagram Shopping**: Robust built-in tools but siloed. If Priya sells out of a dress on TikTok Live, her OmniSolo web store and in-person POS might not update instantly, leading to overselling.
 *   **Whatnot / Popshop Live**: Marketplace-specific apps. They own the customer, and the merchant is just a vendor.
-*   **The OHC Opportunity**: OHC can provide a **Platform-Agnostic Co-Host**. By utilizing Vision AI and a unified event mesh, the OHC Co-Host can "listen" to streams across platforms (or OHC's native PWA streamer), identify products shown on camera, and automate the "Comment-to-Cart" pipeline.
+*   **The OmniSolo Opportunity**: OmniSolo can provide a **Platform-Agnostic Co-Host**. By utilizing Vision AI and a unified event mesh, the OmniSolo Co-Host can "listen" to streams across platforms (or OmniSolo's native PWA streamer), identify products shown on camera, and automate the "Comment-to-Cart" pipeline.
 
 ### Core Gaps Identified
 1.  **Context Gap**: Existing tools don't know what the merchant is holding.
@@ -53,7 +53,7 @@ erDiagram
 
     LIVE_SESSION {
         uuid id
-        string platform "OHC | TIKTOK | INSTAGRAM"
+        string platform "OmniSolo | TIKTOK | INSTAGRAM"
         timestamp started_at
         string status "LIVE | ENDED"
     }
@@ -77,7 +77,7 @@ erDiagram
 **Key Invariants:**
 *   **Inventory Locking**: When a customer comments "SOLD," the inventory is "soft-locked" for 15 minutes. If they don't pay, the AI Co-Host automatically announces: *"The Vegan Cake is back in stock!"*
 *   **Zero-Jargon Overlay**: The merchant UI shows "Live Stats" in plain language: "5 claims, 2 paid, $150 earned."
-*   **Privacy**: Customer DMs are handled via OHC's secure identity mesh, never exposing private phone numbers in the public chat.
+*   **Privacy**: Customer DMs are handled via OmniSolo's secure identity mesh, never exposing private phone numbers in the public chat.
 
 ### Mobile UX Flow (375px First)
 1.  **Merchant Streamer View**:
@@ -90,7 +90,7 @@ erDiagram
     *   **Action**: A single button: `[ 🛒 Claim with 1-Tap ]`.
 
 ### AI Agent Integration Points
-*   **The Visualizer (Vision AI)**: Continuously analyzes the video stream to identify products from the OHC Catalog.
+*   **The Visualizer (Vision AI)**: Continuously analyzes the video stream to identify products from the OmniSolo Catalog.
 *   **The Co-Host (Marketing/CS)**: The "Face" of the AI in the chat. Answers FAQs, manages the "Hype" (e.g., *"Only 2 left, get yours now!"*), and greets users.
 *   **The Salesperson (Finance)**: Monitors chat for purchase intents, sends the checkout links, and handles the inventory "Soft-Lock" logic.
 
@@ -99,7 +99,7 @@ erDiagram
 Build the foundational services for the "Autonomous Live-Stream Commerce Engine."
 
 **User Journey (CUJ):**
-1. Maya starts a live session from the OHC Mobile App.
+1. Maya starts a live session from the OmniSolo Mobile App.
 2. She holds a product up to the camera. The Vision AI service must identify the product and update the `ACTIVE_PRODUCT_STATE` in the session.
 3. A test user (Sarah) submits a chat message "SOLD".
 4. The Co-Host service must parse this intent, check the `INVENTORY_LEDGER` via the Operations Agent, and if available, trigger the Salesperson Agent to send a Stripe Payment Link via SMS.
@@ -113,7 +113,7 @@ Build the foundational services for the "Autonomous Live-Stream Commerce Engine.
 *   **Mobile Merchant UI**: Build the 375px "Streaming Dashboard" using macOS Translucent Glass styling and UniFi card layouts.
 
 ## 6. Priority
-**P1** (High - This transforms OHC from a store-builder into a high-performance growth engine for solo creators).
+**P1** (High - This transforms OmniSolo from a store-builder into a high-performance growth engine for solo creators).
 
 ## 7. Estimated Scope
 **Large** (Requires real-time video processing, NLP, and inventory locking logic).

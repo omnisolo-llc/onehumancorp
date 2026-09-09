@@ -1,15 +1,15 @@
 # OmniSolo Documentation
 
-Welcome to the documentation for **OmniSolo** (formerly One Human Corp / OHC), the open-source **Hybrid Agentic OS** designed to empower a single operator to run an entire enterprise using multi-agent swarms, low-code orchestration, and rich integrations.
+Welcome to the documentation for **OmniSolo** (formerly OmniSolo / OmniSolo), the open-source **Hybrid Agentic OS** designed to empower a single operator to run an entire enterprise using multi-agent swarms, low-code orchestration, and rich integrations.
 
 This site is the canonical documentation root for the repository. It follows a markdown-first workflow: source content lives in `docs/`, primary site navigation is declared in `mkdocs.yml`, and the rendered documentation website is built at runtime.
 
 ## Platform Architecture Highlights
 
 - **Hybrid Operating Modes**:
-  - **Cloud-Native Shared Service**: Axum HTTP/gRPC server backed by PostgreSQL, with `OHC_MULTITENANT=true` for tenant isolation and optional Valkey / PowerSync sync.
-  - **Standalone Desktop Mode**: Local desktop environment using Tauri v2, local SQLite SIPDB (`ohc-standalone.db`), and IPC communication.
-  - **Headless Cloud API**: Backend API (`OHC_HEADLESS=true`) providing auth, health probes, metrics, and orchestration for thin/mobile clients.
+  - **Cloud-Native Shared Service**: Axum HTTP/gRPC server backed by PostgreSQL, with `OMNISOLO_MULTITENANT=true` for tenant isolation and optional Valkey / PowerSync sync.
+  - **Standalone Desktop Mode**: Local desktop environment using Tauri v2, local SQLite SIPDB (`omnisolo-standalone.db`), and IPC communication.
+  - **Headless Cloud API**: Backend API (`OMNISOLO_HEADLESS=true`) providing auth, health probes, metrics, and orchestration for thin/mobile clients.
 - **Universal Multi-Harness Middleware**:
   - Exposes session/task middleware supporting Codex app-server v2, OpenCode, DeepSeek Harness, Pi, Kimi ACP, OpenHands Agent Server, and AgentBoardTT OpenHarness.
   - OpenAI-compatible worker contract with support for `OPENAI_API_KEY`, MiniMax, Anthropic, Gemini Pro, and local Ollama models.
@@ -25,7 +25,7 @@ This site is the canonical documentation root for the repository. It follows a m
 ## Start Here
 
 - **[Architecture Hub](technical/architecture/architecture-overview.md)**: Deep dives into KAIROS, Hybrid OS, Sub-Agent Queues, and Mesh Sync.
-- **[Developer Setup & Guide](technical/developer/setup.md)**: Day-one onboarding, master CLI (`ohc_hybrid_cli.sh`), and Bazel build instructions.
+- **[Developer Setup & Guide](technical/developer/setup.md)**: Day-one onboarding, master CLI (`omnisolo_hybrid_cli.sh`), and Bazel build instructions.
 - **[Multi-Harness Compatibility](omnisolo-harness-compatibility-inventory.md)**: Compatibility contracts, model bindings, and session capsule migration.
 - **[Walkthroughs](walkthroughs/index.md)**: Guided tutorials for agent lifecycles, AutoDream CLI, Teammate Mesh, and onboarding.
 - **[User Guide](user_guide.md)**: End-user handbook for setting up stores, hiring AI departments, and managing day-to-day operations.

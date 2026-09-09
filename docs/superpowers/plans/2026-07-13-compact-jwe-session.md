@@ -59,7 +59,7 @@ export type SessionCodecContext = Readonly<{
 Create `sessionCodec.test.ts` using `parseSessionKeyRing` and deterministic non-secret active/previous test keys. Tests must assert:
 
 - Active issue/open round trip returns exactly the `WebSession`, compact token has five segments, contains neither backend token nor user ID, and two issues have different ciphertext.
-- Header is exactly `alg=dir`, `enc=A256GCM`, `typ=ohc-session+jwe`, active `kid`.
+- Header is exactly `alg=dir`, `enc=A256GCM`, `typ=omnisolo-session+jwe`, active `kid`.
 - A token issued under old active opens when that key is the new ring's previous decrypt-only key; new issue uses only the new active ID.
 - Tamper, unknown `kid`, wrong `alg`/`enc`/`typ`, wrong audience, wrong purpose, malformed JSON, and wrong version reject.
 - Missing/wrong-type/empty claims reject; token length >2048, ID/org >128, username >254, >32 roles, role >64 reject.
@@ -107,7 +107,7 @@ Issue by encoding `{...session, aud: context.audience, purpose: context.purpose}
 
 ```ts
 new CompactEncrypt(plaintext)
-  .setProtectedHeader({ alg: "dir", enc: "A256GCM", typ: "ohc-session+jwe", kid: ring.active.id })
+  .setProtectedHeader({ alg: "dir", enc: "A256GCM", typ: "omnisolo-session+jwe", kid: ring.active.id })
   .encrypt(ring.active.key)
 ```
 

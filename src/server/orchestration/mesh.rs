@@ -1,6 +1,6 @@
-use ::server_ohc::orchestration::TeammateMeshEvent;
+use ::server_omnisolo::orchestration::TeammateMeshEvent;
 use async_trait::async_trait;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use omnisolo_builtin_agent::mesh::transport::{MeshTransport, Message};
 use opentelemetry::KeyValue;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
@@ -18,7 +18,7 @@ pub trait P2PTransport: Send + Sync {
     ) -> Result<bool, String>;
     async fn broadcast_crdt_delta(
         &self,
-        delta: ::server_ohc::orchestration::CrdtDelta,
+        delta: ::server_omnisolo::orchestration::CrdtDelta,
     ) -> Result<(), String>;
     async fn discover_peers(&self, tenant_id: &str) -> Result<Vec<String>, String>;
 }
@@ -69,14 +69,14 @@ pub trait TeammateMesh: Send + Sync {
 
 pub struct LocalTeammateMesh {
     hub: Arc<crate::hub::Hub>,
-    inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
+    inner: omnisolo_builtin_agent::mesh::transport::InProcessTransport,
 }
 
 impl LocalTeammateMesh {
     pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
         Self {
             hub,
-            inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            inner: omnisolo_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
     }
 }
@@ -102,7 +102,7 @@ impl P2PTransport for LocalTeammateMesh {
 
     async fn broadcast_crdt_delta(
         &self,
-        _delta: ::server_ohc::orchestration::CrdtDelta,
+        _delta: ::server_omnisolo::orchestration::CrdtDelta,
     ) -> Result<(), String> {
         Ok(())
     }
@@ -272,7 +272,7 @@ impl TeammateMesh for CentrifugeNode {
 
         tokio::task::yield_now().await;
 
-        let dispatch = ::server_ohc::interop::JobDispatch {
+        let dispatch = ::server_omnisolo::interop::JobDispatch {
             job_id: job_id.clone(),
             tenant_id: "default".to_string(),
             action_name: topic.to_string(),
@@ -335,7 +335,7 @@ impl TeammateMesh for CentrifugeNode {
     async fn ping(&self) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let node_id = uuid::Uuid::new_v4().to_string();
-        let ping = ::server_ohc::interop::HealthPing {
+        let ping = ::server_omnisolo::interop::HealthPing {
             source_node_id: node_id.clone(),
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -388,10 +388,10 @@ impl TeammateMesh for CentrifugeNode {
                 "system:health_ping",
                 Box::new(move |msg: Message| {
                     use prost::Message as ProstMessage;
-                    if let Ok(ping) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
+                    if let Ok(ping) = ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..]) {
                         let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
 
-                        let ack = ::server_ohc::interop::HealthAck {
+                        let ack = ::server_omnisolo::interop::HealthAck {
                             source_node_id: "sys".to_string(),
                             target_node_id: ping.source_node_id.clone(),
                             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -436,7 +436,7 @@ impl TeammateMesh for CentrifugeNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{Duration, sleep};
 
@@ -460,7 +460,7 @@ mod tests {
 
         async fn broadcast_crdt_delta(
             &self,
-            _delta: ::server_ohc::orchestration::CrdtDelta,
+            _delta: ::server_omnisolo::orchestration::CrdtDelta,
         ) -> Result<(), String> {
             Ok(())
         }
@@ -507,10 +507,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_teammate_mesh_pubsub() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .connect_lazy(&db_url)
             .unwrap();
@@ -756,7 +756,7 @@ pub async fn get_mesh_transport(
 ) -> Result<Arc<dyn TeammateMesh>, String> {
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         if let Ok(transport) =
-            ohc_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await
+            omnisolo_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await
         {
             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
         }
@@ -772,13 +772,13 @@ pub async fn get_mesh_transport(
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
-            if let Ok(pg_url) = std::env::var("OHC_DATABASE_URL") {
+            if let Ok(pg_url) = std::env::var("OMNISOLO_DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
                     let node_id = super::node_identity::mesh_node_id(
-                        std::env::var("OHC_MESH_NODE_ID").ok().as_deref(),
+                        std::env::var("OMNISOLO_MESH_NODE_ID").ok().as_deref(),
                         &crate::config::get_safe_user_dir().join("mesh"),
                     )?;
-                    match ohc_builtin_agent::mesh::transport::PgTransport::new_with_subscriber_id(
+                    match omnisolo_builtin_agent::mesh::transport::PgTransport::new_with_subscriber_id(
                         &pg_url, node_id,
                     )
                     .await
@@ -798,7 +798,7 @@ pub async fn get_mesh_transport(
                 }
             }
 
-            match ohc_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
+            match omnisolo_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
                 Ok(transport) => {
                     let t_clone = transport.clone();
                     tokio::spawn(async move {

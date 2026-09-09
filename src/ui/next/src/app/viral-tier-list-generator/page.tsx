@@ -77,7 +77,7 @@ export default function ViralTierListGeneratorPage() {
           <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between">
              <div>
                 <label className="font-semibold text-gray-900 flex items-center gap-2 cursor-pointer" onClick={handleBrandingToggle}>
-                   Remove "Powered by OHC" Badge
+                   Remove "Powered by OmniSolo" Badge
                    {!hasPro && <span className="bg-gray-900 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded">Pro</span>}
                 </label>
                 <p className="text-sm text-gray-500 mt-1">Hide the watermark from the public view.</p>
@@ -141,7 +141,7 @@ export default function ViralTierListGeneratorPage() {
                 {!removeBranding && (
                    <div className="mt-4 pt-4 border-t border-gray-100 text-center">
                       <Link href={`/onboarding?ref=${tenant}`} className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors" data-testid="preview-branding">
-                         ⚡ Powered by OHC
+                         ⚡ Powered by OmniSolo
                       </Link>
                    </div>
                 )}
@@ -158,7 +158,7 @@ export default function ViralTierListGeneratorPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Viral Tier List 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the Viral Tier List 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
 
             <Link href="/pricing" className="block w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md bg-gray-900 hover:bg-black">

@@ -1,7 +1,7 @@
 use super::ws_compression::{encode_json, negotiate};
 use ::server_common::Claims;
-use ::server_ohc::orchestration::sync_service_server::SyncService;
-use ::server_ohc::orchestration::{DeltaItem, SyncMcpDeltasRequest};
+use ::server_omnisolo::orchestration::sync_service_server::SyncService;
+use ::server_omnisolo::orchestration::{DeltaItem, SyncMcpDeltasRequest};
 use axum::{
     Router,
     extract::{
@@ -72,13 +72,13 @@ pub async fn power_sync_pull_handler(
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
         Ok((tenant_id, agent_id)) => format!(
-            "spiffe://onehumancorp.io/org/{}/agent/{}",
+            "spiffe://omnisolo.io/org/{}/agent/{}",
             tenant_id, agent_id
         ),
         Err(e) => return e,
     };
     let mut tonic_request =
-        tonic::Request::new(::server_ohc::orchestration::PowerSyncPullRequest {});
+        tonic::Request::new(::server_omnisolo::orchestration::PowerSyncPullRequest {});
 
     if let Ok(metadata_value) = spiffe_id_str.parse() {
         tonic_request
@@ -117,7 +117,7 @@ pub async fn power_sync_push_handler(
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
         Ok((tenant_id, agent_id)) => format!(
-            "spiffe://onehumancorp.io/org/{}/agent/{}",
+            "spiffe://omnisolo.io/org/{}/agent/{}",
             tenant_id, agent_id
         ),
         Err(e) => return e,
@@ -126,7 +126,7 @@ pub async fn power_sync_push_handler(
         .unwrap_or_else(|_| "[]".to_string());
 
     let mut tonic_request =
-        tonic::Request::new(::server_ohc::orchestration::PowerSyncPushRequest {
+        tonic::Request::new(::server_omnisolo::orchestration::PowerSyncPushRequest {
             payload: payload_str,
         });
 
@@ -182,7 +182,7 @@ pub async fn sync_mcp_deltas_handler(
         Err(e) => return e,
     };
     let spiffe_id_str = format!(
-        "spiffe://onehumancorp.io/org/{}/agent/{}",
+        "spiffe://omnisolo.io/org/{}/agent/{}",
         tenant_id, agent_id
     );
 

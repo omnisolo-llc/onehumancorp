@@ -1,11 +1,11 @@
 services:
-  ohc-core:
+  omnisolo-core:
     pull_policy: never
-    image: onehumancorp/mono-core:latest
+    image: omnisolo/mono-core:latest
 
   server:
     pull_policy: never
-    image: onehumancorp/server:latest
+    image: omnisolo/server:latest
 
   postgres:
     image: pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee

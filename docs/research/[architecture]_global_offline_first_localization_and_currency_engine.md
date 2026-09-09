@@ -10,7 +10,7 @@ The platform must natively provide an invisible layer that handles instant local
 *   **Competitor Systems Audit:**
     *   *Shopify:* Strong multi-currency and localization (Shopify Markets), but fundamentally requires constant connectivity to apply dynamic exchange rates or switch complex localized rules at checkout.
     *   *Wix:* Relies on third-party apps for robust multi-currency, which breaks offline and adds latency.
-*   **Identify Gaps:** OHC lacks a unified, edge-cached, offline-capable engine for localization and multi-currency handling. The current offline POS can take payments, but cannot dynamically adjust for a localized currency or instantly switch the UI/AI conversational language without network access.
+*   **Identify Gaps:** OmniSolo lacks a unified, edge-cached, offline-capable engine for localization and multi-currency handling. The current offline POS can take payments, but cannot dynamically adjust for a localized currency or instantly switch the UI/AI conversational language without network access.
 
 ## Design Doc
 

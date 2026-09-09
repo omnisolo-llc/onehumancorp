@@ -5720,7 +5720,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc-mono"
+name = "oid-registry"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bedf36ffb6ba96c2eb7144ef6270557b52e54b20c0a8e1eb2ff99a6c6959bff"
+dependencies = [
+ "asn1-rs 0.5.2",
+]
+
+[[package]]
+name = "oid-registry"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12f40cff3dde1b6087cc5d5f5d4d65712f34016a03ed60e9c08dcc392736b5b7"
+dependencies = [
+ "asn1-rs 0.7.2",
+]
+
+[[package]]
+name = "omnisolo"
 version = "0.4.47"
 dependencies = [
  "aes-gcm",
@@ -5745,7 +5763,7 @@ dependencies = [
  "lettre",
  "libc",
  "libsqlite3-sys",
- "ohc_builtin_agent",
+ "omnisolo_builtin_agent",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -5808,8 +5826,8 @@ dependencies = [
  "server_integrations_teams",
  "server_integrations_twilio",
  "server_integrations_zoom",
- "server_ohc",
  "server_oidc",
+ "server_omnisolo",
  "server_pricing",
  "server_telemetry",
  "server_utils",
@@ -5837,7 +5855,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent"
+name = "omnisolo_builtin_agent"
 version = "0.1.0"
 dependencies = [
  "async-nats",
@@ -5853,9 +5871,9 @@ dependencies = [
  "glob",
  "hex",
  "hmac",
- "ohc_builtin_agent_core",
- "ohc_builtin_agent_llm",
- "ohc_builtin_agent_tools",
+ "omnisolo_builtin_agent_core",
+ "omnisolo_builtin_agent_llm",
+ "omnisolo_builtin_agent_tools",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -5869,7 +5887,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server_harness",
- "server_ohc",
+ "server_omnisolo",
  "server_pricing",
  "server_telemetry",
  "sha2",
@@ -5895,7 +5913,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent_core"
+name = "omnisolo_builtin_agent_core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -5917,11 +5935,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent_llm"
+name = "omnisolo_builtin_agent_llm"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "ohc_builtin_agent_core",
+ "omnisolo_builtin_agent_core",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5930,7 +5948,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent_tools"
+name = "omnisolo_builtin_agent_tools"
 version = "0.1.0"
 dependencies = [
  "async-recursion",
@@ -5940,15 +5958,15 @@ dependencies = [
  "chrono",
  "dashmap 5.5.3",
  "glob",
- "ohc_builtin_agent_core",
- "ohc_builtin_agent_llm",
+ "omnisolo_builtin_agent_core",
+ "omnisolo_builtin_agent_llm",
  "once_cell",
  "qrcode",
  "regex",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
- "server_ohc",
+ "server_omnisolo",
  "server_pricing",
  "sqlx",
  "temp-env",
@@ -5966,35 +5984,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "oid-registry"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bedf36ffb6ba96c2eb7144ef6270557b52e54b20c0a8e1eb2ff99a6c6959bff"
-dependencies = [
- "asn1-rs 0.5.2",
-]
-
-[[package]]
-name = "oid-registry"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f40cff3dde1b6087cc5d5f5d4d65712f34016a03ed60e9c08dcc392736b5b7"
-dependencies = [
- "asn1-rs 0.7.2",
-]
-
-[[package]]
 name = "omnisolo_harness_worker"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
- "ohc_builtin_agent",
+ "omnisolo_builtin_agent",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "server_harness",
- "server_ohc",
+ "server_omnisolo",
  "sha2",
  "sqlx",
  "tokio",
@@ -8879,8 +8879,8 @@ dependencies = [
  "serde_json",
  "server_common",
  "server_config",
- "server_ohc",
  "server_oidc",
+ "server_omnisolo",
  "sha2",
  "sqlx",
  "temp-env",
@@ -8931,7 +8931,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server_common",
- "server_ohc",
+ "server_omnisolo",
  "server_telemetry",
  "sha2",
  "sqlx",
@@ -9328,13 +9328,13 @@ name = "server_integrations_pubsub"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "ohc_builtin_agent",
+ "omnisolo_builtin_agent",
  "prost 0.13.5",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "server_integrations_core",
- "server_ohc",
+ "server_omnisolo",
  "sqlx",
  "tokio",
  "tracing",
@@ -9569,16 +9569,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "server_ohc"
-version = "0.1.0"
-dependencies = [
- "prost 0.13.5",
- "serde",
- "tonic 0.12.3",
- "tonic-build",
-]
-
-[[package]]
 name = "server_oidc"
 version = "0.1.0"
 dependencies = [
@@ -9592,6 +9582,16 @@ dependencies = [
  "temp-env",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "server_omnisolo"
+version = "0.1.0"
+dependencies = [
+ "prost 0.13.5",
+ "serde",
+ "tonic 0.12.3",
+ "tonic-build",
 ]
 
 [[package]]

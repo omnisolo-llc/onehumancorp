@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use crate::db::DB;
 use uuid::Uuid;
-use ohc_builtin_agent::llm::LlmClient;
+use omnisolo_builtin_agent::llm::LlmClient;
 
 fn build_newsletter_llm_client() -> Option<Arc<dyn LlmClient>> {
-    let key = std::env::var("OHC_LLM_API_KEY")
+    let key = std::env::var("OMNISOLO_LLM_API_KEY")
         .or_else(|_| std::env::var("OPENAI_API_KEY"))
         .unwrap_or_default();
 
@@ -13,19 +13,19 @@ fn build_newsletter_llm_client() -> Option<Arc<dyn LlmClient>> {
     }
 
     let endpoint = std::env::var("OPENAI_BASE_URL")
-        .or_else(|_| std::env::var("OHC_OPENAI_BASE_URL"))
-        .or_else(|_| std::env::var("OHC_LLM_BASE_URL"))
-        .or_else(|_| std::env::var("OHC_LLM_ENDPOINT"))
+        .or_else(|_| std::env::var("OMNISOLO_OPENAI_BASE_URL"))
+        .or_else(|_| std::env::var("OMNISOLO_LLM_BASE_URL"))
+        .or_else(|_| std::env::var("OMNISOLO_LLM_ENDPOINT"))
         .ok();
 
-    let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
+    let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
 
     let mut config = if let Some(endpoint) = endpoint {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
+        omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
     } else {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
+        omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
     };
-    Some(Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config)))
+    Some(Arc::new(omnisolo_builtin_agent::llm::openai::OpenAIClient::from_config(config)))
 }
 
 pub struct NewsletterWorker {
@@ -88,7 +88,7 @@ impl NewsletterWorker {
 
                     let context = format!("New items this week: {}", products_context);
 
-                    let mut subject = "Weekly Update from OHC".to_string();
+                    let mut subject = "Weekly Update from OmniSolo".to_string();
                     let mut body_markdown = format!("Hello!\n\nHere are some highlights from the past week:\n\n{}\n\nCheers!", context);
                     let mut body_html = format!("<h1>Hello!</h1><p>Here are some highlights from the past week:</p><p>{}</p><p>Cheers!</p>", context);
 
@@ -97,10 +97,10 @@ impl NewsletterWorker {
                         let system_prompt = "You are a marketing assistant for a small business. Draft a short, engaging weekly newsletter based on the context provided. Respond ONLY with a JSON object containing three keys: 'subject', 'body_markdown', and 'body_html'. Keep it concise and mobile-friendly.";
                         let user_prompt = format!("Context: {}", context);
 
-                        let req = ohc_builtin_agent::types::ChatRequest {
+                        let req = omnisolo_builtin_agent::types::ChatRequest {
                             model: "default".to_string(),
                             system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                            messages: vec![ohc_builtin_agent::types::Message::user(::server_pricing::compression::reduce_tokens(&user_prompt))],
+                            messages: vec![omnisolo_builtin_agent::types::Message::user(::server_pricing::compression::reduce_tokens(&user_prompt))],
                             tools: vec![],
                             max_tokens: 500,
                             temperature: 0.7,

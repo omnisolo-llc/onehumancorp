@@ -11,7 +11,7 @@ Small business owners experience severe cash flow bottlenecks when trying to sca
     *   **Shopify Capital / Stripe Capital**: Both offer revenue-based financing, but they require the user to actively monitor a dashboard, understand financial terms, and manually accept offers. They are disconnected from the immediate operational trigger (e.g., they don't offer capital *because* you just got a big booking).
     *   **Wix / Squarespace**: Offer limited native capital, relying heavily on third-party app integrations that introduce massive friction, separate logins, and disjointed repayment experiences.
     *   **Traditional SMB Banking**: Requires high credit scores, personal guarantees, and weeks of underwriting. Structurally incapable of serving the micro-solopreneur in real-time.
-*   **OHC's Differentiation ("Invisible Capital")**: Because OHC already manages the `Universal Capacity Ledger`, the `Instant Localized Invoicing Ledger`, and the `Autonomous Treasury`, it has perfect, real-time visibility into the merchant's health, upcoming bookings, and historical revenue. The Autonomous Finance Agent can proactively offer micro-advances precisely when an event triggers a need, recovering the funds invisibly via a small percentage split of future daily sales.
+*   **OmniSolo's Differentiation ("Invisible Capital")**: Because OmniSolo already manages the `Universal Capacity Ledger`, the `Instant Localized Invoicing Ledger`, and the `Autonomous Treasury`, it has perfect, real-time visibility into the merchant's health, upcoming bookings, and historical revenue. The Autonomous Finance Agent can proactively offer micro-advances precisely when an event triggers a need, recovering the funds invisibly via a small percentage split of future daily sales.
 
 ## Design Doc
 
@@ -52,7 +52,7 @@ erDiagram
 *   **Trigger (Push Notification)**: Maya receives a notification: "✨ You just booked a $1,200 wedding cake! Need extra cash for supplies? Tap for a $300 instant boost."
 *   **Offer Card (The "Grandmother Test")**: Opening the app reveals a frosted glass card. It strips away all financial jargon (no APR, no compounding interest).
     *   **Headline**: "Growth Boost: $300"
-    *   **Terms**: "Take $300 instantly to your OHC Wallet. We'll automatically keep 10% of your future sales until $330 is repaid. No hidden fees."
+    *   **Terms**: "Take $300 instantly to your OmniSolo Wallet. We'll automatically keep 10% of your future sales until $330 is repaid. No hidden fees."
     *   **Action**: A massive, thumb-friendly primary button: `[Get $300 Now]` (44x44px minimum touch target).
 *   **Repayment Tracker**: On the main dashboard, an active Capital Boost is represented by a satisfying, subtle progress ring around a "Boost" icon, visually ticking down as new sales automatically repay the balance.
 
@@ -64,7 +64,7 @@ erDiagram
 ### Key Design Decisions (Why, not How)
 *   **Event-Driven Context**: Capital is offered contextually (tied to a booking or inventory need) rather than statically sitting in a dashboard. This converts financing from an administrative chore to a magical enabler.
 *   **Flat Fee / Revenue Split**: No compounding interest or fixed monthly payments. Repayment scales with the business, eliminating the fear of defaulting during slow months.
-*   **Instant Wallet Injection**: Funds must be instantly available on the OHC Virtual Card, allowing the owner to use Apple Pay at a supplier immediately.
+*   **Instant Wallet Injection**: Funds must be instantly available on the OmniSolo Virtual Card, allowing the owner to use Apple Pay at a supplier immediately.
 *   **Zero-Trust Multi-Tenancy**: The Risk Assessment Engine must operate under strict SPIFFE/SPIRE identity checks to ensure Tenant A's revenue data never influences Tenant B's risk profile.
 
 ## Implementation Prompt
@@ -72,7 +72,7 @@ erDiagram
 Your objective is to architect the backend logic and mobile-first UI for the "Autonomous Revenue-Based Capital Engine."
 
 **Customer User Journey (CUJ):**
-Maya receives a large booking event that triggers a contextual capital offer. She reviews a simple, jargon-free translucent glass card detailing a flat-fee advance. Upon 1-tap approval, the system instantly credits her OHC Treasury Wallet and configures the Split Payments Ledger to automatically route a fixed percentage of all future incoming transactions to repay the advance.
+Maya receives a large booking event that triggers a contextual capital offer. She reviews a simple, jargon-free translucent glass card detailing a flat-fee advance. Upon 1-tap approval, the system instantly credits her OmniSolo Treasury Wallet and configures the Split Payments Ledger to automatically route a fixed percentage of all future incoming transactions to repay the advance.
 
 **Acceptance Criteria:**
 *   **Risk Engine Hook**: Implement a background worker that securely calculates a `pre_approved_limit` based on a tenant's historical ledger volume, ensuring strict multi-tenant isolation.

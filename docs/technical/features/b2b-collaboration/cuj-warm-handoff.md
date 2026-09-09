@@ -34,7 +34,7 @@ An agent encountered an ambiguous goal or a technical blocker it cannot resolve 
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 ## Edge Cases

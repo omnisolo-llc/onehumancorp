@@ -9,7 +9,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // 3. Check for My Plan components
     await expect(page.locator('h1:has-text("My Plan")').first()).toBeVisible();
-    await expect(page.locator('.ohc-growth-card').first()).toBeVisible();
+    await expect(page.locator('.omnisolo-growth-card').first()).toBeVisible();
     await expect(page.locator('h2:has-text("Plan:")').first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'AI Actions Used' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage Used' }).first()).toBeVisible();

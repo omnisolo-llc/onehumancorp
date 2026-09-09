@@ -18,7 +18,7 @@ async fn test_multitenant_idor_system_bypass_prevention_regression() {
     let repo = PgUserRepository::new(pool.clone());
 
     // In Cloud multi-tenant mode, querying with org_id "system" must be rejected.
-    temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+    temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], async {
         let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
         assert_eq!(
             res.unwrap_err(),
@@ -38,7 +38,7 @@ async fn test_standalone_mode_allows_system_org_id() {
 
     let repo = PgUserRepository::new(pool.clone());
 
-    temp_env::async_with_vars([("OHC_MULTITENANT", Some("false"))], async {
+    temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("false"))], async {
         let mut role_tx = pool.begin().await.unwrap();
         ::server_common::auth_utils::set_org_context(&mut *role_tx, "system")
             .await

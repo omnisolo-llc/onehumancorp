@@ -23,6 +23,6 @@ graph TD
 
 ## 2. Conflict Resolution Mechanism
 
-When the `crdt_push` tool is invoked, the payload is validated against the multi-tenant boundary. If `OHC_MULTITENANT=true`, it checks the `organization_id` in the context to prevent cross-tenant mutations.
+When the `crdt_push` tool is invoked, the payload is validated against the multi-tenant boundary. If `OMNISOLO_MULTITENANT=true`, it checks the `organization_id` in the context to prevent cross-tenant mutations.
 
 </div>

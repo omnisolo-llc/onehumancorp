@@ -63,7 +63,7 @@ describe('ViralPostGeneratorPage', () => {
 
     expect(screen.getByText(/Test Product/)).toBeDefined();
     expect(screen.getByText(/Testing benefits/)).toBeDefined();
-    expect(screen.getAllByText(/Powered by OHC/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Powered by OmniSolo/).length).toBeGreaterThan(0);
   });
 
   it('copies to clipboard', () => {

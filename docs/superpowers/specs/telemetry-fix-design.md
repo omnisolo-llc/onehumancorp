@@ -1,7 +1,7 @@
-# OHC Standalone Telemetry Opt-in & PII Audit Design
+# OmniSolo Standalone Telemetry Opt-in & PII Audit Design
 
 ## Problem
-Currently, OHC could leak PII in traces (`tracing::warn!`, `tracing::error!`), and the Standalone offline mode might try to exfiltrate telemetry if not strictly gated.
+Currently, OmniSolo could leak PII in traces (`tracing::warn!`, `tracing::error!`), and the Standalone offline mode might try to exfiltrate telemetry if not strictly gated.
 
 ## Goals
 1. Implement lint/test to enforce PII is not logged unless marked safe, which is achieved with the `pii_leakage_check.sh`.

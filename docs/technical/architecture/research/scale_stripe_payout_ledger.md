@@ -1,7 +1,7 @@
 # [Scale] High-Performance Stripe Payment Routing & Ledger Optimization
 
 ## Problem Statement
-As OneHumanCorp grows, our payment integration via Stripe experiences structural limitations. Currently, small payouts result in large cumulative transaction fees for our users, reducing their profit margin. Non-technical users like Maya (the baker) and Carlos (the handyman) shouldn't have to figure out how to minimize payout fees—the platform should handle it invisibly. Additionally, we need a strong, reliable architecture for handling payout batching and routing across diverse currency contexts to save processing fees.
+As OmniSolo grows, our payment integration via Stripe experiences structural limitations. Currently, small payouts result in large cumulative transaction fees for our users, reducing their profit margin. Non-technical users like Maya (the baker) and Carlos (the handyman) shouldn't have to figure out how to minimize payout fees—the platform should handle it invisibly. Additionally, we need a strong, reliable architecture for handling payout batching and routing across diverse currency contexts to save processing fees.
 
 ## Research Report
 - **Stripe Fees**: Standard payout fees include a fixed amount (e.g., $0.25). A high frequency of small payments leads to unnecessary accumulated costs.

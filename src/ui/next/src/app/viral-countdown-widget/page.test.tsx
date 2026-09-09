@@ -57,7 +57,7 @@ describe('ViralCountdownWidgetPage', () => {
   it('shows paywall when trying to remove branding without pro', () => {
     render(<ViralCountdownWidgetPage />);
 
-    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/i);
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/i);
     fireEvent.click(removeBrandingCheckbox);
 
     expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
@@ -69,7 +69,7 @@ describe('ViralCountdownWidgetPage', () => {
     render(<ViralCountdownWidgetPage />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
-    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/i);
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/i);
     fireEvent.click(removeBrandingCheckbox);
 
     expect(screen.queryByText('Upgrade to Remove Branding')).toBeNull();

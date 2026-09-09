@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# 🔬 OHC Market Research Report: Unified Harness Architecture (Bwrap, Proxy, AST)
+# 🔬 OmniSolo Market Research Report: Unified Harness Architecture (Bwrap, Proxy, AST)
 
 ## Title
 Implement Unified Bwrap Sandboxing, Egress Proxy, and AST Validation Engine
 
 ## Problem Statement
-OHC’s Agent Harness currently uses rudimentary regex to filter shell commands (`bash_sandbox.go`) and executes processes with the same host permissions and network access as the orchestrator. Without robust execution boundaries, agents risk modifying critical host files (sandbox escape) or performing unauthorized network egress. Conversely, market leaders like Claude Code isolate shell commands via unprivileged namespaces (`bwrap`), employ dynamic system-call blocking (`seccomp-bpf`), intercept all network traffic via local HTTP/SOCKS proxies, and use abstract syntax tree (AST) validation for granular command-level restriction.
+OmniSolo’s Agent Harness currently uses rudimentary regex to filter shell commands (`bash_sandbox.go`) and executes processes with the same host permissions and network access as the orchestrator. Without robust execution boundaries, agents risk modifying critical host files (sandbox escape) or performing unauthorized network egress. Conversely, market leaders like Claude Code isolate shell commands via unprivileged namespaces (`bwrap`), employ dynamic system-call blocking (`seccomp-bpf`), intercept all network traffic via local HTTP/SOCKS proxies, and use abstract syntax tree (AST) validation for granular command-level restriction.
 
 ## Research Report
 ### Deep Audit: Leaked Claude Code (v2.1.88)
@@ -17,9 +17,9 @@ Claude Code encapsulates agent terminal execution inside an `@anthropic-ai/sandb
 3. **AST Validation:** Commands aren't just strings; they are parsed via `shell-quote` or Tree-sitter. It explicitly detects dangerous behaviors (like malicious `>` redirections, UNC paths on Windows, and carriage return injections via `$IFS`) that regexes miss.
 4. **Seccomp Filters:** It blocks unsafe operations at the kernel level by applying generated BPF filters (`seccomp`), explicitly denying operations like Unix Domain socket creation to avoid proxy bypassing.
 
-### Comparative Table: OHC vs Market
+### Comparative Table: OmniSolo vs Market
 
-| Feature Capability | OHC Current State | Market Standard (Claude Code) | Gap Impact |
+| Feature Capability | OmniSolo Current State | Market Standard (Claude Code) | Gap Impact |
 | :--- | :--- | :--- | :--- |
 | **Command Execution** | Raw `exec.Command` | Wrapped via `SandboxManager` & AST Validator | 🚨 Critical (P0) |
 | **OS Sandboxing** | None (Host Default) | Bubblewrap namespaces & Seccomp filters | 🚨 Critical (P0) |

@@ -18,7 +18,7 @@ openssl req \
   -sha256 \
   -days 365 \
   -out "$output_dir/ca.crt" \
-  -subj "/CN=OHC E2E Test CA" \
+  -subj "/CN=OmniSolo E2E Test CA" \
   -addext "basicConstraints=critical,CA:TRUE" \
   -addext "keyUsage=critical,keyCertSign,cRLSign" \
   -addext "subjectKeyIdentifier=hash" \

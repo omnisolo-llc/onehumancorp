@@ -1,0 +1,65 @@
+{{- if .Values.omnisoloCore.enabled }}
+# OmniSolo Core — Rust micro-service (settings · agent scheduler · meeting rooms · chat)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-omnisolo-core
+  labels:
+    app: {{ .Release.Name }}-omnisolo-core
+    app.kubernetes.io/part-of: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.omnisoloCore.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-omnisolo-core
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-omnisolo-core
+        {{- include "omnisolo.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: omnisolo-core
+          image: {{ .Values.omnisoloCore.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.omnisoloCore.service.port }}
+          env:
+            - name: LOG_FORMAT
+              value: "json"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: LISTEN_ADDR
+              value: "0.0.0.0:{{ .Values.omnisoloCore.service.port }}"
+            - name: RUST_LOG
+              value: "info"
+          resources:
+            {{- toYaml .Values.omnisoloCore.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.omnisoloCore.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.omnisoloCore.service.port }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - "ALL"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -7,7 +7,7 @@
 **Last Updated:** 2024-04-22
 
 ## 1. Overview
-OHC's Hybrid Agentic OS requires the ability for standalone agents (running in local SQLite mode) to receive asynchronous webhooks from external services. Local environments lack a publicly accessible endpoint, preventing external services from pushing events. This feature introduces an MCP tool that establishes an encrypted, bidirectional multiplexed connection from the local standalone agent to a centralized OHC Cloud relay, allowing secure webhook delivery to local environments.
+OmniSolo's Hybrid Agentic OS requires the ability for standalone agents (running in local SQLite mode) to receive asynchronous webhooks from external services. Local environments lack a publicly accessible endpoint, preventing external services from pushing events. This feature introduces an MCP tool that establishes an encrypted, bidirectional multiplexed connection from the local standalone agent to a centralized OmniSolo Cloud relay, allowing secure webhook delivery to local environments.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

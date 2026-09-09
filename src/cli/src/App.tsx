@@ -17,7 +17,7 @@ export const App = () => {
   const [inputs, setInputs] = useState<string[]>([]);
   const [showMarketplace, setShowMarketplace] = useState(false);
   const [showVisualBuilder, setShowVisualBuilder] = useState(false);
-  const markdown = `# OHC Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
+  const markdown = `# OmniSolo OneHumanCorp Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
 
   const handleSubmit = async (val: string) => {
     setInputs([...inputs, val]);

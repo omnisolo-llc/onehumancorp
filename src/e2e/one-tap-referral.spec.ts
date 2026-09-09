@@ -58,7 +58,7 @@ test.describe('One-Tap Referral Generator', () => {
       const html = await response.text();
       expect(html).toContain('Give $20, Get $20');
       expect(html).toContain('Special offer for your friends!');
-      expect(html).toContain('⚡ Powered by OHC'); // Should contain branding
+      expect(html).toContain('⚡ OmniSolo'); // Should contain branding
     }
   });
 });

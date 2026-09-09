@@ -7,7 +7,7 @@ Detailed explanation of why this feature exists, the specific pain points it sol
 
 ## 2. Prerequisites & Requirements
 - **Hardware/Software**: Memory, CPU, Browser versions.
-- **Permissions**: Required OHC roles (Admin, Manager, etc.).
+- **Permissions**: Required OmniSolo roles (Admin, Manager, etc.).
 - **Dependencies**: Other features or tools that must be enabled.
 
 ## 3. Getting Started (Step-by-Step)

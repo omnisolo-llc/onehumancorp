@@ -20,8 +20,8 @@ test.describe('Viral Gift Cards Loop', () => {
     await expect(page.getByText('Share Your Gift Card')).toBeVisible();
     await expect(page.locator('input[aria-label="Gift Card Link"]')).toHaveValue(/https?:\/\/[^\/]+\/gift-card\?amount=150&ref=.*$/);
 
-    // Verify the "Powered by OHC" footer link
-    const poweredByLink = page.locator('a', { hasText: '⚡ Powered by OHC' });
+    // Verify the "OmniSolo" footer link
+    const poweredByLink = page.locator('a', { hasText: '⚡ OmniSolo' });
     await expect(poweredByLink).toBeVisible();
 
     // Verify the href link is correct

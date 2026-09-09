@@ -86,11 +86,11 @@ export async function parseSessionKeyRing(env: Env): Promise<SessionKeyRing> {
   try {
     activeMaterial = parseKeyMaterial(
       env,
-      "OHC_WEB_SESSION_KEY_ID",
-      "OHC_WEB_SESSION_SECRET",
+      "OMNISOLO_WEB_SESSION_KEY_ID",
+      "OMNISOLO_WEB_SESSION_SECRET",
     );
-    const previousId = env.OHC_WEB_SESSION_PREVIOUS_KEY_ID;
-    const previousSecret = env.OHC_WEB_SESSION_PREVIOUS_SECRET;
+    const previousId = env.OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID;
+    const previousSecret = env.OMNISOLO_WEB_SESSION_PREVIOUS_SECRET;
     if ((previousId === undefined) !== (previousSecret === undefined)) {
       throw new Error("previous key id and secret must be configured together");
     }
@@ -100,8 +100,8 @@ export async function parseSessionKeyRing(env: Env): Promise<SessionKeyRing> {
 
     previousMaterial = parseKeyMaterial(
       env,
-      "OHC_WEB_SESSION_PREVIOUS_KEY_ID",
-      "OHC_WEB_SESSION_PREVIOUS_SECRET",
+      "OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID",
+      "OMNISOLO_WEB_SESSION_PREVIOUS_SECRET",
     );
     if (previousMaterial.id === activeMaterial.id) {
       throw new Error("previous key id must differ from active key id");

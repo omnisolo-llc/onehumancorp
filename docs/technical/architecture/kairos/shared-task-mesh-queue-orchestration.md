@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# OHC KAIROS Orchestration Master Architecture
+# OmniSolo KAIROS Orchestration Master Architecture
 
 This document outlines the architectural blueprints for KAIROS Orchestrator to decompose complex features across the Swarm and manage long-term state effectively.
 
@@ -48,7 +48,7 @@ sequenceDiagram
 ```
 
 ## 2. Phase 2: Teammate Mesh APIs (Orchestration)
-The Teammate Mesh ensures agents coordinate without delays. It acts as the Nervous System of the OHC Swarm.
+The Teammate Mesh ensures agents coordinate without delays. It acts as the Nervous System of the OmniSolo Swarm.
 
 Cloud-Native implementations leverage Redis Pub/Sub connected to Centrifuge WebSocket hubs for realtime synchronization.
 
@@ -69,7 +69,7 @@ Agents broadcast state transitions and orchestrator events using a structured HT
 ```
 
 ## 3. Phase 3: autoDream Vector Memory Architecture
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads and completed task results be consolidated into long-term durable state. autoDream serves as the omni-context memory layer for continuous learning.
+The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads and completed task results be consolidated into long-term durable state. autoDream serves as the omni-context memory layer for continuous learning.
 
 Worker agents process completed tasks via the background pipeline, generating Minimax/OpenAI embeddings for semantic recall. The system relies heavily on PostgreSQL's `pgvector` extension.
 

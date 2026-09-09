@@ -35,6 +35,6 @@ test.describe('Growth Leaderboard Embed', () => {
 
     // Check for the rendered HTML
     await expect(page.locator('h3', { hasText: 'Top Referrers' })).toBeVisible();
-    await expect(page.locator('text=Powered by OHC')).toBeVisible();
+    await expect(page.locator('text=OmniSolo')).toBeVisible();
   });
 });

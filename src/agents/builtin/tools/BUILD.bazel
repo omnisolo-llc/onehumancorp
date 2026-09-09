@@ -68,7 +68,7 @@ rust_library(
         "write.rs",
     ],
     crate_root = "mod.rs",
-    crate_name = "ohc_builtin_agent_tools",
+    crate_name = "omnisolo_builtin_agent_tools",
 
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -76,7 +76,7 @@ rust_library(
         "//src/agents/builtin:core",
         "//src/agents/builtin/llm",
         "//src/proto:agent_service_tonic",
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "@crates//:base64",
         "@crates//:chrono",
         "@crates//:dashmap",

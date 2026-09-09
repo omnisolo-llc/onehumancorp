@@ -10,8 +10,8 @@
 - **Compatibility**: Cloud, Standalone (via API).
 **Design Doc**:
 - User provides API keys to connect MessageBird.
-- OHC integrates MessageBird API to send outbound SMS.
+- OmniSolo integrates MessageBird API to send outbound SMS.
 - Triggers are set up for automated SMS sending (e.g., appointment reminders, order updates).
-**Implementation Prompt**: Integrate the MessageBird API to handle automated SMS triggers. Ensure the integration supports global phone number formats and handles delivery status webhooks to update the message status in the OHC dashboard.
+**Implementation Prompt**: Integrate the MessageBird API to handle automated SMS triggers. Ensure the integration supports global phone number formats and handles delivery status webhooks to update the message status in the OmniSolo dashboard.
 **Priority**: P2
 **Estimated Scope**: Medium

@@ -9,7 +9,7 @@ Small business owners like Leo (Music Tutor) and Maya (Baker) often struggle wit
     *   *Shopify:* Offers discounts and basic sale pricing, but dynamic pricing requires apps like "Dynamic Pricing" which cost monthly fees and require complex rule setup.
     *   *Wix & Squarespace:* Provide static pricing and manual coupon generation. No native, intelligent yield management or demand-based pricing adjustments.
     *   *Airlines/Hotels:* Utilize advanced yield management, but these enterprise systems are entirely inaccessible to an SMB.
-*   **Discovery:** OHC can democratize yield management by utilizing its Business Advisory Agent and Finance & Payments Agent. The AI will monitor sales velocity, upcoming calendar availability, and seasonal trends to proactively suggest dynamic pricing adjustments (e.g., "Increase custom cake prices by 10% for the busy wedding season") or targeted promotions (e.g., "Offer a 15% discount on remaining Tuesday guitar slots"). The owner simply taps "Approve" on a mobile notification.
+*   **Discovery:** OmniSolo can democratize yield management by utilizing its Business Advisory Agent and Finance & Payments Agent. The AI will monitor sales velocity, upcoming calendar availability, and seasonal trends to proactively suggest dynamic pricing adjustments (e.g., "Increase custom cake prices by 10% for the busy wedding season") or targeted promotions (e.g., "Offer a 15% discount on remaining Tuesday guitar slots"). The owner simply taps "Approve" on a mobile notification.
 
 ## Design Doc
 
@@ -17,7 +17,7 @@ Small business owners like Leo (Music Tutor) and Maya (Baker) often struggle wit
 ```mermaid
 sequenceDiagram
     participant User as Business Owner (Mobile)
-    participant Feed as OHC Unified Activity Feed
+    participant Feed as OmniSolo Unified Activity Feed
     participant Advisory as "The Advisor" (Business Advisory Agent)
     participant Sales as "The Salesperson" (Sales Agent)
     participant Ledger as Core Ledger (Pricing/Inventory)
@@ -34,7 +34,7 @@ sequenceDiagram
 ```
 
 ### UI Wireframes & Mobile UX Flow (375px)
-*   **Mobile Activity Feed (OHC Mobile App - 375px):**
+*   **Mobile Activity Feed (OmniSolo Mobile App - 375px):**
     *   **Notification Card:** "High Demand Alert: Your weekend slots for custom cakes are filling up fast. We suggest a 15% 'Rush Order' premium for remaining slots this weekend."
     *   **Data Visualization:** A simple, glassmorphism-styled micro-chart showing demand spike vs. available capacity.
     *   **Actions:**
@@ -50,7 +50,7 @@ sequenceDiagram
 ### Key Design Decisions
 1.  **Opt-In Approval Only:** Pricing is sensitive. The AI will *suggest* changes, but never autonomously mutate base prices without the owner's 1-Tap approval.
 2.  **Margin Protection:** The system will require a baseline cost input (or estimate it) to ensure dynamic discounting never results in negative margins.
-3.  **Real-Time Synchronization:** Pricing updates must instantly sync across the OHC Storefront, Mobile POS, and any active digital channels.
+3.  **Real-Time Synchronization:** Pricing updates must instantly sync across the OmniSolo Storefront, Mobile POS, and any active digital channels.
 
 ## Implementation Prompt
 **Task for Implementer Agent:**
@@ -59,7 +59,7 @@ Implement the "AI-Driven Dynamic Pricing & Promotional Yield Engine" core flow.
 2.  Create a background worker service for "The Advisor" agent that periodically evaluates sales velocity/capacity against predefined or learned thresholds to generate pricing suggestions.
 3.  Develop the API endpoints to serve these suggestions to the mobile activity feed and to accept the owner's "1-Tap Approve" decision.
 4.  Ensure that approved pricing modifiers are immediately reflected in the checkout flow and integrated with the Sales agent for promotional broadcasting.
-5.  All user interfaces must strictly adhere to the 375px mobile-first constraint and use the OHC premium glassmorphism design tokens. Do not implement complex rule-builder UIs; focus entirely on the AI-proposed, single-tap approval flow.
+5.  All user interfaces must strictly adhere to the 375px mobile-first constraint and use the OmniSolo premium glassmorphism design tokens. Do not implement complex rule-builder UIs; focus entirely on the AI-proposed, single-tap approval flow.
 
 ## Priority
 P1

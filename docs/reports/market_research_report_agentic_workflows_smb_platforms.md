@@ -23,20 +23,20 @@ Shopify is the dominant player in the SMB commerce space, but its architecture i
 4. **Data Silos**: Apps don't talk to each other seamlessly. A loyalty app might not know a customer's support ticket history.
 
 ### Conclusion on Shopify
-Shopify is a tool for *building* a store. OHC must be an agent that *runs* the business.
+Shopify is a tool for *building* a store. OmniSolo must be an agent that *runs* the business.
 
-## Track 3: OHC Gap & Pain Point Identification
+## Track 3: OmniSolo Gap & Pain Point Identification
 
-Based on our analysis of the market and our target personas (Maya the Baker, Carlos the Handyman), we've identified the following gaps OHC must address:
+Based on our analysis of the market and our target personas (Maya the Baker, Carlos the Handyman), we've identified the following gaps OmniSolo must address:
 
-1. **Time Starvation**: SMB owners spend 30-40% of their time on admin, marketing, and customer support. OHC must automate these via the Operations and Marketing Agents.
-2. **Technical Anxiety**: Users are terrified of breaking their site or misconfiguring payments. OHC must offer a "Zero-Setup" experience where AI provisions the store based on a simple prompt or Instagram handle.
-3. **Fragmented Communication**: Managing Instagram DMs, emails, and SMS is overwhelming. OHC needs a unified Inbox powered by the Customer Success Agent to draft responses.
+1. **Time Starvation**: SMB owners spend 30-40% of their time on admin, marketing, and customer support. OmniSolo must automate these via the Operations and Marketing Agents.
+2. **Technical Anxiety**: Users are terrified of breaking their site or misconfiguring payments. OmniSolo must offer a "Zero-Setup" experience where AI provisions the store based on a simple prompt or Instagram handle.
+3. **Fragmented Communication**: Managing Instagram DMs, emails, and SMS is overwhelming. OmniSolo needs a unified Inbox powered by the Customer Success Agent to draft responses.
 4. **Lack of Actionable Insights**: Analytics dashboards are useless to non-technical users. They need the Business Advisory Agent to tell them *what to do* ("You had 10 abandoned carts yesterday; I drafted an email to win them back. Approve?").
 
 ## Track 4: Deeper Focused Research & Agentic Solutions
 
-To dominate the market, OHC must transition from a traditional SaaS model to a "Service-as-Software" model powered by agentic workflows.
+To dominate the market, OmniSolo must transition from a traditional SaaS model to a "Service-as-Software" model powered by agentic workflows.
 
 ### Proposed Agentic Workflows
 

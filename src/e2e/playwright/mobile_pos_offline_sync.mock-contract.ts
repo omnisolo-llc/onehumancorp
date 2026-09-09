@@ -9,10 +9,10 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     await page.goto('http://127.0.0.1:3000/').catch(() => {});
     await page.evaluate((tenant) => {
         localStorage.setItem('tenant_id', tenant);
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Owner', pin_hash: '1234', tenant_id: tenant }]));
-        localStorage.setItem('ohc_offline_events', JSON.stringify([]));
-        localStorage.setItem('ohc_pos_device_id', 'test_device_123');
-        localStorage.setItem('ohc_catalog_default', JSON.stringify([]));
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Owner', pin_hash: '1234', tenant_id: tenant }]));
+        localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
+        localStorage.setItem('omnisolo_pos_device_id', 'test_device_123');
+        localStorage.setItem('omnisolo_catalog_default', JSON.stringify([]));
     }, tenantId);
 
     // 1. Navigate to Feed and click New Sale
@@ -65,7 +65,7 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     // Verify it's in the IndexedDB offline queue
     const queueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');
@@ -90,9 +90,9 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     await page.goto('http://127.0.0.1:3000/').catch(() => {}); // Fallback to UI server
     await page.evaluate((tenant) => {
         localStorage.setItem('tenant_id', tenant);
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Priya', role: 'Manager', pin_hash: '1234', tenant_id: tenant }]));
-        localStorage.setItem('ohc_offline_events', JSON.stringify([]));
-        localStorage.setItem('ohc_pos_device_id', 'test_device_123');
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Priya', role: 'Manager', pin_hash: '1234', tenant_id: tenant }]));
+        localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
+        localStorage.setItem('omnisolo_pos_device_id', 'test_device_123');
 
         const catalog = [{
             id: 'prod_offline_sync_test',
@@ -102,7 +102,7 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
             stock: 5,
             available_quantity: 5
         }];
-        localStorage.setItem('ohc_catalog_default', JSON.stringify(catalog));
+        localStorage.setItem('omnisolo_catalog_default', JSON.stringify(catalog));
     }, tenantId);
 
     // Navigate to POS terminal

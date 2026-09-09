@@ -5,7 +5,7 @@ umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
-STATE_DIR="${OHC_COMPOSE_STATE_DIR:-${REPO_ROOT}/.ohc-compose}"
+STATE_DIR="${OMNISOLO_COMPOSE_STATE_DIR:-${REPO_ROOT}/.omnisolo-compose}"
 ENV_FILE="${STATE_DIR}/compose.env"
 TLS_DIR="${STATE_DIR}/grpc-tls"
 
@@ -31,7 +31,7 @@ find "${TLS_DIR}" -mindepth 1 -maxdepth 1 -type f -delete
 POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 JWT_SECRET="$(openssl rand -hex 48)"
 SETUP_TOKEN="$(openssl rand -hex 32)"
-ADMIN_PASSWORD="OHC-Local-Aa1-$(openssl rand -hex 18)"
+ADMIN_PASSWORD="OmniSolo-Local-Aa1-$(openssl rand -hex 18)"
 
 printf '%s' "${POSTGRES_PASSWORD}" > "${STATE_DIR}/postgres-password"
 printf '%s' "${JWT_SECRET}" > "${STATE_DIR}/jwt-secret"
@@ -43,7 +43,7 @@ printf 'postgres://ohc:%s@postgres:5432/ohc?sslmode=disable' \
 openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 365 \
   -keyout "${TLS_DIR}/ca.key" \
   -out "${TLS_DIR}/ca.crt" \
-  -subj '/CN=OHC local Compose CA' \
+  -subj '/CN=OmniSolo local Compose CA' \
   -addext 'basicConstraints=critical,CA:TRUE' \
   -addext 'keyUsage=critical,keyCertSign,cRLSign' >/dev/null 2>&1
 openssl req -new -newkey rsa:3072 -nodes -sha256 \
@@ -71,17 +71,17 @@ escape_env_value() {
 }
 
 cat > "${ENV_FILE}" <<EOF
-OHC_DOCKER_GRPC_TLS_DIR="$(escape_env_value "${TLS_DIR}")"
+OMNISOLO_DOCKER_GRPC_TLS_DIR="$(escape_env_value "${TLS_DIR}")"
 JWT_SECRET_FILE="$(escape_env_value "${STATE_DIR}/jwt-secret")"
-OHC_SETUP_TOKEN_FILE="$(escape_env_value "${STATE_DIR}/setup-token")"
+OMNISOLO_SETUP_TOKEN_FILE="$(escape_env_value "${STATE_DIR}/setup-token")"
 SETUP_ADMIN_INIT_PASSWORD_FILE="$(escape_env_value "${STATE_DIR}/admin-password")"
-OHC_POSTGRES_PASSWORD_FILE="$(escape_env_value "${STATE_DIR}/postgres-password")"
+OMNISOLO_POSTGRES_PASSWORD_FILE="$(escape_env_value "${STATE_DIR}/postgres-password")"
 DATABASE_URL_FILE="$(escape_env_value "${STATE_DIR}/database-url")"
 SETUP_ADMIN_INIT_USERNAME="$(escape_env_value "${SETUP_ADMIN_INIT_USERNAME:-admin}")"
 SETUP_ADMIN_INIT_EMAIL="$(escape_env_value "${SETUP_ADMIN_INIT_EMAIL:-admin@example.test}")"
 SETUP_ADMIN_INIT_ORGANIZATION_ID="$(escape_env_value "${SETUP_ADMIN_INIT_ORGANIZATION_ID:-local}")"
-OHC_DOCKER_UID="$(id -u)"
-OHC_DOCKER_GID="$(id -g)"
+OMNISOLO_DOCKER_UID="$(id -u)"
+OMNISOLO_DOCKER_GID="$(id -g)"
 EOF
 chmod 700 "${STATE_DIR}" "${TLS_DIR}"
 find "${STATE_DIR}" -type f -exec chmod 600 {} +

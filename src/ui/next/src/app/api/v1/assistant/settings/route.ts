@@ -1,6 +1,15 @@
-function unavailable(): Response {
-  return Response.json({ error: "assistant settings are not implemented" }, { status: 501 });
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+
+export function GET(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/assistant/settings", {
+    forwardQuery: false,
+    suppressRequestBody: true,
+  });
 }
 
-export function GET(): Response { return unavailable(); }
-export function PATCH(): Response { return unavailable(); }
+export function PATCH(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/assistant/settings", {
+    forwardQuery: false,
+    requestContentType: "application/json",
+  });
+}

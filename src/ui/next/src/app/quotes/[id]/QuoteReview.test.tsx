@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { TooltipProvider } from '../../../components/TooltipRegistry';
 
+const testQuoteId = '11111111-1111-4111-8111-111111111111';
+
 vi.mock('next/navigation', () => ({
   useParams: vi.fn(),
   useRouter: vi.fn(),
-  usePathname: vi.fn(() => '/quotes/123'),
+  usePathname: vi.fn(() => `/quotes/${testQuoteId}`),
 }));
 
 describe('QuoteReviewPage', () => {
@@ -16,7 +18,7 @@ describe('QuoteReviewPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useParams as any).mockReturnValue({ id: '123' });
+    (useParams as any).mockReturnValue({ id: testQuoteId });
     (useRouter as any).mockReturnValue(mockRouter);
     global.fetch = vi.fn((url) => {
       if (url === '/api/v1/tooltips') {
@@ -34,11 +36,24 @@ describe('QuoteReviewPage', () => {
     global.alert = vi.fn();
   });
 
+  it('renders malformed quote IDs as not found without requesting the API', async () => {
+    (useParams as any).mockReturnValue({ id: 'visual-audit-id' });
+
+    render(
+      <TooltipProvider>
+        <QuoteReviewPage />
+      </TooltipProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Quote not found')).toBeInTheDocument());
+    expect(global.fetch).not.toHaveBeenCalledWith('/api/v1/quotes/visual-audit-id');
+  });
+
   it('renders quote details and allows approval', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        id: '123',
+        id: testQuoteId,
         status: 'DRAFT',
         total_amount_cents: 10000,
         required_deposit_cents: 3333,

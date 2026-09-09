@@ -8,8 +8,8 @@ vi.mock('next/navigation', () => {
     };
 });
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />
 }));
 
 describe('SeasonalPromoPage', () => {
@@ -26,8 +26,8 @@ describe('SeasonalPromoPage', () => {
     expect(screen.getByText('Seasonal Promotion Generator ✨')).toBeInTheDocument();
   });
 
-  it('renders the PoweredByOHC component', () => {
+  it('renders the PoweredByOmniSolo component', () => {
     render(<SeasonalPromoPage />);
-    expect(screen.getByTestId('powered-by-ohc')).toBeInTheDocument();
+    expect(screen.getByTestId('powered-by-omnisolo')).toBeInTheDocument();
   });
 });

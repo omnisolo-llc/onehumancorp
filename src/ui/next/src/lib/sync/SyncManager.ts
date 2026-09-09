@@ -63,7 +63,7 @@ export class SyncManager {
 
   private notifyListeners() {
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('ohc_queue_updated'));
+      window.dispatchEvent(new Event('omnisolo_queue_updated'));
       window.dispatchEvent(new Event('storage')); // trigger fallback storage listeners
     }
   }
@@ -125,7 +125,7 @@ export class SyncManager {
       const posTransactions = queue.filter(m => m.type === 'tap_to_pay' || m.type === 'cash_sale').map(m => {
         let storedDeviceId = 'terminal_client';
         if (typeof window !== 'undefined') {
-            storedDeviceId = localStorage.getItem('ohc_pos_device_id') || 'terminal_client';
+            storedDeviceId = localStorage.getItem('omnisolo_pos_device_id') || 'terminal_client';
         }
 
         return {
@@ -264,7 +264,7 @@ export class SyncManager {
 
       // Sync POS transactions
       if (posTransactions.length > 0) {
-        const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
+        const sessionId = localStorage.getItem('omnisolo_active_terminal_session_id');
         try {
           const resPos = await fetch('/api/v1/payments/terminal/sync_offline', {
             method: 'POST',
@@ -285,7 +285,7 @@ export class SyncManager {
               const resPosData = await resPos.json();
               if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
                 if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resPosData.pending_reconciliation } }));
+                    window.dispatchEvent(new CustomEvent('omnisolo_sync_reconciliation', { detail: { pending_reconciliation: resPosData.pending_reconciliation } }));
                 }
               }
             } catch (e) {
@@ -371,7 +371,7 @@ export class SyncManager {
               const resGenData = await resGen.json();
               if (resGenData.pending_reconciliation && resGenData.pending_reconciliation.length > 0) {
                 if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resGenData.pending_reconciliation } }));
+                    window.dispatchEvent(new CustomEvent('omnisolo_sync_reconciliation', { detail: { pending_reconciliation: resGenData.pending_reconciliation } }));
                 }
               }
             } catch (e) {

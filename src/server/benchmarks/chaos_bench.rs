@@ -11,7 +11,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn test_simulate_sql_sync_lag() {
         // Here we simulate lock contention that would arise from SQL sync lag.
-        use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+        use omnisolo_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
 
         let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let resource = format!(
@@ -59,7 +59,7 @@ mod tests {
         // Using Mock Mesh behavior
         use crate::orchestration::mesh::TeammateMesh;
         use async_trait::async_trait;
-        use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport, Message};
+        use omnisolo_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport, Message};
 
         struct FaultyMesh {
             transport: InProcessTransport,
@@ -207,7 +207,7 @@ mod tests {
     #[tokio::test]
     async fn test_ai_agent_timeout_enforcement() {
         // Agent timeout rule: must have 60-second timeout.
-        let timeout_ms = ohc_builtin_agent::agent::agent_task_timeout().as_millis();
+        let timeout_ms = omnisolo_builtin_agent::agent::agent_task_timeout().as_millis();
         assert_eq!(
             timeout_ms, 60000,
             "Agent jobs must have a 60-second timeout"

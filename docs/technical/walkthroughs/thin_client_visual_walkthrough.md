@@ -2,7 +2,7 @@
 
 # Thin Client Architecture Visual Walkthrough
 
-Welcome to the visual walkthrough of the OHC Thin Client Architecture. This guide illustrates how the UI-only Thin Client (Mobile/Desktop) connects securely to the Cloud-Native backend via API and OAuth.
+Welcome to the visual walkthrough of the OmniSolo Thin Client Architecture. This guide illustrates how the UI-only Thin Client (Mobile/Desktop) connects securely to the Cloud-Native backend via API and OAuth.
 
 ## 1. Zero Trust Connection Flow
 
@@ -10,7 +10,7 @@ The Thin Client initiates a secure connection to the Cloud Gateway, relying enti
 
 ```mermaid
 graph TD
-    UI[Thin Client UI] -->|OAuth / SPIFFE| Gateway[OHC Cloud Gateway]
+    UI[Thin Client UI] -->|OAuth / SPIFFE| Gateway[OmniSolo Cloud Gateway]
     Gateway --> Auth{Identity Provider}
     Auth -->|Valid SVID| Orchestrator[KAIROS Hub]
     Auth -->|Invalid| 401[401 Unauthorized]

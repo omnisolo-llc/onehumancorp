@@ -32,6 +32,7 @@ describe('FieldOpsJobsPage', () => {
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
+        ok: true,
         json: () => Promise.resolve({
           appointments: [
             {
@@ -69,6 +70,9 @@ describe('FieldOpsJobsPage', () => {
     await waitFor(() => {
       expect(screen.getByText("Today's Route")).toBeInTheDocument();
     });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/v1/field-ops/appointments?tenant_id=authenticated',
+    );
     expect(screen.getByText('Alice Smith')).toBeInTheDocument();
     expect(screen.getByText('Bob Jones')).toBeInTheDocument();
   });
@@ -79,6 +83,26 @@ describe('FieldOpsJobsPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/Offline Mode/)).toBeInTheDocument();
     });
+  });
+
+  it('shows a recoverable error when the schedule API is unavailable', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    global.fetch = vi.fn(() => Promise.resolve({
+      ok: false,
+      status: 500,
+      json: () => Promise.reject(new Error('not JSON')),
+    })) as any;
+
+    render(<FieldOpsJobsPage />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "We couldn't load today's schedule. Try again later.",
+    );
+    expect(consoleError).not.toHaveBeenCalledWith(
+      'Failed to load appointments',
+      expect.anything(),
+    );
+    consoleError.mockRestore();
   });
 
   it('allows state transitions and completing a job', async () => {

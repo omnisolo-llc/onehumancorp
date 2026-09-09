@@ -1,4 +1,4 @@
-module github.com/onehumancorp/mono
+module github.com/omnisolo-llc/omnisolo
 
 go 1.24.0
 

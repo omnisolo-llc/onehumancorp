@@ -20,4 +20,4 @@ uuid = { version = "1", features = ["v4", "serde"] }
 path = "mod.rs"
 
 [lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ohc_bazel)', 'cfg(ohc_bazel_package)', 'cfg(ohc_bazel_tauri_context)'] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(omnisolo_bazel)', 'cfg(omnisolo_bazel_package)', 'cfg(omnisolo_bazel_tauri_context)'] }

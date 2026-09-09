@@ -5,8 +5,8 @@
 ## 1. Executive Summary
 This report analyzes the Agent Harness and Sandbox implementation of the leaked Claude Code application. We discovered that Claude Code has a deeply integrated sandbox that intercepts tool outputs to communicate sandbox violations, implements explicit overrides (`dangerouslyDisableSandbox`), and has deep protection mechanisms to stop sandbox escapes via internal git files.
 
-## 2. Competitive Analysis: Claude Code vs. OHC
-| Feature | Claude Code (Market Leader) | OHC Hybrid OS | Gap |
+## 2. Competitive Analysis: Claude Code vs. OmniSolo
+| Feature | Claude Code (Market Leader) | OmniSolo Hybrid OS | Gap |
 | :--- | :--- | :--- | :--- |
 | **Sandbox Execution** | Yes, `bwrap`/`sandbox-exec` | Yes, basic blockedPatterns in `bash_sandbox/sandbox.go` | Minimal |
 | **Sandbox Escape Mitigations** | Advanced (Git internal path write blocking, cwd manipulation checks) | Basic Regexp matching | **Critical Gap** |

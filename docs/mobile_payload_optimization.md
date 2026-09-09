@@ -1,7 +1,7 @@
 # Mobile Payload Optimization Report
 
 ## Overview
-As part of the continuous performance tuning for OneHumanCorp (OHC), this report verifies and documents the implementation of mobile payload optimization strategies. The goal is to ensure that mobile clients do not receive over-fetched data, thereby minimizing payload sizes, reducing network latency, and improving application responsiveness on varied network conditions.
+As part of the continuous performance tuning for OmniSolo (OmniSolo), this report verifies and documents the implementation of mobile payload optimization strategies. The goal is to ensure that mobile clients do not receive over-fetched data, thereby minimizing payload sizes, reducing network latency, and improving application responsiveness on varied network conditions.
 
 ## Field Selection Logic
 The optimization leverages the `mobile_optimized` flag passed through the API requests. This flag triggers the following field selection and payload trimming behaviors in the data fetching logic:

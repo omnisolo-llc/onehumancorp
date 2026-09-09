@@ -34,7 +34,7 @@ test.describe('Assistant Link Audit on Dashboard', () => {
     await assistantLink.click();
 
     // Verify Title
-    await expect(page).toHaveTitle('OHC Assistant Workstation');
+    await expect(page).toHaveTitle('OmniSolo Assistant Workstation');
     await expect(page.locator('h2[aria-label="Task Title"]')).toBeVisible();
   });
 

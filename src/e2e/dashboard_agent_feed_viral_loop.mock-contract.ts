@@ -56,7 +56,7 @@ test.describe('Dashboard Agent Feed Viral Loop', () => {
     // Navigate to local file instead of server url
     // Setup token for API mock
     await page.addInitScript(() => {
-        localStorage.setItem('ohc_token', 'test-token');
+        localStorage.setItem('omnisolo_token', 'test-token');
         localStorage.setItem('tenant_id', 'e2e-tenant');
     });
 

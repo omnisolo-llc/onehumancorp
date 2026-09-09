@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-As our small business owners grow from solo operations to hiring their first employees, they immediately hit a wall of administrative complexity. Maya (baker) just hired a part-time delivery driver and an assistant baker; she needs them to see orders but not total revenue. Fatima (food cart) has two shift workers sharing the same Android phone for POS, and needs to track who sold what and split tips fairly at the end of the day. Carlos (handyman) hired an apprentice and needs to assign him to specific jobs, track his time on site, and pay him per job. Currently, OHC assumes a single-user (founder) perspective. Competitors like Square (Square Shifts) and Shopify (Staff Accounts) offer team management, but they require complex manual setup, app downloads for staff, and manual tip calculations. OHC needs a zero-friction, offline-capable staff mesh where adding an employee is as simple as texting them a link, and the AI handles the shift reminders, permissions, and tip splitting invisibly.
+As our small business owners grow from solo operations to hiring their first employees, they immediately hit a wall of administrative complexity. Maya (baker) just hired a part-time delivery driver and an assistant baker; she needs them to see orders but not total revenue. Fatima (food cart) has two shift workers sharing the same Android phone for POS, and needs to track who sold what and split tips fairly at the end of the day. Carlos (handyman) hired an apprentice and needs to assign him to specific jobs, track his time on site, and pay him per job. Currently, OmniSolo assumes a single-user (founder) perspective. Competitors like Square (Square Shifts) and Shopify (Staff Accounts) offer team management, but they require complex manual setup, app downloads for staff, and manual tip calculations. OmniSolo needs a zero-friction, offline-capable staff mesh where adding an employee is as simple as texting them a link, and the AI handles the shift reminders, permissions, and tip splitting invisibly.
 
 ## Research Report
 
@@ -10,13 +10,13 @@ We audited the team and staff management architectures of leading SMB platforms 
 
 ### Competitive Analysis
 
-| Platform | Staff Capabilities | Strengths | Weaknesses (The OHC Opportunity) |
+| Platform | Staff Capabilities | Strengths | Weaknesses (The OmniSolo Opportunity) |
 |---|---|---|---|
 | Square | Square Shifts & Payroll | Excellent POS integration, timecards | Very complex setup, requires multiple apps (Team app vs POS), manual tip pool rules |
 | Shopify | Staff Accounts | Granular permissions per role | Web-first design, poor mobile POS switching experience, rigid tier limits on staff count |
 | Wix | Roles & Permissions | Good for web editors | Not designed for physical in-person shift work, no tip pooling |
 | Homebase | Standalone App | Deep scheduling & HR | Another tool to integrate, requires separate app download, high friction for a 1-day temp hire |
-| **OHC (Target)** | **Universal Staff Mesh** | **Zero-app-install SMS onboarding, Invisible AI tip splitting, Offline-first clock-ins** | **Must abstract RBAC (Role-Based Access Control) into simple English ("Can run register")** |
+| **OmniSolo (Target)** | **Universal Staff Mesh** | **Zero-app-install SMS onboarding, Invisible AI tip splitting, Offline-first clock-ins** | **Must abstract RBAC (Role-Based Access Control) into simple English ("Can run register")** |
 
 ### Persona Pain Points
 
@@ -51,7 +51,7 @@ sequenceDiagram
     participant POS as Terminal (Offline-capable)
 
     Manager->>AI: "Add Sarah as a cashier, her number is 555-0199"
-    AI->>Staff: SMS: "Maya invited you to OHC. Tap here to set your 4-digit PIN."
+    AI->>Staff: SMS: "Maya invited you to OmniSolo. Tap here to set your 4-digit PIN."
     Staff->>AI: Sets PIN via secure web link (No app install)
     AI->>POS: Background Sync: Add Sarah's hashed PIN to local secure store
     Note over POS: POS goes offline
@@ -93,7 +93,7 @@ sequenceDiagram
 ## Implementation Prompt
 
 **Implementer Agent Task:**
-Implement the foundational Staff Mesh and Offline-First Authentication module for the OHC POS terminal.
+Implement the foundational Staff Mesh and Offline-First Authentication module for the OmniSolo POS terminal.
 
 **Customer-User Journey (CUJ):**
 1. The business owner navigates to the Team screen and adds a new staff member by providing only a name, phone number, and a predefined role ("Cashier").

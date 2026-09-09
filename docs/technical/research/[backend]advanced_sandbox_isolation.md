@@ -1,7 +1,7 @@
 # [backend] KAIROS Advanced Sandbox Isolation
 
 ## Problem Statement
-The current `bash_sandbox` in OHC uses simple regex-based filtering (`regexp.MustCompile`) to block dangerous commands. This is brittle and easily bypassed. We need a robust, kernel-level isolation mechanism (Namespaces, Cgroups, or lightweight VMs) that provides a "Gold Standard" of security for autonomous agents.
+The current `bash_sandbox` in OmniSolo uses simple regex-based filtering (`regexp.MustCompile`) to block dangerous commands. This is brittle and easily bypassed. We need a robust, kernel-level isolation mechanism (Namespaces, Cgroups, or lightweight VMs) that provides a "Gold Standard" of security for autonomous agents.
 
 ## Research Report
 - **Competitor Analysis**: Claude Code uses native sandboxing (likely gVisor or macOS App Sandbox). OpenClaw uses Docker containers.

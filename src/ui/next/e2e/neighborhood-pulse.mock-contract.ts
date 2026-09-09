@@ -16,7 +16,7 @@ test.describe('Neighborhood Pulse Dashboard UI', () => {
     // Verify neighbors appear
     await expect(page.locator('text=Carlos Repairs')).toBeVisible();
     await expect(page.locator('text=Fatima Food Cart')).toBeVisible();
-    await expect(page.locator('text=There are 2 OHC businesses in your area')).toBeVisible();
+    await expect(page.locator('text=There are 2 OmniSolo businesses in your area')).toBeVisible();
 
     // Setup an alert dialog handler since our mock uses `alert`
     let dialogMessage = '';

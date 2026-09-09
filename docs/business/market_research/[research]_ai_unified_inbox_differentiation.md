@@ -11,7 +11,7 @@ Small business owners (like Carlos the handyman or Maya the baker) receive custo
 - **Shopify Inbox:** Aggregates chat and email but relies heavily on manual responses or basic, rigid auto-replies. It does not proactively draft contextual responses based on full customer history across all channels.
 - **Wix Inbox:** Good aggregation, but AI features are mostly limited to "improving tone" or generating generic replies, not acting as an autonomous customer success agent.
 - **Zendesk/Intercom:** Enterprise-grade and far too complex/expensive for a single-person SMB.
-- **OHC Opportunity:** Leverage our "Teammate" AI philosophy. The Customer Success Agent (The Ambassador) doesn't just aggregate messages; it reads them, queries the customer's omnichannel identity graph (purchase history, past bookings, previous DMs), and proactively drafts a complete, accurate response. The owner just sees an "Action Required: Approve Reply" card in their mobile feed.
+- **OmniSolo Opportunity:** Leverage our "Teammate" AI philosophy. The Customer Success Agent (The Ambassador) doesn't just aggregate messages; it reads them, queries the customer's omnichannel identity graph (purchase history, past bookings, previous DMs), and proactively drafts a complete, accurate response. The owner just sees an "Action Required: Approve Reply" card in their mobile feed.
 
 ## Design Doc
 ### Architecture Diagram
@@ -47,7 +47,7 @@ graph TD
 - **Zero-Touch Fallback:** If the AI confidence is low, it escalates to a human-only reply but provides suggested data points (e.g., "Sarah's last order was #1234").
 
 ## Implementation Prompt
-**User-Facing Outcome:** As a business owner, when a customer DMs me on Instagram asking about their past order, I open the OHC app to find a pre-written, perfectly accurate response already drafted. I tap one button to send it, taking 2 seconds instead of 2 minutes.
+**User-Facing Outcome:** As a business owner, when a customer DMs me on Instagram asking about their past order, I open the OmniSolo app to find a pre-written, perfectly accurate response already drafted. I tap one button to send it, taking 2 seconds instead of 2 minutes.
 **CUJ & Acceptance Criteria:**
 1. A simulated external message (e.g., via a test webhook) is ingested by the Omnichannel Gateway.
 2. The Customer Identity Resolution Engine correctly matches the incoming identifier (e.g., social handle) to an existing customer record in the database.

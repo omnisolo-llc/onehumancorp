@@ -928,8 +928,8 @@ impl SeaOrmAuthRepository {
     pub async fn sync_configured_oidc_providers_from_environment(&self) -> Result<(), String> {
         let transaction = begin_global_transaction(&self.connection).await?;
         let mut configured = Vec::new();
-        let google_client_id = std::env::var("OHC_OIDC_GOOGLE_CLIENT_ID").ok();
-        let google_secret = std::env::var("OHC_OIDC_GOOGLE_CLIENT_SECRET").ok();
+        let google_client_id = std::env::var("OMNISOLO_OIDC_GOOGLE_CLIENT_ID").ok();
+        let google_secret = std::env::var("OMNISOLO_OIDC_GOOGLE_CLIENT_SECRET").ok();
         if let (Some(client_id), Some(secret)) = (google_client_id, google_secret) {
             if !client_id.trim().is_empty() && !secret.trim().is_empty() {
                 configured.push((
@@ -938,13 +938,13 @@ impl SeaOrmAuthRepository {
                     "google".to_string(),
                     "https://accounts.google.com".to_string(),
                     client_id,
-                    "OHC_OIDC_GOOGLE_CLIENT_SECRET".to_string(),
+                    "OMNISOLO_OIDC_GOOGLE_CLIENT_SECRET".to_string(),
                 ));
             }
         }
-        let keycloak_issuer = std::env::var("OHC_OIDC_KEYCLOAK_ISSUER").ok();
-        let keycloak_client_id = std::env::var("OHC_OIDC_KEYCLOAK_CLIENT_ID").ok();
-        let keycloak_secret = std::env::var("OHC_OIDC_KEYCLOAK_CLIENT_SECRET").ok();
+        let keycloak_issuer = std::env::var("OMNISOLO_OIDC_KEYCLOAK_ISSUER").ok();
+        let keycloak_client_id = std::env::var("OMNISOLO_OIDC_KEYCLOAK_CLIENT_ID").ok();
+        let keycloak_secret = std::env::var("OMNISOLO_OIDC_KEYCLOAK_CLIENT_SECRET").ok();
         if let (Some(issuer), Some(client_id), Some(secret)) =
             (keycloak_issuer, keycloak_client_id, keycloak_secret)
         {
@@ -958,7 +958,7 @@ impl SeaOrmAuthRepository {
                     "oidc".to_string(),
                     issuer,
                     client_id,
-                    "OHC_OIDC_KEYCLOAK_CLIENT_SECRET".to_string(),
+                    "OMNISOLO_OIDC_KEYCLOAK_CLIENT_SECRET".to_string(),
                 ));
             }
         }
@@ -1537,8 +1537,8 @@ mod atomic_registration_tests {
 
         assert!(production_source.contains("EmailChallengeCreation"));
         assert!(production_source.contains("is_unique_violation"));
-        assert!(production_source.contains("OHC_OIDC_GOOGLE_CLIENT_SECRET"));
-        assert!(production_source.contains("OHC_OIDC_KEYCLOAK_CLIENT_SECRET"));
+        assert!(production_source.contains("OMNISOLO_OIDC_GOOGLE_CLIENT_SECRET"));
+        assert!(production_source.contains("OMNISOLO_OIDC_KEYCLOAK_CLIENT_SECRET"));
         assert!(production_source.contains("INSERT IGNORE"));
         assert!(production_source.contains("quote(\"oidc_providers\")"));
         assert!(production_source.contains("\"key\","));
@@ -1700,11 +1700,11 @@ mod atomic_registration_tests {
         let (_directory, repository, _second) = repositories().await;
         temp_env::async_with_vars(
             [
-                ("OHC_OIDC_GOOGLE_CLIENT_ID", Some("client-id")),
-                ("OHC_OIDC_GOOGLE_CLIENT_SECRET", None),
-                ("OHC_OIDC_KEYCLOAK_ISSUER", None),
-                ("OHC_OIDC_KEYCLOAK_CLIENT_ID", None),
-                ("OHC_OIDC_KEYCLOAK_CLIENT_SECRET", None),
+                ("OMNISOLO_OIDC_GOOGLE_CLIENT_ID", Some("client-id")),
+                ("OMNISOLO_OIDC_GOOGLE_CLIENT_SECRET", None),
+                ("OMNISOLO_OIDC_KEYCLOAK_ISSUER", None),
+                ("OMNISOLO_OIDC_KEYCLOAK_CLIENT_ID", None),
+                ("OMNISOLO_OIDC_KEYCLOAK_CLIENT_SECRET", None),
             ],
             async {
                 repository
@@ -1723,11 +1723,11 @@ mod atomic_registration_tests {
 
         temp_env::async_with_vars(
             [
-                ("OHC_OIDC_GOOGLE_CLIENT_ID", Some("client-id")),
-                ("OHC_OIDC_GOOGLE_CLIENT_SECRET", Some("client-secret")),
-                ("OHC_OIDC_KEYCLOAK_ISSUER", None),
-                ("OHC_OIDC_KEYCLOAK_CLIENT_ID", None),
-                ("OHC_OIDC_KEYCLOAK_CLIENT_SECRET", None),
+                ("OMNISOLO_OIDC_GOOGLE_CLIENT_ID", Some("client-id")),
+                ("OMNISOLO_OIDC_GOOGLE_CLIENT_SECRET", Some("client-secret")),
+                ("OMNISOLO_OIDC_KEYCLOAK_ISSUER", None),
+                ("OMNISOLO_OIDC_KEYCLOAK_CLIENT_ID", None),
+                ("OMNISOLO_OIDC_KEYCLOAK_CLIENT_SECRET", None),
             ],
             async {
                 repository

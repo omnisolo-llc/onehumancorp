@@ -371,7 +371,7 @@
     }
 
     /* Floating Pill Badge Style */
-    .ohc-badge-pill {
+    .omnisolo-badge-pill {
       position: absolute;
       bottom: 20px;
       right: 20px;
@@ -390,18 +390,18 @@
       transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .ohc-badge-pill:hover {
+    .omnisolo-badge-pill:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     }
 
-    .preview-box.dark .ohc-badge-pill {
+    .preview-box.dark .omnisolo-badge-pill {
       background: #1f2937;
       border-color: #374151;
       color: #f9fafb;
     }
 
-    .ohc-badge-icon {
+    .omnisolo-badge-icon {
       background: #0066FF;
       color: white;
       border-radius: 50%;
@@ -415,7 +415,7 @@
     }
 
     /* Inline Footer Badge Style */
-    .ohc-badge-footer {
+    .omnisolo-badge-footer {
       display: none;
       width: 100%;
       padding: 24px;
@@ -425,12 +425,12 @@
       box-sizing: border-box;
     }
 
-    .preview-box.dark .ohc-badge-footer {
+    .preview-box.dark .omnisolo-badge-footer {
       background: #111827;
       border-color: #374151;
     }
 
-    .ohc-badge-footer-link {
+    .omnisolo-badge-footer-link {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -441,11 +441,11 @@
       transition: color 0.2s;
     }
 
-    .preview-box.dark .ohc-badge-footer-link {
+    .preview-box.dark .omnisolo-badge-footer-link {
       color: #9ca3af;
     }
 
-    .ohc-badge-footer-link:hover {
+    .omnisolo-badge-footer-link:hover {
       color: #0066FF;
     }
 
@@ -537,7 +537,7 @@
   <div class="container">
     <div class="header">
       <h1 class="font-outfit">Footer Branding Loop Builder</h1>
-      <p>Generate a "Powered by OHC" snippet for your website. When visitors click it to create their own account, you earn affiliate credit.</p>
+      <p>Generate a "OmniSolo" snippet for your website. When visitors click it to create their own account, you earn affiliate credit.</p>
     </div>
 
     <div class="builder-grid">
@@ -555,9 +555,9 @@
         <div class="form-group">
           <label class="form-label" for="badge-text">Badge Text</label>
           <select id="badge-text" class="form-select">
-            <option value="powered">Powered by OHC</option>
-            <option value="made">Made with OHC</option>
-            <option value="launch">Launch your own on OHC</option>
+            <option value="powered">OmniSolo</option>
+            <option value="made">Made with OmniSolo</option>
+            <option value="launch">Launch your own on OmniSolo OneHumanCorp</option>
           </select>
         </div>
 
@@ -593,15 +593,15 @@
             <div class="preview-text"></div>
           </div>
 
-          <a href="#" class="ohc-badge-pill" id="preview-badge-pill">
-            <div class="ohc-badge-icon">⚡</div>
-            <span id="preview-text-pill">Powered by OHC</span>
+          <a href="#" class="omnisolo-badge-pill" id="preview-badge-pill">
+            <div class="omnisolo-badge-icon">⚡</div>
+            <span id="preview-text-pill">Powered by OmniSolo</span>
           </a>
 
-          <div class="ohc-badge-footer" id="preview-badge-footer">
-            <a href="#" class="ohc-badge-footer-link">
-              <span class="ohc-badge-icon">⚡</span>
-              <span id="preview-text-footer">Powered by OHC</span>
+          <div class="omnisolo-badge-footer" id="preview-badge-footer">
+            <a href="#" class="omnisolo-badge-footer-link">
+              <span class="omnisolo-badge-icon">⚡</span>
+              <span id="preview-text-footer">Powered by OmniSolo</span>
             </a>
           </div>
         </div>
@@ -631,7 +631,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 20px;">Removing the OHC branding is a Pro feature. Upgrade to Pro to make it 100% yours, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Removing the OmniSolo branding is a Pro feature. Upgrade to Pro to make it 100% yours, or share on X to unlock a 7-day Pro trial for free.</p>
 
       <p style="font-size: 13px; font-weight: 500; margin-bottom: 20px; color: #ff9500; background: rgba(255, 149, 0, 0.1); padding: 8px; border-radius: 8px;">Note: Removing branding will disable your referral loop and you will no longer earn affiliate credit from it.</p>
 
@@ -650,7 +650,7 @@
         tenant: (() => { try { return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store'; } catch(e) { return 'my-store'; } })(),
         hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
         style: 'pill',
-        text: 'Powered by OHC',
+        text: 'OmniSolo',
         theme: 'light',
         removeBranding: false
       };
@@ -753,7 +753,7 @@
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
           const tenantId = state.tenant;
-          const message = `Check out my new business built with OneHumanCorp! 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+          const message = `Check out my new business built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           // Open share dialog
@@ -833,7 +833,7 @@
           return;
         }
 
-        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
 
         let code = `<script src="${origin}/api/v1/growth/footer-branding/embed.js?tenant=${state.tenant}&style=${state.style}&text=${encodeURIComponent(state.text)}&theme=${state.theme}" defer><\/script>`;
 

@@ -16,14 +16,14 @@ Small business owners like Carlos (Handyman, 42) and Priya (Boutique, 35) know t
 *   Hyper-local businesses (services, food carts) require dynamic targeting (e.g., turning on ads only when it rains for a handyman, or when the food cart moves to a new street).
 
 ### Opportunity
-By linking the **Marketing Agent** directly to the **Operations Agent** (capacity/inventory) and the **Finance Agent** (budget), OHC can launch a Zero-Touch Ad Engine. It auto-generates creatives based on the catalog, automatically pauses campaigns if Carlos is fully booked for the week, and dynamically adjusts bids for a 5-mile radius around Fatima's moving food cart.
+By linking the **Marketing Agent** directly to the **Operations Agent** (capacity/inventory) and the **Finance Agent** (budget), OmniSolo can launch a Zero-Touch Ad Engine. It auto-generates creatives based on the catalog, automatically pauses campaigns if Carlos is fully booked for the week, and dynamically adjusts bids for a 5-mile radius around Fatima's moving food cart.
 
 ## Design Doc
 
 ### High-Level Architecture
 ```mermaid
 graph TD;
-    Owner[Small Business Owner] -->|Sets $50 Budget Goal| MarketingAgent[OHC Marketing Agent];
+    Owner[Small Business Owner] -->|Sets $50 Budget Goal| MarketingAgent[OmniSolo Marketing Agent];
     OperationsAgent[Operations Agent] -->|Reports Capacity/Stock| MarketingAgent;
     MarketingAgent -->|Generates Creatives| AdGateway[Omnichannel Ad Gateway];
     AdGateway --> GoogleAds[Google Local Services];

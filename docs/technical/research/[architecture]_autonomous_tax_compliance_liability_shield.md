@@ -11,7 +11,7 @@ Small business owners, particularly solopreneurs and non-technical individuals (
 - **Shopify:** Provides basic tax calculation using Avalara, but requires manual setup and configuration. Terms of service generators are static templates that don't auto-update.
 - **Wix / Squarespace:** No integrated dynamic legal advisory. Relies entirely on the merchant to know when to collect tax and what legal documents to include.
 - **GoDaddy:** Bundled tools are rudimentary and offer no proactive liability shielding or license expiration tracking.
-- **OHC Opportunity:** Utilize "The Protector" AI department to continuously monitor the tenant's transaction flow, business type, and physical location to dynamically calculate tax obligations, generate and enforce custom contracts, and proactively monitor business licenses. This agent acts as a personal compliance officer, moving from reactive "plugins" to proactive, invisible "infrastructure."
+- **OmniSolo Opportunity:** Utilize "The Protector" AI department to continuously monitor the tenant's transaction flow, business type, and physical location to dynamically calculate tax obligations, generate and enforce custom contracts, and proactively monitor business licenses. This agent acts as a personal compliance officer, moving from reactive "plugins" to proactive, invisible "infrastructure."
 
 ## Design Doc
 

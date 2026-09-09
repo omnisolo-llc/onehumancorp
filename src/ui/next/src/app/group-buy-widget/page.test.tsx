@@ -11,8 +11,8 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc">Powered By OHC</div>,
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo">Powered By OmniSolo</div>,
 }));
 
 describe('Group Buy Widget Page', () => {
@@ -38,7 +38,7 @@ describe('Group Buy Widget Page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Remove OHC Branding')).toBeInTheDocument();
+      expect(screen.getByText('Remove OmniSolo Branding')).toBeInTheDocument();
     });
 
     // Find the hidden checkbox associated with the label
@@ -46,7 +46,7 @@ describe('Group Buy Widget Page', () => {
     fireEvent.click(brandingToggle);
 
     expect(screen.getAllByText('Upgrade to Pro')[0]).toBeInTheDocument();
-    expect(screen.getByText(/Removing OHC branding/)).toBeInTheDocument();
+    expect(screen.getByText(/Removing OmniSolo branding/)).toBeInTheDocument();
   });
 
   it('allows removing branding with pro', async () => {
@@ -54,7 +54,7 @@ describe('Group Buy Widget Page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Remove OHC Branding')).toBeInTheDocument();
+      expect(screen.getByText('Remove OmniSolo Branding')).toBeInTheDocument();
       expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan');
     });
 

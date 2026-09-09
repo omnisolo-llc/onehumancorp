@@ -16,7 +16,7 @@ test.describe('Unified Agent Feed Offline Mode', () => {
     await expect(page.locator('text=Proposals').first()).toBeVisible();
 
     // Trigger an agent action via the backend webhook to generate a proposal
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
     const tenantId = 'e2e-tenant';
     const webhookPayload = {
       tenant_id: tenantId,

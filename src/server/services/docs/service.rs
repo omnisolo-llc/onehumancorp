@@ -20,8 +20,8 @@ fn get_articles() -> &'static Vec<HelpArticle> {
             HelpArticle {
                 id: "getting-started-1".to_string(),
                 topic: "Getting Started".to_string(),
-                title: "Welcome to One Human Corp".to_string(),
-                content_markdown: "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string(),
+                title: "Welcome to OmniSolo".to_string(),
+                content_markdown: "Welcome to OmniSolo! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string(),
             },
             HelpArticle {
                 id: "my-store-1".to_string(),

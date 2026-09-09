@@ -11,14 +11,14 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 
 ## 2. Test Strategy
 - **Unit Testing:** Focus on verifying individual adapter state mapping, message translation logic, and context summarization boundaries.
-- **Integration Testing:** Validate end-to-end communication between the OHC Hub pub/sub system and simulated framework adapters, including K8s CRD updates.
+- **Integration Testing:** Validate end-to-end communication between the OmniSolo Hub pub/sub system and simulated framework adapters, including K8s CRD updates.
 - **End-to-End (E2E) Testing:** Simulate a heterogeneous swarm executing a complex multi-step workflow via the MCP Switchboard and Postgres checkpointer.
 
 ## 3. Test Cases
 ### 3.1 Unit Tests
 | Test ID | Component | Description | Expected Result | Status |
 |---------|-----------|-------------|-----------------|--------|
-| UT-01 | `autogen_adapter.go` | Translates AutoGen conversational payload to OHC event | Proper `AgentMessage` generated | Pending |
+| UT-01 | `autogen_adapter.go` | Translates AutoGen conversational payload to OmniSolo event | Proper `AgentMessage` generated | Pending |
 | UT-02 | `crewai_adapter.go` | Maps CrewAI task result to LangGraph state checkpoint | JSON state schema successfully validated | Pending |
 | UT-03 | `openclaw_adapter.go` | Triggers K8s CRD update upon state change | `patch` payload generated correctly | Pending |
 | UT-04 | `semantickernel_adapter.go` | Maps SK function call request to MCP JSON-RPC format | Correct JSON-RPC schema returned | Pending |
@@ -26,7 +26,7 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 ### 3.2 Integration Tests
 | Test ID | Components | Description | Expected Result | Status |
 |---------|------------|-------------|-----------------|--------|
-| IT-01 | Adapter -> Hub | Verify OHC Pub/Sub routing across frameworks | Events routed strictly via SPIFFE SVID | Pending |
+| IT-01 | Adapter -> Hub | Verify OmniSolo Pub/Sub routing across frameworks | Events routed strictly via SPIFFE SVID | Pending |
 | IT-02 | Adapter -> DB | LangGraph state persistence for third-party agents | Checkpoints stored correctly in Postgres | Pending |
 | IT-03 | Adapter -> MCP Gateway | Framework agent triggers an MCP tool call | MCP request processed and response returned | Pending |
 
@@ -38,7 +38,7 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 
 ## 4. Edge Cases & Error Handling
 - **Context Limit Breaches**: Ensure `autogen_adapter.go` automatically forces semantic distillation if payloads exceed token boundaries.
-- **Malformed Payloads**: Ensure invalid JSON responses from the third-party frameworks do not crash the OHC Hub (fail gracefully).
+- **Malformed Payloads**: Ensure invalid JSON responses from the third-party frameworks do not crash the OmniSolo Hub (fail gracefully).
 - **Unauthorized MCP Access**: Test that an agent adapter lacking specific MCP privileges correctly fails closed at the Switchboard.
 
 ## 5. Security & Safety

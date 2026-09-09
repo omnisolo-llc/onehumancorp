@@ -1,8 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Multilingual Order Interceptor Walk-up', () => {
-  test.beforeEach(async ({ page, context }) => {
-    await context.clearCookies();
+  test.beforeEach(async ({ page }) => {
     await page.goto('/pos/walkup');
     await page.evaluate(() => localStorage.clear());
     await page.reload();

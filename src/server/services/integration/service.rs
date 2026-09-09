@@ -1,6 +1,6 @@
 use crate::integrations::registry::IntegrationsRegistry;
-use ::server_ohc::orchestration::integration_service_server::IntegrationService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::integration_service_server::IntegrationService;
+use ::server_omnisolo::orchestration::*;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 

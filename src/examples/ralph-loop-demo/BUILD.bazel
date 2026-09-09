@@ -5,7 +5,7 @@ rust_binary(
     srcs = ["main.rs"],
     edition = "2024",
     deps = [
-        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
         "//src/agents/builtin:core",
         "@crates//:tokio",
         "@crates//:serde_json",

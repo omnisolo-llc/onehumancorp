@@ -2,14 +2,14 @@
 
 ## Problem Statement
 
-Priya (The Boutique Owner, 35) relies on OneHumanCorp (OHC) to run her business smoothly. She has both a physical storefront and an online catalog. Recently, she started using her smartphone to take in-person payments ("Tap-to-Pay"). However, when she sells a limited-edition piece in her physical boutique, her online store doesn't automatically reflect the drop in inventory. This forces her to manually deduct the inventory online to avoid double-selling—a stressful, error-prone task that completely undercuts the promise of OHC doing everything invisibly in the background.
+Priya (The Boutique Owner, 35) relies on OmniSolo (OmniSolo) to run her business smoothly. She has both a physical storefront and an online catalog. Recently, she started using her smartphone to take in-person payments ("Tap-to-Pay"). However, when she sells a limited-edition piece in her physical boutique, her online store doesn't automatically reflect the drop in inventory. This forces her to manually deduct the inventory online to avoid double-selling—a stressful, error-prone task that completely undercuts the promise of OmniSolo doing everything invisibly in the background.
 
 The core issue is that our mobile tap-to-pay infrastructure is completely isolated from our global multi-tenant inventory ledger system. They are currently treated as disparate systems, causing friction for omnichannel merchants who expect their stock to simply be accurate, regardless of where the sale occurred.
 
 ## Research Report
 
 - **The Status Quo:** Competitors like Shopify bundle this functionality through their Point-of-Sale (POS) application. Square treats inventory centrally but focuses aggressively on terminal hardware. Wix and GoDaddy treat POS as a cumbersome "add-on."
-- **The OHC Differentiator:** OHC's mandate is "zero-config, invisible management." Maya, Carlos, Priya, Leo, and Fatima do not understand what "omnichannel syncing" means—they just know they sold an item, so the stock should be updated.
+- **The OmniSolo Differentiator:** OmniSolo's mandate is "zero-config, invisible management." Maya, Carlos, Priya, Leo, and Fatima do not understand what "omnichannel syncing" means—they just know they sold an item, so the stock should be updated.
 - **Architectural Gap Discovered:** There is currently no unified integration layer between terminal sessions/event capture (the tap-to-pay SDK logic) and the real-time global multi-tenant database cache that powers the online storefronts. The current latency of updating the inventory via traditional polling is unacceptable for a fast-paced retail environment.
 - **Goal Targets:**
   - Inventory reflects point-of-sale deduction globally under 500ms.
@@ -22,7 +22,7 @@ The core issue is that our mobile tap-to-pay infrastructure is completely isolat
 ```mermaid
 graph TD
     subgraph "Mobile Device (Priya's Phone)"
-        App[OHC App - 375px UI]
+        App[OmniSolo App - 375px UI]
         Tap[Tap-to-Pay Terminal Session SDK]
         LocalCache[Offline Action Queue / Local DB]
         App --> Tap
@@ -34,7 +34,7 @@ graph TD
         LB[Load Balancer]
     end
 
-    subgraph "Core OHC Multi-Tenant Platform"
+    subgraph "Core OmniSolo Multi-Tenant Platform"
         Ledger[Inventory Ledger Service]
         PaymentDB[(Transaction / POS DB)]
         InventoryDB[(Global Inventory DB)]
@@ -57,7 +57,7 @@ graph TD
 1.  **Checkout Flow (Tap-to-Pay):**
     - **Screen 1 (Cart):** Clean glassmorphic list of items (e.g., "Vintage Silk Scarf", Qty: 1). Large, primary bottom button: "Charge $45.00".
     - **Screen 2 (Tap):** Translucent overlay triggers OS-native Tap-to-Pay UI.
-    - **Screen 3 (Success):** Seamless transition back to OHC. A subtle, elegant toast notification confirms: "Paid. Online inventory updated."
+    - **Screen 3 (Success):** Seamless transition back to OmniSolo. A subtle, elegant toast notification confirms: "Paid. Online inventory updated."
 2.  **Inventory Management (Behind the scenes):**
     - The user never has to leave the main workflow. If they visit the "Inventory" tab later, the quantities are simply correct.
     - If the connection drops during tap, the success screen shows: "Paid. Syncing when online..." and queues the update invisibly.

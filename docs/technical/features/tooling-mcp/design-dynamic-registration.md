@@ -7,7 +7,7 @@
 **Last Updated:** $(date +"%Y-%m-%d")
 
 ## 1. Overview
-The "Dynamic Tool Registration via MCP" feature enables One Human Corp's Multi-Agent Orchestrator to dynamically discover, validate, and bind to external Model Context Protocol (MCP) tools at runtime. This avoids the limitations of hardcoding OpenAPI schemas and allows the "Agentic OS" to extend its capabilities dynamically on a per-need basis across multiple agents.
+The "Dynamic Tool Registration via MCP" feature enables OmniSolo's Multi-Agent Orchestrator to dynamically discover, validate, and bind to external Model Context Protocol (MCP) tools at runtime. This avoids the limitations of hardcoding OpenAPI schemas and allows the "Agentic OS" to extend its capabilities dynamically on a per-need basis across multiple agents.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -31,7 +31,7 @@ The payload must include:
 - `spiffeId`: A valid SPIFFE identifier indicating the trust domain and source of the tool request.
 
 ### 3.3 Security & Validation
-Before any tool is accepted into the `dynamicMCPTools` slice, the `spiffeId` must be checked using `interop.ValidateSPIFFEID`. If the ID originates from an untrusted domain or does not meet OHC structure guidelines, the request will be rejected with HTTP 403 Forbidden.
+Before any tool is accepted into the `dynamicMCPTools` slice, the `spiffeId` must be checked using `interop.ValidateSPIFFEID`. If the ID originates from an untrusted domain or does not meet OmniSolo structure guidelines, the request will be rejected with HTTP 403 Forbidden.
 
 ## 4. Alternatives Considered
 - **File-based Configuration Watcher**: Monitoring `MCP_BUNDLE_DIR` for YAML changes. Rejected because it requires shared filesystem access across K8s pods, which breaks the API-first loosely-coupled design.

@@ -26,7 +26,7 @@ export default function MysteryDiscountGeneratorPage() {
       setTenant(storedTenant);
     }
     if (typeof document !== 'undefined') {
-      document.title = "Mystery Discount Generator | OHC";
+      document.title = "Mystery Discount Generator | OmniSolo OneHumanCorp";
     }
   }, []);
 
@@ -39,7 +39,7 @@ export default function MysteryDiscountGeneratorPage() {
     setRemoveBranding(e.target.checked);
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/mystery-discount/embed?tenant=${tenant}&title=${encodeURIComponent(widgetTitle)}&desc=${encodeURIComponent(description)}&codes=${encodeURIComponent(discountCodes)}&theme=${theme}&branding=${!removeBranding}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/mystery-discount/embed?tenant=${tenant}&title=${encodeURIComponent(widgetTitle)}&desc=${encodeURIComponent(description)}&codes=${encodeURIComponent(discountCodes)}&theme=${theme}&branding=${!removeBranding}`;
   const absoluteEmbedUrl = `/api/v1/growth/mystery-discount/embed?tenant=${tenant}&title=${encodeURIComponent(widgetTitle)}&desc=${encodeURIComponent(description)}&codes=${encodeURIComponent(discountCodes)}&theme=${theme}&branding=${!removeBranding}`;
 
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="380" style="border:none; border-radius:16px; overflow:hidden;" title="Mystery Discount Box"></iframe>`;
@@ -127,7 +127,7 @@ export default function MysteryDiscountGeneratorPage() {
                     className="mt-1 w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
                   />
                   <div>
-                    <span className="text-sm font-medium text-gray-900">Remove "Powered by OHC" branding</span>
+                    <span className="text-sm font-medium text-gray-900">Remove "Powered by OmniSolo" branding</span>
                     <p className="text-xs text-gray-500 mt-1">Make the widget 100% white-labeled. Requires Pro plan.</p>
                   </div>
                 </label>
@@ -192,7 +192,7 @@ export default function MysteryDiscountGeneratorPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-8 text-sm leading-relaxed">
-              Make the Mystery Box 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the Mystery Box 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
             <button
               onClick={() => { setShowPaywall(false); router.push('/pricing'); }}

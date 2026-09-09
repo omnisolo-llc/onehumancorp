@@ -47,7 +47,7 @@ test.describe('Omni-Context Sub-Agent Routing for Customer Inquiries', () => {
         await page.goto('/triage');
 
         // Look for the AI-drafted reply card with translucent glass styling
-        const draftCard = page.locator('.ohc-card').filter({ hasText: 'Carlos' }).first();
+        const draftCard = page.locator('.omnisolo-card').filter({ hasText: 'Carlos' }).first();
         await expect(draftCard).toBeVisible({ timeout: 15000 });
 
         // Verify the Draft Reply combines Operations and Sales context

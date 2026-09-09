@@ -11,7 +11,7 @@ The Hybrid Architecture uses a background daemon to synchronize states between L
 ```mermaid
 graph TD
     A[Standalone Mode] -->|Private Local State| B(SQLite DB)
-    B -.->|Background Sync via OHC-SIP| C{Sync Engine}
+    B -.->|Background Sync via OmniSolo-SIP| C{Sync Engine}
     C -->|Aggregated Insights| D(PostgreSQL DB)
     D -->|Global Context| E[Cloud Swarm Orchestration]
 

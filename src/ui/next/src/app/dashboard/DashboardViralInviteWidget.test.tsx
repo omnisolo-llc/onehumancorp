@@ -34,7 +34,7 @@ describe('DashboardViralInviteWidget', () => {
     render(<DashboardViralInviteWidget />);
 
     expect(screen.getByText('Invite a Business Owner')).toBeDefined();
-    expect(screen.getByText(/Generate a referral link through the OHC referral service/)).toBeDefined();
+    expect(screen.getByText(/Generate a referral link through the OmniSolo referral service/)).toBeDefined();
 
     const generateBtn = screen.getByRole('button', { name: 'Get My Invite Link' });
     expect(generateBtn).toBeDefined();
@@ -44,7 +44,7 @@ describe('DashboardViralInviteWidget', () => {
     // Mock the fetch call for the generation
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test-tenant-123' }),
+      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test-tenant-123' }),
     });
     global.fetch = mockFetch;
 
@@ -62,7 +62,7 @@ describe('DashboardViralInviteWidget', () => {
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('https://ohc.app/ref/test-tenant-123')
+      expect.stringContaining('https://cloud.omnisolo.co/ref/test-tenant-123')
     );
     expect(screen.getByText('Copied!')).toBeDefined();
 

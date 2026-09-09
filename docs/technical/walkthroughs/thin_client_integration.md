@@ -2,7 +2,7 @@
 
 # Thin Client Integration Walkthrough
 
-Welcome to the Thin Client Integration interactive walkthrough. This guide explains how OHC connects lightweight UI clients (Mobile and Desktop) to the Cloud Orchestration Hub via robust API boundaries and OAuth flows.
+Welcome to the Thin Client Integration interactive walkthrough. This guide explains how OmniSolo connects lightweight UI clients (Mobile and Desktop) to the Cloud Orchestration Hub via robust API boundaries and OAuth flows.
 
 ## 1. Architectural Overview
 
@@ -10,7 +10,7 @@ The **Thin Client Mode** is designed for maximum API reliability, low-latency in
 
 ```mermaid
 graph TD
-    UI[Thin Client UI] -->|OAuth 2.0 Auth| API[OHC Gateway API]
+    UI[Thin Client UI] -->|OAuth 2.0 Auth| API[OmniSolo Gateway API]
     API -->|Route Request| Hub[Orchestration Hub]
     Hub --> K8s[K8s Managed Swarm]
     Hub --> DB[(Cloud PostgreSQL)]
@@ -26,7 +26,7 @@ Thin clients exclusively use external OAuth flows to acquire session tokens. Zer
 ```mermaid
 sequenceDiagram
     participant User as Thin Client User
-    participant Gateway as OHC Gateway
+    participant Gateway as OmniSolo Gateway
     participant Identity as OIDC Provider
 
     User->>Gateway: 1. Request Login
@@ -43,8 +43,8 @@ sequenceDiagram
 Unlike the Standalone Mode which runs local SQLite and background processes, Thin Clients require configuration of the remote API endpoint.
 
 Configure your Thin Client `.env` with:
-- `VITE_OHC_REMOTE_HUB_URL=https://api.onehumancorp.com`
-- `VITE_OHC_AUTH_DOMAIN=auth.onehumancorp.com`
+- `VITE_OMNISOLO_REMOTE_HUB_URL=https://cloud.omnisolo.co`
+- `VITE_OMNISOLO_AUTH_DOMAIN=auth.omnisolo.co`
 
 When properly connected, the client utilizes the Centrifuge WebSocket (`/api/v1/mesh/v2/broadcast`) connection to stream real-time task coordination directly into the local view.
 

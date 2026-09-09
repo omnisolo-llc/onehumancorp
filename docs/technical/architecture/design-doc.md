@@ -1,6 +1,6 @@
 # KAIROS AI OS Orchestration: Unified Architecture
 
-This document outlines the KAIROS Hybrid AI OS Orchestration layer, aligning with OHC's Vision and Market Reality.
+This document outlines the KAIROS Hybrid AI OS Orchestration layer, aligning with OmniSolo's Vision and Market Reality.
 
 ## 1. Shared Task List (The Brain)
 A durable state machine decomposing complex tasks.

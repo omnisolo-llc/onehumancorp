@@ -22,7 +22,7 @@ test.describe('Viral Invite Loop on Dashboard Page', () => {
 
     const linkInput = page.locator('#dashboard-invite-link');
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/ohc\.app\/invite\/.+/);
+    await expect(linkInput).toHaveValue(/^https:\/\/cloud.omnisolo.co\/invite\/.+/);
   });
 
   test('should copy generated link to clipboard', async ({ page, loginAs, unlimitedAdminUser }) => {
@@ -62,6 +62,6 @@ test.describe('Viral Invite Loop on Dashboard Page', () => {
     // Verify window.open was called with twitter intent
     const lastOpenedUrl = await page.evaluate(() => window.lastOpenedUrl);
     expect(lastOpenedUrl).toContain('twitter.com/intent/tweet');
-    expect(lastOpenedUrl).toContain('ohc.app/invite');
+    expect(lastOpenedUrl).toContain('cloud.omnisolo.co/invite');
   });
 });

@@ -20,7 +20,7 @@ interface OnboardingChatAgentProps {
 
 export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: "Hi there! I'm your OHC setup assistant. What kind of business do you want to build or manage today?" }
+    { role: 'assistant', content: "Hi there! I'm your OmniSolo setup assistant. What kind of business do you want to build or manage today?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -159,7 +159,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
           ✨
         </div>
         <div>
-          <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">OHC Setup Assistant</h3>
+          <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">OmniSolo Setup Assistant</h3>
           <p className="text-xs text-[#424245] dark:text-[#A1A1A6]">Usually replies instantly</p>
         </div>
       </div>

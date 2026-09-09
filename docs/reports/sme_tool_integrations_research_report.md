@@ -17,11 +17,11 @@ Business owners are overwhelmed tracking messages across Instagram, WhatsApp, an
 
 **Design Doc:**
 - **Trigger:** A new message arrives on IG, WhatsApp, or FB.
-- **Action:** The message appears instantly in the OHC unified inbox.
-- **User Experience:** The business owner sees a combined feed of all messages. They can reply directly from OHC, and the response is routed to the correct platform seamlessly.
+- **Action:** The message appears instantly in the OmniSolo unified inbox.
+- **User Experience:** The business owner sees a combined feed of all messages. They can reply directly from OmniSolo, and the response is routed to the correct platform seamlessly.
 
 **Implementation Prompt:**
-Implement an integration that pulls messages from Facebook, Instagram, and WhatsApp into a unified inbox view. The user must be able to authenticate their social accounts easily, view incoming messages in a single feed, and reply from within the OHC platform.
+Implement an integration that pulls messages from Facebook, Instagram, and WhatsApp into a unified inbox view. The user must be able to authenticate their social accounts easily, view incoming messages in a single feed, and reply from within the OmniSolo platform.
 
 **Priority:** P0
 **Estimated Scope:** Large
@@ -43,11 +43,11 @@ SMEs waste hours sending emails back and forth trying to find a meeting time. Th
 
 **Design Doc:**
 - **Trigger:** A client requests a meeting or needs to be scheduled.
-- **Action:** OHC generates a personalized booking link and sends it to the client. When booked, the event is synced to the owner's calendar.
-- **User Experience:** The owner shares a link (or OHC auto-sends it). The client picks a time, and it magically appears on the owner's calendar with a notification in OHC.
+- **Action:** OmniSolo generates a personalized booking link and sends it to the client. When booked, the event is synced to the owner's calendar.
+- **User Experience:** The owner shares a link (or OmniSolo auto-sends it). The client picks a time, and it magically appears on the owner's calendar with a notification in OmniSolo.
 
 **Implementation Prompt:**
-Integrate a scheduling tool that allows users to generate booking links based on their calendar availability. Ensure that booked events automatically reflect in the user's connected calendar and trigger a notification within OHC.
+Integrate a scheduling tool that allows users to generate booking links based on their calendar availability. Ensure that booked events automatically reflect in the user's connected calendar and trigger a notification within OmniSolo.
 
 **Priority:** P1
 **Estimated Scope:** Medium
@@ -69,11 +69,11 @@ Business owners struggle to keep their customer lists organized and send profess
 
 **Design Doc:**
 - **Trigger:** An SME wants to send a promotional email to their customer base.
-- **Action:** OHC pushes the current customer list to Mailchimp and initiates a campaign draft.
-- **User Experience:** The owner selects "Send Newsletter" in OHC, chooses a segment of their customers, and is directed to a pre-filled, simple template to write their message.
+- **Action:** OmniSolo pushes the current customer list to Mailchimp and initiates a campaign draft.
+- **User Experience:** The owner selects "Send Newsletter" in OmniSolo, chooses a segment of their customers, and is directed to a pre-filled, simple template to write their message.
 
 **Implementation Prompt:**
-Create an integration that synchronizes the OHC customer list with an external email marketing platform. Provide a UI for the user to select customer segments and initiate an email campaign draft directly from the OHC dashboard.
+Create an integration that synchronizes the OmniSolo customer list with an external email marketing platform. Provide a UI for the user to select customer segments and initiate an email campaign draft directly from the OmniSolo dashboard.
 
 **Priority:** P1
 **Estimated Scope:** Medium
@@ -95,8 +95,8 @@ For SMEs in Latin America, standard international payment gateways (like Stripe)
 
 **Design Doc:**
 - **Trigger:** A customer reaches the checkout stage or an invoice is generated.
-- **Action:** OHC generates a localized payment link via Mercado Pago.
-- **User Experience:** The owner creates an invoice in OHC. OHC provides a local payment link that the customer can pay using familiar local methods. The invoice is automatically marked "Paid" in OHC when the transaction clears.
+- **Action:** OmniSolo generates a localized payment link via Mercado Pago.
+- **User Experience:** The owner creates an invoice in OmniSolo. OmniSolo provides a local payment link that the customer can pay using familiar local methods. The invoice is automatically marked "Paid" in OmniSolo when the transaction clears.
 
 **Implementation Prompt:**
 Implement a payment gateway integration specifically tailored for localized payment methods (e.g., Mercado Pago for LATAM). Enable users to generate payment links for invoices and automatically update invoice status upon successful payment.
@@ -120,12 +120,12 @@ E-commerce SMEs spend excessive time manually calculating shipping rates, printi
 - **Hybrid Support:** Fully viable via standard REST APIs in both Cloud and Standalone environments.
 
 **Design Doc:**
-- **Trigger:** An order is marked as "Ready to Ship" in OHC.
-- **Action:** OHC fetches real-time rates, generates a shipping label, and retrieves a tracking number.
+- **Trigger:** An order is marked as "Ready to Ship" in OmniSolo.
+- **Action:** OmniSolo fetches real-time rates, generates a shipping label, and retrieves a tracking number.
 - **User Experience:** The owner clicks "Ship Item". They see the cheapest rate, click confirm, and a label prints. The customer automatically receives a tracking link.
 
 **Implementation Prompt:**
-Integrate a shipping aggregator to provide real-time shipping rates and label generation within OHC. Users should be able to view carrier options, purchase a label, and automatically email tracking information to the customer.
+Integrate a shipping aggregator to provide real-time shipping rates and label generation within OmniSolo. Users should be able to view carrier options, purchase a label, and automatically email tracking information to the customer.
 
 **Priority:** P2
 **Estimated Scope:** Medium
@@ -147,8 +147,8 @@ Many SMEs serve customers with low email engagement or limited English proficien
 
 **Design Doc:**
 - **Trigger:** An appointment is booked, or a critical update occurs.
-- **Action:** OHC sends a customized SMS via Twilio to the customer.
-- **User Experience:** The business owner configures automated reminders in OHC (e.g., "Remind 24hrs before"). The customer receives a simple text message reminder, reducing no-shows without the owner lifting a finger.
+- **Action:** OmniSolo sends a customized SMS via Twilio to the customer.
+- **User Experience:** The business owner configures automated reminders in OmniSolo (e.g., "Remind 24hrs before"). The customer receives a simple text message reminder, reducing no-shows without the owner lifting a finger.
 
 **Implementation Prompt:**
 Implement an SMS notification system allowing business owners to configure automated text alerts for specific events (like appointment reminders or shipping updates). The system must handle global phone number formats and provide delivery status indicators.
@@ -172,12 +172,12 @@ SMEs offering online consultations or lessons waste time manually creating Zoom 
 - **Hybrid Support:** Viable. OAuth flow works well in Cloud, and can be adapted for Standalone mode via local redirects.
 
 **Design Doc:**
-- **Trigger:** An online meeting/appointment is scheduled in OHC.
-- **Action:** OHC automatically creates a Zoom meeting and attaches the join link to the calendar invite.
-- **User Experience:** When an owner schedules a "Virtual Consultation," OHC instantly generates a Zoom link and emails it to the client. At the meeting time, the owner clicks a "Join Now" button directly inside OHC.
+- **Trigger:** An online meeting/appointment is scheduled in OmniSolo.
+- **Action:** OmniSolo automatically creates a Zoom meeting and attaches the join link to the calendar invite.
+- **User Experience:** When an owner schedules a "Virtual Consultation," OmniSolo instantly generates a Zoom link and emails it to the client. At the meeting time, the owner clicks a "Join Now" button directly inside OmniSolo.
 
 **Implementation Prompt:**
-Integrate a video conferencing tool to automatically generate meeting links when a virtual appointment is scheduled. Ensure the meeting link is automatically embedded in calendar invitations and accessible via a "Join" button in the OHC dashboard.
+Integrate a video conferencing tool to automatically generate meeting links when a virtual appointment is scheduled. Ensure the meeting link is automatically embedded in calendar invitations and accessible via a "Join" button in the OmniSolo dashboard.
 
 **Priority:** P1
 **Estimated Scope:** Medium

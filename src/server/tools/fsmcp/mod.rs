@@ -69,9 +69,9 @@ impl FsMcpTool {
     pub fn new(storage_provider: Option<Arc<dyn Provider>>) -> Self {
         let is_standalone = crate::is_standalone_runtime();
         let local_base_dir = if let Ok(home) = env::var("HOME") {
-            PathBuf::from(home).join(".ohc-local-data/fs")
+            PathBuf::from(home).join(".omnisolo-local-data/fs")
         } else {
-            std::env::temp_dir().join(".ohc-local-data/fs")
+            std::env::temp_dir().join(".omnisolo-local-data/fs")
         };
 
         let local_dir_clone = local_base_dir.clone();

@@ -10,14 +10,14 @@ Small business owners struggle to keep up with customer messages scattered acros
 
 ### Research Report
 - **Tool Candidates**: Meta Business Suite API, WhatsApp Business API.
-- **Evaluation**: Connecting Meta platforms natively into OHC allows for centralising the communication for the merchant.
-- **Ease of Use**: Merchants connect their accounts via OAuth. Non-technical users benefit as all interactions remain inside OHC.
+- **Evaluation**: Connecting Meta platforms natively into OmniSolo allows for centralising the communication for the merchant.
+- **Ease of Use**: Merchants connect their accounts via OAuth. Non-technical users benefit as all interactions remain inside OmniSolo.
 - **Pricing**: Meta's standard APIs are generally free, WhatsApp conversation charges apply.
 - **Compatibility**: Works well via standard OAuth flows for Cloud; standalone may require a proxy due to callback URLs.
 
 ### Design Doc
 - **Integration Trigger**: Users connect accounts from Settings.
-- **Action**: Webhooks feed into an internal OHC Inbox.
+- **Action**: Webhooks feed into an internal OmniSolo Inbox.
 - **User Interface**: A unified chronological timeline.
 
 ### Implementation Prompt
@@ -33,7 +33,7 @@ Implement a unified inbox feature where users can connect their Meta platforms. 
 Native Google Calendar Sync
 
 ### Problem Statement
-Service providers (like Leo the music tutor) manually manage appointments between their personal calendar and OHC, causing double bookings. They need automatic two-way sync so OHC knows when they are busy.
+Service providers (like Leo the music tutor) manually manage appointments between their personal calendar and OmniSolo, causing double bookings. They need automatic two-way sync so OmniSolo knows when they are busy.
 
 ### Research Report
 - **Tool Candidates**: Google Calendar API, Outlook Calendar API.
@@ -44,11 +44,11 @@ Service providers (like Leo the music tutor) manually manage appointments betwee
 
 ### Design Doc
 - **Integration Trigger**: User authenticates with Google from their profile settings.
-- **Action**: OHC queries free/busy times and blocks slots natively.
-- **User Interface**: OHC booking widget uses aggregated availability.
+- **Action**: OmniSolo queries free/busy times and blocks slots natively.
+- **User Interface**: OmniSolo booking widget uses aggregated availability.
 
 ### Implementation Prompt
-Create a native integration with Google Calendar API. Fetch free/busy times to update OHC booking slots, and push new OHC bookings into the Google Calendar.
+Create a native integration with Google Calendar API. Fetch free/busy times to update OmniSolo booking slots, and push new OmniSolo bookings into the Google Calendar.
 - **Acceptance Criteria**: Connect Google account. Availability reflects calendar. Bookings push to calendar.
 - **Priority**: P1
 - **Estimated Scope**: Medium
@@ -64,15 +64,15 @@ Priya wants to email her customers about new stock but finds tools like Mailchim
 
 ### Research Report
 - **Tool Candidates**: SendGrid, AWS SES.
-- **Evaluation**: Using a transactional email API allows OHC to wrap the feature entirely in its own UI.
+- **Evaluation**: Using a transactional email API allows OmniSolo to wrap the feature entirely in its own UI.
 - **Ease of Use**: Completely native. The user doesn't need to learn a new tool.
-- **Pricing**: Built into OHC subscription (scale-based).
+- **Pricing**: Built into OmniSolo subscription (scale-based).
 - **Compatibility**: Centralized API for Cloud.
 
 ### Design Doc
-- **Integration Trigger**: User creates a campaign via OHC UI.
-- **Action**: OHC composes and sends via backend API.
-- **User Interface**: Simple editor and metrics dashboard inside OHC.
+- **Integration Trigger**: User creates a campaign via OmniSolo UI.
+- **Action**: OmniSolo composes and sends via backend API.
+- **User Interface**: Simple editor and metrics dashboard inside OmniSolo.
 
 ### Implementation Prompt
 Build a native email campaign management system utilizing SendGrid/SES for delivery.
@@ -179,7 +179,7 @@ Tutors manually create meeting links and email them. They need this automated wh
 
 ### Design Doc
 - **Integration Trigger**: Service booked as "Online Meeting".
-- **Action**: OHC creates meeting via Zoom API and saves URL.
+- **Action**: OmniSolo creates meeting via Zoom API and saves URL.
 - **User Interface**: Link embedded in bookings and emails.
 
 ### Implementation Prompt

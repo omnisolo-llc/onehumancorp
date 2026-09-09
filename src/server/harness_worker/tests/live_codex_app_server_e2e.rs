@@ -1,7 +1,7 @@
 use std::process::Stdio;
 
-use server_ohc::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
-use server_ohc::harness_middleware::{AttemptCommandEnvelope, SessionOperationEnvelope};
+use server_omnisolo::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
+use server_omnisolo::harness_middleware::{AttemptCommandEnvelope, SessionOperationEnvelope};
 use tokio::process::{Child, Command};
 use tokio::time::{Duration, sleep, timeout};
 use tokio_stream::StreamExt;

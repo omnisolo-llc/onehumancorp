@@ -22,19 +22,19 @@ export default function EmbedBuilderPage() {
     useEffect(() => {
         if (!tenantId) return;
 
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
         let embedUrl = `${baseUrl}/embed/widget?tenant_id=${encodeURIComponent(tenantId)}&type=${encodeURIComponent(widgetType)}&theme=${encodeURIComponent(theme)}`;
 
         if (hideBranding) {
             embedUrl += `&hideBranding=true`;
         }
 
-        const iframeCode = `<iframe src="${embedUrl}" width="100%" height="500" frameborder="0" style="border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); background: transparent;" title="OHC ${widgetType === 'intake' ? 'Intake' : widgetType === 'booking' ? 'Booking' : 'Quote'} Widget"></iframe>`;
+        const iframeCode = `<iframe src="${embedUrl}" width="100%" height="500" frameborder="0" style="border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); background: transparent;" title="OmniSolo ${widgetType === 'intake' ? 'Intake' : widgetType === 'booking' ? 'Booking' : 'Quote'} Widget"></iframe>`;
 
         let fullCode = iframeCode;
 
         if (!hideBranding) {
-            fullCode += `\n<div style="text-align: center; margin-top: 12px; font-family: sans-serif; font-size: 12px;">\n  <a href="${baseUrl}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>\n</div>`;
+            fullCode += `\n<div style="text-align: center; margin-top: 12px; font-family: sans-serif; font-size: 12px;">\n  <a href="${baseUrl}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>\n</div>`;
         }
 
         setEmbedCode(fullCode);
@@ -76,7 +76,7 @@ export default function EmbedBuilderPage() {
                         <span>🚀 Growth Loop</span>
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 drop-shadow-sm">Interactive Embed Builder</h1>
-                    <p className="text-gray-600 text-base md:text-lg">Generate a custom widget to embed on your external website. Capture leads, bookings, or quotes directly into OHC.</p>
+                    <p className="text-gray-600 text-base md:text-lg">Generate a custom widget to embed on your external website. Capture leads, bookings, or quotes directly into OmniSolo.</p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">
@@ -94,7 +94,7 @@ export default function EmbedBuilderPage() {
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all shadow-inner"
                                     placeholder="your-workspace-id"
                                 />
-                                <p className="text-xs text-gray-500 mt-2">Connects widget submissions to your OHC workspace.</p>
+                                <p className="text-xs text-gray-500 mt-2">Connects widget submissions to your OmniSolo OneHumanCorp workspace.</p>
                             </div>
 
                             <div className="mb-6">
@@ -154,7 +154,7 @@ export default function EmbedBuilderPage() {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-sm font-semibold text-gray-900">Remove Branding</span>
-                                        <span className="text-xs text-gray-500">Hide the "Powered by OHC" footer.</span>
+                                        <span className="text-xs text-gray-500">Hide the "Powered by OmniSolo" footer.</span>
                                     </div>
                                 </label>
                             </div>
@@ -222,7 +222,7 @@ export default function EmbedBuilderPage() {
                                                 rel="noopener noreferrer"
                                                 className={`hover:underline transition-colors ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
                                             >
-                                                ⚡ Powered by OHC
+                                                ⚡ Powered by OmniSolo
                                             </a>
                                         </div>
                                     )}
@@ -257,7 +257,7 @@ export default function EmbedBuilderPage() {
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-3 font-outfit">Upgrade to Pro</h2>
                             <p className="text-gray-600 mb-8 text-base">
-                                White-label your embedded widgets. Upgrade to Pro to remove the <span className="font-semibold text-gray-900">"Powered by OHC"</span> branding completely.
+                                White-label your embedded widgets. Upgrade to Pro to remove the <span className="font-semibold text-gray-900">"Powered by OmniSolo"</span> branding completely.
                             </p>
 
                             <div className="space-y-3">

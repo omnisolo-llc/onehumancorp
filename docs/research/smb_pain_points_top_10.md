@@ -17,7 +17,7 @@ pie title Frequency of Top SMB Pain Points
     "Support Deserts" : 30
 ```
 
-| Rank | Pain Point | Frequency (Est.) | Description | OHC Mapping |
+| Rank | Pain Point | Frequency (Est.) | Description | OmniSolo Mapping |
 | :--- | :--- | :--- | :--- | :--- |
 | 1 | **Setup Complexity** | High (73%) | Users feel "stupid" when asked about DNS, liquid templates, or complex shipping zones. | **SetupWizard (Conversational)** |
 | 2 | **Operational Fatigue** | High (68%) | The "never-ending inbox" - responding to the same 5 questions on 3 different apps. | **Proactive Agents (The Ambassador)** |

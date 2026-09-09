@@ -12,7 +12,7 @@ test.describe('Help Tooltips', () => {
     await tooltipTrigger.hover();
 
     // Wait for the tooltip element to become visible
-    const tooltip = page.locator('.ohc-tooltip.visible');
+    const tooltip = page.locator('.omnisolo-tooltip.visible');
     await expect(tooltip).toBeVisible();
 
     // Check that it contains text

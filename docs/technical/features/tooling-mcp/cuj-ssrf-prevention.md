@@ -10,7 +10,7 @@
 This Customer User Journey (CUJ) describes the interactions and expected outcomes for preventing Server-Side Request Forgery (SSRF) vulnerabilities when an AI Agent or User interacts with the Integrations Registry.
 
 ## 2. Personas
-- **Human CEO/Admin:** The user responsible for connecting new external integrations (e.g., GitHub, Slack) to the One Human Corp platform.
+- **Human CEO/Admin:** The user responsible for connecting new external integrations (e.g., GitHub, Slack) to the OmniSolo platform.
 - **AI Agent:** An autonomous worker that may attempt to connect to external systems via the `Connect()` API or `TestConnection()` functionality.
 - **Malicious User/Agent:** An entity attempting to leverage the Integrations Registry to probe internal network infrastructure or access restricted services.
 

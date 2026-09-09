@@ -22,7 +22,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/agents/builtin:core",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
         "@crates//:chrono",
         "@crates//:sqlx",
         "@crates//:tokio",

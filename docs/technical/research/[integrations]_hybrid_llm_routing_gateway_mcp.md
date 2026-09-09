@@ -3,7 +3,7 @@
 # Title: [integrations] Hybrid LLM Routing Gateway MCP
 
 ## Problem Statement
-The OHC Hybrid Agentic OS requires agents to be agnostic to the underlying LLM provider. In Cloud-native mode, LLM requests must be routed through a centralized API Gateway (e.g., LiteLLM) to handle load balancing, API key rotation, cost-tracking, and tenant-based rate limits. However, in Standalone Desktop mode, agents must seamlessly fallback to local inference engines (e.g., Ollama, Llama.cpp) to preserve privacy and function in air-gapped environments. Currently, there is no unified MCP tool that dynamically routes these requests based on the deployment footprint.
+The OmniSolo Hybrid Agentic OS requires agents to be agnostic to the underlying LLM provider. In Cloud-native mode, LLM requests must be routed through a centralized API Gateway (e.g., LiteLLM) to handle load balancing, API key rotation, cost-tracking, and tenant-based rate limits. However, in Standalone Desktop mode, agents must seamlessly fallback to local inference engines (e.g., Ollama, Llama.cpp) to preserve privacy and function in air-gapped environments. Currently, there is no unified MCP tool that dynamically routes these requests based on the deployment footprint.
 
 ## Research Report
 Market analysis highlights that frameworks like CrewAI and LangChain often require hardcoding LLM clients or relying on environment variables that do not easily support dynamic switching between a multi-tenant cloud gateway and a local LLM daemon.
@@ -16,16 +16,16 @@ Market analysis highlights that frameworks like CrewAI and LangChain often requi
 | **Authentication** | SPIFFE/SPIRE & Kubernetes Secrets | Local OS Keychain / None |
 | **Rate Limiting** | Strict tenant quotas | Hardware constrained |
 
-**Recommendation:** Develop a Hybrid LLM Routing Gateway MCP Tool that abstracts the provider logic and routes prompts based on `OHC_MULTITENANT` configurations.
+**Recommendation:** Develop a Hybrid LLM Routing Gateway MCP Tool that abstracts the provider logic and routes prompts based on `OMNISOLO_MULTITENANT` configurations.
 
 ### Architecture Flow
 ```mermaid
 graph TD;
     A[Agent Workspace] -->|MCP Tool Request| B(Hybrid LLM Routing MCP);
-    B -->{OHC_MULTITENANT == true?};
-    {OHC_MULTITENANT == true?} -- Yes --> C[Cloud API Gateway];
+    B -->{OMNISOLO_MULTITENANT == true?};
+    {OMNISOLO_MULTITENANT == true?} -- Yes --> C[Cloud API Gateway];
     C --> D[OpenAI/Anthropic APIs];
-    {OHC_MULTITENANT == true?} -- No --> E[Local Inference Engine];
+    {OMNISOLO_MULTITENANT == true?} -- No --> E[Local Inference Engine];
     E --> F[Ollama / Llama.cpp];
 ```
 
@@ -33,8 +33,8 @@ graph TD;
 **Architecture:**
 - Create a new package `src/server/lib/integrations/llm_router/`.
 - Introduce an `LLMRouterManager` implementing the MCP Tool interface.
-- Dynamically route based on `os.Getenv("OHC_MULTITENANT") == "true"`.
-- **Cloud Mode:** Utilize an HTTP client configured with Keep-Alive pools to connect to the internal OHC LiteLLM gateway. Enforce tenant ID propagation via headers.
+- Dynamically route based on `os.Getenv("OMNISOLO_MULTITENANT") == "true"`.
+- **Cloud Mode:** Utilize an HTTP client configured with Keep-Alive pools to connect to the internal OmniSolo LiteLLM gateway. Enforce tenant ID propagation via headers.
 - **Standalone Mode:** Connect directly to `localhost:11434` (Ollama default) or similar local socket for offline inference.
 
 **API Contracts:**
@@ -48,7 +48,7 @@ graph TD;
 ## Implementation Prompt
 "Implement the Hybrid LLM Routing Gateway MCP tool in `src/server/lib/integrations/llm_router/`.
 1. Create `llm_router.go` defining the `LLMRouterManager` and its MCP capabilities (`GenerateCompletion`, `GenerateEmbeddings`).
-2. Implement dynamic routing logic based on `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
+2. Implement dynamic routing logic based on `os.Getenv(\"OMNISOLO_MULTITENANT\") == \"true\"`.
 3. For Cloud Mode, implement the HTTP client integrating with the LiteLLM gateway, ensuring tenant headers (`X-Tenant-ID`) are injected.
 4. For Standalone Mode, implement integration with the Ollama REST API (`http://localhost:11434/api/generate`).
 5. Ensure prompts undergo PII Redaction in Cloud Mode.

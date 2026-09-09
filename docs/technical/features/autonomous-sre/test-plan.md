@@ -43,7 +43,7 @@ A high-level summary of the testing strategy for the Autonomous SRE Engine featu
 - **Quota Protection:** Ensure SRE Agents cannot trigger more than 3 restarts per hour to prevent cascading failures.
 
 ## 6. Environment & Prerequisites
-- OHC Hub configured with local test cluster and Prometheus mock.
+- OmniSolo Hub configured with local test cluster and Prometheus mock.
 - ArgoCD deployed in the test cluster.
 
 ## Implementation Details

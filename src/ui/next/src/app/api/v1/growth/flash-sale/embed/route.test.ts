@@ -13,8 +13,8 @@ describe('GET /api/v1/growth/flash-sale/embed', () => {
         expect(html).toContain('50% OFF');
         expect(html).toContain('GET50');
         expect(html).toContain('background: #111827;'); // dark theme
-        expect(html).toContain('href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=my-shop"');
-        expect(html).toContain('⚡ Powered by OHC');
+        expect(html).toContain('href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=my-shop"');
+        expect(html).toContain('⚡ Powered by OmniSolo');
     });
 
     it('uses default values when parameters are missing', async () => {

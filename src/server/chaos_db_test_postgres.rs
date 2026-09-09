@@ -4,7 +4,7 @@ mod postgres_chaos_tests {
     use std::sync::Arc;
 
     async fn setup_postgres_db() -> Option<Arc<DB>> {
-        if let Ok(url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(url) = std::env::var("OMNISOLO_DATABASE_URL") {
             if url.starts_with("postgres") {
                 let pool = sqlx::postgres::PgPoolOptions::new()
                     .acquire_timeout(std::time::Duration::from_millis(100))

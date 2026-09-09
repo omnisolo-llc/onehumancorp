@@ -11,7 +11,7 @@ The Automated Software Development Life Cycle (SDLC) orchestrates the entire eng
 
 ## 2. Identity
 - **Human Identity**: Human CEOs still approve final releases and use standard OIDC for login, mapping to the appropriate role in the system.
-- **AI Identity**: Leveraging SPIFFE/SPIRE for universal workload identity to manage internal authentication and authorization between AI agents and the CI/CD pipeline. The `ohc-operator` injects SPIRE sidecars into each new CI runner.
+- **AI Identity**: Leveraging SPIFFE/SPIRE for universal workload identity to manage internal authentication and authorization between AI agents and the CI/CD pipeline. The `omnisolo-operator` injects SPIRE sidecars into each new CI runner.
 
 ## 3. Architecture
 The architecture centers around the `Hub` which manages the CI/CD state machines using LangGraph for tracking.

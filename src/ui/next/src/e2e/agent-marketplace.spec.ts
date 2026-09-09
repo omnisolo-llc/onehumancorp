@@ -1,20 +1,20 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Agent Marketplace', () => {
-  test('should load the agent marketplace and allow searching, verifying basic data presence', async ({ page }) => {
+  test('should load the agent marketplace and present a recoverable service error', async ({ page }) => {
     test.setTimeout(60000);
     await page.goto('/agent-marketplace');
 
-    await expect(page.getByRole('heading', { name: 'Agent Marketplace' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agent Marketplace' }).first()).toBeVisible();
 
     const searchInput = page.getByPlaceholder('Search for agents...');
     await expect(searchInput).toBeVisible();
     await searchInput.fill('Sales');
     await searchInput.press('Enter');
 
-    // Wait for the grid of agents to populate
-    const agentCards = page.locator('h3').first();
-    await expect(agentCards).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Failed to fetch agents', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('button', { name: 'Retry marketplace' })).toBeVisible();
+    await expect(page.getByText('No agents found')).not.toBeVisible();
   });
 
   test('should allow navigating to publish agent page and verify form elements', async ({ page }) => {

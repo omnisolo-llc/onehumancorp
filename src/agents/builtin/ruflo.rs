@@ -1,7 +1,7 @@
 #![allow(clippy::items_after_test_module)]
 use futures::future::join_all;
-use ohc_builtin_agent_core::types::{ChatRequest, Message};
-use ohc_builtin_agent_llm::LlmClient;
+use omnisolo_builtin_agent_core::types::{ChatRequest, Message};
+use omnisolo_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
 
 /// Ruflo Unique Harness Innovations: Multi-agent swarm (Hierarchical, mesh, adaptive with consensus)
@@ -101,7 +101,7 @@ impl SwarmAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatResponse, Usage};
 
     struct MockLlmClient {
         resp: String,

@@ -1,9 +1,9 @@
 use crate::pydantic::{PydanticAdapter, PydanticToolExecutor};
-use ohc_builtin_agent_core::expert_team::{
+use omnisolo_builtin_agent_core::expert_team::{
     DomainExpert, ExpertTeamLlmClient, ExpertTeamManager, SkillTrace,
 };
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolError};
-use ohc_builtin_agent_llm::LlmClient;
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolError};
+use omnisolo_builtin_agent_llm::LlmClient;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -119,7 +119,7 @@ pub fn expert_team_tool(client: Arc<dyn LlmClient>, model: String) -> crate::Too
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{Message, Role, Usage};
+    use omnisolo_builtin_agent_core::types::{Message, Role, Usage};
     use tokio::sync::Mutex;
 
     struct MockExpertTeamLlm {

@@ -22,7 +22,7 @@ graph TD;
         UploadService --> LocalCache[(Local Image Cache)];
     end
 
-    UploadService -- Raw Image --> API[OHC API Gateway];
+    UploadService -- Raw Image --> API[OmniSolo API Gateway];
     API --> BackgroundJobQueue[AI Job Queue (Postgres)];
 
     subgraph AI Marketing Department
@@ -39,7 +39,7 @@ graph TD;
 ```
 
 ### Mobile UX Flow (375px First)
-1. **Product Creation/Edit:** Maya is adding a new "Vegan Chocolate Cake." She taps "Add Photo" in the OHC mobile app.
+1. **Product Creation/Edit:** Maya is adding a new "Vegan Chocolate Cake." She taps "Add Photo" in the OmniSolo mobile app.
 2. **Capture:** She takes a photo of the cake on her kitchen counter using her phone's camera.
 3. **Magic Wand Processing:** She taps a "Magic Enhance" button (styled with a subtle glassmorphic shimmer). A translucent loading overlay appears with a message: "AI is setting up the studio..."
 4. **Review Options:** Within 5-10 seconds, the app presents 3-4 professional variations (e.g., pure white background, soft pastel background, marble countertop).

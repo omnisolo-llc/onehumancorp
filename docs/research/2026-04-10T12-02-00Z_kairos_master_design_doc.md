@@ -1,7 +1,7 @@
 # Master Design Doc: KAIROS AI OS Orchestration (Phase 4)
 
 ## Problem Statement
-We need a final, premium Design Doc detailing how OHC will implement the AI OS features: Shared Task List, Teammate Mesh, and AutoDream pipelines.
+We need a final, premium Design Doc detailing how OmniSolo will implement the AI OS features: Shared Task List, Teammate Mesh, and AutoDream pipelines.
 
 ## Research Report
 The core architecture consists of three pillars:
@@ -11,7 +11,7 @@ The core architecture consists of three pillars:
 
 ## Design Doc
 ### The KAIROS Triad
-The absolute autonomy of the OHC Swarm rests on three pillars:
+The absolute autonomy of the OmniSolo Swarm rests on three pillars:
 
 1. **Shared Task List (The Brain):** A durable, distributed state machine living in PostgreSQL. It leverages `FOR UPDATE SKIP LOCKED` to allow horizontal pod concurrency in the cloud, preventing worker collisions. It degrades to SQLite transactions for standalone desktop use.
 2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer. Using `CentrifugeNode` and Redis Pub/Sub (`rueidis`), agents broadcast state changes, advertise capabilities, and stream events.
@@ -63,4 +63,4 @@ body {
 ```
 
 ## Implementation Prompt
-Submit this premium Design Doc via PR detailing how OHC will implement these AI OS features.
+Submit this premium Design Doc via PR detailing how OmniSolo will implement these AI OS features.

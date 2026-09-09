@@ -413,10 +413,28 @@ mod tests {
     use chrono::Utc;
     use uuid::Uuid;
 
+    #[test]
+    fn active_migration_owns_every_column_used_by_the_feed_union() {
+        let migration = include_str!("../../migrations/223_agent_action_requests.sql");
+        for column in [
+            "agent_action_requests",
+            "tenant_id",
+            "action_type",
+            "status",
+            "payload",
+            "created_at",
+            "updated_at",
+            "source",
+            "agent_type",
+        ] {
+            assert!(migration.contains(column), "migration is missing {column}");
+        }
+    }
+
     #[tokio::test]
 
     async fn test_agent_feed_repo_lifecycle() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         if !database_url.starts_with("postgres") {
             return;

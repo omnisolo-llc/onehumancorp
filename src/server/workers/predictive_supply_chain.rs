@@ -154,7 +154,7 @@ impl PredictiveSupplyChainWorker {
 
             // We lock on the product to avoid multiple agents drafting POs for the same product at the exact same time
             let lock_key = format!("ohc:lock:{}:purchase_order:{}", tenant_id, product_id);
-            let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+            let redis_url = std::env::var("OMNISOLO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
 
             // Acquire lock (simple Redis lock implementation for this worker, similar to what's defined in locks.rs)
             let mut has_lock = false;

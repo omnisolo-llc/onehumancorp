@@ -1,7 +1,7 @@
 # [Architecture] Neighborhood Collective Discovery & Shared Loyalty Mesh
 
 ## 1. Title
-**Neighborhood Collective Discovery & Shared Loyalty Mesh (The OHC "Main Street" Engine)**
+**Neighborhood Collective Discovery & Shared Loyalty Mesh (The OmniSolo "Main Street" Engine)**
 
 ## 2. Problem Statement
 Small business owners like **Maya (baker)**, **Carlos (handyman)**, and **Fatima (food cart operator)** operate as isolated islands. While they may physically be located in the same neighborhood or serve the same local customer base, they lack the technical infrastructure to leverage each other's success.
@@ -14,8 +14,8 @@ Large retail chains dominate because of massive, unified loyalty networks and cr
 *   **Wix/Squarespace**: Completely isolated. No cross-tenant discovery or loyalty integration exists natively.
 *   **Nextdoor / Yelp**: Provide discovery but are disconnected from the transaction. You can't earn a "Main Street Point" at the bakery and spend it at the hardware store.
 
-### The OHC Opportunity
-OHC can create a "Network Effect for the Little Guy." By utilizing the **Universal Buyer Identity (OHC Pay)**, we can allow separate tenants to form a "Collective." Within this mesh, AI agents proactively identify complementary businesses (e.g., a baker and a florist) and suggest shared loyalty programs. This turns every OHC merchant into a discovery node for every other local OHC merchant, creating a "Virtual Mall" experience on a 375px phone screen.
+### The OmniSolo Opportunity
+OmniSolo can create a "Network Effect for the Little Guy." By utilizing the **Universal Buyer Identity (OmniSolo Pay)**, we can allow separate tenants to form a "Collective." Within this mesh, AI agents proactively identify complementary businesses (e.g., a baker and a florist) and suggest shared loyalty programs. This turns every OmniSolo merchant into a discovery node for every other local OmniSolo merchant, creating a "Virtual Mall" experience on a 375px phone screen.
 
 ## 4. Design Doc
 
@@ -32,7 +32,7 @@ graph TD
     T2[Carlos's Repairs] <-->|Join/Sync| C
     T3[Fatima's Food Cart] <-->|Join/Sync| C
 
-    Buyer[OHC Buyer Identity] -->|Transact at T1| L
+    Buyer[OmniSolo Buyer Identity] -->|Transact at T1| L
     L -->|Earn Points| Buyer
     Buyer -->|Redeem at T2| L
 
@@ -77,14 +77,14 @@ erDiagram
 *   **Opt-in Only**: No tenant is added to a collective without a 1-tap mobile approval.
 
 ### Mobile-First UX Flow (375px First)
-1. **The Neighborhood Pulse (Dashboard Card)**: A translucent glass card appears on Maya's dashboard: *"There are 4 OHC businesses in your area. Form a 'Main Street Collective' to share customers?"*
+1. **The Neighborhood Pulse (Dashboard Card)**: A translucent glass card appears on Maya's dashboard: *"There are 4 OmniSolo businesses in your area. Form a 'Main Street Collective' to share customers?"*
 2. **The "Partner Match" Sheet**: Maya taps the card and sees high-contrast cards for Carlos and Fatima with their "Vibe" matches.
 3. **Shared Loyalty Setup**: Maya selects "Shared Points." The AI suggests: *"Give 5 'Main Street' points for every $10 spent. Points valid at all 3 shops."*
-4. **Buyer Experience (The OHC Wallet)**: A customer pays Maya using OHC Pay. Their receipt (glassmorphic modal) shows: *"You earned 15 Main Street Points! Spend them at Carlos's Repairs or Fatima's Cart nearby."*
+4. **Buyer Experience (The OmniSolo Wallet)**: A customer pays Maya using OmniSolo Pay. Their receipt (glassmorphic modal) shows: *"You earned 15 Main Street Points! Spend them at Carlos's Repairs or Fatima's Cart nearby."*
 5. **Discovery Widget**: On Maya's live storefront, a subtle "Neighbors" footer displays partner businesses with a 1-tap navigation/booking link.
 
 ### AI Agent Integration Points
-- **The Promoter (Marketing AI)**: Periodically scans for OHC tenants within a 5-mile radius. Evaluates business categories to find non-competing, complementary pairs (e.g., Handyman + Cleaning Service).
+- **The Promoter (Marketing AI)**: Periodically scans for OmniSolo tenants within a 5-mile radius. Evaluates business categories to find non-competing, complementary pairs (e.g., Handyman + Cleaning Service).
 - **The Accountant (Finance AI)**: Handles the "Loyalty Clearinghouse" logic, ensuring that if a customer earns points at Maya's but spends them at Carlos's, the ledger records the value transfer correctly for tax purposes.
 
 ## 5. Implementation Prompt
@@ -95,8 +95,8 @@ Build the backend services and mobile UI for the "Neighborhood Collective Discov
 1. Maya (Merchant A) receives a dashboard suggestion to partner with Carlos (Merchant B).
 2. Maya taps "Invite Carlos" to form a collective.
 3. Carlos receives a push notification, reviews the partnership terms (Shared Loyalty), and taps "Join."
-4. A customer (Sarah) buys a cake from Maya. Her OHC Pay profile is credited with "Neighborhood Points."
-5. Sarah later visits Carlos's booking page. The OHC checkout UI automatically detects her points and offers a translucent glass toggle: `[ Use 50 Neighborhood Points for $5 off ]`.
+4. A customer (Sarah) buys a cake from Maya. Her OmniSolo Pay profile is credited with "Neighborhood Points."
+5. Sarah later visits Carlos's booking page. The OmniSolo checkout UI automatically detects her points and offers a translucent glass toggle: `[ Use 50 Neighborhood Points for $5 off ]`.
 6. Upon redemption, the Finance AI updates the shared ledger to record the cross-merchant value transfer.
 
 **Acceptance Criteria:**
@@ -107,7 +107,7 @@ Build the backend services and mobile UI for the "Neighborhood Collective Discov
 *   **Grandmother Test**: The entire setup must require < 3 taps for the merchant. No complex rule builders.
 
 ## 6. Priority
-**P1** (High - This is OHC's primary "Unfair Advantage" to create a network effect).
+**P1** (High - This is OmniSolo's primary "Unfair Advantage" to create a network effect).
 
 ## 7. Estimated Scope
-**Large** (Requires integration with OHC Pay, cross-tenant ledger logic, and location-based discovery).
+**Large** (Requires integration with OmniSolo Pay, cross-tenant ledger logic, and location-based discovery).

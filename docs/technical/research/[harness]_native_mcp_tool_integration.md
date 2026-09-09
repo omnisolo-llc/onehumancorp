@@ -1,7 +1,7 @@
 # Native MCP Tool Integration & Scope Sandboxing
 
 ## Problem Statement
-OHC currently lacks a standardized way to integrate external tools, APIs, and file systems seamlessly with its agents. Competitors like Claude Code rely heavily on the Model Context Protocol (MCP) to dynamically load and scope capabilities (like file read/write, terminal execution, and browser automation) natively into their Agent Harness. We need to implement a native MCP integration layer.
+OmniSolo currently lacks a standardized way to integrate external tools, APIs, and file systems seamlessly with its agents. Competitors like Claude Code rely heavily on the Model Context Protocol (MCP) to dynamically load and scope capabilities (like file read/write, terminal execution, and browser automation) natively into their Agent Harness. We need to implement a native MCP integration layer.
 
 ## Research Report
 ### Competitive Analysis: Claude Code (v2.1.88)
@@ -11,8 +11,8 @@ Claude Code leverages MCP as the central nervous system of its Agent Harness.
 - **Communication Protocol**: It supports running local MCP servers via `stdio`, `HTTP`, or `SSE` (Server-Sent Events), allowing it to integrate with any language or ecosystem.
 - **Rate Limiting & Cost Tracking**: MCP tool calls are integrated with a mock rate limiting service (`mockRateLimits.ts`) and a cost tracker (`cost-tracker.ts`) that intercepts all tool usage, ensuring agent execution does not overrun budgets.
 
-### OHC Gap Analysis
-OHC-HA has basic tool integrations, but they are hardcoded and tightly coupled to the orchestrator (`src/server/orchestration/`).
+### OmniSolo Gap Analysis
+OmniSolo-HA has basic tool integrations, but they are hardcoded and tightly coupled to the orchestrator (`src/server/orchestration/`).
 1. We lack a dynamic mechanism to discover and register new tools.
 2. We do not have `.mcp.json` scope validation to restrict what files an agent can read or write.
 3. Our tool calls are not standardized using the open Model Context Protocol.
@@ -20,8 +20,8 @@ OHC-HA has basic tool integrations, but they are hardcoded and tightly coupled t
 ## Design Doc
 ### Architecture
 1. **MCP Client Core**: Implement a native MCP client capable of communicating over `stdio` and `HTTP/SSE`.
-2. **Tool Registry**: A dynamic registry that parses `.mcp.json` from the target repository/directory, instantiates the defined MCP servers, and registers their tools with the OHC Agent.
-3. **Scope & Permission Enforcer**: An interceptor that intercepts file-system tools (like `FileRead` or `FileWrite`) and validates the requested paths against the scopes defined in `.mcp.json` and the OHC global policies.
+2. **Tool Registry**: A dynamic registry that parses `.mcp.json` from the target repository/directory, instantiates the defined MCP servers, and registers their tools with the OmniSolo Agent.
+3. **Scope & Permission Enforcer**: An interceptor that intercepts file-system tools (like `FileRead` or `FileWrite`) and validates the requested paths against the scopes defined in `.mcp.json` and the OmniSolo global policies.
 4. **Telemetry & Cost Proxy**: A wrapper around tool invocations that tracks execution time, token usage, and simulated costs, sending metrics to Prometheus/OpenTelemetry.
 
 ### Implementation Protocol
@@ -35,7 +35,7 @@ OHC-HA has basic tool integrations, but they are hardcoded and tightly coupled t
   <h3>Architecture Diagram: MCP Integration</h3>
   <pre class="mermaid">
   graph TD
-    A[OHC Agent] -->|Request Tool| B[MCP Client Core]
+    A[OmniSolo Agent] -->|Request Tool| B[MCP Client Core]
     B -->|Check Config| C[.mcp.json Loader]
     B -->|Validate Permissions| D[Scope Enforcer]
     D -- Deny --> E[Agent Rejected]

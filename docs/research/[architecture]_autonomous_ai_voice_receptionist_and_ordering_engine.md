@@ -12,7 +12,7 @@ Small business owners like **Carlos (Handyman)** and **Fatima (Food Cart Operato
   - *Shopify*: No native voice agents. Relies on text-based "Shopify Inbox".
   - *Wix / Squarespace*: Web-based booking and forms only.
   - *GoDaddy*: Offers a virtual phone number but no AI conversational agent.
-- **Opportunity:** By integrating WebRTC and modern low-latency Voice AI (e.g., Twilio Voice + Gemini/OpenAI Realtime API), OHC can provide a unique phone number to each tenant. The "Sales & Acquisition" and "Customer Success" AI departments can handle the call, access the tenant's exact inventory, pricing, and availability, and process requests dynamically.
+- **Opportunity:** By integrating WebRTC and modern low-latency Voice AI (e.g., Twilio Voice + Gemini/OpenAI Realtime API), OmniSolo can provide a unique phone number to each tenant. The "Sales & Acquisition" and "Customer Success" AI departments can handle the call, access the tenant's exact inventory, pricing, and availability, and process requests dynamically.
 - **Persona Alignment:**
   - *Fatima*: Needs an agent that speaks Arabic and English to take phone pre-orders and push them to her tablet's order queue.
   - *Carlos*: Needs an agent to answer calls from older demographics, give price estimates for simple repairs, and book a time slot on his calendar.
@@ -23,9 +23,9 @@ Small business owners like **Carlos (Handyman)** and **Fatima (Food Cart Operato
 ```mermaid
 graph TD
     Cust[Customer Phone] -->|PSTN Call| Twilio[Twilio/Telco Gateway]
-    Twilio -->|WebSockets/Media Stream| OHC_Voice[OHC Voice Mesh Service]
-    OHC_Voice -->|STT/TTS Stream| Voice_LLM[Low-Latency Voice LLM]
-    OHC_Voice -->|Context/Function Calls| KAIROS[KAIROS Orchestrator]
+    Twilio -->|WebSockets/Media Stream| OMNISOLO_Voice[OmniSolo Voice Mesh Service]
+    OMNISOLO_Voice -->|STT/TTS Stream| Voice_LLM[Low-Latency Voice LLM]
+    OMNISOLO_Voice -->|Context/Function Calls| KAIROS[KAIROS Orchestrator]
 
     KAIROS -->|Query Avail| Booking[Booking Engine]
     KAIROS -->|Query Menu| Inventory[Inventory & Catalog]
@@ -59,10 +59,10 @@ graph TD
 
 ## Implementation Prompt
 **Task for Implementer Agent:**
-Implement the Voice Agent settings and Call Log UI for the OHC mobile app, along with the foundational backend API for webhook handling from Twilio.
+Implement the Voice Agent settings and Call Log UI for the OmniSolo mobile app, along with the foundational backend API for webhook handling from Twilio.
 1. Create a `VoiceAgentConfig` data model supporting the fields: `phone_number`, `is_enabled`, `primary_language`, and `custom_instructions`. Apply strict multi-tenant row-level security.
 2. Build the backend endpoint `POST /api/webhooks/voice/incoming` that accepts Twilio webhooks, verifies the signature, and initializes a KAIROS state machine session for the call.
-3. In the Flutter frontend, implement a new `Voice Agent` dashboard card adopting the OHC Premium Token library (Glassmorphism, 20px blur).
+3. In the Flutter frontend, implement a new `Voice Agent` dashboard card adopting the OmniSolo Premium Token library (Glassmorphism, 20px blur).
 4. Implement E2E Playwright tests that simulate a user toggling the AI Voice Agent on, saving custom instructions, and verifying the state persists.
 
 ## Priority

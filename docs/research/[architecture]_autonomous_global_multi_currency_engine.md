@@ -1,7 +1,7 @@
 # [Architecture] Autonomous Global Multi-Currency & Cross-Border Engine
 
 ## Problem Statement
-Small business owners frequently lose international sales because presenting prices in a foreign currency creates friction and distrust. Priya (boutique owner) ships globally but struggles to manually calculate exchange rates and update prices for her international customers; she loses sales when Canadian or European buyers see USD prices and abandon their carts. Leo (music tutor) teaches students in the UK and Australia but invoicing them in USD causes confusion and hidden conversion fees for his students. Currently, OHC displays a single base currency for all storefronts and invoices. Business owners lack the time, financial expertise, and technical capability to configure localized pricing, tax routing, and foreign exchange (FX) risk mitigation. They need a system that invisibly handles multi-currency pricing, local payment methods, and automated FX reconciliation without any manual configuration.
+Small business owners frequently lose international sales because presenting prices in a foreign currency creates friction and distrust. Priya (boutique owner) ships globally but struggles to manually calculate exchange rates and update prices for her international customers; she loses sales when Canadian or European buyers see USD prices and abandon their carts. Leo (music tutor) teaches students in the UK and Australia but invoicing them in USD causes confusion and hidden conversion fees for his students. Currently, OmniSolo displays a single base currency for all storefronts and invoices. Business owners lack the time, financial expertise, and technical capability to configure localized pricing, tax routing, and foreign exchange (FX) risk mitigation. They need a system that invisibly handles multi-currency pricing, local payment methods, and automated FX reconciliation without any manual configuration.
 
 ## Research Report
 
@@ -15,7 +15,7 @@ We investigated cross-border commerce architectures from leading platforms to un
 | Stripe | Excellent API for localized pricing and presentment. | Developer-centric. Small businesses cannot implement this without a platform layer. |
 | Wix | Basic currency converter widget. | Prices are converted dynamically at checkout, often resulting in "ugly" prices (e.g., €14.82 instead of €14.99). |
 | Squarespace | Very limited. Usually requires third-party plugins. | Brittle integration, poor mobile checkout experience for foreign buyers. |
-| **OHC (Target)** | **Autonomous, zero-config localized presentment and settlement.** | **Must abstract all FX risk and routing complexity from the merchant.** |
+| **OmniSolo (Target)** | **Autonomous, zero-config localized presentment and settlement.** | **Must abstract all FX risk and routing complexity from the merchant.** |
 
 ### Industry Findings
 - **Cosmetic Pricing:** Converting $20 to €18.43 decreases conversion. Best practice is to round to "charming" prices (e.g., €18.99).
@@ -66,20 +66,20 @@ erDiagram
 sequenceDiagram
     participant Buyer (Mobile)
     participant Edge Cache (Cloudflare)
-    participant OHC Pricing Engine
+    participant OmniSolo Pricing Engine
     participant Payment Gateway (Stripe)
-    participant OHC Ledger
+    participant OmniSolo Ledger
 
     Buyer (Mobile)->>Edge Cache: GET /priyas-boutique (IP: France)
-    Edge Cache->>OHC Pricing Engine: Request Pricing Context (EUR)
-    OHC Pricing Engine-->>Edge Cache: Return EUR Prices (Cosmetically Rounded)
+    Edge Cache->>OmniSolo Pricing Engine: Request Pricing Context (EUR)
+    OmniSolo Pricing Engine-->>Edge Cache: Return EUR Prices (Cosmetically Rounded)
     Edge Cache-->>Buyer (Mobile): Display Storefront in EUR
-    Buyer (Mobile)->>OHC Pricing Engine: Initiate Checkout
-    OHC Pricing Engine->>Payment Gateway: Create PaymentIntent (EUR) + Request Local Methods (Cartes Bancaires)
+    Buyer (Mobile)->>OmniSolo Pricing Engine: Initiate Checkout
+    OmniSolo Pricing Engine->>Payment Gateway: Create PaymentIntent (EUR) + Request Local Methods (Cartes Bancaires)
     Payment Gateway-->>Buyer (Mobile): Present Localized Checkout UI
     Buyer (Mobile)->>Payment Gateway: Complete Payment
-    Payment Gateway->>OHC Ledger: Webhook: Payment Success (FX Locked)
-    OHC Ledger-->>OHC Ledger: Record Payout in Merchant Home Currency (USD)
+    Payment Gateway->>OmniSolo Ledger: Webhook: Payment Success (FX Locked)
+    OmniSolo Ledger-->>OmniSolo Ledger: Record Payout in Merchant Home Currency (USD)
 ```
 
 ### Mobile UX Flow (375px First)
@@ -87,7 +87,7 @@ sequenceDiagram
 **The "Grandmother Test" Mobile Flow:**
 1. **Storefront View (Buyer):** A buyer in Paris visits Priya's shop on their iPhone. The price tag on a dress elegantly displays "€49.99" instead of "$54.00". A subtle, non-intrusive tooltip says "Showing prices in EUR based on your location. [Tap to change]".
 2. **Checkout View (Buyer):** The checkout drawer slides up. The total is clearly stated in EUR. The payment options prioritize "Cartes Bancaires" and "Apple Pay" at the top, perfectly tailored to a French buyer.
-3. **Dashboard View (Merchant):** Priya opens her OHC app. She sees a push notification: "New sale! €49.99 paid by Chloe in Paris. You will receive $52.10 USD." She doesn't need to do any math.
+3. **Dashboard View (Merchant):** Priya opens her OmniSolo app. She sees a push notification: "New sale! €49.99 paid by Chloe in Paris. You will receive $52.10 USD." She doesn't need to do any math.
 4. **Settings (Advanced):** Tucked away under "Settings > International", a simple toggle reads: "Sell Globally: ON. We automatically show local currencies and handle exchange rates."
 
 ### AI Agent Integration Points

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from "../components/PoweredByOHC";
+import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 
 export default function ViralStreakWidgetPage() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function ViralStreakWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Viral Streak Widget | OHC";
+    document.title = "Viral Streak Widget | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,7 +34,7 @@ export default function ViralStreakWidgetPage() {
     }
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/viral-streak/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&goal=${encodeURIComponent(goal)}&reward=${encodeURIComponent(reward)}&branding=${!hasPro}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-streak/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&goal=${encodeURIComponent(goal)}&reward=${encodeURIComponent(reward)}&branding=${!hasPro}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -92,7 +92,7 @@ export default function ViralStreakWidgetPage() {
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2 cursor-pointer">
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                 </label>
              </div>
@@ -139,7 +139,7 @@ export default function ViralStreakWidgetPage() {
 
                   {!hasPro && (
                       <div className="mt-6 text-center">
-                          <PoweredByOHC tenantId={tenant} />
+                          <PoweredByOmniSolo tenantId={tenant} />
                       </div>
                   )}
               </div>
@@ -209,7 +209,7 @@ export default function ViralStreakWidgetPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Streak Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Streak Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

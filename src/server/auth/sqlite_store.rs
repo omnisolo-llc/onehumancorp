@@ -6,7 +6,7 @@ use sqlx::SqlitePool;
 fn is_multitenant_mode() -> bool {
     #[cfg(test)]
     {
-        if let Ok(val) = std::env::var("OHC_MULTITENANT") {
+        if let Ok(val) = std::env::var("OMNISOLO_MULTITENANT") {
             return val == "true";
         }
     }
@@ -595,7 +595,7 @@ mod tests {
             .unwrap();
 
         let repo = SqliteUserRepository::new(_pool.clone());
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+        temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
             let _org_id = "system";
             let should_bypass = !is_multitenant;
@@ -638,7 +638,7 @@ mod tests {
         };
 
         // Ensure multitenant environment is mocked strictly for 'system' context evaluation
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+        temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], async {
             let res = repo.update_user(dummy_user, "system").await;
             assert!(res.is_err(), "Must reject system org_id");
             assert_eq!(

@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use std::sync::Arc;
 use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
@@ -22,7 +22,7 @@ impl PydanticToolExecutor<CreateServiceRequestArgs> for CreateServiceRequestExec
     async fn execute_typed(&self, args: CreateServiceRequestArgs) -> Result<String, ToolError> {
         let request_id = Uuid::new_v4();
 
-        let db_url = std::env::var("OHC_DATABASE_URL")
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::PgPool::connect(&db_url).await

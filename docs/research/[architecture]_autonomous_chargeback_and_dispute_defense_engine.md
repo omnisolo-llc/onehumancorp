@@ -1,7 +1,7 @@
 # Title: Autonomous Chargeback & Dispute Defense Engine
 
 ## Problem Statement
-Small business owners—especially solopreneurs like Maya (custom cakes) and Carlos (handyman)—are particularly vulnerable to friendly fraud and chargebacks. When a customer disputes a transaction (e.g., claiming "Item not received" or "Service not rendered"), the burden of proof falls entirely on the business owner. Gathering evidence (chat logs, delivery photos, signed quotes) and formatting it into a compelling response for payment gateways like Stripe or PayPal takes hours they don't have. If they miss the tight deadline or fail to provide the correct format, they lose the revenue and pay a dispute fee. They need an invisible, proactive system that automatically intercepts dispute webhooks, compiles the necessary evidence from their existing OHC platform data, and submits a defense on their behalf, turning a stressful, time-consuming process into a simple notification.
+Small business owners—especially solopreneurs like Maya (custom cakes) and Carlos (handyman)—are particularly vulnerable to friendly fraud and chargebacks. When a customer disputes a transaction (e.g., claiming "Item not received" or "Service not rendered"), the burden of proof falls entirely on the business owner. Gathering evidence (chat logs, delivery photos, signed quotes) and formatting it into a compelling response for payment gateways like Stripe or PayPal takes hours they don't have. If they miss the tight deadline or fail to provide the correct format, they lose the revenue and pay a dispute fee. They need an invisible, proactive system that automatically intercepts dispute webhooks, compiles the necessary evidence from their existing OmniSolo platform data, and submits a defense on their behalf, turning a stressful, time-consuming process into a simple notification.
 
 ## Research Report
 *   **Current Architecture Limits:** Small businesses typically rely on their payment processor's default dispute dashboard, which requires manual data entry and document uploading. Existing platforms like Shopify provide dispute management tools but still require the merchant to actively collect and submit the evidence.
@@ -9,7 +9,7 @@ Small business owners—especially solopreneurs like Maya (custom cakes) and Car
     *   *Shopify:* Provides a "Chargeback protection" feature (Shopify Protect) but only for eligible Shop Pay transactions. For other processors, it's manual.
     *   *Stripe:* Excellent API for dispute management, but merchants must build their own integration to automate evidence collection.
     *   *Chargehound/Midigator:* Expensive third-party services focused on enterprise/mid-market companies, not accessible or simple enough for solopreneurs.
-*   **Discovery:** OHC has a unique advantage: it acts as the central hub for the entire business journey (quoting, communication, invoicing, delivery). By leveraging the KAIROS Orchestrator and the Omnichannel Inbox, OHC can autonomously compile a comprehensive evidence packet (e.g., WhatsApp confirmation of a cake delivery, an approved digital quote for a handyman service) and interface directly with the payment processor's dispute API without human intervention.
+*   **Discovery:** OmniSolo has a unique advantage: it acts as the central hub for the entire business journey (quoting, communication, invoicing, delivery). By leveraging the KAIROS Orchestrator and the Omnichannel Inbox, OmniSolo can autonomously compile a comprehensive evidence packet (e.g., WhatsApp confirmation of a cake delivery, an approved digital quote for a handyman service) and interface directly with the payment processor's dispute API without human intervention.
 
 ## Design Doc
 
@@ -27,9 +27,9 @@ erDiagram
 ```
 
 ### UI Wireframes & Mobile UX Flow (375px)
-*   **Owner View (OHC Mobile App - 375px):**
+*   **Owner View (OmniSolo Mobile App - 375px):**
     *   **Action:** A dispute is filed against a transaction.
-    *   **Notification:** Maya receives a push notification: "Dispute opened for Order #102. OHC is compiling evidence."
+    *   **Notification:** Maya receives a push notification: "Dispute opened for Order #102. OmniSolo is compiling evidence."
     *   **Dashboard Card:** A clean, Unifi-style card in the Activity Feed shows the dispute status.
     *   **Review/Approve Screen:** If the AI confidence is high, it automatically submits. If the confidence is lower, the card asks for a 1-tap approval: "Review generated dispute defense. [Approve & Submit] [Edit Evidence]". The screen shows a beautifully formatted timeline of the interaction (Order placed -> Quote signed -> Delivery photo taken).
     *   **Outcome Notification:** "Dispute won! Funds returned to your wallet."

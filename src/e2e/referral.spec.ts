@@ -8,7 +8,7 @@ test.describe('Referral Viral Loop', () => {
     const linkInput = page.locator('#referral-link');
     await expect(linkInput).not.toHaveValue('', { timeout: 10000 });
     const value = await linkInput.inputValue();
-    expect(value).toMatch(/ohc\.app\/ref\/|ohc:\/\/join\?ref=/);
+    expect(value).toMatch(/cloud.omnisolo.co\/ref\/|ohc:\/\/join\?ref=/);
   });
 
   test('copies referral link to clipboard', async ({ page, context }) => {

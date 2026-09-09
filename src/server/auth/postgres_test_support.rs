@@ -17,9 +17,9 @@ pub(crate) fn decide_postgres_test(
     require_postgres: Option<&str>,
 ) -> Result<PostgresTestDecision, String> {
     let unavailable_reason = match database_url {
-        None | Some("") => Some("OHC_DATABASE_URL is not set"),
+        None | Some("") => Some("OMNISOLO_DATABASE_URL is not set"),
         Some(url) if !url.starts_with("postgres://") && !url.starts_with("postgresql://") => {
-            Some("OHC_DATABASE_URL is not a PostgreSQL URL")
+            Some("OMNISOLO_DATABASE_URL is not a PostgreSQL URL")
         }
         Some(_) => None,
     };
@@ -27,7 +27,7 @@ pub(crate) fn decide_postgres_test(
     if let Some(reason) = unavailable_reason {
         return if require_postgres == Some("1") {
             Err(format!(
-                "OHC_REQUIRE_POSTGRES_TESTS=1 requires PostgreSQL security tests to execute: {reason}"
+                "OMNISOLO_REQUIRE_POSTGRES_TESTS=1 requires PostgreSQL security tests to execute: {reason}"
             ))
         } else {
             Ok(PostgresTestDecision::Skip(reason.to_string()))
@@ -43,7 +43,7 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .acquire_timeout(Duration::from_secs(10))
         .connect(admin_url)
         .await
-        .map_err(|error| format!("connect to OHC_POSTGRES_ADMIN_URL: {error}"))?;
+        .map_err(|error| format!("connect to OMNISOLO_POSTGRES_ADMIN_URL: {error}"))?;
 
     sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
         .execute(&admin_pool)
@@ -92,8 +92,8 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
 }
 
 pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPool> {
-    let database_url = std::env::var("OHC_DATABASE_URL").ok();
-    let require_postgres = std::env::var("OHC_REQUIRE_POSTGRES_TESTS").ok();
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").ok();
+    let require_postgres = std::env::var("OMNISOLO_REQUIRE_POSTGRES_TESTS").ok();
     let database_url =
         match decide_postgres_test(database_url.as_deref(), require_postgres.as_deref()) {
             Ok(PostgresTestDecision::Run(url)) => url,
@@ -104,9 +104,9 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
             Err(error) => panic!("{error}"),
         };
 
-    let admin_url = std::env::var("OHC_POSTGRES_ADMIN_URL").unwrap_or_else(|_| {
+    let admin_url = std::env::var("OMNISOLO_POSTGRES_ADMIN_URL").unwrap_or_else(|_| {
         panic!(
-            "PostgreSQL security tests require OHC_POSTGRES_ADMIN_URL for extension, migration, and application-role setup"
+            "PostgreSQL security tests require OMNISOLO_POSTGRES_ADMIN_URL for extension, migration, and application-role setup"
         )
     });
     POSTGRES_SETUP
@@ -135,7 +135,7 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
         .connect(&database_url)
         .await
         .unwrap_or_else(|error| {
-            panic!("connect through OHC_DATABASE_URL application role: {error}")
+            panic!("connect through OMNISOLO_DATABASE_URL application role: {error}")
         });
 
     let (
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(
             decide_postgres_test(None, None),
             Ok(PostgresTestDecision::Skip(
-                "OHC_DATABASE_URL is not set".to_string()
+                "OMNISOLO_DATABASE_URL is not set".to_string()
             ))
         );
     }
@@ -197,7 +197,7 @@ mod tests {
         assert_eq!(
             decide_postgres_test(Some("sqlite://ohc.db"), None),
             Ok(PostgresTestDecision::Skip(
-                "OHC_DATABASE_URL is not a PostgreSQL URL".to_string()
+                "OMNISOLO_DATABASE_URL is not a PostgreSQL URL".to_string()
             ))
         );
     }
@@ -205,11 +205,11 @@ mod tests {
     #[test]
     fn required_lane_rejects_missing_or_non_postgres_database_url() {
         let missing = decide_postgres_test(None, Some("1")).unwrap_err();
-        assert!(missing.contains("OHC_REQUIRE_POSTGRES_TESTS=1"));
-        assert!(missing.contains("OHC_DATABASE_URL is not set"));
+        assert!(missing.contains("OMNISOLO_REQUIRE_POSTGRES_TESTS=1"));
+        assert!(missing.contains("OMNISOLO_DATABASE_URL is not set"));
 
         let sqlite = decide_postgres_test(Some("sqlite://ohc.db"), Some("1")).unwrap_err();
-        assert!(sqlite.contains("OHC_REQUIRE_POSTGRES_TESTS=1"));
+        assert!(sqlite.contains("OMNISOLO_REQUIRE_POSTGRES_TESTS=1"));
         assert!(sqlite.contains("not a PostgreSQL URL"));
     }
 

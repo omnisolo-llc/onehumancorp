@@ -23,7 +23,7 @@ test.describe('Spin To Win Generator Growth Loop', () => {
 
         await expect(page.locator('text=Embed Spin to Win')).toBeVisible();
 
-        // Check that the code block has powered by OHC (In iframe embed, the URL carries tenant and default payload)
+        // Check that the code block has powered by OmniSolo (In iframe embed, the URL carries tenant and default payload)
         const codeBlock = await page.locator('code').innerText();
         expect(codeBlock).toContain('tenant=DEFAULT');
     });

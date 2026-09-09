@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This report proposes the architecture and design of an Autonomous Multi-Tenant Loyalty and Rewards Engine for OneHumanCorp (OHC). This engine will empower small business owners (like Maya, Carlos, Priya, Leo, and Fatima) to easily create, manage, and automate customer loyalty programs with zero technical setup. By integrating deeply with OHC's existing multi-tenant architecture and AI agents, the engine will drive repeat business and improve customer retention automatically.
+This report proposes the architecture and design of an Autonomous Multi-Tenant Loyalty and Rewards Engine for OmniSolo (OmniSolo). This engine will empower small business owners (like Maya, Carlos, Priya, Leo, and Fatima) to easily create, manage, and automate customer loyalty programs with zero technical setup. By integrating deeply with OmniSolo's existing multi-tenant architecture and AI agents, the engine will drive repeat business and improve customer retention automatically.
 
 ## 2. Core Personas and Use Cases
 
@@ -16,7 +16,7 @@ This report proposes the architecture and design of an Autonomous Multi-Tenant L
 
 ### 3.1. Database Schema (PostgreSQL)
 
-The engine will utilize OHC's multi-tenant PostgreSQL database with Row-Level Security (RLS) on `tenant_id`.
+The engine will utilize OmniSolo's multi-tenant PostgreSQL database with Row-Level Security (RLS) on `tenant_id`.
 
 *   **`loyalty_programs`**: Defines the rules and type of program (points, punch card, tiers).
     *   `id`, `tenant_id`, `name`, `type`, `config` (JSONB for flexible rules), `is_active`.

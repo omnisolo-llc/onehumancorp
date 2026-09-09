@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use omnisolo_builtin_agent::mesh::transport::{MeshTransport, Message};
 use opentelemetry::KeyValue;
 use opentelemetry::global;
 use opentelemetry::metrics::{Counter, Histogram};
@@ -8,7 +8,7 @@ use std::time::Instant;
 /// RedisMeshTransport uses Redis Pub/Sub for Teammate Mesh APIs.
 /// It wraps RedisPubSubTransport to add OpenTelemetry tracking metrics.
 pub struct RedisMeshTransport {
-    inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
+    inner: omnisolo_builtin_agent::mesh::transport::RedisPubSubTransport,
     publish_counter: Counter<u64>,
     bytes_counter: Counter<u64>,
     subscribe_counter: Counter<u64>,
@@ -17,7 +17,7 @@ pub struct RedisMeshTransport {
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
-        let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url)
+        let inner = omnisolo_builtin_agent::mesh::transport::RedisPubSubTransport::new(url)
             .await
             .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
 
@@ -42,7 +42,7 @@ impl MeshTransport for RedisMeshTransport {
     async fn publish(
         &self,
         topic: &str,
-        message: ::server_ohc::orchestration::TeammateMeshEvent,
+        message: ::server_omnisolo::orchestration::TeammateMeshEvent,
     ) -> Result<(), String> {
         let start = Instant::now();
         let payload_size = message.payload.len() as u64;
@@ -139,7 +139,7 @@ impl MeshTransport for RedisMeshTransport {
 /// This is primarily utilized when the application runs in Standalone (offline) mode.
 /// It wraps InProcessTransport to add OpenTelemetry tracking metrics.
 pub struct MemoryMeshTransport {
-    inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
+    inner: omnisolo_builtin_agent::mesh::transport::InProcessTransport,
     publish_counter: Counter<u64>,
     bytes_counter: Counter<u64>,
     subscribe_counter: Counter<u64>,
@@ -155,7 +155,7 @@ impl MemoryMeshTransport {
         let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
 
         Self {
-            inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            inner: omnisolo_builtin_agent::mesh::transport::InProcessTransport::new(),
             publish_counter,
             bytes_counter,
             subscribe_counter,
@@ -169,7 +169,7 @@ impl MeshTransport for MemoryMeshTransport {
     async fn publish(
         &self,
         topic: &str,
-        message: ::server_ohc::orchestration::TeammateMeshEvent,
+        message: ::server_omnisolo::orchestration::TeammateMeshEvent,
     ) -> Result<(), String> {
         let start = Instant::now();
         let payload_size = message.payload.len() as u64;
@@ -265,7 +265,7 @@ impl MeshTransport for MemoryMeshTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::Message;
+    use omnisolo_builtin_agent::mesh::transport::Message;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -284,7 +284,7 @@ mod tests {
 
         let cancel = transport.subscribe("test_topic", handler).await.unwrap();
 
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "agent_1".to_string(),
             action: "action_1".to_string(),
             status: "ok".to_string(),
@@ -385,7 +385,7 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "agent_1".to_string(),
             action: "action_redis".to_string(),
             status: "ok".to_string(),
@@ -505,7 +505,7 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "agent_concurrent".to_string(),
             action: "broadcast".to_string(),
             status: "ok".to_string(),
@@ -526,10 +526,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_redis_mesh_transport_concurrent_subscribers() {
-        if std::env::var("OHC_REDIS_URL").is_err() {
+        if std::env::var("OMNISOLO_REDIS_URL").is_err() {
             return;
         }
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap();
+        let redis_url = std::env::var("OMNISOLO_REDIS_URL").unwrap();
         let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
 
         let mut cancels = Vec::new();
@@ -551,7 +551,7 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "agent_concurrent_redis".to_string(),
             action: "broadcast".to_string(),
             status: "ok".to_string(),
@@ -592,7 +592,7 @@ mod tests {
 
         let cancel = transport.subscribe("subms_topic", handler).await.unwrap();
 
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "agent_fast".to_string(),
             action: "fast_action".to_string(),
             status: "ok".to_string(),
@@ -648,7 +648,7 @@ mod tests {
             .await
             .unwrap();
 
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "agent_fast_redis".to_string(),
             action: "fast_action_redis".to_string(),
             status: "ok".to_string(),

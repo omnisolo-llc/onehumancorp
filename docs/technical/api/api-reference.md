@@ -12,13 +12,13 @@
 </style>
 
 
-# OHC API Playbook: Interactive Reference
+# OmniSolo API Playbook: Interactive Reference
 
 **Version:** 1.0.0
 **Target Audience:** Orchestration Engineers & Human CEOs
 
 ## 1. Introduction
-The One Human Corp (OHC) API is the central nervous system of the Agentic OS. It bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments via the **Swarm Intelligence Protocol (OHC-SIP)**.
+The OmniSolo (OmniSolo) API is the central nervous system of the Agentic OS. It bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments via the **Swarm Intelligence Protocol (OmniSolo-SIP)**.
 
 ## 2. Authentication (Zero Secrets)
 
@@ -26,9 +26,9 @@ All endpoints are secured via SPIFFE/SPIRE zero-trust principles or an OIDC JWT.
 
 **Example Request:**
 ```bash
-curl -X GET https://api.ohc.local/api/v1/agents/status \
+curl -X GET https://api.omnisolo.local/api/v1/agents/status \
   -H "Authorization: Bearer <JWT_OR_SVID>" \
-  -H "X-OHC-Tenant-ID: org_acme_123"
+  -H "X-OmniSolo-Tenant-ID: org_acme_123"
 ```
 
 ## 3. Core Endpoints
@@ -161,7 +161,7 @@ Adjust the number of concurrent agents for a specific role in real-time.
 Synchronize local SQLite context to the cloud Postgres orchestration engine.
 
 **Headers:**
-- `X-OHC-Conflict-Resolution: force-local`
+- `X-OmniSolo-Conflict-Resolution: force-local`
 
 **Payload:**
 ```json
@@ -194,7 +194,7 @@ Channels:
 <div class="glass-panel" markdown="1">
 
 ### AutoDream Data Pipelines (pgvector)
-The API supports AutoDream pipelines where the backend background workers process `agent_session_data` and any `*.yml` files found under `OHC_MEMORY_DIR`.
+The API supports AutoDream pipelines where the backend background workers process `agent_session_data` and any `*.yml` files found under `OMNISOLO_MEMORY_DIR`.
 
 **Endpoint:** `POST /api/v1/mesh/broadcast`
 Allows agents to publish messages to the mesh.
@@ -305,7 +305,7 @@ Enqueues a sub-agent task into the highly available distributed queue (backed by
 #### Sub-Agent Queue Orchestration Flow
 ```mermaid
 sequenceDiagram
-    participant API as OHC API
+    participant API as OmniSolo API
     participant DB as State Machine (PG/SQLite)
     participant Queue as Sub-Agent Queue
     participant Worker as Sub-Agent
@@ -408,7 +408,7 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
 ### 4.7 AutoDream Vector Embedding Workflow
 ```mermaid
 graph TD
-    Agent[Agent Shared Memory] -->|Writes to OHC_MEMORY_DIR| FS[Runtime Memory Directory]
+    Agent[Agent Shared Memory] -->|Writes to OMNISOLO_MEMORY_DIR| FS[Runtime Memory Directory]
     FS -->|Watched by| AutoDream[AutoDream Pipeline Worker]
     AutoDream --> Chunk[Chunk & Tokenize]
     Chunk --> Embed[Minimax/Cohere Embedding API]
@@ -462,7 +462,7 @@ Triggers an immediate AutoDream vector embedding workflow on newly generated age
 ```json
 {
   "target_memory_files": [
-    ".ohc/runtime/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.yml"
+    ".omnisolo/runtime/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.yml"
   ],
   "priority": "high"
 }
@@ -597,7 +597,7 @@ All CRDT tools accept their arguments as a raw JSON object (`json.RawMessage`) t
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
-    Client[Human CEO / External Tools] --> API[OHC Gateway]
+    Client[Human CEO / External Tools] --> API[OmniSolo Gateway]
     API --> Auth{SPIFFE / OIDC}
     Auth -->|Valid| Hub[Orchestration Hub]
     Auth -->|Invalid| 401[401 Unauthorized]

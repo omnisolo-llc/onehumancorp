@@ -64,8 +64,8 @@ impl From<sqlx::Error> for BootstrapError {
 
 pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     let token = match ::server_common::secret_source::load_optional_secret(
-        "OHC_SETUP_TOKEN",
-        "OHC_SETUP_TOKEN_FILE",
+        "OMNISOLO_SETUP_TOKEN",
+        "OMNISOLO_SETUP_TOKEN_FILE",
     ) {
         Ok(Some(token)) => token,
         Ok(None) | Err(_) => return Router::new(),
@@ -456,7 +456,7 @@ mod tests {
     async fn setup_route_is_disabled_for_a_short_configured_token() {
         let (db, _) = sqlite_db().await;
         temp_env::async_with_vars(
-            [("OHC_SETUP_TOKEN", Some("short-setup-token"))],
+            [("OMNISOLO_SETUP_TOKEN", Some("short-setup-token"))],
             async move {
                 let response = router(db)
                     .oneshot(request(Some("short-setup-token"), VALID_REQUEST))
@@ -471,7 +471,7 @@ mod tests {
     #[tokio::test]
     async fn setup_route_is_absent_without_a_configured_token() {
         let (db, _) = sqlite_db().await;
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", None::<&str>)], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", None::<&str>)], async move {
             let response = router(db)
                 .oneshot(request(None, VALID_REQUEST))
                 .await
@@ -495,8 +495,8 @@ mod tests {
         let (db, _) = sqlite_db().await;
         temp_env::async_with_vars(
             [
-                ("OHC_SETUP_TOKEN", None),
-                ("OHC_SETUP_TOKEN_FILE", Some(path.to_str().unwrap())),
+                ("OMNISOLO_SETUP_TOKEN", None),
+                ("OMNISOLO_SETUP_TOKEN_FILE", Some(path.to_str().unwrap())),
             ],
             async move {
                 let response = router(db)
@@ -511,8 +511,8 @@ mod tests {
         let (db, _) = sqlite_db().await;
         temp_env::async_with_vars(
             [
-                ("OHC_SETUP_TOKEN", Some(SETUP_TOKEN)),
-                ("OHC_SETUP_TOKEN_FILE", Some(path.to_str().unwrap())),
+                ("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN)),
+                ("OMNISOLO_SETUP_TOKEN_FILE", Some(path.to_str().unwrap())),
             ],
             async move {
                 let response = router(db)
@@ -528,8 +528,8 @@ mod tests {
         let (db, _) = sqlite_db().await;
         temp_env::async_with_vars(
             [
-                ("OHC_SETUP_TOKEN", None),
-                ("OHC_SETUP_TOKEN_FILE", Some(missing_path.to_str().unwrap())),
+                ("OMNISOLO_SETUP_TOKEN", None),
+                ("OMNISOLO_SETUP_TOKEN_FILE", Some(missing_path.to_str().unwrap())),
             ],
             async move {
                 let response = router(db)
@@ -546,7 +546,7 @@ mod tests {
     async fn setup_route_requires_the_exact_bearer_token() {
         for authorization in [None, Some("wrong-wrong-wrong-wrong-wrong-token")] {
             let (db, pool) = sqlite_db().await;
-            temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+            temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
                 let response = router(db)
                     .oneshot(request(authorization, VALID_REQUEST))
                     .await
@@ -570,7 +570,7 @@ mod tests {
     async fn concurrent_setup_requests_create_one_admin_and_conflict_the_rest() {
         let (db, pool) = sqlite_db().await;
         create_identity_email_claims_table(&pool).await;
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let app = router(db);
             let mut tasks = Vec::new();
             for _ in 0..4 {
@@ -629,7 +629,7 @@ mod tests {
             "organizationId":"tenant-bootstrap"
         }"#;
 
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let response = router(db)
                 .oneshot(request(Some(SETUP_TOKEN), body))
                 .await
@@ -659,7 +659,7 @@ mod tests {
             .await
             .unwrap();
 
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let response = router(db)
                 .oneshot(request(Some(SETUP_TOKEN), VALID_REQUEST))
                 .await
@@ -684,7 +684,7 @@ mod tests {
     #[tokio::test]
     async fn setup_creates_the_requested_tenant_and_a_fixed_admin() {
         let (db, pool) = sqlite_db().await;
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let response = router(db)
                 .oneshot(request(Some(SETUP_TOKEN), VALID_REQUEST))
                 .await
@@ -859,7 +859,7 @@ mod tests {
             .await
             .unwrap();
 
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let response = router(db)
                 .oneshot(request(Some(SETUP_TOKEN), VALID_REQUEST))
                 .await
@@ -883,7 +883,7 @@ mod tests {
             .await
             .unwrap();
 
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let response = router(db)
                 .oneshot(request(Some(SETUP_TOKEN), VALID_REQUEST))
                 .await
@@ -920,7 +920,7 @@ mod tests {
 
         for body in invalid_requests {
             let (db, _) = sqlite_db().await;
-            temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+            temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
                 let response = router(db)
                     .oneshot(request(Some(SETUP_TOKEN), body))
                     .await
@@ -960,7 +960,7 @@ mod tests {
         assert!(setup_merge > protected_layers_end);
         assert!(oauth_merge > protected_layers_end);
 
-        type MeshState = Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>;
+        type MeshState = Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>;
         let auth_store = Arc::new(crate::auth::Store::new());
         let protected = Router::<MeshState>::new()
             .route("/api/v1/protected", get(|| async { "protected" }))
@@ -970,9 +970,9 @@ mod tests {
             ));
         let (db, _) = sqlite_db().await;
         let transport: MeshState =
-            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
 
-        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+        temp_env::async_with_vars([("OMNISOLO_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let setup_router = Router::<MeshState>::new().nest("/api/v1/setup", router(db));
             let oauth_router = Router::<MeshState>::new()
                 .nest("/api/v1/oauth", crate::api::oauth::proxy::router());

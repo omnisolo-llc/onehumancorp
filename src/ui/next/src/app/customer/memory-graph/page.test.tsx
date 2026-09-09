@@ -8,9 +8,9 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams('customerId=test-customer&tenantId=test-tenant'),
 }));
 
-// Mock the PoweredByOHC component since we're focused on CustomerMemoryGraph
-vi.mock('@/app/components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+// Mock the PoweredByOmniSolo component since we're focused on CustomerMemoryGraph
+vi.mock('@/app/components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 describe('CustomerMemoryGraph Component', () => {

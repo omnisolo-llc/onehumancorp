@@ -10,7 +10,7 @@ test.describe('KDS Offline & Multilingual', () => {
     await page.evaluate(() => localStorage.clear());
     await page.evaluate(async () => {
       return new Promise((resolve) => {
-        const req = indexedDB.deleteDatabase('OHC_Offline_Queue');
+        const req = indexedDB.deleteDatabase('OMNISOLO_Offline_Queue');
         req.onsuccess = resolve;
         req.onerror = resolve;
         req.onblocked = resolve;
@@ -69,7 +69,7 @@ test.describe('KDS Offline & Multilingual', () => {
     // Verify localStorage queued events
     const events = await page.evaluate(async () => {
       return new Promise((resolve) => {
-        const request = indexedDB.open('OHC_Offline_Queue', 1);
+        const request = indexedDB.open('OMNISOLO_Offline_Queue', 1);
         request.onsuccess = (e) => {
           const db = e.target.result;
           if (!db.objectStoreNames.contains('actions')) {
@@ -99,7 +99,7 @@ test.describe('KDS Offline & Multilingual', () => {
     await expect(async () => {
       const remainingEvents = await page.evaluate(async () => {
         return new Promise((resolve) => {
-          const request = indexedDB.open('OHC_Offline_Queue', 1);
+          const request = indexedDB.open('OMNISOLO_Offline_Queue', 1);
           request.onsuccess = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {

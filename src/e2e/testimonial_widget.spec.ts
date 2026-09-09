@@ -14,15 +14,15 @@ test.describe('Testimonial Widget Generator E2E', () => {
         await page.getByRole('button', { name: 'Dark' }).click();
 
         // Check if viral loop option is present and showing PRO badge
-        await expect(page.getByText('Remove "Powered by OHC" Badge')).toBeVisible();
+        await expect(page.getByText('Remove "OmniSolo" Badge')).toBeVisible();
 
         // Verify soft paywall appears when checking without Pro
-        const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OHC" Badge');
+        const removeBrandingCheckbox = page.getByLabel('Remove "OmniSolo" Badge');
         await removeBrandingCheckbox.check();
 
         const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Remove Branding' });
         await expect(paywallHeading).toBeVisible();
-        await expect(page.getByText('Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.')).toBeVisible();
+        await expect(page.getByText('Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark.')).toBeVisible();
 
         // Close paywall
         await page.getByRole('button', { name: 'Close paywall' }).click();

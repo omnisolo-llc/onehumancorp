@@ -166,8 +166,8 @@ impl SubscriptionHealthWorker {
                 }
 
                 if let Some(transaction) = postgres_transaction {
-                    if let Err(error) = transaction.commit().await {
-                        tracing::warn!("subscription health worker failed to commit: {}", error);
+                    if transaction.commit().await.is_err() {
+                        tracing::warn!("subscription health worker failed to commit");
                     }
                 }
             }

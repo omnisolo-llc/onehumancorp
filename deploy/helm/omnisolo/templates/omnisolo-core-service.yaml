@@ -1,0 +1,17 @@
+{{- if .Values.omnisoloCore.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-omnisolo-core
+  labels:
+    app: {{ .Release.Name }}-omnisolo-core
+spec:
+  selector:
+    app: {{ .Release.Name }}-omnisolo-core
+  ports:
+    - port: {{ .Values.omnisoloCore.service.port }}
+      targetPort: {{ .Values.omnisoloCore.service.port }}
+      protocol: TCP
+      name: http
+  type: ClusterIP
+{{- end }}

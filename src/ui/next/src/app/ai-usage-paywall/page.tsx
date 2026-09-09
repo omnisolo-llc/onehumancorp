@@ -34,7 +34,7 @@ export default function AiUsagePaywallPage() {
         const headers: Record<string, string> = {};
         if (typeof window !== 'undefined') {
           const tenantId = localStorage.getItem('active_business_display_name');
-          if (tenantId) headers['x-ohc-tenant-id'] = tenantId;
+          if (tenantId) headers['x-omnisolo-tenant-id'] = tenantId;
         }
 
         const costRes = await fetch('/api/v1/billing/cost-dashboard', { headers });

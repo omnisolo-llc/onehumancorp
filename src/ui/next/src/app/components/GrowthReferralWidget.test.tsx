@@ -22,13 +22,13 @@ describe('GrowthReferralWidget', () => {
     expect(screen.getByText('Grow Your Team')).toBeInTheDocument();
     expect(screen.getByText('Invite to Cloud Team')).toBeInTheDocument();
     // Validate aesthetic token existence
-    expect(container.firstChild).toHaveClass('ohc-growth-card');
+    expect(container.firstChild).toHaveClass('omnisolo-growth-card');
   });
 
   it('generates a link successfully', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ invite_link: 'https://ohc.app/invite/123' }),
+      json: async () => ({ invite_link: 'https://cloud.omnisolo.co/invite/123' }),
     });
 
     render(<GrowthReferralWidget />);
@@ -39,7 +39,7 @@ describe('GrowthReferralWidget', () => {
     expect(screen.getByText('Generating...')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('https://cloud.omnisolo.co/invite/123')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Copy')).toBeInTheDocument();
@@ -64,20 +64,20 @@ describe('GrowthReferralWidget', () => {
   it('copies link to clipboard', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ invite_link: 'https://ohc.app/invite/123' }),
+      json: async () => ({ invite_link: 'https://cloud.omnisolo.co/invite/123' }),
     });
 
     render(<GrowthReferralWidget />);
     fireEvent.click(screen.getByText('Invite to Cloud Team'));
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('https://cloud.omnisolo.co/invite/123')).toBeInTheDocument();
     });
 
     const copyButton = screen.getByText('Copy');
     fireEvent.click(copyButton);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/invite/123');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://cloud.omnisolo.co/invite/123');
     expect(screen.getByText('Copied!')).toBeInTheDocument();
   });
 });

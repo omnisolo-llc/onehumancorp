@@ -10,7 +10,7 @@
 To leapfrog existing agentic orchestration frameworks (e.g., Claude Code, OpenClaw) by implementing "Omni-Context Sub-agent Routing." This feature seamlessly bridges the gap in project grounding by automatically injecting critical project-level context (such as `AGENTS.md` or `CLAUDE.md`) into the Swarm Intelligence Protocol Database (`agent_missions` table) precisely at the time of task delegation.
 
 ## 2. Motivation
-Currently, sub-agents spawned by orchestrating agents must proactively discover and parse grounding files to align with the project's macro-context. This approach introduces latency, heightens the risk of hallucination (if grounding files are missed), and degrades operational efficiency. By natively injecting this context into the initial task payload, OHC ensures that newly instantiated sub-agents possess immediate, deterministic awareness of project guidelines without explicitly executing "read file" tools.
+Currently, sub-agents spawned by orchestrating agents must proactively discover and parse grounding files to align with the project's macro-context. This approach introduces latency, heightens the risk of hallucination (if grounding files are missed), and degrades operational efficiency. By natively injecting this context into the initial task payload, OmniSolo ensures that newly instantiated sub-agents possess immediate, deterministic awareness of project guidelines without explicitly executing "read file" tools.
 
 ## 3. Architecture
 
@@ -29,7 +29,7 @@ graph TD
     A[Orchestrating Agent] -->|Identifies Need| B(Task Generator)
     B --> C{Context Injector}
     C -->|Reads| D[(AGENTS.md / CLAUDE.md)]
-    C -->|Injects Grounding| E[(OHC-SIP DB: agent_missions)]
+    C -->|Injects Grounding| E[(OmniSolo-SIP DB: agent_missions)]
     E -->|Instantly Routed| F[Sub-Agent Executor]
     F -->|Executes with Zero Latency| G[Task Completion]
 

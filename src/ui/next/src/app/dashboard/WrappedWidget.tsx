@@ -48,7 +48,7 @@ export function WrappedWidget() {
 
   const referralLink = `/onboarding?ref=${tenantId}&source=wrapped_share`;
   // Construct the full URL using window.location.origin if available
-  const fullShareLink = typeof window !== 'undefined' ? `${window.location.origin}${referralLink}` : `https://ohc.app${referralLink}`;
+  const fullShareLink = typeof window !== 'undefined' ? `${window.location.origin}${referralLink}` : `https://cloud.omnisolo.co${referralLink}`;
   const fullShareText = `${data.shareText} ${fullShareLink}`;
 
   const handleShare = () => {

@@ -35,7 +35,7 @@ Add a missing-organization test that asserts `401` in multitenant mode.
 Run:
 
 ```bash
-OHC_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:<port>/ohc_test \
+OMNISOLO_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:<port>/ohc_test \
   cargo test --lib api::subscription::tests::subscription_overview -- --nocapture
 ```
 
@@ -102,9 +102,9 @@ existing GET handlers to call the same helpers so their behavior cannot drift.
 Run the overview test and then:
 
 ```bash
-OHC_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:<port>/ohc_test \
+OMNISOLO_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:<port>/ohc_test \
   cargo test --lib api::subscription::tests -- --nocapture
-cargo check -p ohc-mono --lib
+cargo check -p omnisolo --lib
 ```
 
 Expected: all subscription tests pass; compile exits zero.

@@ -35,9 +35,9 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
     await page.goto('/api/v1/staff');
     await page.evaluate(() => {
         localStorage.setItem('token', 'test_token');
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Priya', role: 'Owner', pin_hash: '1234' }]));
-        localStorage.setItem('ohc_offline_rules', JSON.stringify([]));
-        localStorage.setItem('ohc_offline_inventory', JSON.stringify([
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Priya', role: 'Owner', pin_hash: '1234' }]));
+        localStorage.setItem('omnisolo_offline_rules', JSON.stringify([]));
+        localStorage.setItem('omnisolo_offline_inventory', JSON.stringify([
             { id: 'prod_test_item', name: 'Test Boutique Item', inventory_count: 6, price_cents: 2500 }
         ]));
     });

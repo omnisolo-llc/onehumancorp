@@ -13,7 +13,7 @@
 **Tool:** Cal.com
 **Problem Solved:** Eliminates back-and-forth emails for service providers like Leo (Music Tutor) trying to schedule appointments without double booking.
 **Persona Value:** High. Simplifies the booking process for both owner and client.
-**Advantages:** Open-source, highly customizable, white-label API. Self-serve booking links perfectly align with OHC.
+**Advantages:** Open-source, highly customizable, white-label API. Self-serve booking links perfectly align with OmniSolo.
 **Risks:** Reliance on an external API for core scheduling logic.
 **Pricing:** Team plans available. Great free tier for individuals.
 **Modes:** Cloud (easy); Standalone (perfectly supports self-hosting, keeping excellent privacy).
@@ -52,7 +52,7 @@
 **Advantages:** Industry standard, incredibly reliable, programmable, cheap per-message cost.
 **Risks:** A2P 10DLC compliance in the US requires business registration, potentially tough for informal businesses.
 **Pricing:** Pay-as-you-go (~$0.0079 per SMS in US).
-**Modes:** Cloud (Centralized OHC Twilio account); Standalone (User provides API key).
+**Modes:** Cloud (Centralized OmniSolo Twilio account); Standalone (User provides API key).
 
 ## 7. Video Conferencing
 **Tool:** Google Meet

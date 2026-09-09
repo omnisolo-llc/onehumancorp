@@ -5,13 +5,13 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Navigate to local API directly to set up origin to allow localstorage modification
     await page.goto('/api/v1/staff');
     await page.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+      localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
         id: 'staff_1',
         name: 'Carlos',
         role: 'Manager',
         pin_hash: '1234'
       }]));
-      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+      localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     });
 
     await page.setViewportSize({ width: 375, height: 812 });
@@ -47,7 +47,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Test Centralized Inventory & Distributed POS Architecture
     // Trigger offline conflict generation
     await page.evaluate(() => {
-        localStorage.setItem('ohc_offline_pos_tx', JSON.stringify([{
+        localStorage.setItem('omnisolo_offline_pos_tx', JSON.stringify([{
             id: 'tx_conflict',
             client_id: 'device_1',
             amount_cents: 5000,
@@ -79,8 +79,8 @@ test.describe('In-Person Payment (POS) Flow', () => {
 
     // Wait for background sync to trigger (interval is 10s) and clear events
     await expect(async () => {
-      const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'));
-      const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
+      const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('omnisolo_offline_events') || '[]'));
+      const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('omnisolo_offline_pos_tx') || '[]'));
       // Only verifying pos_tx because timecard events backend is apparently not responding in UI mode
       expect(remainingPosTx.length).toBe(0);
     }).toPass({ timeout: 15000 });

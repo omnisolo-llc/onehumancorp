@@ -227,7 +227,7 @@
     <div class="form-group">
       <label class="checkbox-label">
         <input type="checkbox" id="remove-branding" />
-        Remove "Powered by OHC" Badge (Pro)
+        Remove "OmniSolo" Badge (Pro)
       </label>
     </div>
 
@@ -251,7 +251,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div style="font-size: 48px; margin-bottom: 10px;">✨</div>
       <h2 style="margin-top:0; font-family:'Outfit'">Upgrade to Pro</h2>
-      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OHC" branding is a Pro feature. Upgrade your account or share OHC on social media to unlock a 7-day Pro trial.</p>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "OmniSolo" branding is a Pro feature. Upgrade your account or share OmniSolo on social media to unlock a 7-day Pro trial.</p>
 
       <button id="upgrade-btn" style="margin-bottom: 10px;">Upgrade to Pro</button>
       <button id="share-unlock-btn" style="background-color: #1d1d1f; box-shadow: none;">Share on X to Unlock</button>
@@ -307,7 +307,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                'x-spiffe-id': 'spiffe://omnisolo.io/' + tenantId + '/agent1'
             },
             body: JSON.stringify({
                 title: companyName,
@@ -321,7 +321,7 @@
 
             let baseUrl = window.location.origin;
             if (baseUrl === 'file://' || baseUrl.includes('localhost') || baseUrl === 'null') {
-              baseUrl = 'https://app.onehumancorp.com';
+              baseUrl = 'https://cloud.omnisolo.co';
             }
 
             const embedUrl = `${baseUrl}/ui/job-board-embed.html?tenant=${tenantId}&company=${encodeURIComponent(companyName)}&hideBranding=${hideBranding}&board_url=${encodeURIComponent(jobBoardLink)}`;
@@ -329,7 +329,7 @@
             let embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; background: transparent;"></iframe>`;
 
             if (!hideBranding) {
-                embedCode += `\n<div style="text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/setup.html?ref=${tenantId}" target="_blank" style="color: #888; text-decoration: none;">⚡ Powered by OHC</a></div>`;
+                embedCode += `\n<div style="text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/setup.html?ref=${tenantId}" target="_blank" style="color: #888; text-decoration: none;">⚡ OmniSolo</a></div>`;
             }
 
             document.getElementById('embed-code').value = embedCode;

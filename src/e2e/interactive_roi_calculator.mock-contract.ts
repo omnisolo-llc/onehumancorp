@@ -10,7 +10,7 @@ test.describe('Interactive ROI Calculator Generator', () => {
     await expect(page.locator('h1')).toHaveText('Interactive ROI Calculator');
 
     // Verify default preview values
-    await expect(page.locator('#preview-title')).toHaveText('OHC Pro Services ROI');
+    await expect(page.locator('#preview-title')).toHaveText('OmniSolo Pro Services ROI');
     await expect(page.locator('#preview-return')).toHaveText('$3,000');
 
     // Fill custom values
@@ -81,7 +81,7 @@ test.describe('Interactive ROI Calculator Generator', () => {
     // Check viral loop branding footer
     const brandingLink = page.locator('#branding-link');
     await expect(brandingLink).toBeVisible();
-    await expect(brandingLink).toHaveText('⚡ Powered by OHC');
+    await expect(brandingLink).toHaveText('⚡ OmniSolo');
 
     // Check the link URL contains the correct referral parameters
     const href = await brandingLink.getAttribute('href');

@@ -256,6 +256,74 @@ describe('Walkthrough Component', () => {
     });
     bubble = screen.getByRole('dialog');
   });
+
+  it('moves a top walkthrough below a target near the viewport edge', async () => {
+    mockGetElementById.mockImplementation((id: string) => {
+      if (id !== 'test-target') return null;
+      const div = document.createElement('div');
+      div.scrollIntoView = vi.fn();
+      div.getBoundingClientRect = vi.fn().mockReturnValue({
+        top: 8,
+        left: 100,
+        bottom: 28,
+        right: 120,
+        width: 20,
+        height: 20,
+      });
+      return div;
+    });
+
+    render(
+      <InteractiveWalkthrough
+        steps={[{ targetId: 'test-target', title: 'Edge Step', content: 'content', position: 'top' }]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    const bubble = await screen.findByRole('dialog');
+    await waitFor(() => {
+      expect(bubble).toHaveStyle({ top: '44px', transform: 'translateX(-50%)' });
+    });
+    expect(screen.getByRole('button', { name: 'Close walkthrough' })).toBeVisible();
+  });
+
+  it('hides the bubble until the next target position has settled', async () => {
+    vi.useFakeTimers();
+    render(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'First Step', content: 'first' },
+          { targetId: 'test-target', title: 'Second Step', content: 'second' },
+        ]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    await act(async () => vi.advanceTimersByTime(300));
+    expect(screen.getByRole('dialog')).toHaveTextContent('First Step');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await act(async () => vi.advanceTimersByTime(300));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Second Step');
+    vi.useRealTimers();
+  });
+
+  it('does not animate walkthrough control geometry', async () => {
+    const { container } = render(
+      <InteractiveWalkthrough
+        steps={[{ targetId: 'test-target', title: 'Stable Step', content: 'content' }]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    await screen.findByRole('dialog');
+    expect(container.querySelector('style')?.textContent).not.toContain('scale(');
+  });
 });
 
   it('does not render when isOpen is false', () => {

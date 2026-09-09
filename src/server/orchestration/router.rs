@@ -283,8 +283,8 @@ Return strict JSON:
         while retry_count < max_retries {
             let compressed_prompt_clone = compressed_prompt.clone();
             let llm_call = async {
-                match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                match std::env::var("OMNISOLO_INBOX_DRAFT_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                     .as_deref()
                 {
                     Ok("minimax") => {

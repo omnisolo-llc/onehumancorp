@@ -417,7 +417,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+            'x-spiffe-id': 'spiffe://omnisolo.io/' + tenantId + '/agent1'
           },
           body: JSON.stringify({ message: text, tenant_id: tenantId })
         });
@@ -448,7 +448,7 @@
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                    'x-spiffe-id': 'spiffe://omnisolo.io/' + tenantId + '/agent1'
                   },
                   body: JSON.stringify({ action_id: data.draft_action.id, tenant_id: tenantId })
                 });

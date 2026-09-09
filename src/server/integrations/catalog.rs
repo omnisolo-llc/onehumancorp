@@ -190,8 +190,8 @@ fn metadata_provider(
 }
 
 fn chromadb_base_url() -> String {
-    let mode = std::env::var("OHC_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
-    let headless = std::env::var("OHC_HEADLESS").unwrap_or_else(|_| "false".to_string());
+    let mode = std::env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
+    let headless = std::env::var("OMNISOLO_HEADLESS").unwrap_or_else(|_| "false".to_string());
 
     if mode == "cloud" && headless != "true" {
         return "mock://chromadb".to_string();

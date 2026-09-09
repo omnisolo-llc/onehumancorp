@@ -19,7 +19,7 @@ test.describe('Sovereign-to-Cloud Bridge Invite', () => {
     await expect(input).toBeVisible({ timeout: 10000 });
 
     const value = await input.inputValue();
-    expect(value).toContain('https://ohc.app/invite/inv-');
+    expect(value).toContain('https://omnisolo.co/invite/inv-');
 
     // Verify copy button works (UI feedback)
     const copyBtn = page.getByRole('button', { name: 'Copy' });

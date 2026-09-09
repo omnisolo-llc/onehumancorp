@@ -34,9 +34,9 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         setPendingReconciliation(e.detail.pending_reconciliation);
       }
     };
-    window.addEventListener('ohc_sync_reconciliation', handleReconciliation);
+    window.addEventListener('omnisolo_sync_reconciliation', handleReconciliation);
     return () => {
-      window.removeEventListener('ohc_sync_reconciliation', handleReconciliation);
+      window.removeEventListener('omnisolo_sync_reconciliation', handleReconciliation);
     };
   }, []);
 

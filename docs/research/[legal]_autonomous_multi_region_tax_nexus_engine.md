@@ -6,14 +6,14 @@
 ## 2. Problem Statement
 For growing small business owners like **Priya (boutique owner)** and **Maya (baker)**, scaling beyond their local city or state introduces a terrifying new layer of complexity: **Sales Tax Nexus**.
 
-Economic Nexus laws mean that even without a physical office, selling into a new state (e.g., reaching $100k in sales or 200 transactions in California) makes the business legally responsible for collecting and remitting sales tax in that state. Missing these thresholds leads to massive back-tax liabilities and legal penalties. Currently, owners must manually track their sales volume per state or pay for expensive, technical tools like Avalara. OHC needs an invisible engine that proactively monitors these thresholds, alerts the owner *before* they are crossed, and autonomously prepares the registration paperwork for 1-tap approval on mobile.
+Economic Nexus laws mean that even without a physical office, selling into a new state (e.g., reaching $100k in sales or 200 transactions in California) makes the business legally responsible for collecting and remitting sales tax in that state. Missing these thresholds leads to massive back-tax liabilities and legal penalties. Currently, owners must manually track their sales volume per state or pay for expensive, technical tools like Avalara. OmniSolo needs an invisible engine that proactively monitors these thresholds, alerts the owner *before* they are crossed, and autonomously prepares the registration paperwork for 1-tap approval on mobile.
 
 ## 3. Research Report
 ### The "Nexus Gap"
 *   **Competitor Landscape**:
     *   **Shopify Tax / Stripe Tax**: Excellent at *calculating* tax once configured. However, *monitoring* nexus across 50+ US states and dozens of international VAT regions is often a passive dashboard that the owner must remember to check.
     *   **Avalara / TaxJar**: High-end tools that solve this but add significant "Cost Creep" and technical jargon (e.g., "Jurisdictional Nexus", "Remittance Frequency").
-*   **The "OHC Unfair Advantage"**: We move from "Dashboard Reporting" to "Autonomous Protection." The **Protector (Legal Agent)** doesn't just show a chart; it watches the transaction stream and says, *"Priya, you're at 190 sales in Texas. We need to register for a tax permit there next week. Tap here to let me handle the paperwork."*
+*   **The "OmniSolo Unfair Advantage"**: We move from "Dashboard Reporting" to "Autonomous Protection." The **Protector (Legal Agent)** doesn't just show a chart; it watches the transaction stream and says, *"Priya, you're at 190 sales in Texas. We need to register for a tax permit there next week. Tap here to let me handle the paperwork."*
 
 ### Key Standards (Economic Nexus)
 *   Most US states use a threshold of **$100,000 in gross sales** OR **200 individual transactions** in a calendar year.

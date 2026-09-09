@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Design Doc: OHC Edge-Caching Dynamic Storefronts (CDN & Instant Loading)
+# Design Doc: OmniSolo Edge-Caching Dynamic Storefronts (CDN & Instant Loading)
 
 **Author(s):** System Architect
 **Status:** Draft
@@ -13,7 +13,7 @@
 - **Competitor Analysis:**
   - **Shopify:** Utilizes a globally distributed edge network (Cloudflare) to cache storefront assets and read-only API requests, serving dynamic content close to the buyer.
   - **Vercel / Next.js:** Employs ISR (Incremental Static Regeneration) and Edge caching for instant load times without sacrificing dynamic product availability.
-- **OHC Requirement:** The caching must be completely invisible to the user. A sold-out item must instantly invalidate the cache across the edge network so that Fatima (Food Cart) doesn't over-sell her pre-orders.
+- **OmniSolo Requirement:** The caching must be completely invisible to the user. A sold-out item must instantly invalidate the cache across the edge network so that Fatima (Food Cart) doesn't over-sell her pre-orders.
 
 ## 3. Design Doc
 
@@ -22,7 +22,7 @@
 graph TD
     A[Buyer Mobile App / Web] -->|Requests Storefront| B(Cloudflare/Fastly Edge CDN);
     B -- Cache Hit --> A;
-    B -- Cache Miss --> C(OHC API Gateway);
+    B -- Cache Miss --> C(OmniSolo API Gateway);
     C --> D[Storefront Service];
     D --> E[(PostgreSQL Read Replica)];
 

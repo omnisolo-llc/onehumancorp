@@ -6,7 +6,7 @@
 
 ## Architecture
 
-The OS-Level Sandbox Isolation Harness provides strict, system-level containment for untrusted agent workflows. By utilizing native isolation mechanisms (Bubblewrap/sandbox-exec), OHC ensures that processes cannot access unauthorized network endpoints or read sensitive local files outside their designated space.
+The OS-Level Sandbox Isolation Harness provides strict, system-level containment for untrusted agent workflows. By utilizing native isolation mechanisms (Bubblewrap/sandbox-exec), OmniSolo ensures that processes cannot access unauthorized network endpoints or read sensitive local files outside their designated space.
 
 ## Configuration
 

@@ -59,13 +59,13 @@ async fn simulate_promoter_draft(
     let parsed = serde_json::json!({
         "tiktok": "Check out our new product!
 
-⚡ Powered by OHC",
+⚡ OmniSolo",
         "instagram": "New arrival! Link in bio.
 
-⚡ Powered by OHC",
+⚡ OmniSolo",
         "facebook": "We just added a new product to our store.
 
-⚡ Powered by OHC",
+⚡ OmniSolo",
         "feature_type": "social_post_draft",
         "product_name": product_name
     });
@@ -85,10 +85,10 @@ async fn simulate_promoter_draft(
             let agent_feed_item_id = uuid::Uuid::new_v4().to_string();
 
             // Insert fallback feed item so it shows up in UI Unified Agent Feed correctly
-            let insert_res = if std::env::var("OHC_DATABASE_URL")
+            let insert_res = if std::env::var("OMNISOLO_DATABASE_URL")
                 .unwrap_or_default()
                 .starts_with("sqlite")
-                || std::env::var("OHC_DATABASE_URL").is_err()
+                || std::env::var("OMNISOLO_DATABASE_URL").is_err()
             {
                 sqlx::query(
                     "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -835,7 +835,7 @@ async fn simulate_autonomous_booking_quote(
     let proposed_slot_id = uuid::Uuid::new_v4().to_string();
 
     // Acquire Redis Redlock for the slot
-    if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
+    if let Ok(redis_url) = std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
         if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url)
         {
             let _ = redis_lock

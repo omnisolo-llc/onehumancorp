@@ -21,7 +21,7 @@ test.describe('Setup Wizard 375px Flow', () => {
 
         // Go to setup wizard
         await page.goto('http://mock/setup.html');
-        await expect(page).toHaveTitle(/OHC Setup/);
+        await expect(page).toHaveTitle(/OmniSolo Setup/);
 
         // Wait for page to be ready
         await page.waitForLoadState('domcontentloaded');

@@ -5,13 +5,13 @@ test.describe('Distributed Inventory Sync via UI', () => {
     // 1. Visit the home page / login and get to the POS
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+      localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
         id: 'staff_1',
         name: 'Priya',
         role: 'Manager',
         pin_hash: '1234'
       }]));
-      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+      localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     });
 
     await page.goto('/login');
@@ -78,13 +78,13 @@ test.describe('Distributed Inventory Sync via UI', () => {
      // 1. Visit the home page / login and get to the POS
      await memberPage.goto('/api/v1/staff');
      await memberPage.evaluate(() => {
-       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+       localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
          id: 'staff_1',
          name: 'Priya',
          role: 'Manager',
          pin_hash: '1234'
        }]));
-       localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+       localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
      });
 
      await page.goto('/login');

@@ -13,7 +13,7 @@ test.describe('Viral Giveaway Generator', () => {
     await expect(page.locator('#result-area')).toBeHidden();
 
     // Fill out the form
-    await page.fill('#title', 'Win a Free Lifetime OHC Pro Account');
+    await page.fill('#title', 'Win a Free Lifetime OmniSolo Pro Account');
     await page.fill('#desc', 'Share this amazing link on your socials and sign up to win!');
 
     // Click Generate
@@ -28,7 +28,7 @@ test.describe('Viral Giveaway Generator', () => {
 
     const generatedUrl = await urlInput.inputValue();
     expect(generatedUrl).toContain('/giveaway/enter');
-    expect(generatedUrl).toContain('title=Win+a+Free+Lifetime+OHC+Pro+Account');
+    expect(generatedUrl).toContain('title=Win+a+Free+Lifetime+OmniSolo+Pro+Account');
     expect(generatedUrl).toContain('desc=Share+this+amazing+link+on+your+socials+and+sign+up+to+win');
 
     // Verify Share buttons

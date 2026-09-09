@@ -15,6 +15,6 @@ pub struct ViolationEvent {
 }
 
 #[async_trait]
-pub trait OHCSandboxManager: Send + Sync {
+pub trait OmniSoloSandboxManager: Send + Sync {
     async fn execute(&self, cmd: &str) -> Result<(bool, String, String), ViolationEvent>;
 }

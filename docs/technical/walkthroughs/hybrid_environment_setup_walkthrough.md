@@ -2,11 +2,11 @@
 
 # Hybrid Environment Setup Walkthrough
 
-Welcome to the One Human Corp Hybrid Environment Setup Walkthrough.
+Welcome to the OmniSolo Hybrid Environment Setup Walkthrough.
 
 ## 1. Cloud-Native vs Standalone Initialization
 
-The system operates on the `OHC-HA` (Hybrid Architecture).
+The system operates on the `OmniSolo-HA` (Hybrid Architecture).
 
 ```mermaid
 graph TD
@@ -22,6 +22,6 @@ graph TD
 
 ## 2. Environment Variables
 
-Configure your `.env` to select the target mode. Use `./deploy/scripts/ohc-setup.sh` together with `source deploy/scripts/ohc-mode.sh [cloud|standalone|headless]`.
+Configure your `.env` to select the target mode. Use `./deploy/scripts/omnisolo-setup.sh` together with `source deploy/scripts/omnisolo-mode.sh [cloud|standalone|headless]`.
 
 </div>

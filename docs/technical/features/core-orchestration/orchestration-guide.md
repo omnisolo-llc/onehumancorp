@@ -3,7 +3,7 @@
 # User Guide: Core Orchestration Engine
 
 ## 1. Introduction & Value Proposition
-The Core Orchestration Engine is the "brain" of One Human Corp. It transforms high-level CEO mandates into actionable, multi-agent workflows. By automating task delegation, context propagation, and meeting management, it allows a single human to operate with the capacity of a 50-person department.
+The Core Orchestration Engine is the "brain" of OmniSolo. It transforms high-level CEO mandates into actionable, multi-agent workflows. By automating task delegation, context propagation, and meeting management, it allows a single human to operate with the capacity of a 50-person department.
 
 **Key Benefits:**
 - **Reduced Context Switch**: Agents manage sub-tasks autonomously.
@@ -11,7 +11,7 @@ The Core Orchestration Engine is the "brain" of One Human Corp. It transforms hi
 - **Scalable Execution**: Burst capacity by hiring specialists on-demand.
 
 ## 2. Prerequisites & Requirements
-- **OHC Tier**: Professional or Enterprise for multi-department support.
+- **OmniSolo Tier**: Professional or Enterprise for multi-department support.
 - **Provider API Keys**: Configured in Settings (Gemini, OpenAI, or Anthropic).
 - **Identity Service**: `spire-server` must be healthy for agent-to-agent communication.
 
@@ -49,7 +49,7 @@ The Core Orchestration Engine is the "brain" of One Human Corp. It transforms hi
     - A: Use the "Snapshot" feature which bundles all Hub state into a PG-backed record.
 
 ## 7. Support
-For technical issues, please file a ticket via the "OHC Support" portal or contact your dedicated Engineering Director agent.
+For technical issues, please file a ticket via the "OmniSolo Support" portal or contact your dedicated Engineering Director agent.
 
 ## Implementation Details
 - **Architecture**: A Rust monolith operating within the `Hub` module handles the orchestration loop. It uses goroutines for lightweight concurrent task management and LangGraph checkpointers for saving/loading context.

@@ -15,7 +15,7 @@ The Billing Engine provides real-time, token-level visibility into the operation
 - **Model-Aware Pricing**: Support dynamic pricing catalogs for Gemini, GPT-4o, Claude 3.5, etc.
 - **Budget Guardrails**: Auto-suspend agents or notify the CEO when daily/monthly limits are approached.
 ### 2.2 Non-Goals
-- **External Payment Processing**: OHC tracks *internal* cost; actual billing (e.g., Stripe) is handled at the provider level.
+- **External Payment Processing**: OmniSolo tracks *internal* cost; actual billing (e.g., Stripe) is handled at the provider level.
 - **Real-time Fiat Conversions**: We track in fixed USD rates defined in the catalog.
 
 ## 3. Detailed Design
@@ -58,11 +58,11 @@ The Billing API is locked to the `CEOID`. Agents cannot read their own cost summ
 ## 6. Implementation Phases
 - **Phase 1**: Token ingestion and basic P&L view (COMPLETE).
 - **Phase 2**: Real-time forecasting and budget alerts (IN-PROGRESS).
-- **Phase 3**: Multi-currency support and OHC-managed API proxying.
+- **Phase 3**: Multi-currency support and OmniSolo-managed API proxying.
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

@@ -3,8 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TestimonialWidgetGenerator from './page';
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 describe('Testimonial Widget Generator', () => {
@@ -27,7 +27,7 @@ describe('Testimonial Widget Generator', () => {
 
         const authorInput = screen.getByDisplayValue('Jane Doe');
         expect(authorInput).toBeDefined();
-        expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
+        expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
     });
 
     it('updates live preview URL when settings change', () => {
@@ -56,7 +56,7 @@ describe('Testimonial Widget Generator', () => {
         fireEvent.click(copyButton);
 
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-            expect.stringContaining('<iframe src="https://ohc.app/api/v1/growth/testimonial/embed')
+            expect.stringContaining('<iframe src="https://cloud.omnisolo.co/api/v1/growth/testimonial/embed')
         );
         expect(screen.getByText('Copied!')).toBeDefined();
 

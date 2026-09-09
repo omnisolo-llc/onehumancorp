@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-The CEO Dashboard is the primary human-in-the-loop (HITL) interface for One Human Corp. It provides the CEO with high-fidelity observability into the AI workforce, a portal for approval gating, and a "Mission Control" center for injecting high-level goals into the Orchestration Engine.
+The CEO Dashboard is the primary human-in-the-loop (HITL) interface for OmniSolo. It provides the CEO with high-fidelity observability into the AI workforce, a portal for approval gating, and a "Mission Control" center for injecting high-level goals into the Orchestration Engine.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -64,7 +64,7 @@ The dashboard must maintain a 100/100 Lighthouse score for accessibility, ensuri
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

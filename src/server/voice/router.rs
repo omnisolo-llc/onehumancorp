@@ -2,9 +2,9 @@ use super::engine::VoiceAIEdgeEngine;
 use ::server_integrations_twilio::provider::TwilioProvider;
 use std::sync::Arc;
 
-#[cfg(not(ohc_bazel_package))]
+#[cfg(not(omnisolo_bazel_package))]
 use crate::minimax::{LocalLLMClient, MinimaxClient};
-#[cfg(ohc_bazel_package)]
+#[cfg(omnisolo_bazel_package)]
 use ::minimax::{LocalLLMClient, MinimaxClient};
 
 pub struct VoiceContextRouter {
@@ -31,11 +31,11 @@ pub struct LlmVoiceTurnPlanner;
 impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
     async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String> {
         let prompt = format!(
-            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, GENERAL_HELP, ORDER_FOOD, or GENERAL_INQUIRY. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the caller wants to place an order (ORDER_FOOD), immediately offer to send them a secure ordering link via SMS and include the link (e.g., https://pay.ohc.com/store/voice) in the sms_body. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
+            "You are the OmniSolo voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, GENERAL_HELP, ORDER_FOOD, or GENERAL_INQUIRY. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the caller wants to place an order (ORDER_FOOD), immediately offer to send them a secure ordering link via SMS and include the link (e.g., https://cloud.omnisolo.co/store/voice) in the sms_body. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
         );
 
-        let provider = std::env::var("OHC_VOICE_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+        let provider = std::env::var("OMNISOLO_VOICE_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
             .unwrap_or_default();
 
         let raw: String = match provider.as_str() {
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn test_parse_voice_turn_plan_from_llm_json() {
         let plan = parse_voice_turn_plan(
-            r#"{"intent_type":"BOOK_APPOINTMENT","ai_response":"I sent the confirmation link.","sms_body":"Confirm here: https://ohc.example/confirm"}"#,
+            r#"{"intent_type":"BOOK_APPOINTMENT","ai_response":"I sent the confirmation link.","sms_body":"Confirm here: https://cloud.omnisolo.co/confirm"}"#,
         )
         .unwrap();
 
@@ -226,11 +226,11 @@ mod tests {
         assert_eq!(plan.ai_response, "I sent the confirmation link.");
         assert_eq!(
             plan.sms_body.as_deref(),
-            Some("Confirm here: https://ohc.example/confirm")
+            Some("Confirm here: https://cloud.omnisolo.co/confirm")
         );
 
         let plan2 = parse_voice_turn_plan(
-            r#"{"intent_type":"ORDER_FOOD","ai_response":"I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!","sms_body":"Order here: https://pay.ohc.com/store/voice"}"#,
+            r#"{"intent_type":"ORDER_FOOD","ai_response":"I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!","sms_body":"Order here: https://cloud.omnisolo.co/store/voice"}"#,
         )
         .unwrap();
         assert_eq!(plan2.intent_type.as_deref(), Some("ORDER_FOOD"));
@@ -240,7 +240,7 @@ mod tests {
         );
         assert_eq!(
             plan2.sms_body.as_deref(),
-            Some("Order here: https://pay.ohc.com/store/voice")
+            Some("Order here: https://cloud.omnisolo.co/store/voice")
         );
     }
 
@@ -263,7 +263,7 @@ mod tests {
                     intent_type: Some("BOOK_APPOINTMENT".to_string()),
                     ai_response: "All set. I texted you the secure confirmation link.".to_string(),
                     sms_body: Some(
-                        "Confirm your booking: https://pay.ohc.com/book/session".to_string(),
+                        "Confirm your booking: https://cloud.omnisolo.co/book/session".to_string(),
                     ),
                 },
             ]),
@@ -311,7 +311,7 @@ mod tests {
                 VoiceTurnPlan {
                     intent_type: Some("ORDER_FOOD".to_string()),
                     ai_response: "I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!".to_string(),
-                    sms_body: Some("Order here: https://pay.ohc.com/store/voice".to_string()),
+                    sms_body: Some("Order here: https://cloud.omnisolo.co/store/voice".to_string()),
                 },
             ]),
         });

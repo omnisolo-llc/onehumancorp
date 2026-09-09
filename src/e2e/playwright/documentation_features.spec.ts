@@ -47,7 +47,7 @@ test.describe('Documentation Features CUJ', () => {
     await chatInterface.locator('button[data-target="tab-tours"]').click();
 
     // Click the first tour card
-    await chatInterface.locator('.ohc-tour-card').first().click();
+    await chatInterface.locator('.omnisolo-tour-card').first().click();
 
     // Verify walkthrough bubble appears
     await expect(page.locator('#walkthrough-bubble')).toBeVisible();
@@ -66,7 +66,7 @@ test.describe('Documentation Features CUJ', () => {
     await page.goto('/api-docs');
 
     // Check title
-    await expect(page.locator('h1')).toContainText('OHC Advanced API Reference');
+    await expect(page.locator('h1')).toContainText('OmniSolo Advanced API Reference');
 
     // Hover the tooltip element
     const tooltipTarget = page.locator('#api-docs-tooltip');
@@ -76,7 +76,7 @@ test.describe('Documentation Features CUJ', () => {
     await tooltipTarget.hover();
 
     // Check if tooltip becomes visible. We expect the global tooltip element to appear
-    const globalTooltip = page.locator('.ohc-tooltip');
+    const globalTooltip = page.locator('.omnisolo-tooltip');
     await expect(globalTooltip).toHaveClass(/visible/);
     await expect(globalTooltip).toContainText('Direct API access is only for custom integrations.');
   });

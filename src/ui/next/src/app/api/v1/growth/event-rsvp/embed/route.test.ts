@@ -17,7 +17,7 @@ describe('GET /api/v1/growth/event-rsvp/embed', () => {
     expect(html).toContain('Zoom');
 
     // Check for viral loop link
-    expect(html).toContain('⚡ Powered by OHC');
+    expect(html).toContain('⚡ Powered by OmniSolo');
     expect(html).toContain('Want to host your own events?');
     expect(html).toContain('href="/api/v1/growth/referrals/click?target=/onboarding&ref=test-tenant&source=viral_event_rsvp_widget"');
   });
@@ -29,7 +29,7 @@ describe('GET /api/v1/growth/event-rsvp/embed', () => {
     const html = await res.text();
 
     // Check that viral loop link is absent
-    expect(html).not.toContain('⚡ Powered by OHC');
+    expect(html).not.toContain('⚡ Powered by OmniSolo');
     expect(html).not.toContain('Want to host your own events?');
   });
 

@@ -1,6 +1,6 @@
 use super::agent_protocol::agent_protocol_tool;
 use axum::{Json, Router, response::IntoResponse, routing::post};
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use tokio::net::TcpListener;
 

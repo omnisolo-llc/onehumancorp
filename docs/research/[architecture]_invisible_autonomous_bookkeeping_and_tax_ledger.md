@@ -12,7 +12,7 @@ For non-technical small business owners like Maya (the baker) and Carlos (the ha
 *   **Stripe / Square:** Good at transaction processing and payouts, but they do not automatically handle receipt OCR, expense categorization from external bank accounts, or proactive tax reserving based on dynamic local tax codes.
 
 **Competitive Analysis:**
-We lack an integrated, zero-touch financial ledger. OHC must provide a system where the AI acts as a virtual CFO. Every transaction (inbound payment, outbound expense, or uploaded receipt) is instantly reconciled, categorized, and recorded in a multi-tenant, immutable ledger. This system must calculate estimated tax liabilities in real-time and suggest (or automate) tax withholding, keeping the user compliant effortlessly.
+We lack an integrated, zero-touch financial ledger. OmniSolo must provide a system where the AI acts as a virtual CFO. Every transaction (inbound payment, outbound expense, or uploaded receipt) is instantly reconciled, categorized, and recorded in a multi-tenant, immutable ledger. This system must calculate estimated tax liabilities in real-time and suggest (or automate) tax withholding, keeping the user compliant effortlessly.
 
 ## Design Doc
 
@@ -61,7 +61,7 @@ Deploy an invisible bookkeeping engine that automatically tracks income, categor
 
 **Core User Journeys (CUJ):**
 1.  **Expense Capture:** The user snaps a picture of a receipt while offline. The app saves it and, upon reconnecting, the AI automatically reads the amount, vendor, and date, and categorizes it without user intervention.
-2.  **Tax Estimation:** As sales occur on OHC, the system automatically calculates the estimated income tax and updates a "Tax Safe" display, advising the user how much cash to hold back.
+2.  **Tax Estimation:** As sales occur on OmniSolo, the system automatically calculates the estimated income tax and updates a "Tax Safe" display, advising the user how much cash to hold back.
 3.  **Bank Sync:** Bank feed transactions are silently mapped to ledger categories by the Finance AI Department based on the user's business type.
 
 **Acceptance Criteria:**

@@ -6,12 +6,12 @@ Autonomous Brand DNA & Operationalized Brand Book Engine
 ## Problem Statement
 Small business owners like Maya (baker), Carlos (handyman), and Priya (boutique owner) are domain experts but lack the skills of a Creative Director. Currently, they face "Design Paralysis" (Ranked #8 in SMB pain points). They struggle to maintain a consistent brand identity across their website, social media, and customer communications.
 
-Existing platforms treat "Branding" as a set of static theme settings (colors, fonts) that the user must manually configure. If Maya wants her Instagram posts to match her website, she has to manually copy hex codes and font names. There is no central "Memory Primitive" that captures the business's unique "Vibe" and operationalizes it across all AI agents. OHC needs an invisible engine that extracts Brand DNA from a single paragraph of text or a few images and ensures every AI-generated artifact—from a website block to an automated DM reply—is perfectly on-brand.
+Existing platforms treat "Branding" as a set of static theme settings (colors, fonts) that the user must manually configure. If Maya wants her Instagram posts to match her website, she has to manually copy hex codes and font names. There is no central "Memory Primitive" that captures the business's unique "Vibe" and operationalizes it across all AI agents. OmniSolo needs an invisible engine that extracts Brand DNA from a single paragraph of text or a few images and ensures every AI-generated artifact—from a website block to an automated DM reply—is perfectly on-brand.
 
 ## Research Report
 *   **Market Analysis**: Tools like Canva and Adobe Express are powerful but remain standalone creative tools. "Brand DNA" tools like Durable or Wix ADI provide one-time generation but don't carry that identity into the day-to-day operations of the business (e.g., automated support replies).
-*   **The OHC Advantage**: By treating Brand DNA as a **Core Tenant Primitive**, OHC ensures that all agents in the "Teammate Mesh" share a unified aesthetic and behavioral context. This is the difference between a generic chatbot and a "Virtual Teammate."
-*   **Gap Identified**: The current `builder_brand_toolboxes` in OHC is limited to the Storefront Builder. We need to elevate this into a platform-wide **Brand DNA Engine** that serves as the "Source of Truth" for visual and behavioral identity.
+*   **The OmniSolo Advantage**: By treating Brand DNA as a **Core Tenant Primitive**, OmniSolo ensures that all agents in the "Teammate Mesh" share a unified aesthetic and behavioral context. This is the difference between a generic chatbot and a "Virtual Teammate."
+*   **Gap Identified**: The current `builder_brand_toolboxes` in OmniSolo is limited to the Storefront Builder. We need to elevate this into a platform-wide **Brand DNA Engine** that serves as the "Source of Truth" for visual and behavioral identity.
 
 ## Design Doc
 
@@ -94,7 +94,7 @@ sequenceDiagram
 *   **Proactive Evolution**: The Brand DNA is not static. As the user interacts or provides new content, the Advisor suggests subtle "Brand Refinements" to the owner.
 
 ## Implementation Prompt
-**Objective**: Build the "Autonomous Brand DNA Engine" as the foundational identity layer for the OHC platform.
+**Objective**: Build the "Autonomous Brand DNA Engine" as the foundational identity layer for the OmniSolo platform.
 
 **User-Facing Outcome**: Maya types "Cozy organic bakery" during onboarding. The system instantly generates a full brand identity—including a color palette, font pairings, and a warm tone of voice. All subsequent AI-generated content (her website, her Instagram posts, her automated replies) automatically inherits this identity.
 
@@ -107,7 +107,7 @@ sequenceDiagram
 **Acceptance Criteria**:
 - **Core Entities**: Implement the `brand_dna`, `visual_primitives`, and `behavioral_primitives` models with strict multi-tenant isolation.
 - **DNA Extraction**: Integrate the LLM provider to derive structured brand data from unstructured user input.
-- **Mobile UI**: Build the 375px "Vibe Selection" interface using OHC premium design tokens (Glassmorphism, 20px blur).
+- **Mobile UI**: Build the 375px "Vibe Selection" interface using OmniSolo premium design tokens (Glassmorphism, 20px blur).
 - **Agent Handoff**: Implement a notification/event system so downstream agents are alerted when Brand DNA changes.
 - **Grandmother Test**: The entire branding process must require < 3 taps and zero knowledge of hex codes or design theory.
 

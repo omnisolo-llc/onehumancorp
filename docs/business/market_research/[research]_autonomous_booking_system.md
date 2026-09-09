@@ -5,7 +5,7 @@ Service-based small business owners (e.g., Leo the Music Tutor, Carlos the Handy
 
 ## 2. Research Report
 - **Market Context**: Platforms like Shopify require third-party apps for robust booking, often adding $15-$30/month to the subscription cost and fracturing the user experience. Wix and Squarespace offer native booking but lack proactive, agent-driven management. They wait for the user to configure availability and for the customer to initiate the booking.
-- **The OHC Opportunity**: By integrating booking natively alongside e-commerce and powering it with the Operations and Sales AI Agents, OHC can eliminate the "app tax" and provide a genuinely proactive booking experience.
+- **The OmniSolo Opportunity**: By integrating booking natively alongside e-commerce and powering it with the Operations and Sales AI Agents, OmniSolo can eliminate the "app tax" and provide a genuinely proactive booking experience.
 - **Competitor Gaps**:
   - *Shopify*: Bookings are treated as products via apps; poor native calendar management.
   - *Wix*: Complex setup; passive system.

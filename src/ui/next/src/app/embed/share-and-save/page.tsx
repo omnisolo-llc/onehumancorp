@@ -55,7 +55,7 @@ function ShareAndSaveContent() {
                         rel="noopener noreferrer"
                         className={`hover:underline transition-colors ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'}`}
                     >
-                        ⚡ Powered by OHC
+                        ⚡ Powered by OmniSolo
                     </a>
                 </div>
             )}

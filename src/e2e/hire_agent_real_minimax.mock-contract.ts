@@ -24,7 +24,7 @@ const specialistLabels = [
 ] as const;
 
 async function readWorkflow(request: APIRequestContext, workflowId: string): Promise<WorkflowRecord | undefined> {
-  const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+  const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
   const response = await request.get(`${apiBase}/api/v1/agents/workflows`);
   expect(response.ok()).toBeTruthy();
   const body = await response.json();
@@ -40,7 +40,7 @@ function specialistProcessesFor(commands: string, agentName: string): string[] {
   const lines = commands.split('\n');
   return specialistLabels.filter((label) =>
     lines.some((line) =>
-      line.includes('ohc-builtin-agent --task') &&
+      line.includes('omnisolo-builtin-agent --task') &&
       line.includes(agentName) &&
       line.includes(label),
     ),
@@ -56,11 +56,11 @@ test.describe('real MiniMax hire-agent flow', () => {
       process.env.MINIMAX_API_KEY = 'dummy_key_for_test';
     }
     expect(process.env.MINIMAX_API_KEY).toBeTruthy();
-    expect(process.env.OHC_LLM_PROVIDER || 'minimax').toBe('minimax');
-    expect(process.env.OHC_LLM_MODEL || process.env.MINIMAX_MODEL || 'MiniMax-M3').toBe('MiniMax-M3');
+    expect(process.env.OMNISOLO_LLM_PROVIDER || 'minimax').toBe('minimax');
+    expect(process.env.OMNISOLO_LLM_MODEL || process.env.MINIMAX_MODEL || 'MiniMax-M3').toBe('MiniMax-M3');
 
     const agentName = `M3 E2E Business Operator ${Date.now()}`;
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
     const hireResponse = await request.post(`${apiBase}/api/v1/agents/hire`, {
       data: {
         name: agentName,
@@ -118,7 +118,7 @@ test.describe('real MiniMax hire-agent flow', () => {
     const commands = await readAgentCommands();
     const runningSpecialists = specialistProcessesFor(commands, agentName);
     expect(runningSpecialists).toEqual(expect.arrayContaining([...specialistLabels]));
-    expect(commands).toContain('ohc-builtin-agent --task');
+    expect(commands).toContain('omnisolo-builtin-agent --task');
     expect(commands).toContain(agentName);
     expect(commands).toContain('MiniMax-M3');
   });

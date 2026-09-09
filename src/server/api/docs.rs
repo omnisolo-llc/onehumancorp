@@ -42,6 +42,113 @@ pub struct WalkthroughStep {
     pub content: String,
 }
 
+async fn mysql_walkthrough_steps(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+    page: &str,
+) -> Result<Vec<WalkthroughStep>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT selector, title, text FROM walkthrough_steps
+         WHERE tenant_id = ? AND page = ? ORDER BY step_order ASC",
+    )
+    .bind(tenant_id)
+    .bind(page)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            use sqlx::Row;
+            WalkthroughStep {
+                target_id: row.get("selector"),
+                title: row.get("title"),
+                content: row.get("text"),
+            }
+        })
+        .collect())
+}
+
+async fn mysql_tooltips(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+) -> Result<std::collections::HashMap<String, String>, sqlx::Error> {
+    let rows = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?")
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await?;
+    let mut tooltips = std::collections::HashMap::new();
+    for row in rows {
+        use sqlx::Row;
+        tooltips.insert(row.get("id"), row.get("text"));
+    }
+    Ok(tooltips)
+}
+
+async fn mysql_articles(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+    query: Option<&str>,
+) -> Result<Vec<HelpArticle>, sqlx::Error> {
+    let rows = if let Some(query) = query {
+        let query = format!("%{}%", query.to_lowercase());
+        sqlx::query(
+            "SELECT category, title, desc_text, link FROM help_articles
+             WHERE tenant_id = ? AND (LOWER(category) LIKE ? OR LOWER(title) LIKE ? OR LOWER(desc_text) LIKE ?)",
+        )
+        .bind(tenant_id)
+        .bind(&query)
+        .bind(&query)
+        .bind(&query)
+        .fetch_all(pool)
+        .await?
+    } else {
+        sqlx::query(
+            "SELECT category, title, desc_text, link FROM help_articles
+             WHERE tenant_id = ? ORDER BY id ASC",
+        )
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await?
+    };
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            use sqlx::Row;
+            HelpArticle {
+                category: row.get("category"),
+                title: row.get("title"),
+                desc: row.get("desc_text"),
+                link: row.get("link"),
+            }
+        })
+        .collect())
+}
+
+async fn mysql_videos(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+) -> Result<Vec<VideoTutorial>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT id, title, duration, video_url FROM video_tutorials
+         WHERE tenant_id = ? ORDER BY id ASC",
+    )
+    .bind(tenant_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            use sqlx::Row;
+            VideoTutorial {
+                id: row.get("id"),
+                title: row.get("title"),
+                duration: row.get("duration"),
+                video_url: row.get("video_url"),
+            }
+        })
+        .collect())
+}
+
 pub async fn get_walkthrough(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
@@ -49,7 +156,15 @@ pub async fn get_walkthrough(
 ) -> Result<Json<Vec<WalkthroughStep>>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
 
-    let steps = match &db.store {
+    let steps = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        mysql_walkthrough_steps(&pool, &tenant_id, &page)
+            .await
+            .map_err(|error| {
+                tracing::error!("Failed to fetch MySQL walkthrough steps: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?
+    } else {
+        match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
                 Ok(tx) => tx,
@@ -100,6 +215,7 @@ pub async fn get_walkthrough(
                 }
                 Err(_) => vec![]
             }
+        }
         }
     };
 
@@ -153,55 +269,62 @@ pub async fn get_tooltips(
 ) -> Result<Json<std::collections::HashMap<String, String>>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
     let mut tooltips = std::collections::HashMap::new();
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            let mut tx = db.pool.begin().await.map_err(|e| {
-                tracing::error!("Failed to start tooltip transaction: {}", e);
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        tooltips = mysql_tooltips(&pool, &tenant_id).await.map_err(|error| {
+            tracing::error!("Failed to fetch MySQL tooltips: {error}");
+            axum::http::StatusCode::SERVICE_UNAVAILABLE
+        })?;
+    } else {
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| {
+                    tracing::error!("Failed to start tooltip transaction: {}", e);
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR
                 })?;
-            let result = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1")
-                .bind(tenant_id.to_string())
-                .fetch_all(&mut *tx)
-                .await;
-            let _ = tx.commit().await;
-            match result {
-                Ok(rows) => {
-                    for row in rows {
-                        use sqlx::Row;
-                        let id: String = row.get("id");
-                        let text: String = row.get("text");
-                        tooltips.insert(id, text);
+                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                    })?;
+                let result = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1")
+                    .bind(tenant_id.to_string())
+                    .fetch_all(&mut *tx)
+                    .await;
+                let _ = tx.commit().await;
+                match result {
+                    Ok(rows) => {
+                        for row in rows {
+                            use sqlx::Row;
+                            let id: String = row.get("id");
+                            let text: String = row.get("text");
+                            tooltips.insert(id, text);
+                        }
                     }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to fetch tooltips: {}", e);
-                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    Err(e) => {
+                        tracing::error!("Failed to fetch tooltips: {}", e);
+                        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    }
                 }
             }
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?")
-                .bind(tenant_id.to_string())
-                .fetch_all(pool)
-                .await
-            {
-                Ok(rows) => {
-                    for row in rows {
-                        use sqlx::Row;
-                        let id: String = row.get("id");
-                        let text: String = row.get("text");
-                        tooltips.insert(id, text);
+            crate::db::DbStore::Sqlite(pool) => {
+                match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?")
+                    .bind(tenant_id.to_string())
+                    .fetch_all(pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        for row in rows {
+                            use sqlx::Row;
+                            let id: String = row.get("id");
+                            let text: String = row.get("text");
+                            tooltips.insert(id, text);
+                        }
                     }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to fetch tooltips: {}", e);
-                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    Err(e) => {
+                        tracing::error!("Failed to fetch tooltips: {}", e);
+                        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    }
                 }
             }
         }
@@ -300,6 +423,22 @@ pub async fn update_tooltip(
     axum::extract::Json(payload): axum::extract::Json<TooltipPayload>,
 ) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        sqlx::query(
+            "INSERT INTO tooltips (id, tenant_id, text) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE text = VALUES(text)",
+        )
+        .bind(payload.id)
+        .bind(tenant_id)
+        .bind(payload.text)
+        .execute(&pool)
+        .await
+        .map_err(|error| {
+            tracing::error!("Failed to update MySQL tooltip: {error}");
+            axum::http::StatusCode::SERVICE_UNAVAILABLE
+        })?;
+        return Ok(Json(SuccessResponse { success: true }));
+    }
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| {
@@ -353,6 +492,18 @@ pub async fn delete_tooltip(
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        sqlx::query("DELETE FROM tooltips WHERE id = ? AND tenant_id = ?")
+            .bind(id.clone())
+            .bind(tenant_id)
+            .execute(&pool)
+            .await
+            .map_err(|error| {
+                tracing::error!("Failed to delete MySQL tooltip: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?;
+        return Ok(Json(SuccessResponse { success: true }));
+    }
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| {
@@ -406,7 +557,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
         HelpArticle {
             category: "Getting Started".to_string(),
             title: "Getting Started with Your Store".to_string(),
-            desc: "Welcome to OneHumanCorp! Let's get your business online in under 10 minutes."
+            desc: "Welcome to OmniSolo! Let's get your business online in under 10 minutes."
                 .to_string(),
             link: "/help/getting-started-1".to_string(),
         },
@@ -571,7 +722,13 @@ pub async fn list_articles(
     } else {
         let db_clone = db.clone();
         let t_id = tenant_id.to_string();
-        articles = match &db_clone.store {
+        articles = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            mysql_articles(&pool, &t_id, None).await.map_err(|error| {
+                tracing::error!("Failed to fetch MySQL help articles: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?
+        } else {
+            match &db_clone.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = match db_clone.pool.begin().await {
                     Ok(tx) => tx,
@@ -622,6 +779,7 @@ pub async fn list_articles(
                     }
                     Err(_) => vec![]
                 }
+            }
             }
         };
         if articles.is_empty() {
@@ -678,42 +836,50 @@ pub async fn search_articles(
         let db_clone = db.clone();
         let t_id = tenant_id.to_string();
         let query_str = format!("%{}%", q);
-        articles = match &db_clone.store {
-            crate::db::DbStore::Postgres => {
-                let mut tx = match db_clone.pool.begin().await {
-                    Ok(tx) => tx,
-                    Err(_) => return Ok(Json(vec![])),
-                };
-                if ::server_common::auth_utils::set_org_context(&mut *tx, &t_id)
-                    .await
-                    .is_err()
-                {
-                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
-                }
-                let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1 AND (category ILIKE $2 OR title ILIKE $2 OR desc_text ILIKE $2)")
+        articles = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            mysql_articles(&pool, &t_id, Some(&q))
+                .await
+                .map_err(|error| {
+                    tracing::error!("Failed to search MySQL help articles: {error}");
+                    axum::http::StatusCode::SERVICE_UNAVAILABLE
+                })?
+        } else {
+            match &db_clone.store {
+                crate::db::DbStore::Postgres => {
+                    let mut tx = match db_clone.pool.begin().await {
+                        Ok(tx) => tx,
+                        Err(_) => return Ok(Json(vec![])),
+                    };
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &t_id)
+                        .await
+                        .is_err()
+                    {
+                        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    }
+                    let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1 AND (category ILIKE $2 OR title ILIKE $2 OR desc_text ILIKE $2)")
                     .bind(t_id.clone())
                     .bind(query_str.clone())
                     .fetch_all(&mut *tx)
                     .await;
-                let _ = tx.commit().await;
-                match result {
-                    Ok(rows) => rows
-                        .into_iter()
-                        .map(|row| {
-                            use sqlx::Row;
-                            HelpArticle {
-                                category: row.get("category"),
-                                title: row.get("title"),
-                                desc: row.get("desc_text"),
-                                link: row.get("link"),
-                            }
-                        })
-                        .collect(),
-                    Err(_) => vec![],
+                    let _ = tx.commit().await;
+                    match result {
+                        Ok(rows) => rows
+                            .into_iter()
+                            .map(|row| {
+                                use sqlx::Row;
+                                HelpArticle {
+                                    category: row.get("category"),
+                                    title: row.get("title"),
+                                    desc: row.get("desc_text"),
+                                    link: row.get("link"),
+                                }
+                            })
+                            .collect(),
+                        Err(_) => vec![],
+                    }
                 }
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ? AND (category LIKE ? OR title LIKE ? OR desc_text LIKE ?)")
+                crate::db::DbStore::Sqlite(pool) => {
+                    match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ? AND (category LIKE ? OR title LIKE ? OR desc_text LIKE ?)")
                     .bind(t_id.clone())
                     .bind(query_str.clone())
                     .bind(query_str.clone())
@@ -733,6 +899,7 @@ pub async fn search_articles(
                         }).collect()
                     }
                     Err(_) => vec![]
+                }
                 }
             }
         };
@@ -795,7 +962,13 @@ pub async fn list_videos(
     } else {
         let db_clone = db.clone();
         let t_id = tenant_id.to_string();
-        videos = match &db_clone.store {
+        videos = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            mysql_videos(&pool, &t_id).await.map_err(|error| {
+                tracing::error!("Failed to fetch MySQL video tutorials: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?
+        } else {
+            match &db_clone.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = match db_clone.pool.begin().await {
                     Ok(tx) => tx,
@@ -848,6 +1021,7 @@ pub async fn list_videos(
                     }
                     Err(_) => vec![]
                 }
+            }
             }
         };
         if videos.is_empty() {
@@ -906,7 +1080,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
             title: "Getting Started with Your Store".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
-        Welcome to OneHumanCorp! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
+        Welcome to OmniSolo! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Step 1: Tell us about your business</h2>
       <p class="text-gray-700 mb-4">
@@ -977,7 +1151,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Viewing Your Bills</h2>
       <p class="text-gray-700 mb-4">
-        You can see a history of all the payments you have made to OneHumanCorp. This makes it easy to keep track of your expenses for your own records.
+        You can see a history of all the payments you have made to OmniSolo. This makes it easy to keep track of your expenses for your own records.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Inviting Team Members</h2>
       <p class="text-gray-700 mb-4">
@@ -1107,7 +1281,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
         "info": {
             "title": "API Documentation (for Advanced Users)",
             "version": "1.0.0",
-            "description": "OHC Advanced API Reference integrating with OneHumanCorp.",
+            "description": "OmniSolo Advanced API Reference integrating with OmniSolo.",
         },
         "servers": [
             {
@@ -1456,7 +1630,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
             "/api/v1/orgs/register": {
                 "post": {
                     "summary": "Register an Organization",
-                    "description": "Registers a new tenant organization in the multi-tenant OHC environment.",
+                    "description": "Registers a new tenant organization in the multi-tenant OmniSolo environment.",
                     "tags": ["Tenants"],
                     "requestBody": {
                         "required": true,
@@ -1692,6 +1866,13 @@ mod tests {
         // but for now let's just make sure it parses properly.
         let data = get_changelog_data();
         assert!(!data.is_empty());
+        assert!(data.iter().all(|section| {
+            section
+                .screenshot_url
+                .as_deref()
+                .map(|url| !url.contains("via.placeholder.com"))
+                .unwrap_or(true)
+        }));
     }
 
     #[tokio::test]

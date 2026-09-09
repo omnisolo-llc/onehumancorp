@@ -7,8 +7,8 @@ test.describe('WhatsApp Link Generator Growth Loop', () => {
         // Verify the main heading
         await expect(page.locator('h1', { hasText: 'WhatsApp Link Generator 📱' }).first()).toBeVisible();
 
-        // Check the "Powered by OHC" footer is present on the page
-        const footerLink = page.locator('footer a', { hasText: '⚡ Powered by OHC' });
+        // Check the "OmniSolo" footer is present on the page
+        const footerLink = page.locator('footer a', { hasText: '⚡ OmniSolo' });
         await expect(footerLink).toBeVisible();
 
         // Check that "Get Link" is disabled initially
@@ -31,7 +31,7 @@ test.describe('WhatsApp Link Generator Growth Loop', () => {
         // Verify the live preview updates with the text
         const previewText = page.locator('.whitespace-pre-wrap', { hasText: 'Hi, I am interested in your services.' });
         await expect(previewText).toBeVisible();
-        await expect(previewText).toContainText('⚡ Powered by OHC');
+        await expect(previewText).toContainText('⚡ OmniSolo');
 
         // Click "Get Link" to open modal
         await getLinkBtn.click();
@@ -43,13 +43,13 @@ test.describe('WhatsApp Link Generator Growth Loop', () => {
         const linkTextarea = page.locator('textarea[readonly]');
         const generatedLink = await linkTextarea.inputValue();
         expect(generatedLink).toContain('wa.me/1234567890');
-        expect(generatedLink).toContain(encodeURIComponent('Hi, I am interested in your services.\n\n⚡ Powered by OHC'));
+        expect(generatedLink).toContain(encodeURIComponent('Hi, I am interested in your services.\n\n⚡ OmniSolo'));
 
         // Close modal
         await page.locator('button', { hasText: 'Close' }).click();
 
         // Try to remove branding and verify paywall
-        const removeBrandingToggle = page.locator('label', { hasText: 'Remove "Powered by OHC" Badge (Pro)' });
+        const removeBrandingToggle = page.locator('label', { hasText: 'Remove "OmniSolo" Badge (Pro)' });
         await removeBrandingToggle.click();
 
         // Verify paywall modal appears

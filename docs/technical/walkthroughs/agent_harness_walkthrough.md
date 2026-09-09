@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# 🔬 OHC Hybrid Agent Harness: Visual Walkthrough
+# 🔬 OmniSolo Hybrid Agent Harness: Visual Walkthrough
 
-Welcome to the **Hybrid Agent Harness** visual walkthrough. This document outlines the architectural components of OHC's execution sandboxing layer, illustrating how we achieve true zero-trust autonomy.
+Welcome to the **Hybrid Agent Harness** visual walkthrough. This document outlines the architectural components of OmniSolo's execution sandboxing layer, illustrating how we achieve true zero-trust autonomy.
 
 ## 1. The Core Architecture
 
-OHC uses a robust `SandboxManager` that bridges KAIROS orchestration with OS-native primitives, drawing inspiration from leading implementations.
+OmniSolo uses a robust `SandboxManager` that bridges KAIROS orchestration with OS-native primitives, drawing inspiration from leading implementations.
 
 - **OS-Level Sandboxing (`bwrap`):** On Linux, the harness heavily leverages `bwrap` to spawn tightly restricted child processes with explicit `allowRead` and `denyWrite` directives.
 - **Network Proxy Interception:** Every execution forces traffic through a localized HTTP/SOCKS MITM proxy to drop unauthorized API calls.
@@ -25,7 +25,7 @@ graph TD;
     E -->|Allowed| F((Internet/Intranet));
     E -->|Denied| G[Drop & Log Telemetry];
     D -->|Stdout/Stderr| H[OpenTelemetry Span Exporter];
-    H --> I[(OHC Central Database)];
+    H --> I[(OmniSolo Central Database)];
     G --> I;
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
@@ -50,6 +50,6 @@ graph TD
 
 ## 4. MCP & Memory Directory (MemDir) Integration
 
-Agents maintain persistence through locally configured Memory Directories (`.ohc/memory/auto`), while interactions with external tools flow exclusively through the Model Context Protocol (MCP) bridge to ensure cloud-to-local hybrid synchrony.
+Agents maintain persistence through locally configured Memory Directories (`.omnisolo/memory/auto`), while interactions with external tools flow exclusively through the Model Context Protocol (MCP) bridge to ensure cloud-to-local hybrid synchrony.
 
 </div>

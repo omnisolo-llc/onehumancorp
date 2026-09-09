@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 
 use super::LlmClient;
 use super::circuit_breaker::CircuitBreaker;

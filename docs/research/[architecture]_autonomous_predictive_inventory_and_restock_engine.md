@@ -8,7 +8,7 @@ Small business owners like Priya (boutique owner) and Maya (baker) constantly ru
     *   **Shopify**: Provides basic low-stock alerts and manual purchase orders (PO), but relies on third-party apps (like Stocky) for demand forecasting, which are complex and expensive for micro-businesses.
     *   **Wix / Squarespace**: Very basic inventory tracking. No predictive capabilities out of the box. Users are forced to manually update numbers and remember to reorder.
     *   **Square**: Good real-time tracking, but predictive ordering requires upgrading to expensive retail tiers or using complex integrations.
-*   **The OHC Differentiator**: OneHumanCorp will move from passive tracking to active, autonomous management. The AI Operations Agent will analyze real-time sales velocity, historical trends, and external signals to predict stockouts before they happen and draft automated supplier reorder requests for a "1-Tap Approval" by the business owner.
+*   **The OmniSolo Differentiator**: OmniSolo will move from passive tracking to active, autonomous management. The AI Operations Agent will analyze real-time sales velocity, historical trends, and external signals to predict stockouts before they happen and draft automated supplier reorder requests for a "1-Tap Approval" by the business owner.
 
 ## Design Doc
 
@@ -19,7 +19,7 @@ graph TD;
     KAIROS --> InventoryLedger[(Global Inventory Ledger)];
     KAIROS --> PredictionEngine[AI Predictive Engine];
     PredictionEngine -->|Analyzes Velocity & Trends| OperationsAgent[AI Operations Agent];
-    OperationsAgent -->|Drafts PO / Alerts| MobileApp[OHC Mobile App];
+    OperationsAgent -->|Drafts PO / Alerts| MobileApp[OmniSolo Mobile App];
     MobileApp -->|1-Tap Approve| PurchasingGateway[Supplier Gateway / Email];
     InventoryLedger --> MobileApp;
 ```

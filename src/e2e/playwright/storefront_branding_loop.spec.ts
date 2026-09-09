@@ -21,7 +21,7 @@ test.describe('Storefront Branding Loop E2E', () => {
     await expect(footerLink).toBeVisible({ timeout: 15000 });
 
     // Check if the text matches
-    await expect(footerLink).toContainText('⚡ Powered by OHC');
+    await expect(footerLink).toContainText('⚡ OmniSolo');
 
     // Check if it has the correct referral URL using the seeded tenant 'e2e-tenant'
     const href = await footerLink.getAttribute('href');

@@ -16,9 +16,9 @@ Priya (Boutique Owner) finds traditional shipping carriers confusing with their 
 - **Compatibility**: Cloud & Standalone (API Key based).
 
 ## Design Doc
-- **Integration with OHC**:
-    - OHC fetches Sendle quotes based on the merchant's predefined parcel sizes.
-    - Merchant selects Sendle for fulfillment, and OHC generates the label and schedules a pickup.
+- **Integration with OmniSolo**:
+    - OmniSolo fetches Sendle quotes based on the merchant's predefined parcel sizes.
+    - Merchant selects Sendle for fulfillment, and OmniSolo generates the label and schedules a pickup.
     - The "Ambassador" AI agent tracks the shipment and proactively notifies the customer of progress.
 - **User View**: A "Ship with Sendle" button that shows a single clear price and generates a label in one click.
 

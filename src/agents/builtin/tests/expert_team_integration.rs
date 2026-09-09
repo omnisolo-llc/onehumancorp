@@ -1,7 +1,7 @@
-use ohc_builtin_agent::expert_team::{
+use omnisolo_builtin_agent::expert_team::{
     DomainExpert, ExpertTeamLlmClient, ExpertTeamManager, QualityGates, SkillTrace,
 };
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 use std::sync::Arc;
 
 struct MockExpertLlm {

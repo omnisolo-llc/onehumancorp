@@ -4,7 +4,7 @@ Fatima (a food cart operator with limited English proficiency) needs to interact
 # Research Report
 - **Competitor Analysis**:
   - **Shopify / Wix**: Support static multilingual storefronts but do not offer real-time, bi-directional chat or order-note translation natively within the merchant dashboard. Merchants rely on browser extensions or third-party apps.
-- **OHC Advantage**: By integrating AI-driven translation at the edge of the communication ingestion pipeline, OHC can instantly present inbound messages in the owner's preferred language and automatically translate outbound replies back to the customer's language. This empowers owners like Fatima to expand their customer base confidently.
+- **OmniSolo Advantage**: By integrating AI-driven translation at the edge of the communication ingestion pipeline, OmniSolo can instantly present inbound messages in the owner's preferred language and automatically translate outbound replies back to the customer's language. This empowers owners like Fatima to expand their customer base confidently.
 
 # Design Doc
 ## Architecture Diagram (Mermaid.js)

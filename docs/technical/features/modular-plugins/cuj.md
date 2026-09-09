@@ -10,7 +10,7 @@ The CEO wants to dynamically extend the capabilities of their virtual workforce 
 
 ## Journey
 1. **Discovery**: The CEO identifies a gap in their organization's capabilities and acquires a standardized `plugin-manifest.yaml` (or equivalent URL) for the required capability.
-2. **Import**: The CEO navigates to the "Capabilities" or "Plugin Mesh" dashboard within the OHC platform.
+2. **Import**: The CEO navigates to the "Capabilities" or "Plugin Mesh" dashboard within the OmniSolo platform.
 3. **Registration**: The CEO selects "Import Plugin" and provides the manifest.
 4. **Validation**: The platform autonomously validates the schema (Zero-Lock Stack) to ensure it meets security and compatibility requirements.
 5. **Dynamic Binding**: The backend dynamically registers the new capabilities with the MCP Gateway. The `capability_plugins` database table is updated with the active plugin state.

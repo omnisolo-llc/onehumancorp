@@ -12,8 +12,8 @@ rust_library(
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/agents/builtin:ohc_builtin_agent_lib",
-        "//src/server/ohc:server_ohc",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
+        "//src/server/omnisolo:server_omnisolo",
         "@crates//:prost",
         "@crates//:uuid",
     ],

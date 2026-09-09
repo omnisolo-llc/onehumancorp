@@ -54,10 +54,10 @@ export default function KitchenView() {
     };
 
     updateCount();
-    window.addEventListener("ohc_queue_updated", updateCount);
+    window.addEventListener("omnisolo_queue_updated", updateCount);
 
     return () => {
-      window.removeEventListener("ohc_queue_updated", updateCount);
+      window.removeEventListener("omnisolo_queue_updated", updateCount);
     };
   }, []);
 

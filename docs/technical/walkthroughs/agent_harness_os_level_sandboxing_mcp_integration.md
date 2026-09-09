@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# 🛡️ OHC Agent Harness: OS-Level Sandboxing & MCP Integration Walkthrough
+# 🛡️ OmniSolo Agent Harness: OS-Level Sandboxing & MCP Integration Walkthrough
 
-Welcome to the **Agent Harness OS-Level Sandboxing and MCP Integration** visual walkthrough. This document details the architectural components of OHC's execution sandboxing layer and its native integration with the Model Context Protocol (MCP).
+Welcome to the **Agent Harness OS-Level Sandboxing and MCP Integration** visual walkthrough. This document details the architectural components of OmniSolo's execution sandboxing layer and its native integration with the Model Context Protocol (MCP).
 
 ## 1. The Core Sandboxing Architecture
 
-OHC enforces absolute zero-trust autonomy via the `bwrap` OS-Level Sandboxing wrapper on Linux systems.
+OmniSolo enforces absolute zero-trust autonomy via the `bwrap` OS-Level Sandboxing wrapper on Linux systems.
 
 - **OS-Level Isolation (`bwrap`)**: Every Agent Harness runtime encapsulates execution in an isolated namespace.
 - **Strict Capability ACLs**: Explicit `allowRead` and `denyWrite` directives prevent agents from reading or modifying unauthorized host files.

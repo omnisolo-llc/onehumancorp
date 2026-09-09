@@ -1,7 +1,7 @@
 use serde_json::{Value, json};
 use server_harness::middleware::local_services::{LocalServiceRegistry, LocalServiceScopeContext};
-use server_ohc::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
-use server_ohc::harness_middleware::{
+use server_omnisolo::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
+use server_omnisolo::harness_middleware::{
     AttemptCommandEnvelope, EventDeliveryEnvelope, SessionOperationEnvelope, WorkerExchangeEnvelope,
 };
 use tokio::time::{Duration, sleep, timeout};
@@ -942,7 +942,7 @@ async fn connect_when_ready(
             if let Ok(mut client) = HarnessWorkerServiceClient::connect(endpoint.to_owned()).await {
                 let harness = required_env("OMNISOLO_LIVE_HARNESS_ID");
                 let mut request =
-                    authenticated(server_ohc::harness_middleware::WorkerHealthRequest {
+                    authenticated(server_omnisolo::harness_middleware::WorkerHealthRequest {
                         protocol_version: 1,
                         worker_id: format!("harness-{harness}"),
                         harness_id: harness.clone(),

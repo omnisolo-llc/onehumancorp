@@ -31,8 +31,8 @@ test.describe('Viral Storefront Embed', () => {
 
     // Check if the clipboard content is a valid iframe with the viral link
     expect(clipboardText).toContain('<iframe');
-    expect(clipboardText).toContain('src="https://ohc.app/api/v1/growth/storefront/embed');
-    expect(clipboardText).toContain('⚡ Powered by OHC');
-    expect(clipboardText).toContain('href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=');
+    expect(clipboardText).toContain('src="https://omnisolo.co/api/v1/growth/storefront/embed');
+    expect(clipboardText).toContain('⚡ OmniSolo');
+    expect(clipboardText).toContain('href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=');
   });
 });

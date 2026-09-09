@@ -159,3 +159,9 @@ sh_test(
     tags = ["lint"],
 )
 # Adding test dynamically is fine since we ran out of time
+
+filegroup(
+    name = "vitest_contract_sources",
+    srcs = ["db_utils.ts", "fixtures.ts", "e2e-seed.sql"],
+    visibility = ["//visibility:public"],
+)

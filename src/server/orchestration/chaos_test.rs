@@ -1,6 +1,6 @@
 use crate::db::{DB, DbStore};
 use crate::orchestration::mesh::TeammateMesh;
-use ohc_builtin_agent::mesh::transport::Message;
+use omnisolo_builtin_agent::mesh::transport::Message;
 
 use async_trait::async_trait;
 
@@ -118,20 +118,20 @@ impl TeammateMesh for CorruptedMockMesh {
 }
 
 struct RacingLockMesh {
-    transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
+    transport: omnisolo_builtin_agent::mesh::transport::InProcessTransport,
 }
 
 impl RacingLockMesh {
     fn new() -> Self {
         Self {
-            transport: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            transport: omnisolo_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
     }
 }
 
 #[async_trait]
 impl TeammateMesh for RacingLockMesh {
-    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> { self.transport.publish(topic, ohc_builtin_agent::mesh::transport::TeammateMeshEvent { agent_id: "sys".into(), action: topic.into(), status: "ok".into(), payload, msg_id: "m1".into() }).await }
+    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> { self.transport.publish(topic, omnisolo_builtin_agent::mesh::transport::TeammateMeshEvent { agent_id: "sys".into(), action: topic.into(), status: "ok".into(), payload, msg_id: "m1".into() }).await }
     async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { self.transport.subscribe(topic, handler).await }
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -156,22 +156,22 @@ impl TeammateMesh for RacingLockMesh {
 
 // A mock transport that occasionally drops messages to test Pub/Sub message loss resilience
 struct DroppingMockTransport {
-    transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
+    transport: omnisolo_builtin_agent::mesh::transport::InProcessTransport,
     drop_rate: std::sync::atomic::AtomicUsize,
 }
 
 impl DroppingMockTransport {
     fn new(drop_rate: usize) -> Self {
         Self {
-            transport: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            transport: omnisolo_builtin_agent::mesh::transport::InProcessTransport::new(),
             drop_rate: std::sync::atomic::AtomicUsize::new(drop_rate),
         }
     }
 }
 
 #[async_trait]
-impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport {
-    async fn publish(&self, topic: &str, event: ohc_builtin_agent::mesh::transport::TeammateMeshEvent) -> Result<(), String> {
+impl omnisolo_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport {
+    async fn publish(&self, topic: &str, event: omnisolo_builtin_agent::mesh::transport::TeammateMeshEvent) -> Result<(), String> {
         let rate = self.drop_rate.load(std::sync::atomic::Ordering::SeqCst);
 
         let mut success = false;
@@ -193,7 +193,7 @@ impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport
         }
         self.transport.publish(topic, event).await
     }
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe(topic, handler).await
     }
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
@@ -360,7 +360,7 @@ mod chaos_tests {
         // This attempts to acquire lock (takes 80ms) and then query DB.
         // The DB query might be instantaneous, but we can configure `state_manager_timeout()` in our environment
         // We use temp_env to safely mock the environment variable without concurrent race conditions
-        temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
+        temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
             let result = tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung");
             let elapsed = start.elapsed();
 
@@ -423,7 +423,7 @@ mod chaos_tests {
 
         // This attempts to pull tasks, and should gracefully skip or handle the corrupted task
         // We verify that the pull doesn't crash on deserialization errors
-        let result = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
+        let result = temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
             tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung")
         }).await;
 
@@ -443,7 +443,7 @@ mod chaos_tests {
         .await
         .unwrap();
 
-        let result = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
+        let result = temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
             tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung")
         }).await;
         assert!(result.is_ok(), "StateManager must not panic when pulling a PENDING task with corrupt dependencies");
@@ -597,11 +597,11 @@ mod chaos_tests {
         .unwrap();
 
         // Use a 50ms timeout mock configuration where query blocks for 2000ms internally.
-        // We will just set the OHC_STATE_MANAGER_TIMEOUT_MS to force an early exit timeout.
+        // We will just set the OMNISOLO_STATE_MANAGER_TIMEOUT_MS to force an early exit timeout.
         let standalone_state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(standalone_db.clone(), latency_mesh.clone());
         let cloud_state_manager = crate::orchestration::state::cloud::CloudStateManager::new(standalone_db.clone(), latency_mesh.clone());
 
-        temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+        temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
             let start_s = std::time::Instant::now();
             let standalone_tasks = standalone_state_manager.pull_available_tasks(10).await;
             let _elapsed_s = start_s.elapsed();
@@ -670,13 +670,13 @@ mod chaos_tests {
         // if they timeout, they return an empty vector rather than panicking.
 
         let start_cloud = std::time::Instant::now();
-        let cloud_tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+        let cloud_tasks = temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
             tokio::time::timeout(std::time::Duration::from_millis(250), cloud_state_manager.pull_available_tasks(10)).await.expect("Test hung")
         }).await;
         let elapsed_cloud = start_cloud.elapsed();
 
         let start_standalone = std::time::Instant::now();
-        let standalone_tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+        let standalone_tasks = temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
             tokio::time::timeout(std::time::Duration::from_millis(250), standalone_state_manager.pull_available_tasks(10)).await.expect("Test hung")
         }).await;
         let _elapsed_standalone = start_standalone.elapsed();
@@ -812,7 +812,7 @@ mod chaos_tests {
 
         let start = std::time::Instant::now();
 
-        let tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+        let tasks = temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
             tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung").unwrap_or(vec![])
         }).await;
         let elapsed = start.elapsed();
@@ -832,8 +832,8 @@ mod chaos_tests {
         // Simulates LLM API failures and ensuring circuit breaker/fallback behavior.
         use crate::workers::OperationsWorker;
 
-        // Intentionally bad OHC_HUB_URL to simulate API failure
-        temp_env::async_with_vars([("OHC_HUB_URL", Some("http://127.0.0.1:1"))], async {
+        // Intentionally bad OMNISOLO_HUB_URL to simulate API failure
+        temp_env::async_with_vars([("OMNISOLO_HUB_URL", Some("http://127.0.0.1:1"))], async {
             let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
                 .connect("sqlite::memory:")
                 .await
@@ -858,7 +858,7 @@ mod chaos_tests {
                 .bind(payload.to_string())
                 .execute(&dummy_sqlite_pool).await.unwrap();
 
-            // Poll - this should trigger restock drafting which will fail AI call due to bad OHC_HUB_URL
+            // Poll - this should trigger restock drafting which will fail AI call due to bad OMNISOLO_HUB_URL
             let res = OperationsWorker::poll(&db).await;
             assert!(res.is_ok());
 
@@ -911,7 +911,7 @@ mod chaos_tests {
 
         let start = std::time::Instant::now();
 
-        let res = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+        let res = temp_env::async_with_vars([("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
             tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung")
         }).await;
         let elapsed = start.elapsed();
@@ -931,7 +931,7 @@ async fn test_redis_mailbox_corruption_pubsub_loss() {
     use std::sync::Arc;
     use std::time::Duration;
     use crate::orchestration::mesh::TeammateMesh;
-    use ohc_builtin_agent::mesh::transport::Message;
+    use omnisolo_builtin_agent::mesh::transport::Message;
 
     struct CorruptedRedisMesh;
 

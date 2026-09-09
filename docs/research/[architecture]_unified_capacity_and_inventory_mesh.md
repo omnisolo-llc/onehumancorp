@@ -10,7 +10,7 @@ For hybrid businesses like Maya (the baker) or Leo (the music tutor), what they 
 *   **Shopify**: Dominates physical inventory tracking. However, time-based bookings require third-party apps (like Sesami or Appointo). These apps bolt onto the order flow but do not share a unified underlying reservation state, leading to race conditions during high-traffic sales.
 *   **Wix / Squarespace**: Offer both "Stores" and "Bookings" modules, but they exist as distinct silos. Booking a service does not natively reserve physical resources required for that service.
 *   **Stripe**: Excellent at processing the transaction but relies on the platform (or custom code) to handle the complex logic of resource locking and capacity management before the payment is captured.
-*   **The OHC Gap**: To deliver true "business in a box," OHC must abstract away the difference between a "Product" and a "Service." A unified mesh allows the AI Operations Agent to manage reservations holistically, whether it's reserving 5 cupcakes or 1 hour of Maya's time.
+*   **The OmniSolo Gap**: To deliver true "business in a box," OmniSolo must abstract away the difference between a "Product" and a "Service." A unified mesh allows the AI Operations Agent to manage reservations holistically, whether it's reserving 5 cupcakes or 1 hour of Maya's time.
 
 ## Design Doc
 

@@ -40,7 +40,7 @@
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_core -p ohc_builtin_agent_llm -p ohc_builtin_agent_tools -p ohc_builtin_agent --lib
+cargo test -p omnisolo_builtin_agent_core -p omnisolo_builtin_agent_llm -p omnisolo_builtin_agent_tools -p omnisolo_builtin_agent --lib
 ```
 
 Expected: all currently passing tests pass. Record existing failures verbatim under `Baseline caveats` in the report created in Task 9; do not classify a pre-existing failure as a regression.
@@ -120,7 +120,7 @@ mod tests {
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_core request_profile
+cargo test -p omnisolo_builtin_agent_core request_profile
 ```
 
 Expected: FAIL because `request_profile` is not exported by the core crate.
@@ -152,8 +152,8 @@ Register this integration test using the existing `rust_test` conventions in `sr
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent request_profile
-cargo test -p ohc_builtin_agent --test production_agent_path
+cargo test -p omnisolo_builtin_agent request_profile
+cargo test -p omnisolo_builtin_agent --test production_agent_path
 ```
 
 Expected: PASS; the fixture makes no external network or database calls.
@@ -210,7 +210,7 @@ Extend the full-turn fixture to include the same `Lookup` tool and assert `reque
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent native_tool_schema_is_not_duplicated_in_system_text
+cargo test -p omnisolo_builtin_agent native_tool_schema_is_not_duplicated_in_system_text
 ```
 
 Expected: FAIL because the current builder emits `<tool_definitions>`.
@@ -240,8 +240,8 @@ Declare those fields as `tracing::field::Empty` when the span is created. Do not
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent prompt_construction
-cargo test -p ohc_builtin_agent --test production_agent_path
+cargo test -p omnisolo_builtin_agent prompt_construction
+cargo test -p omnisolo_builtin_agent --test production_agent_path
 ```
 
 Expected: PASS. Capture the old and new `system_chars` and `estimated_input_tokens` from the deterministic fixture for Task 9.
@@ -278,7 +278,7 @@ Make the shared prefix exceed 8,000 characters so the current `truncate_context(
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_llm truncated_prompt_prefixes_do_not_share_responses -- --nocapture
+cargo test -p omnisolo_builtin_agent_llm truncated_prompt_prefixes_do_not_share_responses -- --nocapture
 ```
 
 Expected: FAIL because the second request returns the first cached text and does not reach the server.
@@ -292,8 +292,8 @@ Delete `PromptCache` imports, the `cache` field, its initialization, `optimized_
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_llm
-cargo test -p ohc_builtin_agent --test production_agent_path
+cargo test -p omnisolo_builtin_agent_llm
+cargo test -p omnisolo_builtin_agent --test production_agent_path
 ```
 
 Expected: PASS; two distinct requests always receive distinct provider responses, including tool calls.
@@ -336,14 +336,14 @@ fn blocked_ip(ip: std::net::IpAddr) -> bool {
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_tools network_policy
+cargo test -p omnisolo_builtin_agent_tools network_policy
 ```
 
 Expected: FAIL because the module is not exported.
 
 - [ ] **Step 3: Implement initial and resolved-address validation**
 
-Parse only `http` and `https`; reject credentials in URLs; reject blocked literal IPs and case-insensitive `localhost`. Before connecting, call `tokio::net::lookup_host((host, port))`, reject an empty result, and reject the request if any resolved address is blocked. Use an explicit `OHC_AGENT_ALLOW_PRIVATE_NETWORK=true` override, defaulting to false, and emit a warning when enabled.
+Parse only `http` and `https`; reject credentials in URLs; reject blocked literal IPs and case-insensitive `localhost`. Before connecting, call `tokio::net::lookup_host((host, port))`, reject an empty result, and reject the request if any resolved address is blocked. Use an explicit `OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK=true` override, defaulting to false, and emit a warning when enabled.
 
 Export the module from `tools/mod.rs` and add it to Cargo/Bazel sources and dependencies.
 
@@ -373,8 +373,8 @@ Test private-address rejection without sending a request, oversized chunked-resp
 - [ ] **Step 7: Run and commit**
 
 ```bash
-cargo test -p ohc_builtin_agent_tools webfetch
-cargo test -p ohc_builtin_agent_tools agent_protocol
+cargo test -p omnisolo_builtin_agent_tools webfetch
+cargo test -p omnisolo_builtin_agent_tools agent_protocol
 git add src/agents/builtin/tools/network_policy.rs src/agents/builtin/tools/mod.rs src/agents/builtin/tools/BUILD.bazel src/agents/builtin/tools/webfetch.rs src/agents/builtin/tools/webfetch_test.rs src/agents/builtin/tools/agent_protocol.rs
 git commit -m "security: constrain outbound agent requests"
 ```
@@ -401,7 +401,7 @@ Both functions reject `RootDir`, `ParentDir`, and platform prefixes by inspectin
 
 - [ ] **Step 2: Verify tests fail, then export the module**
 
-Run `cargo test -p ohc_builtin_agent_tools workspace_path`; expect FAIL before adding `pub mod workspace_path;` and the Bazel source entry.
+Run `cargo test -p omnisolo_builtin_agent_tools workspace_path`; expect FAIL before adding `pub mod workspace_path;` and the Bazel source entry.
 
 - [ ] **Step 3: Require an explicit workspace root in production file tools**
 
@@ -420,9 +420,9 @@ Reject content larger than 4 MiB. Create a sibling path with `format!(".{}.{}.tm
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_tools read
-cargo test -p ohc_builtin_agent_tools write
-cargo test -p ohc_builtin_agent_tools workspace_path
+cargo test -p omnisolo_builtin_agent_tools read
+cargo test -p omnisolo_builtin_agent_tools write
+cargo test -p omnisolo_builtin_agent_tools workspace_path
 ```
 
 Expected: PASS, including traversal and symlink regressions.
@@ -453,14 +453,14 @@ assert!(matches!(auth_mode_from_env().unwrap(), AuthMode::Token { .. }));
 assert!(matches!(auth_mode_from_env().unwrap(), AuthMode::Spiffe { .. }));
 ```
 
-The disabled mode is accepted only when `OHC_AGENT_AUTH_DISABLED=true` and `OHC_ENV` is `development` or `test`; it is rejected when `OHC_ENV=production`.
+The disabled mode is accepted only when `OMNISOLO_AGENT_AUTH_DISABLED=true` and `OMNISOLO_ENV` is `development` or `test`; it is rejected when `OMNISOLO_ENV=production`.
 
 - [ ] **Step 2: Verify current behavior fails the new expectations**
 
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_core auth_mode_requires_complete_configuration
+cargo test -p omnisolo_builtin_agent_core auth_mode_requires_complete_configuration
 ```
 
 Expected: FAIL because the current implementation uses `default_auth_key_change_me` and permits an empty SPIFFE ID.
@@ -473,7 +473,7 @@ Change the signature to:
 pub fn auth_mode_from_env() -> Result<AuthMode, String>
 ```
 
-Require a non-empty `OHC_AGENT_AUTH_KEY` of at least 32 bytes in token mode. Require a valid non-empty `OHC_AGENT_SPIFFE_ID` in SPIFFE mode. Replace the fallback key in `hmac_token` with a key parameter so hashing cannot silently select configuration:
+Require a non-empty `OMNISOLO_AGENT_AUTH_KEY` of at least 32 bytes in token mode. Require a valid non-empty `OMNISOLO_AGENT_SPIFFE_ID` in SPIFFE mode. Replace the fallback key in `hmac_token` with a key parameter so hashing cannot silently select configuration:
 
 ```rust
 pub fn hmac_token(tok: &str, key: &[u8]) -> Vec<u8>
@@ -486,8 +486,8 @@ Use `Mac::verify_slice` for comparison. Update `run_agent` and server startup ca
 Run:
 
 ```bash
-cargo test -p ohc_builtin_agent_core auth
-cargo test -p ohc_builtin_agent auth
+cargo test -p omnisolo_builtin_agent_core auth
+cargo test -p omnisolo_builtin_agent auth
 cargo test --lib server_lib -- auth
 ```
 
@@ -537,7 +537,7 @@ Assert one half-open probe, reset on success, reopen on probe failure, and indep
 
 - [ ] **Step 2: Verify tests fail before export**
 
-Run `cargo test -p ohc_builtin_agent_llm circuit_breaker`; expect FAIL because the shared module does not exist.
+Run `cargo test -p omnisolo_builtin_agent_llm circuit_breaker`; expect FAIL because the shared module does not exist.
 
 - [ ] **Step 3: Add one breaker to each client instance**
 
@@ -550,7 +550,7 @@ Record breaker failures for transport failures, timeouts, HTTP 429, and HTTP 5xx
 - [ ] **Step 5: Run provider tests and commit**
 
 ```bash
-cargo test -p ohc_builtin_agent_llm
+cargo test -p omnisolo_builtin_agent_llm
 git add src/agents/builtin/llm/circuit_breaker.rs src/agents/builtin/llm/mod.rs src/agents/builtin/llm/openai.rs src/agents/builtin/llm/anthropic.rs src/agents/builtin/llm/gemini.rs src/agents/builtin/llm/ollama.rs src/agents/builtin/llm/BUILD.bazel
 git commit -m "perf: isolate LLM provider circuit breakers"
 ```
@@ -586,7 +586,7 @@ cargo test --lib server_lib -- multitenancy_isolation --nocapture
 cargo test --lib server_lib -- agent_memory_pipeline --nocapture
 cargo test --lib server_lib -- services::agent --nocapture
 cargo test --lib server_lib -- orchestration::queue --nocapture
-cargo test -p ohc_builtin_agent service -- --nocapture
+cargo test -p omnisolo_builtin_agent service -- --nocapture
 ```
 
 Expected: PASS or explicit environment skips. Record skips as unverified risks, not passes. In the service tests, verify `RunTaskStream` uses the bounded channel and that receiver cancellation terminates producer work; in queue tests, record enqueue/dequeue counts and tenant identifiers for the deterministic fixtures.
@@ -640,7 +640,7 @@ struct BenchmarkResult {
     iterations: usize,
     median_micros: u128,
     p95_micros: u128,
-    request_profile: ohc_builtin_agent_core::request_profile::RequestProfile,
+    request_profile: omnisolo_builtin_agent_core::request_profile::RequestProfile,
     llm_calls_per_turn: f64,
     quality_passed: bool,
 }
@@ -653,8 +653,8 @@ Sort durations before selecting median and p95. Assert the answer and tool schem
 Run on the baseline commit and optimized HEAD with the same machine and environment:
 
 ```bash
-cargo run --release -p ohc_builtin_agent --example agent_path_baseline > /tmp/agent-baseline.json
-cargo run --release -p ohc_builtin_agent --example agent_path_baseline > /tmp/agent-optimized.json
+cargo run --release -p omnisolo_builtin_agent --example agent_path_baseline > /tmp/agent-baseline.json
+cargo run --release -p omnisolo_builtin_agent --example agent_path_baseline > /tmp/agent-optimized.json
 ```
 
 Expected: both JSON files report `quality_passed: true` and identical expected response behavior. Include commit hashes, compiler version, CPU description, and both JSON objects in the report. Do not claim latency improvement when run-to-run variance overlaps; the tool-schema character/token reduction is deterministic and may be reported exactly.
@@ -665,8 +665,8 @@ Run:
 
 ```bash
 cargo fmt --all -- --check
-cargo clippy -p ohc_builtin_agent_core -p ohc_builtin_agent_llm -p ohc_builtin_agent_tools -p ohc_builtin_agent --all-targets -- -D warnings
-cargo test -p ohc_builtin_agent_core -p ohc_builtin_agent_llm -p ohc_builtin_agent_tools -p ohc_builtin_agent --all-targets
+cargo clippy -p omnisolo_builtin_agent_core -p omnisolo_builtin_agent_llm -p omnisolo_builtin_agent_tools -p omnisolo_builtin_agent --all-targets -- -D warnings
+cargo test -p omnisolo_builtin_agent_core -p omnisolo_builtin_agent_llm -p omnisolo_builtin_agent_tools -p omnisolo_builtin_agent --all-targets
 cargo test --lib server_lib -- multitenancy_isolation
 bazel test //src/agents/builtin:all //src/agents/builtin/llm:all //src/agents/builtin/tools:all
 git diff --check

@@ -2,7 +2,7 @@
 
 # KAIROS AI OS Architecture: Premium Hybrid Design
 
-This document details the finalized Phase 4 architecture for the OHC KAIROS AI OS, incorporating the Shared Task List, Teammate Mesh, and AutoDream components into a robust, scalable system.
+This document details the finalized Phase 4 architecture for the OmniSolo KAIROS AI OS, incorporating the Shared Task List, Teammate Mesh, and AutoDream components into a robust, scalable system.
 
 ## Core Hybrid Orchestration Components
 

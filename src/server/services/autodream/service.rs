@@ -1,9 +1,9 @@
-#[cfg(not(ohc_bazel_package))]
+#[cfg(not(omnisolo_bazel_package))]
 use crate::autodream::AutoDreamWorker;
-#[cfg(ohc_bazel_package)]
+#[cfg(omnisolo_bazel_package)]
 use ::server_lib::autodream::AutoDreamWorker;
-use ::server_ohc::orchestration::auto_dream_service_server::AutoDreamService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::auto_dream_service_server::AutoDreamService;
+use ::server_omnisolo::orchestration::*;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 

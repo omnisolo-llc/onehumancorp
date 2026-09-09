@@ -6,14 +6,14 @@
 **Research Report**:
 - **Tool**: Manychat
 - **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
+- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OmniSolo's backend. Extremely popular among SMBs for basic automation.
 - **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
 - **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
 - **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
 **Design Doc**:
 - User goes to the Operations dashboard and clicks "Connect Instagram".
 - User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
+- OmniSolo registers webhooks to receive new DMs.
 - When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
 - The user sees a unified "Customer Inbox" on their phone showing the conversation history.
 **Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
@@ -25,13 +25,13 @@
 **Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
 **Research Report**:
 - Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
+- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OmniSolo modes.
 - Free tier available for individuals; great for our free tier users.
 - Alternative is building from scratch, which is error-prone.
 **Design Doc**:
 - "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
 - Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
+- When a customer books a slot on the OmniSolo public page, Cal.com manages the calendar event and conflict resolution transparently.
 **Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
 **Priority**: P0
 **Estimated Scope**: Medium
@@ -42,10 +42,10 @@
 Business owners like Priya want to notify their existing customers about new stock or holiday sales. Traditional tools like Mailchimp are too complex and require manual template design, list management, and campaign scheduling.
 **Research Report**:
 - **Tool**: Resend.
-- **Evaluation**: Resend provides a developer-friendly, reliable email API. Instead of giving users a complex drag-and-drop builder, OHC can use the "Marketing" AI agent to generate beautiful HTML emails based on a simple text prompt from the user.
+- **Evaluation**: Resend provides a developer-friendly, reliable email API. Instead of giving users a complex drag-and-drop builder, OmniSolo can use the "Marketing" AI agent to generate beautiful HTML emails based on a simple text prompt from the user.
 - **Ease of Use**: Zero-friction. The user types "Tell my customers about the new summer dress collection," and the AI generates the subject line, body, and inserts product photos automatically.
-- **Pricing**: Resend charges around $20/mo for up to 50k emails, very economical to bundle into an OHC premium tier.
-- **Cloud vs. Standalone**: Cloud mode uses OHC's centralized Resend account. Standalone mode requires the user to input their own SMTP credentials.
+- **Pricing**: Resend charges around $20/mo for up to 50k emails, very economical to bundle into an OmniSolo premium tier.
+- **Cloud vs. Standalone**: Cloud mode uses OmniSolo's centralized Resend account. Standalone mode requires the user to input their own SMTP credentials.
 **Design Doc**:
 - "Marketing" tab -> "Send a Broadcast".
 - User provides a 1-sentence prompt.
@@ -71,14 +71,14 @@ Create a feature where the user can prompt the AI to draft an email blast. Use t
 - User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
 - User connects their Mercado Pago account.
 - Customers see a "Pay with Mercado Pago" button at checkout.
-- Webhooks update the order status in OHC when payment succeeds.
+- Webhooks update the order status in OmniSolo when payment succeeds.
 **Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
 **Priority**: P2
 **Estimated Scope**: Large
 
 ## 5. Shipping & Logistics
 **Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
+**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OmniSolo to buy and print a label.
 **Research Report**:
 - **Tool**: Shippo
 - **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
@@ -87,10 +87,10 @@ Create a feature where the user can prompt the AI to draft an email blast. Use t
 - **Pricing**: Free tier (pay per label + postage).
 - **Compatibility**: Cloud (OAuth). Standalone (API Key).
 **Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
+- When an order is placed, OmniSolo sends the dimensions/weight to Shippo to get rates.
 - The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
+- The user clicks "Buy Label", and OmniSolo downloads the PDF label for printing.
+- OmniSolo automatically emails the customer the tracking number.
 **Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
 **Priority**: P1
 **Estimated Scope**: Large
@@ -104,7 +104,7 @@ Create a feature where the user can prompt the AI to draft an email blast. Use t
 - **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
 - **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
 - **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+- **Compatibility**: Cloud (Centralized OmniSolo Twilio account). Standalone (User provides API key).
 **Design Doc**:
 - User goes to Settings and toggles "Send me SMS for new orders".
 - When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
@@ -125,7 +125,7 @@ Create a feature where the user can prompt the AI to draft an email blast. Use t
 - **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
 **Design Doc**:
 - User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
+- When a customer books an online service (e.g., via Calendly or native booking), OmniSolo calls the Zoom API to create a meeting.
 - The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
 **Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
 **Priority**: P1

@@ -61,7 +61,7 @@ export async function GET(request: Request) {
         <div class="author">${escapeHtml(authorName)}</div>
         ${branding ? `
         <div class="footer">
-          <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}&source=testimonial_widget" target="_blank">⚡ Powered by OHC</a>
+          <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}&source=testimonial_widget" target="_blank">⚡ Powered by OmniSolo</a>
         </div>
         ` : ''}
       </div>

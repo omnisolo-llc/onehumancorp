@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -39,7 +39,7 @@ impl PydanticToolExecutor<ResticArgs> for ResticExecutor {
 
         let env_vars = vec![("RESTIC_PASSWORD".to_string(), password.clone())];
 
-        let mode = std::env::var("OHC_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
+        let mode = std::env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
         if mode == "cloud" {
             return Err(ToolError::LlmRecoverable(
                 "restic: unsupported in cloud mode".to_string(),
@@ -206,7 +206,7 @@ mod tests {
         temp_env::async_with_vars(
             vec![
                 ("RESTIC_PASSWORD", Some("test_pass")),
-                ("OHC_EXECUTION_MODE", Some("cloud")),
+                ("OMNISOLO_EXECUTION_MODE", Some("cloud")),
             ],
             async {
                 let executor = ResticExecutor {
@@ -235,7 +235,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_no_hardcoded_dummy_password() {
+    async fn test_restic_source_has_no_password_fallback() {
         let source = include_str!("restic.rs");
         let implementation = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(

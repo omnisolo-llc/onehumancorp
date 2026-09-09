@@ -2,11 +2,11 @@
 Autonomous Inbox Handler: The Omnichannel Customer Success Engine
 
 ## Problem Statement
-Small business owners like Maya (baker) and Carlos (handyman) lose sales because they cannot respond instantly to Instagram DMs or SMS inquiries while actively working, driving, or sleeping. Customers expect immediate answers to questions like "Do you do vegan cakes?" or "What's your hourly rate?". While a unified inbox aggregates messages, it still requires manual typing. OHC needs an invisible AI engine that autonomously negotiates, answers FAQs from the catalog, and captures leads seamlessly 24/7.
+Small business owners like Maya (baker) and Carlos (handyman) lose sales because they cannot respond instantly to Instagram DMs or SMS inquiries while actively working, driving, or sleeping. Customers expect immediate answers to questions like "Do you do vegan cakes?" or "What's your hourly rate?". While a unified inbox aggregates messages, it still requires manual typing. OmniSolo needs an invisible AI engine that autonomously negotiates, answers FAQs from the catalog, and captures leads seamlessly 24/7.
 
 ## Research Report
 - **Codebase & Competitor Audit**: Traditional platforms (Shopify Inbox, Wix Chat) offer simple "Away" messages or rigid decision-tree chatbots that require explicit programming. They lack multi-tenant autonomous AI capable of executing actions across different channels.
-- **The Gap**: OHC currently lacks a background job capability that connects the `unified_inbox` to a proactive Customer Success AI capable of instantly answering, quoting, and converting leads based on real-time inventory and availability.
+- **The Gap**: OmniSolo currently lacks a background job capability that connects the `unified_inbox` to a proactive Customer Success AI capable of instantly answering, quoting, and converting leads based on real-time inventory and availability.
 - **Data & Market Validation**: 80% of SMB social media messages are variations of "Is this available?", "How much?", or "Can you accommodate a custom request?" An autonomous agent can resolve these instantly or intelligently escalate complex requests, dramatically increasing conversion rates without human intervention.
 
 ## Design Doc
@@ -82,7 +82,7 @@ Build the Omnichannel Autonomous Support Engine within the KAIROS framework.
 2. Develop the Customer Success AI role, including its RAG capabilities to query the local SQLite/Vector catalog ensuring strict multi-tenant isolation.
 3. Implement the `ai_paused` state invariant: if the human owner replies, suppress the agent for that thread for 2 hours.
 4. Coordinate the Customer Success agent with Finance/Ops to generate and append payment links for purchase intents.
-5. Update the mobile UI (`InboxView`) to render AI messages using the OHC design system (Glassmorphism, 44x44px touch targets) and include the "✨ Sparkle" and "Needs Human" badges.
+5. Update the mobile UI (`InboxView`) to render AI messages using the OmniSolo design system (Glassmorphism, 44x44px touch targets) and include the "✨ Sparkle" and "Needs Human" badges.
 
 ## Priority
 P0

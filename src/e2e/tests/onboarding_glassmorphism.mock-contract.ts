@@ -15,7 +15,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
 
 
 
-  test('onboarding container matches OHC glassmorphism light mode spec', async ({ page }) => {
+  test('onboarding container matches OmniSolo glassmorphism light mode spec', async ({ page }) => {
     await page.goto('http://mock/setup.html');
     const container = page.locator('.container');
     await expect(container).toBeVisible();
@@ -37,7 +37,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
     expect(borderRadius).toBe('16px');
   });
 
-  test('onboarding container matches OHC glassmorphism dark mode spec', async ({ page }) => {
+  test('onboarding container matches OmniSolo glassmorphism dark mode spec', async ({ page }) => {
     await page.goto('http://mock/setup.html');
     const container = page.locator('.container');
     await expect(container).toBeVisible();

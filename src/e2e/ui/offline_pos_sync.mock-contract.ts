@@ -35,7 +35,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     // Verify it's in the queue (IndexedDB)
     const queueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');
@@ -57,7 +57,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     // Verify queue is empty
     const updatedQueueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');
@@ -99,7 +99,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     // Modify the quantity in IndexedDB to force a conflict since the UI doesn't allow changing quantity
     await page.evaluate(async () => {
         return new Promise((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve(true);
@@ -130,7 +130,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
 
     const updatedQueueData2 = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');

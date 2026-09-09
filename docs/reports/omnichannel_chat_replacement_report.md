@@ -2,9 +2,9 @@ issue_title: "Native Rust Omnichannel Messaging System Replication"
 issue_description: |
   # Problem Statement
 
-  OneHumanCorp (OHC) currently relies on an external integration for omnichannel customer support and inbox functionality. This violates our core tenet of a unified, self-contained, native platform, and limits our ability to seamlessly inject our AI agents (like "The Ambassador") directly into the core event stream.
+  OmniSolo currently relies on an external integration for omnichannel customer support and inbox functionality. This violates our core tenet of a unified, self-contained, native platform, and limits our ability to seamlessly inject our AI agents (like "The Ambassador") directly into the core event stream.
 
-  We need to replace the external dependency entirely by replicating its core omnichannel data models, real-time WebSocket messaging, and inbox architecture natively in Rust inside `onehumancorp/mono`. This will enable true, invisible AI agent coordination for SMB owners, meeting our core value of "Radical Simplicity" where the system just works without complex third-party configurations.
+  We need to replace the external dependency entirely by replicating its core omnichannel data models, real-time WebSocket messaging, and inbox architecture natively in Rust inside `omnisolo/mono`. This will enable true, invisible AI agent coordination for SMB owners, meeting our core value of "Radical Simplicity" where the system just works without complex third-party configurations.
 
   # Research Report
 
@@ -41,7 +41,7 @@ issue_description: |
 
   - **Mobile Inbox View:** A clean, single-column feed of conversations across all channels.
   - **Conversation Detail:**
-    - Standard chat UI (bubbles) but integrated with OHC Premium Tokens (Glassmorphism, clear typography).
+    - Standard chat UI (bubbles) but integrated with OmniSolo Premium Tokens (Glassmorphism, clear typography).
     - Top area shows AI-summarized customer context (past orders, tags).
     - "Smart Reply" area at the bottom: AI pre-drafts the response based on the conversation history and business knowledge base.
     - Large, accessible "Approve & Send" button.
@@ -59,7 +59,7 @@ issue_description: |
 
   # Implementation Prompt
 
-  **User-Facing Outcome**: The SMB owner can manage all customer conversations (Instagram, WhatsApp, Web) directly within the OHC mobile app. The AI automatically drafts highly accurate replies based on the customer's history. There is no external messaging system setup required; it's seamlessly integrated.
+  **User-Facing Outcome**: The SMB owner can manage all customer conversations (Instagram, WhatsApp, Web) directly within the OmniSolo mobile app. The AI automatically drafts highly accurate replies based on the customer's history. There is no external messaging system setup required; it's seamlessly integrated.
 
   **CUJ & Acceptance Criteria**:
   1. A new `Conversation` is created via a mock incoming webhook simulating an Instagram DM.

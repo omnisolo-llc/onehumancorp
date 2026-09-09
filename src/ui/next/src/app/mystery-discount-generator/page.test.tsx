@@ -70,7 +70,7 @@ describe('MysteryDiscountGeneratorPage', () => {
     render(<MysteryDiscountGeneratorPage />);
 
     // There might be multiple checkboxes, get the one for removing branding
-    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" branding/);
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OmniSolo" branding/);
     fireEvent.click(removeBrandingCheckbox);
 
     // Paywall should appear

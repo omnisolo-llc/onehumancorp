@@ -6,7 +6,7 @@
 **Target Audience:** Orchestration Engineers & AI Agents
 
 ## 1. Introduction
-The **KAIROS Orchestration API** drives the core backbone of the One Human Corp Swarm. It encompasses the Shared Task List, Teammate Mesh APIs, and AutoDream Vector Data Pipelines, bridging the gap between Cloud-Native pgvector PostgreSQL deployments and Local Standalone SQLite execution.
+The **KAIROS Orchestration API** drives the core backbone of the OmniSolo Swarm. It encompasses the Shared Task List, Teammate Mesh APIs, and AutoDream Vector Data Pipelines, bridging the gap between Cloud-Native pgvector PostgreSQL deployments and Local Standalone SQLite execution.
 
 ## 2. Shared Task List APIs
 
@@ -50,7 +50,7 @@ Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
 
 ## 3. Teammate Mesh APIs
 
-The Teammate Mesh API handles real-time inter-agent messaging and meeting room broadcasts, resolving the Swarm Intelligence Protocol (OHC-SIP).
+The Teammate Mesh API handles real-time inter-agent messaging and meeting room broadcasts, resolving the Swarm Intelligence Protocol (OmniSolo-SIP).
 
 ### 3.1 Publish to Room
 **Endpoint:** `POST /api/v1/mesh/rooms/{room_id}/messages`
@@ -77,7 +77,7 @@ The AutoDream endpoints manage long-term semantic memory consolidation.
 
 ### 4.1 Trigger Manual AutoDream Sync
 **Endpoint:** `POST /api/v1/autodream/sync`
-Forces the background worker to scan any `*.yml` files in `OHC_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
+Forces the background worker to scan any `*.yml` files in `OMNISOLO_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
 
 **Payload:**
 ```json
@@ -120,7 +120,7 @@ sequenceDiagram
     participant LLM as Embedding Model
     participant DB as pgvector
 
-    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
+    Worker->>FS: Writes Session Context to OMNISOLO_MEMORY_DIR
     AutoDream->>FS: Polling/Manual Sync Trigger
     AutoDream->>LLM: Pass text to Minimax/Ada
     LLM-->>AutoDream: Return 1536-dim Embedding

@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Design Doc: OHC Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture
+# Design Doc: OmniSolo Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture
 
 **Author(s):** System Architect
 **Status:** Final
@@ -9,14 +9,14 @@
 ## 1. Problem Statement
 **The Pain Point:** Users like Maya (Baker) and Leo (Musician) experience massive traffic spikes when their social media posts go viral. Their storefronts, currently reliant on centralized database queries for every load, face significant risk of latency degradation, timeouts, and poor user experience, potentially costing them critical sales. Additionally, current dynamic rendering limits SEO performance as web crawlers struggle with slow, client-side rendered content. Small business owners cannot and should not have to manage complex caching or SEO infrastructure themselves.
 
-Small business storefronts must correctly route traffic to the appropriate tenant based on custom domains (e.g., `mayascakes.com` -> `tenant_id: 123`). OHC needs a globally distributed, edge-cached serving architecture that supports millions of distinct tenant domains while remaining fast and cost-effective.
+Small business storefronts must correctly route traffic to the appropriate tenant based on custom domains (e.g., `mayascakes.com` -> `tenant_id: 123`). OmniSolo needs a globally distributed, edge-cached serving architecture that supports millions of distinct tenant domains while remaining fast and cost-effective.
 
 ## 2. Research Report
 - **Competitor Analysis:**
   - **Shopify:** Utilizes a globally distributed edge network (Cloudflare) to cache storefront assets and read-only API requests, ensuring fast delivery. They aggressively cache at the edge but struggle with dynamic localized pricing.
   - **Vercel / Next.js:** Employs ISR (Incremental Static Regeneration) and Edge caching to deliver instant load times without sacrificing dynamic content availability.
   - **Wix/Squarespace:** Provide easier SEO tools, but they still require manual configuration and historically suffered from slow load times due to heavy JS payloads. Have moved towards SSR + CDN, but TTFB can still lag.
-- **OHC Requirement:** Serve static assets via CDN, use edge compute for instant tenant domain resolution and initial HTML rendering, and hydrate with the Flutter/PWA application for dynamic interactions.
+- **OmniSolo Requirement:** Serve static assets via CDN, use edge compute for instant tenant domain resolution and initial HTML rendering, and hydrate with the Flutter/PWA application for dynamic interactions.
 
 ## 3. Design Doc
 
@@ -27,12 +27,12 @@ graph TD
     B -->|Domain Lookup| C[Edge K/V Store - Redis]
     C -->|Tenant ID| B
     B -->|Cache Hit| D[Return Pre-rendered HTML]
-    B -->|Cache Miss| E[OHC Core Backend / SSR Service]
+    B -->|Cache Miss| E[OmniSolo Core Backend / SSR Service]
     E -->|Render| F[(PostgreSQL: Storefront Content)]
     F --> E
     E -->|Store in Cache| B
     D --> A
-    A -->|Hydrate PWA| G[OHC Flutter App]
+    A -->|Hydrate PWA| G[OmniSolo Flutter App]
 ```
 
 ### 3.2 Mobile UX Flow (375px)
@@ -43,13 +43,13 @@ graph TD
 
 ### 3.3 Key Design Decisions
 - **Edge Routing (Domain to Tenant Mapping):** DNS and initial HTTP requests hit an edge network (e.g., Nginx, Cloudflare Workers). The edge node maps the custom domain (via Host header) to the internal `tenant_id` using a high-speed distributed Key/Value store (like Redis). This prevents the core database from handling routing lookups.
-- **Stale-While-Revalidate:** The CDN cache uses `Cache-Control: stale-while-revalidate` headers. When a cached page goes stale, the CDN serves the stale content instantly to the user while asynchronously fetching the updated version from the OHC Core Backend, ensuring zero wait time.
+- **Stale-While-Revalidate:** The CDN cache uses `Cache-Control: stale-while-revalidate` headers. When a cached page goes stale, the CDN serves the stale content instantly to the user while asynchronously fetching the updated version from the OmniSolo Core Backend, ensuring zero wait time.
 - **Asset Compression:** All images uploaded by the owner are automatically compressed to WebP format and served directly from the CDN.
 - **Agentic SEO Pre-rendering & Cache Invalidation:**
   - **Marketing Agent / Operations Agent:** Automatically invalidates the edge cache via a Webhook / API event whenever the owner updates a product, changes a price, or publishes a new blog post. The system instantly purges the corresponding surrogate keys globally.
 
 ### 3.4 Reverse Proxy Configuration (Nginx + Lua/NJS)
-To inspect incoming HTTP Host headers and map them to a specific OHC `tenant_id` via a high-speed cache (Redis), an Nginx proxy with Lua (OpenResty) can be utilized.
+To inspect incoming HTTP Host headers and map them to a specific OmniSolo `tenant_id` via a high-speed cache (Redis), an Nginx proxy with Lua (OpenResty) can be utilized.
 
 **Nginx Configuration Example (OpenResty):**
 ```nginx
@@ -101,7 +101,7 @@ http {
                         ngx.var.tenant_id = res
                         cache:set(host, res, 300) -- Cache mapping for 5 mins locally
                     else
-                        -- Fallback for unmatched domains or redirect to OHC main page
+                        -- Fallback for unmatched domains or redirect to OmniSolo main page
                         ngx.exit(404)
                     end
                 end
@@ -113,7 +113,7 @@ http {
             # Proxy the request to the SSR service with the mapped tenant ID
             rewrite ^(.*)$ /api/v1/storefront/$tenant_id$1 break;
 
-            proxy_pass http://ohc-core:18789;
+            proxy_pass http://omnisolo-core:18789;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Tenant-Id $tenant_id;

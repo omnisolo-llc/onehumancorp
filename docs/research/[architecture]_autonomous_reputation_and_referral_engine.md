@@ -4,7 +4,7 @@
 Implement Autonomous Reputation & Referral Engine
 
 ## Problem Statement
-Small business owners (like Carlos the handyman and Maya the baker) rely intensely on word-of-mouth and local reputation to grow. However, asking for reviews or managing referral programs is incredibly high-friction. They simply forget, feel awkward asking, or lack the technical tools to track referral credits. Competitor platforms (Shopify, Wix) rely on third-party apps like Loox or Smile.io, which are expensive, desktop-first, require manual setup, and feel "tacked on." OHC needs an invisible, autonomous "Growth Partner" that proactively solicits verified reviews at the exact right moment (e.g., right after a 5-star service delivery or unboxing) and automatically credits referrers without the business owner lifting a finger.
+Small business owners (like Carlos the handyman and Maya the baker) rely intensely on word-of-mouth and local reputation to grow. However, asking for reviews or managing referral programs is incredibly high-friction. They simply forget, feel awkward asking, or lack the technical tools to track referral credits. Competitor platforms (Shopify, Wix) rely on third-party apps like Loox or Smile.io, which are expensive, desktop-first, require manual setup, and feel "tacked on." OmniSolo needs an invisible, autonomous "Growth Partner" that proactively solicits verified reviews at the exact right moment (e.g., right after a 5-star service delivery or unboxing) and automatically credits referrers without the business owner lifting a finger.
 
 ## Research Report
 
@@ -15,7 +15,7 @@ Small business owners (like Carlos the handyman and Maya the baker) rely intense
 | Shopify | App Store (Loox, Smile.io, Yotpo). | High cost, complex configuration, brittle integrations. |
 | Wix | Built-in basic loyalty, no autonomous outreach. | Passive; requires merchant to configure email campaigns manually. |
 | Durable | None natively. | Growth relies solely on SEO/Ad spend rather than organic retention. |
-| **OHC (Target)** | **Autonomous, Zero-touch, Event-Driven.** | **Must be completely invisible, abstracting SMS/Email routing and ledger accounting.** |
+| **OmniSolo (Target)** | **Autonomous, Zero-touch, Event-Driven.** | **Must be completely invisible, abstracting SMS/Email routing and ledger accounting.** |
 
 ### Market Insights
 - **Timing is Everything:** Review solicitation conversion drops by 70% if asked more than 2 hours after the "aha moment" (e.g., delivery, service completion).

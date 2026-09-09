@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role};
+use omnisolo_builtin_agent_core::types::{ChatRequest, Message, Role};
 use crate::llm::LlmClient;
 use crate::tools::Tool;
 use crate::agent::AgentEvent;
@@ -128,7 +128,7 @@ impl GatherActVerifyHarness {
 
                 let tool_defs: Vec<_> = current_tools
                     .iter()
-                    .map(|t| ohc_builtin_agent_core::types::ToolDefinition {
+                    .map(|t| omnisolo_builtin_agent_core::types::ToolDefinition {
                         name: t.name.clone(),
                         description: t.description.clone(),
                         parameters: t.parameters.clone(),
@@ -243,16 +243,16 @@ impl GatherActVerifyHarness {
                                 let tool_opt = current_tools.iter().find(|t| t.name == tc_name);
                                 let tr_res = if let Some(tool) = tool_opt {
                                     match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2, &config).await {
-                                        Ok(res) => Ok(ohc_builtin_agent_core::types::ToolResult {
+                                        Ok(res) => Ok(omnisolo_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: res.clone(),
                                             error: String::new(),
                                         }),
-                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg))),
+                                        Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg))),
                                         Err(e) => Err(e),
                                     }
                                 } else {
-                                    Err(ohc_builtin_agent_core::types::ToolError::Fatal(format!("Tool {} not found in this phase", tc_name)))
+                                    Err(omnisolo_builtin_agent_core::types::ToolError::Fatal(format!("Tool {} not found in this phase", tc_name)))
                                 };
 
                                 match tr_res {
@@ -272,7 +272,7 @@ impl GatherActVerifyHarness {
                             let (name, args, mut tr) = match res {
                                 Ok(r) => r,
                                 Err(e) => match e {
-                                    ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg) => {
                                         if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
                                             if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
                                                 tracing::warn!("Failed to restore checkpoint {} after UserFixable error: {}", cp_id, restore_err);
@@ -287,19 +287,19 @@ impl GatherActVerifyHarness {
                                         let _ = tx.send(AgentEvent::UserInterventionRequired { error: format!("USER_FIXABLE: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::Fatal(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::Fatal(msg) => {
                                         let _ = tx.send(AgentEvent::TaskError { error: format!("Fatal tool error: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::Unexpected(msg) => {
                                         let _ = tx.send(AgentEvent::TaskError { error: format!("Unexpected tool error: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::Transient(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::Transient(msg) => {
                                         let _ = tx.send(AgentEvent::TaskError { error: format!("Transient error after retries: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::HandoffRequested(target) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::HandoffRequested(target) => {
                                         let _ = tx.send(AgentEvent::Handoff { target_agent: target });
                                         return;
                                     }
@@ -335,7 +335,7 @@ impl GatherActVerifyHarness {
                         let read_only_count = tool_results.len();
                         for tc in mutating_calls {
                             if skip_remaining {
-                                tool_results.push(ohc_builtin_agent_core::types::ToolResult {
+                                tool_results.push(omnisolo_builtin_agent_core::types::ToolResult {
                                     tool_call_id: tc.id.clone(),
                                     content: "[ABORTED] Tool execution aborted due to previous tool failure and workspace rollback in this super-step.".to_string(),
                                     error: String::new(),
@@ -349,12 +349,12 @@ impl GatherActVerifyHarness {
                             let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
                             let tr_res = if let Some(tool) = tool_opt {
                                 match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2, &config).await {
-                                    Ok(res) => Ok(ohc_builtin_agent_core::types::ToolResult {
+                                    Ok(res) => Ok(omnisolo_builtin_agent_core::types::ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: res.clone(),
                                         error: String::new(),
                                     }),
-                                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                                    Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                                         if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
                                             if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
                                                 tracing::warn!("Failed to restore checkpoint {} after LlmRecoverable error: {}", cp_id, restore_err);
@@ -366,18 +366,18 @@ impl GatherActVerifyHarness {
                                                 skip_remaining = true;
                                             }
                                         }
-                                        Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg)))
+                                        Ok(omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg)))
                                     },
                                     Err(e) => Err(e),
                                 }
                             } else {
-                                Err(ohc_builtin_agent_core::types::ToolError::Fatal(format!("Tool {} not found in this phase", tc.name)))
+                                Err(omnisolo_builtin_agent_core::types::ToolError::Fatal(format!("Tool {} not found in this phase", tc.name)))
                             };
 
                             let mut tr = match tr_res {
                                 Ok(r) => r,
                                 Err(e) => match e {
-                                    ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg) => {
                                         if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
                                             if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
                                                 tracing::warn!("Failed to restore checkpoint {} after UserFixable error: {}", cp_id, restore_err);
@@ -392,19 +392,19 @@ impl GatherActVerifyHarness {
                                         let _ = tx.send(AgentEvent::UserInterventionRequired { error: format!("USER_FIXABLE: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::Fatal(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::Fatal(msg) => {
                                         let _ = tx.send(AgentEvent::TaskError { error: format!("Fatal tool error: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::Unexpected(msg) => {
                                         let _ = tx.send(AgentEvent::TaskError { error: format!("Unexpected tool error: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::Transient(msg) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::Transient(msg) => {
                                         let _ = tx.send(AgentEvent::TaskError { error: format!("Transient error after retries: {}", msg) });
                                         return;
                                     }
-                                    ohc_builtin_agent_core::types::ToolError::HandoffRequested(target) => {
+                                    omnisolo_builtin_agent_core::types::ToolError::HandoffRequested(target) => {
                                         let _ = tx.send(AgentEvent::Handoff { target_agent: target });
                                         return;
                                     }
@@ -514,12 +514,12 @@ impl GatherActVerifyHarness {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatResponse, Usage};
 
     #[tokio::test]
     async fn test_gather_act_verify_compounding_error_prevention() {
         use crate::tools::ToolExecutor;
-        use ohc_builtin_agent_core::types::ToolError;
+        use omnisolo_builtin_agent_core::types::ToolError;
 
         struct FailingToolExecutor;
         #[async_trait::async_trait]
@@ -547,7 +547,7 @@ mod tests {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
 
-                let tool_call = ohc_builtin_agent_core::types::ToolCall {
+                let tool_call = omnisolo_builtin_agent_core::types::ToolCall {
                     id: format!("call_{}", count),
                     name: "fail_tool".to_string(),
                     arguments: serde_json::json!({}),
@@ -555,7 +555,7 @@ mod tests {
 
                 Ok(ChatResponse {
                     message: Message {
-                        role: ohc_builtin_agent_core::types::Role::Assistant,
+                        role: omnisolo_builtin_agent_core::types::Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![tool_call],
                         tool_results: vec![],
@@ -685,7 +685,7 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: String::new(),
-                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                        tool_calls: vec![omnisolo_builtin_agent_core::types::ToolCall {
                             id: "call_1".to_string(),
                             name: "test_gather".to_string(),
                             arguments: serde_json::json!({}),
@@ -747,7 +747,7 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
-                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall { id: "1".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
+                        tool_calls: vec![omnisolo_builtin_agent_core::types::ToolCall { id: "1".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
@@ -760,7 +760,7 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
-                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall { id: "2".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
+                        tool_calls: vec![omnisolo_builtin_agent_core::types::ToolCall { id: "2".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
@@ -844,7 +844,7 @@ mod tests {
         config.max_iterations = 5;
         config.server_system_message = "You are an agent executing the Gather-Act-Verify cycle.".to_string();
         config.model = "claude-3-5-sonnet".to_string();
-        config.guardrails = Some(ohc_builtin_agent_core::types::GuardrailsConfig {
+        config.guardrails = Some(omnisolo_builtin_agent_core::types::GuardrailsConfig {
             input_guardrail: None,
             output_guardrail: Some(Box::new(|output| {
                 if output.contains("destroy") {
@@ -872,7 +872,7 @@ mod tests {
     #[tokio::test]
     async fn test_gather_act_verify_git_commit_checkpointing_rollback() {
         use crate::tools::ToolExecutor;
-        use ohc_builtin_agent_core::types::ToolError;
+        use omnisolo_builtin_agent_core::types::ToolError;
         use std::sync::atomic::{AtomicUsize, Ordering};
 
         struct MutatingFailExecutor;
@@ -921,14 +921,14 @@ mod tests {
 
         #[async_trait::async_trait]
         impl LlmClient for MockLlm {
-            async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(&self, _req: omnisolo_builtin_agent_core::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
 
                 if *count == 1 {
                     Ok(ChatResponse {
-                        message: ohc_builtin_agent_core::types::Message::assistant("I will call the tool")
-                            .with_tool_calls(vec![ohc_builtin_agent_core::types::ToolCall {
+                        message: omnisolo_builtin_agent_core::types::Message::assistant("I will call the tool")
+                            .with_tool_calls(vec![omnisolo_builtin_agent_core::types::ToolCall {
                                 id: "tc_1".to_string(),
                                 name: "mutating_fail".to_string(),
                                 arguments: serde_json::json!({}),
@@ -938,7 +938,7 @@ mod tests {
                     })
                 } else {
                     Ok(ChatResponse {
-                        message: ohc_builtin_agent_core::types::Message::assistant("I am done"),
+                        message: omnisolo_builtin_agent_core::types::Message::assistant("I am done"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                     })
@@ -977,7 +977,7 @@ mod tests {
     #[tokio::test]
     async fn test_gather_act_verify_multi_tool_desync_prevention() {
         use crate::tools::ToolExecutor;
-        use ohc_builtin_agent_core::types::ToolError;
+        use omnisolo_builtin_agent_core::types::ToolError;
         use std::sync::atomic::{AtomicUsize, Ordering};
 
         struct MutatingSuccessExecutor;
@@ -1058,25 +1058,25 @@ mod tests {
 
         #[async_trait::async_trait]
         impl LlmClient for MockLlm {
-            async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(&self, req: omnisolo_builtin_agent_core::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
 
                 if *count == 1 {
                     Ok(ChatResponse {
-                        message: ohc_builtin_agent_core::types::Message::assistant("I will call the tools")
+                        message: omnisolo_builtin_agent_core::types::Message::assistant("I will call the tools")
                             .with_tool_calls(vec![
-                                ohc_builtin_agent_core::types::ToolCall {
+                                omnisolo_builtin_agent_core::types::ToolCall {
                                     id: "tc_1".to_string(),
                                     name: "mutating_success".to_string(),
                                     arguments: serde_json::json!({}),
                                 },
-                                ohc_builtin_agent_core::types::ToolCall {
+                                omnisolo_builtin_agent_core::types::ToolCall {
                                     id: "tc_2".to_string(),
                                     name: "mutating_fail".to_string(),
                                     arguments: serde_json::json!({}),
                                 },
-                                ohc_builtin_agent_core::types::ToolCall {
+                                omnisolo_builtin_agent_core::types::ToolCall {
                                     id: "tc_3".to_string(),
                                     name: "mutating_success2".to_string(),
                                     arguments: serde_json::json!({}),
@@ -1092,13 +1092,13 @@ mod tests {
                     assert!(last_msg.content.contains("[REVERTED]"));
                     assert!(last_msg.content.contains("[ABORTED]"));
                     Ok(ChatResponse {
-                        message: ohc_builtin_agent_core::types::Message::assistant("I see the rollback"),
+                        message: omnisolo_builtin_agent_core::types::Message::assistant("I see the rollback"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                     })
                 } else {
                     Ok(ChatResponse {
-                        message: ohc_builtin_agent_core::types::Message::assistant("I am done"),
+                        message: omnisolo_builtin_agent_core::types::Message::assistant("I am done"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                     })

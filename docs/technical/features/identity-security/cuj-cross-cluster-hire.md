@@ -39,7 +39,7 @@ The CEO of a US-based firm wants to launch a satellite team in Europe to handle 
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

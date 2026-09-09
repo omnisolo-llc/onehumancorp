@@ -5,13 +5,13 @@ test.describe('Universal Autonomous Staff & Shift Management Mesh', () => {
     // Navigate to local API directly to set up origin to allow localstorage modification
     await page.goto('/api/v1/staff');
     await page.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+      localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
         id: 'staff_1',
         name: 'John Connor',
         role: 'Manager',
         pin_hash: '1234'
       }]));
-      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+      localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     });
 
     // Go to the terminal

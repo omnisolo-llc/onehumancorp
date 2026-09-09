@@ -4,7 +4,7 @@ The Rust authentication transport keeps bounded, privacy-preserving login
 buckets in process memory. Standalone deployments need no additional setting.
 
 Cloud/multitenant startup fails closed unless
-`OHC_AUTH_RATE_LIMIT_DEPLOYMENT` is exactly one of:
+`OMNISOLO_AUTH_RATE_LIMIT_DEPLOYMENT` is exactly one of:
 
 - `single-instance`: the backend is constrained to one replica.
 - `upstream-bounded`: a trusted gateway enforces equivalent source and account
@@ -18,7 +18,7 @@ including successful requests:
 - At most 20 attempts per normalized account in 300 seconds.
 
 The source is the direct peer IP unless that peer exactly matches an address in
-`OHC_AUTH_TRUSTED_PROXY_IPS`. Only for those peers, the source is the single,
+`OMNISOLO_AUTH_TRUSTED_PROXY_IPS`. Only for those peers, the source is the single,
 unambiguous IP in either `Forwarded: for=<ip>` or `X-Forwarded-For: <ip>`; the
 gateway must reject multiple, combined, or malformed forwarding values. The
 account key is `lowercase(trim(organization_id))`, a separator, then

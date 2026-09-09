@@ -22,14 +22,14 @@ test.describe('Interactive Demo Generator Growth Loop', () => {
         // 5. Verify the live preview updates
         await expect(page.locator('.bg-white.border.border-gray-200 > h3')).toHaveText('Test Product Showcase');
         await expect(page.locator('.bg-white.border.border-gray-200 > p')).toHaveText('See how it works in real time.');
-        await expect(page.locator('.bg-white.border.border-gray-200')).toContainText('⚡ Powered by OHC');
+        await expect(page.locator('.bg-white.border.border-gray-200')).toContainText('⚡ OmniSolo');
 
         // 6. Verify the embed code contains the viral link and correct text
         const codeOutput = page.locator('textarea[readonly]');
         const embedHtml = await codeOutput.inputValue();
         expect(embedHtml).toContain('Test Product Showcase');
         expect(embedHtml).toContain('See how it works in real time.');
-        expect(embedHtml).toContain('⚡ Powered by OHC');
+        expect(embedHtml).toContain('⚡ OmniSolo');
 
         // 7. Test removing branding soft paywall
         // Ensure the user doesn't have pro
@@ -57,10 +57,10 @@ test.describe('Interactive Demo Generator Growth Loop', () => {
         await expect(modal).not.toBeVisible();
 
         // Watermark should be gone in preview
-        await expect(page.locator('.bg-white.border.border-gray-200')).not.toContainText('⚡ Powered by OHC');
+        await expect(page.locator('.bg-white.border.border-gray-200')).not.toContainText('⚡ OmniSolo');
 
         // Watermark should be gone in code output
         const newEmbedHtml = await codeOutput.inputValue();
-        expect(newEmbedHtml).not.toContain('⚡ Powered by OHC');
+        expect(newEmbedHtml).not.toContain('⚡ OmniSolo');
     });
 });

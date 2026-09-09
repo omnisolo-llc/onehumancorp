@@ -16,15 +16,15 @@ Rohan (Handmade Crafts) in India cannot easily use Stripe for local customers wh
 - **Compatibility**: Cloud & Standalone.
 
 ## Design Doc
-- **Integration with OHC**:
+- **Integration with OmniSolo**:
     - Merchant chooses "India" as their region during setup, prompting Razorpay activation.
-    - OHC uses the Razorpay Orders API to initiate payments.
+    - OmniSolo uses the Razorpay Orders API to initiate payments.
     - Checkout widget supports UPI QR codes and local bank redirects natively.
     - The "Accountant" AI agent reconciles INR transactions and tracks local tax (GST) compliance.
 - **User View**: A checkout screen that features UPI prominently, making payment instant for the customer.
 
 ## Implementation Prompt
-Implement Razorpay as a native payment provider for the Indian market. Ensure the checkout flow supports UPI, local cards, and net banking. Normalize Razorpay webhooks into the standard OHC order and fulfillment system. Ensure the merchant can view transaction details in INR within the OHC dashboard.
+Implement Razorpay as a native payment provider for the Indian market. Ensure the checkout flow supports UPI, local cards, and net banking. Normalize Razorpay webhooks into the standard OmniSolo order and fulfillment system. Ensure the merchant can view transaction details in INR within the OmniSolo dashboard.
 
 ## Priority
 P1

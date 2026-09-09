@@ -15,7 +15,7 @@ For users like Fatima (food cart operator), checking an app or email constantly 
 ## Design Doc
 - **Integration Flow**: In the "Operations" or Profile settings, users verify their mobile number and enable SMS alerts.
 - **Actions**: When a specific trigger occurs (e.g., Order Paid), the system dispatches an SMS via the Twilio API to the owner's phone.
-- **User Experience**: A simple toggle: "Send me a text message for new orders." The received text is concise: "OHC Alert: New order #123 for $15.00 - Chicken Over Rice."
+- **User Experience**: A simple toggle: "Send me a text message for new orders." The received text is concise: "OmniSolo Alert: New order #123 for $15.00 - Chicken Over Rice."
 
 ## Implementation Prompt
 Build an SMS notification service integrated with Twilio that allows business owners to opt-in to receive text message alerts for critical events, such as new orders or bookings. The feature must include a simple phone number verification flow and toggle switches to control which events trigger an SMS. The notification content must be concise and informative.

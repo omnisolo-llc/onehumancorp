@@ -37,11 +37,11 @@ test.describe("Documentation User Journey", () => {
     await searchInput.fill("products");
 
     // Click on the article
-    const myStoreLink = page.locator("h3", { hasText: "Adding Products" });
+    const myStoreLink = page.getByRole("link", { name: /Adding Products/ });
     await expect(myStoreLink).toBeVisible({ timeout: 10000 });
     await myStoreLink.click();
     await page.waitForURL("/help/add-products");
-    await expect(page.locator("h1", { hasText: "Managing Your Store" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Managing My Store" })).toBeVisible();
   });
 
   test("Maya opens the Help Chat and asks a question", async ({ page }) => {
@@ -52,10 +52,10 @@ test.describe("Documentation User Journey", () => {
     await expect(chatButton).toBeVisible();
 
     // Open the Help Chat
-    await chatButton.click();
+    await chatButton.focus();
+    await page.keyboard.press("Enter");
 
-    // Verify the Help Chat interface is visible
-    await expect(page.locator("h3", { hasText: "Ask anything" })).toBeVisible();
+    await page.getByRole("button", { name: "Ask anything" }).click();
 
     // Locate the chat input and send button
     const chatInput = page.locator('input[placeholder="Ask anything..."]');
@@ -66,13 +66,12 @@ test.describe("Documentation User Journey", () => {
     await sendButton.click();
 
     // Verify that the user message appears in the chat
-    await expect(
-      page.locator("div", { hasText: "How do I add a product?" }).first(),
-    ).toBeVisible();
+    const widget = page.locator("#omnisolo-floating-help-widget");
+    await expect(widget.getByText("How do I add a product?", { exact: true })).toBeVisible();
 
     // Verify AI response from the real backend
     await expect(
-      page.locator("text=How do I add a product?").first(),
-    ).toBeVisible();
+      widget.getByText(/To set up your storefront/),
+    ).toBeVisible({ timeout: 15000 });
   });
 });

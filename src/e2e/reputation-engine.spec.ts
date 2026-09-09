@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Autonomous Reputation & Referral Engine CUJ', () => {
   test('Non-technical owner can verify reputation and referral engine workflow', async ({ page }) => {
-    // 1. Owner logs into OHC dashboard
+    // 1. Owner logs into OmniSolo dashboard
     await page.goto('/dashboard');
 
     // Simulate navigation to a business settings or reputation page

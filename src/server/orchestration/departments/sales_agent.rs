@@ -38,8 +38,8 @@ pub enum SalesIntentBackend {
 
 impl SalesIntentBackend {
     pub fn from_env() -> Self {
-        match std::env::var("OHC_SALES_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+        match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
             .as_deref()
         {
             Ok("minimax") => {
@@ -89,7 +89,7 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
 
         let payload_json = serde_json::to_string(payload).map_err(|e| e.to_string())?;
         let prompt = format!(
-            "You are the OneHumanCorp sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, original_message, preferred_start_time, and preferred_end_time. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. preferred_start_time and preferred_end_time are optional ISO8601 strings if the customer mentioned specific times. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
+            "You are the OmniSolo sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, original_message, preferred_start_time, and preferred_end_time. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. preferred_start_time and preferred_end_time are optional ISO8601 strings if the customer mentioned specific times. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
         );
 
         let mut attempts = 0;
@@ -145,8 +145,8 @@ impl SalesAgent {
 
         loop {
             let ai_op = async {
-                match std::env::var("OHC_SALES_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                     .as_deref()
                 {
                     Ok("minimax") => {
@@ -538,8 +538,8 @@ impl Department for SalesAgent {
                 source, contact_info, context, context_summary
             );
 
-            let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            let raw_response = match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                 .as_deref()
             {
                 Ok("minimax") => {
@@ -633,8 +633,8 @@ impl Department for SalesAgent {
                     intent.original_message, service_name, price, context_summary
                 );
 
-                let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                let raw_response = match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                     .as_deref()
                 {
                     Ok("minimax") => {

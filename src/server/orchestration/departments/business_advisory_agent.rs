@@ -101,13 +101,13 @@ impl Department for BusinessAdvisoryAgent {
             while attempts < 3 {
                 let ai_op = async {
                     if let Ok(mut client) =
-                        ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(
-                            std::env::var("OHC_HUB_URL")
+                        ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(
+                            std::env::var("OMNISOLO_HUB_URL")
                                 .unwrap_or_else(|_| "http://127.0.0.1:8081".to_string()),
                         )
                         .await
                     {
-                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                        let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                             prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                             from_agent_id: "The Advisor".into(),
                         };
@@ -242,9 +242,9 @@ impl BaseAgent for BusinessAdvisoryAgent {
                 let mut attempts = 0;
                 while attempts < 3 {
                     let ai_op = async {
-                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                            let publish_req = ::server_ohc::orchestration::PublishMeshEventRequest {
-                                event: Some(::server_ohc::orchestration::MeshEvent {
+                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            let publish_req = ::server_omnisolo::orchestration::PublishMeshEventRequest {
+                                event: Some(::server_omnisolo::orchestration::MeshEvent {
                                     event_id: uuid::Uuid::new_v4().to_string(),
                                     topic: "tenant.marketing.draft_requested".to_string(),
                                     payload: serde_json::to_string(&serde_json::json!({

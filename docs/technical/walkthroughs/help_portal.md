@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# OHC Help Portal: Visual Walkthroughs
+# OmniSolo Help Portal: Visual Walkthroughs
 
-Welcome to the One Human Corp Help Portal. This guide will walk you through setting up and orchestrating your swarm of agents seamlessly across the Hybrid Architecture.
+Welcome to the OmniSolo Help Portal. This guide will walk you through setting up and orchestrating your swarm of agents seamlessly across the Hybrid Architecture.
 
 ## 1. Getting Started Flow
 
-Follow these steps to unleash the power of the OHC Swarm:
+Follow these steps to unleash the power of the OmniSolo Swarm:
 
 ```mermaid
 sequenceDiagram
@@ -27,7 +27,7 @@ sequenceDiagram
 ### Step-by-Step Instructions
 
 1. **Initialize the Orchestration Hub**
-    Start by configuring your base environment. The system operates on the `OHC-HA` (Hybrid Architecture). Use `./deploy/scripts/ohc-setup.sh` together with `source deploy/scripts/ohc-mode.sh [cloud|standalone|headless]`, or manually configure your `.env` to select the target mode.
+    Start by configuring your base environment. The system operates on the `OmniSolo-HA` (Hybrid Architecture). Use `./deploy/scripts/omnisolo-setup.sh` together with `source deploy/scripts/omnisolo-mode.sh [cloud|standalone|headless]`, or manually configure your `.env` to select the target mode.
 
 2. **Hiring Agents**
    Use the UI dashboard or the API to assemble your team. Agents are automatically onboarded using zero-trust SPIFFE identity protocols, ensuring secure communication and delegation.
@@ -51,7 +51,7 @@ graph LR
 
 ## 3. Delegating Tasks & Reviewing Agent Memory
 
-Task delegation is seamless in OHC:
+Task delegation is seamless in OmniSolo:
 1. Navigate to the **Orchestration Hub**.
 2. Click **New Task**.
 3. Select the target role (e.g., `swe`, `scribe`).
@@ -68,11 +68,11 @@ graph TD
     class User,Hub,Agent,Outcome premium;
 ```
 
-Agents share memory via the OHC Central Database. Navigate to **Swarm Memory**, search for specific concepts or architectural insights, and review the consolidated knowledge retrieved from past missions.
+Agents share memory via the OmniSolo Central Database. Navigate to **Swarm Memory**, search for specific concepts or architectural insights, and review the consolidated knowledge retrieved from past missions.
 
 ### Teammate Mesh and AutoDream
 
-The Agent Swarm operates using a sophisticated shared memory protocol (OHC-SIP) ensuring Zero WIP and continuous orchestration.
+The Agent Swarm operates using a sophisticated shared memory protocol (OmniSolo-SIP) ensuring Zero WIP and continuous orchestration.
 
 ```mermaid
 sequenceDiagram
@@ -84,9 +84,9 @@ sequenceDiagram
 
     Worker->>Mesh: 1. Broadcast "Task Started" (mesh:tasks)
     Worker->>Mesh: 2. Share Findings (mesh:coordination)
-    Worker->>Worker: 3. Complete Task & write to OHC_MEMORY_DIR
+    Worker->>Worker: 3. Complete Task & write to OMNISOLO_MEMORY_DIR
     Worker->>Mesh: 4. Broadcast "Task Completed" (mesh:tasks)
-    AutoDream->>Worker: 5. Wake up & Read OHC_MEMORY_DIR/*.yml
+    AutoDream->>Worker: 5. Wake up & Read OMNISOLO_MEMORY_DIR/*.yml
     AutoDream->>Embed: 6. Request Context Compression (Tokens -> Vector)
     Embed-->>AutoDream: 7. Return 1536-dim Vector
     AutoDream->>DB: 8. Upsert to agent_memories (pgvector)
@@ -95,7 +95,7 @@ sequenceDiagram
 
 ## 4. Troubleshooting
 
-- **Redis Connections in Standalone Mode**: In Standalone mode, OHC falls back gracefully to SQLite. Ensure your `DATABASE_URL` is configured for your local sqlite database rather than a remote Postgres instance.
+- **Redis Connections in Standalone Mode**: In Standalone mode, OmniSolo falls back gracefully to SQLite. Ensure your `DATABASE_URL` is configured for your local sqlite database rather than a remote Postgres instance.
 - **Teammate Mesh Not Syncing**: Verify the connection to the Centrifuge realtime pub/sub system and ensure your client is subscribed to the `mesh:tasks` channels. Check the network logs for any 401 Unauthorized errors indicating token expiration.
 
 ## 5. Advanced KAIROS Orchestration
@@ -105,7 +105,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[AutoDream Pipeline](../../features/kairos/autodream_pipelines.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ## 6. Deep Dive Walkthroughs
-- **[OHC Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
+- **[OmniSolo Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
 - **[KAIROS Shared Task List: Visual Walkthrough](shared_task_list_visual_walkthrough.md)**
 - **[KAIROS Orchestration: Visual Walkthrough](../../walkthroughs/kairos_orchestration.md)**
 - **[Interactive CLI Guide for AutoDream](../../walkthroughs/autodream_cli_guide.md)**
@@ -120,7 +120,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[KAIROS Interactive API Playbook Walkthrough](kairos_interactive_api_playbook.md)**: Interactive guide to KAIROS API endpoints.
 - **[KAIROS API Playbook Visual Walkthrough](api_playbook_visual_walkthrough.md)**: Comprehensive visual diagrams for the API Playbook.
 - **[Hybrid Health Probe Walkthrough](hybrid_health_probe.md)**: Visual guide to the system health checks across standalone and cloud modes.
-- **[Swarm Intelligence Protocol Walkthrough](swarm_intelligence_protocol.md)**: Visual guide to OHC-SIP shared memory and telemetry.
+- **[Swarm Intelligence Protocol Walkthrough](swarm_intelligence_protocol.md)**: Visual guide to OmniSolo-SIP shared memory and telemetry.
 - **[Hybrid CRDT State Synchronization Walkthrough](hybrid_crdt_sync_mcp.md)**: Visual guide to the CRDT MCP offline sync strategy.
 - **[Hybrid Swarm-Aware Telemetry Mesh Walkthrough](hybrid_swarm_telemetry_mesh.md)**: Visual guide to the mTLS telemetry buffering and sync.
 - **[Hybrid FS MCP Architecture Walkthrough](hybrid_fs_mcp_architecture.md)**: Visual guide to the Machine Context Protocol state sync.

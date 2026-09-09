@@ -1,7 +1,7 @@
-# OHC Market & Competitor Research Report: The SMB Platform Gap
+# OmniSolo Market & Competitor Research Report: The SMB Platform Gap
 
 ## Executive Summary
-This research report analyzes the current small business platform landscape, focusing on non-technical users and evaluating competitors like Shopify, Wix, Squarespace, and GoDaddy. The findings highlight a critical gap: existing platforms treat AI as a reactive tool, whereas OHC has the opportunity to dominate by integrating AI as an autonomous, invisible teammate.
+This research report analyzes the current small business platform landscape, focusing on non-technical users and evaluating competitors like Shopify, Wix, Squarespace, and GoDaddy. The findings highlight a critical gap: existing platforms treat AI as a reactive tool, whereas OmniSolo has the opportunity to dominate by integrating AI as an autonomous, invisible teammate.
 
 ## 1. Deep Competitor Audit & Feature Gap Matrix
 
@@ -9,7 +9,7 @@ A comprehensive analysis of major platforms reveals that none fully solve the "S
 
 ### Feature Gap Matrix
 
-| Feature | **Shopify** | **Wix** | **Squarespace** | **GoDaddy** | **OHC (Target)** |
+| Feature | **Shopify** | **Wix** | **Squarespace** | **GoDaddy** | **OmniSolo (Target)** |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Setup Time** | 30-60 min | 20-40 min | 30-60 min | 20-40 min | **< 10 min** |
 | **Technical Reqs** | Low/Medium | Low | Low | Low | **Zero** |
@@ -24,7 +24,7 @@ quadrantChart
     title Small Business Platform Landscape
     x-axis Low Autonomy --> High Autonomy
     y-axis High Complexity --> Radical Simplicity
-    quadrant-1 "Leapfrog Zone (OHC)"
+    quadrant-1 "Leapfrog Zone (OmniSolo)"
     quadrant-2 "Legacy Leaders (Shopify, Wix)"
     quadrant-3 "Niche Builders"
     quadrant-4 "AI Toys (Durable)"
@@ -33,8 +33,8 @@ quadrantChart
     "Squarespace": [0.2, 0.45]
     "GoDaddy": [0.3, 0.6]
     "Durable": [0.7, 0.8]
-    "OHC (Current)": [0.6, 0.7]
-    "OHC (Target)": [0.95, 0.95]
+    "OmniSolo (Current)": [0.6, 0.7]
+    "OmniSolo (Target)": [0.95, 0.95]
 ```
 
 ## 2. Top 10 SMB User Pain Points
@@ -77,8 +77,8 @@ pie title Frequency of Top SMB Pain Points
     *   **Pain Point**: Inventory synchronization between physical point-of-sale and the online storefront is a nightmare.
     *   **Need**: Native integration between her physical POS (Stripe Terminal) and the online catalog, with AI flagging low stock.
 
-## 3. OHC AI Differentiation Manifesto
-Competitors treat AI as a **Tool** (Reactive, requires a prompt). OHC must treat AI as a **Teammate** (Proactive, event-driven).
+## 3. OmniSolo AI Differentiation Manifesto
+Competitors treat AI as a **Tool** (Reactive, requires a prompt). OmniSolo must treat AI as a **Teammate** (Proactive, event-driven).
 
 **The 5 Pillar Automations to Implement:**
 1. **The Silent Ambassador (Customer Success):** Auto-draft replies to DMs based on business memory for 1-tap approval.
@@ -95,7 +95,7 @@ graph LR
     User -->|Edit/Send| Action[Final Action]
     end
 
-    subgraph OHC_Teammate
+    subgraph OMNISOLO_Teammate
     Event[Business Event] -->|Trigger| Agent[Autonomous Agent]
     Agent -->|Execute/Queue| Dashboard[Action Feed]
     Dashboard -->|1-Tap Approve| Live[Live Change]
@@ -104,7 +104,7 @@ graph LR
 
 ## 4. Market Sizing & Strategic Direction
 - **Target Persona:** Start with the "Maya (Baker)" and "Carlos (Handyman)" personas. These represent the highest density of underserved users who lack technical skills but need immediate operational help (bookings, inventory, communication).
-- **Go-to-Market Wedge:** "No Jargon, 10-Minute Setup, Mobile-Only Management." OHC should prioritize absolute mobile-first design, given that 42% of pain points revolve around poor mobile experiences on competitors.
+- **Go-to-Market Wedge:** "No Jargon, 10-Minute Setup, Mobile-Only Management." OmniSolo should prioritize absolute mobile-first design, given that 42% of pain points revolve around poor mobile experiences on competitors.
 
 ## 5. Implementation Recommendations (Issue Briefs)
 

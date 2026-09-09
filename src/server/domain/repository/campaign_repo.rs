@@ -127,11 +127,11 @@ impl CampaignRepository {
         sqlx::query(
             r#"
             INSERT INTO lead_gen_campaigns (id, tenant_id, budget, radius_miles, zip_code, status, created_at, updated_at)
-            VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
         )
-        .bind(uuid::Uuid::parse_str(&campaign.id).unwrap_or_default())
-        .bind(uuid::Uuid::parse_str(&campaign.tenant_id).unwrap_or_default())
+        .bind(&campaign.id)
+        .bind(&campaign.tenant_id)
         .bind(&campaign.budget)
         .bind(campaign.radius_miles)
         .bind(&campaign.zip_code)
@@ -151,11 +151,11 @@ impl CampaignRepository {
     ) -> Result<LeadGenCampaign, Error> {
         sqlx::query_as::<_, LeadGenCampaign>(
             r#"
-            SELECT * FROM lead_gen_campaigns WHERE tenant_id = $1::uuid AND id = $2::uuid
+            SELECT * FROM lead_gen_campaigns WHERE tenant_id = $1 AND id = $2
             "#,
         )
-        .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or_default())
-        .bind(uuid::Uuid::parse_str(id).unwrap_or_default())
+        .bind(tenant_id)
+        .bind(id)
         .fetch_one(&self.pool)
         .await
     }

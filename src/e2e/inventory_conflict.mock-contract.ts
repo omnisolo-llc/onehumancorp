@@ -4,13 +4,13 @@ test('Prevents simultaneous online and offline purchases via Redis Redlock and g
     // Navigate to local API directly to set up origin to allow localstorage modification
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+      localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
         id: 'staff_1',
         name: 'Priya',
         role: 'Manager',
         pin_hash: '1234'
       }]));
-      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+      localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     });
 
     // 1. Log in as an admin or tenant
@@ -76,13 +76,13 @@ test('Persona: Online checkout fails due to offline POS conflict and triggers Cu
     // 1. Visit the home page / login and get to the POS
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+      localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
         id: 'staff_1',
         name: 'Priya',
         role: 'Manager',
         pin_hash: '1234'
       }]));
-      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+      localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     });
 
     await page.goto('/login');

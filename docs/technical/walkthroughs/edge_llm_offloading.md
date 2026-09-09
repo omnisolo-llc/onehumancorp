@@ -2,7 +2,7 @@
 
 # Edge LLM Offloading Protocol
 
-This interactive walkthrough demonstrates the Edge LLM Offloading Protocol, a critical feature of the OHC Hybrid Architecture that dynamically routes LLM inference requests between the local edge device and the cloud based on task complexity and privacy requirements.
+This interactive walkthrough demonstrates the Edge LLM Offloading Protocol, a critical feature of the OmniSolo Hybrid Architecture that dynamically routes LLM inference requests between the local edge device and the cloud based on task complexity and privacy requirements.
 
 ## Protocol Flow
 
@@ -40,7 +40,7 @@ sequenceDiagram
 To enable the Edge LLM Offloading Protocol, you must configure the `mcp_inference_router` tool in your Standalone Desktop Client.
 
 1.  Ensure you are authenticated via SPIFFE/SPIRE.
-2.  Set the environment variable `OHC_EDGE_OFFLOADING_ENABLED=true`.
+2.  Set the environment variable `OMNISOLO_EDGE_OFFLOADING_ENABLED=true`.
 
 For a full breakdown of the API endpoints, see the [Hybrid MCP Integration API Playbook](../api/hybrid-mcp-api.md).
 

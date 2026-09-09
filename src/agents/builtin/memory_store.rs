@@ -1160,7 +1160,7 @@ impl VectorRepository {
 }
 
 #[async_trait]
-pub trait OHCMemory: Send + Sync {
+pub trait OmniSoloMemory: Send + Sync {
     fn service_configuration_identity(&self) -> String {
         format!("{}:{self:p}", std::any::type_name::<Self>())
     }
@@ -1196,7 +1196,7 @@ impl FileBasedMemory {
 }
 
 #[async_trait]
-impl OHCMemory for FileBasedMemory {
+impl OmniSoloMemory for FileBasedMemory {
     fn service_configuration_identity(&self) -> String {
         format!("file:{}", self.base_dir.to_string_lossy())
     }
@@ -1614,7 +1614,7 @@ pub struct PersistentMemoryStore {
     #[allow(dead_code)]
     pub tenant_id: String,
     pub agent_id: String,
-    pub llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+    pub llm: std::sync::Arc<dyn omnisolo_builtin_agent_llm::LlmClient>,
 }
 
 impl std::fmt::Debug for PersistentMemoryStore {
@@ -3181,8 +3181,8 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_persistent_memory_store_retrieve_store() {
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
-        use ohc_builtin_agent_llm::LlmClient;
+        use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+        use omnisolo_builtin_agent_llm::LlmClient;
         use std::sync::Arc;
 
         struct MockLlm;

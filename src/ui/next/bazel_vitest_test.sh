@@ -28,17 +28,23 @@ fi
 
 cd "$next_dir"
 
-work_dir="$TEST_TMPDIR/work"
-rm -rf "$work_dir"
+work_root="$TEST_TMPDIR/work"
+work_dir="$work_root/src/ui/next"
+rm -rf "$work_root"
 mkdir -p "$work_dir"
 
 cp -RL src "$work_dir/src"
+mkdir -p "$work_root/src/e2e"
+for file in db_utils.ts fixtures.ts e2e-seed.sql; do
+  cp -L "$runfiles_root/src/e2e/$file" "$work_root/src/e2e/$file"
+done
+ln -s "$node_modules" "$work_root/node_modules"
 
 for file in \
-  src/server/monitoring/dashboards/ohc-hybrid-telemetry.json \
-  deploy/helm/ohc/dashboards/ohc-hybrid-telemetry.json \
-  deploy/grafana/dashboards/ohc-hybrid-telemetry.json \
-  deploy/docker/grafana/provisioning/dashboards/ohc-hybrid-telemetry.json; do
+  src/server/monitoring/dashboards/omnisolo-hybrid-telemetry.json \
+  deploy/helm/omnisolo/dashboards/omnisolo-hybrid-telemetry.json \
+  deploy/grafana/dashboards/omnisolo-hybrid-telemetry.json \
+  deploy/docker/grafana/provisioning/dashboards/omnisolo-hybrid-telemetry.json; do
   if [[ -f "$runfiles_root/$file" ]]; then
     mkdir -p "$work_dir/$(dirname "$file")"
     cp -L "$runfiles_root/$file" "$work_dir/$file"
@@ -48,7 +54,7 @@ for file in \
   fi
 done
 
-for file in next-env.d.ts next.config.mjs package.json package-lock.json tsconfig.json vitest.setup.ts vitest.config.mts; do
+for file in playwright.config.ts next-env.d.ts next.config.mjs package.json package-lock.json tsconfig.json vitest.setup.ts vitest.config.mts; do
   if [[ -f "$file" ]]; then
     cp -L "$file" "$work_dir/$file"
   else

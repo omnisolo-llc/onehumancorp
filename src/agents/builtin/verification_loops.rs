@@ -3,7 +3,7 @@ use crate::llm::LlmClient;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
 /// Master Catalog C.4. Verification Loops: Guides (steer before action) vs Sensors (observe after action).
 /// Master Catalog B.10. Verification Loops
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -100,7 +100,7 @@ impl ComputationalGuide for CargoTestGuide {
     }
 }
 
-use ohc_builtin_agent_core::types::Role;
+use omnisolo_builtin_agent_core::types::Role;
 
 pub struct LlmJudgeInferentialSensor {
     pub client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser>,
@@ -111,7 +111,7 @@ pub struct LlmJudgeInferentialSensor {
 #[async_trait::async_trait]
 impl InferentialSensor for LlmJudgeInferentialSensor {
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
-        let user_message = ohc_builtin_agent_core::types::Message {
+        let user_message = omnisolo_builtin_agent_core::types::Message {
             role: Role::User,
             content: format!("Task: {}\n\nOutput to verify: {}", task, output),
             tool_calls: vec![],
@@ -120,7 +120,7 @@ impl InferentialSensor for LlmJudgeInferentialSensor {
             previous_response_id: None,
         };
 
-        let req = ohc_builtin_agent_core::types::ChatRequest {
+        let req = omnisolo_builtin_agent_core::types::ChatRequest {
             messages: vec![user_message],
             system: self.system_prompt.clone(),
             model: self.model.clone(),
@@ -435,21 +435,21 @@ mod tests {
     impl crate::output_parser::LlmClientForParser for MockLlmClientForSensor {
         async fn chat(
             &self,
-            _req: ohc_builtin_agent_core::types::ChatRequest,
+            _req: omnisolo_builtin_agent_core::types::ChatRequest,
         ) -> Result<
-            ohc_builtin_agent_core::types::ChatResponse,
+            omnisolo_builtin_agent_core::types::ChatResponse,
             Box<dyn std::error::Error + Send + Sync>,
         > {
-            Ok(ohc_builtin_agent_core::types::ChatResponse {
-                message: ohc_builtin_agent_core::types::Message {
-                    role: ohc_builtin_agent_core::types::Role::Assistant,
+            Ok(omnisolo_builtin_agent_core::types::ChatResponse {
+                message: omnisolo_builtin_agent_core::types::Message {
+                    role: omnisolo_builtin_agent_core::types::Role::Assistant,
                     content: self.response_content.clone(),
                     tool_calls: vec![],
                     tool_results: vec![],
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: ohc_builtin_agent_core::types::Usage::default(),
+                usage: omnisolo_builtin_agent_core::types::Usage::default(),
                 stop_reason: "stop".to_string(),
                 response_id: None,
             })
@@ -517,7 +517,7 @@ mod tests {
         );
     }
 
-    use ohc_builtin_agent_core::types::Usage;
+    use omnisolo_builtin_agent_core::types::Usage;
 
     struct MockComputationalGuide {
         should_pass: bool,
@@ -568,7 +568,7 @@ mod tests {
             &self,
             _req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let tool_call = ohc_builtin_agent_core::types::ToolCall {
+            let tool_call = omnisolo_builtin_agent_core::types::ToolCall {
                 id: "call_1".to_string(),
                 name: "structured_output".to_string(),
                 arguments: serde_json::json!({
@@ -577,7 +577,7 @@ mod tests {
             };
 
             let msg = Message {
-                role: ohc_builtin_agent_core::types::Role::Assistant,
+                role: omnisolo_builtin_agent_core::types::Role::Assistant,
                 content: "".to_string(),
                 tool_calls: vec![tool_call],
                 tool_results: vec![],
@@ -598,7 +598,7 @@ mod tests {
             &self,
             _req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let tool_call = ohc_builtin_agent_core::types::ToolCall {
+            let tool_call = omnisolo_builtin_agent_core::types::ToolCall {
                 id: "call_1".to_string(),
                 name: "structured_output".to_string(),
                 arguments: serde_json::json!({
@@ -607,7 +607,7 @@ mod tests {
             };
 
             let msg = Message {
-                role: ohc_builtin_agent_core::types::Role::Assistant,
+                role: omnisolo_builtin_agent_core::types::Role::Assistant,
                 content: "".to_string(),
                 tool_calls: vec![tool_call],
                 tool_results: vec![],

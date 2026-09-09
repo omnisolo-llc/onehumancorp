@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-As OHC workloads shift toward heavier models (e.g., Llama-3 70B, local image generation), the platform must intelligently schedule agents onto nodes with specialized hardware. This design introduces **GPU-Aware Scheduling**, ensuring that high-priority agents get the compute they need while low-priority tasks run on efficient CPUs.
+As OmniSolo workloads shift toward heavier models (e.g., Llama-3 70B, local image generation), the platform must intelligently schedule agents onto nodes with specialized hardware. This design introduces **GPU-Aware Scheduling**, ensuring that high-priority agents get the compute they need while low-priority tasks run on efficient CPUs.
 
 ## 2. Technical Architecture
 
@@ -50,7 +50,7 @@ struct ComputeProfile {
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

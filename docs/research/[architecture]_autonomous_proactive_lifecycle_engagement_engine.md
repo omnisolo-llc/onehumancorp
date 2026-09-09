@@ -10,7 +10,7 @@ Small business owners (like Leo the music tutor or Priya the boutique owner) los
 - **Competitor Systems Audit**:
   - **Shopify / Wix / Squarespace**: Focus on reactive automation (e.g., abandoned cart emails triggered by immediate session data) but lack long-term, relationship-driven engagement engines. Their tools require manual configuration of complex workflows.
   - **GoDaddy / Mailchimp**: Provide templates but still rely on the user to identify who to contact, when, and with what message.
-- **OHC's Opportunity**: We need to shift from "User-Driven CRM" to "AI-Driven Lifecycle Management". By analyzing the Universal Capacity and Inventory Ledger, the engine can identify dormant relationships (e.g., Carlos the handyman's client hasn't requested seasonal maintenance in 6 months) and automatically draft highly contextual, personalized outreach via the Omnichannel Unified Inbox. This engine bridges the gap between historical transactions and future bookings invisibly.
+- **OmniSolo's Opportunity**: We need to shift from "User-Driven CRM" to "AI-Driven Lifecycle Management". By analyzing the Universal Capacity and Inventory Ledger, the engine can identify dormant relationships (e.g., Carlos the handyman's client hasn't requested seasonal maintenance in 6 months) and automatically draft highly contextual, personalized outreach via the Omnichannel Unified Inbox. This engine bridges the gap between historical transactions and future bookings invisibly.
 
 ## Design Doc
 

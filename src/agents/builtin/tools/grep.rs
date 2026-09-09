@@ -1,5 +1,5 @@
 use async_recursion::async_recursion;
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::json;

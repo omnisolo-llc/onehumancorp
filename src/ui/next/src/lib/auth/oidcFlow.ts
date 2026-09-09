@@ -11,8 +11,8 @@ import { cookieForSession, serializeSessionCookie, sessionCodecContext } from ".
 import type { WebSession } from "./sessionTypes";
 import { safeReturnPath } from "./url";
 
-const STATE_COOKIE = "__Host-ohc_oidc_state";
-const LOCAL_STATE_COOKIE = "ohc_oidc_state";
+const STATE_COOKIE = "__Host-omnisolo_oidc_state";
+const LOCAL_STATE_COOKIE = "omnisolo_oidc_state";
 const STATE_SECONDS = 600;
 const MAX_PROVIDER_RESPONSE = 65_536;
 
@@ -95,16 +95,16 @@ async function boundedJson(response: Response): Promise<unknown> {
 
 function providerConfig(key: string): ProviderConfig | null {
   if (key === "google") {
-    const clientId = process.env.OHC_OIDC_GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.OHC_OIDC_GOOGLE_CLIENT_SECRET;
+    const clientId = process.env.OMNISOLO_OIDC_GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.OMNISOLO_OIDC_GOOGLE_CLIENT_SECRET;
     return clientId && clientSecret
       ? { key: "google", issuer: "https://accounts.google.com", clientId, clientSecret }
       : null;
   }
   if (key === "keycloak") {
-    const issuer = process.env.OHC_OIDC_KEYCLOAK_ISSUER?.replace(/\/$/, "");
-    const clientId = process.env.OHC_OIDC_KEYCLOAK_CLIENT_ID;
-    const clientSecret = process.env.OHC_OIDC_KEYCLOAK_CLIENT_SECRET;
+    const issuer = process.env.OMNISOLO_OIDC_KEYCLOAK_ISSUER?.replace(/\/$/, "");
+    const clientId = process.env.OMNISOLO_OIDC_KEYCLOAK_CLIENT_ID;
+    const clientSecret = process.env.OMNISOLO_OIDC_KEYCLOAK_CLIENT_SECRET;
     return issuer && clientId && clientSecret
       ? { key: "keycloak", issuer, clientId, clientSecret }
       : null;
@@ -200,7 +200,7 @@ async function sealState(state: OidcState, dependencies: PublicAuthDependencies)
   return new EncryptJWT(state)
     .setProtectedHeader({ alg: "dir", enc: "A256GCM", kid: dependencies.ring.active.id, typ: "JWT" })
     .setIssuer(dependencies.config.canonicalOrigin)
-    .setAudience("onehumancorp-oidc-state")
+    .setAudience("omnisolo-oidc-state")
     .setIssuedAt(dependencies.now())
     .setExpirationTime(dependencies.now() + STATE_SECONDS)
     .encrypt(dependencies.ring.active.key);
@@ -216,7 +216,7 @@ async function openState(compact: string, dependencies: PublicAuthDependencies):
     },
     {
       issuer: dependencies.config.canonicalOrigin,
-      audience: "onehumancorp-oidc-state",
+      audience: "omnisolo-oidc-state",
       clockTolerance: 5,
     },
   );

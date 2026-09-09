@@ -127,8 +127,8 @@ impl DailyBriefingWorker {
                 let mut ai_response = String::new();
                 while attempts < MAX_RETRIES {
                     let ai_op = async {
-                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                 prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                 from_agent_id: "Decision Assistant".into(),
                             };
@@ -268,7 +268,7 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         // In a real environment, this makes an RPC to the LLM agent.
-        // In this test, it will timeout or fail the LLM call because OHC_HUB_URL isn't mocked properly,
+        // In this test, it will timeout or fail the LLM call because OMNISOLO_HUB_URL isn't mocked properly,
         // so we just expect the poll function to execute without crashing,
         // even if it doesn't create the triage item due to the LLM failure.
         let _ = DailyBriefingWorker::poll(&db).await;

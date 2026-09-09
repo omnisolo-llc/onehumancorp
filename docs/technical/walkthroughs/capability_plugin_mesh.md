@@ -2,7 +2,7 @@
 
 # Capability Plugin Mesh Visual Walkthrough
 
-This guide walks through the integration and usage of the Capability Plugin Mesh within the OHC Hybrid Architecture.
+This guide walks through the integration and usage of the Capability Plugin Mesh within the OmniSolo Hybrid Architecture.
 
 ## Plugin Lifecycle
 

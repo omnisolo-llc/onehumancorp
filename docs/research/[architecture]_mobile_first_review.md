@@ -1,15 +1,15 @@
 # Architecture Brief: Mobile-First Review & Performance
 
 ## Title
-OHC Mobile-First Contract: Performance, Resilience, and "Grandmother Test" Audit
+OmniSolo Mobile-First Contract: Performance, Resilience, and "Grandmother Test" Audit
 
 ## Problem Statement
-Small business owners (Carlos, Fatima, Maya) are mobile-only or mobile-primary. They operate in high-distraction environments (bakeries, repair sites, food carts) and often on low-end Android devices or poor 4G/5G connections. If the OHC dashboard is slow to load or fails when offline, Carlos can't send a quote, and Fatima loses a sale. OHC must be as fast and reliable as a native calculator app.
+Small business owners (Carlos, Fatima, Maya) are mobile-only or mobile-primary. They operate in high-distraction environments (bakeries, repair sites, food carts) and often on low-end Android devices or poor 4G/5G connections. If the OmniSolo dashboard is slow to load or fails when offline, Carlos can't send a quote, and Fatima loses a sale. OmniSolo must be as fast and reliable as a native calculator app.
 
 ## Research Report
 - **The "Grandmother Test"**: If a user has to wait more than 2 seconds for a screen to load, or more than 1 second for a button to respond, they assume the app is "broken."
 - **Payload Bloat**: Traditional SaaS dashboards (Shopify/Wix) often fetch megabytes of JS and JSON, leading to LCP > 3s on 4G networks.
-- **Offline Gaps**: Most web-based builders require a constant internet connection. OHC's hybrid nature (Local SQLite/SIPDB) provides a unique opportunity to allow "Offline Drafting."
+- **Offline Gaps**: Most web-based builders require a constant internet connection. OmniSolo's hybrid nature (Local SQLite/SIPDB) provides a unique opportunity to allow "Offline Drafting."
 
 ## Design Doc
 

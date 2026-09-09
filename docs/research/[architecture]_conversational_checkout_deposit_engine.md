@@ -13,8 +13,8 @@ Service providers and custom product makers (like Maya the baker and Leo the tut
 *   **ManyChat / Chatbot Builders**: Can send static links automatically, but lack a native, tightly-coupled integration with an underlying financial ledger and unified capacity/inventory mesh.
 *   **Shopify Inbox**: Geared primarily towards traditional physical e-commerce cart checkouts, struggling with the nuanced workflows of custom deposits, staggered service payments, or dynamic quoting.
 
-### The OHC Gap
-Reviewing the current architecture docs (`docs/research/`), OneHumanCorp has established concepts for an Omnichannel Unified Inbox, an Instant Localized Invoicing Ledger, and a Unified Capacity Mesh. However, we lack the critical architectural bridge: the engine that allows an AI Sales Agent operating inside a DM thread to autonomously construct a secure checkout session, render an interactive payment card (or zero-click webview), and immediately lock capacity/inventory the exact millisecond the deposit is confirmed.
+### The OmniSolo Gap
+Reviewing the current architecture docs (`docs/research/`), OmniSolo has established concepts for an Omnichannel Unified Inbox, an Instant Localized Invoicing Ledger, and a Unified Capacity Mesh. However, we lack the critical architectural bridge: the engine that allows an AI Sales Agent operating inside a DM thread to autonomously construct a secure checkout session, render an interactive payment card (or zero-click webview), and immediately lock capacity/inventory the exact millisecond the deposit is confirmed.
 
 ## Design Doc
 

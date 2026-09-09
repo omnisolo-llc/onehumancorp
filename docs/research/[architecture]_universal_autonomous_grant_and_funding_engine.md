@@ -10,7 +10,7 @@ Small business owners like Maya (baker), Carlos (handyman), and Priya (boutique 
 **Findings & Competitive Analysis:**
 - **Current Platforms (Shopify Capital, Stripe Capital):** These provide revenue-based loans and cash advances, but they are *loans* that must be repaid (often with high fees). They do not help businesses secure *free* grant money.
 - **Grant Aggregators (Grants.gov, HelloAlice):** These require manual searching, manual profile creation, and manual essay writing.
-- **The Gap in OHC:** OHC already possesses the business's entire context—revenue history, location, industry, owner demographics, and growth trajectory. By leveraging this data, the OHC AI Swarm can cross-reference live grant databases, autonomously verify eligibility, and draft highly personalized, compelling grant proposals.
+- **The Gap in OmniSolo:** OmniSolo already possesses the business's entire context—revenue history, location, industry, owner demographics, and growth trajectory. By leveraging this data, the OmniSolo AI Swarm can cross-reference live grant databases, autonomously verify eligibility, and draft highly personalized, compelling grant proposals.
 
 ## Design Doc
 
@@ -39,9 +39,9 @@ erDiagram
 sequenceDiagram
     participant GovDB as External Grant APIs
     participant Engine as Funding Engine
-    participant Memory as OHC Vector Memory
+    participant Memory as OmniSolo Vector Memory
     participant AI as Finance & Legal Agents
-    participant App as OHC Mobile App
+    participant App as OmniSolo Mobile App
 
     Engine->>GovDB: Sync new grants daily
     Engine->>Memory: Match grant criteria vs. Tenant Profiles
@@ -68,7 +68,7 @@ sequenceDiagram
 
 **Screen 3: The 1-Tap Submission**
 - **Content:** A sleek, glassmorphism modal showing the AI-generated essay.
-- **Footer:** "By tapping Submit, OHC will automatically file this application on your behalf using your verified business details."
+- **Footer:** "By tapping Submit, OmniSolo will automatically file this application on your behalf using your verified business details."
 - **Primary Button:** Glowing "Submit Application" button.
 
 ### AI Agent Integration Points
@@ -76,7 +76,7 @@ sequenceDiagram
 - **The Protector (Legal Dept):** Crafts the actual narrative of the grant proposal, ensuring the tone is professional, persuasive, and directly addresses the specific grading rubric of the grant issuer.
 
 ### Key Design Decisions
-- **Zero-Data Entry:** The owner should not have to fill out any forms. Their EIN, address, revenue, and story are already in the OHC system.
+- **Zero-Data Entry:** The owner should not have to fill out any forms. Their EIN, address, revenue, and story are already in the OmniSolo system.
 - **Strict Pre-Qualification:** The AI only presents grants where the business has a high mathematical probability of qualifying, avoiding "application fatigue."
 - **Multi-Tenant Isolation:** The engine must ensure that Maya's financial data is never used as context when generating a proposal for Carlos.
 

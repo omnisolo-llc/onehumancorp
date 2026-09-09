@@ -3,7 +3,7 @@ use super::{
     pydantic::{PydanticAdapter, PydanticToolExecutor},
 };
 use crate::{booking::SharedBookingStore, tenant::TenantContext};
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;

@@ -15,12 +15,12 @@ Small business owners (like Maya the baker, Carlos the handyman, and Fatima the 
 - **Fatima (Food Cart):** Requires a system with simple, non-technical interactions to manage pickup orders and notify her on her mobile device.
 - **Priya & Leo:** Need easy integration for POS, inventory, subscriptions, and AI follow-ups without learning complex dashboard navigation.
 
-### OHC Gap Analysis
-OHC's current builder still requires manual intervention and navigation of a traditional UI. We lack a proactive, conversational management layer.
+### OmniSolo Gap Analysis
+OmniSolo's current builder still requires manual intervention and navigation of a traditional UI. We lack a proactive, conversational management layer.
 
 ### Comparative Tables
 
-| Feature / Platform | OHC (Current) | Shopify (Deep Dive) | Wix | Durable | OHC (Target) |
+| Feature / Platform | OmniSolo (Current) | Shopify (Deep Dive) | Wix | Durable | OmniSolo (Target) |
 | --- | --- | --- | --- | --- | --- |
 | **Store Generation** | Manual / Templates | Manual / Complex | Drag & Drop | AI Generated | **AI Generated** |
 | **Ongoing Management** | Dashboard-based | Dashboard / App Store | Dashboard-based | Dashboard-based | **Conversational (Chat/Voice)** |
@@ -39,7 +39,7 @@ The analysis incorporates findings from 50+ URLs including competitor sites (Sho
 ### High-Level Architecture
 - **Input Layer:** Natural Language (Text/Voice) interface accessible via mobile and web.
 - **Agent Layer:** NLP engine to parse intent (e.g., "Update inventory", "Create discount", "Change hours").
-- **Execution Layer:** Action execution against OHC's backend APIs without exposing the complexity to the user.
+- **Execution Layer:** Action execution against OmniSolo's backend APIs without exposing the complexity to the user.
 
 ### UI/UX Flow (Mobile First)
 1. **Home Screen:** A chat interface (similar to WhatsApp/iMessage) greeting the user (e.g., "Good morning, Maya! You have 3 new orders. Should I schedule pickups?").
@@ -62,8 +62,8 @@ quadrantChart
     Squarespace: [0.3, 0.4]
     Durable: [0.8, 0.6]
     10Web: [0.7, 0.5]
-    OHC (Current): [0.3, 0.6]
-    OHC (Target): [0.9, 0.9]
+    OmniSolo (Current): [0.3, 0.6]
+    OmniSolo (Target): [0.9, 0.9]
 ```
 
 ### Feature Gap Heatmap (Mermaid)

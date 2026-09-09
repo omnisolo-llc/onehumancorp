@@ -14,10 +14,10 @@ pub fn negotiate(ws: WebSocketUpgrade) -> (WebSocketUpgrade, bool) {
 pub fn encode_json(json: String, gzip: bool) -> Message {
     if gzip && json.len() > 1024 {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
-        if encoder.write_all(json.as_bytes()).is_ok()
-            && let Ok(bytes) = encoder.finish()
-        {
-            return Message::Binary(bytes.into());
+        if encoder.write_all(json.as_bytes()).is_ok() {
+            if let Ok(bytes) = encoder.finish() {
+                return Message::Binary(bytes.into());
+            }
         }
     }
     Message::Text(json.into())

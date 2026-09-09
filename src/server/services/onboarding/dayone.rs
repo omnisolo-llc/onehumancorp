@@ -28,21 +28,21 @@ mod tests {
 
     #[test]
     fn test_run_day_one_setup_standalone() {
-        if std::path::Path::new(".ohc-local-data").exists() {
-            fs::remove_dir_all(".ohc-local-data").unwrap();
+        if std::path::Path::new(".omnisolo-local-data").exists() {
+            fs::remove_dir_all(".omnisolo-local-data").unwrap();
         }
 
         let report = run_day_one_setup(false).unwrap();
         assert!(report.contains("PASSED"));
         assert!(report.contains("Standalone"));
 
-        fs::remove_dir_all(".ohc-local-data").unwrap();
+        fs::remove_dir_all(".omnisolo-local-data").unwrap();
     }
 
     #[test]
     fn test_run_day_one_setup_cloud() {
-        if std::path::Path::new(".ohc-cloud-data").exists() {
-            fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        if std::path::Path::new(".omnisolo-cloud-data").exists() {
+            fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
         }
 
         let num_cpus = std::thread::available_parallelism()
@@ -59,8 +59,8 @@ mod tests {
             assert!(report.contains("Cloud-native"));
         }
 
-        if std::path::Path::new(".ohc-cloud-data").exists() {
-            fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        if std::path::Path::new(".omnisolo-cloud-data").exists() {
+            fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
         }
     }
 }

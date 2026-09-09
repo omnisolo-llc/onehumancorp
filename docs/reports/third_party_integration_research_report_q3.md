@@ -1,8 +1,8 @@
-# OHC Third-Party Integration Research Report (Q3)
+# OmniSolo Third-Party Integration Research Report (Q3)
 
 ## Executive Summary
 
-This report evaluates key third-party integrations that can dramatically improve the operational efficiency of small business owners using OHC. We focus heavily on minimizing technical complexity for the user while unlocking crucial business capabilities like communication, scheduling, payments, and logistics.
+This report evaluates key third-party integrations that can dramatically improve the operational efficiency of small business owners using OmniSolo. We focus heavily on minimizing technical complexity for the user while unlocking crucial business capabilities like communication, scheduling, payments, and logistics.
 
 ### Persona Pain Points
 
@@ -21,9 +21,9 @@ pie title "Small Business Pain Points Handled by Automation"
 
 ### Strategic Recommendations
 
-* **OHC should prioritize Calendar & Scheduling integrations because** double bookings directly cost small business owners revenue and reputation.
-* **OHC should build native unified messaging (Social Media + SMS) because** business owners like Carlos are currently using 4-5 different apps to track leads.
-* **OHC should integrate localized payment providers because** Stripe is not sufficient for emerging markets where tools like Mercado Pago dominate.
+* **OmniSolo should prioritize Calendar & Scheduling integrations because** double bookings directly cost small business owners revenue and reputation.
+* **OmniSolo should build native unified messaging (Social Media + SMS) because** business owners like Carlos are currently using 4-5 different apps to track leads.
+* **OmniSolo should integrate localized payment providers because** Stripe is not sufficient for emerging markets where tools like Mercado Pago dominate.
 
 ---
 
@@ -43,13 +43,13 @@ Business owners are losing track of customer inquiries because they receive mess
 *   **Reputation:** Meta's APIs are reliable but have strict 24-hour reply window policies.
 
 **Design Doc:**
-*   **Integration Flow:** The user visits the OHC settings page and clicks "Connect Social Media". They authenticate via Meta/TikTok.
+*   **Integration Flow:** The user visits the OmniSolo settings page and clicks "Connect Social Media". They authenticate via Meta/TikTok.
 *   **User Experience (375px Mobile):** A new "Unified Inbox" tab appears on the mobile app. All messages are aggregated into a single feed. Each message clearly displays the source icon (e.g., Instagram).
-*   **AI Points:** OHC's AI can automatically draft suggested replies based on previous customer interactions and the business's FAQ.
-*   **Cloud vs. Standalone:** Cloud mode will utilize OHC webhooks to receive real-time messages. Standalone mode can poll APIs directly from the local device to maintain privacy.
+*   **AI Points:** OmniSolo's AI can automatically draft suggested replies based on previous customer interactions and the business's FAQ.
+*   **Cloud vs. Standalone:** Cloud mode will utilize OmniSolo webhooks to receive real-time messages. Standalone mode can poll APIs directly from the local device to maintain privacy.
 
 **Implementation Prompt:**
-Create a unified messaging interface that aggregates conversations from connected social media platforms. The user must be able to view and reply to messages directly from the OHC mobile app. Acceptance criteria include successful connection via OAuth, real-time message fetching, and successful delivery of replies back to the native platform.
+Create a unified messaging interface that aggregates conversations from connected social media platforms. The user must be able to view and reply to messages directly from the OmniSolo mobile app. Acceptance criteria include successful connection via OAuth, real-time message fetching, and successful delivery of replies back to the native platform.
 
 **Priority:** P1
 **Estimated Scope:** Large
@@ -92,12 +92,12 @@ Business owners want to send promotions or updates to their customers but find t
 
 **Research Report:**
 *   **Findings:** Small businesses often pay for bloated email marketing software when they only need to send a simple update once a month.
-*   **Ease of Use:** Needs to feel like sending an email from Gmail, but to a filtered list of their OHC customer database.
+*   **Ease of Use:** Needs to feel like sending an email from Gmail, but to a filtered list of their OmniSolo customer database.
 *   **Pricing:** Tools like Mailgun or SendGrid offer pay-as-you-go pricing that is much cheaper for low-volume senders than Mailchimp's monthly fees.
 *   **Reputation:** Deliverability is key. Integrating with established email delivery APIs ensures emails don't end up in spam.
 
 **Design Doc:**
-*   **Integration Flow:** Users do not need to configure SMTP. OHC will handle delivery via a robust backend provider.
+*   **Integration Flow:** Users do not need to configure SMTP. OmniSolo will handle delivery via a robust backend provider.
 *   **User Experience (375px Mobile):** The user selects a group of customers (e.g., "Purchased in last 30 days"), types a subject and message, and hits "Send Campaign".
 *   **AI Points:** AI can help suggest catchy subject lines to improve open rates, or translate the email for specific customer segments.
 *   **Cloud vs. Standalone:** Cloud mode handles bulk delivery easily. Standalone mode will require the user to input their own SMTP credentials to send directly from their local network.
@@ -151,7 +151,7 @@ E-commerce business owners waste hours manually packing boxes, measuring them, a
 *   **Reputation:** Highly reliable uptime and excellent carrier coverage.
 
 **Design Doc:**
-*   **Integration Flow:** Business owner enters their default package sizes. When an order is placed, OHC fetches rates via the shipping API.
+*   **Integration Flow:** Business owner enters their default package sizes. When an order is placed, OmniSolo fetches rates via the shipping API.
 *   **User Experience (375px Mobile):** On the order details screen, the owner sees a "Buy Label" button. Clicking it generates a printable PDF shipping label and automatically texts the tracking number to the customer.
 *   **AI Points:** AI can suggest the most cost-effective box size based on the items in the order.
 *   **Cloud vs. Standalone:** Works identically in both modes via direct API calls.
@@ -178,7 +178,7 @@ Customers miss appointments or forget to pick up orders because they don't check
 *   **Reputation:** Twilio is the industry leader for reliability and global carrier compliance.
 
 **Design Doc:**
-*   **Integration Flow:** OHC manages the Twilio integration in the backend. The business owner doesn't need a Twilio account; they just buy "SMS Credits" within OHC.
+*   **Integration Flow:** OmniSolo manages the Twilio integration in the backend. The business owner doesn't need a Twilio account; they just buy "SMS Credits" within OmniSolo.
 *   **User Experience (375px Mobile):** A simple toggle switch in the appointment settings: "Send text reminder 24h before".
 *   **AI Points:** AI automatically translates the SMS reminder into the customer's preferred language based on their profile settings.
 *   **Cloud vs. Standalone:** Cloud mode will utilize a centralized Twilio account pool. Standalone mode allows power users to input their own Twilio API keys.

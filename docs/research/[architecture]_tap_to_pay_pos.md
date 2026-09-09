@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Small business owners who operate in person—like Priya the boutique owner or Fatima the food cart operator—need a frictionless way to accept in-person payments without purchasing, pairing, and maintaining expensive external POS hardware (e.g., Square readers or dedicated terminals). Currently, OHC lacks a native, seamless in-person POS capability that connects directly to the unified OHC mobile app. The "Setup Complexity" of legacy hardware POS solutions creates significant friction and fails the "grandmother test." We need an integrated, zero-hardware solution utilizing native mobile NFC (Tap-to-Pay on iPhone/Android) to unify their online and offline sales, inventory, and ledger in real-time.
+Small business owners who operate in person—like Priya the boutique owner or Fatima the food cart operator—need a frictionless way to accept in-person payments without purchasing, pairing, and maintaining expensive external POS hardware (e.g., Square readers or dedicated terminals). Currently, OmniSolo lacks a native, seamless in-person POS capability that connects directly to the unified OmniSolo mobile app. The "Setup Complexity" of legacy hardware POS solutions creates significant friction and fails the "grandmother test." We need an integrated, zero-hardware solution utilizing native mobile NFC (Tap-to-Pay on iPhone/Android) to unify their online and offline sales, inventory, and ledger in real-time.
 
 ## Research Report
 
@@ -11,9 +11,9 @@ In-person sales remain a vital revenue channel for many SMBs. Traditional soluti
 - **Shopify:** Requires external POS hardware or specific Tap-to-Pay iOS/Android apps that are often separate from the primary management app, causing fragmentation.
 - **Square:** Known for their hardware, but shifts to Tap-to-Pay require their specific ecosystem which may lock users out of a unified platform.
 - **Wix/Squarespace:** Point of Sale capabilities exist but often rely heavily on third-party hardware integrations (like Stripe Terminal external readers), causing setup complexity.
-- **Stripe Terminal:** Offers Tap-to-Pay SDKs that allow merchants to accept payments directly on their mobile devices using NFC without extra hardware. This is the ideal technology enabler for OHC.
+- **Stripe Terminal:** Offers Tap-to-Pay SDKs that allow merchants to accept payments directly on their mobile devices using NFC without extra hardware. This is the ideal technology enabler for OmniSolo.
 
-By directly embedding Tap-to-Pay via Stripe Terminal SDKs into the primary OHC app, we can completely bypass external hardware. This positions OHC in the "Leapfrog Zone" (High Autonomy, Radical Simplicity), allowing a merchant to open the app, enter an amount, and instantly have a customer tap their card on the merchant's phone.
+By directly embedding Tap-to-Pay via Stripe Terminal SDKs into the primary OmniSolo app, we can completely bypass external hardware. This positions OmniSolo in the "Leapfrog Zone" (High Autonomy, Radical Simplicity), allowing a merchant to open the app, enter an amount, and instantly have a customer tap their card on the merchant's phone.
 
 ### Key Learnings
 1. **Hardware is Friction:** External readers battery dies, lose bluetooth pairing, or break.
@@ -65,10 +65,10 @@ erDiagram
 ```mermaid
 sequenceDiagram
     actor Merchant (Priya)
-    participant App as OHC Mobile App
+    participant App as OmniSolo Mobile App
     participant Terminal as NFC/Tap-to-Pay SDK
     participant OpsAgent as Operations Agent
-    participant CoreAPI as OHC Core API
+    participant CoreAPI as OmniSolo Core API
     participant PaymentGW as Stripe/Payment Gateway
 
     Merchant->>App: Adds items to cart, taps "Charge"
@@ -100,7 +100,7 @@ Every screen follows the macOS-style Translucent Glass materials combined with c
 
 ## Implementation Prompt
 **Prompt for Implementer Agent:**
-Implement the hardware-free Tap-to-Pay Point of Sale module for the OHC mobile application. The user journey should allow a merchant (e.g., Priya or Fatima) to open the app, ring up items, and directly accept a customer's contactless card payment using the device's native NFC capabilities.
+Implement the hardware-free Tap-to-Pay Point of Sale module for the OmniSolo mobile application. The user journey should allow a merchant (e.g., Priya or Fatima) to open the app, ring up items, and directly accept a customer's contactless card payment using the device's native NFC capabilities.
 Ensure the UX strictly follows the mobile-first (375px) Translucent Glass / modular card design system, passing the "grandmother test."
 Design the backend coordination to seamlessly decrement shared inventory, log to the unified ledger, and securely trigger background AI agents for operations and finance updates.
 You must design a secure, multi-tenant resilient system capable of handling intermittent offline states gracefully without losing transaction data. Choose the appropriate SDKs and backend endpoints to fulfill this capability without prescribing specific function signatures here.

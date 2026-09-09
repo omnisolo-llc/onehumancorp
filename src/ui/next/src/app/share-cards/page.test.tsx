@@ -23,9 +23,9 @@ describe('ShareCardsPage', () => {
     expect(facebookLink.closest('a')).toHaveAttribute('href', expect.stringContaining('facebook.com/sharer/sharer.php'));
   });
 
-  it('renders Powered by OHC branding in preview', () => {
+  it('renders Powered by OmniSolo branding in preview', () => {
     render(<ShareCardsPage />);
-    const brandingElements = screen.getAllByText(/Powered by OHC/i);
+    const brandingElements = screen.getAllByText(/Powered by OmniSolo/i);
     expect(brandingElements.length).toBeGreaterThan(0);
   });
 
@@ -46,6 +46,6 @@ describe('ShareCardsPage', () => {
     act(() => {
         toggle.click();
     });
-    expect(screen.queryByText('Powered by OHC')).toBeNull();
+    expect(screen.queryByText('Powered by OmniSolo')).toBeNull();
   });
 });

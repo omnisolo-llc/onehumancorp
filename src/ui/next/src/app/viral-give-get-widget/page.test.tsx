@@ -20,7 +20,7 @@ describe('ViralGiveGetWidgetPage', () => {
     // Mock fetch for generating referral link
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ referral_link: 'https://ohc.app/give-get/join?ref=test-ref-123' }),
+      json: () => Promise.resolve({ referral_link: 'https://cloud.omnisolo.co/give-get/join?ref=test-ref-123' }),
     });
 
     const localStorageMock = {
@@ -49,18 +49,18 @@ describe('ViralGiveGetWidgetPage', () => {
     expect(screen.getByText('Get (Your Reward)')).toBeDefined();
   });
 
-  it('renders Powered by OHC branding by default', () => {
+  it('renders Powered by OmniSolo branding by default', () => {
     render(<ViralGiveGetWidgetPage />);
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined();
   });
 
   it('shows paywall when trying to remove branding without pro', () => {
     render(<ViralGiveGetWidgetPage />);
-    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo" Badge/i });
     fireEvent.click(checkbox);
 
     expect(screen.getAllByText('Upgrade to Remove Branding').length).toBeGreaterThan(0);
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined(); // branding still there
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined(); // branding still there
   });
 
   it('updates give and get values', () => {

@@ -10,7 +10,7 @@ category: "observability"
 # Title: Implement Hybrid Swarm-Aware MCP Telemetry Mesh
 
 ## Problem Statement
-The current Agentic OS market, dominated by **AI coding assistant**, **OpenClaw**, and **Replit Agent**, exhibits a fundamental weakness in operational observability for hybrid agentic workflows. These platforms either lock telemetry strictly within cloud silos (OpenClaw, Replit) or lack persistent, scalable telemetry entirely (AI coding assistant). OHC must capitalize on this gap by introducing a "Hybrid Swarm-Aware MCP Telemetry Mesh"—a solution leveraging the OHC Hybrid Architecture (OHC-HA) to seamlessly synchronize local SQLite-based metrics with Cloud PostgreSQL-based observability, all authenticated via SPIFFE/SPIRE.
+The current Agentic OS market, dominated by **AI coding assistant**, **OpenClaw**, and **Replit Agent**, exhibits a fundamental weakness in operational observability for hybrid agentic workflows. These platforms either lock telemetry strictly within cloud silos (OpenClaw, Replit) or lack persistent, scalable telemetry entirely (AI coding assistant). OmniSolo must capitalize on this gap by introducing a "Hybrid Swarm-Aware MCP Telemetry Mesh"—a solution leveraging the OmniSolo Hybrid Architecture (OmniSolo-HA) to seamlessly synchronize local SQLite-based metrics with Cloud PostgreSQL-based observability, all authenticated via SPIFFE/SPIRE.
 
 ## Research Report
 A deep market audit reveals significant structural vulnerabilities among our primary competitors:
@@ -19,12 +19,12 @@ A deep market audit reveals significant structural vulnerabilities among our pri
 - **OpenClaw**: Cloud-native but rigid. Forces telemetry exfiltration. Has no capability to run a standalone agent locally while maintaining deferred metrics synchronization.
 - **Replit Agent**: Completely cloud-dependent. Any localized orchestration lacks native OpenTelemetry aggregation back to a global control plane.
 
-### OHC's "Blue Ocean" Advantage
-By leveraging OHC-HA, we can build a telemetry mesh that degrading gracefully. Agents running in local Standalone Mode log OpenTelemetry metrics to the SQLite SIPDB. When internet connectivity is restored or cloud scaling is required, the "Swarm-Aware MCP Telemetry Mesh" batches and securely transmits (via SPIFFE/SPIRE identity) these metrics to the Cloud PostgreSQL/Prometheus stack, providing **Full-Spectrum Observability** with zero data loss.
+### OmniSolo's "Blue Ocean" Advantage
+By leveraging OmniSolo-HA, we can build a telemetry mesh that degrading gracefully. Agents running in local Standalone Mode log OpenTelemetry metrics to the SQLite SIPDB. When internet connectivity is restored or cloud scaling is required, the "Swarm-Aware MCP Telemetry Mesh" batches and securely transmits (via SPIFFE/SPIRE identity) these metrics to the Cloud PostgreSQL/Prometheus stack, providing **Full-Spectrum Observability** with zero data loss.
 
 ### Competitive Analysis Table
 
-| Feature Area | AI coding assistant | OpenClaw | Replit Agent | **OHC Vision (OHC-HA)** |
+| Feature Area | AI coding assistant | OpenClaw | Replit Agent | **OmniSolo Vision (OmniSolo-HA)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Telemetry Persistence** | Ephemeral | Cloud Only | Cloud Only | **Hybrid (SQLite + Postgres)** |
 | **Identity & Security** | None | Proprietary API Keys | Cloud IAM | **Zero-Trust SPIFFE/SPIRE** |
@@ -33,7 +33,7 @@ By leveraging OHC-HA, we can build a telemetry mesh that degrading gracefully. A
 
 ```mermaid
 graph TD
-    A[Standalone OHC Agent] -->|Logs Metrics locally| B(Local SQLite SIPDB)
+    A[Standalone OmniSolo Agent] -->|Logs Metrics locally| B(Local SQLite SIPDB)
     A -->|SPIFFE/SPIRE SVID| C[Local mTLS Proxy]
     B -.->|Background MCP Sync| D{Cloud MCP Gateway}
     C -.->|Auth Handshake| D

@@ -8,7 +8,7 @@ pub struct ResticProvider {
 
 impl ResticProvider {
     pub fn new() -> Self {
-        let mode = env::var("OHC_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
+        let mode = env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
 
         let is_supported = mode == "standalone";
 

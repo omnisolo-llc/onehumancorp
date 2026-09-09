@@ -1,7 +1,7 @@
 # Master Design Doc: KAIROS AI OS Orchestration (Phase 4)
 
 ## The KAIROS Triad
-The absolute autonomy of the OHC Swarm rests on three pillars:
+The absolute autonomy of the OmniSolo Swarm rests on three pillars:
 
 1. **Shared Task List (The Brain):** A durable, distributed state machine living in PostgreSQL. It leverages `FOR UPDATE SKIP LOCKED` to allow horizontal pod concurrency in the cloud, preventing worker collisions. It degrades to SQLite transactions for standalone desktop use.
 2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer. Using `CentrifugeNode` and Redis Pub/Sub (`redis`), agents broadcast state changes, advertise capabilities, and stream events.

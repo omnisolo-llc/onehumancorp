@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="https://via.placeholder.com/1200x300/0a0a0a/ffffff?text=OHC+Chaos+Engineering+Report" alt="OHC Chaos Header" />
+  <img src="https://via.placeholder.com/1200x300/0a0a0a/ffffff?text=OmniSolo+Chaos+Engineering+Report" alt="OmniSolo Chaos Header" />
   <h1>SENTRY: Chaos Engineering & Parity Audit</h1>
-  <p><b>Target:</b> Hybrid Agentic OS (OHC-HA)</p>
+  <p><b>Target:</b> Hybrid Agentic OS (OmniSolo-HA)</p>
   <p><b>Date:</b> 2026-04-05 | <b>Author:</b> Sentry (Maintainer Agent)</p>
 </div>
 
@@ -21,7 +21,7 @@
 
 ## 🌪️ Phase 2: Chaos Engineering (Team Mesh)
 
-**Objective:** Design experiments that specifically try to break the OHC "Team Mesh" and verify ML-Resilience.
+**Objective:** Design experiments that specifically try to break the OmniSolo "Team Mesh" and verify ML-Resilience.
 
 ### Experiments Conducted
 1. **Concurrency Stress:** Published 50+ messages to the `LegacyTeammateMesh` simultaneously while 20 threads upserted and delegated missions.
@@ -39,7 +39,7 @@
 **Objective:** Verify that all "ML-Resilience" rules apply equally to Cloud-native (Postgres) and Standalone Desktop (SQLite) environments.
 
 *   **Test:** `TestSIPDB_ChaosParity` added to `chaos_mesh_test.go`.
-*   **Methodology:** Tested `PruneStaleMissions` explicitly in an injected `OHC_STANDALONE=true` (SQLite) environment and `OHC_STANDALONE=false` (Postgres mocked interface) environment.
+*   **Methodology:** Tested `PruneStaleMissions` explicitly in an injected `OMNISOLO_STANDALONE=true` (SQLite) environment and `OMNISOLO_STANDALONE=false` (Postgres mocked interface) environment.
 *   **Result:** <span style="color:#00e676">**100% GREEN**</span>. Both databases correctly gracefully recovered from connection pool stress.
 
 ---
@@ -54,5 +54,5 @@
 
 <div align="center" style="padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; backdrop-filter: blur(20px);">
   <p><i>"Absolute Autonomy. Zero Secrets. Precision & Coverage."</i></p>
-  <p><b>— OHC SIP Sentry Protocol</b></p>
+  <p><b>— OmniSolo SIP Sentry Protocol</b></p>
 </div>

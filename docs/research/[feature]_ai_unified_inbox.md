@@ -9,7 +9,7 @@ Unified Omnichannel AI Inbox
 ## Research Report
 Analysis of Maya (The Home Baker) persona reveals she loses track of custom orders in DMs. A unified inbox would consolidate these scattered messages and leverage an AI agent to draft replies based on past customer history.
 
-Based on the Top 10 SMB User Pain Points, "Operational Fatigue" (68%) and "Communication Lag" (40%) are critical friction points. Competitors like Shopify require third-party apps (e.g., Gorgias) for this, creating cost creep. Wix has a passive unified inbox. OHC can leapfrog by integrating an active "Silent Ambassador" AI.
+Based on the Top 10 SMB User Pain Points, "Operational Fatigue" (68%) and "Communication Lag" (40%) are critical friction points. Competitors like Shopify require third-party apps (e.g., Gorgias) for this, creating cost creep. Wix has a passive unified inbox. OmniSolo can leapfrog by integrating an active "Silent Ambassador" AI.
 
 ## Design Doc
 A centralized feed (`Hub` data model) aggregating all external messages. The 'Ambassador' AI agent listens to the event mesh, drafts contextual replies based on past customer history, business memory (inventory, pricing), and presents them for 1-tap approval.

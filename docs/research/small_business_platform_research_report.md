@@ -1,4 +1,4 @@
-# OHC Small Business Platform Research Report
+# OmniSolo Small Business Platform Research Report
 
 ## Feature Gaps & Market Opportunities
 
@@ -6,7 +6,7 @@
     - Shopify: Complex, hard to use for non-technical users. High learning curve.
     - Wix: Good templates, but AI features are a gimmick. Lacks strong workflow automation.
     - Squarespace: Design-focused, not business-operations focused.
-    - OHC needs focus on AI automations that save time (auto-reply, auto-description, auto-post).
+    - OmniSolo needs focus on AI automations that save time (auto-reply, auto-description, auto-post).
 
 2. **User Pain Points**
     - "I spend 2 hours a day answering the same DM questions on Instagram."
@@ -21,7 +21,7 @@
 
 ## Feature Gap Matrix
 
-| Feature | Shopify | Wix | OHC (current) | OHC (gap/advantage) |
+| Feature | Shopify | Wix | OmniSolo (current) | OmniSolo (gap/advantage) |
 | :--- | :--- | :--- | :--- | :--- |
 | **Setup Time** | High | Medium | Low | **Advantage**: Zero-Click Setup |
 | **AI Agents** | "Sidekick" (chatbot) | Weak | Core Orchestration | **Advantage**: Invisible Autonomy |

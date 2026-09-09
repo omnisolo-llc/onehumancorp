@@ -1,4 +1,4 @@
-use server_ohc::orchestration::{
+use server_omnisolo::orchestration::{
     Agent, RegisterAgentRequest, hub_service_client::HubServiceClient,
 };
 use std::{env, fs, time::Duration};

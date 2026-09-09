@@ -92,7 +92,7 @@ mod tests {
     #[tokio::test]
     async fn test_cuj_stress_workspaces_cloud_mode() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(database_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
                 .max_connections(20)
                 .connect(&database_url)
@@ -248,7 +248,7 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -286,7 +286,7 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -346,7 +346,7 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -384,7 +384,7 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -951,7 +951,7 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -988,7 +988,7 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1350,7 +1350,7 @@ mod tests {
     async fn test_ml_resilience_60s_timeout_rule() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
 
-        let timeout_duration = ohc_builtin_agent::agent::agent_task_timeout();
+        let timeout_duration = omnisolo_builtin_agent::agent::agent_task_timeout();
         assert_eq!(
             timeout_duration.as_secs(),
             60,
@@ -1755,7 +1755,7 @@ async fn test_sipdb_multi_tenancy_isolation() {
     );
 
     // Postgres Parity Logic
-    if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+    if let Ok(database_url) = std::env::var("OMNISOLO_DATABASE_URL") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(5)
             .connect(&database_url)
@@ -2005,7 +2005,7 @@ mod parity_auditing_tests {
 
         // 2. Postgres Setup (if available)
         let mut pg_pool_opt = None;
-        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(database_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pg_pool = PgPoolOptions::new()
                 .max_connections(5)
                 .connect(&database_url)

@@ -12,7 +12,7 @@ Non-US users in Latin America cannot rely solely on Stripe due to high fees, lac
 - **Advantages**: Mercado Pago is the dominant payment gateway in LATAM. Supports local payment methods which are critical for conversion (often >50% of transactions). Standard API/webhook integration.
 - **Risks**: Regulatory complexities when operating outside of Latin America.
 - **Pricing**: Varies by region and transaction type.
-- **Compatibility**: Cloud (via OHC platform account) and Standalone (user supplies API keys).
+- **Compatibility**: Cloud (via OmniSolo platform account) and Standalone (user supplies API keys).
 
 ## Design Doc
 - In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
@@ -20,7 +20,7 @@ Non-US users in Latin America cannot rely solely on Stripe due to high fees, lac
 - Supports one-off payments and split payments for the eventual marketplace feature.
 
 ## Implementation Prompt
-Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
+Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OmniSolo checkout flow.
 
 ## Priority
 P1

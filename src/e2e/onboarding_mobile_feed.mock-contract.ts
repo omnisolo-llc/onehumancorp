@@ -44,7 +44,7 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
                 };
             }
             if (cmd === 'generate_cloud_invite') {
-                return 'https://cloud.ohc.network/invite/mock-test';
+                return 'https://cloud.omnisolo.co/invite/mock-test';
             }
             throw new Error('Unhandled command: ' + cmd);
           }

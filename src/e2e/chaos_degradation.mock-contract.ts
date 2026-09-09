@@ -18,7 +18,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
         }
       }));
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onupgradeneeded = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {
@@ -47,7 +47,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     const q1: any = await page.evaluate(() => {
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onupgradeneeded = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {
@@ -80,7 +80,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     await page.evaluate(() => {
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onupgradeneeded = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {
@@ -112,7 +112,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     const q2: any = await page.evaluate(() => {
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onupgradeneeded = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {
@@ -144,7 +144,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     await page.evaluate(() => {
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onupgradeneeded = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {
@@ -174,7 +174,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     const q3: any = await page.evaluate(() => {
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onupgradeneeded = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {
@@ -221,7 +221,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     // 1. Add item to queue using IndexedDB directly as originally intended
     await page.evaluate(() => {
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onupgradeneeded = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) {
@@ -267,7 +267,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     // 4. Verify queue was emptied by SyncManager
     const q4: any = await page.evaluate(() => {
       return new Promise((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onsuccess = (e: any) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);

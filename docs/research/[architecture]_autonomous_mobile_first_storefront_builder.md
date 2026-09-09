@@ -1,7 +1,7 @@
 # Architecture Design: Autonomous Mobile-First Storefront Builder
 
 ## Problem Statement
-Small business owners (like Maya the Baker or Fatima the Food Cart Operator) typically do not use laptops for their daily operations. They run their entire businesses from their smartphones. Legacy platforms (Shopify, Wix) mandate a desktop experience for complex store building, relegating their mobile apps to simple "dashboards." The OHC platform must invert this paradigm by enabling **100% of storefront design, management, and deployment from a 375px mobile screen** without drag-and-drop complexity.
+Small business owners (like Maya the Baker or Fatima the Food Cart Operator) typically do not use laptops for their daily operations. They run their entire businesses from their smartphones. Legacy platforms (Shopify, Wix) mandate a desktop experience for complex store building, relegating their mobile apps to simple "dashboards." The OmniSolo platform must invert this paradigm by enabling **100% of storefront design, management, and deployment from a 375px mobile screen** without drag-and-drop complexity.
 
 ## Proposed Architecture: The Agentic Storefront Builder
 
@@ -32,7 +32,7 @@ Instead of navigating nested menus to edit a layout, the user interacts with the
 ```mermaid
 graph TD
     User([Business Owner - Mobile]) --> |Voice/Text Command| Frontend(Flutter Mobile App)
-    Frontend --> |gRPC / REST| API_Gateway(OHC API Layer)
+    Frontend --> |gRPC / REST| API_Gateway(OmniSolo API Layer)
 
     API_Gateway --> |Intent Payload| JobQueue(PostgreSQL Job Queue)
 

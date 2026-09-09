@@ -16,7 +16,7 @@ exports_files([
 
 filegroup(
     name = "helm_chart_files",
-    srcs = glob(["helm/ohc/**"]),
+    srcs = glob(["helm/omnisolo/**"]),
 )
 
 rust_binary(
@@ -24,20 +24,20 @@ rust_binary(
     srcs = ["tests/grpc_mtls_probe.rs"],
     edition = "2024",
     deps = [
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "@crates//:tokio",
         "@crates//:tonic",
     ],
 )
 
 
-# ── server image (onehumancorp/server) ────────────────────────────────────────
+# ── server image (omnisolo/server) ────────────────────────────────────────
 filegroup(
     name = "hybrid_telemetry_dashboard_mirrors",
     srcs = glob([
         "grafana/dashboards/*.json",
         "docker/grafana/provisioning/dashboards/*.json",
-        "helm/ohc/dashboards/*.json",
+        "helm/omnisolo/dashboards/*.json",
     ]),
     visibility = ["//visibility:public"],
 )
@@ -47,7 +47,7 @@ filegroup(
 pkg_tar(
     name = "backend_pkg",
     srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
+        "//src/agents/builtin:omnisolo-builtin-agent",
         "//src/server",
     ],
     package_dir = "/usr/local/bin",
@@ -60,7 +60,7 @@ pkg_tar(
     strip_prefix = "src/server/migrations",
 )
 
-# Published as onehumancorp/server – the single canonical image.
+# Published as omnisolo/server – the single canonical image.
 # Serves both the API and the Flutter web UI (static assets).
 oci_image(
     name = "server_image",
@@ -79,7 +79,7 @@ oci_image(
 oci_load(
     name = "server_load",
     image = ":server_image",
-    repo_tags = ["onehumancorp/server:latest"],
+    repo_tags = ["omnisolo/server:latest"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -89,7 +89,7 @@ oci_load(
 oci_load(
     name = "mono_core_load",
     image = ":server_image",
-    repo_tags = ["onehumancorp/mono-core:latest"],
+    repo_tags = ["omnisolo/mono-core:latest"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -102,8 +102,8 @@ oci_load(
     name = "server_web_image_tarball",
     image = ":server_image",
     repo_tags = [
-        "onehumancorp/server:latest",
-        "onehumancorp/server-web:latest",
+        "omnisolo/server:latest",
+        "omnisolo/server-web:latest",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -125,7 +125,7 @@ filegroup(
 oci_push(
     name = "server_push_ghcr",
     image = ":server_image",
-    repository = "ghcr.io/onehumancorp/server",
+    repository = "ghcr.io/omnisolo/server",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -136,7 +136,7 @@ oci_push(
 oci_push(
     name = "server_push_dockerhub",
     image = ":server_image",
-    repository = "index.docker.io/onehumancorp/server",
+    repository = "index.docker.io/omnisolo/server",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -144,14 +144,14 @@ oci_push(
     visibility = ["//visibility:public"],
 )
 
-# ── agent image (onehumancorp/agent) ──────────────────────────────────────────
+# ── agent image (omnisolo/agent) ──────────────────────────────────────────
 # Cluster agents run as their own binary. Standalone desktop keeps the agent
 # in-process inside //src/server:server instead.
 
 pkg_tar(
     name = "agent_pkg",
     srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
+        "//src/agents/builtin:omnisolo-builtin-agent",
     ],
     package_dir = "/usr/local/bin",
 )
@@ -159,7 +159,7 @@ pkg_tar(
 oci_image(
     name = "agent_image",
     base = "@distroless_cc",
-    entrypoint = ["/usr/local/bin/ohc-builtin-agent"],
+    entrypoint = ["/usr/local/bin/omnisolo-builtin-agent"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -172,7 +172,7 @@ oci_image(
 oci_load(
     name = "agent_load",
     image = ":agent_image",
-    repo_tags = ["onehumancorp/agent:bazel"],
+    repo_tags = ["omnisolo/agent:bazel"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -183,7 +183,7 @@ oci_load(
 oci_image(
     name = "default_agent_image",
     base = "@distroless_cc",
-    entrypoint = ["/usr/local/bin/ohc-builtin-agent"],
+    entrypoint = ["/usr/local/bin/omnisolo-builtin-agent"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -196,7 +196,7 @@ oci_image(
 oci_load(
     name = "default_agent_load",
     image = ":default_agent_image",
-    repo_tags = ["onehumancorp/internal-default-agent:bazel"],
+    repo_tags = ["omnisolo/internal-default-agent:bazel"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -207,7 +207,7 @@ oci_load(
 oci_push(
     name = "agent_push_ghcr",
     image = ":agent_image",
-    repository = "ghcr.io/onehumancorp/agent",
+    repository = "ghcr.io/omnisolo/agent",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -218,7 +218,7 @@ oci_push(
 oci_push(
     name = "agent_push_dockerhub",
     image = ":agent_image",
-    repository = "index.docker.io/onehumancorp/agent",
+    repository = "index.docker.io/omnisolo/agent",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -232,52 +232,56 @@ sh_test(
     srcs = ["tests/deploy_artifacts_test.sh"],
     data = [
         ":helm_chart_files",
+        "//:.dockerignore",
         "docker-compose.yml",
+        "docker/server/Dockerfile",
         "docker/server-init/bootstrap-admin.sh",
-        "helm/ohc/Chart.yaml",
-        "helm/ohc/dashboards/ohc-agent-audit.json",
-        "helm/ohc/dashboards/ohc-database.json",
-        "helm/ohc/dashboards/grafana-dashboard.json",
-        "helm/ohc/dashboards/ohc-harness-efficiency.json",
-        "helm/ohc/dashboards/ohc-hybrid-telemetry.json",
-        "helm/ohc/dashboards/ohc-infra-observability.json",
-        "helm/ohc/dashboards/ohc-kairos.json",
-        "helm/ohc/dashboards/ohc-kairos-hybrid.json",
-        "helm/ohc/dashboards/ohc-hybrid-dashboard.json",
-        "helm/ohc/dashboards/ohc-infra.json",
-        "helm/ohc/dashboards/ohc-token-forecast.json",
-        "helm/ohc/dashboards/hybrid_swarm_cost_analytics.json",
-        "helm/ohc/dashboards/hybrid_swarm_health.json",
-        "helm/ohc/dashboards/llm_provider_health.json",
-        "helm/ohc/dashboards/standalone_swarm_health.json",
-        "helm/ohc/dashboards/tenant-cost.json",
-        "helm/ohc/dashboards/tenant_cost_efficiency.json",
-        "helm/ohc/dashboards/tenant_costs.json",
-        "helm/ohc/dashboards/token_forecast.json",
-        "helm/ohc/dashboards/agent_api_errors_dashboard.json",
-        "helm/ohc/dashboards/chaos_resilience.json",
-        "helm/ohc/dashboards/cost_dashboard.json",
-        "helm/ohc/dashboards/ohc-tenant-cost-miser.json",
-        "helm/ohc/dashboards/sandbox_observability.json",
-        "helm/ohc/templates/_helpers.tpl",
-        "helm/ohc/templates/backend-deployment.yaml",
-        "helm/ohc/templates/default-deny-network-policy.yaml",
-        "helm/ohc/templates/backend-service.yaml",
-        "helm/ohc/templates/fluent-bit.yaml",
-        "helm/ohc/templates/fluent-bit-config.yaml",
-        "helm/ohc/templates/grafana-dashboard-configmap.yaml",
-        "helm/ohc/templates/hpa.yaml",
-        "helm/ohc/templates/vpa.yaml",
-        "helm/ohc/templates/network-policy.yaml",
-        "helm/ohc/templates/ohc-core-deployment.yaml",
-        "helm/ohc/templates/ohc-core-service.yaml",
-        "helm/ohc/templates/powersync-deployment.yaml",
-        "helm/ohc/templates/powersync-service.yaml",
-        "helm/ohc/templates/resourcequota.yaml",
-        "helm/ohc/templates/servicemonitor.yaml",
+        "docker/web/Dockerfile",
+        "//src/ui/next:package.json",
+        "helm/omnisolo/Chart.yaml",
+        "helm/omnisolo/dashboards/omnisolo-agent-audit.json",
+        "helm/omnisolo/dashboards/omnisolo-database.json",
+        "helm/omnisolo/dashboards/grafana-dashboard.json",
+        "helm/omnisolo/dashboards/omnisolo-harness-efficiency.json",
+        "helm/omnisolo/dashboards/omnisolo-hybrid-telemetry.json",
+        "helm/omnisolo/dashboards/omnisolo-infra-observability.json",
+        "helm/omnisolo/dashboards/omnisolo-kairos.json",
+        "helm/omnisolo/dashboards/omnisolo-kairos-hybrid.json",
+        "helm/omnisolo/dashboards/omnisolo-hybrid-dashboard.json",
+        "helm/omnisolo/dashboards/omnisolo-infra.json",
+        "helm/omnisolo/dashboards/omnisolo-token-forecast.json",
+        "helm/omnisolo/dashboards/hybrid_swarm_cost_analytics.json",
+        "helm/omnisolo/dashboards/hybrid_swarm_health.json",
+        "helm/omnisolo/dashboards/llm_provider_health.json",
+        "helm/omnisolo/dashboards/standalone_swarm_health.json",
+        "helm/omnisolo/dashboards/tenant-cost.json",
+        "helm/omnisolo/dashboards/tenant_cost_efficiency.json",
+        "helm/omnisolo/dashboards/tenant_costs.json",
+        "helm/omnisolo/dashboards/token_forecast.json",
+        "helm/omnisolo/dashboards/agent_api_errors_dashboard.json",
+        "helm/omnisolo/dashboards/chaos_resilience.json",
+        "helm/omnisolo/dashboards/cost_dashboard.json",
+        "helm/omnisolo/dashboards/omnisolo-tenant-cost-miser.json",
+        "helm/omnisolo/dashboards/sandbox_observability.json",
+        "helm/omnisolo/templates/_helpers.tpl",
+        "helm/omnisolo/templates/backend-deployment.yaml",
+        "helm/omnisolo/templates/default-deny-network-policy.yaml",
+        "helm/omnisolo/templates/backend-service.yaml",
+        "helm/omnisolo/templates/fluent-bit.yaml",
+        "helm/omnisolo/templates/fluent-bit-config.yaml",
+        "helm/omnisolo/templates/grafana-dashboard-configmap.yaml",
+        "helm/omnisolo/templates/hpa.yaml",
+        "helm/omnisolo/templates/vpa.yaml",
+        "helm/omnisolo/templates/network-policy.yaml",
+        "helm/omnisolo/templates/omnisolo-core-deployment.yaml",
+        "helm/omnisolo/templates/omnisolo-core-service.yaml",
+        "helm/omnisolo/templates/powersync-deployment.yaml",
+        "helm/omnisolo/templates/powersync-service.yaml",
+        "helm/omnisolo/templates/resourcequota.yaml",
+        "helm/omnisolo/templates/servicemonitor.yaml",
 
-        "helm/ohc/values.yaml",
-        "//deploy/scripts:ohc-standalone.sh",
+        "helm/omnisolo/values.yaml",
+        "//deploy/scripts:omnisolo-standalone.sh",
     ] + ["BUILD.bazel"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -294,16 +298,16 @@ sh_test(
     args = [
         "$(rootpath :tests/kind_e2e_test.sh)",
         "$(rootpath :tests/docker_compose_e2e_test.sh)",
-        "$(rootpath :helm/ohc/templates/backend-deployment.yaml)",
-        "$(rootpath :helm/ohc/values.yaml)",
+        "$(rootpath :helm/omnisolo/templates/backend-deployment.yaml)",
+        "$(rootpath :helm/omnisolo/values.yaml)",
         "$(rootpath :docker/server-init/bootstrap-admin.sh)",
         "$(rootpath :docker-compose.yml)",
     ],
     data = [
-        "helm/ohc/templates/backend-deployment.yaml",
-        "helm/ohc/templates/default-deny-network-policy.yaml",
-        "helm/ohc/templates/prometheusrule.yaml",
-        "helm/ohc/values.yaml",
+        "helm/omnisolo/templates/backend-deployment.yaml",
+        "helm/omnisolo/templates/default-deny-network-policy.yaml",
+        "helm/omnisolo/templates/prometheusrule.yaml",
+        "helm/omnisolo/values.yaml",
         "docker/server-init/bootstrap-admin.sh",
         "docker-compose.yml",
         "tests/kind_e2e_test.sh",
@@ -316,12 +320,12 @@ sh_test(
     name = "operational_api_contract_test",
     srcs = ["tests/operational_api_contract_test.sh"],
     args = [
-        "$(rootpath //deploy/scripts:ohc-agent-wizard.sh)",
-        "$(rootpath //deploy/scripts:ohc-seed-data.sh)",
+        "$(rootpath //deploy/scripts:omnisolo-agent-wizard.sh)",
+        "$(rootpath //deploy/scripts:omnisolo-seed-data.sh)",
     ],
     data = [
-        "//deploy/scripts:ohc-agent-wizard.sh",
-        "//deploy/scripts:ohc-seed-data.sh",
+        "//deploy/scripts:omnisolo-agent-wizard.sh",
+        "//deploy/scripts:omnisolo-seed-data.sh",
     ],
     tags = ["lint"],
 )
@@ -369,49 +373,49 @@ sh_test(
     data = [
         ":helm_chart_files",
         "docker-compose.yml",
-        "helm/ohc/Chart.yaml",
+        "helm/omnisolo/Chart.yaml",
         ":grpc_mtls_probe",
-        "helm/ohc/dashboards/ohc-agent-audit.json",
-        "helm/ohc/dashboards/ohc-database.json",
-        "helm/ohc/dashboards/grafana-dashboard.json",
-        "helm/ohc/dashboards/ohc-harness-efficiency.json",
-        "helm/ohc/dashboards/ohc-hybrid-telemetry.json",
-        "helm/ohc/dashboards/ohc-infra-observability.json",
-        "helm/ohc/dashboards/ohc-kairos.json",
-        "helm/ohc/dashboards/ohc-kairos-hybrid.json",
-        "helm/ohc/dashboards/ohc-hybrid-dashboard.json",
-        "helm/ohc/dashboards/ohc-infra.json",
-        "helm/ohc/dashboards/ohc-token-forecast.json",
-        "helm/ohc/dashboards/hybrid_swarm_cost_analytics.json",
-        "helm/ohc/dashboards/hybrid_swarm_health.json",
-        "helm/ohc/dashboards/llm_provider_health.json",
-        "helm/ohc/dashboards/standalone_swarm_health.json",
-        "helm/ohc/dashboards/tenant-cost.json",
-        "helm/ohc/dashboards/tenant_cost_efficiency.json",
-        "helm/ohc/dashboards/tenant_costs.json",
-        "helm/ohc/dashboards/token_forecast.json",
-        "helm/ohc/dashboards/agent_api_errors_dashboard.json",
-        "helm/ohc/dashboards/chaos_resilience.json",
-        "helm/ohc/dashboards/cost_dashboard.json",
-        "helm/ohc/dashboards/ohc-tenant-cost-miser.json",
-        "helm/ohc/dashboards/sandbox_observability.json",
-        "helm/ohc/templates/_helpers.tpl",
-        "helm/ohc/templates/backend-deployment.yaml",
-        "helm/ohc/templates/backend-service.yaml",
-        "helm/ohc/templates/fluent-bit.yaml",
-        "helm/ohc/templates/fluent-bit-config.yaml",
-        "helm/ohc/templates/grafana-dashboard-configmap.yaml",
-        "helm/ohc/templates/hpa.yaml",
-        "helm/ohc/templates/vpa.yaml",
-        "helm/ohc/templates/network-policy.yaml",
-        "helm/ohc/templates/ohc-core-deployment.yaml",
-        "helm/ohc/templates/ohc-core-service.yaml",
-        "helm/ohc/templates/powersync-deployment.yaml",
-        "helm/ohc/templates/powersync-service.yaml",
-        "helm/ohc/templates/resourcequota.yaml",
-        "helm/ohc/templates/servicemonitor.yaml",
+        "helm/omnisolo/dashboards/omnisolo-agent-audit.json",
+        "helm/omnisolo/dashboards/omnisolo-database.json",
+        "helm/omnisolo/dashboards/grafana-dashboard.json",
+        "helm/omnisolo/dashboards/omnisolo-harness-efficiency.json",
+        "helm/omnisolo/dashboards/omnisolo-hybrid-telemetry.json",
+        "helm/omnisolo/dashboards/omnisolo-infra-observability.json",
+        "helm/omnisolo/dashboards/omnisolo-kairos.json",
+        "helm/omnisolo/dashboards/omnisolo-kairos-hybrid.json",
+        "helm/omnisolo/dashboards/omnisolo-hybrid-dashboard.json",
+        "helm/omnisolo/dashboards/omnisolo-infra.json",
+        "helm/omnisolo/dashboards/omnisolo-token-forecast.json",
+        "helm/omnisolo/dashboards/hybrid_swarm_cost_analytics.json",
+        "helm/omnisolo/dashboards/hybrid_swarm_health.json",
+        "helm/omnisolo/dashboards/llm_provider_health.json",
+        "helm/omnisolo/dashboards/standalone_swarm_health.json",
+        "helm/omnisolo/dashboards/tenant-cost.json",
+        "helm/omnisolo/dashboards/tenant_cost_efficiency.json",
+        "helm/omnisolo/dashboards/tenant_costs.json",
+        "helm/omnisolo/dashboards/token_forecast.json",
+        "helm/omnisolo/dashboards/agent_api_errors_dashboard.json",
+        "helm/omnisolo/dashboards/chaos_resilience.json",
+        "helm/omnisolo/dashboards/cost_dashboard.json",
+        "helm/omnisolo/dashboards/omnisolo-tenant-cost-miser.json",
+        "helm/omnisolo/dashboards/sandbox_observability.json",
+        "helm/omnisolo/templates/_helpers.tpl",
+        "helm/omnisolo/templates/backend-deployment.yaml",
+        "helm/omnisolo/templates/backend-service.yaml",
+        "helm/omnisolo/templates/fluent-bit.yaml",
+        "helm/omnisolo/templates/fluent-bit-config.yaml",
+        "helm/omnisolo/templates/grafana-dashboard-configmap.yaml",
+        "helm/omnisolo/templates/hpa.yaml",
+        "helm/omnisolo/templates/vpa.yaml",
+        "helm/omnisolo/templates/network-policy.yaml",
+        "helm/omnisolo/templates/omnisolo-core-deployment.yaml",
+        "helm/omnisolo/templates/omnisolo-core-service.yaml",
+        "helm/omnisolo/templates/powersync-deployment.yaml",
+        "helm/omnisolo/templates/powersync-service.yaml",
+        "helm/omnisolo/templates/resourcequota.yaml",
+        "helm/omnisolo/templates/servicemonitor.yaml",
 
-        "helm/ohc/values.yaml",
+        "helm/omnisolo/values.yaml",
     ] + [
         ":load_all_images",
         "//src/server",

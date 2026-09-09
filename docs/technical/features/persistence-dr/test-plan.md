@@ -43,7 +43,7 @@ A high-level summary of the testing strategy for the Persistence & Disaster Reco
 - **Access Control:** Ensure only users with `Admin` privileges can trigger a global restore.
 
 ## 6. Environment & Prerequisites
-- OHC Hub configured with local storage driver supporting CSI snapshots.
+- OmniSolo Hub configured with local storage driver supporting CSI snapshots.
 
 ## Implementation Details
 - **Architecture**: The Persistence & DR tests utilize Rust table-driven tests. Integration logic runs against a local PostgreSQL seeder and a mock Kubernetes CSI (Container Storage Interface) driver.

@@ -4,14 +4,14 @@
 **Universal Cross-Channel Identity Resolution Engine**
 
 ## Problem Statement
-Small business owners suffer from hopelessly fragmented customer data. When a customer DMs Maya on Instagram to ask about a cake, buys a smaller item later via her web storefront, and finally visits her pop-up shop to tap their card for an in-person purchase, they appear as three entirely separate individuals in Maya's system. To offer a loyalty discount or personalize her communication, Maya would need to manually piece together these interactions. For an owner handling everything on their phone, this manual CRM merging is impossible. OHC must invisibly stitch these fragmented interactions into a single, cohesive customer profile.
+Small business owners suffer from hopelessly fragmented customer data. When a customer DMs Maya on Instagram to ask about a cake, buys a smaller item later via her web storefront, and finally visits her pop-up shop to tap their card for an in-person purchase, they appear as three entirely separate individuals in Maya's system. To offer a loyalty discount or personalize her communication, Maya would need to manually piece together these interactions. For an owner handling everything on their phone, this manual CRM merging is impossible. OmniSolo must invisibly stitch these fragmented interactions into a single, cohesive customer profile.
 
 ## Research Report
 - **Competitor Landscape**:
   - **Shopify**: Solves identity well online via Shop Pay, but is heavily tied to its own wallet ecosystem and struggles to link social DMs natively to offline tap-to-pay without a heavy app ecosystem.
   - **Square**: Excels at linking offline payments to a phone number or email (via digital receipts), but lacks visibility into top-of-funnel social interactions like Instagram DMs or WhatsApp.
   - **Wix & Squarespace**: Offer basic CRM functionalities, but rely on the merchant to manually merge duplicate contacts or require the user to log into an account.
-- **The Opportunity**: OHC has a unique vantage point because it natively hosts the storefront, manages the AI social agent (IG DMs, WhatsApp), and handles the tap-to-pay POS. By employing a background AI agent to evaluate deterministic signals (email, phone, card hash) and probabilistic signals (name similarity, location, interaction timing), OHC can autonomously maintain a unified Identity Graph for every customer across all merchants.
+- **The Opportunity**: OmniSolo has a unique vantage point because it natively hosts the storefront, manages the AI social agent (IG DMs, WhatsApp), and handles the tap-to-pay POS. By employing a background AI agent to evaluate deterministic signals (email, phone, card hash) and probabilistic signals (name similarity, location, interaction timing), OmniSolo can autonomously maintain a unified Identity Graph for every customer across all merchants.
 
 ## Design Doc
 
@@ -35,7 +35,7 @@ graph TD
 
     %% Downstream
     Graph --> CRM[Unified Customer Profile API]
-    CRM --> MobileApp[OHC Merchant Mobile App]
+    CRM --> MobileApp[OmniSolo Merchant Mobile App]
     CRM --> Marketing[AI Marketing / Loyalty Agent]
 ```
 
@@ -57,13 +57,13 @@ graph TD
 
 ### Key Design Decisions
 - **Invisible First**: We do not burden the merchant with CRM management. Merging is handled deterministically via strong keys (Card Hash, Phone, Email) or probabilistically via an AI confidence scorer.
-- **Multi-Tenant Isolation**: Identities are scoped appropriately. While OHC may recognize a global identity for seamless 1-click checkout, merchant-specific interaction histories remain strictly isolated to the respective merchant's tenant.
+- **Multi-Tenant Isolation**: Identities are scoped appropriately. While OmniSolo may recognize a global identity for seamless 1-click checkout, merchant-specific interaction histories remain strictly isolated to the respective merchant's tenant.
 - **Zero-Trust**: Customer data (especially card hashes and PII used for matching) must be processed within secure, ephemeral enclaves.
 
 ## Implementation Prompt
 **To the Implementer Agent**:
 Implement the Universal Cross-Channel Identity Resolution Engine. Your goal is to build the backend service and database structures necessary to ingest events from POS, Web, and Social channels, and link them to a unified customer profile.
-- **Customer User Journey (CUJ)**: A customer messages the merchant on Instagram, buys an item online via the storefront, and later taps to pay in person. When the merchant opens the OHC app, they must see all three interactions chronologically under a single customer profile, without having pressed a single "merge" button.
+- **Customer User Journey (CUJ)**: A customer messages the merchant on Instagram, buys an item online via the storefront, and later taps to pay in person. When the merchant opens the OmniSolo app, they must see all three interactions chronologically under a single customer profile, without having pressed a single "merge" button.
 - **Acceptance Criteria**:
   - System can ingest events with sparse identity data (e.g., just an IG handle, or just a card hash).
   - System automatically merges profiles when deterministic links (e.g., same phone number provided for digital receipt) become available.

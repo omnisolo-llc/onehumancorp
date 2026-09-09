@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn extracts_one_strict_spiffe_uri_san() {
-        let expected = "spiffe://onehumancorp.io/org/acme/agent/worker-1";
+        let expected = "spiffe://omnisolo.io/org/acme/agent/worker-1";
         let der = certificate_with_uris(&[expected]);
         assert_eq!(spiffe_id_from_certificate_der(&der).unwrap(), expected);
     }
@@ -132,8 +132,8 @@ mod tests {
     #[test]
     fn rejects_ambiguous_or_untrusted_spiffe_uri_sans() {
         let ambiguous = certificate_with_uris(&[
-            "spiffe://onehumancorp.io/org/acme/agent/worker-1",
-            "spiffe://onehumancorp.io/org/acme/agent/worker-2",
+            "spiffe://omnisolo.io/org/acme/agent/worker-1",
+            "spiffe://omnisolo.io/org/acme/agent/worker-2",
         ]);
         assert!(spiffe_id_from_certificate_der(&ambiguous).is_err());
 
@@ -143,8 +143,8 @@ mod tests {
 
     #[test]
     fn cloud_authentication_uses_only_the_verified_certificate_identity() {
-        let verified = "spiffe://onehumancorp.io/org/acme/agent/worker-1";
-        let claimed = "spiffe://onehumancorp.io/org/other/agent/forged";
+        let verified = "spiffe://omnisolo.io/org/acme/agent/worker-1";
+        let claimed = "spiffe://omnisolo.io/org/other/agent/forged";
         let certificate = certificate_with_uris(&[verified]);
 
         assert_eq!(

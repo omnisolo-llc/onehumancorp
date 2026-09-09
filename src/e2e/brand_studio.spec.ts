@@ -33,7 +33,7 @@ test.describe('Brand Studio workflow', () => {
     await expect(page.locator('svg').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Publish Website' }).click();
-    await expect(page.getByText(/Published domain: .*\.ohc\.store/)).toBeVisible({
+    await expect(page.getByText(/Published domain: .*\.cloud.omnisolo.co/)).toBeVisible({
       timeout: 30_000,
     });
     await expect(page.locator('body')).not.toContainText(confusingCompetitorName);

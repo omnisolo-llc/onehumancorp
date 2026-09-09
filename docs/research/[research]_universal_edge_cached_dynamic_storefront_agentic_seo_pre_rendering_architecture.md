@@ -8,7 +8,7 @@ Small business owners, such as Maya (a baker) and Carlos (a freelance handyman),
 *   **Shopify:** Employs a robust edge delivery network but requires merchants to understand and configure SEO settings. The storefronts are generally fast, but deep personalization often relies on client-side fetching that can delay the "time to interactive".
 *   **Wix & Squarespace:** Offer decent SEO defaults and edge caching, but heavily dynamic storefronts can experience performance degradation. Their built-in AI tools are typically constrained to content generation rather than autonomous SEO optimization and edge caching logic.
 *   **Next.js / Vercel (General Architecture):** Showcases the power of Incremental Static Regeneration (ISR) and Edge middleware, blending static speeds with dynamic updates.
-*   **OHC Opportunity:** By introducing a "Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture," OHC can proactively and autonomously generate highly optimized, static HTML for all product and service pages, push them to the edge, and use lightweight edge functions to hydrate dynamic states (like inventory or personalized pricing). An AI Agent ("The Promoter") can continuously monitor search trends and autonomously trigger re-rendering of specific pages to target emerging, localized keywords without any merchant intervention.
+*   **OmniSolo Opportunity:** By introducing a "Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture," OmniSolo can proactively and autonomously generate highly optimized, static HTML for all product and service pages, push them to the edge, and use lightweight edge functions to hydrate dynamic states (like inventory or personalized pricing). An AI Agent ("The Promoter") can continuously monitor search trends and autonomously trigger re-rendering of specific pages to target emerging, localized keywords without any merchant intervention.
 
 ### Findings
 1.  **SEO is Make-or-Break:** For small businesses without large marketing budgets, organic search traffic is vital. Pre-rendered HTML is universally understood by all search engine crawlers, ensuring maximum visibility.
@@ -50,7 +50,7 @@ graph TD
 *   **The Operations Manager:** Triggers partial re-rendering of product pages when significant inventory changes occur (e.g., item goes out of stock) to ensure cached HTML remains relatively fresh.
 
 ## Implementation Prompt
-**Goal:** Implement the Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture to guarantee sub-100ms load times and automated, top-tier SEO for all OHC storefronts.
+**Goal:** Implement the Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture to guarantee sub-100ms load times and automated, top-tier SEO for all OmniSolo storefronts.
 
 **Acceptance Criteria:**
 1.  Implement a Pre-rendering Engine that generates static HTML for all public storefront routes (products, services, profiles).

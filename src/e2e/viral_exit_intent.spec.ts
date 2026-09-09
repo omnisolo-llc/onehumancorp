@@ -32,7 +32,7 @@ test.describe('Viral Exit-Intent Loop', () => {
     // Check the embed code text area content directly since we don't have a reliable way to check clipboard in all CI environments
     const embedCode = await page.locator('#code-output').textContent();
     expect(embedCode).toContain('/api/v1/growth/referrals/click?target=/setup.html&ref=');
-    expect(embedCode).toContain('⚡ Powered by OHC');
+    expect(embedCode).toContain('⚡ OmniSolo');
 
     // 6. Test Paywall logic
     const brandingToggle = page.locator('#branding-toggle');

@@ -57,7 +57,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/common:server_common",
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "//src/server/telemetry:server_telemetry",
         "@crates//:chrono",
         "@crates//:axum",

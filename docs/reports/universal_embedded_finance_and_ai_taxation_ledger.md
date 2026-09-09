@@ -1,4 +1,4 @@
-# OHC Research Report: Universal Embedded Finance & AI Taxation Ledger
+# OmniSolo Research Report: Universal Embedded Finance & AI Taxation Ledger
 
 ## 1. Deep Competitor Audit & Gap Analysis
 
@@ -10,14 +10,14 @@ This section analyzes how primary competitors handle the critical aspects of emb
 *   **Square:** Excellent at point-of-sale and immediate payment processing. **Weakness:** Operates largely as a payment processor rather than an autonomous financial advisory agent; tax reporting is reactive.
 *   **QuickBooks/Xero:** The gold standard for accounting, but built for accountants, not the business owner. **Weakness:** Requires technical accounting knowledge, high friction for non-technical users to set up correctly.
 
-### The OHC Gap
-Currently, OHC lacks a unified, invisible financial nervous system that can autonomously handle cross-channel revenue (online, POS, manual entry), automatically set aside estimated taxes, and provide real-time, plain-language financial health insights without requiring a separate accounting platform.
+### The OmniSolo Gap
+Currently, OmniSolo lacks a unified, invisible financial nervous system that can autonomously handle cross-channel revenue (online, POS, manual entry), automatically set aside estimated taxes, and provide real-time, plain-language financial health insights without requiring a separate accounting platform.
 
 ---
 
 ## 2. Universal Embedded Finance Architecture
 
-To dominate the market, OHC must build a "Finance & Payments" department that acts as an invisible, autonomous "Accountant" agent.
+To dominate the market, OmniSolo must build a "Finance & Payments" department that acts as an invisible, autonomous "Accountant" agent.
 
 ### Core Capabilities
 1.  **Unified Cross-Channel Ledger:** A single source of truth for all transactions (Stripe online, Stripe Terminal POS, manual cash entries) synced in real-time to a PostgreSQL `ledger_entries` table with strict row-level security.

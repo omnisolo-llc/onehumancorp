@@ -1,4 +1,4 @@
-# Issue Brief: Complete Architecture Design Suite for OHC Core Systems
+# Issue Brief: Complete Architecture Design Suite for OmniSolo Core Systems
 
 This report consolidates the required architecture design tasks into a single comprehensive output, addressing Business Journeys, Data Models, AI Agent Departments, Website Builder, Mobile-First constraints, and SaaS Tiers.
 
@@ -7,10 +7,10 @@ This report consolidates the required architecture design tasks into a single co
 ## 1. Business Journey Architecture
 
 ### Title
-End-to-End Business Journey Mapping for OHC Personas
+End-to-End Business Journey Mapping for OmniSolo Personas
 
 ### Problem Statement
-The OHC platform must serve diverse small business owners (Maya, Carlos, Priya, Leo, Fatima) seamlessly. The current journeys lack a unified architectural view, risking friction during critical phases (Onboarding, Activation, Retention). We must map these journeys to guarantee a sub-10-minute "time-to-live" experience.
+The OmniSolo platform must serve diverse small business owners (Maya, Carlos, Priya, Leo, Fatima) seamlessly. The current journeys lack a unified architectural view, risking friction during critical phases (Onboarding, Activation, Retention). We must map these journeys to guarantee a sub-10-minute "time-to-live" experience.
 
 ### Research Report
 - **Personas**: Needs range from simple pre-orders (Fatima) to omnichannel sync (Priya) and subscription management (Leo).
@@ -33,18 +33,18 @@ The OHC platform must serve diverse small business owners (Maya, Carlos, Priya, 
 ```mermaid
 sequenceDiagram
     actor Maya
-    participant OHC as OHC App
+    participant OmniSolo as OmniSolo App
     participant AI_Mark as Marketing Agent
     participant AI_Ops as Operations Agent
     participant Stripe as Stripe API
 
-    Maya->>OHC: "I sell custom vegan cakes"
-    OHC->>AI_Mark: Generate Storefront
-    AI_Mark->>OHC: Storefront Live
-    Customer->>OHC: Books order & pays deposit
-    OHC->>Stripe: Process Payment
-    Stripe-->>OHC: Success
-    OHC->>AI_Ops: Trigger order flow
+    Maya->>OmniSolo: "I sell custom vegan cakes"
+    OmniSolo->>AI_Mark: Generate Storefront
+    AI_Mark->>OmniSolo: Storefront Live
+    Customer->>OmniSolo: Books order & pays deposit
+    OmniSolo->>Stripe: Process Payment
+    Stripe-->>OmniSolo: Success
+    OmniSolo->>AI_Ops: Trigger order flow
     AI_Ops-->>Maya: Push Notification "New Deposit Received"
 ```
 
@@ -52,15 +52,15 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Carlos
-    participant OHC as OHC App
+    participant OmniSolo as OmniSolo App
     participant AI_Mark as Marketing Agent
     participant AI_Sales as Sales Agent
 
-    Carlos->>OHC: "Plumbing services"
-    OHC->>AI_Mark: Generate Service Listings
-    AI_Mark->>OHC: Booking Page Live
-    Customer->>OHC: Requests Quote
-    OHC->>AI_Sales: Drafts Quote
+    Carlos->>OmniSolo: "Plumbing services"
+    OmniSolo->>AI_Mark: Generate Service Listings
+    AI_Mark->>OmniSolo: Booking Page Live
+    Customer->>OmniSolo: Requests Quote
+    OmniSolo->>AI_Sales: Drafts Quote
     AI_Sales->>Carlos: Approval Required
     Carlos->>AI_Sales: 1-Tap Approve
     AI_Sales-->>Customer: Sends Quote
@@ -132,7 +132,7 @@ sequenceDiagram
     participant Hub as Teammate Mesh
     participant Op as Operations Agent
     participant CS as Customer Success Agent
-    participant DB as OHC DB (Memory)
+    participant DB as OmniSolo DB (Memory)
 
     Hub->>Op: Trigger: New Order
     Op->>DB: Update Inventory
@@ -159,7 +159,7 @@ Implement the "Draft-for-Review" workflow in the KAIROS Orchestrator. Create a p
 Instant AI-Driven Storefront Builder
 
 ### Problem Statement
-Traditional drag-and-drop builders are too complex for non-technical users. OHC needs a system where the AI generates the initial site based on conversational input, which the user can then easily tweak.
+Traditional drag-and-drop builders are too complex for non-technical users. OmniSolo needs a system where the AI generates the initial site based on conversational input, which the user can then easily tweak.
 
 ### Research Report
 - **Goal**: Sub-60-second generation time for a functional storefront.
@@ -183,7 +183,7 @@ graph TD
 - **SEO**: Auto-generated meta tags and structured data.
 
 ### Implementation Prompt
-Implement the "Instant Build" mode. Accept a single text prompt, utilize the Marketing Agent to structure the data (layout, copy, initial products), and render a live preview. Ensure the output utilizes OHC design tokens (Glassmorphism, correct typography).
+Implement the "Instant Build" mode. Accept a single text prompt, utilize the Marketing Agent to structure the data (layout, copy, initial products), and render a live preview. Ensure the output utilizes OmniSolo design tokens (Glassmorphism, correct typography).
 
 ### Priority: P1 | Scope: Medium
 
@@ -195,7 +195,7 @@ Implement the "Instant Build" mode. Accept a single text prompt, utilize the Mar
 Mobile-First Constraints and Performance Targets
 
 ### Problem Statement
-OHC promises full business management from a mobile device. We must formalize the architectural constraints required to deliver a native-feeling, resilient mobile experience.
+OmniSolo promises full business management from a mobile device. We must formalize the architectural constraints required to deliver a native-feeling, resilient mobile experience.
 
 ### Research Report
 - **Baseline**: 375px viewport width.

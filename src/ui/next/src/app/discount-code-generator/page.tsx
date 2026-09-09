@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { useProPlan } from '../components/useProPlan';
 
 export default function DiscountCodeGeneratorPage() {
@@ -34,13 +34,13 @@ export default function DiscountCodeGeneratorPage() {
 
   const claimTrialExtension = async () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${encodeURIComponent(tenant)}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setShowSoftPaywall(false);
   };
 
   const encodedTenant = encodeURIComponent(tenant);
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/discount-code/embed?tenant=${encodedTenant}&discount=${encodeURIComponent(discountValue)}&code=${encodeURIComponent(codeName)}${hasPro ? '&hideBranding=true' : ''}" width="100%" height="200" frameborder="0"></iframe>${hasPro ? '' : `\n<div style="text-align: center; font-family: sans-serif; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`}`;
+  const embedCode = `<iframe src="https://cloud.omnisolo.co/api/v1/growth/discount-code/embed?tenant=${encodedTenant}&discount=${encodeURIComponent(discountValue)}&code=${encodeURIComponent(codeName)}${hasPro ? '&hideBranding=true' : ''}" width="100%" height="200" frameborder="0"></iframe>${hasPro ? '' : `\n<div style="text-align: center; font-family: sans-serif; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -92,7 +92,7 @@ export default function DiscountCodeGeneratorPage() {
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 mt-4">
                         <div>
-                            <p className="text-sm font-semibold text-gray-900">Remove OHC Branding</p>
+                            <p className="text-sm font-semibold text-gray-900">Remove OmniSolo Branding</p>
                             <p className="text-xs text-gray-500">Requires Pro subscription</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -128,7 +128,7 @@ export default function DiscountCodeGeneratorPage() {
                 {!hasPro && (
                     <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
                         <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-                            ⚡ Powered by OHC
+                            ⚡ Powered by OmniSolo
                         </a>
                     </div>
                 )}
@@ -197,7 +197,7 @@ export default function DiscountCodeGeneratorPage() {
             <div className="text-5xl mb-4">✨</div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Removing OHC branding is a Pro feature. Upgrade to our Pro plan to customize your widgets.
+              Removing OmniSolo branding is a Pro feature. Upgrade to our Pro plan to customize your widgets.
             </p>
 
             <button

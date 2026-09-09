@@ -487,9 +487,9 @@ git commit -m "feat: route omnisolo harness through inference"
 **Files:**
 - Modify: `deploy/docker/Dockerfile.harness-worker`
 - Modify: `deploy/docker-compose.yml`
-- Modify: `deploy/helm/ohc/values.yaml`
-- Modify: `deploy/helm/ohc/templates/harness-workers.yaml`
-- Modify: `deploy/helm/ohc/templates/harness-workers-hpa.yaml`
+- Modify: `deploy/helm/omnisolo/values.yaml`
+- Modify: `deploy/helm/omnisolo/templates/harness-workers.yaml`
+- Modify: `deploy/helm/omnisolo/templates/harness-workers-hpa.yaml`
 - Modify: `deploy/tests/harness_worker_deployment_contract_test.sh`
 
 - [ ] **Step 1: Write failing deployment contract assertions**
@@ -519,7 +519,7 @@ Run:
 ```bash
 bash deploy/tests/harness_worker_deployment_contract_test.sh
 docker compose -f deploy/docker-compose.yml --profile harness config >/dev/null
-helm template omnisolo deploy/helm/ohc >/dev/null
+helm template omnisolo deploy/helm/omnisolo >/dev/null
 ```
 
 Expected: all commands exit 0.
@@ -527,7 +527,7 @@ Expected: all commands exit 0.
 - [ ] **Step 5: Commit deployment integration**
 
 ```bash
-git add deploy/docker/Dockerfile.harness-worker deploy/docker-compose.yml deploy/helm/ohc/values.yaml deploy/helm/ohc/templates/harness-workers.yaml deploy/helm/ohc/templates/harness-workers-hpa.yaml deploy/tests/harness_worker_deployment_contract_test.sh
+git add deploy/docker/Dockerfile.harness-worker deploy/docker-compose.yml deploy/helm/omnisolo/values.yaml deploy/helm/omnisolo/templates/harness-workers.yaml deploy/helm/omnisolo/templates/harness-workers-hpa.yaml deploy/tests/harness_worker_deployment_contract_test.sh
 git commit -m "feat: deploy independently scalable harness pools"
 ```
 
@@ -601,7 +601,7 @@ Expected: all commands exit 0.
 - [ ] **Step 2: Run SQL and build-system verification**
 
 ```bash
-cargo test -p server_ohc --test harness_migration_parity -- --nocapture
+cargo test -p server_omnisolo --test harness_migration_parity -- --nocapture
 bazel test //src/server/harness/... //src/server/harness_worker/...
 git diff --check
 ```

@@ -13,8 +13,8 @@ describe('GET /api/v1/growth/testimonial/embed', () => {
         expect(html).toContain('Happy Customer');
         expect(html).toContain('This is the best service');
         expect(html).toContain('★★★★★');
-        expect(html).toContain('⚡ Powered by OHC');
-        expect(html).toContain('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=demo');
+        expect(html).toContain('⚡ Powered by OmniSolo');
+        expect(html).toContain('https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=demo');
     });
 
     it('customizes the widget based on query parameters', async () => {

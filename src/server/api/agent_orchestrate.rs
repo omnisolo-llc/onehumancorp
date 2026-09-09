@@ -14,7 +14,7 @@ use futures_util::{StreamExt, stream::FuturesUnordered};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use server_common::Claims;
-use server_ohc::orchestration::{Agent, Message};
+use server_omnisolo::orchestration::{Agent, Message};
 use std::{
     collections::HashSet,
     convert::Infallible,

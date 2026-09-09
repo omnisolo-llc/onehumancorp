@@ -20,11 +20,6 @@ if ! cd "$repo_root" 2>/dev/null; then
 fi
 
 guard_path="deploy/tests/no_chatwoot_residue_test.sh"
-historical=(
-  docs/research/ohc_tool_integration_research_report.md
-  docs/reports/tool_integration_research_report_q3.md
-  docs/research/triage_report_bazel.md
-)
 allowed_reference_paths=(
   .github/workflows/ci.yml
   "$guard_path"
@@ -32,7 +27,6 @@ allowed_reference_paths=(
   docs/superpowers/plans/2026-07-13-chatwoot-removal.md
   docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md
   docs/reports/production_agent_optimization_report.md
-  "${historical[@]}"
 )
 
 is_allowed_reference() {

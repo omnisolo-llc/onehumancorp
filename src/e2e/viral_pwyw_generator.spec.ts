@@ -34,8 +34,8 @@ test.describe('Viral PWYW Generator Widget', () => {
     await expect(embedCode).toContainText('min="1"');
     await expect(embedCode).toContainText('value="5"');
 
-    // Verify "Powered by OHC" branding is visible by default
-    await expect(embedCode).toContainText('Powered by OHC');
+    // Verify "OmniSolo" branding is visible by default
+    await expect(embedCode).toContainText('OmniSolo');
     await expect(embedCode).toContainText('source=viral_pwyw');
 
     // Click "Copy Code"
@@ -52,7 +52,7 @@ test.describe('Viral PWYW Generator Widget', () => {
         });
         expect(clipboardText).toContain('The Ultimate Notion Template');
         expect(clipboardText).toContain('Organize your entire life with this template.');
-        expect(clipboardText).toContain('Powered by OHC');
+        expect(clipboardText).toContain('OmniSolo');
     } catch (e) {
         console.warn('Clipboard read failed (expected in some headless environments): ', e);
     }
@@ -65,7 +65,7 @@ test.describe('Viral PWYW Generator Widget', () => {
     await page.locator('#product-name').fill('Cool Thing');
 
     // Toggle the "Remove branding" checkbox
-    await page.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
+    await page.locator('label', { hasText: 'Remove "OmniSolo" Badge' }).click();
 
     // Click "Generate Embed Code"
     await page.locator('#generate-btn').click();
@@ -75,7 +75,7 @@ test.describe('Viral PWYW Generator Widget', () => {
 
     // Verify the branding footer is hidden
     const embedCode = page.locator('#embed-code');
-    await expect(embedCode).not.toContainText('Powered by OHC');
+    await expect(embedCode).not.toContainText('OmniSolo');
   });
 
   test('should navigate back to dashboard', async ({ page }) => {

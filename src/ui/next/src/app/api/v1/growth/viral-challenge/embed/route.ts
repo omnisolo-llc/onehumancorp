@@ -159,13 +159,13 @@ export async function GET(request: Request) {
             <div class="reward-value">🎁 ${escapedReward}</div>
         </div>
 
-        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_challenge" target="_blank" class="button">
+        <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_challenge" target="_blank" class="button">
             Join Challenge
         </a>
 
         ${rawBranding ? `
         <div class="footer">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_challenge" target="_blank" id="preview-branding">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_challenge" target="_blank" id="preview-branding">⚡ Powered by OmniSolo</a>
         </div>
         ` : ''}
     </div>

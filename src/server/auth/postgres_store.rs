@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 fn is_multitenant_mode() -> bool {
     #[cfg(test)]
     {
-        if let Ok(val) = std::env::var("OHC_MULTITENANT") {
+        if let Ok(val) = std::env::var("OMNISOLO_MULTITENANT") {
             return val == "true";
         }
     }
@@ -462,7 +462,7 @@ mod auth_utils_tests {
     #[tokio::test]
     async fn test_tenant_isolation_boundary_enforcement() {
         let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };
@@ -492,7 +492,7 @@ mod auth_utils_tests {
 
         let _repo = PgUserRepository::new(pool.clone());
 
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+        temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], async {
             let mut tx = pool.begin().await.unwrap();
             let res = set_org_context(&mut *tx, "tenant_foo").await;
             assert!(res.is_ok());
@@ -517,7 +517,7 @@ mod security_tests {
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
         let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };
@@ -547,7 +547,7 @@ mod security_tests {
 
         let repo = PgUserRepository::new(pool.clone());
 
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+        temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
             let _org_id = "system";
             let should_bypass = !is_multitenant;
@@ -568,7 +568,7 @@ mod security_tests {
 
     #[tokio::test]
     async fn test_revoke_token_uses_transaction_and_tenant_context() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };
@@ -616,7 +616,7 @@ mod security_tests {
     #[tokio::test]
     async fn test_update_user_tenant_isolation_regression() {
         let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };
@@ -658,7 +658,7 @@ mod security_tests {
         };
 
         // Ensure multitenant environment is mocked strictly for 'system' context evaluation
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], {
+        temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], {
             let dummy_user = dummy_user.clone();
             let pool_clone = pool.clone();
             async move {
@@ -693,7 +693,7 @@ mod security_tests {
             oidc_subject: None,
         };
 
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], {
+        temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], {
             let uid = uid.clone();
             let user = user.clone();
             let pool_clone = pool.clone();

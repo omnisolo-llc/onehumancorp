@@ -1,6 +1,6 @@
 /// Master Catalog A: Framework Implementation Archetypes: CrewAI. Implements a role-based architecture. A "deterministic backbone" (Flows layer) handles strict routing and validation, while the LLM only handles "intelligence where it matters."
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::Message;
+use omnisolo_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use serde_json::Value;
 
@@ -177,7 +177,7 @@ impl Flow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, ToolCall};
+    use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, ToolCall};
     use crate::llm::client::LlmClient;
     use tokio::sync::Mutex;
 

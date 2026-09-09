@@ -8,18 +8,18 @@ Small business owners like Maya (baker) and Fatima (food cart) increasingly need
 1. Build their own delivery fleet, which means tracking drivers via disjointed apps, manually calculating delivery zones, and guessing ETA.
 2. Sign up for 3rd-party platforms (Uber Eats, DoorDash), which take a massive 30% margin and own the customer relationship.
 
-Maya needs to offer local delivery for her custom cakes. Sometimes she can have her assistant deliver (when not busy), but other times she needs a reliable on-demand courier, all without leaving the OneHumanCorp app or manually dispatching drivers. She needs an autonomous system that calculates costs, quotes the customer at checkout, and routes the delivery seamlessly to the cheapest/fastest available mode (in-house staff or 3rd-party API) without technical setup.
+Maya needs to offer local delivery for her custom cakes. Sometimes she can have her assistant deliver (when not busy), but other times she needs a reliable on-demand courier, all without leaving the OmniSolo app or manually dispatching drivers. She needs an autonomous system that calculates costs, quotes the customer at checkout, and routes the delivery seamlessly to the cheapest/fastest available mode (in-house staff or 3rd-party API) without technical setup.
 
 ## Research Report
 ### Competitive Analysis
-| Platform | Delivery Capabilities | Strengths | Weaknesses (The OHC Opportunity) |
+| Platform | Delivery Capabilities | Strengths | Weaknesses (The OmniSolo Opportunity) |
 |---|---|---|---|
 | **Shopify** | Local Delivery | Built-in routing for in-house staff | Requires merchant to manually plan routes. Heavy manual intervention. No fallback to 3rd-party if staff is busy. |
 | **Square** | On-Demand Delivery | Integrates with DoorDash/Uber | High setup friction. Hard to mix in-house fleet with 3rd-party overflow. Complex UI for non-technical users. |
 | **Wix** | Local Delivery Apps | Third-party app ecosystem | Fragmented experience. Merchants must manage multiple dashboards. |
-| **OHC (Target)** | **Autonomous Multi-Modal Mesh** | **Zero-config, real-time AI dispatch, hybrid in-house/3rd-party routing** | **Must ensure seamless driver tracking in the mobile UI and abstract complex logistics terminology.** |
+| **OmniSolo (Target)** | **Autonomous Multi-Modal Mesh** | **Zero-config, real-time AI dispatch, hybrid in-house/3rd-party routing** | **Must ensure seamless driver tracking in the mobile UI and abstract complex logistics terminology.** |
 
-The core gap in the market is a **hybrid delivery engine** that intelligently routes orders to either an internal staff member (via the OHC Staff Mesh) or a 3rd-party delivery network (e.g., Uber Direct, DoorDash Drive API) based on real-time parameters (staff availability, delivery cost, distance) with absolutely zero manual dispatching by the business owner.
+The core gap in the market is a **hybrid delivery engine** that intelligently routes orders to either an internal staff member (via the OmniSolo Staff Mesh) or a 3rd-party delivery network (e.g., Uber Direct, DoorDash Drive API) based on real-time parameters (staff availability, delivery cost, distance) with absolutely zero manual dispatching by the business owner.
 
 ## Design Doc
 
@@ -81,11 +81,11 @@ sequenceDiagram
 
 ### Mobile UX Flow (375px First)
 1. **Business Owner Setup:**
-   - A single toggle on the OHC app dashboard: "Enable Local Delivery."
+   - A single toggle on the OmniSolo app dashboard: "Enable Local Delivery."
    - The AI asks: "Do you have your own drivers?" Maya selects "Yes, my assistant."
    - The AI automatically generates a delivery radius (e.g., 5 miles) based on local density.
 2. **Staff Driver Experience:**
-   - Staff member receives an SMS link to open their OHC Driver Card (no app download).
+   - Staff member receives an SMS link to open their OmniSolo Driver Card (no app download).
    - Shows a large, high-contrast map with a "Start Route" button and turn-by-turn navigation via native OS maps.
    - Large "Mark Delivered" swipe action (accessible with one hand while holding a cake).
 3. **Customer Experience:**

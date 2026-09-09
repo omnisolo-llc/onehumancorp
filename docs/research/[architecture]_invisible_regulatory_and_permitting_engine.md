@@ -14,8 +14,8 @@ In many jurisdictions, a home-based bakery requires specific cottage food permit
 *   **LegalZoom / ZenBusiness**: Excellent for business formation (LLC/Corp), but they treat permitting as a one-time upsell during formation rather than a continuous, integrated management feature. Their interfaces are desktop-heavy and form-intensive.
 *   **Gov2Go / Municipal Portals**: While some cities are digitizing, the landscape is fragmented. Every city has a different portal, requiring different logins and data formats, which fails the "Grandmother Test."
 
-### The OHC Opportunity
-OHC can bridge the "Bureaucracy Gap" by using AI agents to scout local municipal requirements via LLM-driven research (crawling city codes and ordinance databases) and presenting a unified "1-Tap Permit" experience on a 375px mobile screen. By centralizing the business's data, OHC can auto-fill 95% of permit applications, requiring only a final signature from the owner.
+### The OmniSolo Opportunity
+OmniSolo can bridge the "Bureaucracy Gap" by using AI agents to scout local municipal requirements via LLM-driven research (crawling city codes and ordinance databases) and presenting a unified "1-Tap Permit" experience on a 375px mobile screen. By centralizing the business's data, OmniSolo can auto-fill 95% of permit applications, requiring only a final signature from the owner.
 
 ## 4. Design Doc
 
@@ -87,13 +87,13 @@ A business owner (like Maya) enters her bakery's address and business type. The 
 **Acceptance Criteria:**
 1. Define the `Permit` and `FilingEvent` data entities with strict multi-tenant isolation and PostgreSQL RLS.
 2. Implement a "Compliance Scout" service hook that identifies requirements based on zip code and business category (mocked or using LLM research integration).
-3. Build the mobile-first (375px) "Compliance Pulse" dashboard card and Permit Detail bottom-sheet using OHC Translucent Glass design tokens.
+3. Build the mobile-first (375px) "Compliance Pulse" dashboard card and Permit Detail bottom-sheet using OmniSolo Translucent Glass design tokens.
 4. Implement the state machine for permit lifecycle management (Required -> Filed -> Approved -> Expiring).
 5. Ensure the "Protector" agent can trigger push notifications for expiring permits.
 6. All developer/technical terms must be hidden; the UI must pass the "Grandmother Test."
 
 ## 6. Priority
-**P1** (High - Critical for legal safety and establishing OHC as a "True Partner" rather than just a tool).
+**P1** (High - Critical for legal safety and establishing OmniSolo as a "True Partner" rather than just a tool).
 
 ## 7. Estimated Scope
 **Large** (Requires integration with location services, AI scouting logic, and a robust status tracking engine).

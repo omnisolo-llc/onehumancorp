@@ -55,7 +55,14 @@ export async function handleLogout(
   if (!isTrustedMutationOrigin(request.headers, dependencies.config.canonicalOrigin)) {
     return json(403, { error: "forbidden" });
   }
-  if (request.body !== null) return json(400, { error: "invalid request" });
+  if (request.body !== null) {
+    try {
+      const body = await request.arrayBuffer();
+      if (body.byteLength !== 0) return json(400, { error: "invalid request" });
+    } catch {
+      return json(400, { error: "invalid request" });
+    }
+  }
 
   const parsedCookie = parseSessionCookieHeader(
     request.headers.get("cookie"),

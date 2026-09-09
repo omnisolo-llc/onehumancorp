@@ -1,12 +1,12 @@
-# OHC Research Report: AI-Automated Scheduling and Booking
+# OmniSolo Research Report: AI-Automated Scheduling and Booking
 
 ## 1. Executive Summary
 
-This report analyzes the market landscape for small business booking and scheduling solutions, identifying a critical gap in autonomous AI capabilities. Currently, platforms like Shopify, Wix, and Squarespace offer functional booking tools, but they rely heavily on manual user intervention. OHC can leapfrog these competitors by introducing "AI-Automated Scheduling," where an autonomous agent (e.g., "The Manager" or "The Salesperson") handles the end-to-end booking process, from initial inquiry to follow-ups, reducing the manual burden on business owners.
+This report analyzes the market landscape for small business booking and scheduling solutions, identifying a critical gap in autonomous AI capabilities. Currently, platforms like Shopify, Wix, and Squarespace offer functional booking tools, but they rely heavily on manual user intervention. OmniSolo can leapfrog these competitors by introducing "AI-Automated Scheduling," where an autonomous agent (e.g., "The Manager" or "The Salesperson") handles the end-to-end booking process, from initial inquiry to follow-ups, reducing the manual burden on business owners.
 
 ## 2. Competitive Analysis
 
-| Feature | OHC (Proposed) | Shopify (via Apps) | Wix | Squarespace | GoDaddy |
+| Feature | OmniSolo (Proposed) | Shopify (via Apps) | Wix | Squarespace | GoDaddy |
 |---|---|---|---|---|---|
 | Native Booking Engine | **Yes** | No (Third-party apps) | Yes | Yes (Acuity) | Yes |
 | AI-Driven Inquiry Handling | **Yes (Autonomous)** | No | Limited | No | No |
@@ -28,9 +28,9 @@ This report analyzes the market landscape for small business booking and schedul
 *   **Leo (The Music Tutor):** Leo spends hours manually coordinating lesson schedules and sending Zoom links. Reminders are tedious to send, and generic automated reminders often lack context. Rescheduling is a nightmare.
 *   **Fatima (The Food Cart Operator):** Fatima finds taking pre-orders by phone disruptive. She needs a simple way for customers to schedule pickups without taking her attention away from cooking, and a way to quickly see her daily schedule.
 
-## 4. OHC Differentiation Strategy
+## 4. OmniSolo Differentiation Strategy
 
-OHC will deploy an autonomous "Operations" agent that operates invisibly in the background.
+OmniSolo will deploy an autonomous "Operations" agent that operates invisibly in the background.
 
 *   **Proactive Engagement:** The agent detects booking-related inquiries across channels (web chat, email, DMs) and proactively offers available time slots.
 *   **Contextual Understanding:** The agent understands the service being requested (e.g., "Need a leaky pipe fixed" vs. "Want a custom cake consultation") and schedules the appropriate duration and resource.

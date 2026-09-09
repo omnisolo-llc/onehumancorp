@@ -1,6 +1,6 @@
 # KAIROS AI OS Orchestration Walkthrough
 
-The KAIROS Orchestration layer is the foundation of the OneHumanCorp autonomous workforce. It ensures that your business runs smoothly, efficiently, and with perfect memory.
+The KAIROS Orchestration layer is the foundation of the OmniSolo autonomous workforce. It ensures that your business runs smoothly, efficiently, and with perfect memory.
 
 ## The KAIROS Triad
 

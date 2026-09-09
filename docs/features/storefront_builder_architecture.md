@@ -1,4 +1,4 @@
-# Research Report: Architectural Design for the OHC Website & Storefront Builder
+# Research Report: Architectural Design for the OmniSolo Website & Storefront Builder
 
 ## Problem Statement
 Small business owners like Carlos the Handyman or Maya the Baker need a professional web presence to attract customers and accept orders. However, they lack the technical skills to build a website, the budget to hire a developer, and the time to learn complex platforms. Existing website builders are often too generic, require too much configuration, and don't natively integrate with booking, scheduling, and payment systems right out of the box, especially on a mobile device. They just want a beautiful, functional storefront that works seamlessly from their phone.
@@ -9,18 +9,18 @@ Our user personas demand extreme simplicity.
 - **Maya (Baker)** needs a beautiful product catalog with image galleries and a custom order deposit flow.
 - **Priya (Boutique)** needs product variants, inventory sync, and a clean checkout.
 
-Currently, if users piece these together, they end up with a fragmented experience (e.g., Carrd for landing page + Calendly for booking + Stripe for payments). OHC must unify this into a single cohesive builder that defaults to "live" status very quickly.
+Currently, if users piece these together, they end up with a fragmented experience (e.g., Carrd for landing page + Calendly for booking + Stripe for payments). OmniSolo must unify this into a single cohesive builder that defaults to "live" status very quickly.
 
 ### Competitive Analysis
 - **Shopify**: Excellent for e-commerce but overwhelming for services (Carlos, Leo) or simple food pre-orders (Fatima). High learning curve; mobile app is mostly for management, not initial setup.
 - **Wix**: Very flexible, but too complex ("blank canvas syndrome"). Not truly mobile-first for the *builder* experience.
 - **Squarespace**: Beautiful templates, but rigid. Requires desktop to build effectively.
 - **GoDaddy**: Fast setup but very limited customization and poor aesthetic defaults.
-- **OHC**: Differentiates by offering a mobile-first, component-based builder that is heavily AI-assisted. The "Marketing & Advertising" agent handles the initial generation, and the user simply tweaks content blocks on a 375px screen.
+- **OmniSolo**: Differentiates by offering a mobile-first, component-based builder that is heavily AI-assisted. The "Marketing & Advertising" agent handles the initial generation, and the user simply tweaks content blocks on a 375px screen.
 
 ### Data & References
 - Studies show SMBs abandon website creation if the process takes more than 1 hour.
-- Over 70% of local searches are performed on mobile devices, meaning the resulting site MUST be mobile-first. OHC's builder mandates a 375px-first approach.
+- Over 70% of local searches are performed on mobile devices, meaning the resulting site MUST be mobile-first. OmniSolo's builder mandates a 375px-first approach.
 
 ## Architectural Design
 
@@ -72,7 +72,7 @@ graph TD
 1. **AI Generation Step:** User inputs basic info. "Marketing & Advertising" agent generates a functional preview within 10 seconds.
 2. **Editor View (375px):** Shows the live preview. A bottom sheet allows adding "Blocks". Tapping any element opens an inline editor using the native mobile keyboard.
 3. **Block Library:** Scrollable list of semantic blocks: Hero, Product Grid, Service List, Booking Calendar, Contact Form, Testimonials.
-4. **Publishing Flow:** Big "Publish" button triggers the workflow, provisioning an OHC subdomain or mapping a custom domain.
+4. **Publishing Flow:** Big "Publish" button triggers the workflow, provisioning an OmniSolo subdomain or mapping a custom domain.
 
 ### Mobile UX Constraints
 - Operable with one thumb.

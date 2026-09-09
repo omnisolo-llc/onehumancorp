@@ -1,10 +1,10 @@
 # 💰 Stripe Transaction Fee Optimization (ACH vs. Card)
 
-To maintain OHC's economic sustainability and keep user costs low, we've implemented an intelligent payment router that chooses between Credit Card and ACH for Stripe transactions.
+To maintain OmniSolo's economic sustainability and keep user costs low, we've implemented an intelligent payment router that chooses between Credit Card and ACH for Stripe transactions.
 
 ## Fee Comparison
 
-| Payment Method | Stripe Fee (Standard) | Minimum Amount for OHC |
+| Payment Method | Stripe Fee (Standard) | Minimum Amount for OmniSolo |
 | :--- | :--- | :--- |
 | **Credit Card** | 2.9% + $0.30 | None |
 | **ACH Direct Debit** | 0.8% (Capped at $5.00) | $50.00 |
@@ -20,7 +20,7 @@ We route to **ACH** if:
 
 ### Potential Savings Examples
 
-| Amount | Credit Card Fee | ACH Fee | **OHC Savings** |
+| Amount | Credit Card Fee | ACH Fee | **OmniSolo Savings** |
 | :--- | :--- | :--- | :--- |
 | $20 | $0.88 | N/A (Card) | $0.00 |
 | $100 | $3.20 | $0.80 | **$2.40** |
@@ -28,4 +28,4 @@ We route to **ACH** if:
 | $1,000 | $29.30 | $5.00 (Cap) | **$24.30** |
 
 ## Implementation
-The logic is integrated into `StripeClient::create_checkout_session`, ensuring that high-value transactions automatically utilize the most cost-effective payment rail. This optimization directly contributes to OHC's ability to offer a generous free tier by reducing overhead on paid conversions.
+The logic is integrated into `StripeClient::create_checkout_session`, ensuring that high-value transactions automatically utilize the most cost-effective payment rail. This optimization directly contributes to OmniSolo's ability to offer a generous free tier by reducing overhead on paid conversions.

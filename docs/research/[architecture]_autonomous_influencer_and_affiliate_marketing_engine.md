@@ -4,9 +4,9 @@
 **Autonomous Influencer and Affiliate Marketing Engine: Zero-Touch Viral Growth**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC)'s core personas—especially **Priya (boutique owner, 35)** and **Maya (baker, 28)**—driving viral growth through micro-influencers and affiliates is highly desired but technically complex. Setting up affiliate programs requires managing third-party tools (like Refersion or ShareASale), creating tracking links, calculating commissions, and handling payouts. This requires technical knowledge and manual administrative work that non-technical business owners do not have time for.
+For OmniSolo (OmniSolo)'s core personas—especially **Priya (boutique owner, 35)** and **Maya (baker, 28)**—driving viral growth through micro-influencers and affiliates is highly desired but technically complex. Setting up affiliate programs requires managing third-party tools (like Refersion or ShareASale), creating tracking links, calculating commissions, and handling payouts. This requires technical knowledge and manual administrative work that non-technical business owners do not have time for.
 
-Competitors like Shopify require expensive third-party apps for affiliate marketing, adding friction and cost. OHC needs an invisible, autonomous system that turns happy customers and local micro-influencers into commissioned promoters with zero configuration.
+Competitors like Shopify require expensive third-party apps for affiliate marketing, adding friction and cost. OmniSolo needs an invisible, autonomous system that turns happy customers and local micro-influencers into commissioned promoters with zero configuration.
 
 ## 3. Research Report
 ### Competitive Landscape
@@ -20,7 +20,7 @@ Competitors like Shopify require expensive third-party apps for affiliate market
 *   An integrated affiliate system can boost average order value and customer acquisition organically.
 
 ### Opportunity
-By integrating the **Marketing & Advertising Agent** with the **Finance & Payments Agent**, OHC can automatically offer an affiliate link to every customer post-purchase or via direct DM outreach to local influencers. The entire lifecycle—link generation, attribution, commission calculation, and payout—is handled invisibly.
+By integrating the **Marketing & Advertising Agent** with the **Finance & Payments Agent**, OmniSolo can automatically offer an affiliate link to every customer post-purchase or via direct DM outreach to local influencers. The entire lifecycle—link generation, attribution, commission calculation, and payout—is handled invisibly.
 
 ## 4. Design Doc
 
@@ -28,9 +28,9 @@ By integrating the **Marketing & Advertising Agent** with the **Finance & Paymen
 ```mermaid
 sequenceDiagram
     participant Customer as Local Influencer/Customer
-    participant Agent as OHC Marketing Agent
-    participant Core as OHC Affiliate Ledger
-    participant Finance as OHC Finance Agent
+    participant Agent as OmniSolo Marketing Agent
+    participant Core as OmniSolo Affiliate Ledger
+    participant Finance as OmniSolo Finance Agent
     participant Owner as Priya (Mobile 375px)
 
     Customer->>Agent: Completes purchase (or is identified as a top customer)
@@ -46,7 +46,7 @@ sequenceDiagram
 ### Mobile UX Flow (375px First)
 1. **Activation:** The business owner receives a proactive prompt from the Marketing Agent: "Your top customers are referring people. Want to automatically give them a 10% cut for every sale they bring?" -> [1-Tap "Yes, turn it on"].
 2. **Influencer View:** Customers get a clean, mobile-optimized dashboard (glassmorphism design) showing their unique link, total earnings, and a 1-tap "Share to Instagram Story" button.
-3. **Owner Dashboard:** A single card in the UniFi-style dashboard: "Viral Growth: 15 affiliates brought in $500 this week." Payouts are handled automatically from the business's OHC balance.
+3. **Owner Dashboard:** A single card in the UniFi-style dashboard: "Viral Growth: 15 affiliates brought in $500 this week." Payouts are handled automatically from the business's OmniSolo balance.
 
 ### AI Agent Integration Points
 *   **Marketing Agent:** Identifies top customers or local influencers based on purchase history and social interactions. Drafts and sends the affiliate invitation.

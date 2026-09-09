@@ -10,7 +10,7 @@ test.describe('LangGraph State Machine', () => {
     await page.click('a[href="/langgraph"]');
 
     // Check that the title exists
-    await expect(page.locator('h1')).toHaveText('LangGraph State Machine');
+    await expect(page.getByRole('heading', { name: 'LangGraph State Machine', exact: true })).toBeVisible();
 
     // Instruct the agent to use the Bash tool, proving that it routes to tool_node and back
     await page.fill('textarea[placeholder*="Write a quick poem about a cake"]', 'Use the Bash tool to execute "echo hello". Then confirm you have done so.');

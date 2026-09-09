@@ -10,7 +10,7 @@ Small business owners like Maya (baker) and Carlos (handyman) struggle to proact
 Current SMB platforms limit AI to reactive chatbot features:
 *   **Shopify Sidekick:** Only responds to direct user queries in a chat interface. It does not run continuously in the background to analyze store events or proactively trigger operational workflows.
 *   **Wix/Squarespace AI:** Focused on content generation (text, images) during site setup, but lacks long-term episodic memory or autonomous background task execution.
-*   **OHC's Opportunity:** By introducing a "Proactive Autonomous Memory Engine," OHC can transition AI from a reactive tool to an active "Operations Manager." This engine will process a continuous event stream (Event Mesh), store context in a vector memory layer, and run periodic background jobs (AI Agents) that proactively draft actions for the business owner, dramatically reducing cognitive load.
+*   **OmniSolo's Opportunity:** By introducing a "Proactive Autonomous Memory Engine," OmniSolo can transition AI from a reactive tool to an active "Operations Manager." This engine will process a continuous event stream (Event Mesh), store context in a vector memory layer, and run periodic background jobs (AI Agents) that proactively draft actions for the business owner, dramatically reducing cognitive load.
 
 ## Design Doc
 
@@ -44,7 +44,7 @@ Implement the Proactive Autonomous Memory Engine and Action Proposal Ledger.
 
 ```mermaid
 sequenceDiagram
-    participant App as OHC Mobile App
+    participant App as OmniSolo Mobile App
     participant Events as Event Mesh
     participant VectorDB as Vector Memory Layer
     participant Agent as Autonomous Background Agent

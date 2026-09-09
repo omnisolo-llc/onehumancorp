@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('OHC Expert Center Comprehensive E2E Flows', () => {
+test.describe('OmniSolo Expert Center Comprehensive E2E Flows', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the agents dashboard page
     await page.goto('/agents');

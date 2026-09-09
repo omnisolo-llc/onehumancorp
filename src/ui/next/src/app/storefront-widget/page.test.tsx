@@ -43,7 +43,7 @@ describe('StorefrontWidgetPage', () => {
 
     const textareas = screen.getAllByRole('textbox');
     const textarea = textareas[1] as HTMLTextAreaElement;
-    expect(textarea.value).toContain('<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=my-store&theme=light"');
+    expect(textarea.value).toContain('<iframe src="https://cloud.omnisolo.co/api/v1/growth/storefront/embed?tenant=my-store&theme=light"');
   });
 
   it('reflects updated tenant and theme in embed code', () => {

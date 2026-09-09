@@ -85,7 +85,7 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
           newBlocks.splice(toIndex, 0, moved);
 
           if (typeof localStorage !== "undefined") {
-              localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+              localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
           }
 
           return { blocks: newBlocks };

@@ -29,7 +29,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     // Check generated link input and action buttons
     const linkInput = page.locator('#referral-link');
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/cloud\.ohc\.network\/invite\//);
+    await expect(linkInput).toHaveValue(/^https:\/\/cloud\.omnisolo\.network\/invite\//);
 
     const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await expect(copyBtn).toBeVisible();
@@ -42,14 +42,14 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     await copyBtn.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
-    // Verify the clipboard content includes the link and the "Powered by OHC" branding
+    // Verify the clipboard content includes the link and the "OmniSolo" branding
     // Playwright evaluates clipboard via API in headed mode or context config but we can check visual drift here
     // since the original test skips clipboard API evaluation due to permissions in headless mode sometimes.
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
     if (clipboardText) {
-      expect(clipboardText).toContain('Join my team on OHC!');
-      expect(clipboardText).toContain('https://cloud.ohc.network/invite/');
-      expect(clipboardText).toContain('⚡ Powered by OHC');
+      expect(clipboardText).toContain('Join my team on OmniSolo!');
+      expect(clipboardText).toContain('https://cloud.omnisolo.co/invite/');
+      expect(clipboardText).toContain('⚡ OmniSolo');
     }
 
     // Verify WhatsApp Share opens new tab with the correct URL
@@ -63,7 +63,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     const popupUrl = popup.url();
     // wa.me gets expanded to api.whatsapp.com by the browser often
     expect(popupUrl).toMatch(/wa\.me|api\.whatsapp\.com/);
-    expect(popupUrl).toContain('Powered+by+OHC');
-    expect(popupUrl).toContain(encodeURIComponent('https://cloud.ohc.network/invite/'));
+    expect(popupUrl).toContain('Powered+by+OmniSolo');
+      expect(popupUrl).toContain(encodeURIComponent('https://cloud.omnisolo.co/invite/'));
   });
 });

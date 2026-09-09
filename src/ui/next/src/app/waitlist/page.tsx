@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PoweredByOHC } from "../components/PoweredByOHC";
+import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 
 export default function WaitlistPage() {
   const router = useRouter();
@@ -58,7 +58,7 @@ export default function WaitlistPage() {
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40">
         <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] tracking-tight">
-          OneHumanCorp
+          OmniSolo
         </h1>
         <button
           onClick={() => router.push("/")}
@@ -80,7 +80,7 @@ export default function WaitlistPage() {
                 : "You're on the list!"}
             </h2>
             <p className="text-gray-600 mb-6">
-              Thanks for joining. We'll let you know as soon as OneHumanCorp is
+              Thanks for joining. We'll let you know as soon as OmniSolo is
               ready for you.
             </p>
 
@@ -112,7 +112,7 @@ export default function WaitlistPage() {
                   </button>
                 </div>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just joined the waitlist for OneHumanCorp! The AI platform for small business. Join me here: ${referralLink} \n\n⚡ Powered by OHC`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just joined the waitlist for OmniSolo! The AI platform for small business. Join me here: ${referralLink} \n\n⚡ Powered by OmniSolo`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 bg-black text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-gray-800 transition-all hover:-translate-y-0.5"
@@ -136,7 +136,7 @@ export default function WaitlistPage() {
               Sign up another email
             </button>
             <div className="mt-8 pt-6 border-t border-gray-200/60 w-full flex justify-center">
-              <PoweredByOHC tenantId="waitlist" />
+              <PoweredByOmniSolo tenantId="waitlist" />
             </div>
           </div>
         ) : (

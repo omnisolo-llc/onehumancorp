@@ -17,7 +17,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
       getItem: vi.fn().mockImplementation((key) => {
         if (key === 'tenant') return 'mock-tenant';
         if (key === 'has_pro') return 'false';
-        if (key === 'ohc_dbc_shared') return 'false';
+        if (key === 'omnisolo_dbc_shared') return 'false';
         return null;
       }),
       setItem: vi.fn(),
@@ -46,7 +46,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
 
     // Check branding checkbox exists
-    expect(screen.getByText(/Remove "Powered by OHC" branding/)).toBeInTheDocument();
+    expect(screen.getByText(/Remove "Powered by OmniSolo" branding/)).toBeInTheDocument();
   });
 
   it('updates live preview when form is filled', () => {
@@ -65,6 +65,6 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     fireEvent.click(brandingCheckbox);
 
     expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeInTheDocument();
-    expect(screen.getByText('Make the Digital Business Card 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock full customization.')).toBeInTheDocument();
+    expect(screen.getByText('Make the Digital Business Card 100% white-labeled. Upgrade to Pro to remove the "Powered by OmniSolo" watermark and unlock full customization.')).toBeInTheDocument();
   });
 });

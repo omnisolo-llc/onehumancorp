@@ -10,7 +10,7 @@ Small business owners like Fatima (food cart, limited English) and Priya (boutiq
 * **Shopify POS:** Relies heavily on hardware terminals for in-person transactions. QR codes generally link to a storefront, not an instant context-aware checkout.
 * **Square:** Offers QR codes for ordering at tables, but the experience is often clunky, requiring the user to navigate a full digital menu.
 * **Linktree / Biolinks:** Static routing, no native contextual checkout.
-* **OneHumanCorp (OHC) Differentiation - "Invisible Commerce Bridge":** OHC enables the instantaneous generation of Contextual QR Codes directly from the merchant's mobile device. These aren't generic links; they encode the exact intent (e.g., "Buy 1 Vegan Cupcake", "Pay Table 4 Bill", "Book 30min Consultation"). Scanning the QR code instantly invokes a Zero-Trust, edge-cached web-clip (App Clip / Instant App experience) or a deep link to a WhatsApp/SMS conversation pre-loaded with the context. No app downloads, no generic storefront navigation. Just Scan -> FaceID -> Done.
+* **OmniSolo (OmniSolo) Differentiation - "Invisible Commerce Bridge":** OmniSolo enables the instantaneous generation of Contextual QR Codes directly from the merchant's mobile device. These aren't generic links; they encode the exact intent (e.g., "Buy 1 Vegan Cupcake", "Pay Table 4 Bill", "Book 30min Consultation"). Scanning the QR code instantly invokes a Zero-Trust, edge-cached web-clip (App Clip / Instant App experience) or a deep link to a WhatsApp/SMS conversation pre-loaded with the context. No app downloads, no generic storefront navigation. Just Scan -> FaceID -> Done.
 
 ## Design Doc
 
@@ -35,30 +35,30 @@ erDiagram
 ```mermaid
 sequenceDiagram
     participant Merchant as Merchant (Mobile App)
-    participant OHC_Core as OHC Core Services
+    participant OMNISOLO_Core as OmniSolo Core Services
     participant Customer as Customer (Smartphone Camera)
     participant Edge as Edge Routing & Cache
     participant AI as AI Ambassador / Checkout Engine
 
-    Merchant->>OHC_Core: Select "Vegan Cupcake" -> Generate QR (1-Tap Checkout)
-    OHC_Core-->>Merchant: Returns High-Res QR Code (Context Encoded)
+    Merchant->>OMNISOLO_Core: Select "Vegan Cupcake" -> Generate QR (1-Tap Checkout)
+    OMNISOLO_Core-->>Merchant: Returns High-Res QR Code (Context Encoded)
     Merchant->>Customer: Displays QR on screen / Prints to thermal
     Customer->>Customer: Scans QR with Camera
     Customer->>Edge: HTTPS Request (Deep Link / Web Clip)
     Edge->>Edge: Resolves Context from ID (Edge Cached)
     Edge-->>Customer: Instantly renders 1-Tap Checkout (Apple/Google Pay) or opens WhatsApp
     Customer->>AI: Completes Payment / Starts Chat
-    AI->>OHC_Core: Finalizes Transaction
-    OHC_Core-->>Merchant: Real-time Push Notification: "Paid!"
+    AI->>OMNISOLO_Core: Finalizes Transaction
+    OMNISOLO_Core-->>Merchant: Real-time Push Notification: "Paid!"
 ```
 
 ### AI Agent Integration Points
-*   **Contextual Agent Hand-off:** If the QR code routes to a conversational flow (e.g., a high-ticket item requiring negotiation or custom specs), the OHC AI Ambassador is instantly primed with the exact item or service context. It greets the user: "Hi! I see you're looking at the vintage leather jacket. Any questions about sizing?"
+*   **Contextual Agent Hand-off:** If the QR code routes to a conversational flow (e.g., a high-ticket item requiring negotiation or custom specs), the OmniSolo AI Ambassador is instantly primed with the exact item or service context. It greets the user: "Hi! I see you're looking at the vintage leather jacket. Any questions about sizing?"
 *   **Dynamic Pricing & Yield:** The AI Operations department can dynamically adjust the payload associated with a static QR code based on time of day (e.g., happy hour pricing) without the merchant needing to reprint the code.
 *   **Fraud Defense Engine:** Every scan event is evaluated invisibly by the Fraud Defense Engine to ensure transaction integrity, particularly for high-velocity physical locations.
 
 ### Key Design Decisions
-1.  **Late Binding of Context:** The QR code encodes a secure intent ID, not the raw data. This allows the OHC platform (and AI agents) to dynamically update pricing, availability, or routing (e.g., item sold out -> route to "Join Waitlist" agent) without re-generating the physical code.
+1.  **Late Binding of Context:** The QR code encodes a secure intent ID, not the raw data. This allows the OmniSolo platform (and AI agents) to dynamically update pricing, availability, or routing (e.g., item sold out -> route to "Join Waitlist" agent) without re-generating the physical code.
 2.  **Edge-Cached Resolution:** The resolution of the QR intent ID must happen at the edge (CDN/Edge Workers) to guarantee sub-100ms load times, preventing customer drop-off.
 3.  **App Clip / Instant App Priority:** The primary routing mechanism bypasses the browser where possible, aiming for OS-level native overlays (App Clips / Instant Apps) or direct deep-links to messaging platforms to minimize friction.
 

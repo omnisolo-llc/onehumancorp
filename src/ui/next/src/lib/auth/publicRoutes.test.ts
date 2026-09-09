@@ -63,6 +63,13 @@ describe("bootstrap public contracts", () => {
         owner: "authentication",
       },
       {
+        method: "GET",
+        invocation: "page",
+        matcher: { kind: "exact", path: "/healthz" },
+        reason: "expose a public liveness check for ingress and orchestration",
+        owner: "authentication",
+      },
+      {
         method: "POST",
         invocation: "route-handler",
         matcher: { kind: "exact", path: "/api/v1/auth/login" },
@@ -146,6 +153,7 @@ describe("bootstrap public contracts", () => {
     ["GET", "/login", "page", "public"],
     ["GET", "/register", "page", "public"],
     ["GET", "/verify-email", "page", "public"],
+    ["GET", "/healthz", "page", "public"],
     ["POST", "/api/v1/auth/login", "route-handler", "public"],
     ["GET", "/api/v1/auth/public-settings", "route-handler", "public"],
     ["POST", "/api/v1/auth/registration/email/start", "route-handler", "public"],

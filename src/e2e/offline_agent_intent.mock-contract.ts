@@ -20,7 +20,7 @@ test.describe('Offline Agent Intent Sync', () => {
     // Enqueue an agent intent mutation into IndexedDB
     await page.evaluate(async () => {
         await new Promise((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) {
@@ -39,7 +39,7 @@ test.describe('Offline Agent Intent Sync', () => {
             req.onerror = () => resolve(true);
         });
         // Trigger queue update
-        window.dispatchEvent(new Event('ohc_queue_updated'));
+        window.dispatchEvent(new Event('omnisolo_queue_updated'));
     });
 
     // Verify queue indicator shows items pending
@@ -57,7 +57,7 @@ test.describe('Offline Agent Intent Sync', () => {
     // Wait for the sync to complete and the queue to be cleared
     await page.waitForFunction(async () => {
         return new Promise((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve(true);
@@ -71,7 +71,7 @@ test.describe('Offline Agent Intent Sync', () => {
 
     const queueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');

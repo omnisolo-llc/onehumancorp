@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# OHC KAIROS Orchestration: Master Hybrid Blueprint
+# OmniSolo KAIROS Orchestration: Master Hybrid Blueprint
 
 ## 1. Phase 1: Shared Task List Decomposition (KAIROS Mode)
 
@@ -85,7 +85,7 @@ The Teammate Mesh ensures agents coordinate without delays, leveraging WebSocket
 
 ## 3. Phase 3: autoDream Memory Vector Architecture
 
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state via pgvector embedding indexing.
+The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state via pgvector embedding indexing.
 
 ```sql
 CREATE TABLE IF NOT EXISTS consolidated_memory (

@@ -120,14 +120,14 @@ test.describe('Mobile POS - Unified Omnichannel Inventory', () => {
 
     // We also need to seed staff for this tenant so the POS terminal allows login
     await page.evaluate((tenant) => {
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
             id: 'staff_1',
             name: 'Priya',
             role: 'Manager',
             pin_hash: '1234',
             tenant_id: tenant
         }]));
-        localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+        localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     }, tenantId);
 
     // 4. Enter terminal

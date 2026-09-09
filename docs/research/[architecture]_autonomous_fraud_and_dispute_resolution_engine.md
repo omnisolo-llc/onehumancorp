@@ -10,8 +10,8 @@ For small business owners like Priya (Boutique) and Maya (Baker), dealing with c
 *   **Wix/Squarespace:** Rely entirely on underlying payment gateways, offering no integrated platform-level defense.
 *   **Specialized Tools (Signifyd, Chargehound):** Enterprise-focused, expensive, and require complex API integration. Unsuitable for micro-businesses.
 
-**OHC's Differentiator: The AI Teammate**
-OHC can uniquely solve this by leveraging our unified data architecture. Because OHC controls the entire journey (Customer Success DMs, Operations shipping logs, Finance ledgers), our AI Agent Departments can autonomously compile the full context of a transaction to defend against chargebacks instantly.
+**OmniSolo's Differentiator: The AI Teammate**
+OmniSolo can uniquely solve this by leveraging our unified data architecture. Because OmniSolo controls the entire journey (Customer Success DMs, Operations shipping logs, Finance ledgers), our AI Agent Departments can autonomously compile the full context of a transaction to defend against chargebacks instantly.
 
 ### Design Doc
 
@@ -73,7 +73,7 @@ erDiagram
 ### Implementation Prompt
 Implement the Autonomous Fraud & Dispute Resolution Engine backend and mobile UI.
 1. Create background workers that listen for `chargeback.created` events from our payment gateways.
-2. Implement the `Legal Agent` logic to cross-reference the OHC global unified inbox and order fulfillment ledgers to auto-generate an `EvidencePacket`.
+2. Implement the `Legal Agent` logic to cross-reference the OmniSolo global unified inbox and order fulfillment ledgers to auto-generate an `EvidencePacket`.
 3. Design a mobile-optimized (375px) UI component in the Activity Feed that alerts the user and allows them to approve the auto-generated response with 1 tap.
 4. Ensure all database queries enforce strict multi-tenant isolation by `tenant_id`. Do not prescribe specific frameworks or SQL schemas.
 

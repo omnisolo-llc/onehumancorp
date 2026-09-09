@@ -19,7 +19,7 @@ Service-based and non-standard small businesses (like Carlos, the handyman, or M
 ### Business Journey Mapping
 
 1.  **Acquisition / Trigger:** Carlos completes a job or Maya agrees on a custom cake design via Instagram DM.
-2.  **Creation:** Carlos opens the OHC app, taps "New Invoice", types "Fix sink $150", and selects the customer.
+2.  **Creation:** Carlos opens the OmniSolo app, taps "New Invoice", types "Fix sink $150", and selects the customer.
 3.  **AI Augmentation:** The AI Finance Agent formats it, applies local taxes (e.g., VAT/Sales Tax based on location), and generates a web-based payment link.
 4.  **Delivery:** The invoice is sent via the customer's preferred channel (SMS/WhatsApp/Email) with a 1-tap Apple Pay/Google Pay checkout link.
 5.  **Autonomous Collection:** If unpaid after 48 hours, the AI Finance Agent sends a polite, conversational reminder (e.g., "Hi John, just a quick reminder about the invoice from Carlos. You can pay securely here: [Link]").
@@ -54,18 +54,18 @@ erDiagram
 ```mermaid
 sequenceDiagram
     participant Merchant (Mobile App)
-    participant OHC Gateway
+    participant OmniSolo Gateway
     participant AI Finance Agent
     participant Ledger / Tenant DB
     participant Customer (SMS/WhatsApp)
 
-    Merchant (Mobile App)->>OHC Gateway: "Create invoice for John: $150 Sink Repair"
-    OHC Gateway->>AI Finance Agent: Parse intent, draft invoice
+    Merchant (Mobile App)->>OmniSolo Gateway: "Create invoice for John: $150 Sink Repair"
+    OmniSolo Gateway->>AI Finance Agent: Parse intent, draft invoice
     AI Finance Agent->>Ledger / Tenant DB: Fetch tax rules & customer details
-    AI Finance Agent-->>OHC Gateway: Formatted Invoice & Payment Link
-    OHC Gateway-->>Merchant (Mobile App): Preview UI (375px)
-    Merchant (Mobile App)->>OHC Gateway: Tap "Send"
-    OHC Gateway->>Customer (SMS/WhatsApp): Deliver localized payment link
+    AI Finance Agent-->>OmniSolo Gateway: Formatted Invoice & Payment Link
+    OmniSolo Gateway-->>Merchant (Mobile App): Preview UI (375px)
+    Merchant (Mobile App)->>OmniSolo Gateway: Tap "Send"
+    OmniSolo Gateway->>Customer (SMS/WhatsApp): Deliver localized payment link
 
     loop Autonomous Collection
         AI Finance Agent->>Ledger / Tenant DB: Check invoice status daily

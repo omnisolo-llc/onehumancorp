@@ -1,5 +1,5 @@
 use crate::db::DB;
-use ::server_ohc::orchestration::{
+use ::server_omnisolo::orchestration::{
     PowerSyncPullRequest, PowerSyncPushRequest, sync_service_client::SyncServiceClient,
 };
 use ::server_telemetry::{record_sync_latency, record_sync_payload_size};
@@ -109,7 +109,7 @@ impl PowerSyncOrchestrator {
         });
 
         // Add internal auth using spiffe identity
-        let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
+        let spiffe_id = format!("spiffe://omnisolo.io/{}/system", "system");
         req.metadata_mut().insert(
             "x-spiffe-id",
             MetadataValue::try_from(spiffe_id.as_str()).unwrap(),
@@ -164,7 +164,7 @@ impl PowerSyncOrchestrator {
         let mut req = Request::new(PowerSyncPullRequest {});
 
         // Add internal auth using spiffe identity
-        let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
+        let spiffe_id = format!("spiffe://omnisolo.io/{}/system", "system");
         req.metadata_mut().insert(
             "x-spiffe-id",
             MetadataValue::try_from(spiffe_id.as_str()).unwrap(),

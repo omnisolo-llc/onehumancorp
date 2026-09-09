@@ -10,7 +10,7 @@ Small business owners like **Carlos (handyman)**, **Maya (custom baker)**, and *
 - **LegalZoom:** Expensive, one-off document creation. Not integrated into the daily flow of business operations.
 
 **Gaps Identified:**
-There is no platform that treats legal protection as an automated, invisible layer of the checkout/booking process. OHC needs a "Protector" engine that dynamically drafts contracts based on the specific items in a cart or the nature of a booking, presents them for a seamless "tap-to-agree" or mobile e-signature, and immutably stores the record to defend against disputes.
+There is no platform that treats legal protection as an automated, invisible layer of the checkout/booking process. OmniSolo needs a "Protector" engine that dynamically drafts contracts based on the specific items in a cart or the nature of a booking, presents them for a seamless "tap-to-agree" or mobile e-signature, and immutably stores the record to defend against disputes.
 
 ## Design Doc
 
@@ -18,11 +18,11 @@ There is no platform that treats legal protection as an automated, invisible lay
 ```mermaid
 graph TD;
     subgraph Mobile Device (375px)
-        App[OHC Mobile App] --> CheckoutUI[Checkout / Booking UI];
+        App[OmniSolo Mobile App] --> CheckoutUI[Checkout / Booking UI];
         CheckoutUI --> ConsentUI[Glassmorphism E-Signature Modal];
     end
 
-    App -- "Initiate Transaction" --> Gateway[OHC API Gateway];
+    App -- "Initiate Transaction" --> Gateway[OmniSolo API Gateway];
 
     Gateway --> LegalEngine[Invisible Legal Engine];
     LegalEngine --> Ledger[(Universal Immutable Ledger)];
@@ -39,11 +39,11 @@ graph TD;
 ```
 
 ### Mobile UX Flow (375px First)
-1. **Trigger (Business Owner):** Carlos is setting up a new service ("High-Voltage Repair") on his OHC app. He toggles a switch: "Requires Liability Waiver."
-2. **Drafting (Invisible):** The Legal Agent (The Protector) autonomously drafts a localized waiver based on Carlos's business address and the service description. Carlos doesn't have to read legal jargon; he just sees a badge saying "Protected by OHC Legal."
+1. **Trigger (Business Owner):** Carlos is setting up a new service ("High-Voltage Repair") on his OmniSolo app. He toggles a switch: "Requires Liability Waiver."
+2. **Drafting (Invisible):** The Legal Agent (The Protector) autonomously drafts a localized waiver based on Carlos's business address and the service description. Carlos doesn't have to read legal jargon; he just sees a badge saying "Protected by OmniSolo Legal."
 3. **Checkout (Customer):** A customer books the repair. During the mobile checkout, right before the Apple Pay / Tap-to-Pay step, a clean bottom sheet slides up. It presents a plain-language summary: "By booking, you agree that Carlos Handyman Services is not liable for pre-existing electrical faults."
 4. **E-Signature:** The customer signs with their finger or taps "I Agree" natively in the UI. No redirecting to a clunky third-party PDF viewer.
-5. **Storage:** The cryptographic hash of the agreement, the timestamp, and the customer's IP/Identity are stored immutably in the OHC Ledger, ready to be used by the Dispute Resolution Engine if a chargeback occurs.
+5. **Storage:** The cryptographic hash of the agreement, the timestamp, and the customer's IP/Identity are stored immutably in the OmniSolo Ledger, ready to be used by the Dispute Resolution Engine if a chargeback occurs.
 
 ### AI Agent Integration Points
 - **The Protector (Legal AI):** Monitors the business's catalog and location. It dynamically generates required policies (GDPR banners for EU, CCPA for California) and service contracts. It also scans Fatima's profile and alerts her 30 days before her local food cart permit expires.
@@ -60,7 +60,7 @@ Implement the Invisible AI Legal & Compliance Engine.
 - **User-Facing Outcome:** Business owners can attach auto-generated legal requirements to their products or services with a single tap. Customers sign these dynamically generated agreements via a frictionless, mobile-native UI during checkout.
 - **CUJ:** Carlos adds a "Requires Liability Waiver" toggle to his repair service. A customer books the service on their phone, is presented with a native "tap-to-agree" summary of the AI-generated waiver, and completes the booking. The signed agreement is stored immutably on Carlos's ledger.
 - **Acceptance Criteria:**
-  - Ensure the e-signature/consent UI is mobile-first, adhering to the 375px baseline and OHC Glassmorphism design system (no PDF viewers).
+  - Ensure the e-signature/consent UI is mobile-first, adhering to the 375px baseline and OmniSolo Glassmorphism design system (no PDF viewers).
   - The Legal AI Agent must be able to generate plain-language summaries and full legal texts based on product/service metadata.
   - Signed agreements must be hashed and stored immutably with multi-tenant isolation.
   - The checkout process must conditionally block payment capture until the required legal consent is registered.

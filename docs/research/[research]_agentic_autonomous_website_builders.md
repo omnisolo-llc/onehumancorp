@@ -41,14 +41,14 @@ issue_description: |
   - "I'm paying $39/mo for Shopify, but then I need an app for reviews ($15), an app for bookings ($20), and an app for email marketing ($25). It's exhausting." (Trustpilot)
   - "Sidekick is okay, but it just tells me *how* to do things instead of just doing them for me." (App Store review)
 
-  ## Track 3: OHC Gap & Pain Point Identification
+  ## Track 3: OmniSolo Gap & Pain Point Identification
 
-  **OHC Feature Audit vs Shopify**
-  | Feature | OHC (Vision) | Shopify | Gap to Close |
+  **OmniSolo Feature Audit vs Shopify**
+  | Feature | OmniSolo (Vision) | Shopify | Gap to Close |
   |---|---|---|---|
-  | Mobile-first Setup | Yes (< 10 mins) | No (Desktop preferred) | OHC needs fully native mobile onboarding |
-  | AI-Native Execution | Yes (Agents *do* the work) | Partial (Chatbots *advise*) | OHC must automate tasks, not just advise |
-  | All-in-one Pricing | Yes | No (App fees add up) | OHC must bundle bookings + commerce |
+  | Mobile-first Setup | Yes (< 10 mins) | No (Desktop preferred) | OmniSolo needs fully native mobile onboarding |
+  | AI-Native Execution | Yes (Agents *do* the work) | Partial (Chatbots *advise*) | OmniSolo must automate tasks, not just advise |
+  | All-in-one Pricing | Yes | No (App fees add up) | OmniSolo must bundle bookings + commerce |
 
   **Unresolved Pain Points for SMBs**
   1. **The "App Tax" Fatigue**: SMBs hate piecing together disparate tools.
@@ -62,8 +62,8 @@ issue_description: |
   - **Carlos (Handyman)**: Needs an auto-quoting agent based on customer inquiry, not a complex CRM.
 
   **Actionable Agentic Solutions**
-  - **OHC should implement a "Zero-Click Generation" flow** because 73% of non-technical users abandon complex setups. The system should take a single sentence prompt ("I'm a baker in Austin") and autonomously generate the DB schema, product catalog, and storefront layout.
-  - **OHC should deploy "Departmental AI Workers"** that don't just chat, but execute state changes (e.g., modifying inventory, sending emails) based on natural language commands.
+  - **OmniSolo should implement a "Zero-Click Generation" flow** because 73% of non-technical users abandon complex setups. The system should take a single sentence prompt ("I'm a baker in Austin") and autonomously generate the DB schema, product catalog, and storefront layout.
+  - **OmniSolo should deploy "Departmental AI Workers"** that don't just chat, but execute state changes (e.g., modifying inventory, sending emails) based on natural language commands.
 
   ## Visualizing the Landscape
 
@@ -72,26 +72,26 @@ issue_description: |
       title SMB Platform Landscape: Complexity vs AI Integration
       x-axis "Manual Configuration" --> "Autonomous Execution"
       y-axis "Complex / Enterprise" --> "Simple / Mobile-First"
-      quadrant-1 "Ideal Future (OHC)"
+      quadrant-1 "Ideal Future (OmniSolo)"
       quadrant-2 "AI Toy Builders"
       quadrant-3 "Traditional Monoliths"
       quadrant-4 "Complex Integrators"
       "Shopify": [0.3, 0.4]
       "Wix": [0.4, 0.6]
       "Durable": [0.8, 0.8]
-      "OHC Target": [0.95, 0.95]
+      "OmniSolo Target": [0.95, 0.95]
       "Squarespace": [0.3, 0.7]
   ```
 
   ```mermaid
   journey
-      title Setup Time Comparison: Traditional vs OHC
+      title Setup Time Comparison: Traditional vs OmniSolo
       section Traditional Setup (Shopify)
         Sign up & verify: 3: User
         Navigate complex settings: 1: User
         Install themes & apps: 2: User
         Add initial products manually: 1: User
-      section OHC Agentic Flow
+      section OmniSolo Agentic Flow
         Enter business idea: 5: User
         AI generates site, DB, and copy: 5: Agent
         Review and launch from phone: 5: User

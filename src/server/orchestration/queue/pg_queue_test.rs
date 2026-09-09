@@ -5,11 +5,11 @@ use std::sync::Arc;
 
 #[tokio::test]
 async fn test_pg_fail_backoff() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
     let pool = match PgPoolOptions::new()
         .max_connections(5)
         .connect(&database_url)
@@ -81,11 +81,11 @@ async fn test_pg_fail_backoff() {
 
 #[tokio::test]
 async fn test_pg_fail_max_retries_dead_letter() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
     let pool = match PgPoolOptions::new()
         .max_connections(5)
         .connect(&database_url)
@@ -167,11 +167,11 @@ async fn test_pg_fail_max_retries_dead_letter() {
 async fn test_pg_queue_concurrent_workers() {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
         .max_connections(20)
         .connect(&database_url)
@@ -253,11 +253,11 @@ async fn test_pg_queue_concurrent_workers() {
 
 #[tokio::test]
 async fn test_pg_queue_rls_isolation() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
     let pool = match PgPoolOptions::new()
         .max_connections(5)
         .connect(&database_url)

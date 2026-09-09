@@ -2,18 +2,18 @@
 
 # AutoDream Pipeline: Visual Walkthrough
 
-This guide details the architectural flow of the AutoDream Data Pipelines, the long-term memory consolidation engine that satisfies the Swarm Intelligence Protocol (OHC-SIP).
+This guide details the architectural flow of the AutoDream Data Pipelines, the long-term memory consolidation engine that satisfies the Swarm Intelligence Protocol (OmniSolo-SIP).
 
 ## 1. Overview of the AutoDream Pipeline
 
-During standard operation, the OHC Swarm generates vast amounts of ephemeral context—logs, scratchpads, and short-term reasoning chunks. To prevent context window overflows and preserve organizational knowledge, the AutoDream Pipeline periodically awakens to read these raw thoughts, compress them into semantic vectors, and persist them into a long-term Vector DB.
+During standard operation, the OmniSolo Swarm generates vast amounts of ephemeral context—logs, scratchpads, and short-term reasoning chunks. To prevent context window overflows and preserve organizational knowledge, the AutoDream Pipeline periodically awakens to read these raw thoughts, compress them into semantic vectors, and persist them into a long-term Vector DB.
 
 ### Architectural Flow
 
 ```mermaid
 graph TD
     Agent[Worker Agent] -->|Produces| SessionData(agent_session_data)
-    Agent -->|Produces| MemoryFiles(OHC_MEMORY_DIR/*.yml)
+    Agent -->|Produces| MemoryFiles(OMNISOLO_MEMORY_DIR/*.yml)
 
     SessionData -->|Periodic Sweeps| AutoDreamWorker
     MemoryFiles -->|Periodic Sweeps| AutoDreamWorker

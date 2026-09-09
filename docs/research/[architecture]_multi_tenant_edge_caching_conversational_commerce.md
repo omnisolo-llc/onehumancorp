@@ -4,7 +4,7 @@
 Small business owners like Maya (baker) and Fatima (food cart) rely heavily on social media platforms (Instagram, WhatsApp) for customer acquisition and conversational orders. However, managing these orders, updating inventory in real-time, and taking deposits across disconnected channels causes massive friction. High-latency APIs or centralized databases cause delayed AI agent responses, losing impulsive buyers. A multi-tenant, edge-cached conversational commerce engine is needed to allow AI agents to instantly verify inventory, quote prices, and generate localized checkout links natively within social channels with zero perceptible latency.
 
 ## Research Report
-*   **Current Architecture Limits:** OHC's current architecture relies on centralized cloud databases which introduce significant latency when AI agents need to check live inventory for Instagram DMs.
+*   **Current Architecture Limits:** OmniSolo's current architecture relies on centralized cloud databases which introduce significant latency when AI agents need to check live inventory for Instagram DMs.
 *   **Competitor Analysis:**
     *   *Shopify:* Uses global edge networks for storefronts but lacks native multi-tenant AI conversational agents at the edge.
     *   *ManyChat:* Great for conversational flows but lacks deep, real-time inventory and deposit ledger integration.
@@ -25,7 +25,7 @@ erDiagram
 
 ### UI Wireframes & Mobile UX Flow (375px)
 *   **Customer View (Instagram/WhatsApp):** Customer messages "Do you have vegan cakes for tomorrow?" -> AI agent replies instantly (<500ms) with a beautifully formatted card/message containing an embedded checkout link using macOS-style Translucent Glass aesthetics and Ubiquiti UniFi modular layout.
-*   **Merchant View (OHC Mobile App - 375px):**
+*   **Merchant View (OmniSolo Mobile App - 375px):**
     *   **Unified Inbox Card:** Clean dashboard card showing "Conversational Orders" with an auto-updating counter.
     *   **Agent Approval Feed:** If the AI is unsure, it pushes an approval request to the merchant's 375px screen. The screen uses a Translucent Glass overlay with a clear "Approve Quote" or "Edit" button. Grandmother test passed: Clear, large tap targets, intuitive swipe-to-approve.
 

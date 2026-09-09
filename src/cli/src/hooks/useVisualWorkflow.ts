@@ -25,7 +25,7 @@ export const useVisualWorkflow = () => {
     setError(null);
     setResult(null);
 
-    const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
+    const agentUrl = process.env.OMNISOLO_AGENT_URL || 'http://127.0.0.1:18789';
 
     try {
       const response = await fetch(`${agentUrl}/rpc`, {

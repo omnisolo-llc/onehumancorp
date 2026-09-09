@@ -20,7 +20,7 @@ test.describe('Viral Invite Loop on Team Page', () => {
     // Wait for the link to be generated (input appears)
     const linkInput = page.locator('input[readonly]').first();
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/ohc\.app\/invite\/.+/);
+    await expect(linkInput).toHaveValue(/^https:\/\/cloud.omnisolo.co\/invite\/.+/);
 
     // Test copy button interaction
     await page.getByRole('button', { name: 'Copy' }).first().click();

@@ -93,7 +93,7 @@ impl MigrationWorker {
         let html_content = res.text().await?;
 
         // Use AI to extract products
-        let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+        let api_key = std::env::var("OMNISOLO_MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
         let minimax = MinimaxClient::new(api_key);
 
         let prompt = format!(

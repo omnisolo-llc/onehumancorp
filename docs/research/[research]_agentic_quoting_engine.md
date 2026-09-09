@@ -13,13 +13,13 @@ Service providers and custom product creators (like handymen, bakers) frequently
 - **UI Flow (Mobile First - 375px):**
   1. Customer submits a natural language request on the storefront ("I need a vegan chocolate cake for 20 people on Saturday").
   2. Owner receives a push notification: "Agent drafted a quote for a Vegan Cake. Review?"
-  3. Owner taps notification. Sees a beautiful glassmorphism card (OHC Premium Token library) with the AI-suggested price, line items, and required deposit amount.
+  3. Owner taps notification. Sees a beautiful glassmorphism card (OmniSolo Premium Token library) with the AI-suggested price, line items, and required deposit amount.
   4. Owner taps "Approve & Send".
   5. Customer receives an SMS/Email with a 1-tap Apple Pay/Google Pay checkout link.
 - **AI Agent Integration:** The "Salesperson" Agent parses the free-text customer request, queries the business's `memory` (past quotes, inventory, pricing strategy), and structures the `Quote`.
 
 ## Implementation Prompt
-Implement the Autonomous Quoting Engine. The system must allow a customer to submit a free-text request. The Salesperson AI must process this request, generate a structured quote with a deposit requirement, and present it to the owner in a mobile-optimized (375px) UI for 1-tap approval. Upon approval, it must generate a Stripe payment link. The UI must use the OHC Premium Token library (Glassmorphism, Outfit font).
+Implement the Autonomous Quoting Engine. The system must allow a customer to submit a free-text request. The Salesperson AI must process this request, generate a structured quote with a deposit requirement, and present it to the owner in a mobile-optimized (375px) UI for 1-tap approval. Upon approval, it must generate a Stripe payment link. The UI must use the OmniSolo Premium Token library (Glassmorphism, Outfit font).
 
 ## Priority
 P0

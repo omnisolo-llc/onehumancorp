@@ -1,17 +1,17 @@
-# [backend] Implement AutoDream Data Pipelines for OHC VectorDB
+# [backend] Implement AutoDream Data Pipelines for OmniSolo VectorDB
 
 ## Problem Statement
-The OS loses context over time as agent sessions cycle. We need a persistent architectural memory to inform future swarm actions. The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
+The OS loses context over time as agent sessions cycle. We need a persistent architectural memory to inform future swarm actions. The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
 
 ## Research Report
-By extracting UltraPlans and closed Tasks, embedding them via LLMs, and indexing them using pgvector, we can provide a semantic search API that acts as OHC's long-term memory (AutoDream).
+By extracting UltraPlans and closed Tasks, embedding them via LLMs, and indexing them using pgvector, we can provide a semantic search API that acts as OmniSolo's long-term memory (AutoDream).
 
 ## Design Doc
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
 **autoDream Memory Vector Architecture**
 
-The AutoDream Data Pipeline extracts episodic memory from the `OHC_MEMORY_DIR` or from completed tasks in the Shared Task List, chunks it, embeds it, and stores it in the vector database.
+The AutoDream Data Pipeline extracts episodic memory from the `OMNISOLO_MEMORY_DIR` or from completed tasks in the Shared Task List, chunks it, embeds it, and stores it in the vector database.
 
 **Storage Configuration (`consolidated_memory`)**
 ```sql

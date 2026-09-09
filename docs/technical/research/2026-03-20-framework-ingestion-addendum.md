@@ -5,12 +5,12 @@
 **Author:** Lead AI Product Architect & Market Strategist (L7)
 
 ## Executive Summary
-This document synthesizes capabilities from leading AI Agent frameworks (OpenClaw, CrewAI, AutoGen, Claude Code) and merges them into the One Human Corp (OHC) execution playbook. The focus is triangulating the top 5 urgent capability gaps against our current trajectory and providing architectural blueprints leveraging our K8s, LangGraph, and SPIFFE/SPIRE stack.
+This document synthesizes capabilities from leading AI Agent frameworks (OpenClaw, CrewAI, AutoGen, Claude Code) and merges them into the OmniSolo (OmniSolo) execution playbook. The focus is triangulating the top 5 urgent capability gaps against our current trajectory and providing architectural blueprints leveraging our K8s, LangGraph, and SPIFFE/SPIRE stack.
 
 ## Top 5 Urgent Capability Gaps & Actionable Designs
 
 ### 1. Agent Memory (Short/Long-Term)
-**Market Context:** Frameworks natively support persistent conversational and semantic memory. OHC requires robust stateful backing to remain competitive in long-running agent workflows.
+**Market Context:** Frameworks natively support persistent conversational and semantic memory. OmniSolo requires robust stateful backing to remain competitive in long-running agent workflows.
 **Actionable Design:** Introduce native Kubernetes StatefulSets paired with Redis (for high-speed short-term contextual memory) and Pinecone or another distributed vector store (for long-term semantic retrieval). Memory retrieval must be integrated into the core orchestration Hub via gRPC streams.
 
 ### 2. Dynamic Tool Discovery

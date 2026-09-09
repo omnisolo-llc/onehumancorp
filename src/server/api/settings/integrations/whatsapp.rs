@@ -72,22 +72,6 @@ pub async fn connect_whatsapp_cloud_api(
         return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
     }
 
-    let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-        integration_id: "whatsapp_cloud_api".to_string(),
-        base_url: "https://graph.facebook.com/v19.0".to_string(),
-        bot_token: "".to_string(),
-        chat_id: "".to_string(),
-        webhook_url: "".to_string(),
-        api_token: api_token.clone(),
-        from_phone: from_phone.clone(),
-    };
-
-    if let Err(e) = hub.integration_service().connect("whatsapp_cloud_api", "https://graph.facebook.com/v19.0", creds) {
-         tracing::error!("Failed to register WhatsApp Cloud API in memory: {}", e);
-         // Do not fail the request if memory registration fails, as DB is the source of truth,
-         // but log it.
-    }
-
     (StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
 }
 
@@ -147,20 +131,6 @@ pub async fn connect_whatsapp_twilio(
     if let Err(e) = creds_res {
         tracing::error!("Failed to save WhatsApp Twilio credentials: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
-    }
-
-    let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-        integration_id: "whatsapp".to_string(),
-        base_url: "https://api.twilio.com".to_string(),
-        bot_token: bot_token.clone(),
-        chat_id: "".to_string(),
-        webhook_url: "".to_string(),
-        api_token: api_token.clone(),
-        from_phone: from_phone.clone(),
-    };
-
-    if let Err(e) = hub.integration_service().connect("whatsapp", "https://api.twilio.com", creds) {
-         tracing::error!("Failed to register WhatsApp Twilio in memory: {}", e);
     }
 
     (StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()

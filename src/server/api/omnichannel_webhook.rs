@@ -459,7 +459,7 @@ mod tests {
         };
 
         let transport =
-            std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+            std::sync::Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let orchestrator = std::sync::Arc::new(
             crate::orchestration::departments::DepartmentOrchestrator::new(

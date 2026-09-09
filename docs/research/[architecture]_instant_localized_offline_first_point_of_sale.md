@@ -8,7 +8,7 @@ Small business owners like Priya (boutique owner) and Fatima (food cart operator
 *   **Square POS:** Requires proprietary hardware for card payments. Offline mode exists but is risky (merchants assume liability for declined cards processed offline) and has limited functionality.
 *   **Shopify POS:** Very reliant on an active internet connection to sync inventory and process payments. Offline mode is severely limited.
 *   **Wix POS:** Similar to Shopify, highly cloud-dependent.
-*   **OHC Differentiation - "True Offline-First Localized Mesh":** OHC's POS is designed mobile-first and offline-first from the ground up using local device storage (SQLite/IndexedDB) and CRDTs (Conflict-free Replicated Data Types). It allows full catalog browsing, cash/offline payment recording, and queueing of digital payments. It also leverages native device capabilities (Tap-to-Pay on iPhone/Android) to eliminate the need for extra dongles.
+*   **OmniSolo Differentiation - "True Offline-First Localized Mesh":** OmniSolo's POS is designed mobile-first and offline-first from the ground up using local device storage (SQLite/IndexedDB) and CRDTs (Conflict-free Replicated Data Types). It allows full catalog browsing, cash/offline payment recording, and queueing of digital payments. It also leverages native device capabilities (Tap-to-Pay on iPhone/Android) to eliminate the need for extra dongles.
 
 ## Design Doc
 
@@ -31,7 +31,7 @@ erDiagram
 *   **Payment Methods:** Clearly displays localized options (e.g., Tap to Pay, Cash, PIX in Brazil, local QR codes). If offline, digital payment methods that require cloud authorization are gracefully disabled or switched to a "Queue for later processing" mode (with clear liability warnings).
 
 ### Mobile UX Flow
-1. **Scenario:** Fatima is at a busy street festival. The cell network is overwhelmed. The OHC app automatically switches to `[🟠 Offline]` mode.
+1. **Scenario:** Fatima is at a busy street festival. The cell network is overwhelmed. The OmniSolo app automatically switches to `[🟠 Offline]` mode.
 2. **Action:** A customer orders. Fatima taps the items on her phone screen.
 3. **Payment:** The customer pays with cash. Fatima taps "Cash" and completes the order. The inventory is updated locally and the sale is recorded in the local SQLite database.
 4. **Resolution:** Two hours later, the festival ends and Fatima gets back on Wi-Fi. The `SYNC_ENGINE` automatically pushes the queued orders to the `CLOUD_LEDGER`. The AI Finance Dept verifies the offline transactions and updates her daily summary.
@@ -47,10 +47,10 @@ erDiagram
 
 ## Implementation Prompt
 **To the Implementer Swarm:**
-Your goal is to build the foundational offline-first architecture for the OHC Mobile POS.
+Your goal is to build the foundational offline-first architecture for the OmniSolo Mobile POS.
 
 **Customer User Journey (CUJ):**
-1. User opens the OHC mobile app.
+1. User opens the OmniSolo mobile app.
 2. User turns on Airplane Mode (simulating network loss).
 3. User adds items to a cart and completes a cash transaction.
 4. User turns off Airplane Mode.

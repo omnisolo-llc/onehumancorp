@@ -24,13 +24,13 @@ impl LocalLLMProvider {
     }
 
     pub fn from_env() -> Self {
-        let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
+        let endpoint = std::env::var("OMNISOLO_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
-        let embed_endpoint = std::env::var("OHC_LOCAL_LLM_EMBED_ENDPOINT")
+        let embed_endpoint = std::env::var("OMNISOLO_LOCAL_LLM_EMBED_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
-        let model = std::env::var("OHC_LOCAL_MODEL_NAME")
+        let model = std::env::var("OMNISOLO_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
-        let ttl_secs = std::env::var("OHC_PROMPT_CACHE_TTL")
+        let ttl_secs = std::env::var("OMNISOLO_PROMPT_CACHE_TTL")
             .ok()
             .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(600); // 10 minute TTL default

@@ -21,13 +21,13 @@ If something goes wrong, navigate to the Snapshots log and click "Restore". Your
 
 ## Troubleshooting
 **Snapshot restoration failed**
-- Check the database logs for the OHC cluster.
+- Check the database logs for the OmniSolo cluster.
 - Ensure you have enough storage space in your Kubernetes cluster.
 
 ## Implementation Details
 - **Architecture**: The Snapshot Fabric leverages Kubernetes CSI (Container Storage Interface) volume snapshots combined with Postgres `pg_dump`/`pg_restore` for database state.
 - **State Management**: LangGraph checkpointers serialize the exact multi-agent state (memory, pending tasks, active tools) into the append-only `events.jsonl` log. Restoring a snapshot replays or truncates this log deterministically.
-- **Execution**: Orchestrated via Rust in the OHC Hub. The Operator pauses the `HoldingCompany` CRD reconciliation loop during the restoration process.
+- **Execution**: Orchestrated via Rust in the OmniSolo Hub. The Operator pauses the `HoldingCompany` CRD reconciliation loop during the restoration process.
 
 ## Edge Cases
 - **In-Flight Tool Operations**: If an agent is executing a long-running external API call (e.g., provisioning AWS infrastructure) during a snapshot restore, the external state might become orphaned from the restored internal state.

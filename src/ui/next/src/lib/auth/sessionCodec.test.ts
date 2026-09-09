@@ -32,17 +32,17 @@ const encode = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64url");
 
 async function activeRing(id = "prod-v1", bytes = ACTIVE_BYTES): Promise<SessionKeyRing> {
   return parseSessionKeyRing({
-    OHC_WEB_SESSION_KEY_ID: id,
-    OHC_WEB_SESSION_SECRET: encode(bytes),
+    OMNISOLO_WEB_SESSION_KEY_ID: id,
+    OMNISOLO_WEB_SESSION_SECRET: encode(bytes),
   });
 }
 
 async function rotatedRing(): Promise<SessionKeyRing> {
   return parseSessionKeyRing({
-    OHC_WEB_SESSION_KEY_ID: "prod-v2",
-    OHC_WEB_SESSION_SECRET: encode(PREVIOUS_BYTES),
-    OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1",
-    OHC_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
+    OMNISOLO_WEB_SESSION_KEY_ID: "prod-v2",
+    OMNISOLO_WEB_SESSION_SECRET: encode(PREVIOUS_BYTES),
+    OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1",
+    OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
   });
 }
 
@@ -60,7 +60,7 @@ async function encryptRaw(
   header: CompactJWEHeaderParameters = {
     alg: "dir",
     enc: "A256GCM",
-    typ: "ohc-session+jwe",
+    typ: "omnisolo-session+jwe",
     kid: ring.active.id,
   },
 ): Promise<string> {
@@ -128,7 +128,7 @@ describe("compact JWE web sessions", () => {
     expect(decodeProtectedHeader(token)).toEqual({
       alg: "dir",
       enc: "A256GCM",
-      typ: "ohc-session+jwe",
+      typ: "omnisolo-session+jwe",
       kid: "prod-v1",
     });
   });
@@ -165,7 +165,7 @@ describe("compact JWE web sessions", () => {
     const unknown = await encryptRaw(ring, wirePayload(), {
       alg: "dir",
       enc: "A256GCM",
-      typ: "ohc-session+jwe",
+      typ: "omnisolo-session+jwe",
       kid: "unknown",
     });
     await expectInvalid(openSession(unknown, ring, CONTEXT, NOW));
@@ -191,16 +191,16 @@ describe("compact JWE web sessions", () => {
   });
 
   it.each([
-    ["alg", { alg: "A256KW", enc: "A256GCM", typ: "ohc-session+jwe", kid: "prod-v1" }],
-    ["enc", { alg: "dir", enc: "A128GCM", typ: "ohc-session+jwe", kid: "prod-v1" }],
+    ["alg", { alg: "A256KW", enc: "A256GCM", typ: "omnisolo-session+jwe", kid: "prod-v1" }],
+    ["enc", { alg: "dir", enc: "A128GCM", typ: "omnisolo-session+jwe", kid: "prod-v1" }],
     ["typ", { alg: "dir", enc: "A256GCM", typ: "wrong", kid: "prod-v1" }],
     [
       "extra",
-      { alg: "dir", enc: "A256GCM", typ: "ohc-session+jwe", kid: "prod-v1", crit: [] },
+      { alg: "dir", enc: "A256GCM", typ: "omnisolo-session+jwe", kid: "prod-v1", crit: [] },
     ],
     [
       "zip",
-      { alg: "dir", enc: "A256GCM", typ: "ohc-session+jwe", kid: "prod-v1", zip: "DEF" },
+      { alg: "dir", enc: "A256GCM", typ: "omnisolo-session+jwe", kid: "prod-v1", zip: "DEF" },
     ],
   ])("rejects a wrong or extra protected header: %s", async (_case, header) => {
     const ring = await activeRing();

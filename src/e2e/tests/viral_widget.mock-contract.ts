@@ -6,7 +6,7 @@ test.describe('Viral Widget Builder E2E', () => {
     await page.setViewportSize({ width: 375, height: 812 });
 
     // Navigate to the viral widget builder page
-    await page.goto('/viral-powered-by-ohc-widget');
+    await page.goto('/viral-powered-by-omnisolo-widget');
 
     // Verify title and page loaded
     await expect(page.getByRole('heading', { name: 'Viral Widget Builder' })).toBeVisible();
@@ -37,9 +37,9 @@ test.describe('Viral Widget Builder E2E', () => {
       localStorage.setItem('has_pro', 'false');
     });
     // Reload to apply localStorage
-    await page.goto('/viral-powered-by-ohc-widget');
+    await page.goto('/viral-powered-by-omnisolo-widget');
 
-    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
+    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "OmniSolo"/i });
 
     // As a non-pro user, checking should show the paywall modal
     await removeBrandingCheckbox.check();
@@ -55,7 +55,7 @@ test.describe('Viral Widget Builder E2E', () => {
     await page.evaluate(() => {
       localStorage.setItem('has_pro', 'true');
     });
-    await page.goto('/viral-powered-by-ohc-widget');
+    await page.goto('/viral-powered-by-omnisolo-widget');
 
     // Checkbox should now be toggled without paywall
     await expect(removeBrandingCheckbox).toBeChecked(); // Since we mocked localstorage it starts checked

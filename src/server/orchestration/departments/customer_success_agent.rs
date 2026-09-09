@@ -405,7 +405,7 @@ impl Department for CustomerSuccessAgent {
                             let integration_id = "meta";
 
                             let meta_creds =
-                                ::server_ohc::orchestration::ConnectIntegrationRequest {
+                                ::server_omnisolo::orchestration::ConnectIntegrationRequest {
                                     bot_token: api_token.clone(),
                                     chat_id: "".to_string(),
                                     webhook_url: "".to_string(),
@@ -467,7 +467,7 @@ impl Department for CustomerSuccessAgent {
             // Log the action in the agent's memory, handling errors and using proper defaults
             // Assuming we don't have an embedding service here, we use a zero vector
             // but properly await and map the error.
-            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
                 agent_id: "customer_success_agent".to_string(),
@@ -516,7 +516,7 @@ impl Department for CustomerSuccessAgent {
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            let generated_response = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                 Ok("minimax") => {
                     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
                     crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?".to_string())
@@ -568,7 +568,7 @@ impl Department for CustomerSuccessAgent {
                 );
                 let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-                let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                let generated_response = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                     Ok("minimax") => {
                         let api_key = std::env::var("MINIMAX_API_KEY")
                             .unwrap_or_else(|_| "fake-key".to_string());
@@ -672,7 +672,7 @@ impl Department for CustomerSuccessAgent {
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
+            let generated_response = match std::env::var("OMNISOLO_INBOX_DRAFT_LLM_PROVIDER").or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER")).as_deref() {
                 Ok("minimax") => { let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string()); crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!".to_string()) },
                 _ => { crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!".to_string()) }
             };
@@ -865,8 +865,8 @@ impl Department for CustomerSuccessAgent {
                 }
             }
 
-            let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            let query_embedding = match std::env::var("OMNISOLO_INBOX_DRAFT_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                 .as_deref()
             {
                 Ok("minimax") => {
@@ -924,8 +924,8 @@ impl Department for CustomerSuccessAgent {
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            let generated_response = match std::env::var("OMNISOLO_INBOX_DRAFT_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                 .as_deref()
             {
                 Ok("minimax") => {
@@ -1106,12 +1106,12 @@ impl BaseAgent for CustomerSuccessAgent {
 mod tests {
     use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_customer_success_agent_subscribed_events() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             // For environments without DB URL, skip or use memory.
             return;
         }

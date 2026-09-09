@@ -13,7 +13,7 @@ impl CompetitorAuditWorker {
     }
 
     pub fn start(&self) {
-        if !competitor_audit_enabled(std::env::var("OHC_ENABLE_COMPETITOR_AUDIT").ok().as_deref()) {
+        if !competitor_audit_enabled(std::env::var("OMNISOLO_ENABLE_COMPETITOR_AUDIT").ok().as_deref()) {
             tracing::debug!("Competitor audit worker is disabled");
             return;
         }
@@ -55,7 +55,7 @@ impl CompetitorAuditWorker {
         ];
 
         let client = reqwest::Client::builder()
-            .user_agent("OHC-Competitor-Audit-Worker")
+            .user_agent("OmniSolo-Competitor-Audit-Worker")
             .build()?;
 
         for (comp, url) in competitors {

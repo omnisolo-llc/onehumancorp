@@ -2,11 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const canonical = "src/server/monitoring/dashboards/ohc-hybrid-telemetry.json";
+const canonical = "src/server/monitoring/dashboards/omnisolo-hybrid-telemetry.json";
 const mirroredDashboards = [
-  "deploy/helm/ohc/dashboards/ohc-hybrid-telemetry.json",
-  "deploy/grafana/dashboards/ohc-hybrid-telemetry.json",
-  "deploy/docker/grafana/provisioning/dashboards/ohc-hybrid-telemetry.json",
+  "deploy/helm/omnisolo/dashboards/omnisolo-hybrid-telemetry.json",
+  "deploy/grafana/dashboards/omnisolo-hybrid-telemetry.json",
+  "deploy/docker/grafana/provisioning/dashboards/omnisolo-hybrid-telemetry.json",
 ];
 const repoRoot =
   [

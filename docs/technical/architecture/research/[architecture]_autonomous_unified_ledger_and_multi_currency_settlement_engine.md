@@ -1,17 +1,17 @@
 # Autonomous Unified Ledger & Multi-Currency Settlement Engine
 
 ## Problem Statement
-Currently, OneHumanCorp (OHC) handles payments directly via Stripe, but lacks a robust internal financial ledger to coordinate multi-currency transactions, deposits, split-payments (for future marketplace expansion), and offline/cash settlements across the various personas (like Carlos the handyman or Priya the boutique owner). As our user base grows internationally and expands to complex workflows (e.g. partial deposits, cash-on-delivery, and gift cards), a scalable, multi-tenant Double-Entry Ledger System is required to maintain absolute financial truth.
+Currently, OmniSolo (OmniSolo) handles payments directly via Stripe, but lacks a robust internal financial ledger to coordinate multi-currency transactions, deposits, split-payments (for future marketplace expansion), and offline/cash settlements across the various personas (like Carlos the handyman or Priya the boutique owner). As our user base grows internationally and expands to complex workflows (e.g. partial deposits, cash-on-delivery, and gift cards), a scalable, multi-tenant Double-Entry Ledger System is required to maintain absolute financial truth.
 
 ## Research Report
-Leading platforms (Shopify, Stripe) decouple the payment gateway from the financial state machine. Shopify's "Balance" and Stripe's "Ledger" APIs treat every transaction as a double-entry accounting event. By introducing an internal Ledger, OHC can easily support multi-currency conversion, accurately compute tax liabilities (working with the Legal & Compliance Agent), and provide real-time, trustworthy financial reports via the Finance & Payments Agent ("The Accountant") without directly hammering external API rate limits.
+Leading platforms (Shopify, Stripe) decouple the payment gateway from the financial state machine. Shopify's "Balance" and Stripe's "Ledger" APIs treat every transaction as a double-entry accounting event. By introducing an internal Ledger, OmniSolo can easily support multi-currency conversion, accurately compute tax liabilities (working with the Legal & Compliance Agent), and provide real-time, trustworthy financial reports via the Finance & Payments Agent ("The Accountant") without directly hammering external API rate limits.
 
 ### Competitive Analysis
 - **Shopify**: Uses Shopify Balance to provide an embedded financial account for merchants.
 - **Stripe**: Provides Stripe Treasury and Ledger APIs for double-entry bookkeeping.
 - **Wix/Squarespace**: Generally rely on third-party integrations (like QuickBooks) rather than offering a native embedded ledger.
 
-OHC's differentiation lies in embedding this ledger natively, powered by AI agents that can automatically reconcile transactions and generate plain-language financial reports for non-technical users.
+OmniSolo's differentiation lies in embedding this ledger natively, powered by AI agents that can automatically reconcile transactions and generate plain-language financial reports for non-technical users.
 
 ## Design Doc
 

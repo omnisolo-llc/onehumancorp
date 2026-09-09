@@ -3,7 +3,7 @@
 **Title**: Implement KAIROS Orchestration Backend and Queue Infrastructure
 
 **Problem Statement**:
-The One Human Corp Swarm requires a robust, autonomous, and self-healing orchestration backend. We currently lack a unified database-backed state machine for task claiming (Shared Task List), a real-time Teammate Mesh for zero-friction agent coordination, and an autoDream memory vector architecture to consolidate temporary agent scratchpads into durable semantic memory. Without these components, agents risk race conditions during task claiming and miss out on long-term context retention.
+The OmniSolo Swarm requires a robust, autonomous, and self-healing orchestration backend. We currently lack a unified database-backed state machine for task claiming (Shared Task List), a real-time Teammate Mesh for zero-friction agent coordination, and an autoDream memory vector architecture to consolidate temporary agent scratchpads into durable semantic memory. Without these components, agents risk race conditions during task claiming and miss out on long-term context retention.
 
 **Research Report**:
 Competitor analysis and our internal audits (`ohc_hybrid_competitive_analysis.md`) indicate that autonomous agent operating systems require highly available task queues and seamless inter-agent communication. Our hybrid architecture dictates that this orchestration layer must gracefully degrade from a robust PostgreSQL/Redis cloud implementation to a resource-constrained SQLite/in-memory Standalone mode. The orchestration relies heavily on distributed state machine tracking (e.g., `PENDING` -> `IN_PROGRESS` -> `SUCCESS`) and requires strict token/VRAM quotas for sub-agent queuing.

@@ -47,7 +47,7 @@ export const useLocalizationStore = create<LocalizationState>()(
       }
     }),
     {
-      name: 'ohc-localization-storage',
+      name: 'omnisolo-localization-storage',
       storage: createJSONStorage(() => localStorage),
     }
   )

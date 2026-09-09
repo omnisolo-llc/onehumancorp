@@ -24,7 +24,7 @@ describe('AIUsageLimitWidget', () => {
     global.fetch = vi.fn((url: string) => Promise.resolve(
       url.includes('department-tier-usage')
         ? { ok: true, json: () => Promise.resolve({ departments: [{ actions_used: 85, action_limit: 100 }] }) }
-        : { ok: true, json: () => Promise.resolve({ referral_link: 'https://ohc.app/onboarding?ref=verified' }) },
+        : { ok: true, json: () => Promise.resolve({ referral_link: 'https://cloud.omnisolo.co/onboarding?ref=verified' }) },
     )) as any;
   });
 
@@ -62,7 +62,7 @@ describe('AIUsageLimitWidget', () => {
     fireEvent.click(copyBtn);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      'https://ohc.app/onboarding?ref=verified'
+      'https://cloud.omnisolo.co/onboarding?ref=verified'
     );
 
     expect(screen.getByText(/Copied Link!/)).toBeDefined();

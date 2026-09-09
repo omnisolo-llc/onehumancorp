@@ -34,7 +34,8 @@ fi
 
 while IFS= read -r -d '' path; do
   case "$path" in
-    .ohc_jwt_secret|*/.ohc_jwt_secret)
+    .ohc_jwt_secret|*/.ohc_jwt_secret|.ohc_sqlite_key|*/.ohc_sqlite_key|\
+    .omnisolo_jwt_secret|*/.omnisolo_jwt_secret|.omnisolo_sqlite_key|*/.omnisolo_sqlite_key)
       report_path 'forbidden runtime secret artifact is tracked' "$path"
       ;;
     .empty_commit_trigger*|*/.empty_commit_trigger*|get_business_context_code|get_business_context_code.rs|*/get_business_context_code|*/get_business_context_code.rs|bazelisk-linux-amd64|*/bazelisk-linux-amd64)

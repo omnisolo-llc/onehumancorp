@@ -139,7 +139,7 @@ export default function TeamChatPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div className="flex gap-2 mb-4">
             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-               <span className="text-xs font-bold text-[#0071E3]">OHC</span>
+               <span className="text-xs font-bold text-[#0071E3]">OmniSolo</span>
             </div>
             <div className="bg-gray-100 p-3 rounded-2xl rounded-tl-none text-sm text-gray-800">
               Hello! I'm your central team interface. How can we help your business today?
@@ -150,7 +150,7 @@ export default function TeamChatPage() {
             <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
               {msg.role === 'system' && (
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
-                  <span className="text-xs font-bold text-[#0071E3]">OHC</span>
+                  <span className="text-xs font-bold text-[#0071E3]">OmniSolo</span>
                 </div>
               )}
 

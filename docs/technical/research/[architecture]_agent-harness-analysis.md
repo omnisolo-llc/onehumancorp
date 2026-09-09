@@ -17,7 +17,7 @@
 
 <div class="glass-card">
   <h2>Problem Statement</h2>
-  <p>To achieve true Absolute Autonomy and Swarm Intelligence, OHC agents need a highly robust, secure, and flexible execution environment (the "Agent Harness"). Current analysis of leading frameworks (Claude Code, Hermes Agent, Gstack, OpenClaw) reveals that OHC lacks a unified, multi-backend execution engine with reliable state synchronization and lifecycle management.</p>
+  <p>To achieve true Absolute Autonomy and Swarm Intelligence, OmniSolo agents need a highly robust, secure, and flexible execution environment (the "Agent Harness"). Current analysis of leading frameworks (Claude Code, Hermes Agent, Gstack, OpenClaw) reveals that OmniSolo lacks a unified, multi-backend execution engine with reliable state synchronization and lifecycle management.</p>
 </div>
 
 ## Title
@@ -40,7 +40,7 @@ Large
     <li><b>OpenClaw:</b> Provides a standardized `AgentHarness` interface (`types.ts`) managing the execution lifecycle (runAttempt, compact, reset) and a robust `SandboxBackendManager`.</li>
   </ul>
 
-  <h3>Comparative Table: OHC vs Market</h3>
+  <h3>Comparative Table: OmniSolo vs Market</h3>
   <table>
     <thead>
       <tr>
@@ -48,8 +48,8 @@ Large
         <th>Claude Code</th>
         <th>Hermes Agent</th>
         <th>OpenClaw</th>
-        <th>OHC-HA (Current)</th>
-        <th>OHC-HA (Target)</th>
+        <th>OmniSolo-HA (Current)</th>
+        <th>OmniSolo-HA (Target)</th>
       </tr>
     </thead>
     <tbody>
@@ -99,7 +99,7 @@ Large
       D -.->|Sync| G[File Sync Bridge]
       E -.->|Sync| G
       F -.->|Sync| G
-      G --> H[(OHC-SIP Central Database)]
+      G --> H[(OmniSolo-SIP Central Database)]
   </pre>
 </div>
 
@@ -111,7 +111,7 @@ Large
   <p>Provides a unified <code>SandboxBackend</code> interface with implementations for Local, Docker, and K8s execution. Includes a strict validation layer for security.</p>
 
   <h3>2. FileSyncBridge</h3>
-  <p>A high-performance utility to synchronize files between the OHC orchestrator node and the remote sandbox. Utilizes hashing/mtime to detect changes and syncs deltas. Protected by distributed Redis locks.</p>
+  <p>A high-performance utility to synchronize files between the OmniSolo orchestrator node and the remote sandbox. Utilizes hashing/mtime to detect changes and syncs deltas. Protected by distributed Redis locks.</p>
 
   <h3>3. HarnessLifecycle</h3>
   <p>Defines the agent execution flow: <code>StartSession</code>, <code>RunAttempt</code>, <code>CompactContext</code>, <code>ResetSession</code>. Emits OpenTelemetry metrics for every state transition.</p>
@@ -139,7 +139,7 @@ type HarnessLifecycle interface {
   <h2>Implementation Prompt</h2>
   <p>Implement the Agent Harness architecture in Go under <code>src/server/harness/</code>:</p>
   <ol>
-    <li>Create <code>sandbox.go</code> defining the <code>SandboxBackend</code> interface and a <code>DockerBackend</code> implementation. Use <code>OHCMultitenant</code> env var to conditionally enable K8s support.</li>
+    <li>Create <code>sandbox.go</code> defining the <code>SandboxBackend</code> interface and a <code>DockerBackend</code> implementation. Use <code>OmniSoloMultitenant</code> env var to conditionally enable K8s support.</li>
     <li>Create <code>sync.go</code> for the <code>FileSyncBridge</code> using a struct that hashes files and syncs deltas. Protect the state with distributed Redis locks.</li>
     <li>Create <code>lifecycle.go</code> defining the <code>HarnessLifecycle</code> interface.</li>
     <li>Ensure 100% unit test coverage for all new files.</li>

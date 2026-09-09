@@ -1,9 +1,9 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# 🔬 OHC Market Research Report: Agent Harness Architecture Audit
+# 🔬 OmniSolo Market Research Report: Agent Harness Architecture Audit
 
 ## Problem Statement
-Current OHC Agent Harness lacks the robust isolation, state management, and semantic verification seen in state-of-the-art systems like OpenClaw, Hermes Agent, and Claude Code. We need to implement a modern Harness architecture to safely and efficiently execute autonomous AI agents.
+Current OmniSolo Agent Harness lacks the robust isolation, state management, and semantic verification seen in state-of-the-art systems like OpenClaw, Hermes Agent, and Claude Code. We need to implement a modern Harness architecture to safely and efficiently execute autonomous AI agents.
 
 ## Research Report
 
@@ -13,15 +13,15 @@ After deep technical audits of the leading agent frameworks:
 - **Gstack**: Uses `bwrap` (Bubblewrap) for rigorous sandbox execution (`Dockerfile.sandbox`), isolating agents completely from the host system while maintaining low overhead.
 - **OpenClaw & Hermes**: Rely on Podman and `fly.io` for execution and deployment, emphasizing cloud-native ephemeral environments.
 
-### Gap Analysis for OHC
-1. **Isolation:** OHC needs Bubblewrap (`bwrap`) for local sandboxing, matching Gstack's efficiency while running locally.
-2. **Security:** OHC needs semantic validation of bash commands via AST parsing (like Claude Code) before passing them to the sandbox.
-3. **Telemetry:** OHC needs OpenTelemetry instrumentation around tool executions.
-4. **State:** OHC needs a centralized Context Manager synchronizing local (SQLite) and cloud (PostgreSQL) states via PowerSync.
+### Gap Analysis for OmniSolo
+1. **Isolation:** OmniSolo needs Bubblewrap (`bwrap`) for local sandboxing, matching Gstack's efficiency while running locally.
+2. **Security:** OmniSolo needs semantic validation of bash commands via AST parsing (like Claude Code) before passing them to the sandbox.
+3. **Telemetry:** OmniSolo needs OpenTelemetry instrumentation around tool executions.
+4. **State:** OmniSolo needs a centralized Context Manager synchronizing local (SQLite) and cloud (PostgreSQL) states via PowerSync.
 
-### Comparative Table: OHC vs Market
+### Comparative Table: OmniSolo vs Market
 
-| Feature | Claude Code | Gstack | OpenClaw | OHC (Proposed) |
+| Feature | Claude Code | Gstack | OpenClaw | OmniSolo (Proposed) |
 | :--- | :--- | :--- | :--- | :--- |
 | **Sandbox Technology** | Node.js Process | Bubblewrap (`bwrap`) | Podman | Bubblewrap (`bwrap`) |
 | **Command Validation** | Advanced AST Parser | Basic Regex | None | Advanced AST Parser |

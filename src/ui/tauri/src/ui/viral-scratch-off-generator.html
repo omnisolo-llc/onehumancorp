@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viral Scratch-Off Generator | OHC</title>
+  <title>Viral Scratch-Off Generator | OmniSolo OneHumanCorp</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -305,7 +305,7 @@
 
     <div class="toggle-container">
       <div>
-        <label for="branding-toggle">Hide OHC Branding</label>
+        <label for="branding-toggle">Hide OmniSolo Branding</label>
         <span style="font-size: 12px; color: #86868b;">Requires Pro or Share</span>
       </div>
       <label class="toggle">
@@ -323,9 +323,9 @@
     <div class="modal-content">
       <button class="close-btn" id="close-paywall">×</button>
       <h2>Upgrade to Pro</h2>
-      <p>Hiding the OHC branding is a premium feature. Upgrade your workspace to unlock fully white-labeled widgets, or share on X to get 7 days free.</p>
+      <p>Hiding the OmniSolo branding is a premium feature. Upgrade your workspace to unlock fully white-labeled widgets, or share on X to get 7 days free.</p>
       <button class="pro-btn">Upgrade to Pro</button>
-      <button class="x-btn" onclick="window.open('https://twitter.com/intent/tweet?text=Just%20created%20a%20viral%20scratch-off%20campaign%20using%20@OneHumanCorp!%20%F0%9F%8E%A1', '_blank')">Share on X to get 7 Days Free</button>
+      <button class="x-btn" onclick="window.open('https://twitter.com/intent/tweet?text=Just%20created%20a%20viral%20scratch-off%20campaign%20using%20@OmniSolo!%20%F0%9F%8E%A1', '_blank')">Share on X to get 7 Days Free</button>
     </div>
   </div>
 
@@ -371,7 +371,7 @@
         }
 
         const baseUrl = window.location.origin.includes('localhost') || window.location.origin.includes('tauri')
-            ? 'https://ohc.app'
+            ? 'https://omnisolo.co'
             : window.location.origin;
 
         const iframeSrc = `${baseUrl}/api/v1/growth/scratch-off/embed?tenant=${encodeURIComponent(tenantId)}&prizes=${encodeURIComponent(prizes)}`;

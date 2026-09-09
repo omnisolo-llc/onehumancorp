@@ -18,7 +18,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# gazelle:prefix github.com/onehumancorp/mono
+# gazelle:prefix github.com/omnisolo-llc/omnisolo
 exports_files([
     "README.md",
     "Cargo.lock",
@@ -28,6 +28,7 @@ exports_files([
     "package.json",
     "package-lock.json",
     "CHANGELOG.md",
+    ".dockerignore",
     ".github/workflows/ci.yml",
 ])
 
@@ -170,5 +171,5 @@ alias(
     tags = ["manual"],
 )
 
-# gazelle:prefix onehumancorp
+# gazelle:prefix omnisolo
 gazelle(name = "gazelle")

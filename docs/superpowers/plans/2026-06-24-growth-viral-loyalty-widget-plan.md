@@ -1,8 +1,8 @@
-# OHC Viral Loyalty Widget Growth Feature Implementation Plan
+# OmniSolo Viral Loyalty Widget Growth Feature Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Enhance the viral loyalty widget to include an interactive mockup and match OHC premium design tokens.
+**Goal:** Enhance the viral loyalty widget to include an interactive mockup and match OmniSolo premium design tokens.
 
 **Architecture:** Modify the static HTML page to add CSS layout improvements and dynamic javascript handling that renders a "card" preview visually updating when "Generate" is clicked. Then add Playwright tests.
 

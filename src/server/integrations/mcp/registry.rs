@@ -289,7 +289,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pg_tool_registry_isolation() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 

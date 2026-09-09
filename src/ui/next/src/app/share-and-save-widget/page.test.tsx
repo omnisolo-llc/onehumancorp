@@ -45,9 +45,9 @@ describe('ShareAndSaveWidgetPage', () => {
     expect(screen.getByText(/sharing will not issue a code/i)).toBeDefined();
   });
 
-  it('renders Powered by OHC branding by default', () => {
+  it('renders Powered by OmniSolo branding by default', () => {
     render(<ShareAndSaveWidgetPage />);
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined();
   });
 
   it('shows paywall when trying to remove branding without pro', () => {
@@ -56,7 +56,7 @@ describe('ShareAndSaveWidgetPage', () => {
     fireEvent.click(checkbox);
 
     expect(screen.getAllByText('Upgrade to Remove Branding').length).toBeGreaterThan(0);
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined(); // branding still there
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined(); // branding still there
   });
 
   it('navigates back to dashboard', () => {

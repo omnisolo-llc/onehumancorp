@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-The Agent-to-Agent (A2A) Interaction Protocol defines the standardized communication layer for autonomous agents within the OHC ecosystem. It ensures that agents can discover, collaborate, and exchange structured data (Code, Specs, Security Flags) with cryptographic certainty of identity and intent.
+The Agent-to-Agent (A2A) Interaction Protocol defines the standardized communication layer for autonomous agents within the OmniSolo ecosystem. It ensures that agents can discover, collaborate, and exchange structured data (Code, Specs, Security Flags) with cryptographic certainty of identity and intent.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -17,7 +17,7 @@ The Agent-to-Agent (A2A) Interaction Protocol defines the standardized communica
 - **Verifiable Provenance**: Every message must be signed with a SPIFFE SVID to prevent identity spoofing.
 ### 2.2 Non-Goals
 - **Replacing Human Chat**: A2A is for machine-to-machine coordination; human interaction flows through the `CEO Dashboard`.
-- **Global Consensus**: OHC uses hierarchical coordination (Director -> Specialist) rather than a decentralized blockchain-style consensus.
+- **Global Consensus**: OmniSolo uses hierarchical coordination (Director -> Specialist) rather than a decentralized blockchain-style consensus.
 
 ## 3. Detailed Design
 
@@ -45,7 +45,7 @@ Agents transition through states based on protocol events:
 ### 3.3 Security & mTLS Verification
 All A2A gRPC traffic is mandatorily encrypted via Mutual TLS (mTLS).
 - **Handshake**: Agents present their X.509 SVID during the TLS handshake.
-- **Authorization**: The recipient agent verifies the `trustDomain` (e.g., `ohc.local`) and the `AgentID` against the OHC Hub Registry.
+- **Authorization**: The recipient agent verifies the `trustDomain` (e.g., `ohc.local`) and the `AgentID` against the OmniSolo Hub Registry.
 
 ## 4. Cross-cutting Concerns
 ### 4.1 Latency & Throughput

@@ -74,7 +74,7 @@ describe('ViralChallengeGeneratorPage', () => {
   it('shows paywall when removing branding without pro', () => {
     render(<ViralChallengeGeneratorPage />);
 
-    const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/);
+    const checkbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/);
     fireEvent.click(checkbox);
 
     expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();

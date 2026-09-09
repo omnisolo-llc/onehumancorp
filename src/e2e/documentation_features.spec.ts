@@ -20,7 +20,7 @@ test.describe('Help Chat Flow', () => {
     const chatHeader = page.locator('#ohc-floating-help-header h3');
     await expect(chatHeader).toBeVisible();
     await expect(page.getByText('In-App Help Center')).toBeVisible();
-    await expect(page.getByText("Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OHC.")).toBeVisible();
+    await expect(page.getByText("Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo.")).toBeVisible();
 
     // Type a message
     const input = page.locator('#ohc-help-chat-input');

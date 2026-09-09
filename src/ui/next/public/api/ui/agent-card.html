@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agent Public Card Generator - OHC</title>
+  <title>Agent Public Card Generator - OmniSolo</title>
   <style>
     :root {
       --bg-color: #f5f5f7;
@@ -341,7 +341,7 @@
 
       <div class="toggle-group">
         <input type="checkbox" id="remove-branding" />
-        <label for="remove-branding">Remove "Powered by OHC" Badge (Pro)</label>
+        <label for="remove-branding">Remove "OmniSolo" Badge (Pro)</label>
       </div>
 
       <button class="btn" id="generate-btn">Copy Share Link</button>
@@ -363,7 +363,7 @@
         </div>
         <div class="preview-footer" id="preview-footer-el">
           <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team" id="branding-link" target="_blank">
-            <span>⚡</span> Powered by OHC
+            <span>⚡</span> OmniSolo
           </a>
         </div>
       </div>
@@ -428,7 +428,7 @@
   </script>
 
 <style>
-.ohc-tooltip {
+.omnisolo-tooltip {
     position: fixed;
     background: #333;
     color: white;
@@ -444,17 +444,17 @@
     max-width: 250px;
     line-height: 1.4;
 }
-.ohc-tooltip.visible {
+.omnisolo-tooltip.visible {
     opacity: 1;
 }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
-            window.OHC_TOOLTIPS = {
+            window.OMNISOLO_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
@@ -495,14 +495,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });

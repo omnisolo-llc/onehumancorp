@@ -73,8 +73,16 @@ export default function AgentMarketplacePage() {
        </div>
 
        {error && (
-         <div className="p-4 mb-8 bg-red-100 text-red-700 border border-red-200 rounded-[12px] w-full text-center">
-           {error}
+         <div className="p-6 mb-8 bg-red-50 text-red-800 border border-red-200 rounded-[16px] w-full text-center" role="alert">
+           <p className="font-semibold">{error}</p>
+           <p className="mt-1 text-sm text-red-700">The marketplace service is temporarily unavailable. Your installed agents are unaffected.</p>
+           <button
+             type="button"
+             onClick={() => fetchAgents(query)}
+             className="mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
+           >
+             Retry marketplace
+           </button>
          </div>
        )}
 
@@ -114,7 +122,7 @@ export default function AgentMarketplacePage() {
                </div>
              </div>
            ))}
-           {agents.length === 0 && (
+           {!error && agents.length === 0 && (
              <div className="col-span-full flex flex-col items-center justify-center py-20 px-4 rounded-[16px] border border-dashed border-gray-300 text-gray-500 bg-white/50 backdrop-blur-[10px]">
                <svg className="w-12 h-12 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                <p className="text-lg font-medium text-gray-900 mb-1">No agents found</p>

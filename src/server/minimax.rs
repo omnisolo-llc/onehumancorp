@@ -542,11 +542,11 @@ pub struct LocalLLMClient {
 
 impl LocalLLMClient {
     pub fn new() -> Self {
-        let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
+        let endpoint = std::env::var("OMNISOLO_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
-        let embed_endpoint = std::env::var("OHC_LOCAL_LLM_EMBED_ENDPOINT")
+        let embed_endpoint = std::env::var("OMNISOLO_LOCAL_LLM_EMBED_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
-        let model = std::env::var("OHC_LOCAL_MODEL_NAME").unwrap_or_else(|_| "llama3".to_string());
+        let model = std::env::var("OMNISOLO_LOCAL_MODEL_NAME").unwrap_or_else(|_| "llama3".to_string());
 
         LocalLLMClient {
             endpoint,

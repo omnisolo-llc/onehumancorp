@@ -166,7 +166,7 @@ fn agent_prompt(
         serde_json::to_string(&template.handoff_to).map_err(|err| err.to_string())?;
 
     Ok(format!(
-        "You are an OHC agent in a five-agent workspace. Agent id: {agent_id}. Role: {role}. Mission: {mission}. Task: {task}. Prior agent transcript JSON: {prior_json}. You must collaborate with the prior agents and hand off to exactly these next agents: {handoff_json} (do not include any other agents or omit any, ensure the list is exactly as provided). Return strict JSON only with keys agent_id, role, contribution, handoff_to, confidence. contribution must mention at least one prior agent when prior transcript is non-empty, and must be concise but specific.",
+        "You are an OmniSolo agent in a five-agent workspace. Agent id: {agent_id}. Role: {role}. Mission: {mission}. Task: {task}. Prior agent transcript JSON: {prior_json}. You must collaborate with the prior agents and hand off to exactly these next agents: {handoff_json} (do not include any other agents or omit any, ensure the list is exactly as provided). Return strict JSON only with keys agent_id, role, contribution, handoff_to, confidence. contribution must mention at least one prior agent when prior transcript is non-empty, and must be concise but specific.",
         agent_id = template.id,
         role = template.role,
         mission = template.mission,
@@ -500,7 +500,7 @@ mod tests {
     #[tokio::test]
     async fn live_minimax_five_agent_workspace_collaborates() {
         // Skip this test in normal runs to make the test suite hermetic
-        if std::env::var("OHC_RUN_LIVE_MINIMAX_TESTS").is_err() {
+        if std::env::var("OMNISOLO_RUN_LIVE_MINIMAX_TESTS").is_err() {
             return;
         }
         let maybe_workspace = minimax_agent_workspace_from_env();
@@ -513,7 +513,7 @@ mod tests {
         let workspace = maybe_workspace
             .unwrap()
             .with_turn_delay(std::time::Duration::from_millis(
-                std::env::var("OHC_MINIMAX_SWARM_TURN_DELAY_MS")
+                std::env::var("OMNISOLO_MINIMAX_SWARM_TURN_DELAY_MS")
                     .ok()
                     .and_then(|value| value.parse::<u64>().ok())
                     .unwrap_or(0),

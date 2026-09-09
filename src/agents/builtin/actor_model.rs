@@ -6,7 +6,7 @@ use tracing::{debug, error, info};
 
 use crate::agent::{Agent, AgentRunConfig};
 use crate::tool_executor_engine::ToolExecutionEngine;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolCall, ToolResult};
+use omnisolo_builtin_agent_core::types::{ChatRequest, Message, ToolCall, ToolResult};
 
 /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
 #[derive(Debug, Clone)]
@@ -207,20 +207,20 @@ impl Actor for ToolActor {
                                 }
                                 Err(e) => {
                                     let error_str = match e {
-                                        ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => {
+                                        omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => {
                                             let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
                                             error_counts.insert(tc.name.clone(), count);
                                             if count > 2 {
                                                 format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg)
                                             } else {
-                                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &tc.name, &msg).error
+                                                omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &tc.name, &msg).error
                                             }
                                         },
-                                        ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
-                                        ohc_builtin_agent_core::types::ToolError::Fatal(msg) => format!("Fatal Error: {}", msg),
-                                        ohc_builtin_agent_core::types::ToolError::Transient(msg) => format!("Transient Error: {}", msg),
-                                        ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => format!("Unexpected Error: {}", msg),
-                                        ohc_builtin_agent_core::types::ToolError::HandoffRequested(msg) => format!("Handoff Requested: {}", msg),
+                                        omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
+                                        omnisolo_builtin_agent_core::types::ToolError::Fatal(msg) => format!("Fatal Error: {}", msg),
+                                        omnisolo_builtin_agent_core::types::ToolError::Transient(msg) => format!("Transient Error: {}", msg),
+                                        omnisolo_builtin_agent_core::types::ToolError::Unexpected(msg) => format!("Unexpected Error: {}", msg),
+                                        omnisolo_builtin_agent_core::types::ToolError::HandoffRequested(msg) => format!("Handoff Requested: {}", msg),
                                     };
                                     tool_results.push(ToolResult {
                                         tool_call_id: tc.id.clone(),
@@ -285,7 +285,7 @@ impl Actor for AgentActor {
         let tool_defs: Vec<_> = agent
             .tools
             .iter()
-            .map(|t| ohc_builtin_agent_core::types::ToolDefinition {
+            .map(|t| omnisolo_builtin_agent_core::types::ToolDefinition {
                 name: t.name.clone(),
                 description: t.description.clone(),
                 parameters: t.parameters.clone(),
@@ -310,7 +310,7 @@ impl Actor for AgentActor {
                 // Is it a tool result coming back from the ToolActor?
                 if !msg.tool_results.is_empty() {
                     messages.push(Message {
-                        role: ohc_builtin_agent_core::types::Role::Tool,
+                        role: omnisolo_builtin_agent_core::types::Role::Tool,
                         content: String::new(),
                         tool_calls: vec![],
                         tool_results: msg.tool_results.clone(),
@@ -439,7 +439,7 @@ mod tests {
     use super::*;
     use crate::llm::LlmClient;
     use crate::tools::{Tool, ToolExecutor};
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
 
     struct MockLlm {
         pub response_text: String,
@@ -459,9 +459,9 @@ mod tests {
             if *count == 1 {
                 Ok(ChatResponse {
                     message: Message {
-                        role: ohc_builtin_agent_core::types::Role::Assistant,
+                        role: omnisolo_builtin_agent_core::types::Role::Assistant,
                         content: "".to_string(),
-                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                        tool_calls: vec![omnisolo_builtin_agent_core::types::ToolCall {
                             id: "call_1".to_string(),
                             name: "echo".to_string(),
                             arguments: serde_json::json!({"val": "test"}),
@@ -639,7 +639,7 @@ mod tests {
             .register("ProductionHarness".to_string(), test_tx)
             .await;
 
-        let tool_results = vec![ohc_builtin_agent_core::types::ToolResult {
+        let tool_results = vec![omnisolo_builtin_agent_core::types::ToolResult {
             tool_call_id: "call_1".to_string(),
             content: "Tool completed successfully".to_string(),
             error: "".to_string(),

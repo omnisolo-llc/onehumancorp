@@ -43,7 +43,7 @@ describe("registration entry", () => {
     await user.click(screen.getByRole("button", { name: /verify email/i }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/verify-email"));
-    expect(JSON.parse(sessionStorage.getItem("ohc-registration-challenge") ?? "null")).toEqual({
+    expect(JSON.parse(sessionStorage.getItem("omnisolo-registration-challenge") ?? "null")).toEqual({
       challengeId: "challenge-7",
       email: "alice@example.test",
     });

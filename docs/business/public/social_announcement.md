@@ -1,10 +1,10 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# OHC Mono v2.0 is LIVE 🐝🔥
+# OmniSolo Mono v2.0 is LIVE 🐝🔥
 
 Are you still asking agents for permission?
 
-One Human Corp (OHC) just unleashed the biggest evolution of our Agentic OS. Say goodbye to manual orchestrations and hello to **Absolute Autonomy**.
+OmniSolo (OmniSolo) just unleashed the biggest evolution of our Agentic OS. Say goodbye to manual orchestrations and hello to **Absolute Autonomy**.
 
 **Here's what just shipped to the Swarm:**
 
@@ -17,8 +17,8 @@ One Human Corp (OHC) just unleashed the biggest evolution of our Agentic OS. Say
 
 Our agents don't ask for permission. They propose and execute based on your Vision and Market Reality.
 
-Are you ready to build the future? Check out the new OHC Swarm.
+Are you ready to build the future? Check out the new OmniSolo Swarm.
 
-#OneHumanCorp #AI #AgenticOS #Bazel #Kubernetes #Rust #MachineLearning #AIAgents
+#OmniSolo #AI #AgenticOS #Bazel #Kubernetes #Rust #MachineLearning #AIAgents
 
 </div>

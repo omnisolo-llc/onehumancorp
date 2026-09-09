@@ -1,7 +1,7 @@
-# OHC KAIROS: Hybrid AI OS Architecture
+# OmniSolo KAIROS: Hybrid AI OS Architecture
 
 ## Premium Visual Design Mandate
-All OHC interfaces derived from this architecture MUST adhere to:
+All OmniSolo interfaces derived from this architecture MUST adhere to:
 *   \`backdrop-filter: blur(20px) saturate(200%)\`
 *   \`background: rgba(255, 255, 255, 0.03)\`
 *   \`font-family: 'Outfit', 'Inter', sans-serif\`
@@ -10,7 +10,7 @@ All OHC interfaces derived from this architecture MUST adhere to:
 
 ## Phase 1: UltraPlan/Decomposition (Shared Task List)
 
-The Shared Task List is the backbone of the OHC Swarm. It tracks complex feature decomposition into actionable, sequenced \`shared_tasks\`.
+The Shared Task List is the backbone of the OmniSolo Swarm. It tracks complex feature decomposition into actionable, sequenced \`shared_tasks\`.
 
 ### Sequence Diagram
 ```mermaid
@@ -82,7 +82,7 @@ Realtime communication between agents is critical for the "Zero Friction" swarm 
 The long-term memory system. Agents document their findings locally, and the autoDream background pipeline asynchronously vectorizes these findings into a durable pgvector store.
 
 ### Data Pipeline Architecture
-1. **Source**: Local runtime memory YAML files from `OHC_MEMORY_DIR`.
+1. **Source**: Local runtime memory YAML files from `OMNISOLO_MEMORY_DIR`.
 2. **Ingestion Agent**: Reads files, generates chunked text.
 3. **Embedding Generation**: Calls LLM provider (e.g., Anthropic/OpenAI/Minimax) to produce vectors.
 4. **Storage (pgvector)**:
@@ -101,10 +101,10 @@ CREATE TABLE autodream_memories (
 
 ## Phase 4: KAIROS Orchestration: Unified Architecture
 
-This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
+This document serves as the final premium design doc synthesizing the OmniSolo Hybrid AI OS Orchestration layer.
 
 ### The KAIROS Triad
-The absolute autonomy of the OHC Swarm rests on three pillars:
+The absolute autonomy of the OmniSolo Swarm rests on three pillars:
 
 1. **Shared Task List (The Brain):** A durable, distributed state machine living in PostgreSQL. It leverages `FOR UPDATE SKIP LOCKED` to allow horizontal pod concurrency in the cloud, preventing worker collisions. It degrades to SQLite transactions for standalone desktop use.
 2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer. Using `CentrifugeNode` and Redis Pub/Sub (`redis`), agents broadcast state changes, advertise capabilities, and stream events.

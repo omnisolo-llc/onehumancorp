@@ -18,7 +18,7 @@ test.describe('Assistant Workspace', () => {
     await page.goto('/assistant.html');
 
     // Verify Title
-    await expect(page).toHaveTitle('OHC Assistant Workstation');
+    await expect(page).toHaveTitle('OmniSolo Assistant Workstation');
 
     // Verify Top Bar Links
     await expect(page.locator('a[aria-label="Remote Control"]')).toBeVisible();

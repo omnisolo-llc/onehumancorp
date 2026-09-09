@@ -18,7 +18,7 @@ test.describe('Growth & Referral Features', () => {
     // Wait for either the copied/input element to show or an error message to display
     // Because this hits the real backend, if setup is missing, it will show an error
     // which is the truthful state of the app
-    const outputContainer = page.locator('.ohc-growth-card').first();
+    const outputContainer = page.locator('.omnisolo-growth-card').first();
     await expect(outputContainer).toBeVisible();
   });
 

@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReferralsPage from './page';
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />
 }));
 
 vi.mock('../components/GrowthReferralWidget', () => ({
@@ -44,7 +44,7 @@ describe('ReferralsPage', () => {
   it('renders how it works section', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
     });
     await act(async () => {
       render(<ReferralsPage />);
@@ -58,7 +58,7 @@ describe('ReferralsPage', () => {
   it('fetches and displays dynamic referral link', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
     });
 
     await act(async () => {
@@ -71,7 +71,7 @@ describe('ReferralsPage', () => {
     });
 
     const referralSpan = document.getElementById('referral-link');
-    expect(referralSpan?.textContent).toBe('https://ohc.app/ref/test1234');
+    expect(referralSpan?.textContent).toBe('https://cloud.omnisolo.co/ref/test1234');
 
     // Copy button should be enabled
     const copyButton = screen.getByText('Copy Link');
@@ -97,14 +97,14 @@ describe('ReferralsPage', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('renders Powered by OHC footer', async () => {
+  it('renders Powered by OmniSolo footer', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
     });
     await act(async () => {
       render(<ReferralsPage />);
     });
-    expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
+    expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
   });
 });

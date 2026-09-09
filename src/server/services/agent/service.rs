@@ -1,6 +1,6 @@
 use crate::hub::Hub;
-use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::agent_manager_service_server::AgentManagerService;
+use ::server_omnisolo::orchestration::*;
 use chrono::Utc;
 use std::sync::{Arc, RwLock};
 use tonic::{Request, Response, Status};
@@ -87,7 +87,7 @@ impl MyAgentManagerService {
         let task_queue = tasks_res.unwrap();
         let queue_length = task_queue.len() as i32;
         let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
-        let mut proto_task_queue_mut: Vec<::server_ohc::orchestration::SharedTask> =
+        let mut proto_task_queue_mut: Vec<::server_omnisolo::orchestration::SharedTask> =
             proto_task_queue;
         if mobile_optimized {
             for task in proto_task_queue_mut.iter_mut() {
@@ -329,8 +329,8 @@ impl AgentManagerService for MyAgentManagerService {
             .into_iter()
             .map(|a| AgentIdentity {
                 agent_id: a.id.clone(),
-                svid: format!("spiffe://onehumancorp.io/org/{org_id}/agent/{}", a.id),
-                trust_domain: "onehumancorp.io".to_string(),
+                svid: format!("spiffe://omnisolo.io/org/{org_id}/agent/{}", a.id),
+                trust_domain: "omnisolo.io".to_string(),
                 issued_at_unix: now.timestamp(),
                 expires_at_unix: (now + chrono::Duration::hours(24)).timestamp(),
             })
@@ -490,7 +490,7 @@ mod tests {
 
     fn request_for_org<T>(message: T, org_id: &str) -> Request<T> {
         let mut request = Request::new(message);
-        let identity = format!("spiffe://onehumancorp.io/org/{org_id}/agent/test-agent");
+        let identity = format!("spiffe://omnisolo.io/org/{org_id}/agent/test-agent");
         request
             .metadata_mut()
             .insert("x-spiffe-id", identity.parse().unwrap());
@@ -654,7 +654,7 @@ mod tests {
         let mut metadata = tonic::metadata::MetadataMap::new();
         metadata.insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
+            "spiffe://omnisolo.io/org/system/agent/test"
                 .parse()
                 .unwrap(),
         );
@@ -677,7 +677,7 @@ mod tests {
         let mut metadata2 = tonic::metadata::MetadataMap::new();
         metadata2.insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
+            "spiffe://omnisolo.io/org/system/agent/test"
                 .parse()
                 .unwrap(),
         );
@@ -701,7 +701,7 @@ mod tests {
         let mut metadata = tonic::metadata::MetadataMap::new();
         metadata.insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
+            "spiffe://omnisolo.io/org/system/agent/test"
                 .parse()
                 .unwrap(),
         );
@@ -731,7 +731,7 @@ mod tests {
         let mut metadata = tonic::metadata::MetadataMap::new();
         metadata.insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
+            "spiffe://omnisolo.io/org/system/agent/test"
                 .parse()
                 .unwrap(),
         );
@@ -753,7 +753,7 @@ mod tests {
         let mut metadata2 = tonic::metadata::MetadataMap::new();
         metadata2.insert(
             "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
+            "spiffe://omnisolo.io/org/system/agent/test"
                 .parse()
                 .unwrap(),
         );
@@ -782,7 +782,7 @@ mod benchmark_tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, crate::db::get_pool().clone()));
 
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: "agent_1".to_string(),
             name: "Test Agent".to_string(),
             role: "assistant".to_string(),

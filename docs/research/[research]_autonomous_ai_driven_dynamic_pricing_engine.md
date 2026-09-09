@@ -12,7 +12,7 @@ Pricing optimization is traditionally an enterprise-grade feature reserved for l
 - **Wix & Squarespace**: Offer static pricing and basic discount codes. No dynamic or AI-driven pricing capabilities.
 - **GoDaddy**: Basic fixed pricing only.
 
-**Opportunity for OHC**: By integrating an AI Dynamic Pricing Engine directly into the Finance & Payments ("The Accountant") and Operations ("The Manager") departments, OHC can democratize yield management. For example, Leo's guitar lesson prices could slightly increase during peak booking seasons, or Priya's winter coats could automatically discount as spring approaches, all within constraints they simply approve with one tap.
+**Opportunity for OmniSolo**: By integrating an AI Dynamic Pricing Engine directly into the Finance & Payments ("The Accountant") and Operations ("The Manager") departments, OmniSolo can democratize yield management. For example, Leo's guitar lesson prices could slightly increase during peak booking seasons, or Priya's winter coats could automatically discount as spring approaches, all within constraints they simply approve with one tap.
 
 ## Design Doc
 

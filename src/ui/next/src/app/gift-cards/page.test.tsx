@@ -29,9 +29,9 @@ describe('GiftCardsPage', () => {
     expect(screen.getAllByText('$150')).toBeDefined();
   });
 
-  it('includes the Powered by OHC branding in the preview by default', () => {
+  it('includes the Powered by OmniSolo branding in the preview by default', () => {
     render(<GiftCardsPage />);
-    const branding = screen.getAllByText(/Powered by OHC/i);
+    const branding = screen.getAllByText(/Powered by OmniSolo/i);
     expect(branding).toBeDefined();
   });
 

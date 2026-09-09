@@ -14,11 +14,11 @@
   - `CorruptAgentLock` (validating ability to gracefully error when swarm state `.agent-lock` locks are unavailable)
 
 ## Issue Link
-- Linked to GitHub issue: https://github.com/onehumancorp/mono/issues/5531
+- Linked to GitHub issue: https://github.com/omnisolo-llc/omnisolo/issues/5531
 
 ## Exit Criteria Checklist
 - [x] Absolute Autonomy respected.
-- [x] OHC Aesthetic tokens applied to Markdown reports.
+- [x] OmniSolo Aesthetic tokens applied to Markdown reports.
 - [x] Zero Secrets exposed.
 - [x] > 95% Code Coverage in tests for tested files.
 - [x] Bazel checks fully passed (`bazelisk test //src/tests/chaos/...`).

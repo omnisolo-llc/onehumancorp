@@ -26,7 +26,7 @@ test.describe('Agentic Proposal & Invoice Generator for Service Agencies', () =>
     const { id: proposalId } = await response.json();
     expect(proposalId).toBeDefined();
 
-    // 2. Nora opens OHC app and navigates to review AI-generated proposal
+    // 2. Nora opens OmniSolo app and navigates to review AI-generated proposal
     await page.goto(`${e2eConfig.baseURL}/proposals/${proposalId}`);
     await page.waitForLoadState('networkidle');
 

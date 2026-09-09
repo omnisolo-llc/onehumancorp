@@ -9,7 +9,7 @@ use axum::{
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use futures::{sink::SinkExt, stream::StreamExt};
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
+use omnisolo_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use prost::Message as ProstMessage;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -299,7 +299,7 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
 mod tests {
     use super::*;
     use axum::{Router, routing::get};
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
     use tokio_tungstenite::connect_async;
@@ -352,7 +352,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Test receiving a message from server to client (subscribe)
-        let srv_msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let srv_msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "test".to_string(),
             action: "test_chan".to_string(),
             status: "ok".to_string(),

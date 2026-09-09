@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); color: #fff;">
 
-# OHC Walkthrough: Custom Agent Creation
+# OmniSolo Walkthrough: Custom Agent Creation
 
 Welcome to the Custom Agent Creation walkthrough!
 
@@ -11,7 +11,7 @@ sequenceDiagram
     participant Hub as Orchestration Hub
     participant Agent as Custom Agent
     CEO->>Hub: Define Custom Agent Role & Skills
-    Hub->>Agent: Provision via OHC-HA
+    Hub->>Agent: Provision via OmniSolo-HA
     Agent-->>Hub: Acknowledges
     Hub-->>CEO: Custom Agent Ready
 ```

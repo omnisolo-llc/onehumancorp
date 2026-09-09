@@ -11,9 +11,9 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/agents/builtin:core",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
         "//src/server:server_lib",
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "//src/server/pricing:server_pricing",
         "@crates//:chrono",
         "@crates//:opentelemetry",

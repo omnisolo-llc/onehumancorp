@@ -26,7 +26,7 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
 
     const emptyState = page.locator('[data-testid="onboarding-welcome-card"]');
     await expect(emptyState).toBeVisible();
-    await expect(emptyState).toContainText('Welcome to OHC!');
+    await expect(emptyState).toContainText('Welcome to OmniSolo!');
   });
 
   // Test 3: Action Card Interaction

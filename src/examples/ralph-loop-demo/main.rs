@@ -1,7 +1,7 @@
-use ohc_builtin_agent::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent::llm::LlmClient;
-use ohc_builtin_agent::ralph_loop::RalphLoop;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use omnisolo_builtin_agent::agent::{Agent, AgentRunConfig};
+use omnisolo_builtin_agent::llm::LlmClient;
+use omnisolo_builtin_agent::ralph_loop::RalphLoop;
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 use std::sync::Arc;
 
 struct DemoLlmClient;

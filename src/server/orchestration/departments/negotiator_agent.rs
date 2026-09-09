@@ -20,8 +20,8 @@ impl NegotiatorAgent {
     }
 
     async fn generate_embedding(&self, text: &str) -> Vec<f32> {
-        match std::env::var("OHC_NEGOTIATOR_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+        match std::env::var("OMNISOLO_NEGOTIATOR_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
             .as_deref()
         {
             Ok("minimax") => {
@@ -76,8 +76,8 @@ impl Department for NegotiatorAgent {
         );
         let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-        let raw_response = match std::env::var("OHC_NEGOTIATOR_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+        let raw_response = match std::env::var("OMNISOLO_NEGOTIATOR_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
             .as_deref()
         {
             Ok("minimax") => {
@@ -207,7 +207,7 @@ impl Department for NegotiatorAgent {
         let proposed_slot_id = uuid::Uuid::new_v4().to_string();
 
         // Lock in Redis
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
+        if let Ok(redis_url) = std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
             if let Ok(redis_lock) = RedisLock::new(&redis_url) {
                 let _ = redis_lock.acquire_lock(&event.tenant_id, "booking_slot", &proposed_slot_id, 600).await;
             }
@@ -305,13 +305,13 @@ impl BaseAgent for NegotiatorAgent {
 mod tests {
     use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use crate::orchestration::departments::Department;
 
     #[tokio::test]
     async fn test_negotiator_agent_subscribed_events() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
         let db = Arc::new(crate::db::DB::new().await.unwrap());

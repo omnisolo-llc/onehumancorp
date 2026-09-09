@@ -19,7 +19,7 @@ test.describe('Documentation UI Verification', () => {
     await videosTab.click();
 
     // Verify video list is populated
-    const videoList = page.locator('.ohc-help-content.active #video-list').first();
+    const videoList = page.locator('.omnisolo-help-content.active #video-list').first();
     await videoList.waitFor({ state: 'visible' });
     await expect(videoList).not.toBeEmpty();
     // Verify it isn't just loading text
@@ -42,7 +42,7 @@ test.describe('Documentation UI Verification', () => {
     await expect(walkthroughBubble).toContainText('Business Analytics');
 
     // Close the walkthrough
-    const closeBtn = page.locator('.ohc-walkthrough-close').first();
+    const closeBtn = page.locator('.omnisolo-walkthrough-close').first();
     if (await closeBtn.isVisible()) {
       await closeBtn.click();
       await expect(walkthroughBubble).not.toBeVisible();

@@ -23,7 +23,7 @@ export default function ViralProductWidgetPage() {
             const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
             setTenant(storedTenant);
         }
-        document.title = "Viral Product Widget | OHC";
+        document.title = "Viral Product Widget | OmniSolo OneHumanCorp";
     }, []);
 
     const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +38,7 @@ export default function ViralProductWidgetPage() {
     const embedUrl = `/api/v1/growth/viral-product-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&price=${encodeURIComponent(price)}&description=${encodeURIComponent(description)}&imageUrl=${encodeURIComponent(imageUrl)}&theme=${theme}&branding=${!hideBranding}`;
 
     // Construct the HTML code block for the user to copy
-    const absoluteEmbedUrl = `https://ohc.app/api/v1/growth/viral-product-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&price=${encodeURIComponent(price)}&description=${encodeURIComponent(description)}&imageUrl=${encodeURIComponent(imageUrl)}&theme=${theme}&branding=${!hideBranding}`;
+    const absoluteEmbedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-product-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&price=${encodeURIComponent(price)}&description=${encodeURIComponent(description)}&imageUrl=${encodeURIComponent(imageUrl)}&theme=${theme}&branding=${!hideBranding}`;
     const embedCode = `<iframe src="${absoluteEmbedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
     const handleCopy = () => {
@@ -61,7 +61,7 @@ export default function ViralProductWidgetPage() {
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Left Column: Configuration */}
                     <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                        <div className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
+                        <div className="app-card omnisolo-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6 flex items-center gap-2">
                                 <span className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">⚙️</span>
                                 Configuration
@@ -139,7 +139,7 @@ export default function ViralProductWidgetPage() {
                                                 Remove Branding
                                                 {!hasPro && <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">PRO</span>}
                                             </span>
-                                            <span className="text-xs text-gray-500">Hide the "Powered by OHC" footer.</span>
+                                            <span className="text-xs text-gray-500">Hide the "Powered by OmniSolo" footer.</span>
                                         </div>
                                     </label>
                                 </div>
@@ -147,7 +147,7 @@ export default function ViralProductWidgetPage() {
                         </div>
 
                         {/* Embed Code Section */}
-                        <div className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
+                        <div className="app-card omnisolo-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Embed Code</h2>
                             <div className="relative group">
                                 <pre className="w-full h-32 p-4 bg-gray-900 border border-gray-700 rounded-xl font-mono text-xs text-gray-300 overflow-x-auto overflow-y-auto shadow-inner leading-relaxed">
@@ -165,7 +165,7 @@ export default function ViralProductWidgetPage() {
 
                     {/* Right Column: Live Preview */}
                     <div className="w-full lg:w-2/3 flex flex-col">
-                        <div className="flex-1 app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl overflow-hidden flex flex-col relative min-h-[600px]">
+                        <div className="flex-1 app-card omnisolo-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl overflow-hidden flex flex-col relative min-h-[600px]">
                             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 z-10"></div>
                             <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center z-10 relative">
                                 <h3 className="text-sm font-bold text-gray-600 uppercase tracking-widest flex items-center gap-2">
@@ -214,7 +214,7 @@ export default function ViralProductWidgetPage() {
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-3 font-outfit">Upgrade to Pro</h2>
                             <p className="text-gray-600 mb-8 text-base">
-                                White-label your embedded product widgets. Upgrade to Pro to remove the <span className="font-semibold text-gray-900">"Powered by OHC"</span> branding completely.
+                                White-label your embedded product widgets. Upgrade to Pro to remove the <span className="font-semibold text-gray-900">"Powered by OmniSolo"</span> branding completely.
                             </p>
 
                             <div className="space-y-3">

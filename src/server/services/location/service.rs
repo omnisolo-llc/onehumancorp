@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::location_service_server::LocationService;
+use ::server_omnisolo::orchestration::*;
+use ::server_omnisolo::orchestration::location_service_server::LocationService;
 use std::sync::Arc;
 use crate::hub::Hub;
 use sqlx::Row;

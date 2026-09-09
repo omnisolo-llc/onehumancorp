@@ -2,10 +2,10 @@
 title: Agent Harness Architecture Strategy
 ---
 
-# Title: Implement OHC-Harness Core Bash Security Module
+# Title: Implement OmniSolo-Harness Core Bash Security Module
 
 ## Problem Statement
-The current OHC codebase requires a robust, secure, and fully sandboxed Agent Harness environment for safely executing arbitrary bash commands, python code, and file manipulations during agent execution. By auditing the leaked Claude Code repository, we can distill the architecture of a production-grade Agent Harness and incorporate those findings into the OHC project to secure our agent deployments.
+The current OmniSolo codebase requires a robust, secure, and fully sandboxed Agent Harness environment for safely executing arbitrary bash commands, python code, and file manipulations during agent execution. By auditing the leaked Claude Code repository, we can distill the architecture of a production-grade Agent Harness and incorporate those findings into the OmniSolo project to secure our agent deployments.
 
 ## Research Report
 The Claude Code Agent Harness (`src/tools/BashTool`) presents a deeply robust architecture for command sandboxing and security:
@@ -16,9 +16,9 @@ The Claude Code Agent Harness (`src/tools/BashTool`) presents a deeply robust ar
 - **Git Tracking**: Integrates `trackGitOperations` for state snapshots.
 - **Durable File IO History**: Incorporates `fileHistoryTrackEdit` to manage file states safely during automated interactions.
 
-**Comparison Table: OHC vs Market Leaders**
+**Comparison Table: OmniSolo vs Market Leaders**
 
-| Feature | OHC (Current) | Claude Code | OpenClaw / GStack |
+| Feature | OmniSolo (Current) | Claude Code | OpenClaw / GStack |
 | :--- | :--- | :--- | :--- |
 | **Parsing Engine** | Regex / Basic | Tree-sitter (AST) | Varies (mostly Regex) |
 | **Command Sandboxing**| Basic | SandboxManager Adapter | Basic |
@@ -56,15 +56,15 @@ graph TD
 ```
 
 ## Design Doc
-**OHC Hybrid Harness Architecture (`ohc-harness`):**
-1. **Tree-sitter Bash Parsing Engine**: To replicate the level of accuracy seen in Claude, OHC will use a backend wrapper around Tree-sitter for analyzing bash commands before they run locally in desktop mode or remotely in Cloud mode.
-2. **Deterministic Sandboxing Flag**: Provide `shouldUseSandbox` evaluations natively through the `SandboxManager`, dynamically toggled via the Central Database (`OHC-SIP`).
-3. **Deep Validation Pipeline**: Instead of a simple regex match, OHC will pass every command execution through a sequence of validators (IFS injection check, Zsh equals expansion, command substitution blocking) defined in `ohc_harness/bash_security.rs` (or equivalent Slint implementation if native).
+**OmniSolo Hybrid Harness Architecture (`ohc-harness`):**
+1. **Tree-sitter Bash Parsing Engine**: To replicate the level of accuracy seen in Claude, OmniSolo will use a backend wrapper around Tree-sitter for analyzing bash commands before they run locally in desktop mode or remotely in Cloud mode.
+2. **Deterministic Sandboxing Flag**: Provide `shouldUseSandbox` evaluations natively through the `SandboxManager`, dynamically toggled via the Central Database (`OmniSolo-SIP`).
+3. **Deep Validation Pipeline**: Instead of a simple regex match, OmniSolo will pass every command execution through a sequence of validators (IFS injection check, Zsh equals expansion, command substitution blocking) defined in `ohc_harness/bash_security.rs` (or equivalent Slint implementation if native).
 4. **Heredoc and Quoted Strings Processor**: Safely extract heredocs prior to AST inspection, matching `extractHeredocs(command, { quotedOnly: true })` from Claude Code.
 
 ## Implementation Prompt
-**Task**: Build the `OHC-Harness` Core Bash Security Parsing Module
-**Context**: Replicate the bash security validations extracted from Claude Code into the OHC `src/` directory.
+**Task**: Build the `OmniSolo-Harness` Core Bash Security Parsing Module
+**Context**: Replicate the bash security validations extracted from Claude Code into the OmniSolo `src/` directory.
 
 **Steps**:
 1. Implement a Rust-based `ParsedCommand` structure in `src/backend/harness/bash_security.rs` utilizing Tree-sitter (e.g. `tree-sitter/bash`) to parse incoming shell commands.
@@ -74,7 +74,7 @@ graph TD
    - `ValidateZshDangerousCommands` (block `zmodload`)
    - `ValidateCarriageReturn`
    - `ValidateIFSInjection`
-3. Add a sandbox determination endpoint (`harness.ShouldUseSandbox(cmd string) bool`) which checks OHC-SIP Redis configurations to enable or disable sandboxing dynamically.
+3. Add a sandbox determination endpoint (`harness.ShouldUseSandbox(cmd string) bool`) which checks OmniSolo-SIP Redis configurations to enable or disable sandboxing dynamically.
 4. Ensure 100% unit test coverage for the `harness` package using mocked commands that simulate attacks (e.g., `<()`, `$()`, `=curl`, `\r\n`).
 5. **Requirement**: All validation events must expose OpenTelemetry metrics to Prometheus (`ohc_harness_security_divergence_total`).
 6. Update the `docs/research/agent_harness_architecture.md` if the API contract changes.

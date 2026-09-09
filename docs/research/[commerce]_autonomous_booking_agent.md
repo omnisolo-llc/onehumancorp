@@ -1,4 +1,4 @@
-# OHC Issue Brief: Autonomous Booking & Scheduling Agent
+# OmniSolo Issue Brief: Autonomous Booking & Scheduling Agent
 
 ## Title
 **Autonomous Booking & Scheduling Agent for Service-Based SMBs**
@@ -15,17 +15,17 @@ During our dynamic research track, we mapped the top general website builders (S
 - **Success Factors:** Shopify's success lies in its massive app ecosystem and the frictionless "Shop Pay" checkout experience. Wix wins on user-friendly drag-and-drop design.
 - **User Sentiment & Pain Points:** Analysis of SMB forums and reviews reveals severe "app fatigue." Users complain that base platforms are cheap, but the necessary add-ons push costs over $300/month. Furthermore, the configuration of these scheduling apps is overwhelmingly complex for non-technical users.
 
-**The OHC Opportunity**
-OHC currently has basic entities for `bookings`, `products`, and `customers` (verified via codebase audit in `src/server/migrations/001_initial.sql`). However, OHC currently lacks an autonomous agent layer to manage the lifecycle of these entities. By introducing an Autonomous Booking Agent, OHC can eliminate the need for third-party scheduling apps entirely, fulfilling the vision of an invisible AI handling the complex work while the user just makes decisions.
+**The OmniSolo Opportunity**
+OmniSolo currently has basic entities for `bookings`, `products`, and `customers` (verified via codebase audit in `src/server/migrations/001_initial.sql`). However, OmniSolo currently lacks an autonomous agent layer to manage the lifecycle of these entities. By introducing an Autonomous Booking Agent, OmniSolo can eliminate the need for third-party scheduling apps entirely, fulfilling the vision of an invisible AI handling the complex work while the user just makes decisions.
 
 ## Design Doc
 
 ### High-Level Architecture
-The Autonomous Booking Agent will sit between the storefront UI and the OHC Orchestration Hub. It will interact with the user via a chat/voice interface on the storefront and communicate with the backend `bookings` and `customers` entities.
+The Autonomous Booking Agent will sit between the storefront UI and the OmniSolo Orchestration Hub. It will interact with the user via a chat/voice interface on the storefront and communicate with the backend `bookings` and `customers` entities.
 
 ```mermaid
 graph TD;
-    Customer[Customer on Storefront] -->|Interacts| StoreUI[OHC Storefront UI];
+    Customer[Customer on Storefront] -->|Interacts| StoreUI[OmniSolo Storefront UI];
     StoreUI -->|Chat/Voice Input| BookingAgent[Autonomous Booking Agent];
     BookingAgent -->|Queries Availability| OrchestrationHub[KAIROS Orchestration Hub];
     OrchestrationHub -->|Reads/Writes| DB[(Postgres: bookings, customers)];

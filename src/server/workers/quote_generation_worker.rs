@@ -4,10 +4,10 @@ use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
-use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
+use omnisolo_builtin_agent::gpt_researcher::ResearcherLlmClient;
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
 
-use crate::orchestration::queue::ohc_job_queue::OHCJob;
+use crate::orchestration::queue::omnisolo_job_queue::OmniSoloJob;
 use crate::orchestration::queue::worker_pool::JobHandler;
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -88,7 +88,7 @@ impl QuoteGenerationWorker {
         Self { pool }
     }
 
-    async fn do_handle(&self, job: OHCJob) -> Result<(), String> {
+    async fn do_handle(&self, job: OmniSoloJob) -> Result<(), String> {
         let payload: QuoteGenerationPayload = serde_json::from_str(&job.payload)
             .map_err(|e| format!("Failed to parse payload: {}", e))?;
 
@@ -271,7 +271,7 @@ impl QuoteGenerationWorker {
 }
 
 impl JobHandler for QuoteGenerationWorker {
-    fn handle(&self, job: OHCJob) -> tokio::task::JoinHandle<Result<(), String>> {
+    fn handle(&self, job: OmniSoloJob) -> tokio::task::JoinHandle<Result<(), String>> {
         let pool = self.pool.clone();
         tokio::spawn(async move {
             let worker = QuoteGenerationWorker { pool };

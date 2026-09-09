@@ -21,10 +21,10 @@ function isPrivateLanHostname(hostname) {
 }
 
 export function allowedDevOrigins(environment = process.env) {
-  if (environment.OHC_WEB_LOCAL_DEV !== 'true') return [...BASE_DEV_ORIGINS]
+  if (environment.OMNISOLO_WEB_LOCAL_DEV !== 'true') return [...BASE_DEV_ORIGINS]
 
   try {
-    const canonical = new URL(environment.OHC_WEB_CANONICAL_ORIGIN ?? '')
+    const canonical = new URL(environment.OMNISOLO_WEB_CANONICAL_ORIGIN ?? '')
     if (canonical.protocol !== 'http:' || !isPrivateLanHostname(canonical.hostname)) {
       return [...BASE_DEV_ORIGINS]
     }

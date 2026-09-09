@@ -195,7 +195,7 @@ export async function GET(request: Request) {
         </div>
         ${rawBranding ? `
         <div class="footer">
-            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OmniSolo</a>
         </div>
         ` : ''}
     </div>

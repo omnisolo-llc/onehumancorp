@@ -421,7 +421,7 @@ async fn handle_magic_link(
         "cancel" => "Canceled",
         _ => return (StatusCode::BAD_REQUEST, "Invalid action").into_response(),
     };
-    let secret = match std::env::var("OHC_MAGIC_LINK_SECRET")
+    let secret = match std::env::var("OMNISOLO_MAGIC_LINK_SECRET")
         .or_else(|_| std::env::var("MAGIC_LINK_SECRET"))
     {
         Ok(secret) if !secret.trim().is_empty() => secret,
@@ -662,7 +662,8 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
         orchestrator,
         SubscriptionTenantPolicy {
             multitenant: ::server_config::get().multitenant,
-            configured_default: std::env::var("OHC_DEFAULT_TENANT_ID")
+            configured_default: std::env::var("OMNISOLO_DEFAULT_TENANT_ID")
+                .or_else(|_| std::env::var("OHC_DEFAULT_TENANT_ID"))
                 .unwrap_or_else(|_| ::server_common::auth_utils::get_default_tenant()),
         },
     )
@@ -732,7 +733,7 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_overview_queries_are_tenant_scoped_in_postgres() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| {
             "postgres://postgres:postgres@127.0.0.1:32768/ohc_test".to_string()
         });
         let admin = match sqlx::PgPool::connect(&database_url).await {

@@ -39,13 +39,13 @@ export default function StorefrontBuilderPage() {
     const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
     setTenantId(savedTenantId);
 
-    const savedBio = localStorage.getItem("ohc_builder_bio");
+    const savedBio = localStorage.getItem("omnisolo_builder_bio");
     if (savedBio) setBio(savedBio);
 
-    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
+    const savedStatus = localStorage.getItem("omnisolo_builder_status") as "idle" | "generating" | "draft" | "live";
     if (savedStatus) setStatus(savedStatus);
 
-    const savedBlocks = localStorage.getItem("ohc_builder_blocks");
+    const savedBlocks = localStorage.getItem("omnisolo_builder_blocks");
     if (savedBlocks) {
       try {
         setBlocks(JSON.parse(savedBlocks));
@@ -54,7 +54,7 @@ export default function StorefrontBuilderPage() {
       }
     }
 
-    const savedLiveUrl = localStorage.getItem("ohc_builder_liveUrl");
+    const savedLiveUrl = localStorage.getItem("omnisolo_builder_liveUrl");
     if (savedLiveUrl) setLiveUrl(savedLiveUrl);
   }, []);
 
@@ -104,12 +104,12 @@ export default function StorefrontBuilderPage() {
 
   const updateBio = (newBio: string) => {
     setBio(newBio);
-    localStorage.setItem("ohc_builder_bio", newBio);
+    localStorage.setItem("omnisolo_builder_bio", newBio);
   };
 
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live" | "chat") => {
     setStatus(newStatus);
-    localStorage.setItem("ohc_builder_status", newStatus);
+    localStorage.setItem("omnisolo_builder_status", newStatus);
   };
 
   const handleSaveBlock = () => {
@@ -120,7 +120,7 @@ export default function StorefrontBuilderPage() {
         props: editingBlockContent
       };
       setBlocks(newBlocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
       setSelectedBlockIndex(null);
       setSaveMessage("Changes saved!");
       setTimeout(() => setSaveMessage(""), 3000);
@@ -137,7 +137,7 @@ export default function StorefrontBuilderPage() {
 
     const newBlocks = [...blocks, { type, props: defaultProps }];
     setBlocks(newBlocks);
-    localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+    localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
     setIsAddBlockOpen(false);
     setSelectedBlockIndex(newBlocks.length - 1);
   };
@@ -161,7 +161,7 @@ export default function StorefrontBuilderPage() {
         props: b.content
       }));
       setBlocks(blocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(blocks));
       updateStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -176,7 +176,7 @@ export default function StorefrontBuilderPage() {
       const newBlocks = [...prev];
       const [moved] = newBlocks.splice(fromIndex, 1);
       newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
       return newBlocks;
     });
 
@@ -205,7 +205,7 @@ export default function StorefrontBuilderPage() {
         props: b.content
       }));
       setBlocks(newBlocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
       setChatMessage("");
       updateStatus("draft");
     } catch (error) {
@@ -252,7 +252,7 @@ export default function StorefrontBuilderPage() {
         updateStatus("live");
         const url = `/bio/${data.domain || 'myshop'}`;
         setLiveUrl(url);
-        localStorage.setItem("ohc_builder_liveUrl", url);
+        localStorage.setItem("omnisolo_builder_liveUrl", url);
       } else {
         console.error('Failed to publish');
       }
@@ -272,7 +272,7 @@ export default function StorefrontBuilderPage() {
             <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
             <div className="flex justify-end mb-4"><button id="storefront-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors">Start Tour</button></div>
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1></WalkthroughTarget>
+              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OmniSolo OneHumanCorp Smart Builder</h1></WalkthroughTarget>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
@@ -461,7 +461,7 @@ export default function StorefrontBuilderPage() {
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
           <div className="text-center mt-4 mb-8">
-            <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
+            <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OmniSolo</a>
           </div>
         </div>
 
@@ -572,7 +572,7 @@ export default function StorefrontBuilderPage() {
                 onClick={() => {
                   const newBlocks = blocks.filter((_, i) => i !== selectedBlockIndex);
                   setBlocks(newBlocks);
-                  localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+                  localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
                   setSelectedBlockIndex(null);
                 }}
               >

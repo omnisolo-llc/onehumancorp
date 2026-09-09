@@ -1,7 +1,7 @@
 # Advanced Bash Sandboxing & Parsing Isolation
 
 ## Problem Statement
-OHC's current agent harness lacks semantic validation, granular flag-based command filtering, and deterministic misparsing detection. When agents execute terminal commands, the system is vulnerable to sandbox escapes (e.g., via backslash-escaped operators, UNC paths, and quote desynchronization). Competitors like Claude Code utilize rigorous Tree-sitter parsing alongside flag whitelisting and dynamic configuration to enforce isolation.
+OmniSolo's current agent harness lacks semantic validation, granular flag-based command filtering, and deterministic misparsing detection. When agents execute terminal commands, the system is vulnerable to sandbox escapes (e.g., via backslash-escaped operators, UNC paths, and quote desynchronization). Competitors like Claude Code utilize rigorous Tree-sitter parsing alongside flag whitelisting and dynamic configuration to enforce isolation.
 
 ## Research Report
 ### Competitive Analysis: Claude Code (v2.1.88)
@@ -17,8 +17,8 @@ Claude Code implements a sophisticated sandboxing architecture for its `BashTool
 - **Dynamic Configuration & Sandbox Wrapping**: Wraps command execution in an isolated adapter (`SandboxManager`), dynamically syncing configurations like `excludedCommands` and `dangerouslyDisableSandbox` with user settings, while actively preventing configuration overrides by evaluating commands.
 - **Network Proxy Constraints**: Proxies network traffic using `.mcp.json` scope config and blocklists `gh` and `git` commands from executing if in unexpected bare repositories or without appropriate permissions.
 
-### OHC Gap Analysis
-OHC-HA currently executes shell commands without explicit syntax decomposition or granular flag vetting. Our system lacks a robust mechanism to:
+### OmniSolo Gap Analysis
+OmniSolo-HA currently executes shell commands without explicit syntax decomposition or granular flag vetting. Our system lacks a robust mechanism to:
 1. Prevent malicious command substitution (e.g., `` ` `` or `$()`).
 2. Whitelist specific safe flags for common read-only binaries (like `grep`, `ls`, `fd`).
 3. Maintain robust quote context tracking to prevent token injection.

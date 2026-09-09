@@ -5,7 +5,7 @@ type Props = {
 }
 
 const defaultTargetUrl = '/onboarding';
-const trustedShareHosts = new Set(['ohc.app', 'onehumancorp.com']);
+const trustedShareHosts = new Set(['cloud.omnisolo.co', 'omnisolo.co']);
 
 function normalizeShareTarget(rawUrl: string) {
   try {
@@ -28,8 +28,8 @@ export async function generateMetadata(
   _parent: ResolvingMetadata
 ): Promise<Metadata> {
   const resolvedSearchParams = await searchParams;
-  const title = typeof resolvedSearchParams.title === 'string' ? resolvedSearchParams.title : 'One Human Corp';
-  const description = typeof resolvedSearchParams.description === 'string' ? resolvedSearchParams.description : 'Launch your business online instantly with OHC!';
+  const title = typeof resolvedSearchParams.title === 'string' ? resolvedSearchParams.title : 'OmniSolo';
+  const description = typeof resolvedSearchParams.description === 'string' ? resolvedSearchParams.description : 'Launch your business online instantly with OmniSolo!';
   const image = typeof resolvedSearchParams.image === 'string' ? resolvedSearchParams.image : undefined;
   const urlParam = typeof resolvedSearchParams.url === 'string' ? resolvedSearchParams.url : defaultTargetUrl;
   const targetUrl = normalizeShareTarget(urlParam);

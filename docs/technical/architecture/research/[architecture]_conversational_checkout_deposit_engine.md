@@ -15,7 +15,7 @@
   - **Shopify Inbox:** Allows sending product links in chat, but still redirects to a full browser checkout flow. Doesn't support service deposits natively.
   - **Stripe Payment Links:** Fast, but lacks deep bidirectional sync with the merchant's live calendar/inventory without custom webhooks.
   - **Meta WhatsApp Business:** Native payments exist (UPI in India, Pix in Brazil), but they are heavily fragmented and not synced with an omnichannel unified inventory mesh.
-- **Identify Gaps:** OHC needs a universal engine that bridges the DM thread, localized payment gateways (Mercado Pago, Stripe), and the `Unified Capacity Mesh`. The AI must construct a transaction state, hold a soft lock on the inventory, and release the checkout card.
+- **Identify Gaps:** OmniSolo needs a universal engine that bridges the DM thread, localized payment gateways (Mercado Pago, Stripe), and the `Unified Capacity Mesh`. The AI must construct a transaction state, hold a soft lock on the inventory, and release the checkout card.
 
 ## 3. Design Doc
 

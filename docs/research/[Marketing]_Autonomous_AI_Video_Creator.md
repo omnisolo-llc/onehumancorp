@@ -18,7 +18,7 @@ Maya is busy baking; she can take a 10-second video of a finished cake, but she 
     *   **Canva/CapCut**: Provide excellent tools but require manual effort and "creative energy."
     *   **InVideo/Lumen5**: AI-assisted, but usually focused on stock footage and desktop-first workflows.
     *   **Social Media Native Tools**: Highly manual.
-*   **The OHC Advantage**: OHC "Creator" is the only engine that understands the *business context*. Because it has access to the product catalog, customer reviews, and brand "vibe," it doesn't just make a "pretty video"—it makes a *selling* video. It uses the "Promoter" (Marketing) and "Ambassador" (CS) agents to pull testimonials or product features into the script.
+*   **The OmniSolo Advantage**: OmniSolo "Creator" is the only engine that understands the *business context*. Because it has access to the product catalog, customer reviews, and brand "vibe," it doesn't just make a "pretty video"—it makes a *selling* video. It uses the "Promoter" (Marketing) and "Ambassador" (CS) agents to pull testimonials or product features into the script.
 
 ## Design Doc
 
@@ -26,7 +26,7 @@ Maya is busy baking; she can take a 10-second video of a finished cake, but she 
 ```mermaid
 sequenceDiagram
     participant Owner as Maya (Mobile 375px)
-    participant Edge as OHC Edge / Ingest
+    participant Edge as OmniSolo Edge / Ingest
     participant VisionAgent as The Visualizer (Vision AI)
     participant ScriptAgent as The Creator (Marketing AI)
     participant AudioAgent as The Voice (Audio AI)

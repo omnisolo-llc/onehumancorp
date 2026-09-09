@@ -9,15 +9,15 @@ test.describe.serial('Review Reward Growth Loop', () => {
     // 2. Navigate to dashboard
     await page.goto('/dashboard.html');
     let content = await page.content();
-    if (!content.includes('OneHumanCorp')) {
+    if (!content.includes('OmniSolo')) {
         await page.goto('/tauri_out/dashboard.html');
         content = await page.content();
     }
-    if (!content.includes('OneHumanCorp')) {
+    if (!content.includes('OmniSolo')) {
         await page.goto('/ui/dashboard.html');
         content = await page.content();
     }
-    if (!content.includes('OneHumanCorp')) {
+    if (!content.includes('OmniSolo')) {
         await page.goto('/dashboard');
     }
 
@@ -31,15 +31,15 @@ test.describe.serial('Review Reward Growth Loop', () => {
     const previewTitle = page.locator('#previewTitle');
     await expect(previewTitle).toHaveText('Leave a review, get 15% off!');
 
-    // Ensure the powered by OHC link is present
+    // Ensure the powered by OmniSolo link is present
     const poweredByLink = page.locator('#previewBranding');
     await expect(poweredByLink).toBeVisible();
-    await expect(poweredByLink).toHaveText('⚡ Powered by OHC');
+    await expect(poweredByLink).toHaveText('⚡ OmniSolo');
 
     // 5. Test generated HTML code includes the watermark
     const codeOutput = page.locator('#codeOutput');
     let generatedHtml = await codeOutput.textContent();
-    expect(generatedHtml).toContain('⚡ Powered by OHC');
+    expect(generatedHtml).toContain('⚡ OmniSolo');
 
     // 6. Test interaction: modifying the inputs changes the code
     await page.fill('#widgetTitle', 'Leave a 5 star review!');
@@ -75,6 +75,6 @@ test.describe.serial('Review Reward Growth Loop', () => {
 
     // Watermark should be gone in code output
     generatedHtml = await codeOutput.textContent();
-    expect(generatedHtml).not.toContain('⚡ Powered by OHC');
+    expect(generatedHtml).not.toContain('⚡ OmniSolo');
   });
 });

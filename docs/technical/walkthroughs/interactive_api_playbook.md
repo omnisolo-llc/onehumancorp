@@ -1,6 +1,6 @@
-# OHC Interactive API Playbook
+# OmniSolo Interactive API Playbook
 
-Welcome to the OHC Interactive API Playbook. This guide provides a seamless, visual walkthrough of our core APIs.
+Welcome to the OmniSolo Interactive API Playbook. This guide provides a seamless, visual walkthrough of our core APIs.
 
 ## Authentication
 All APIs use SPIFFE/SPIRE for identity and auth to maintain "Zero Secrets".

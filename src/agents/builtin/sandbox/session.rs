@@ -65,7 +65,7 @@ impl ShellSession {
         let env_snapshot_path = self.sandbox_dir.join("env_snapshot.sh");
         let cwd_snapshot_path = self.sandbox_dir.join("cwd_snapshot.txt");
 
-        let memory_dir_export = format!("export OHC_MEMORY_DIR='{}';", self.memory_dir.display());
+        let memory_dir_export = format!("export OMNISOLO_MEMORY_DIR='{}';", self.memory_dir.display());
 
         let wrapper_cmd = format!(
             "{} source '{}' 2>/dev/null || true; {{ {}; }}; declare -p | grep -v '^declare -[a-zA-Z-]*r' > '{}'; pwd -P > '{}'",
@@ -189,7 +189,7 @@ mod tests {
         assert!(out.contains("bar"));
 
         // Test memory directory export
-        let out = session.run_stateful_command("echo $OHC_MEMORY_DIR").await.unwrap();
+        let out = session.run_stateful_command("echo $OMNISOLO_MEMORY_DIR").await.unwrap();
         assert!(out.contains("memory"));
 
         let _ = tokio::fs::remove_dir_all(dir).await;

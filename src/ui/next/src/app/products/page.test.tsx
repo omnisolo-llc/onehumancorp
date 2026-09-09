@@ -44,7 +44,7 @@ describe('ProductsPage', () => {
     const qr = screen.getByAltText('QR Code for Seeded Tea') as HTMLImageElement;
     const qrRequest = new URL(qr.src);
     expect(qrRequest.hostname).toBe('api.qrserver.com');
-    expect(qrRequest.searchParams.get('data')).toBe('https://ohc.app/checkout?product_id=product-1');
+    expect(qrRequest.searchParams.get('data')).toBe('https://cloud.omnisolo.co/checkout?product_id=product-1');
   });
 
 });

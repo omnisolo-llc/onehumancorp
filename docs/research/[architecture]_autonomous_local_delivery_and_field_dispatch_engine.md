@@ -13,7 +13,7 @@ Current SMB platforms treat local delivery and field service as an afterthought 
 - **Onfleet/Routific:** Powerful, but designed for enterprise fleets, not a solo operator like Carlos.
 
 **Opportunity:**
-OneHumanCorp can dominate by integrating an offline-capable, AI-driven dispatch engine natively. If Carlos accepts a job at 10 AM, the calendar automatically blocks 9:30-10:00 AM for travel based on the previous job's location. For Maya/Fatima, if a customer selects "Local Delivery", the system automatically negotiates and dispatches a local courier (Uber Direct, DoorDash Drive, Relay) at the exact moment the food/cake is ready, with zero manual input.
+OmniSolo can dominate by integrating an offline-capable, AI-driven dispatch engine natively. If Carlos accepts a job at 10 AM, the calendar automatically blocks 9:30-10:00 AM for travel based on the previous job's location. For Maya/Fatima, if a customer selects "Local Delivery", the system automatically negotiates and dispatches a local courier (Uber Direct, DoorDash Drive, Relay) at the exact moment the food/cake is ready, with zero manual input.
 
 ## Design Doc
 

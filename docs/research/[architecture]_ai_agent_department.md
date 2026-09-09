@@ -16,8 +16,8 @@ Our approach introduces AI "Departments" (Operations, Marketing, Sales, Customer
 ```mermaid
 sequenceDiagram
     participant User as Customer
-    participant Mobile as OHC Mobile App (375px)
-    participant Core as OHC Core Routing
+    participant Mobile as OmniSolo Mobile App (375px)
+    participant Core as OmniSolo Core Routing
     participant DeptOps as Operations (The Manager)
     participant DeptCS as Customer Success (The Ambassador)
 

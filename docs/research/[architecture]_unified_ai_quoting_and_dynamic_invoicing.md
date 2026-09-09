@@ -12,7 +12,7 @@ Current SMB platform capabilities fall short in integrated, conversational servi
 *   **Wix/Squarespace:** Booking tools are calendar-centric, not quote-centric. They do not elegantly handle variable pricing or partial deposit workflows triggered by unstructured social media DMs.
 *   **Stripe Invoicing/Square:** Excellent for payments, but require the user to leave their context (the chat app) and manually build the invoice. They act as "tools" rather than proactive "teammates".
 
-**OHC's Opportunity:** By unifying the Omni-Channel Inbox with an AI Pricing Engine and a Dynamic Invoicing Ledger, OHC can reduce the quote-to-deposit cycle from hours/days to under 60 seconds, executed entirely from the lock screen.
+**OmniSolo's Opportunity:** By unifying the Omni-Channel Inbox with an AI Pricing Engine and a Dynamic Invoicing Ledger, OmniSolo can reduce the quote-to-deposit cycle from hours/days to under 60 seconds, executed entirely from the lock screen.
 
 ## Design Doc
 
@@ -22,7 +22,7 @@ Current SMB platform capabilities fall short in integrated, conversational servi
     *   *Customer Success Agent* reads the DM via the Omnichannel Inbox.
     *   *Sales/Pricing Agent* references Carlos's historical fan installation jobs and current local pricing, determining a $150 quote ($50 deposit).
     *   *Operations Agent* checks Carlos's calendar for available slots.
-3.  **Owner 1-Tap Approval:** Carlos gets an OHC push notification: "Send quote: Ceiling fan install, $150 ($50 deposit)? [Approve] [Edit]". Carlos taps Approve from the lock screen.
+3.  **Owner 1-Tap Approval:** Carlos gets an OmniSolo push notification: "Send quote: Ceiling fan install, $150 ($50 deposit)? [Approve] [Edit]". Carlos taps Approve from the lock screen.
 4.  **Activation/Payment:** Customer receives a rich WhatsApp message with a seamless 1-tap Apple/Google Pay link for the $50 deposit.
 5.  **Retention:** Once paid, the *Operations Agent* automatically schedules the job and sends a calendar invite to both parties.
 
@@ -88,7 +88,7 @@ sequenceDiagram
 
 ### Performance & Offline Targets
 *   **Optimistic UI:** Quote approval must visually resolve in <100ms.
-*   **Offline-First:** If Carlos is in a basement with no signal, he can still tap "Approve". The OHC app queues the action locally and syncs to the central orchestrator the moment cellular connection is restored.
+*   **Offline-First:** If Carlos is in a basement with no signal, he can still tap "Approve". The OmniSolo app queues the action locally and syncs to the central orchestrator the moment cellular connection is restored.
 *   **Zero Trust:** Each tenant (business owner) operates within a strict SPIFFE/SPIRE defined boundary. The AI Sales Agent can only access pricing data and calendar availability for its specific tenant.
 
 ## Implementation Prompt

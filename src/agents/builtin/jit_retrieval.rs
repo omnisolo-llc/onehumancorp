@@ -4,7 +4,7 @@
 /// "Never load full files. Implement tools that act like grep, glob, head, and tail."
 /// And dynamically pull relevant past sessions, tool docs, or code snippets before LLM calls.
 use crate::memory_store::LongTermMemory;
-use ohc_builtin_agent_core::types::Message;
+use omnisolo_builtin_agent_core::types::Message;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ impl JitContextRetriever {
         let last_user_msg = messages
             .iter()
             .rev()
-            .find(|m| m.role == ohc_builtin_agent_core::types::Role::User)?;
+            .find(|m| m.role == omnisolo_builtin_agent_core::types::Role::User)?;
 
         let content = &last_user_msg.content;
 
