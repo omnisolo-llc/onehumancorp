@@ -985,6 +985,7 @@ rust_test(
     "offline/queue.rs",
     "offline/sync.rs",
     "offline/conflict.rs",
+        "//src/server/services/onboarding:onboarding_agent.rs",
         "//src/server/migrations",
     ],
     edition = "2021",

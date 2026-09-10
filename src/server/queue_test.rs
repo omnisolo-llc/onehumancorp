@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_postgres_feature_parity_migration_covers_runtime_tables() {
         let migration_path = get_workspace_dir()
-            .join("src/server/migrations/1009_postgres_feature_parity_tables.sql");
+            .join("src/server/migrations/1011_postgres_feature_parity_tables.sql");
         let migration = std::fs::read_to_string(&migration_path)
             .expect("PostgreSQL feature parity migration should exist");
 
@@ -101,7 +101,7 @@ mod tests {
         let onboarding = std::fs::read_to_string(
             get_workspace_dir().join("src/server/services/onboarding/onboarding_agent.rs"),
         )
-        .expect("onboarding source should be readable");
+        .unwrap_or_else(|e| panic!("onboarding source should be readable at {:?}: {}", get_workspace_dir().join("src/server/services/onboarding/onboarding_agent.rs"), e));
         assert!(onboarding.contains(".bind(sqlx::types::Json(payload))"));
         assert!(!onboarding.contains(".bind(serde_json::to_string(&payload)"));
     }

@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(response["status"], "success");
         assert!(redirect_url.contains("client-123.apps.googleusercontent.com"));
         assert!(
-            redirect_url.contains("https%3A%2F%2Fohc.example%2Foauth%2Fgoogle-business%2Fcallback")
+            redirect_url.contains("https%3A%2F%2Fcloud.omnisolo.co%2Foauth%2Fgoogle-business%2Fcallback")
         );
         assert!(redirect_url.contains("state=tenant123"));
         assert!(!redirect_url.contains("MOCK"));
