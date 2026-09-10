@@ -10,27 +10,32 @@ use sqlx::Row;
 use std::sync::Arc;
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(dead_code)]
 pub struct WalkupPayload {
     pub message: String,
 }
 
 #[derive(Serialize)]
+#[allow(dead_code)]
 pub struct WalkupResponse {
     pub success: bool,
     pub structured_order: Option<String>,
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AppState {
     pub db: Arc<crate::db::DB>,
 }
 
+#[allow(dead_code)]
 pub fn walkup_routes<S: Clone + Send + Sync + 'static>(state: AppState) -> Router<S> {
     Router::new()
         .route("/", post(handle_walkup))
         .with_state(state)
 }
 
+#[allow(dead_code)]
 fn signed_tenant_id(claims: &::server_common::Claims) -> Option<&str> {
     claims
         .organization_id
