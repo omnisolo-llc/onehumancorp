@@ -1,0 +1,11 @@
+--- src/ui/next/src/app/onboarding/page.test.tsx
++++ src/ui/next/src/app/onboarding/page.test.tsx
+@@ -17,7 +17,7 @@
+ } from "@/components/ui/tooltip";
+ import { Save, Check, RefreshCw } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+-import OnboardingWizard from "./page";
++import OnboardingWizard, { generateSubdomain } from "./page";
+
+ const mockRouterPush = vi.fn();
+ const mockRouterReplace = vi.fn();

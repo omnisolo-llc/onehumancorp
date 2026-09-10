@@ -2,7 +2,7 @@ import { cleanup } from '@testing-library/react';
 /* @vitest-environment jsdom */
 import { render, screen, waitFor, act } from "@testing-library/react";
 
-import OnboardingWizard from "./page";
+import OnboardingWizard, { generateSubdomain } from "./page";
 import { useOnboardingStore } from "./store";
 import { TooltipProvider } from "../../components/TooltipRegistry";
 import { beforeEach, describe, it, expect, vi, afterEach } from "vitest";
@@ -65,6 +65,14 @@ describe("OnboardingWizard", () => {
   afterEach(() => {
     vi.clearAllMocks();
     cleanup();
+  });
+
+  it("generates default subdomain if name is empty", async () => {
+    expect(generateSubdomain("")).toBe("my-business.cloud.omnisolo.co");
+  });
+
+  it("generates correct subdomain based on name", async () => {
+    expect(generateSubdomain("My Awesome Bakery")).toBe("my-awesome-bakery.cloud.omnisolo.co");
   });
 
   it("shows a visible loading state while onboarding data is restored", () => {

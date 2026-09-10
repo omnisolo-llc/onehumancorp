@@ -7,13 +7,16 @@ import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
 
 
-function generateSubdomain(name: string): string {
-  if (!name || name.trim() === "") return "my-business.cloud.omnisolo.co";
+const BASE_DOMAIN = "cloud.omnisolo.co";
+const DEFAULT_SUBDOMAIN = `my-business.${BASE_DOMAIN}`;
+
+export function generateSubdomain(name: string): string {
+  if (!name || name.trim() === "") return DEFAULT_SUBDOMAIN;
   const cleanName = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return cleanName ? `${cleanName}.cloud.omnisolo.co` : "my-business.cloud.omnisolo.co";
+  return cleanName ? `${cleanName}.${BASE_DOMAIN}` : DEFAULT_SUBDOMAIN;
 }
 
 export default function OnboardingWizard() {
