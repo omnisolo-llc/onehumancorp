@@ -20,6 +20,7 @@ pub mod billing_webhook;
 pub mod billing_webhook_test;
 pub mod chaos;
 pub mod dynamic_workflows;
+pub mod visual_workflow;
 pub mod growth;
 pub mod health;
 pub mod onboarding;
