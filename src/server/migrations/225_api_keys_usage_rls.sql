@@ -25,14 +25,3 @@ CREATE POLICY tenant_isolation_user_usage_logs ON user_usage_logs
     WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 GRANT ALL PRIVILEGES ON api_keys, user_usage_logs TO ohc_bypassrls;
-
--- +goose Down
--- Migration 225: Revert missing RLS for api_keys and user_usage_logs
-
-DROP POLICY IF EXISTS tenant_isolation_api_keys ON api_keys;
-ALTER TABLE IF EXISTS api_keys DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS api_keys DROP COLUMN IF EXISTS tenant_id;
-
-DROP POLICY IF EXISTS tenant_isolation_user_usage_logs ON user_usage_logs;
-ALTER TABLE IF EXISTS user_usage_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS user_usage_logs DROP COLUMN IF EXISTS tenant_id;
