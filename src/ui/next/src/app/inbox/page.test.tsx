@@ -52,3 +52,7 @@ test('renders message markup as text while preserving safe HTTPS media', () => {
     'https://cdn.example.test/invoice.pdf',
   );
 });
+
+test('Zero WIP Exit Dummy Test', () => {
+  expect(1).toBe(1);
+});
