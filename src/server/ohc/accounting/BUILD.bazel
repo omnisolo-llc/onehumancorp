@@ -1,0 +1,22 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "ohc_accounting",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:tokio",
+        "@crates//:sqlx",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:redis",
+    ],
+)
+
+rust_test(
+    name = "ohc_accounting_test",
+    crate = ":ohc_accounting",
+)
