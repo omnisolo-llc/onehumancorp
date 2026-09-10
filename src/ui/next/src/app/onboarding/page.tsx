@@ -1179,6 +1179,7 @@ export default function OnboardingWizard() {
                         autoFocus
                         autoCapitalize="words"
                         autoComplete="organization"
+                        enterKeyHint="next"
                         value={businessName}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1208,7 +1209,6 @@ export default function OnboardingWizard() {
                         placeholder="e.g. Maya's Custom Cakes"
                         className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Business Name must be at least 3 characters." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
                         inputMode="text"
-                        enterKeyHint="next"
                       />
                     </div>
                   </div>
@@ -1398,6 +1398,7 @@ export default function OnboardingWizard() {
                         type="text"
                         autoFocus
                         autoCapitalize="words"
+                        enterKeyHint="next"
                         value={location}
                         onChange={(e) =>
                           updateState({ location: e.target.value })
@@ -1501,6 +1502,7 @@ export default function OnboardingWizard() {
                         type="text"
                         autoFocus
                         autoCapitalize="words"
+                        enterKeyHint="next"
                         value={targetAudience}
                         onChange={(e) =>
                           updateState({ targetAudience: e.target.value })
@@ -1638,6 +1640,7 @@ export default function OnboardingWizard() {
                     type="text"
                     autoFocus
                     autoCapitalize="words"
+                    enterKeyHint="next"
                     value={businessName}
                     onChange={(e) => {
                       updateState({ businessName: e.target.value });
@@ -1684,6 +1687,7 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoCapitalize="words"
+                    enterKeyHint="next"
                     value={categories.join(", ")}
                     onChange={(e) =>
                       updateState({
@@ -1703,6 +1707,7 @@ export default function OnboardingWizard() {
                     <input
                       type="text"
                       autoCapitalize="words"
+                      enterKeyHint="next"
                       value={firstProductName}
                       onChange={(e) =>
                         updateState({ firstProductName: e.target.value })
@@ -1717,6 +1722,7 @@ export default function OnboardingWizard() {
                     <input
                       type="text"
                       inputMode="decimal"
+                      enterKeyHint="done"
                       value={firstProductPrice}
                       onChange={(e) => {
                         updateState({ firstProductPrice: e.target.value });
