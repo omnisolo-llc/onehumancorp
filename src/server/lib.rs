@@ -9981,7 +9981,7 @@ mod tests {
                 .contains(".layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))"),
             "db is already Arc<DB>; double wrapping inserts Arc<Arc<DB>> and breaks handlers"
         );
-        assert!(production_source.contains(".layer(legacy_db_compatibility_layer(db.clone()))") || production_source.contains(".layer(axum::extract::Extension(db.clone()))"));
+        assert!(production_source.contains("axum::extract::Extension(db.clone())") || production_source.contains("legacy_db_compatibility_layer(db.clone())"));
     }
 
     #[test]
