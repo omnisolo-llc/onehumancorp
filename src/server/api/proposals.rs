@@ -682,12 +682,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_draft_agent_route_exists() {
-        let pool =
-            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
-        if pool.is_err() {
-            return;
-        }
-        let app = router().with_state(pool.unwrap());
+        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+        let app = router().with_state(pool);
 
         let req = Request::builder()
             .method("POST")
@@ -703,12 +702,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_proposal_route_exists() {
-        let pool =
-            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
-        if pool.is_err() {
-            return;
-        }
-        let app = router().with_state(pool.unwrap());
+        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+        let app = router().with_state(pool);
 
         let req = Request::builder()
             .method("GET")
@@ -721,12 +719,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_approve_proposal_route_exists() {
-        let pool =
-            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
-        if pool.is_err() {
-            return;
-        }
-        let app = router().with_state(pool.unwrap());
+        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+        let app = router().with_state(pool);
 
         let req = Request::builder()
             .method("POST")
