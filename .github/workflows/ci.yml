@@ -112,7 +112,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - name: linux-x86_64
@@ -195,7 +195,7 @@ jobs:
             except filter(".*_test$", //...)
             except attr("tags", "manual", //...)
             except filter("(\\.aspect_rules_js/node_modules|node_modules)(/|$)", //...)
-            except //src/ui/tauri:all
+            except //src/ui/...
             except //deploy:all
             except //release:all
           ' > build-targets.txt
