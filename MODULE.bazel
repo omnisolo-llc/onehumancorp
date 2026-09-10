@@ -253,7 +253,7 @@ register_toolchains("@rules_pkg_rpmbuild//:all")
 
 bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
-bazel_dep(name = "rules_nodejs", version = "6.3.3")
+bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "23.6.0")
