@@ -3,10 +3,10 @@
 
 -- Add tenant_id if it doesn't exist, and set a default to prevent application INSERT failures.
 ALTER TABLE IF EXISTS api_keys ADD COLUMN IF NOT EXISTS tenant_id UUID DEFAULT (current_setting('app.current_tenant', true)::uuid);
-UPDATE api_keys SET tenant_id = organization_id::UUID WHERE tenant_id IS NULL;
+UPDATE api_keys SET tenant_id = NULLIF(organization_id, '')::UUID WHERE tenant_id IS NULL AND organization_id != '';
 
 ALTER TABLE IF EXISTS user_usage_logs ADD COLUMN IF NOT EXISTS tenant_id UUID DEFAULT (current_setting('app.current_tenant', true)::uuid);
-UPDATE user_usage_logs SET tenant_id = organization_id::UUID WHERE tenant_id IS NULL;
+UPDATE user_usage_logs SET tenant_id = NULLIF(organization_id, '')::UUID WHERE tenant_id IS NULL AND organization_id != '';
 
 ALTER TABLE IF EXISTS api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS api_keys FORCE ROW LEVEL SECURITY;
