@@ -1,5 +1,5 @@
 -- +goose Up
--- Migration 225: Enable missing RLS for api_keys and user_usage_logs
+-- Migration 1013: Enable missing RLS for api_keys and user_usage_logs
 
 -- Add tenant_id if it doesn't exist, and set a default to prevent application INSERT failures.
 ALTER TABLE IF EXISTS api_keys ADD COLUMN IF NOT EXISTS tenant_id UUID DEFAULT (current_setting('app.current_tenant', true)::uuid);
