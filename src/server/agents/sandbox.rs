@@ -103,6 +103,7 @@ impl LocalEnvironment {
             command.env_remove(var);
         }
 
+        #[cfg(unix)]
         let rusage_start = {
             let mut rusage = std::mem::MaybeUninit::<libc::rusage>::uninit();
             unsafe {
@@ -117,7 +118,9 @@ impl LocalEnvironment {
             Ok(output_result) => {
                 let output = output_result?;
 
-                let mut rusage_end = std::mem::MaybeUninit::<libc::rusage>::uninit();
+                #[cfg(unix)]
+                {
+                    let mut rusage_end = std::mem::MaybeUninit::<libc::rusage>::uninit();
                 unsafe {
                     libc::getrusage(libc::RUSAGE_CHILDREN, rusage_end.as_mut_ptr());
                     let rusage_end = rusage_end.assume_init();
@@ -141,6 +144,7 @@ impl LocalEnvironment {
                     ::server_telemetry::record_sandbox_cpu_usage("local_sandbox", cpu_usage);
                     ::server_telemetry::record_sandbox_memory_bytes("local_sandbox", mem_bytes);
                     ::server_telemetry::record_sandbox_network_io("local_sandbox", net_io);
+                }
                 }
 
                 Ok(output)
