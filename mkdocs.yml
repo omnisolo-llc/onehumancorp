@@ -29,17 +29,17 @@ nav:
   - Home: index.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
-      - KAIROS Master Design: technical/architecture/kairos/master-design-doc.md
+      - Universal Harness Master Design: technical/architecture/kairos/master-design-doc.md
       - Hybrid OS Design: technical/architecture/kairos/hybrid-os-design.md
       - Shared Task Mesh Architecture: technical/architecture/kairos/shared-task-mesh-architecture.md
       - Sub-Agent Queue Design: technical/architecture/kairos/sub-agent-queue-design.md
       - Task Decomposition: technical/architecture/kairos/task-decomposition-design.md
       - Offline Mesh Sync: architecture/mesh/offline_first_sync.md
   - Features:
-      - KAIROS Orchestration: features/kairos_orchestration.md
-      - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md
-      - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
-      - KAIROS Memory Consolidation: features/kairos/memory_consolidation.md
+      - Universal Harness Orchestration: features/kairos_orchestration.md
+      - Distributed State Machine: features/kairos/distributed_state_machine.md
+      - AutoDream Pipelines: features/kairos/autodream_pipelines.md
+      - Memory Consolidation: features/kairos/memory_consolidation.md
       - Dynamic Workflows: features/dynamic_workflows.md
       - Hybrid MCP Config Sync: features/hybrid_mcp_config_sync.md
       - Storefront Builder Architecture: features/storefront_builder_architecture.md
@@ -48,10 +48,10 @@ nav:
       - System Overview: technical/architecture/system-overview.md
       - System Design: technical/architecture/system-design.md
       - API Reference: technical/api/api-reference.md
-      - KAIROS Master API Guide: technical/api/kairos-master-api-guide.md
+      - Master API Guide: technical/api/kairos-master-api-guide.md
   - Walkthroughs:
       - Sub-Agent Orchestration: walkthroughs/sub_agent_orchestration.md
-      - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
+      - Universal Harness Orchestration: walkthroughs/kairos_orchestration.md
       - AutoDream CLI: walkthroughs/autodream_cli_guide.md
       - Teammate Mesh: walkthroughs/teammate_mesh_walkthrough.md
       - Day One Onboarding: technical/walkthroughs/day_one_onboarding.md

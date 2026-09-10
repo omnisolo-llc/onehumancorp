@@ -228,12 +228,8 @@ mod tests {
 
     #[test]
     fn test_store_save_and_load() {
-        let file_path = PathBuf::from("test_settings.json");
-
-        // Clean up before test
-        if file_path.exists() {
-            std::fs::remove_file(&file_path).unwrap();
-        }
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir.path().join("test_settings.json");
 
         let store = Store::from_file(file_path.clone()).unwrap();
         store
@@ -245,9 +241,6 @@ mod tests {
         let store2 = Store::from_file(file_path.clone()).unwrap();
         let settings = store2.get();
         assert_eq!(settings.extras.get("key1").unwrap(), "value1");
-
-        // Clean up after test
-        std::fs::remove_file(&file_path).unwrap();
     }
 
     #[test]

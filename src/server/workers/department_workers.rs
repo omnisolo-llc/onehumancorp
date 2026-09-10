@@ -1765,7 +1765,7 @@ mod tests {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
 
             // Insert a product with low inventory
-            sqlx::query("INSERT INTO products (id, tenant_id, tenant_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'tenant1', 'Low Stock Item', 2)")
+            sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'Low Stock Item', 2)")
                 .execute(pool).await.unwrap();
 
             // Insert a task
@@ -1818,7 +1818,7 @@ mod tests {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
 
             // High inventory but massive velocity
-            sqlx::query("INSERT INTO products (id, tenant_id, tenant_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'tenant1', 'Fast Selling Item', 50)")
+            sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'Fast Selling Item', 50)")
                 .execute(pool).await.unwrap();
 
             let order_id = "order_1";
