@@ -9186,6 +9186,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
+        .nest("/api/v1/workflow", api::visual_workflow::router(pool.clone()))
         .nest("/api/v1/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/assistant", api::assistant::router(db.clone()))
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
