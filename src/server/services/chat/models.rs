@@ -57,3 +57,23 @@ pub struct ChatMessage {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct SessionCapsule {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub conversation_id: Uuid,
+    pub customer_id: Option<Uuid>,
+    pub context: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EventDeliveryEnvelope {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub source: String,
+    pub payload: serde_json::Value,
+    pub timestamp: DateTime<Utc>,
+}
