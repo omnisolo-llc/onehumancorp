@@ -183,6 +183,8 @@ crate.annotation(
     },
     build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
     crate = "libsqlite3-sys",
+    patch_args = ["-p1"],
+    patches = ["//bazel/patches:libsqlite3_sys_windows_cross_compile.patch"],
 )
 crate.annotation(
     build_script_env = {

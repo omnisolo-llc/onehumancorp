@@ -251,6 +251,18 @@ impl MinimaxClient {
                     "handoff_to": [],
                     "confidence": 0.95
                 }"#.to_string());
+            } else if lower_prompt.contains("customer success ambassador")
+                || lower_prompt.contains("check-in message")
+            {
+                let name = if lower_prompt.contains("sarah") {
+                    "Sarah"
+                } else {
+                    "there"
+                };
+                return Ok(format!(
+                    "Hi {}, it's been a while! We wanted to check in and see how you're doing. Let us know if you need anything.",
+                    name
+                ));
             } else {
                 return Ok(r#"{
                     "business_name": "Generic Business",

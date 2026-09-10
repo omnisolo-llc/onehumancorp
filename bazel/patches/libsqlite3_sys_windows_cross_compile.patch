@@ -1,0 +1,29 @@
+--- a/build.rs
++++ b/build.rs
+@@ -140,7 +140,7 @@
+             .flag("-D_POSIX_THREAD_SAFE_FUNCTIONS") // cross compile with MinGW
+             .warnings(false);
+ 
+-        if cfg!(feature = "bundled-sqlcipher") {
++        if !win_target() && cfg!(feature = "bundled-sqlcipher") {
+             cfg.flag("-DSQLITE_HAS_CODEC").flag("-DSQLITE_TEMP_STORE=2");
+ 
+             let target = env::var("TARGET").unwrap();
+@@ -314,7 +314,7 @@
+ }
+ 
+ fn env_prefix() -> &'static str {
+-    if cfg!(any(feature = "sqlcipher", feature = "bundled-sqlcipher")) {
++    if !win_target() && cfg!(any(feature = "sqlcipher", feature = "bundled-sqlcipher")) {
+         "SQLCIPHER"
+     } else {
+         "SQLITE3"
+@@ -322,7 +322,7 @@
+ }
+ 
+ fn lib_name() -> &'static str {
+-    if cfg!(any(feature = "sqlcipher", feature = "bundled-sqlcipher")) {
++    if !win_target() && cfg!(any(feature = "sqlcipher", feature = "bundled-sqlcipher")) {
+         "sqlcipher"
+     } else {
+         "sqlite3"

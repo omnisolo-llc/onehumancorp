@@ -918,6 +918,7 @@ rust_sharded_test(
 
 test_suite(
     name = "server_lib_unit_test",
+    tags = ["manual"],
     tests = SERVER_LIB_SPLIT_TESTS,
 )
 
@@ -986,6 +987,7 @@ rust_test(
     "offline/sync.rs",
     "offline/conflict.rs",
         "//src/server/migrations",
+        "//src/server/services/onboarding:onboarding_agent.rs",
     ],
     edition = "2021",
     target_compatible_with = select({

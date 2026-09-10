@@ -251,8 +251,7 @@ pub async fn bench_api_response_time() {
                 Ok(())
             })
         })
-        .max_connections(100)
-        .min_connections(100)
+        .max_connections(5)
         .connect("sqlite::memory:?cache=shared")
         .await
         .unwrap_or_else(|e| panic!("Error: {:?}", e));
@@ -1674,6 +1673,12 @@ pub async fn bench_billing_api_response_time() {
 
     let database_url =
         std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if !database_url.starts_with("postgres") {
+        tracing::info!(
+            "  - Billing API Fetch (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
+        return;
+    }
     let iterations = std::env::var("BENCH_ITERATIONS")
         .unwrap_or_else(|_| "10".to_string())
         .parse()

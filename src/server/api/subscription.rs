@@ -733,9 +733,13 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_overview_queries_are_tenant_scoped_in_postgres() {
-        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://postgres:postgres@127.0.0.1:32768/ohc_test".to_string()
-        });
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
+            Ok(url) if url.starts_with("postgres") => url,
+            _ => {
+                eprintln!("skipping subscription postgres test; OMNISOLO_DATABASE_URL not set to postgres");
+                return;
+            }
+        };
         let admin = match sqlx::PgPool::connect(&database_url).await {
             Ok(pool) => pool,
             Err(error) => {

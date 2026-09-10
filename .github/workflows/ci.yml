@@ -354,7 +354,7 @@ jobs:
       - name: Test fast targets
         run: |
           set -euo pipefail
-          ALL_TARGETS=$(bazelisk query 'kind(test, //...) except attr(tags, "manual|e2e|requires-docker|local|no-sandbox", kind(test, //...))' | sort)
+          ALL_TARGETS=$(bazelisk query 'kind(test, //...) except kind(test_suite, //...) except attr(tags, "manual|e2e|requires-docker|local|no-sandbox", kind(test, //...))' | sort)
           SHARD_TARGETS=$(echo "$ALL_TARGETS" | awk -v shard="${{ matrix.shard }}" -v total="${{ matrix.total }}" 'NR % total == shard')
           echo "=== Testing targets for ${{ matrix.name }} ==="
           echo "$SHARD_TARGETS"
