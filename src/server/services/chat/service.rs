@@ -1,6 +1,7 @@
-use super::models::{ChatChannel, ChatContact, ChatConversation, ChatInbox, ChatMessage};
+use super::models::{ChatChannel, ChatContact, ChatConversation, ChatInbox, ChatMessage, SessionCapsule, EventDeliveryEnvelope};
 use sqlx::PgPool;
 use uuid::Uuid;
+use chrono::Utc;
 
 pub struct ChatService {
     pool: PgPool,
@@ -122,5 +123,69 @@ impl ChatService {
         .bind(content)
         .fetch_one(&self.pool)
         .await
+    }
+
+    pub async fn get_or_create_session_capsule(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+        customer_id: Option<Uuid>,
+    ) -> Result<SessionCapsule, sqlx::Error> {
+        let existing = sqlx::query_as::<_, SessionCapsule>(
+            "SELECT id, tenant_id, conversation_id, customer_id, context, created_at, updated_at FROM session_capsules WHERE tenant_id = $1 AND conversation_id = $2"
+        )
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(capsule) = existing {
+            return Ok(capsule);
+        }
+
+        sqlx::query_as(
+            r#"
+            INSERT INTO session_capsules (id, tenant_id, conversation_id, customer_id, context)
+            VALUES ($1, $2, $3, $4, '{}'::jsonb)
+            RETURNING id, tenant_id, conversation_id, customer_id, context, created_at, updated_at
+            "#
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .bind(customer_id)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn update_session_capsule_context(
+        &self,
+        tenant_id: Uuid,
+        capsule_id: Uuid,
+        context: serde_json::Value,
+    ) -> Result<SessionCapsule, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            UPDATE session_capsules
+            SET context = $1, updated_at = NOW()
+            WHERE id = $2 AND tenant_id = $3
+            RETURNING id, tenant_id, conversation_id, customer_id, context, created_at, updated_at
+            "#
+        )
+        .bind(context)
+        .bind(capsule_id)
+        .bind(tenant_id)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub fn normalize_inbound_webhook(&self, payload: serde_json::Value, source: &str, tenant_id: Uuid) -> EventDeliveryEnvelope {
+        EventDeliveryEnvelope {
+            id: Uuid::new_v4(),
+            tenant_id,
+            source: source.to_string(),
+            payload,
+            timestamp: Utc::now(),
+        }
     }
 }
