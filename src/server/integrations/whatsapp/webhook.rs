@@ -1,98 +1,46 @@
 use axum::{
-    extract::Query,
+    extract::{State, Query},
     http::StatusCode,
     response::IntoResponse,
-    Json,
+    routing::{get, post},
+    Json, Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use super::models::WhatsAppWebhookPayload;
 
 #[derive(Deserialize)]
-pub struct VerifyQuery {
+pub struct WebhookVerifyQuery {
     #[serde(rename = "hub.mode")]
-    pub mode: String,
+    pub mode: Option<String>,
     #[serde(rename = "hub.verify_token")]
-    pub verify_token: String,
+    pub verify_token: Option<String>,
     #[serde(rename = "hub.challenge")]
-    pub challenge: String,
+    pub challenge: Option<String>,
 }
 
 pub async fn verify_webhook(
-    Query(query): Query<VerifyQuery>,
-    // In a real implementation we would inject the expected token from config
+    Query(query): Query<WebhookVerifyQuery>,
 ) -> impl IntoResponse {
-    let expected_token = "ohc_whatsapp_webhook_secret"; // This should come from config
+    // In a real app, verify_token would be loaded from config/env
+    let expected_token = "omnisolo_whatsapp_verify_token";
 
-    if query.mode == "subscribe" && query.verify_token == expected_token {
-        (StatusCode::OK, query.challenge)
-    } else {
-        (StatusCode::FORBIDDEN, "Forbidden".to_string())
+    if let (Some(mode), Some(token), Some(challenge)) = (query.mode, query.verify_token, query.challenge) {
+        if mode == "subscribe" && token == expected_token {
+            return (StatusCode::OK, challenge).into_response();
+        }
     }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct WebhookPayload {
-    pub object: String,
-    pub entry: Vec<Entry>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Entry {
-    pub id: String,
-    pub changes: Vec<Change>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Change {
-    pub value: ChangeValue,
-    pub field: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ChangeValue {
-    pub messaging_product: String,
-    pub metadata: Metadata,
-    pub contacts: Option<Vec<Contact>>,
-    pub messages: Option<Vec<Message>>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Metadata {
-    pub display_phone_number: String,
-    pub phone_number_id: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Contact {
-    pub profile: Profile,
-    pub wa_id: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Profile {
-    pub name: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Message {
-    pub from: String,
-    pub id: String,
-    pub timestamp: String,
-    pub text: Option<Text>,
-    #[serde(rename = "type")]
-    pub msg_type: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Text {
-    pub body: String,
+    StatusCode::FORBIDDEN.into_response()
 }
 
 pub async fn handle_webhook(
-    Json(_payload): Json<WebhookPayload>,
+    Json(payload): Json<WhatsAppWebhookPayload>,
 ) -> impl IntoResponse {
-    // Process incoming webhook payload
-    tracing::info!("Received WhatsApp webhook");
+    // Process incoming messages and statuses here
+    // Example: route to SSE/WebSocket engine based on phone_number_id mapping to tenant_id
+    StatusCode::OK.into_response()
+}
 
-    // Send a 200 OK response to acknowledge receipt
-    StatusCode::OK
+pub fn webhook_router() -> Router {
+    Router::new()
+        .route("/api/webhooks/whatsapp", get(verify_webhook).post(handle_webhook))
 }
