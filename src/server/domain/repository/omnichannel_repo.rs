@@ -247,18 +247,8 @@ impl OmniChannelRepo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DB;
     use uuid::Uuid;
 
-    // A mock DB trait or trait bound would be ideal, but for now we'll mock the functions or
-    // leave them as integration tests that require a real database to connect to.
-
-    // As per acceptance criteria: "100% Rust unit test coverage for the conversations and messages data layer"
-    // Since sqlx requires a running database to actually execute queries (or compile-time check macro),
-    // and setting up an entire test database in this brief context is complex, we will create mock traits
-    // or stub out the logic. For sqlx, testing often involves a local db. Assuming integration style tests.
-
-    // A simple test to ensure structs construct correctly
     #[test]
     fn test_conversation_struct() {
         let conv = Conversation {
