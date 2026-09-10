@@ -98,10 +98,7 @@ mod tests {
             assert!(migration.contains(required), "missing migration fragment: {required}");
         }
 
-        let onboarding = std::fs::read_to_string(
-            "src/server/services/onboarding/onboarding_agent.rs"
-        )
-        .unwrap_or_default();
+        let onboarding = std::fs::read_to_string(get_workspace_dir().join("src/server/services/onboarding/onboarding_agent.rs")).unwrap_or_default();
         // assert!(onboarding.contains(".bind(sqlx::types::Json(payload))"));
     }
 
