@@ -468,3 +468,4 @@ pub mod deerflow;
 pub mod deerflow_subagents;
 pub mod jit_retrieval;
 pub mod microagent;
+pub mod kimi;

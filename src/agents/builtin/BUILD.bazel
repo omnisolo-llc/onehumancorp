@@ -61,6 +61,7 @@ rust_library(
         "checkpointer.rs",
         "claude_subagents.rs",
         "codex_runner.rs",
+        "kimi.rs",
         "compaction.rs",
         "durable_execution.rs",
         "consolidation_worker.rs",

@@ -19,6 +19,7 @@ pub enum ProviderType {
     MiniMaxi,
     AgenticSeek,
     Pi,
+    Kimi,
 }
 
 impl std::fmt::Display for ProviderType {
@@ -34,6 +35,7 @@ impl std::fmt::Display for ProviderType {
             ProviderType::MiniMaxi => "minimaxi",
             ProviderType::AgenticSeek => "agenticseek",
             ProviderType::Pi => "pi",
+            ProviderType::Kimi => "kimi",
         };
         write!(f, "{}", s)
     }
@@ -127,7 +129,7 @@ impl Transport for RedisIsolationTransport {
     }
 }
 
-async fn execute_in_isolation(
+pub async fn execute_in_isolation(
     command: &str,
     agent_type: &str,
     worktree: &str,
