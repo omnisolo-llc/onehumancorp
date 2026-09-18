@@ -4,8 +4,36 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::path::PathBuf;
-use std::process::Command as StdCommand;
-use tokio::process::Command;
+
+
+#[async_trait]
+pub trait GitCommandRunner: Send + Sync {
+    async fn run_git_command(&self, args: &[&str], current_dir: &std::path::Path) -> Result<std::process::Output, std::io::Error>;
+    fn run_git_command_sync(&self, args: &[&str], current_dir: &std::path::Path) -> Result<std::process::Output, std::io::Error>;
+}
+
+#[derive(Clone)]
+pub struct DefaultGitCommandRunner;
+
+#[async_trait]
+impl GitCommandRunner for DefaultGitCommandRunner {
+    async fn run_git_command(&self, args: &[&str], current_dir: &std::path::Path) -> Result<std::process::Output, std::io::Error> {
+        tokio::process::Command::new("git")
+            .args(args)
+            .current_dir(current_dir)
+            .output()
+            .await
+    }
+
+    fn run_git_command_sync(&self, args: &[&str], current_dir: &std::path::Path) -> Result<std::process::Output, std::io::Error> {
+        std::process::Command::new("git")
+            .args(args)
+            .current_dir(current_dir)
+            .output()
+    }
+}
+
+
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Checkpoint {
@@ -78,6 +106,8 @@ impl PgCheckpointer {
 pub struct GitCheckpointer {
     // State Management: Git Commit Checkpointing Mechanic
     repo_path: PathBuf,
+    runner: std::sync::Arc<dyn GitCommandRunner>,
+
 }
 
 impl GitCheckpointer {
@@ -94,44 +124,33 @@ impl GitCheckpointer {
     }
 
     pub fn new(repo_path: PathBuf) -> Self {
-        // Run git init, check error
-        let init_out = StdCommand::new("git")
-            .arg("init")
-            .current_dir(&repo_path)
-            .output()
-            .expect("Failed to execute git init");
-        if !init_out.status.success() {
-            tracing::warn!(
-                "git init failed: {}",
-                String::from_utf8_lossy(&init_out.stderr)
-            );
-        }
+        Self::with_runner(repo_path, std::sync::Arc::new(DefaultGitCommandRunner))
+    }
 
-        let name_out = StdCommand::new("git")
-            .args(["config", "user.name", "Agent"])
-            .current_dir(&repo_path)
-            .output()
-            .expect("Failed to execute git config user.name");
-        if !name_out.status.success() {
-            tracing::warn!(
-                "git config user.name failed: {}",
-                String::from_utf8_lossy(&name_out.stderr)
-            );
-        }
+        pub fn with_runner(repo_path: PathBuf, runner: std::sync::Arc<dyn GitCommandRunner>) -> Self {
+        if repo_path.exists() {
+            let init_out = runner.run_git_command_sync(&["init"], &repo_path);
+            if let Ok(out) = init_out {
+                if !out.status.success() {
+                    tracing::warn!("git init failed: {}", String::from_utf8_lossy(&out.stderr));
+                }
+            }
 
-        let err_out = StdCommand::new("git")
-            .args(["config", "user.email", "agent@omnisolo.local"])
-            .current_dir(&repo_path)
-            .output()
-            .expect("Failed to execute git config user.email");
-        if !err_out.status.success() {
-            tracing::warn!(
-                "git cmd failed (err): {}",
-                String::from_utf8_lossy(&err_out.stderr)
-            );
-        }
+            let name_out = runner.run_git_command_sync(&["config", "user.name", "Agent"], &repo_path);
+            if let Ok(out) = name_out {
+                if !out.status.success() {
+                    tracing::warn!("git config user.name failed: {}", String::from_utf8_lossy(&out.stderr));
+                }
+            }
 
-        GitCheckpointer { repo_path }
+            let err_out = runner.run_git_command_sync(&["config", "user.email", "agent@omnisolo.local"], &repo_path);
+            if let Ok(out) = err_out {
+                if !out.status.success() {
+                    tracing::warn!("git config user.email failed: {}", String::from_utf8_lossy(&out.stderr));
+                }
+            }
+        }
+        GitCheckpointer { repo_path, runner }
     }
 
     fn progress_file_path(&self, thread_id: &str) -> PathBuf {
@@ -196,12 +215,7 @@ impl CheckpointSaver for GitCheckpointer {
         let mut output = None;
 
         for target_ref in refs_to_try {
-            let res = Command::new("git")
-                .arg("show")
-                .arg(format!("{}:{}", target_ref, file_name))
-                .current_dir(&self.repo_path)
-                .output()
-                .await
+            let res = self.runner.run_git_command(&["show", &format!("{}:{}", target_ref, file_name)], &self.repo_path).await
                 .map_err(|e| e.to_string())?;
 
             if res.status.success() {
@@ -271,12 +285,7 @@ impl CheckpointSaver for GitCheckpointer {
         }
 
         // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
-        let add_out = Command::new("git")
-            .arg("add")
-            .arg("-A")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let add_out = self.runner.run_git_command(&["add", "-A"], &self.repo_path).await
             .map_err(|e| format!("Failed to execute git add: {}", e))?;
 
         if !add_out.status.success() {
@@ -286,16 +295,21 @@ impl CheckpointSaver for GitCheckpointer {
             ));
         }
 
+        // Check if there are any changes staged (or untracked files added)
+        let status_out = self.runner.run_git_command(&["status", "--porcelain"], &self.repo_path).await
+            .map_err(|e| format!("Failed to execute git status: {}", e))?;
+
+        let has_changes = !status_out.stdout.is_empty();
+
+        if !has_changes {
+            // A clean repository is a no-op and does not create an empty commit
+            tracing::info!("Clean repository, skipping commit for checkpoint {}", checkpoint.checkpoint_id);
+            return Ok(());
+        }
+
         // 2. Commit the changes
         let commit_msg = format!("Checkpoint: {}", checkpoint.checkpoint_id);
-        let output = Command::new("git")
-            .arg("commit")
-            .arg("--allow-empty")
-            .arg("-m")
-            .arg(&commit_msg)
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let output = self.runner.run_git_command(&["commit", "-m", &commit_msg], &self.repo_path).await
             .map_err(|e| format!("Failed to execute git commit: {}", e))?;
 
         if !output.status.success() {
@@ -306,13 +320,7 @@ impl CheckpointSaver for GitCheckpointer {
         }
 
         let tag_name = Self::safe_tag_name(&checkpoint.checkpoint_id);
-        let tag_output = Command::new("git")
-            .arg("tag")
-            .arg("-f")
-            .arg(&tag_name)
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let tag_output = self.runner.run_git_command(&["tag", "-f", &tag_name], &self.repo_path).await
             .map_err(|e| format!("Failed to execute git tag: {}", e))?;
 
         if !tag_output.status.success() {
@@ -333,18 +341,10 @@ impl CheckpointSaver for GitCheckpointer {
         ];
 
         // 1. Stash uncommitted and untracked changes to support safe time-travel debugging
-        let stash_out = Command::new("git")
-            .arg("stash")
-            .arg("push")
-            .arg("--include-untracked")
-            .arg("-m")
-            .arg(format!(
+        let stash_out = self.runner.run_git_command(&["stash", "push", "--include-untracked", "-m", &format!(
                 "Auto-stash before restoring checkpoint {}",
                 checkpoint_id
-            ))
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+            )], &self.repo_path).await
             .map_err(|e| e.to_string())?;
 
         if !stash_out.status.success() {
@@ -355,12 +355,7 @@ impl CheckpointSaver for GitCheckpointer {
         }
 
         // 2. Pre-clean to remove any remaining untracked files (that couldn't be stashed) that might block the checkout
-        let pre_clean = Command::new("git")
-            .arg("clean")
-            .arg("-fdx")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let pre_clean = self.runner.run_git_command(&["clean", "-fdx"], &self.repo_path).await
             .map_err(|e| e.to_string())?;
 
         if !pre_clean.status.success() {
@@ -371,13 +366,7 @@ impl CheckpointSaver for GitCheckpointer {
         }
 
         // 3. Reset HEAD to ensure we are in a clean state before checkout
-        let reset_head = Command::new("git")
-            .arg("reset")
-            .arg("--hard")
-            .arg("HEAD")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let reset_head = self.runner.run_git_command(&["reset", "--hard", "HEAD"], &self.repo_path).await
             .map_err(|e| e.to_string())?;
 
         if !reset_head.status.success() {
@@ -396,14 +385,7 @@ impl CheckpointSaver for GitCheckpointer {
 
         // 3. Checkout the target tag into a new branch
         for target_ref in refs_to_try {
-            let output = Command::new("git")
-                .arg("checkout")
-                .arg("-B")
-                .arg(&branch_name)
-                .arg(&target_ref)
-                .current_dir(&self.repo_path)
-                .output()
-                .await
+            let output = self.runner.run_git_command(&["checkout", "-B", &branch_name, &target_ref], &self.repo_path).await
                 .map_err(|e| e.to_string())?;
 
             if output.status.success() {
@@ -422,13 +404,7 @@ impl CheckpointSaver for GitCheckpointer {
         }
 
         // 4. Robust Restore Edge Cases: Reset to HEAD of the new branch and clean remaining untracked and ignored files to ensure spotless working tree.
-        let reset_branch = Command::new("git")
-            .arg("reset")
-            .arg("--hard")
-            .arg("HEAD")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let reset_branch = self.runner.run_git_command(&["reset", "--hard", "HEAD"], &self.repo_path).await
             .map_err(|e| e.to_string())?;
 
         if !reset_branch.status.success() {
@@ -438,12 +414,7 @@ impl CheckpointSaver for GitCheckpointer {
             ));
         }
 
-        let clean_output = Command::new("git")
-            .arg("clean")
-            .arg("-fdx")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let clean_output = self.runner.run_git_command(&["clean", "-fdx"], &self.repo_path).await
             .map_err(|e| e.to_string())?;
 
         if !clean_output.status.success() {
@@ -458,14 +429,7 @@ impl CheckpointSaver for GitCheckpointer {
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
-        let output = Command::new("git")
-            .arg("log")
-            .arg("--format=%H")
-            .arg("--")
-            .arg(&file_name)
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let output = self.runner.run_git_command(&["log", "--format=%H", "--", &file_name], &self.repo_path).await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -490,14 +454,7 @@ impl CheckpointSaver for GitCheckpointer {
     }
 
     async fn list_threads(&self) -> Result<Vec<String>, String> {
-        let output = Command::new("git")
-            .arg("ls-tree")
-            .arg("-r")
-            .arg("HEAD")
-            .arg("--name-only")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
+        let output = self.runner.run_git_command(&["ls-tree", "-r", "HEAD", "--name-only"], &self.repo_path).await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -1001,7 +958,7 @@ mod tests {
             created_at: Utc::now(),
         };
 
-        saver.put_checkpoint(cp1).await.unwrap();
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
         saver.put_checkpoint(cp2).await.unwrap();
 
         let list = saver.list_checkpoints("thread-git-3").await.unwrap();
@@ -1319,5 +1276,226 @@ mod restore_stash_tests {
         assert!(untracked_file_path.exists());
         let untracked_content = std::fs::read_to_string(&untracked_file_path).unwrap();
         assert_eq!(untracked_content, "untracked work");
+    }
+}
+
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use chrono::Utc;
+    use tempfile::tempdir;
+    use tokio::fs;
+
+    fn make_checkpoint(id: &str) -> Checkpoint {
+        Checkpoint {
+            thread_id: "test-thread".to_string(),
+            checkpoint_id: id.to_string(),
+            parent_id: None,
+            data: serde_json::json!({}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        }
+    }
+
+    async fn get_commit_count(repo_path: &std::path::Path) -> usize {
+        let output = tokio::process::Command::new("git")
+            .arg("rev-list")
+            .arg("--count")
+            .arg("HEAD")
+            .current_dir(repo_path)
+            .output()
+            .await
+            .unwrap();
+        if output.status.success() {
+            String::from_utf8_lossy(&output.stdout).trim().parse().unwrap_or(0)
+        } else {
+            0
+        }
+    }
+
+    #[tokio::test]
+    async fn test_dirty_repo_creates_one_commit_and_preserves_diff() {
+        let dir = tempdir().unwrap();
+        let saver = GitCheckpointer::new(dir.path().to_path_buf());
+
+        // Make it dirty
+        fs::write(dir.path().join("tracked.txt"), "v1").await.unwrap();
+        let _ = tokio::process::Command::new("git").arg("add").arg("tracked.txt").current_dir(dir.path()).output().await.unwrap();
+        let _ = tokio::process::Command::new("git").arg("commit").arg("-m").arg("init").current_dir(dir.path()).output().await.unwrap();
+
+        let initial_commits = get_commit_count(dir.path()).await;
+
+        // Dirty it again
+        fs::write(dir.path().join("tracked.txt"), "v2").await.unwrap();
+
+        let cp = make_checkpoint("dirty-1");
+        saver.put_checkpoint(cp).await.unwrap();
+
+        let new_commits = get_commit_count(dir.path()).await;
+        assert_eq!(new_commits, initial_commits + 1);
+
+        let content = fs::read_to_string(dir.path().join("tracked.txt")).await.unwrap();
+        assert_eq!(content, "v2");
+    }
+
+
+    #[tokio::test]
+    async fn test_clean_repo_is_noop_no_empty_commit() {
+        let dir = tempdir().unwrap();
+        let saver = GitCheckpointer::new(dir.path().to_path_buf());
+
+        fs::write(dir.path().join("init.txt"), "init").await.unwrap();
+
+        let cp = make_checkpoint("clean-1");
+        saver.put_checkpoint(cp.clone()).await.unwrap();
+
+        let initial_commits = get_commit_count(dir.path()).await;
+
+        // Call it again with the exact same checkpoint. The repo is clean (no new changes).
+        // It should NOT create an empty commit.
+        saver.put_checkpoint(cp).await.unwrap();
+
+        let new_commits = get_commit_count(dir.path()).await;
+        assert_eq!(new_commits, initial_commits, "Should not create an empty commit on a clean repo");
+    }
+
+
+    #[tokio::test]
+    async fn test_repeated_calls_idempotent() {
+        let dir = tempdir().unwrap();
+        let saver = GitCheckpointer::new(dir.path().to_path_buf());
+
+        fs::write(dir.path().join("file.txt"), "v1").await.unwrap();
+
+        let cp1 = make_checkpoint("idem-1");
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        let commits_after_first = get_commit_count(dir.path()).await;
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        let commits_after_second = get_commit_count(dir.path()).await;
+        assert_eq!(commits_after_first, commits_after_second);
+    }
+
+    #[tokio::test]
+    async fn test_untracked_files_handled() {
+        let dir = tempdir().unwrap();
+        let saver = GitCheckpointer::new(dir.path().to_path_buf());
+
+        fs::write(dir.path().join("untracked.txt"), "untracked").await.unwrap();
+
+        let cp = make_checkpoint("untracked-1");
+        saver.put_checkpoint(cp.clone()).await.unwrap();
+
+        // The put_checkpoint does `git add -A` which tracks the untracked file.
+        // The contract is that it gets committed.
+        let status = tokio::process::Command::new("git").arg("status").arg("--porcelain").current_dir(dir.path()).output().await.unwrap();
+        assert!(status.stdout.is_empty(), "Untracked file should have been committed");
+    }
+
+    #[tokio::test]
+    async fn test_git_failures_invalid_path() {
+        // Use a path that doesn't exist or isn't a git repo
+        let invalid_path = std::path::PathBuf::from("/does/not/exist/12345");
+        let saver = GitCheckpointer::new(invalid_path.clone());
+
+        let cp = make_checkpoint("invalid-1");
+        let res = saver.put_checkpoint(cp).await;
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(err.contains("Failed to execute git status") || err.contains("git add failed") || err.contains("No such file or directory"), "Error was: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_detached_head_behavior() {
+        let dir = tempdir().unwrap();
+        let saver = GitCheckpointer::new(dir.path().to_path_buf());
+
+        // Create a commit
+        fs::write(dir.path().join("file.txt"), "v1").await.unwrap();
+        saver.put_checkpoint(make_checkpoint("commit-1")).await.unwrap();
+
+        // Get the commit hash
+        let hash_out = tokio::process::Command::new("git").arg("rev-parse").arg("HEAD").current_dir(dir.path()).output().await.unwrap();
+        let hash = String::from_utf8_lossy(&hash_out.stdout).trim().to_string();
+
+        // Checkout detached head
+        tokio::process::Command::new("git").arg("checkout").arg(&hash).current_dir(dir.path()).output().await.unwrap();
+
+        // Modify file
+        fs::write(dir.path().join("file.txt"), "v2").await.unwrap();
+
+        let cp = make_checkpoint("detached-1");
+        let res = saver.put_checkpoint(cp).await;
+
+        // Either it succeeds (git commit works in detached head) or fails, but it must be deterministic
+        // We actually expect it to succeed because git commit works in detached head.
+        assert!(res.is_ok(), "Expected deterministic behavior in detached head");
+    }
+
+    #[tokio::test]
+    async fn test_missing_user_config() {
+        let dir = tempdir().unwrap();
+        let _setup_saver = GitCheckpointer::new(dir.path().to_path_buf());
+
+        // Remove the local config set by new()
+        tokio::process::Command::new("git").arg("config").arg("--unset").arg("user.name").current_dir(dir.path()).output().await.unwrap();
+        tokio::process::Command::new("git").arg("config").arg("--unset").arg("user.email").current_dir(dir.path()).output().await.unwrap();
+
+        // And override global config via env vars so git fails to commit
+        let mut cmd = tokio::process::Command::new("git");
+        cmd.arg("commit").arg("-m").arg("test");
+        cmd.env("GIT_CONFIG_GLOBAL", "/dev/null");
+        cmd.env("GIT_CONFIG_SYSTEM", "/dev/null");
+        cmd.env("GIT_AUTHOR_NAME", "");
+        cmd.env("GIT_AUTHOR_EMAIL", "");
+        cmd.env("GIT_COMMITTER_NAME", "");
+        cmd.env("GIT_COMMITTER_EMAIL", "");
+        cmd.current_dir(dir.path());
+
+        // We will test `put_checkpoint` directly, but we need to ensure the runner fails.
+        // Our DefaultGitCommandRunner doesn't set these env vars, so git might still pick up system config if we aren't careful.
+        // Let's create a custom runner for this specific test that strips config.
+        struct ConfigStrippingRunner;
+        #[async_trait::async_trait]
+        impl GitCommandRunner for ConfigStrippingRunner {
+            async fn run_git_command(&self, args: &[&str], current_dir: &std::path::Path) -> Result<std::process::Output, std::io::Error> {
+                tokio::process::Command::new("git")
+                    .args(args)
+                    .env("GIT_CONFIG_GLOBAL", "/dev/null")
+                    .env("GIT_CONFIG_SYSTEM", "/dev/null")
+                    .env("GIT_AUTHOR_NAME", "")
+                    .env("GIT_AUTHOR_EMAIL", "")
+                    .env("GIT_COMMITTER_NAME", "")
+                    .env("GIT_COMMITTER_EMAIL", "")
+                    .current_dir(current_dir)
+                    .output()
+                    .await
+            }
+
+            fn run_git_command_sync(&self, args: &[&str], current_dir: &std::path::Path) -> Result<std::process::Output, std::io::Error> {
+                std::process::Command::new("git")
+                    .args(args)
+                    .env("GIT_CONFIG_GLOBAL", "/dev/null")
+                    .env("GIT_CONFIG_SYSTEM", "/dev/null")
+                    .env("GIT_AUTHOR_NAME", "")
+                    .env("GIT_AUTHOR_EMAIL", "")
+                    .env("GIT_COMMITTER_NAME", "")
+                    .env("GIT_COMMITTER_EMAIL", "")
+                    .current_dir(current_dir)
+                    .output()
+            }
+        }
+
+        let saver_no_config = GitCheckpointer::with_runner(dir.path().to_path_buf(), std::sync::Arc::new(ConfigStrippingRunner));
+        fs::write(dir.path().join("file2.txt"), "v2").await.unwrap();
+        let res = saver_no_config.put_checkpoint(make_checkpoint("noconfig-1")).await;
+
+        assert!(res.is_err(), "Expected failure due to missing git config");
+        let err = res.unwrap_err();
+        assert!(err.contains("Author identity unknown") || err.contains("git commit") || err.contains("empty ident name"), "Error was: {}", err);
     }
 }
