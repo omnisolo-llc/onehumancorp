@@ -398,7 +398,7 @@ function InboxWorkspace({
             {!selected ? (
               <div className="app-empty p-8 text-center text-gray-500">Select a database-backed message to inspect it.</div>
             ) : (
-              <div className="app-panel-body p-5">
+              <div className="app-panel-body p-6 backdrop-filter blur-3xl saturate-200 border border-white/20 rounded-2xl bg-white/60 dark:bg-black/60">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <div className="app-metric-label">Source</div>
