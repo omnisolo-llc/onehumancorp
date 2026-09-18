@@ -146,7 +146,7 @@ pub async fn get_nearby_tenants_handler(
     match list_nearby_tenants(&db, &owner_tenant_id).await {
         Ok(neighbors) => Json(serde_json::json!({ "neighbors": neighbors })).into_response(),
         Err(error) => {
-            tracing::warn!(tenant_id = %owner_tenant_id, "collective discovery unavailable: {error}");
+            tracing::warn!(tenant_id = %owner_tenant_id, "collective discovery unavailable: {error}"); // pii-safe
             json_error(
                 StatusCode::SERVICE_UNAVAILABLE,
                 "collective discovery unavailable",
@@ -376,7 +376,7 @@ pub async fn invite_tenant_handler(
             json_error(StatusCode::NOT_FOUND, "target tenant not found")
         }
         Err(InviteStoreError::Database(error)) => {
-            tracing::warn!(tenant_id = %owner_tenant_id, "collective invite unavailable: {error}");
+            tracing::warn!(tenant_id = %owner_tenant_id, "collective invite unavailable: {error}"); // pii-safe
             json_error(
                 StatusCode::SERVICE_UNAVAILABLE,
                 "collective invite unavailable",
