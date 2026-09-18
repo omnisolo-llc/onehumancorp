@@ -4,7 +4,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::path::PathBuf;
-
+use std::process::Command as StdCommand;
+use tokio::process::Command;
 
 #[async_trait]
 pub trait GitCommandRunner: Send + Sync {
@@ -32,7 +33,6 @@ impl GitCommandRunner for DefaultGitCommandRunner {
             .output()
     }
 }
-
 
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -107,7 +107,6 @@ pub struct GitCheckpointer {
     // State Management: Git Commit Checkpointing Mechanic
     repo_path: PathBuf,
     runner: std::sync::Arc<dyn GitCommandRunner>,
-
 }
 
 impl GitCheckpointer {
@@ -123,11 +122,11 @@ impl GitCheckpointer {
             .join(format!(".scratchpad_{}.json", thread_id))
     }
 
-    pub fn new(repo_path: PathBuf) -> Self {
+        pub fn new(repo_path: PathBuf) -> Self {
         Self::with_runner(repo_path, std::sync::Arc::new(DefaultGitCommandRunner))
     }
 
-        pub fn with_runner(repo_path: PathBuf, runner: std::sync::Arc<dyn GitCommandRunner>) -> Self {
+    pub fn with_runner(repo_path: PathBuf, runner: std::sync::Arc<dyn GitCommandRunner>) -> Self {
         if repo_path.exists() {
             let init_out = runner.run_git_command_sync(&["init"], &repo_path);
             if let Ok(out) = init_out {
@@ -302,7 +301,6 @@ impl CheckpointSaver for GitCheckpointer {
         let has_changes = !status_out.stdout.is_empty();
 
         if !has_changes {
-            // A clean repository is a no-op and does not create an empty commit
             tracing::info!("Clean repository, skipping commit for checkpoint {}", checkpoint.checkpoint_id);
             return Ok(());
         }
@@ -958,7 +956,7 @@ mod tests {
             created_at: Utc::now(),
         };
 
-        saver.put_checkpoint(cp1.clone()).await.unwrap();
+        saver.put_checkpoint(cp1).await.unwrap();
         saver.put_checkpoint(cp2).await.unwrap();
 
         let list = saver.list_checkpoints("thread-git-3").await.unwrap();
@@ -1339,7 +1337,6 @@ mod integration_tests {
         assert_eq!(content, "v2");
     }
 
-
     #[tokio::test]
     async fn test_clean_repo_is_noop_no_empty_commit() {
         let dir = tempdir().unwrap();
@@ -1359,7 +1356,6 @@ mod integration_tests {
         let new_commits = get_commit_count(dir.path()).await;
         assert_eq!(new_commits, initial_commits, "Should not create an empty commit on a clean repo");
     }
-
 
     #[tokio::test]
     async fn test_repeated_calls_idempotent() {
