@@ -125,6 +125,7 @@ pub struct AgentRunConfig {
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
+    pub enable_plandex_planning: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
@@ -260,6 +261,7 @@ impl Default for AgentRunConfig {
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
+            enable_plandex_planning: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
             enable_visual_verification: false,
@@ -396,6 +398,11 @@ impl Agent {
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
     }
+    pub async fn run_plandex_planning(&self, objective: &str, codebase_context: &str, cfg: AgentRunConfig) -> Result<crate::plandex::PlandexPlan, String> {
+        let planner = crate::plandex::PlandexPlanner::new(self.llm.clone(), cfg);
+        planner.run_planning_phase(objective, codebase_context).await
+    }
+
     pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
         Self {
             llm,
