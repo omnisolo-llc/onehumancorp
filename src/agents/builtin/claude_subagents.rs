@@ -114,24 +114,23 @@ impl ClaudeSubagentSpawner {
                     });
                 });
 
-                // Polling loop in the main thread (acts as the caller waiting for the teammate)
+                // Async polling loop in the main thread (acts as the caller waiting for the teammate)
                 let timeout_duration = std::time::Duration::from_secs(300); // 5 minutes timeout
                 let poll_interval = std::time::Duration::from_millis(100);
-                let start_time = std::time::Instant::now();
 
-                loop {
-                    if start_time.elapsed() > timeout_duration {
-                        return Err(
-                            "Teammate execution timed out waiting for outbox response".into()
-                        );
+                let check_file = async {
+                    loop {
+                        if fs::try_exists(&out_mbox).await.unwrap_or(false) {
+                            return fs::read_to_string(&out_mbox).await;
+                        }
+                        tokio::time::sleep(poll_interval).await;
                     }
+                };
 
-                    if fs::try_exists(&out_mbox).await.unwrap_or(false) {
-                        let result = fs::read_to_string(&out_mbox).await?;
-                        return Ok(result);
-                    }
-
-                    tokio::time::sleep(poll_interval).await;
+                match tokio::time::timeout(timeout_duration, check_file).await {
+                    Ok(Ok(result)) => Ok(result),
+                    Ok(Err(e)) => Err(e.into()),
+                    Err(_) => Err("Teammate execution timed out waiting for outbox response".into()),
                 }
             }
             ClaudeSubagentMode::Worktree {
@@ -506,6 +505,54 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(out_content, "Condensed summary of teammate");
+    }
+
+    #[tokio::test]
+    async fn test_claude_subagent_teammate_timeout() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![]),
+        });
+
+        struct BlockingLlmClient;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for BlockingLlmClient {
+            async fn chat(&self, _req: omnisolo_builtin_agent_core::types::ChatRequest) -> Result<omnisolo_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                // Sleep for longer than the timeout to force a timeout
+                tokio::time::sleep(std::time::Duration::from_secs(400)).await;
+                Err("Timeout test failed to block".into())
+            }
+        }
+
+        let sub_client = Arc::new(BlockingLlmClient);
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
+
+        let dir = tempfile::tempdir().unwrap();
+        let mailbox_dir = dir.path().join("mailboxes");
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_client.clone(),
+            subagent,
+            ClaudeSubagentMode::Teammate {
+                mailbox_dir: mailbox_dir.clone(),
+            },
+        );
+
+        // We want to speed up the test so we need a shorter timeout for this specific test
+        // Let's modify the timeout dynamically if we can or just use a short one for the mock...
+        // Actually, let's mock it using tokio::time::pause() and advance time!
+        tokio::time::pause();
+
+        let config = AgentRunConfig::default();
+        let task = tokio::spawn(async move {
+            spawner.run_subagent("Do task", &[], &config).await
+        });
+
+        // Advance time by 301 seconds (timeout is 300)
+        tokio::time::advance(std::time::Duration::from_secs(301)).await;
+
+        let result = task.await.unwrap();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Teammate execution timed out waiting for outbox response");
     }
 
     #[tokio::test]
