@@ -30,8 +30,20 @@ impl CodexCore {
         message: &str,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         // OpenAI Mechanic: Input Guardrails (Early Check)
+        // SOTA Harness Pattern: OpenAI-Compatible Shim Harnesses: Plandex CLI
+        // Implements "Multi-file architectural planning" as a discrete step before execution.
+        let mut modified_message = message.to_string();
+        if self.runtime_config.enable_plandex_planning {
+            if let Ok(plan) = self.agent.run_plandex_planning(&modified_message, "Currently executing within CodexRunner.", self.runtime_config.clone()).await {
+                modified_message = format!("{}
+
+Architectural Plan:
+{}", modified_message, plan.multi_file_strategy);
+            }
+        }
+
         if let Some(guardrails) = &self.runtime_config.guardrails
-            && let Err(e) = guardrails.check_input(message)
+            && let Err(e) = guardrails.check_input(&modified_message)
         {
             return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -52,7 +64,7 @@ impl CodexCore {
         );
         let res = self
             .agent
-            .run(&self.runtime_config, message, &mut on_event)
+            .run(&self.runtime_config, &modified_message, &mut on_event)
             .await;
         tracing::info!("Session Total Cost: ${:.6}", total_cost);
         res

@@ -67,6 +67,7 @@ rust_library(
         "departments.rs",
         "gpt_researcher.rs",
         "plan_and_execute.rs",
+        "plandex.rs",
 
         "harness.rs",
         "hibernation.rs",
