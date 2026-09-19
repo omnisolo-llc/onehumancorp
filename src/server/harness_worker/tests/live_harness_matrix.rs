@@ -354,7 +354,7 @@ fn verify_read_values(evidence: &Value, value: &str) -> Result<(), String> {
 fn service_audit(attempt: Uuid) -> Value {
     let container = required_env("OMNISOLO_LIVE_SERVICE_CONTAINER");
     let output = std::process::Command::new("docker").args(["exec", &container, "node", "-e",
-        "fetch('http://127.0.0.1:8095/v1/audit?attempt_id='+process.argv[1],{headers:{Authorization:'Bearer '+process.env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN}}).then(async r=>{if(!r.ok)process.exit(1); console.log(await r.text())}).catch(()=>process.exit(1))", &attempt.to_string()]).output().expect("read daemon audit");
+        "fetch('http://127.0.0.1:8095/v1/audit?attempt_id='+process.argv[1],{headers:{Authorization:'Bearer '+process.env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN}}).then(async r=>{if(!r.ok)process.exit(1); process.stdout.write(await r.text())}).catch(()=>process.exit(1))", &attempt.to_string()]).output().expect("read daemon audit");
     assert!(output.status.success(), "service audit request failed");
     serde_json::from_slice(&output.stdout).expect("service audit JSON")
 }
