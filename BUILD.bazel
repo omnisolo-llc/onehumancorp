@@ -1,22 +1,11 @@
-load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 npm_link_all_packages(name = "node_modules")
 
 exports_files(["tsconfig.json"])
-
-# Plugin and rule infrastructure for protobuf TypeScript generation in bazel/rules
-
-# Fix for misplaced alias error with rules_nodejs
-filegroup(
-    name = "node_fixed",
-    srcs = ["@nodejs//:node"],
-    visibility = ["//visibility:public"],
-)
 
 # gazelle:prefix github.com/omnisolo-llc/omnisolo
 exports_files([
@@ -151,17 +140,10 @@ py_binary(
     ],
 )
 
-sh_binary(
+alias(
     name = "update-deps",
-    srcs = ["update_deps.sh"],
-    data = [
-        "MODULE.bazel",
-    ],
-    tags = ["manual"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    actual = "//scripts:update_deps",
+    visibility = ["//visibility:public"],
 )
 
 # Alias to run hello-world agent easily

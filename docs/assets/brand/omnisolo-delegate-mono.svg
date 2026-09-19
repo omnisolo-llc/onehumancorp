@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="title desc">
+<title id="title">OmniSolo — Delegate</title>
+<desc id="desc">One decision branches into several coordinated actions. A human-like central stem connects three rounded agent blocks.</desc>
+<defs><linearGradient id="blue" x1="8" y1="0" x2="56" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#087BFF"/><stop offset="1" stop-color="#0049D8"/></linearGradient></defs>
+
+<path d="M32 26V34M15 42V39Q15 34 20 34H44Q49 34 49 39V42M32 34V42" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="32" cy="18" r="7" fill="currentColor"/>
+<rect x="9" y="42" width="12" height="12" rx="4" fill="currentColor"/>
+<rect x="26" y="42" width="12" height="12" rx="4" fill="currentColor"/>
+<rect x="43" y="42" width="12" height="12" rx="4" fill="currentColor"/>
+</svg>

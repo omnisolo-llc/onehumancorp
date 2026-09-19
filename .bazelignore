@@ -1,10 +1,9 @@
-bazel/rules/flutter
-src/frontend/node_modules
-bazel/rules/flutter/e2e
-bazel/rules/flutter/bazel-bin
-bazel/rules/flutter/bazel-out
-bazel/rules/flutter/bazel-testlogs
 node_modules
+src/ui/next/node_modules
+src/cli/node_modules
+src/ui/next/.next
+src/cli/dist
+target
 .worktrees
 bazel-mono
 bazel-bin

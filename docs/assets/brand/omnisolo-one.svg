@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="title desc">
+<title id="title">OmniSolo — One in Omni</title>
+<desc id="desc">A single upright figure within an open O. It combines the solo founder, the number one, and the OmniSolo initial in a compact silhouette.</desc>
+<defs><linearGradient id="blue" x1="8" y1="0" x2="56" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#087BFF"/><stop offset="1" stop-color="#0049D8"/></linearGradient></defs>
+<rect width="64" height="64" rx="14" fill="url(#blue)"/>
+<path d="M40 14A20 20 0 1 0 50 40" stroke="white" stroke-width="7" stroke-linecap="round"/>
+<circle cx="32" cy="22" r="4" fill="#93F5E5"/>
+<path d="M32 33V44" stroke="white" stroke-width="7" stroke-linecap="round"/>
+<circle cx="50" cy="23" r="4" fill="#93F5E5"/>
+</svg>

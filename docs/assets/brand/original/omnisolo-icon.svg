@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="omnisolo-icon-title omnisolo-icon-desc">
+  <title id="omnisolo-icon-title">OmniSolo app icon</title>
+  <desc id="omnisolo-icon-desc">One human at the center of an O-shaped orbit of three agent nodes, representing a business run by one person with coordinated AI agents.</desc>
+  <defs>
+    <linearGradient id="omnisolo-icon-blue" x1="8" y1="0" x2="56" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#087BFF"/>
+      <stop offset="1" stop-color="#0049D8"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#omnisolo-icon-blue)"/>
+  <g stroke="#FFFFFF" stroke-width="4" stroke-linecap="round">
+    <path d="M39 13.27A20 20 0 0 1 51.8 35"/>
+    <path d="M44.8 47.36A20 20 0 0 1 19.2 47.36"/>
+    <path d="M12.2 35A20 20 0 0 1 25 13.27"/>
+  </g>
+  <g fill="#93F5E5">
+    <circle cx="32" cy="12" r="3.5"/>
+    <circle cx="49.32" cy="42" r="3.5"/>
+    <circle cx="14.68" cy="42" r="3.5"/>
+  </g>
+  <g fill="#FFFFFF">
+    <circle cx="32" cy="26" r="4"/>
+    <path d="M24 40V38A8 8 0 0 1 40 38V40A2 2 0 0 1 38 42H26A2 2 0 0 1 24 40Z"/>
+  </g>
+</svg>
