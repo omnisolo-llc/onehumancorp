@@ -124,6 +124,16 @@ impl BudgetManager {
         current >= limit_threshold_cents
     }
 
+    pub fn update_limit(&mut self, new_limit: f64) {
+        let new_limit_cents = if new_limit == f64::MAX {
+            i64::MAX
+        } else {
+            (new_limit * 100.0).round() as i64
+        };
+        self.total_limit = new_limit;
+        self.total_limit_cents = new_limit_cents;
+    }
+
     pub fn is_spend_rate_too_high(
         &self,
         time_elapsed: std::time::Duration,
@@ -318,6 +328,22 @@ mod tests {
             !manager
                 .is_spend_rate_too_high(std::time::Duration::from_secs(10 * 86400), thirty_days)
         ); // 20% in 10 days is fine
+    }
+
+    #[test]
+    fn test_update_limit() {
+        let mut manager = BudgetManager::new(100.0);
+        assert_eq!(manager.get_remaining(), 100.0);
+        manager.record_spend(20.0).unwrap();
+        assert_eq!(manager.get_remaining(), 80.0);
+
+        manager.update_limit(200.0);
+        assert_eq!(manager.total_limit, 200.0);
+        assert_eq!(manager.get_remaining(), 180.0);
+
+        manager.update_limit(f64::MAX);
+        assert_eq!(manager.total_limit, f64::MAX);
+        assert_eq!(manager.total_limit_cents, i64::MAX);
     }
 
     #[test]
