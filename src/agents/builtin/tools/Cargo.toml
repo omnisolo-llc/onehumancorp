@@ -23,6 +23,7 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 server_omnisolo = { path = "../../../server/omnisolo" }
+server_integrations_shippo = { path = "../../../server/integrations/shippo" }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tokio = { workspace = true }
 tracing = "0.1"

@@ -52,6 +52,7 @@ pub mod restic;
 pub mod screenshot;
 pub mod skill;
 pub mod sleep;
+pub mod shipping_label;
 pub mod subagent;
 pub mod superpowers_tool;
 pub mod tail;
@@ -156,6 +157,7 @@ pub fn all_tools(
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
+        shipping_label::shipping_label_tool(std::sync::Arc::new(::server_integrations_shippo::provider::ShippoProvider::new("".to_string()))),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(runner.clone(), llm.clone()),
@@ -229,7 +231,7 @@ mod tenant_capability_test {
 
 #[cfg(test)]
 mod tenant_aware_tool_schema_test {
-    use super::{Tool, booking, quote, tenant::TenantContext};
+    use super::{Tool, booking, quote, tenant::TenantContext, shipping_label};
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -265,6 +267,7 @@ mod tenant_aware_tool_schema_test {
             booking::booking_negotiate_time_tool(store.clone(), tenant.clone()),
             booking::booking_reschedule_tool(store.clone(), tenant.clone()),
             quote::generate_quote_tool(store, tenant),
+            shipping_label::shipping_label_tool(std::sync::Arc::new(::server_integrations_shippo::provider::ShippoProvider::new("".to_string()))),
         ];
 
         for tool in &tools {

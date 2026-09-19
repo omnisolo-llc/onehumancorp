@@ -5966,6 +5966,7 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "server_integrations_shippo",
  "server_omnisolo",
  "server_pricing",
  "sqlx",

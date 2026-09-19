@@ -173,20 +173,31 @@ export default function OrderDetailsPage() {
               </dl>
             </section>
             <section className="app-card rounded-2xl border border-gray-200 bg-white/70 p-6 shadow-sm">
-              <h2 className="text-lg font-bold font-outfit text-gray-900">Shipping</h2>
+              <h2 className="text-lg font-bold font-outfit text-gray-900">Fulfillment</h2>
+              <p className="text-sm text-gray-500">Powered by Shippo</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="text-sm font-medium">Weight (oz)<input aria-label="Package weight in ounces" type="number" value={weight} onChange={(event) => setWeight(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
-                <label className="text-sm font-medium">Dimensions<input aria-label="Package dimensions" value={dimensions} onChange={(event) => setDimensions(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+                <label className="text-sm font-medium">Dimensions<input aria-label="Package dimensions" placeholder="e.g. 10x8x6" value={dimensions} onChange={(event) => setDimensions(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
               </div>
               <button onClick={fetchRates} disabled={shippingPending} className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-white">Get Shipping Rates</button>
               {shippingError && <p className="mt-3 text-sm text-red-600" role="alert">{shippingError}</p>}
-              {rates.length > 0 && <div className="mt-4 space-y-2">{rates.map((rate) => (
-                <label key={rate.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <span><input type="radio" name="shipping-rate" value={rate.id} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /> <span>{rate.carrier} {rate.service}</span>{typeof rate.days === "number" ? ` · ${rate.days} days` : ""}</span>
-                  <span>${rate.amount.toFixed(2)}</span>
-                </label>
-              ))}<button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">Buy Label</button></div>}
-              {label && <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4"><p>{label.carrier} tracking: <strong>{label.trackingNumber}</strong></p><a href={label.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 underline">Open Shipping Label</a></div>}
+              {rates.length > 0 && <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium">Select a Service</p>
+                {rates.map((rate) => (
+                  <label key={rate.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <span><input type="radio" name="shipping_rate" value={rate.id} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /> <span>{rate.carrier} {rate.service}</span>{typeof rate.days === "number" ? ` · ${rate.days} days` : ""}</span>
+                    <span>${rate.amount.toFixed(2)}</span>
+                  </label>
+                ))}
+                <button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">Buy Label & Print</button>
+              </div>}
+              {label && (
+                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4">
+                  <p className="text-green-800 font-medium mb-2">Label Purchased Successfully</p>
+                  <p>{label.carrier} tracking: <strong>{label.trackingNumber}</strong></p>
+                  <a href={label.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-indigo-700 underline">Print Label</a>
+                </div>
+              )}
             </section>
           </>
         )}
