@@ -23,6 +23,7 @@ impl Department for OperationsAgent {
 
     fn subscribed_events(&self) -> Vec<String> {
         vec![
+            "tenant.order.fulfillment_ready".to_string(),
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.order.updated".to_string(),
@@ -870,6 +871,14 @@ impl Department for OperationsAgent {
                     batch_id, subscriber_count
                 )
             }
+            "tenant.order.fulfillment_ready" => {
+                let order_id = event
+                    .payload
+                    .get("order_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                format!("Draft shipping label for physical goods order {}", order_id)
+            }
             _ => "Create order and booking".to_string(),
         };
 
@@ -1010,6 +1019,11 @@ mod tests {
         let orchestrator = test_orchestrator().await;
         let agent = OperationsAgent::new(orchestrator.clone());
 
+        assert!(
+            agent
+                .subscribed_events()
+                .contains(&"tenant.order.fulfillment_ready".to_string())
+        );
         assert!(
             agent
                 .subscribed_events()
