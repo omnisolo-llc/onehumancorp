@@ -27,6 +27,7 @@ impl Department for OperationsAgent {
             "tenant.order.created".to_string(),
             "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "tenant.order.fulfillment_ready".to_string(),
             "tenant.booking.request_received".to_string(),
             "tenant.booking.confirmed".to_string(),
             "LowStockAlert".to_string(),
@@ -870,6 +871,19 @@ impl Department for OperationsAgent {
                     batch_id, subscriber_count
                 )
             }
+            "tenant.order.fulfillment_ready" => {
+                let order_id = event
+                    .payload
+                    .get("order_id")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("unknown_order");
+
+                // Draft Shippo label for review
+                format!(
+                    "Draft shipping label for order {}",
+                    order_id
+                )
+            }
             _ => "Create order and booking".to_string(),
         };
 
@@ -883,7 +897,7 @@ impl Department for OperationsAgent {
             )
             .await?;
 
-        if event.event_type == "tenant.subscription.fulfillment_batch.created" {
+        if event.event_type == "tenant.subscription.fulfillment_batch.created" || event.event_type == "tenant.order.fulfillment_ready" {
             return Ok(());
         }
 
@@ -1049,6 +1063,40 @@ mod tests {
         assert_eq!(
             approval.payload.as_ref().unwrap()["subscriber_count"],
             serde_json::json!(2)
+        );
+    }
+
+    #[tokio::test]
+    async fn operations_agent_consumes_fulfillment_ready_events() {
+        let orchestrator = test_orchestrator().await;
+        let agent = OperationsAgent::new(orchestrator.clone());
+
+        let event = DepartmentEvent {
+            id: "evt-ready".to_string(),
+            tenant_id: "tenant-ops".to_string(),
+            event_type: "tenant.order.fulfillment_ready".to_string(),
+            payload: serde_json::json!({
+                "order_id": "order-123",
+            }),
+        };
+
+        agent.handle_event(&event).await.unwrap();
+
+        let approvals = orchestrator.get_activity_feed("tenant-ops", None, 10).await;
+        let approval = approvals
+            .iter()
+            .find(|approval| {
+                approval
+                    .description
+                    .contains("Draft shipping label for order order-123")
+            })
+            .expect("fulfillment ready should create an operations action");
+
+        assert_eq!(approval.status, ApprovalStatus::Approved);
+        assert_eq!(approval.department, DepartmentType::Operations);
+        assert_eq!(
+            approval.payload.as_ref().unwrap()["order_id"],
+            serde_json::json!("order-123")
         );
     }
 }
