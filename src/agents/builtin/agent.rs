@@ -5145,8 +5145,7 @@ impl Agent {
                 Err(_) => "<unprintable>".to_string(),
             };
             return Err(ToolError::LlmRecoverable(format!(
-                "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.",
-                e, args_str
+                "{}", omnisolo_builtin_agent_core::types::format_llm_recoverable_error(&tc.name, &format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.", e, args_str))
             )));
         }
 
