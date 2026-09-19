@@ -750,7 +750,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism translucent-glass-light dark:translucent-glass-dark"
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border sm:rounded-[16px] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism translucent-glass-light dark:translucent-glass-dark"
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
