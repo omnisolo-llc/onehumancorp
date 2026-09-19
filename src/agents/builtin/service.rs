@@ -84,6 +84,7 @@ pub struct AgentServiceImpl {
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
+    pub pool: Option<sqlx::PgPool>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -202,6 +203,7 @@ impl AgentServiceImpl {
             anthropic_memory: None,
             redis_memory: None,
             worker_handle: None,
+            pool: None,
         }
     }
 
@@ -857,6 +859,7 @@ impl AgentServiceImpl {
             memory_accessor.clone(),
             observation_store,
             self.tenant.clone(),
+            self.pool.clone(),
         );
 
         // Add create_skill tool
