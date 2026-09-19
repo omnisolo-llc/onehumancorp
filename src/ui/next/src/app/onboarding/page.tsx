@@ -750,7 +750,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism translucent-glass-light dark:translucent-glass-dark"
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-[0_18px_44px_rgba(15,23,42,0.12)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)]"
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
@@ -758,7 +758,7 @@ export default function OnboardingWizard() {
               <button
                 type="button"
                 onClick={handleBackToIntro}
-                className="setup-nav-button min-h-[44px]"
+                className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
               >
                 Back
               </button>
@@ -776,14 +776,14 @@ export default function OnboardingWizard() {
             <button
               type="button"
               onClick={handleSkipSetup}
-              className="setup-nav-button min-h-[44px]"
+              className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
             >
               Skip setup
             </button>
           </div>
         </div>
         {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+        <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={getProgress()} aria-current="step">
           <div
             className="h-full bg-[#0066FF] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
@@ -1160,7 +1160,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1274,7 +1274,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1380,7 +1380,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1483,7 +1483,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1617,7 +1617,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                       onClick={() => handleSaveDraft()}
-                  className="setup-nav-button min-h-[44px]"
+                  className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
                 </button>
@@ -1828,7 +1828,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                       onClick={() => handleSaveDraft()}
-                  className="setup-nav-button min-h-[44px]"
+                  className="setup-nav-button min-h-[44px] min-w-[44px] px-2"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
                 </button>
@@ -1981,7 +1981,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => handleStartOnboarding()}
                   disabled={isLoading}
-                className="w-full bg-[#0066FF] text-white p-4 min-h-[44px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                className="w-full bg-[#0066FF] text-white p-4 min-h-[44px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:scale-100 rounded-[8px]"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
