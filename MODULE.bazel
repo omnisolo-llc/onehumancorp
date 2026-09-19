@@ -1,6 +1,6 @@
 module(
     name = "mono",
-    version = "0.4.42",
+    version = "0.4.47",
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
@@ -40,6 +40,7 @@ gradle_distribution_repository(
 register_toolchains("@tauri_gradle//:gradle_toolchain")
 
 cargo_vendor_repository = use_repo_rule("//bazel/rules:cargo_vendor_repository.bzl", "cargo_vendor_repository")
+
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
@@ -61,11 +62,14 @@ cargo_vendor_repository(
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(
     name = "go_sdk",
-    version = "1.23.0",
+    version = "1.24.0",
 )
 use_repo(go_sdk, "go_sdk")
 
 register_toolchains("@go_sdk//:all")
+
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
@@ -257,8 +261,9 @@ bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
+
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
-node.toolchain(node_version = "23.6.0")
+node.toolchain(node_version = "22.14.0")
 use_repo(node, "nodejs")
 
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")

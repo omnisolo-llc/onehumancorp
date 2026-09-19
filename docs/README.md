@@ -13,6 +13,7 @@ This directory is the source for the repository documentation site.
 ## Start Here
 
 - [Documentation Index](index.md)
+- [OmniSolo Brand Identity](brand/identity.md)
 - [Architecture Hub](technical/architecture/architecture-overview.md)
 - [Developer Setup](technical/developer/setup.md)
 - [Developer Guide](technical/developer/developer-guide.md)

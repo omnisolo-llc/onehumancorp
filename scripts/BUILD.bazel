@@ -30,3 +30,18 @@ sh_binary(
     }),
     visibility = ["//visibility:public"],
 )
+
+sh_binary(
+    name = "update_deps",
+    srcs = ["update_deps.sh"],
+    data = [
+        "//:MODULE.bazel",
+    ],
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+)
