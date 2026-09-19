@@ -289,5 +289,26 @@ mod tests {
         );
         assert!(trusted_label_url("https://user:password@app.goshippo.com/label.pdf").is_none());
         assert!(trusted_label_url("http://app.goshippo.com/label.pdf").is_none());
+}
+
+    #[test]
+    fn parcel_dimensions_handles_spaces_and_different_cases() {
+        assert_eq!(
+            parcel_dimensions(" 10 x 8X 6 "),
+            Ok(("10".to_string(), "8".to_string(), "6".to_string()))
+        );
+        assert_eq!(
+            parcel_dimensions("10X8x6"),
+            Ok(("10".to_string(), "8".to_string(), "6".to_string()))
+        );
+    }
+
+    #[test]
+    fn parcel_dimensions_validates_max_value() {
+        assert!(parcel_dimensions("100000.1x10x10").is_err());
+        assert_eq!(
+            parcel_dimensions("100000x10x10"),
+            Ok(("100000".to_string(), "10".to_string(), "10".to_string()))
+        );
     }
 }
