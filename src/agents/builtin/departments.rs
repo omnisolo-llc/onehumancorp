@@ -59,6 +59,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "booking_create_appointment",
                 "booking_negotiate_time",
                 "booking_reschedule",
+                "shippo_fetch_rates",
+                "shippo_purchase_label",
             ],
             confidence_threshold: 0.85,
         },

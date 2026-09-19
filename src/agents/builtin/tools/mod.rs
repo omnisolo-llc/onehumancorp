@@ -51,6 +51,7 @@ pub mod repo_map;
 pub mod restic;
 pub mod screenshot;
 pub mod skill;
+pub mod shippo;
 pub mod sleep;
 pub mod subagent;
 pub mod superpowers_tool;
@@ -178,6 +179,8 @@ pub fn all_tools(
         quote::generate_quote_tool(booking_store, tenant),
         aider_pair_programming::aider_pair_programming_tool(),
         superpowers_tool::superpowers_skill_tool(),
+        shippo::shippo_fetch_rates_tool(),
+        shippo::shippo_purchase_label_tool(),
     ];
 
     if let Some(llm) = agent_llm {

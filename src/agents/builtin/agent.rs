@@ -351,8 +351,9 @@ pub struct Agent {
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
-    pub native_env:
-        Arc<tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+    pub native_env: Arc<
+        tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>,
+    >,
     pub sona_matcher: Option<Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
     pub skill_trace: Arc<tokio::sync::Mutex<crate::expert_team::SkillTrace>>,
     // SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state

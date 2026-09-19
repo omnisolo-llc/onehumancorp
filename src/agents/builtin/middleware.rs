@@ -212,7 +212,9 @@ pub fn record_agent_event(
 /// Projects the portable capsule's safe message and tool-result records into
 /// the existing OmniSolo context format. Native records and unsupported data
 /// never enter this projection.
-pub fn portable_messages(capsule: &SessionCapsule) -> Vec<omnisolo_builtin_agent_core::types::Message> {
+pub fn portable_messages(
+    capsule: &SessionCapsule,
+) -> Vec<omnisolo_builtin_agent_core::types::Message> {
     capsule
         .records
         .iter()
@@ -232,7 +234,9 @@ pub fn portable_messages(capsule: &SessionCapsule) -> Vec<omnisolo_builtin_agent
 
 fn role_from_portable(role: &MessageRole) -> omnisolo_builtin_agent_core::types::Role {
     match role {
-        MessageRole::System | MessageRole::Developer => omnisolo_builtin_agent_core::types::Role::System,
+        MessageRole::System | MessageRole::Developer => {
+            omnisolo_builtin_agent_core::types::Role::System
+        }
         MessageRole::User => omnisolo_builtin_agent_core::types::Role::User,
         MessageRole::Assistant => omnisolo_builtin_agent_core::types::Role::Assistant,
         MessageRole::Tool => omnisolo_builtin_agent_core::types::Role::Tool,
@@ -393,7 +397,10 @@ mod tests {
         let messages = portable_messages(&capsule);
 
         assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].role, omnisolo_builtin_agent_core::types::Role::Tool);
+        assert_eq!(
+            messages[0].role,
+            omnisolo_builtin_agent_core::types::Role::Tool
+        );
         assert_eq!(messages[0].content, "tool output");
         assert_eq!(
             messages[1].role,
@@ -475,12 +482,18 @@ mod tests {
             messages[1].role,
             omnisolo_builtin_agent_core::types::Role::System
         );
-        assert_eq!(messages[2].role, omnisolo_builtin_agent_core::types::Role::User);
+        assert_eq!(
+            messages[2].role,
+            omnisolo_builtin_agent_core::types::Role::User
+        );
         assert_eq!(
             messages[3].role,
             omnisolo_builtin_agent_core::types::Role::Assistant
         );
-        assert_eq!(messages[4].role, omnisolo_builtin_agent_core::types::Role::Tool);
+        assert_eq!(
+            messages[4].role,
+            omnisolo_builtin_agent_core::types::Role::Tool
+        );
         assert_eq!(
             messages[5].role,
             omnisolo_builtin_agent_core::types::Role::Assistant
