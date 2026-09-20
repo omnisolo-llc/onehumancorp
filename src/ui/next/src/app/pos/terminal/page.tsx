@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
+import confetti from 'canvas-confetti';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
 
@@ -239,6 +240,11 @@ export default function POSTerminal() {
     setIsCartOpen(false);
     setShowPaymentSheet(false);
     setChargeAmount('0');
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
   };
 
   const handleSelectProduct = (product: any) => {
@@ -528,7 +534,7 @@ export default function POSTerminal() {
                 <button
                   onClick={() => setShowPaymentSheet(true)}
                   disabled={parseInt(chargeAmount || '0') === 0}
-                  className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
+                  className="glass-control w-full bg-[#0066FF] text-white rounded-[8px] min-h-[44px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
                   Charge ${(parseInt(chargeAmount || '0') / 100).toFixed(2)}
                 </button>
@@ -540,7 +546,7 @@ export default function POSTerminal() {
              <div className="fixed bottom-0 left-0 right-0 p-4 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
                <button
                  onClick={() => setIsCartOpen(true)}
-                 className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
+                 className="glass-control w-full bg-[#0066FF] text-white rounded-[8px] min-h-[44px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
                >
                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</span>
                  <span>Charge ${(cartTotal / 100).toFixed(2)}</span>
@@ -552,7 +558,7 @@ export default function POSTerminal() {
            {(isCartOpen || showPaymentSheet) && !checkoutComplete && (
              <div className="fixed inset-0 z-50 flex flex-col justify-end">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => { setIsCartOpen(false); setShowPaymentSheet(false); }}></div>
-               <div className="relative bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[210%] border-t border-[rgba(255,255,255,0.4)] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+               <div className="translucent-glass-light relative bg-[rgba(255,255,255,0.85)] backdrop-blur-[40px] saturate-[200%] border-t border-[rgba(255,255,255,0.4)] rounded-t-[16px] p-6 shadow-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-full pb-safe pb-8">
                  <div className="flex justify-between items-center mb-6">
                    <h2 className="text-xl font-bold font-outfit text-gray-900">{isCartOpen ? 'Current Order' : 'Payment Method'}</h2>
                    <button onClick={() => { setIsCartOpen(false); setShowPaymentSheet(false); }} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
@@ -580,6 +586,15 @@ export default function POSTerminal() {
                          <span>${(cartTotal / 100).toFixed(2)}</span>
                        </div>
                      </div>
+
+                     {!showPaymentSheet && (
+                       <button
+                         onClick={() => setShowPaymentSheet(true)}
+                         className="glass-control w-full mt-6 bg-[#0066FF] text-white rounded-[8px] min-h-[44px] py-4 text-lg font-bold shadow-lg active:scale-[0.98]"
+                       >
+                         Collect Payment
+                       </button>
+                     )}
                    </>
                  )}
 
