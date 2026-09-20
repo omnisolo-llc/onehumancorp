@@ -10,28 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  source-snapshot:
-    if: github.head_ref == 'fix/ci-parallel-head-repair' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - name: Archive tracked source only
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/ci-repair-source"
-          git rev-parse HEAD > "$RUNNER_TEMP/ci-repair-source/source-sha.txt"
-          git archive --format=tar HEAD > "$RUNNER_TEMP/ci-repair-source/source.tar"
-          sha256sum "$RUNNER_TEMP/ci-repair-source/source.tar" > "$RUNNER_TEMP/ci-repair-source/source.sha256"
-      - uses: actions/upload-artifact@v6
-        with:
-          name: ci-repair-source-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ci-repair-source
-          retention-days: 1
-          if-no-files-found: error
   node-validation-inputs:
     if: github.head_ref == 'fix/ci-parallel-head-repair' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
@@ -44,6 +22,7 @@ jobs:
         with:
           rust: 'false'
           node-scope: all
+          cache: 'true'
       - name: Archive locked test inputs without credentials or sessions
         shell: bash
         run: |
@@ -54,10 +33,35 @@ jobs:
           tar -czf "$RUNNER_TEMP/ci-repair-node/node-modules.tar.gz" node_modules src/ui/next/node_modules src/cli/node_modules
           sha256sum package-lock.json src/ui/next/package-lock.json src/cli/package-lock.json > "$RUNNER_TEMP/ci-repair-node/locks.sha256"
           sha256sum "$RUNNER_TEMP/ci-repair-node/node" "$RUNNER_TEMP/ci-repair-node/node-modules.tar.gz" > "$RUNNER_TEMP/ci-repair-node/inputs.sha256"
+          split -b 200M "$RUNNER_TEMP/ci-repair-node/node-modules.tar.gz" "$RUNNER_TEMP/ci-repair-node/node-modules.part-"
       - uses: actions/upload-artifact@v6
         with:
-          name: ci-repair-node-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ci-repair-node
+          name: ci-repair-node-metadata-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ci-repair-node/node
+            ${{ runner.temp }}/ci-repair-node/source-sha.txt
+            ${{ runner.temp }}/ci-repair-node/locks.sha256
+            ${{ runner.temp }}/ci-repair-node/inputs.sha256
+          retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-node-aa-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-repair-node/node-modules.part-aa
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-node-ab-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-repair-node/node-modules.part-ab
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-node-ac-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-repair-node/node-modules.part-ac
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
