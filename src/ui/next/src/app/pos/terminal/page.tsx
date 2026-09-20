@@ -311,7 +311,7 @@ export default function POSTerminal() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] md:p-10 font-inter px-4 w-full overflow-hidden">
         <div className="w-full max-w-[375px] mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-8 border border-gray-100 relative">
            <div className="text-center mb-8">
-             <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+             <div className="w-16 h-16 bg-gray-900 translucent-glass-light rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
              </div>
              <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
@@ -395,7 +395,7 @@ export default function POSTerminal() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7]">
 
-           <div className="app-card rounded-2xl p-6 shadow-lg mb-6 text-center bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)]">
+           <div className="app-card translucent-glass-light rounded-2xl p-6 shadow-lg mb-6 text-center bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)]">
              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -411,14 +411,14 @@ export default function POSTerminal() {
              {clockedIn ? (
                <button
                  onClick={() => handleClockAction('CLOCK_OUT')}
-                 className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors min-h-[44px] min-w-[44px]"
+                 className="w-full py-4 glass-control bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors min-h-[44px] min-w-[44px]"
                >
                  {t('Clock Out')}
                </button>
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
-                 className="charge-btn w-full py-4 bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
+                 className="charge-btn glass-control w-full py-4 bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
                >
                  {t('Clock In')}
                </button>
@@ -431,7 +431,7 @@ export default function POSTerminal() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)] ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn glass-control min-h-[44px] min-w-[44px] p-4 text-left shadow-lg bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)] ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-[#0066FF] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -448,7 +448,7 @@ export default function POSTerminal() {
            </div>
 
            {/* View Toggle */}
-           <div className="flex bg-gray-200/50 backdrop-blur-[30px] rounded-xl p-1 mb-6 mx-2 mt-8">
+           <div className="flex bg-gray-200/50 backdrop-blur-[30px] glass-control p-1 mb-6 mx-2 mt-8">
               <button
                 onClick={() => setPosMode('catalog')}
                 className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all min-h-[44px] ${posMode === 'catalog' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
@@ -505,7 +505,7 @@ export default function POSTerminal() {
                     <button
                       key={num}
                       onClick={() => handleKeypadPress(num)}
-                      className="bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
+                      className="bg-white/70 backdrop-blur-[30px] border border-white/50 translucent-glass-light rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
                     >
                       {num}
                     </button>
@@ -513,13 +513,13 @@ export default function POSTerminal() {
                   <button className="h-16 min-h-[44px]"></button>
                   <button
                     onClick={() => handleKeypadPress('0')}
-                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
+                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 translucent-glass-light rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
                   >
                     0
                   </button>
                   <button
                     onClick={() => handleKeypadPress('backspace')}
-                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 flex items-center justify-center transition-colors min-h-[44px]"
+                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 translucent-glass-light rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 flex items-center justify-center transition-colors min-h-[44px]"
                   >
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>
                   </button>
@@ -528,7 +528,7 @@ export default function POSTerminal() {
                 <button
                   onClick={() => setShowPaymentSheet(true)}
                   disabled={parseInt(chargeAmount || '0') === 0}
-                  className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
+                  className="w-full bg-[#0066FF] text-white glass-control min-h-[60px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
                   Charge ${(parseInt(chargeAmount || '0') / 100).toFixed(2)}
                 </button>
@@ -540,7 +540,7 @@ export default function POSTerminal() {
              <div className="fixed bottom-0 left-0 right-0 p-4 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
                <button
                  onClick={() => setIsCartOpen(true)}
-                 className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
+                 className="w-full bg-[#0066FF] text-white glass-control min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
                >
                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</span>
                  <span>Charge ${(cartTotal / 100).toFixed(2)}</span>
@@ -564,7 +564,7 @@ export default function POSTerminal() {
                    <>
                      <div className="space-y-4 mb-6">
                        {cart.map((item, idx) => (
-                         <div key={idx} className="flex justify-between items-center p-4 bg-white/50 rounded-xl border border-white/60 shadow-sm">
+                         <div key={idx} className="flex justify-between items-center p-4 bg-white/50 glass-control border border-white/60 shadow-sm">
                            <div className="flex flex-col">
                              <span className="font-bold text-gray-900">{item.product.name}</span>
                              <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
@@ -621,17 +621,17 @@ export default function POSTerminal() {
                        placeholder="Customer email"
                        value={customerEmail}
                        onChange={(e) => setCustomerEmail(e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none mb-4"
+                       className="w-full px-4 py-3 glass-control border border-gray-300 focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none mb-4"
                      />
                      <button
                        disabled
-                       className="w-full bg-[#0066FF] text-white font-bold py-3 px-4 rounded-xl active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
+                       className="w-full bg-[#0066FF] text-white font-bold py-3 px-4 glass-control active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
                      >
                        Receipt service unavailable
                      </button>
                      <button
                        onClick={() => { setCheckoutComplete(false); setCart([]); }}
-                       className="w-full mt-3 text-gray-500 font-bold py-3 px-4 rounded-xl hover:bg-gray-50 active:scale-[0.98] min-h-[44px]"
+                       className="w-full mt-3 text-gray-500 font-bold py-3 px-4 glass-control hover:bg-gray-50 active:scale-[0.98] min-h-[44px]"
                      >
                        No Receipt
                      </button>
@@ -641,14 +641,14 @@ export default function POSTerminal() {
              </div>
            )}
 
-           {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 animate-in fade-in slide-in-from-top-2" role="status">{orderStatus}</p>}
+           {orderStatus && <p className="mt-4 glass-control bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 animate-in fade-in slide-in-from-top-2" role="status">{orderStatus}</p>}
 
            {/* Operations Agent Notification Card */}
            {checkoutComplete && cart.some(item => {
              const invItem = inventory.find(i => i.id === item.product.id);
              return invItem && (invItem.available_quantity - item.quantity <= 0);
            }) && (
-             <div className="mt-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[210%] border-l-4 border-l-[#FF9500] border border-[rgba(255,255,255,0.4)] rounded-2xl p-4 shadow-xl animate-in slide-in-from-bottom-4">
+             <div className="mt-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[210%] border-l-4 border-l-[#FF9500] border border-[rgba(255,255,255,0.4)] translucent-glass-light rounded-2xl p-4 shadow-xl animate-in slide-in-from-bottom-4">
                <div className="flex items-start space-x-3">
                  <div className="w-10 h-10 rounded-full bg-[#FF9500]/10 flex items-center justify-center flex-shrink-0">
                    <svg className="w-6 h-6 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -662,8 +662,8 @@ export default function POSTerminal() {
                      })?.product.name} sold out. Would you like to draft a restock order?
                    </p>
                    <div className="mt-3 flex space-x-2">
-                     <button className="px-4 py-2 bg-[#FF9500] text-white text-sm font-bold rounded-xl active:scale-[0.98]">Draft Restock</button>
-                     <button className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl active:scale-[0.98]">Dismiss</button>
+                     <button className="px-4 py-2 bg-[#FF9500] text-white text-sm font-bold glass-control active:scale-[0.98]">Draft Restock</button>
+                     <button className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold glass-control active:scale-[0.98]">Dismiss</button>
                    </div>
                  </div>
                </div>

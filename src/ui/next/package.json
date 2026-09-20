@@ -2,7 +2,9 @@
   "name": "next",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=22.22.1 <23" },
+  "engines": {
+    "node": ">=22.22.1 <23"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -57,7 +59,7 @@
     "postcss": "8.5.23",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.0.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "@hono/node-server": "2.0.10",
