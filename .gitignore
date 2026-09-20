@@ -15,8 +15,6 @@
 # AI likes to create temporary files, which we don't want to commit
 /*.py
 /*.rs
-# The root Cargo build script tracks embedded migration inputs.
-!/build.rs
 /*.png
 /*.txt
 /*.sh

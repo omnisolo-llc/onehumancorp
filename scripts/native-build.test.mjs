@@ -11,7 +11,9 @@ test('production PostgreSQL migrations are embedded and tracked by Cargo', async
   assert.ok(database.includes('sqlx::migrate!("./src/server/migrations")'),
     'deployed runtime must not depend on the checkout or process working directory');
   assert.ok(database.includes('POSTGRES_MIGRATOR.run(&mut *migration_conn).await'));
-  const build = await readFile(new URL('../build.rs', import.meta.url), 'utf8');
+  const manifest = await readFile(new URL('../Cargo.toml', import.meta.url), 'utf8');
+  assert.ok(manifest.includes('build = "src/server/build.rs"'), 'Cargo must own the migration build script');
+  const build = await readFile(new URL('../src/server/build.rs', import.meta.url), 'utf8');
   assert.ok(build.includes('cargo:rerun-if-changed=src/server/migrations'));
 });
 

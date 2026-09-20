@@ -10,6 +10,7 @@ path = "deploy/tests/grpc_mtls_probe.rs"
 name = "omnisolo"
 version = "0.4.47"
 edition = "2024"
+build = "src/server/build.rs"
 
 [lib]
 name = "server_lib"
