@@ -1,12 +1,13 @@
 "use client";
+import type { StaffShift, StaffTask, StaffEscalation } from '@/lib/business-records';
 
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '@/app/components/AppShell';
 
 export default function ManagerDashboard() {
-  const [shifts, setShifts] = useState([]);
-  const [escalations, setEscalations] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const [shifts, setShifts] = useState<StaffShift[]>([]);
+  const [escalations, setEscalations] = useState<StaffEscalation[]>([]);
+  const [tasks, setTasks] = useState<StaffTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,7 +59,7 @@ export default function ManagerDashboard() {
             <h2 className="text-xl font-bold mb-4">Active Shifts</h2>
             {loading ? <p>Loading...</p> : (
               <div className="space-y-4">
-                {shifts.map((shift: any) => (
+                {shifts.map((shift) => (
                   <div key={shift.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <p className="font-semibold">{shift.role} - Staff ID: {shift.staff_id}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Status: {shift.status}</p>
@@ -73,7 +74,7 @@ export default function ManagerDashboard() {
             <h2 className="text-xl font-bold mb-4">Attention Needed (Escalations)</h2>
              {loading ? <p>Loading...</p> : (
               <div className="space-y-4">
-                {escalations.map((esc: any) => (
+                {escalations.map((esc) => (
                   <div key={esc.id} className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                     <p className="font-semibold text-red-700 dark:text-red-400">{esc.summary}</p>
                     <p className="text-sm text-red-600 dark:text-red-500">Status: {esc.status}</p>
@@ -90,7 +91,7 @@ export default function ManagerDashboard() {
             <h2 className="text-xl font-bold mb-4">Staff Tasks</h2>
             {loading ? <p>Loading...</p> : (
               <div className="space-y-4">
-                {tasks.map((task: any) => (
+                {tasks.map((task) => (
                   <div key={task.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex justify-between">
                     <div>
                       <p className="font-semibold">{task.title || task.description}</p>

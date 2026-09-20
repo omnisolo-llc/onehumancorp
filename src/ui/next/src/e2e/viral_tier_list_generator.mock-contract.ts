@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Viral Tier List Generator Loop', () => {
-  test('Merchant uses Tier List Generator and sees soft paywall', async ({ page, request, loginAs, adminUser }) => {
+  test('Merchant uses Tier List Generator and sees soft paywall', async ({ page, loginAs, adminUser }) => {
     // Navigate and login
     await loginAs(page, adminUser);
 

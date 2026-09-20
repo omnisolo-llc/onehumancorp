@@ -13,7 +13,7 @@ type ApprovalRequest = {
   description: string;
   status: string;
   action_risk: string;
-  payload?: any;
+  payload?: { context?: import("@/lib/agent-feed-types").ActionContext & { product_name?: string } };
 };
 
 export default function ActionCenterPage() {
@@ -50,7 +50,7 @@ export default function ActionCenterPage() {
       try {
         const actions = await getActions();
         setOfflineActionsCount(actions.length);
-      } catch  {}
+      } catch  { /* Optional local state or response decoding failed; retain the existing fallback. */ }
     };
     updateOfflineCount();
 
@@ -144,7 +144,7 @@ export default function ActionCenterPage() {
     }
   };
 
-  const extractPayload = (description: string, rawPayload: any) => {
+  const extractPayload = (description: string, rawPayload: ApprovalRequest['payload']) => {
     if (rawPayload && typeof rawPayload === 'object' && Object.keys(rawPayload).length > 0) {
       return rawPayload;
     }

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { OnboardingResult } from '@/lib/builder-types';
 
-interface OnboardingState {
+export interface OnboardingState {
   step: number;
   chatStep: number;
   bio: string;
@@ -21,7 +22,7 @@ interface OnboardingState {
   aiAutoRespond: boolean;
   isLoading: boolean;
   error: string;
-  startResult: any;
+  startResult: OnboardingResult | null;
   instantImageUrl: string;
   setStep: (step: number) => void;
   setChatStep: (step: number) => void;
@@ -42,7 +43,7 @@ interface OnboardingState {
   setAiAutoRespond: (autoRespond: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
-  setStartResult: (result: any) => void;
+  setStartResult: (result: OnboardingResult) => void;
   setInstantImageUrl: (url: string) => void;
   updateState: (updates: Partial<OnboardingState>) => void;
 }
@@ -99,12 +100,10 @@ export const useOnboardingStore = create<OnboardingState>()(
       version: 5,
       migrate: (persistedState) => {
         if (persistedState && typeof persistedState === 'object') {
-          const {
-            adminName: _adminName,
-            adminEmail: _adminEmail,
-            adminPassword: _adminPassword,
-            ...state
-          } = persistedState as Record<string, unknown>;
+          const state = { ...persistedState } as Record<string, unknown>;
+          delete state.adminName;
+          delete state.adminEmail;
+          delete state.adminPassword;
           return state as unknown as OnboardingState;
         }
         return persistedState as OnboardingState;

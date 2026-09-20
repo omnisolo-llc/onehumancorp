@@ -110,7 +110,7 @@ export default function TriagePage() {
           ? data.items
           : [];
       setItems(rows);
-    } catch (e: any) {
+    } catch (e) {
       setError(e?.message || "Failed to load triage items");
     } finally {
       setLoading(false);

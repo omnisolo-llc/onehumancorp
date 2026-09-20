@@ -8,7 +8,10 @@ import ProviderConnections from "./ProviderConnections";
 declare global {
   interface Window {
     fbAsyncInit: () => void;
-    FB: any;
+    FB?: {
+      init(options: { appId?: string; cookie?: boolean; xfbml?: boolean; version: string }): void;
+      login(callback: (response: { authResponse?: { accessToken: string } }) => void, options: { scope: string }): void;
+    };
   }
 }
 
@@ -178,9 +181,9 @@ export default function Integrations() {
       };
 
       (function(d, s, id) {
-        let js, fjs = d.getElementsByTagName(s)[0];
+        const fjs = d.getElementsByTagName(s)[0];
         if (d.getElementById(id)) return;
-        js = d.createElement(s) as HTMLScriptElement;
+        const js = d.createElement(s) as HTMLScriptElement;
         js.id = id;
         js.src = "https://connect.facebook.net/en_US/sdk.js";
         if (fjs && fjs.parentNode) {
@@ -216,7 +219,7 @@ export default function Integrations() {
       };
 
       if (typeof window !== "undefined" && window.FB) {
-        window.FB.login((response: any) => {
+        window.FB.login((response) => {
           if (response.authResponse) {
             doBackendConnect(response.authResponse.accessToken);
           } else {

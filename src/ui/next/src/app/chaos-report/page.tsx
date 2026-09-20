@@ -1,8 +1,16 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 
+interface ChaosReport {
+  latencyP99Cloud?: string | number;
+  latencyP99Standalone?: string | number;
+  errorRateLlmOutage?: string | number;
+  latencyHistograms?: number[];
+  errorRate?: number[];
+}
+
 export default function ChaosReportPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ChaosReport | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

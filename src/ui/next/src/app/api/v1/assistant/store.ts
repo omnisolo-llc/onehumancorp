@@ -24,7 +24,7 @@ export type AssistantMessage = {
   role: 'user' | 'assistant' | 'tool';
   content: string;
   createdAt: string;
-  tool_metadata_json?: any;
+  tool_metadata_json?: unknown;
 };
 
 export type AssistantAction = {
@@ -1272,7 +1272,7 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
   };
 
   const createdAt = now();
-  const primaryArtifact = artifactForFormat(normalized.outputFormat);
+  artifactForFormat(normalized.outputFormat);
   const artifacts: AssistantArtifact[] = [];
 
   const initialMessages: AssistantMessage[] = [];
@@ -1334,7 +1334,7 @@ export function getAssistantCapabilities() {
   return assistantCapabilities;
 }
 
-export function mutateTask(taskId: string, action: string, payload: Record<string, any> = {}) {
+export function mutateTask(taskId: string, action: string, payload: { title?: string; workspace?: string; workDirectory?: string; confirm?: string } = {}) {
   const task = tasks.find((item) => item.id === taskId);
   if (!task) throw new Error('task not found');
   if (action === 'approve_changes') {
@@ -1423,7 +1423,7 @@ export function createRemoteTask(payload: {
   const confirmationRequired = /\b(send|delete|overwrite|convert all|post|share)\b/i.test(payload.message);
   const remote: RemoteTask = {
     id: id('remote'),
-    platform: assistantCapabilities.remotePlatforms.includes(payload.platform as any) ? payload.platform || 'Slack' : 'Slack',
+    platform: assistantCapabilities.remotePlatforms.some(platform => platform === payload.platform) ? payload.platform || 'Slack' : 'Slack',
     userId: payload.userId || 'unknown',
     threadId: payload.threadId || task.id,
     confirmationRequired,

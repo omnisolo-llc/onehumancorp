@@ -268,7 +268,7 @@ try {
               })
               .filter((item) => item.visible && (item.left < -1 || item.right > viewportWidth + 1))
               .slice(0, 50)
-              .map(({ visible: _visible, ...item }) => item);
+              .map(({ tag, id, className, left, right, width }) => ({ tag, id, className, left, right, width }));
 
             return {
               title: document.title.slice(0, 300),

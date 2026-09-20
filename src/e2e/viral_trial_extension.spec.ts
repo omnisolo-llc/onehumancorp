@@ -27,7 +27,7 @@ test.describe('Viral Trial Extension Loop', () => {
     }
     if (!content.includes('Interactive Trial Extension')) {
         await page.goto('/ui/trial-extension.html');
-        content = await page.content();
+        await page.content();
     }
 
     // Verify page content

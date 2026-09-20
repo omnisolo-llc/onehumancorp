@@ -99,6 +99,12 @@ jobs:
           python3 scripts/release_pipeline_test.py
           node --test scripts/release-workflow.test.mjs
 
+      - name: Check developer bootstrap and required-job contracts
+        run: |
+          python3 .github/scripts/check_checkout_paths_test.py
+          python3 scripts/init_dev_test.py
+          python3 .github/scripts/check_native_cache_test.py
+
       - name: Check tracked artifacts
         run: |
           .github/scripts/check_repo_hygiene_test.sh
@@ -185,15 +191,10 @@ jobs:
       - uses: ./.github/actions/setup-native
         with:
           role: backend-test
-          node: 'false'
+          node-scope: harness
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .node-version
-          package-manager-cache: false
-      - name: Install pinned native harness test prerequisites
+      - name: Verify pinned native harness test prerequisites
         run: |
-          npm ci --prefix .github/test-tools --no-audit --no-fund
           echo "$GITHUB_WORKSPACE/.github/test-tools/node_modules/.bin" >> "$GITHUB_PATH"
           version="$(.github/test-tools/node_modules/.bin/opencode --version)"
           test "$version" = '1.18.15'
@@ -253,8 +254,8 @@ jobs:
         id: next-cache
         with:
           path: src/ui/next/.next/cache
-          key: next-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.node-version', 'package-lock.json', 'src/ui/next/package-lock.json', 'src/ui/next/next.config.mjs') }}-${{ github.sha }}
-          restore-keys: next-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.node-version', 'package-lock.json', 'src/ui/next/package-lock.json', 'src/ui/next/next.config.mjs') }}-
+          key: next-v2-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS || 'custom-image' }}-${{ hashFiles('.node-version', 'package-lock.json', 'src/ui/next/package-lock.json', 'src/ui/next/next.config.mjs') }}-${{ github.sha }}
+          restore-keys: next-v2-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS || 'custom-image' }}-${{ hashFiles('.node-version', 'package-lock.json', 'src/ui/next/package-lock.json', 'src/ui/next/next.config.mjs') }}-
       # Publish this run's build promptly; independent quality gates remain
       # required by CI Required and cannot be bypassed by a successful build.
       - name: Build fresh Node server and assets

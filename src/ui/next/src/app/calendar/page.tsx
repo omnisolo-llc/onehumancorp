@@ -2,12 +2,35 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface BookingRecord {
+  id: string;
+  start_time: string;
+  customer_name?: string;
+  product_title?: string;
+  status?: string;
+  ai_summary?: string;
+}
+interface Appointment {
+  id: string;
+  customer: string;
+  service: string;
+  time: string;
+  date: string;
+  status: string;
+  ai_scheduled: boolean;
+  link: string;
+  isPast: boolean;
+  rawDate: Date;
+  paymentStatus: string;
+  aiSummary: string;
+}
+
 export default function CalendarPage() {
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [morningBriefing, setMorningBriefing] = useState<any>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [morningBriefing, setMorningBriefing] = useState<{ message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
     fetch('/api/v1/ui/bookings')
@@ -19,7 +42,7 @@ export default function CalendarPage() {
       })
       .then(data => {
         if (Array.isArray(data)) {
-          const formattedAppointments = data.map((b: any) => {
+          const formattedAppointments = data.map((b: BookingRecord): Appointment => {
             const startDate = new Date(b.start_time);
             const isPast = startDate < new Date();
             return {

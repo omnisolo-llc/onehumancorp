@@ -98,7 +98,7 @@ export function DraggableBlock({
 
 export function QRCode({ value }: { value: string }) {
   return (
-    <div className="glassmorphism p-4 shadow-sm inline-block">
+    <div className="glassmorphism p-4 shadow-sm inline-block" role="img" aria-label={`QR layout preview for ${value}; not a scannable code`}>
       <svg className="w-32 h-32 rounded-[8px]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" rx="12" fill="white" className="dark:fill-[#1D1D1F]"/>
         <rect x="10" y="10" width="20" height="20" fill="black"/>
@@ -121,7 +121,7 @@ export function QRCode({ value }: { value: string }) {
   );
 }
 
-export function SmartBlock({ type, props }: { type: string; props: any }) {
+export function SmartBlock({ type, props }: { type: string; props: import('@/lib/builder-types').BlockProperties }) {
   if (type === "Hero") {
     return (
       <div className="relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
@@ -144,7 +144,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
       <div className="p-6 bg-transparent font-inter min-w-[375px]">
         <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">Our Services</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {props.items.map((item: any, i: number) => (
+          {props.items.map((item, i) => (
             <div key={i} className="glassmorphism shadow-sm p-4 flex flex-col">
               {item.image && (
                 <div className="w-full h-32 bg-gray-200 mb-3 rounded-[8px] bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
@@ -238,7 +238,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
       <div className="powered-by-footer py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
           href={`/onboarding?ref=${tenantId}&source=footer_widget`}
-          onClick={(e) => {
+          onClick={() => {
             fetch('/api/v1/growth/referrals/click', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

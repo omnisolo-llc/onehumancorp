@@ -23,7 +23,7 @@ export class MutationService {
    */
   public async executeMutation(
     actionType: string,
-    payload: any,
+    payload: OperationIntent['payload'],
     optimisticUpdate: () => void,
     rollback: () => void
   ): Promise<void> {

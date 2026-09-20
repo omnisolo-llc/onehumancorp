@@ -39,7 +39,7 @@ describe('SocialProofNudgePage', () => {
     fireEvent.change(locationInput, { target: { value: 'Alice from Wonderland' } });
 
     // The component splits the location display differently. It shows "Alice from Wonderland purchased"
-    expect(screen.getByText((content, element) => content.startsWith('Alice from Wonderland'))).toBeDefined();
+    expect(screen.getByText((content) => content.startsWith('Alice from Wonderland'))).toBeDefined();
     expect(screen.getByText(/data-location="Alice from Wonderland"/)).toBeDefined();
   });
 

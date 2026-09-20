@@ -1,4 +1,17 @@
 import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
+import type { OfflineAction, MutationPayload } from '../../app/utils/offlineQueue';
+import { recordOrEmpty } from '../records';
+
+type QueuedMutation = Omit<OfflineAction, 'id' | 'timestamp'> & { id?: string; timestamp?: number | string };
+type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
+  timestamp?: number | string;
+  transaction_id?: string;
+  quantity_deducted?: number;
+  payment_method?: string | null;
+  payment_intent_id?: string | null;
+  mutation_type?: string;
+  payload?: MutationPayload | string;
+};
 
 export class SyncManager {
   private static instance: SyncManager;
@@ -29,7 +42,7 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  public async enqueue(mutation: any) {
+  public async enqueue(mutation: QueuedMutation) {
     if (typeof window === 'undefined') return;
 
     if (!mutation.id) {
@@ -39,7 +52,9 @@ export class SyncManager {
         mutation.timestamp = Date.now();
     }
 
-    await enqueueAction(mutation);
+    const timestamp = typeof mutation.timestamp === 'string' ? Date.parse(mutation.timestamp) : mutation.timestamp;
+    if (!Number.isFinite(timestamp)) throw new Error('Offline mutation timestamp must be valid');
+    await enqueueAction({ ...mutation, id: mutation.id, timestamp });
     this.notifyListeners();
 
     if (navigator.onLine) {
@@ -47,7 +62,7 @@ export class SyncManager {
     }
   }
 
-  public async enqueueMutation(mutation: any) {
+  public async enqueueMutation(mutation: QueuedMutation) {
     return this.enqueue(mutation);
   }
 
@@ -56,7 +71,7 @@ export class SyncManager {
     return queue.length;
   }
 
-  private async getQueue(): Promise<any[]> {
+  private async getQueue(): Promise<OfflineAction[]> {
     if (typeof window === 'undefined') return [];
     return await getActions();
   }
@@ -68,7 +83,7 @@ export class SyncManager {
     }
   }
 
-  public mapGeneralMutation(m: any): any {
+  public mapGeneralMutation(m: QueuedMutation & { id: string }): MappedMutation {
     if (m.type === 'inventory_toggle') {
        return {
           timestamp: new Date(m.timestamp || Date.now()).toISOString(),
@@ -318,7 +333,7 @@ export class SyncManager {
             body: JSON.stringify({ intents: mappedIntents })
           });
           if (!resIntents.ok) {
-            try { this.checkRateLimit(resIntents); } catch {}
+            try { this.checkRateLimit(resIntents); } catch { allOkFinal = false; }
             console.error(`Operation Intents Sync failed with status ${resIntents.status}`);
             if (resIntents.status >= 500) allOkFinal = false;
           }
@@ -397,7 +412,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch {}
+            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
             console.error(`Triage Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -411,16 +426,16 @@ export class SyncManager {
       const advisoryActions = generalMutations.filter(m => m.type === 'advisory_action');
       for (const action of advisoryActions) {
         try {
-          const res = await fetch(`/api/v1/agents/approvals/${action.payload.id}`, {
+          const res = await fetch(`/api/v1/agents/approvals/${recordOrEmpty(action.payload).id}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Idempotency-Key': action.id
             },
-            body: JSON.stringify({ approved: action.payload.approved })
+            body: JSON.stringify({ approved: recordOrEmpty(action.payload).approved })
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch {}
+            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
             console.error(`Advisory Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -444,7 +459,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch {}
+            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
             console.error(`Generate Invoice Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -467,7 +482,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch {}
+            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
             console.error(`Field Ops Status Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -480,16 +495,16 @@ export class SyncManager {
       const fulfillmentActions = generalMutations.filter(m => m.type === 'fulfillment_action');
       for (const action of fulfillmentActions) {
         try {
-          const res = await fetch(`/api/v1/fulfillment/execute/${action.payload.id}`, {
+          const res = await fetch(`/api/v1/fulfillment/execute/${recordOrEmpty(action.payload).id}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Idempotency-Key': action.id
             },
-            body: JSON.stringify({ action: action.payload.action })
+            body: JSON.stringify({ action: recordOrEmpty(action.payload).action })
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch {}
+            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
             console.error(`Fulfillment Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }

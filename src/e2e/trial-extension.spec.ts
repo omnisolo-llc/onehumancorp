@@ -1,13 +1,13 @@
 import { test, expect } from './fixtures';
 import './fixtures';
 
-async function navigateToTrialExtension(page: any) {
+async function navigateToTrialExtension(page: import("@playwright/test").Page) {
   try {
     await page.goto('/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
   } catch  {
     try {
       await page.goto('http://127.0.0.1:3000/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-    } catch {}
+    } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
   }
 }
 
@@ -89,11 +89,11 @@ test.describe.serial('Trial Extension', () => {
 
     await page.evaluate(() => {
       const originalFetch = window.fetch;
-      window.fetch = async function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('/api/v1/growth/trial-extension/claim')) {
-          arguments[0] = 'http://localhost:9999/invalid-endpoint-for-network-error'; // deliberate network error
+      window.fetch = async function(...args: Parameters<typeof fetch>) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('/api/v1/growth/trial-extension/claim')) {
+          args[0] = 'http://localhost:9999/invalid-endpoint-for-network-error'; // deliberate network error
         }
-        return originalFetch.apply(this, arguments);
+        return originalFetch(...args);
       };
     });
 

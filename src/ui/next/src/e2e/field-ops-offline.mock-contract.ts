@@ -71,7 +71,7 @@ test.describe('Offline-Tolerant Field Ops CUJ', () => {
     });
 
     const data = await getRes.json();
-    const syncedJob = data.appointments.find((a: any) => a.id === appointmentId);
+    const syncedJob = data.appointments.find((a: { id: string }) => a.id === appointmentId);
 
     expect(syncedJob).toBeDefined();
     expect(syncedJob.status).toBe('Completed');

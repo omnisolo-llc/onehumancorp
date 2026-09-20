@@ -10,17 +10,12 @@ test.describe('Agentic Shift Coverage & Staff Coordination', () => {
         await page.click('#login-btn');
         await page.waitForURL('/dashboard');
 
-        const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'default');
+        await page.evaluate(() => localStorage.getItem('tenant_id') || 'default');
 
         // Note: For end-to-end testing, the prompt now explicitly includes simulated lookup context.
         // Real implementations would inject this context via RAG or SQL tool bindings during LLM orchestration.
 
         // 2. Simulate staff member (Sam) sending an SMS: "I'm sick and can't make my shift tomorrow."
-        const webhookPayload = {
-            From: '+15551234567',
-            To: '+1234567890', // e2e-tenant number
-            Body: "I'm sick and can't make my shift tomorrow."
-        };
 
         // This is form encoded as per twilio specs
         const params = new URLSearchParams();

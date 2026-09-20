@@ -72,7 +72,7 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     expect(updatedQuoteData.quote.total_amount).toBe(30000);
 
     // Check line items got updated
-    const lineItem = updatedQuoteData.line_items.find((i: any) => i.description === 'Drywall Repair');
+    const lineItem = updatedQuoteData.line_items.find((i: { description: string }) => i.description === 'Drywall Repair');
     expect(lineItem.quantity).toBe(2);
   });
 });

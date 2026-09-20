@@ -11,7 +11,7 @@ vi.mock('../../../lib/sync/SyncManager', () => ({
 }));
 
 vi.mock('../../../lib/powersync/PowerSyncProvider', () => ({
-  PowerSyncProvider: ({ children }: any) => <div data-testid="powersync-provider">{children}</div>,
+  PowerSyncProvider: ({ children }: import('react').PropsWithChildren) => <div data-testid="powersync-provider">{children}</div>,
   isPowerSyncSupportedForLocation: () => true
 }));
 vi.mock('../../../lib/powersync/db', () => ({
@@ -22,7 +22,7 @@ vi.mock('../../../lib/powersync/db', () => ({
 
 vi.mock('@powersync/react', () => ({
   useQuery: vi.fn(() => ({ data: [] })),
-  PowerSyncContext: { Provider: ({ children }: any) => <div>{children}</div> }
+  PowerSyncContext: { Provider: ({ children }: import('react').PropsWithChildren) => <div>{children}</div> }
 }));
 
 describe('FieldOpsJobsPage', () => {
@@ -31,9 +31,7 @@ describe('FieldOpsJobsPage', () => {
     Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
 
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({
+      Promise.resolve(Response.json({
           appointments: [
             {
               id: 'job-1',
@@ -60,9 +58,8 @@ describe('FieldOpsJobsPage', () => {
               notes: ''
             }
           ]
-        }),
-      })
-    ) as any;
+        }, { status: 200 }))
+    );
   });
 
   it('renders the daily roster after loading', async () => {
@@ -87,11 +84,7 @@ describe('FieldOpsJobsPage', () => {
 
   it('shows a recoverable error when the schedule API is unavailable', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    global.fetch = vi.fn(() => Promise.resolve({
-      ok: false,
-      status: 500,
-      json: () => Promise.reject(new Error('not JSON')),
-    })) as any;
+    global.fetch = vi.fn(() => Promise.resolve(new Response('not JSON', { status: 500 })));
 
     render(<FieldOpsJobsPage />);
 

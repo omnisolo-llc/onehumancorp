@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Degradation Validation (Mobile/Thin Client)', () => {
-  test('should fallback gracefully to local data when latency spikes over 2s and queue write ops', async ({ page, request, memberPage, context }) => {
+  test('should fallback gracefully to local data when latency spikes over 2s and queue write ops', async ({ request, memberPage, context }) => {
     // Navigate and set offline mode to simulate the degradation
     await memberPage.setViewportSize({ width: 375, height: 667 });
 
