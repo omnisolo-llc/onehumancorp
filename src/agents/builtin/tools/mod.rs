@@ -58,6 +58,7 @@ pub mod tail;
 pub mod task;
 pub mod toolsearch;
 pub mod workflow;
+pub mod shippo;
 
 #[async_trait::async_trait]
 impl ToolExecutor for omnisolo_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -180,6 +181,7 @@ pub fn all_tools(
         quote::generate_quote_tool(booking_store, tenant),
         aider_pair_programming::aider_pair_programming_tool(),
         superpowers_tool::superpowers_skill_tool(),
+        shippo::shippo_draft_label_tool(),
     ];
 
     if let Some(llm) = agent_llm {
