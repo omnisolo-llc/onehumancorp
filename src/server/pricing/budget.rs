@@ -126,7 +126,11 @@ impl BudgetManager {
         Ok(true)
     }
 
-    pub fn settle(&self, reserved_amount_cents: i64, actual_amount_cents: i64) -> Result<(), String> {
+    pub fn settle(
+        &self,
+        reserved_amount_cents: i64,
+        actual_amount_cents: i64,
+    ) -> Result<(), String> {
         if reserved_amount_cents < 0 || actual_amount_cents < 0 {
             return Err("amount cannot be negative".to_string());
         }
@@ -137,7 +141,8 @@ impl BudgetManager {
         }
 
         if actual_amount_cents > 0 {
-            self.current.fetch_add(actual_amount_cents, Ordering::SeqCst);
+            self.current
+                .fetch_add(actual_amount_cents, Ordering::SeqCst);
 
             if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
                 store.llm_cost_counter.add(
@@ -159,10 +164,12 @@ impl BudgetManager {
         }
 
         // Use fetch_update to prevent allocated from dropping below current
-        let _ = self.allocated.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |alloc| {
-            let current = self.current.load(Ordering::SeqCst);
-            Some(alloc.saturating_sub(reserved_amount_cents).max(current))
-        });
+        let _ = self
+            .allocated
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |alloc| {
+                let current = self.current.load(Ordering::SeqCst);
+                Some(alloc.saturating_sub(reserved_amount_cents).max(current))
+            });
         Ok(())
     }
 
