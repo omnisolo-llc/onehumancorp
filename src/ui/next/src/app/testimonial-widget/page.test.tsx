@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent , act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TestimonialWidgetGenerator from './page';
 
@@ -16,8 +16,8 @@ describe('Testimonial Widget Generator', () => {
         });
     });
 
-    it('renders the page correctly with default settings', () => {
-        render(<TestimonialWidgetGenerator />);
+    it('renders the page correctly with default settings', async () => {
+        await act(async () => { render(<TestimonialWidgetGenerator />); });
 
         expect(screen.getByText('Testimonial Widget 🌟')).toBeDefined();
         expect(screen.getByText('Widget Settings')).toBeDefined();
@@ -30,7 +30,7 @@ describe('Testimonial Widget Generator', () => {
         expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
     });
 
-    it('updates live preview URL when settings change', () => {
+    it('updates live preview URL when settings change', async () => {
         const { container } = render(<TestimonialWidgetGenerator />);
 
         const authorInput = screen.getByDisplayValue('Jane Doe');
@@ -45,7 +45,7 @@ describe('Testimonial Widget Generator', () => {
     });
 
     it('opens modal and copies code', async () => {
-        render(<TestimonialWidgetGenerator />);
+        await act(async () => { render(<TestimonialWidgetGenerator />); });
 
         const getCodeButton = screen.getByText('Get Widget Code');
         fireEvent.click(getCodeButton);

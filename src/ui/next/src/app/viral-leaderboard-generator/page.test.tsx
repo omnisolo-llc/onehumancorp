@@ -1,4 +1,4 @@
-import { render,screen,fireEvent } from '@testing-library/react';
+import { render,screen,fireEvent , act , act } from '@testing-library/react';
 import { describe,it,expect,vi,beforeEach } from 'vitest';
 import ViralLeaderboardGeneratorPage from './page';
 
@@ -34,15 +34,15 @@ describe('ViralLeaderboardGeneratorPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders correctly', () => {
-    render(<ViralLeaderboardGeneratorPage />);
+  it('renders correctly', async () => {
+    await act(async () => { render(<ViralLeaderboardGeneratorPage />); });
     expect(screen.getByText('Viral Leaderboard Generator 🏆')).toBeDefined();
     expect(screen.getByText('Leaderboard Title')).toBeDefined();
     expect(screen.getByText('Live Preview')).toBeDefined();
   });
 
-  it('updates form inputs and iframe src', () => {
-    render(<ViralLeaderboardGeneratorPage />);
+  it('updates form inputs and iframe src', async () => {
+    await act(async () => { render(<ViralLeaderboardGeneratorPage />); });
 
     // There's an input and an option with this value. Use getByRole or getAllByDisplayValue
     const titleInput = screen.getAllByDisplayValue('Top Referrers').find(el => el.tagName.toLowerCase() === 'input') as HTMLElement;
@@ -64,7 +64,7 @@ describe('ViralLeaderboardGeneratorPage', () => {
   });
 
   it('copies embed code to clipboard', async () => {
-    render(<ViralLeaderboardGeneratorPage />);
+    await act(async () => { render(<ViralLeaderboardGeneratorPage />); });
 
     const copyBtn = screen.getByRole('button', { name: 'Copy Embed Code' });
     fireEvent.click(copyBtn);
@@ -73,8 +73,8 @@ describe('ViralLeaderboardGeneratorPage', () => {
     expect(screen.getByRole('button', { name: 'Copied to Clipboard!' })).toBeDefined();
   });
 
-  it('shows paywall when removing branding without pro', () => {
-    render(<ViralLeaderboardGeneratorPage />);
+  it('shows paywall when removing branding without pro', async () => {
+    await act(async () => { render(<ViralLeaderboardGeneratorPage />); });
 
     const checkbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/);
     fireEvent.click(checkbox);

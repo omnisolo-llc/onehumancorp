@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Distributed Inventory Sync via UI', () => {
-  test('Persona: Business Owner experiences optimistic lock via UI and concurrent API', async ({ request, page, memberPage }) => {
+  test('Persona: Business Owner experiences optimistic lock via UI and concurrent API', async ({ page, memberPage }) => {
     // 1. Visit the home page / login and get to the POS
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
@@ -74,7 +74,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     expect(commitReq.ok()).toBeTruthy();
   });
 
-  test('Persona: Online customer tries to checkout while item is held in POS', async ({ request, page, memberPage }) => {
+  test('Persona: Online customer tries to checkout while item is held in POS', async ({ page, memberPage }) => {
      // 1. Visit the home page / login and get to the POS
      await memberPage.goto('/api/v1/staff');
      await memberPage.evaluate(() => {
@@ -128,7 +128,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
      await customerContext.close();
   });
 
-  test('Persona: Operations Agent is alerted when inventory drops below threshold', async ({ request, page }) => {
+  test('Persona: Operations Agent is alerted when inventory drops below threshold', async ({ request }) => {
     // Acquire lock and commit order to drop stock below threshold
     const tenantId = 'tenant-worker-test-low';
     const reserveReq = await request.post('/api/v1/payments/terminal/reserve', {

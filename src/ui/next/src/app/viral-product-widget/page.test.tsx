@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor , act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralProductWidgetPage from './page';
 
@@ -18,8 +18,8 @@ describe('ViralProductWidgetPage', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
-  it('renders the initial configuration form', () => {
-    render(<ViralProductWidgetPage />);
+  it('renders the initial configuration form', async () => {
+    await act(async () => { render(<ViralProductWidgetPage />); });
 
     expect(screen.getByText('Viral Product Widget Builder')).toBeDefined();
     expect(screen.getByDisplayValue('Premium Artisan Coffee')).toBeDefined();
@@ -30,8 +30,8 @@ describe('ViralProductWidgetPage', () => {
     expect(screen.getByTitle('Preview')).toBeDefined();
   });
 
-  it('updates iframe source when input changes', () => {
-    render(<ViralProductWidgetPage />);
+  it('updates iframe source when input changes', async () => {
+    await act(async () => { render(<ViralProductWidgetPage />); });
 
     const nameInput = screen.getByDisplayValue('Premium Artisan Coffee');
     fireEvent.change(nameInput, { target: { value: 'Super Cool Gadget' } });
@@ -40,8 +40,8 @@ describe('ViralProductWidgetPage', () => {
     expect(iframe.src).toContain(encodeURIComponent('Super Cool Gadget'));
   });
 
-  it('shows soft paywall when clicking remove branding without pro', () => {
-    render(<ViralProductWidgetPage />);
+  it('shows soft paywall when clicking remove branding without pro', async () => {
+    await act(async () => { render(<ViralProductWidgetPage />); });
 
     const removeBrandingCheckbox = screen.getByLabelText(/Remove Branding/i);
     fireEvent.click(removeBrandingCheckbox);
@@ -54,7 +54,7 @@ describe('ViralProductWidgetPage', () => {
   it('allows removing branding if the plan API reports pro', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
-    render(<ViralProductWidgetPage />);
+    await act(async () => { render(<ViralProductWidgetPage />); });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
     const removeBrandingCheckbox = screen.getByLabelText(/Remove Branding/i);
@@ -68,8 +68,8 @@ describe('ViralProductWidgetPage', () => {
     expect(iframe.src).toContain('branding=false');
   });
 
-  it('closes paywall when keep branding is clicked', () => {
-    render(<ViralProductWidgetPage />);
+  it('closes paywall when keep branding is clicked', async () => {
+    await act(async () => { render(<ViralProductWidgetPage />); });
 
     const removeBrandingCheckbox = screen.getByLabelText(/Remove Branding/i);
     fireEvent.click(removeBrandingCheckbox);

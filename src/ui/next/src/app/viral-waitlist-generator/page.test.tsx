@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor , act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralWaitlistGeneratorPage from './page';
 
@@ -17,14 +17,14 @@ describe('ViralWaitlistGeneratorPage', () => {
     localStorage.clear();
   });
 
-  it('renders correctly', () => {
-    render(<ViralWaitlistGeneratorPage />);
+  it('renders correctly', async () => {
+    await act(async () => { render(<ViralWaitlistGeneratorPage />); });
     expect(screen.getByText('Viral Waitlist Generator 🚀')).toBeDefined();
     expect(screen.getByText('Product/Service Name')).toBeDefined();
   });
 
   it('generates embed code when button is clicked', async () => {
-    render(<ViralWaitlistGeneratorPage />);
+    await act(async () => { render(<ViralWaitlistGeneratorPage />); });
 
     const generateBtn = screen.getByText('Generate Widget');
     fireEvent.click(generateBtn);
@@ -35,7 +35,7 @@ describe('ViralWaitlistGeneratorPage', () => {
   });
 
   it('shows soft paywall when toggling branding off without pro', async () => {
-    render(<ViralWaitlistGeneratorPage />);
+    await act(async () => { render(<ViralWaitlistGeneratorPage />); });
 
     const toggle = screen.getByRole('checkbox');
     fireEvent.click(toggle);
@@ -45,8 +45,8 @@ describe('ViralWaitlistGeneratorPage', () => {
     });
   });
 
-  it('navigates back to dashboard when Back to Dashboard is clicked', () => {
-    render(<ViralWaitlistGeneratorPage />);
+  it('navigates back to dashboard when Back to Dashboard is clicked', async () => {
+    await act(async () => { render(<ViralWaitlistGeneratorPage />); });
 
     const backBtn = screen.getByText('← Back to Dashboard');
     fireEvent.click(backBtn);

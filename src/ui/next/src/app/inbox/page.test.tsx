@@ -23,7 +23,7 @@ beforeEach(() => {
   queryState.data = [];
 });
 
-test('renders a stable empty state when PowerSync has no inbox messages', () => {
+test('renders a stable empty state when PowerSync has no inbox messages', async () => {
   const { container } = render(<InboxPage />);
 
   expect(screen.getByText('No inbox messages found for this tenant.')).toBeInTheDocument();
@@ -31,7 +31,7 @@ test('renders a stable empty state when PowerSync has no inbox messages', () => 
   expect(container.textContent).not.toContain('\\n');
 });
 
-test('renders message markup as text while preserving safe HTTPS media', () => {
+test('renders message markup as text while preserving safe HTTPS media', async () => {
   queryState.data = [{
     id: 'message-1',
     content: '<script>window.compromised = true</script>\n![Receipt](https://cdn.example.test/receipt.png)',

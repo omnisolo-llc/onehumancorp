@@ -66,7 +66,7 @@ test.describe('Mobile POS Optimistic Inventory Sync', () => {
     // Wait, posView.style.display = 'none'; happens in pos.html. Let's look at local storage.
     const finalCatalogStr = await page.evaluate(() => localStorage.getItem('omnisolo_catalog_default'));
     const finalCatalog = JSON.parse(finalCatalogStr || '[]');
-    const product = finalCatalog.find((p: any) => p.id === 'prod_optimistic_test');
+    const product = finalCatalog.find((p: { id: string, inventory_count: number }) => p.id === 'prod_optimistic_test');
 
     expect(product).toBeDefined();
     expect(product.inventory_count).toBe(4);

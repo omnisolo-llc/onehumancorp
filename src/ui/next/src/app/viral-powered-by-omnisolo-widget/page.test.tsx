@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent , act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralPoweredByOmniSoloWidgetPage from './page';
 
@@ -33,21 +33,21 @@ describe('ViralPoweredByOmniSoloWidgetPage', () => {
     });
   });
 
-  it('renders correctly', () => {
-    render(<ViralPoweredByOmniSoloWidgetPage />);
+  it('renders correctly', async () => {
+    await act(async () => { render(<ViralPoweredByOmniSoloWidgetPage />); });
     expect(screen.getByText('Footer Badge Generator')).toBeDefined();
   });
 
-  it('copies embed code to clipboard', () => {
-    render(<ViralPoweredByOmniSoloWidgetPage />);
+  it('copies embed code to clipboard', async () => {
+    await act(async () => { render(<ViralPoweredByOmniSoloWidgetPage />); });
     const copyButton = screen.getAllByRole('button', { name: /Copy Embed Code/i })[0];
     fireEvent.click(copyButton);
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
     expect(screen.getByText('Copied to Clipboard!')).toBeDefined();
   });
 
-  it('shows paywall when removing branding without pro', () => {
-    render(<ViralPoweredByOmniSoloWidgetPage />);
+  it('shows paywall when removing branding without pro', async () => {
+    await act(async () => { render(<ViralPoweredByOmniSoloWidgetPage />); });
     const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo" Badge/i });
     fireEvent.click(checkbox);
     expect(screen.getAllByText('Upgrade to Remove Branding').length).toBeGreaterThan(0);

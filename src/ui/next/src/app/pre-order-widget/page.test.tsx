@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent , act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PreOrderWidgetPage from './page';
 
@@ -15,8 +15,8 @@ describe('PreOrderWidgetPage', () => {
     vi.clearAllMocks();
   });
 
-  it('shows soft paywall when checkbox is checked without pro and includes viral loop option', () => {
-    render(<PreOrderWidgetPage />);
+  it('shows soft paywall when checkbox is checked without pro and includes viral loop option', async () => {
+    await act(async () => { render(<PreOrderWidgetPage />); });
 
     // Click checkbox
     const checkbox = screen.getByLabelText('Remove "Powered by OmniSolo" branding');
@@ -32,8 +32,8 @@ describe('PreOrderWidgetPage', () => {
     expect((checkbox as HTMLInputElement).checked).toBe(false);
   });
 
-  it('updates embed code and preview based on branding toggle', () => {
-    render(<PreOrderWidgetPage />);
+  it('updates embed code and preview based on branding toggle', async () => {
+    await act(async () => { render(<PreOrderWidgetPage />); });
 
     // Initially, branding should be present
     expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined();
@@ -46,16 +46,16 @@ describe('PreOrderWidgetPage', () => {
     expect(embedContainer.parentElement?.textContent).toContain('Powered by OmniSolo');
   });
 
-  it('renders the configuration form correctly', () => {
-    render(<PreOrderWidgetPage />);
+  it('renders the configuration form correctly', async () => {
+    await act(async () => { render(<PreOrderWidgetPage />); });
     expect(screen.getByText('Pre-Order Waitlist Engine')).toBeInTheDocument();
     expect(screen.getByText('Product Name')).toBeInTheDocument();
     expect(screen.getByText('Special Offer (Optional)')).toBeInTheDocument();
     expect(screen.getByText('Theme')).toBeInTheDocument();
   });
 
-  it('updates the live preview when form is filled', () => {
-    render(<PreOrderWidgetPage />);
+  it('updates the live preview when form is filled', async () => {
+    await act(async () => { render(<PreOrderWidgetPage />); });
     const nameInput = screen.getByPlaceholderText('e.g. The Vegan Chocolate Cake');
     fireEvent.change(nameInput, { target: { value: 'Limited Sneakers' } });
 
@@ -63,8 +63,8 @@ describe('PreOrderWidgetPage', () => {
     expect(screen.getByText('Limited Sneakers')).toBeInTheDocument();
   });
 
-  it('shows the embed modal when button is clicked', () => {
-    render(<PreOrderWidgetPage />);
+  it('shows the embed modal when button is clicked', async () => {
+    await act(async () => { render(<PreOrderWidgetPage />); });
 
     // Check that modal is not initially visible
     expect(screen.queryByText('Embed Your Waitlist')).not.toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor , act , act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralScratchOffGeneratorPage from './page';
 
@@ -17,14 +17,14 @@ describe('ViralScratchOffGeneratorPage', () => {
     localStorage.clear();
   });
 
-  it('renders correctly', () => {
-    render(<ViralScratchOffGeneratorPage />);
+  it('renders correctly', async () => {
+    await act(async () => { render(<ViralScratchOffGeneratorPage />); });
     expect(screen.getByText('scratch off Generator 🎡')).toBeDefined();
     expect(screen.getByText('Configure Scratch Off')).toBeDefined();
   });
 
   it('generates embed code when button is clicked', async () => {
-    render(<ViralScratchOffGeneratorPage />);
+    await act(async () => { render(<ViralScratchOffGeneratorPage />); });
 
     const generateBtn = screen.getByText('Generate Widget');
     fireEvent.click(generateBtn);
@@ -35,7 +35,7 @@ describe('ViralScratchOffGeneratorPage', () => {
   });
 
   it('shows soft paywall when toggling branding off without pro', async () => {
-    render(<ViralScratchOffGeneratorPage />);
+    await act(async () => { render(<ViralScratchOffGeneratorPage />); });
 
     const toggle = screen.getByRole('checkbox');
     fireEvent.click(toggle);
@@ -45,8 +45,8 @@ describe('ViralScratchOffGeneratorPage', () => {
     });
   });
 
-  it('navigates back to dashboard when Back to Dashboard is clicked', () => {
-    render(<ViralScratchOffGeneratorPage />);
+  it('navigates back to dashboard when Back to Dashboard is clicked', async () => {
+    await act(async () => { render(<ViralScratchOffGeneratorPage />); });
 
     const backBtn = screen.getByText('Back to Dashboard');
     fireEvent.click(backBtn);
@@ -54,8 +54,8 @@ describe('ViralScratchOffGeneratorPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('allows changing the prizes text input', () => {
-    render(<ViralScratchOffGeneratorPage />);
+  it('allows changing the prizes text input', async () => {
+    await act(async () => { render(<ViralScratchOffGeneratorPage />); });
 
     const input = screen.getByPlaceholderText('10%, 20%, Free Shipping') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '10%, 20%, 30%' } });

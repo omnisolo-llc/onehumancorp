@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent , act } from '@testing-library/react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import ProductsPage from './page';
 
@@ -28,14 +28,14 @@ describe('ProductsPage', () => {
     }));
   });
 
-  it('renders correctly', () => {
-    render(<ProductsPage />);
+  it('renders correctly', async () => {
+    await act(async () => { render(<ProductsPage />); });
     expect(screen.getByText('Imported Products')).toBeDefined();
 
   });
 
   it('does not invent product status and generates checkout QR data from the real product id', async () => {
-    render(<ProductsPage />);
+    await act(async () => { render(<ProductsPage />); });
 
     expect(await screen.findByText('Seeded Tea')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
