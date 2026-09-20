@@ -23,14 +23,7 @@ type AgentFeedItem = {
 
 
 
-type OmniSoloLedgerEntry = {
-  id: string;
-  tenant_id: string;
-  event_type: string;
-  department: string;
-  payload: any;
-  created_at: string;
-};
+
 
 
 

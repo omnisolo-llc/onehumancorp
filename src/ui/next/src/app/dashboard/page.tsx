@@ -106,7 +106,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
-  const [approvals, setApprovals] = useState<any[]>([]);
+  const [, setApprovals] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,8 +120,8 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
-  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
-  const [actionMessage, setActionMessage] = useState("");
+  useState<"idle" | "running" | "complete">("idle");
+  const [actionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);

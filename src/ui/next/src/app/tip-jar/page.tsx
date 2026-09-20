@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 export default function TipJarWidgetGenerator() {
   const router = useRouter();
-  const [tenant, setTenant] = useState('my-business');
+  const [tenant] = useState('my-business');
   const [displayName, setDisplayName] = useState('Creator Name');
   const [message, setMessage] = useState('Buy me a coffee! Your support helps me create more content.');
   const [amounts, setAmounts] = useState('5, 10, 20');

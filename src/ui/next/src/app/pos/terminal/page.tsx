@@ -29,25 +29,25 @@ export default function POSTerminal() {
   const [clockedIn, setClockedIn] = useState(false);
   const [activeStaff, setActiveStaff] = useState<TerminalStaff | null>(null);
   const [inventory, setInventory] = useState<any[]>([]);
-  const [isSyncingInitial, setIsSyncingInitial] = useState(true);
+  useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutComplete, setCheckoutComplete] = useState(false);
   const [customerEmail, setCustomerEmail] = useState('');
-  const [receiptSent, setReceiptSent] = useState(false);
+  const [receiptSent] = useState(false);
   const [reserving, setReserving] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
   const [isOffline, setIsOffline] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [offlineConversion, setOfflineConversion] = useState(false);
+  const [offlineConversion] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [chargeAmount, setChargeAmount] = useState('0');
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
   const [posMode, setPosMode] = useState<'catalog' | 'quick_charge'>('catalog');
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [, setSessionId] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
 
 

@@ -4,7 +4,7 @@ import { useState,useEffect } from 'react';
 import Link from 'next/link';
 
 export function AIUsageLimitWidget() {
-  const [tenantId, setTenantId] = useState("default-team");
+  const [, setTenantId] = useState("default-team");
   const [referralLink, setReferralLink] = useState("");
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);

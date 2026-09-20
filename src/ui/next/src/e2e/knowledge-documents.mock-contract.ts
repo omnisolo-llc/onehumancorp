@@ -1,3 +1,5 @@
+import * as nativePathModule from 'node:path';
+import * as nativeFsModule from 'node:fs';
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Knowledge & Documents Sync UX', () => {
@@ -9,8 +11,8 @@ test.describe('Knowledge & Documents Sync UX', () => {
     await expect(uploadBtn).toBeVisible();
 
     // Create a temporary file to upload
-    const tempFile = require('path').join(__dirname, 'test-doc.txt');
-    require('fs').writeFileSync(tempFile, 'Test Document Content');
+    const tempFile = nativePathModule.join(__dirname, 'test-doc.txt');
+    nativeFsModule.writeFileSync(tempFile, 'Test Document Content');
 
     // Set the input file
     const fileChooserPromise = page.waitForEvent('filechooser');
@@ -29,7 +31,7 @@ test.describe('Knowledge & Documents Sync UX', () => {
 
     // Cleanup test file
     try {
-        require('fs').unlinkSync(tempFile);
+        nativeFsModule.unlinkSync(tempFile);
     } catch {}
   });
 });

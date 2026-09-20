@@ -44,6 +44,41 @@ class CheckoutPathTests(unittest.TestCase):
             self.assertNotIn('synthetic-private-content', result.stderr + result.stdout)
 
 class WorkflowStartupTests(unittest.TestCase):
+    def test_desktop_builds_expose_packager_failures_without_skipping_bundles(self):
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        job = yaml.safe_load((root / '.github/workflows/release.yml').read_text())['jobs']['build-desktop-installers']
+        step = next(s for s in job['steps'] if s.get('uses', '').startswith('tauri-apps/tauri-action@'))
+        self.assertIn('--verbose', step['with']['args'])
+        self.assertIn('--bundles', step['with']['args'])
+        self.assertIn('--locked', step['with']['args'])
+        self.assertNotIn('--no-bundle', step['with']['args'])
+
+    def test_independent_node_checks_run_after_setup_without_masking_failures(self):
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        job = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']['native-node']
+        commands = ('make test-contracts', 'npm run lint:node', 'npm run typecheck:web', 'make test-node')
+        for command in commands:
+            step = next((s for s in job['steps'] if command in s.get('run', '')), None)
+            self.assertIsNotNone(step, command)
+            self.assertEqual(step.get('if'), "${{ !cancelled() && steps.native-setup.outcome == 'success' }}")
+            self.assertFalse(step.get('continue-on-error', False))
+        self.assertFalse(job.get('continue-on-error', False))
+
+    def test_windows_cargo_uses_powershell_without_git_bash_linker_shadowing(self):
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        workflow = yaml.safe_load((root / '.github/workflows/release.yml').read_text())
+        steps = workflow['jobs']['build-release-artifacts']['steps']
+        windows = next(s for s in steps if s.get('name') == 'Build native Cargo release on Windows')
+        unix = next(s for s in steps if s.get('name') == 'Build native Cargo release')
+        self.assertEqual(windows.get('shell'), 'pwsh')
+        self.assertEqual(windows.get('if'), "runner.os == 'Windows'")
+        self.assertEqual(unix.get('if'), "runner.os != 'Windows'")
+        self.assertEqual(windows['run'], unix['run'])
+        self.assertIn('--locked', windows['run'])
+
     def test_android_setup_does_not_request_retired_sdk_tools(self):
         import yaml
         root = SCRIPT.parent.parent.parent

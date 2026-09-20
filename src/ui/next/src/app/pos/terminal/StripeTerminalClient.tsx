@@ -22,7 +22,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const [connectedReader, setConnectedReader] = useState<any>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [reserving, setReserving] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId] = useState<string | null>(null);
   const [pendingReconciliation, setPendingReconciliation] = useState<any[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 

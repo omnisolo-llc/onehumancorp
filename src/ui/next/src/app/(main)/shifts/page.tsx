@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 export default function ManagerDashboard() {
-  const [shifts, setShifts] = useState([
+  const [shifts] = useState([
     { id: 1, startTime: "08:00 AM", endTime: "04:00 PM", status: "Active" }
   ]);
-  const [tasks, setTasks] = useState([
+  const [tasks] = useState([
     { id: 1, description: "Restock Inventory", status: "Pending" },
     { id: 2, description: "Clean Floor", status: "Completed" }
   ]);

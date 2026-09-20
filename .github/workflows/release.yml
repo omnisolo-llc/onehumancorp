@@ -132,6 +132,12 @@ jobs:
     - name: Install the exact Rust target
       run: rustup target add "${{ matrix.target }}"
     - name: Build native Cargo release
+      if: runner.os != 'Windows'
+      run: cargo build --locked --release --target "${{ matrix.target }}" -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
+    - name: Build native Cargo release on Windows
+      # Git Bash shadows Microsoft's linker with its filesystem link.exe.
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: cargo build --locked --release --target "${{ matrix.target }}" -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
     - name: Package and bind native outputs to the release identity
       run: |
@@ -342,7 +348,7 @@ jobs:
       with:
         projectPath: src/ui/tauri
         tauriScript: node ../../../scripts/run-tauri.mjs
-        args: --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} -- --locked
+        args: --ci --verbose --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} -- --locked
         # Only the final complete-matrix publisher may create a release.
         uploadWorkflowArtifacts: false
         uploadUpdaterJson: false

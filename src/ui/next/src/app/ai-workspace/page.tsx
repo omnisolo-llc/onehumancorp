@@ -128,10 +128,10 @@ export default function AIWorkspacePage() {
     { id: 'r3', text: 'Submit weekly cost dashboard metrics', time: 'Friday at 6:00 PM', active: false },
   ]);
   const [newReminderText, setNewReminderText] = useState('');
-  const [newReminderTime, setNewReminderTime] = useState('Tomorrow at 9:00 AM');
+  const [newReminderTime] = useState('Tomorrow at 9:00 AM');
 
   // 6. Goal Tracking State
-  const [goals, setGoals] = useState<Goal[]>([
+  const [goals] = useState<Goal[]>([
     { id: 'g1', title: 'Deploy AI Framework MVP', target: 10, current: 7, unit: 'Milestones', category: 'Engineering' },
     { id: 'g2', title: 'Automate Business Workflows', target: 5, current: 2, unit: 'Automations', category: 'Operations' },
     { id: 'g3', title: 'Establish Note Knowledge Base', target: 20, current: 12, unit: 'Documents', category: 'Productivity' },

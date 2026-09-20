@@ -56,7 +56,7 @@ function createMarkup(msgText: string) {
              .replace(/^(.+)$/gm, '<p>$1</p>')
              .replace(/<p><p>/g, '<p>')
              .replace(/<\/p><\/p>/g, '</p>')
-             .replace(/\- (.*?)<\/p>/g, '<li>$1</li>')
+             .replace(/- (.*?)<\/p>/g, '<li>$1</li>')
              .replace(/(<li>[\s\S]*?<\/li>)/, '<ul>$1</ul>')
     )
   };

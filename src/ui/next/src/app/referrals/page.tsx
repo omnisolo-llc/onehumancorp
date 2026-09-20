@@ -10,9 +10,9 @@ export default function ReferralsPage() {
   const [referralLink, setReferralLink] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [dataAction, setDataAction] = useState('');
-  const [cloudInviteEmail, setCloudInviteEmail] = useState('');
-  const [cloudInviteStatus, setCloudInviteStatus] = useState<{message: string, isError: boolean} | null>(null);
-  const [isGeneratingCloudInvite, setIsGeneratingCloudInvite] = useState(false);
+  useState('');
+  useState<{message: string, isError: boolean} | null>(null);
+  useState(false);
 
   useEffect(() => {
     const fallbackReferralLink = () => {

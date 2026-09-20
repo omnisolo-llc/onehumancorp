@@ -1,3 +1,5 @@
+import * as nativePathModule from 'node:path';
+import * as nativeFsModule from 'node:fs';
 import { test, expect } from '@playwright/test';
 
 test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
@@ -11,14 +13,14 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
   test('Persona: Maya completes zero-click onboarding and approves welcome action on mobile', async ({ page }) => {
     // 1. Start from home
     const workspaceRoot = process.env.TEST_WORKSPACE
-        ? require('path').join(process.env.TEST_SRCDIR || require('path').resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
-        : require('path').resolve(__dirname, '..', '..');
+        ? nativePathModule.join(process.env.TEST_SRCDIR || nativePathModule.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
+        : nativePathModule.resolve(__dirname, '..', '..');
     await page.route('http://mock/index.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/index.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(workspaceRoot, 'src/ui/tauri/src/ui/index.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     await page.route('http://mock/dashboard.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(workspaceRoot, 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     await page.route('**/api/v1/ui/unified_inbox_feed*', async route => {

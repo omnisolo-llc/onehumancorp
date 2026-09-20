@@ -33,7 +33,7 @@ function money(cents: number | undefined) {
 
 export default function PipelinePage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {

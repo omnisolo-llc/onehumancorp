@@ -46,7 +46,7 @@ describe('SocialProofNudgePage', () => {
   it('escapes hostile values in generated HTML attributes', () => {
     render(<SocialProofNudgePage />);
     fireEvent.change(screen.getByPlaceholderText('e.g. Signature Coffee Blend'), {
-      target: { value: '\"><script>alert(1)</script>&' },
+      target: { value: '"><script>alert(1)</script>&' },
     });
 
     const code = document.querySelector('#embed-code')?.textContent ?? '';

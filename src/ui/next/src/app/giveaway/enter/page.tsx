@@ -12,7 +12,7 @@ function GiveawayEnterContent() {
 
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEntered, setIsEntered] = useState(false);
+  const [isEntered] = useState(false);
   const [copied, setCopied] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 

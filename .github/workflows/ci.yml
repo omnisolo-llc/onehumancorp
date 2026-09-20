@@ -201,17 +201,28 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-native
+        id: native-setup
         with:
           rust: 'false'
           node-scope: all
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
       - name: Install Python workflow-contract dependency
         run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      # Independent checks retain their own failing conclusions. A lint failure
+      # must not hide the entire unit suite, and no failed step is made optional.
       - name: Test preserved deployment and security contracts
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: make test-contracts
-      - name: Lint and typecheck JavaScript and TypeScript
-        run: make lint-node
+      - name: Lint JavaScript and TypeScript
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
+        run: npm run lint:node
+      - name: Typecheck web and CLI
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
+        run: |
+          npm run typecheck:web
+          npm --prefix src/cli run typecheck
       - name: Run all Node, frontend, CLI and desktop UI tests
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: make test-node
 
   native-web:

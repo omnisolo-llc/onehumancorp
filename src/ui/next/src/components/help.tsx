@@ -152,7 +152,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
 
   const activeStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
 
-  const [highlightStyle, setHighlightStyle] = useState({});
+  const [, setHighlightStyle] = useState({});
 
   useEffect(() => {
     if (activeStep) {
