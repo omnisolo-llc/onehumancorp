@@ -95,6 +95,27 @@ If you have business partners or staff who need to access your store settings, y
 
 ---
 
+## Trust, Rules, and Fixing Problems
+
+Running your business means trusting the tools you use. We want you to feel safe and in control at all times. Here is how your setup works.
+
+### Your Setup and Accounts
+When you first start, you link your own accounts to the platform (like your bank or email). You always own these accounts. We just help you connect them so your business can run smoothly.
+
+### Your Standing Rules
+You are the boss. You can give your AI helpers "standing rules" (standing authority) to do routine work for you, like sending a standard receipt when someone pays. If something is outside these rules—like a refund or a large purchase—the AI must stop and ask you for permission first.
+
+### Proof of Work
+Every time your AI helper finishes a task, it saves a record (evidence) in your Inbox. You can always check to see exactly what was sent or paid. If a task fails or is not clear, the system will tell you instead of pretending it worked.
+
+### What it Costs
+You only pay for what you use. Your dashboard clearly shows what tasks cost. We keep our fees separate from the money your customers pay you directly. You can set hard budget limits so you are never surprised by a bill.
+
+### Fixing Exceptions and Recovering
+Sometimes things do not go as planned—like a declined card or a missing email address. This is called an "exception." The system will pause that task and alert you. You can review the issue, fix it, and tell the system to try again. If you change your mind about a task, you can always cancel it before it finishes.
+
+---
+
 ## Health Status
 The platform provides simple ways to check if everything is running smoothly. Contact your platform administrator if you encounter any issues.
 
