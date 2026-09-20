@@ -1,0 +1,78 @@
+diff --git a/.github/actions/setup-ci-python/action.yml b/.github/actions/setup-ci-python/action.yml
+new file mode 100644
+index 0000000..e2e47bc
+--- /dev/null
++++ b/.github/actions/setup-ci-python/action.yml
+@@ -0,0 +1,16 @@
++name: CI Python contracts
++description: Use one pinned interpreter and an isolated, pinned YAML dependency
++runs:
++  using: composite
++  steps:
++    - uses: actions/setup-python@v6
++      with:
++        python-version: '3.12'
++    - name: Install isolated workflow-contract dependencies
++      shell: bash
++      run: |
++        set -euo pipefail
++        python -m venv "$RUNNER_TEMP/ohc-ci-python"
++        "$RUNNER_TEMP/ohc-ci-python/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
++        "$RUNNER_TEMP/ohc-ci-python/bin/python" -c 'import sys; import yaml; print(sys.executable, yaml.__version__)'
++        echo "$RUNNER_TEMP/ohc-ci-python/bin" >> "$GITHUB_PATH"
+diff --git a/.github/scripts/check_parallel_ci_test.py b/.github/scripts/check_parallel_ci_test.py
+index c5dcf2e..a4388e2 100644
+--- a/.github/scripts/check_parallel_ci_test.py
++++ b/.github/scripts/check_parallel_ci_test.py
+@@ -12,6 +12,26 @@ class ParallelWorkflowTests(unittest.TestCase):
+     def setUp(self):
+         self.jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
+ 
++    def test_python_contract_jobs_use_the_selected_interpreter(self):
++        action = yaml.safe_load((ROOT / '.github/actions/setup-ci-python/action.yml').read_text())
++        steps = action['runs']['steps']
++        self.assertEqual(steps[0]['uses'], 'actions/setup-python@v6')
++        self.assertEqual(steps[0]['with']['python-version'], '3.12')
++        install = steps[1]['run']
++        self.assertIn('python -m venv "$RUNNER_TEMP/ohc-ci-python"', install)
++        self.assertIn('"$RUNNER_TEMP/ohc-ci-python/bin/python" -m pip install', install)
++        self.assertIn('PyYAML==6.0.3', install)
++        self.assertIn('echo "$RUNNER_TEMP/ohc-ci-python/bin" >> "$GITHUB_PATH"', install)
++        self.assertIn('import yaml', install)
++        self.assertNotIn('sudo', install)
++        for name in ('check-changes', 'native-node'):
++            with self.subTest(job=name):
++                steps = self.jobs[name]['steps']
++                setup = next(i for i, step in enumerate(steps) if step.get('uses') == './.github/actions/setup-ci-python')
++                checks = next(i for i, step in enumerate(steps) if 'release_contract_test.py' in step.get('run', '') or 'make test-contracts' in step.get('run', ''))
++                self.assertLess(setup, checks)
++                self.assertNotIn('python3-yaml', str(steps))
++
+     def test_rust_lint_does_not_serialize_tests(self):
+         lint = self.jobs['native-lint']
+         self.assertEqual(lint['needs'], ['check-changes'])
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index ef588ef..896d605 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -89,9 +89,7 @@ jobs:
+             echo "Non-markdown files changed: $non_md_files"
+           fi
+ 
+-      - name: Install PyYAML
+-        run: |
+-          sudo apt-get update && sudo apt-get install -y python3-yaml
++      - uses: ./.github/actions/setup-ci-python
+ 
+       - name: Check native release identity and workflow contracts
+         run: |
+@@ -241,8 +239,7 @@ jobs:
+           rust: 'false'
+           node-scope: all
+           cache: ${{ github.event.inputs.cold_cache != 'true' }}
+-      - name: Install Python workflow-contract dependency
+-        run: sudo apt-get update && sudo apt-get install -y python3-yaml
++      - uses: ./.github/actions/setup-ci-python
+       # Independent checks retain their own failing conclusions. A lint failure
+       # must not hide the entire unit suite, and no failed step is made optional.
+       - name: Test preserved deployment and security contracts
