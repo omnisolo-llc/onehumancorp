@@ -49,7 +49,7 @@ class WorkflowStartupTests(unittest.TestCase):
         root = SCRIPT.parent.parent.parent
         jobs = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']
         self.assertNotIn('native-init', jobs)
-        for name in ('native-build', 'native-test', 'native-node', 'native-web', 'native-desktop', 'native-e2e'):
+        for name in ('native-build', 'native-test', 'native-lint', 'native-node-lint', 'native-e2e-discovery', 'native-e2e-report', 'native-node', 'native-web', 'native-desktop', 'native-e2e'):
             self.assertTrue(any(step.get('uses') == './.github/actions/setup-native'
                                 for step in jobs[name]['steps']), name)
         self.assertNotIn('make init', str(jobs))
@@ -60,7 +60,7 @@ class WorkflowStartupTests(unittest.TestCase):
         root = SCRIPT.parent.parent.parent
         jobs = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']
         self.assertEqual(set(jobs['ci-required']['needs']), {'check-changes', 'dependency-audit',
-            'native-build', 'native-test', 'native-e2e', 'native-web', 'native-node',
+            'native-build', 'native-test', 'native-lint', 'native-node-lint', 'native-e2e-discovery', 'native-e2e-report', 'native-e2e', 'native-web', 'native-node',
             'native-images', 'native-desktop', 'kind-e2e', 'docker-e2e', 'postgres-security'})
 
     def test_bootstrap_contracts_execute_before_expensive_builds(self):
@@ -107,9 +107,11 @@ class WorkflowStartupTests(unittest.TestCase):
         import yaml
         root = SCRIPT.parent.parent.parent
         job = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']['native-node']
-        commands = ('make test-contracts', 'npm run lint:node', 'npm run typecheck:web', 'make test-node')
-        for command in commands:
-            step = next((s for s in job['steps'] if command in s.get('run', '')), None)
+        lint_job = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']['native-node-lint']
+        commands = ((job, 'make test-contracts'), (job, 'make test-node'),
+                    (lint_job, 'npm run lint:node'), (lint_job, 'npm run typecheck:web'))
+        for owner, command in commands:
+            step = next((s for s in owner['steps'] if command in s.get('run', '')), None)
             self.assertIsNotNone(step, command)
             self.assertEqual(step.get('if'), "${{ !cancelled() && steps.native-setup.outcome == 'success' }}")
             self.assertFalse(step.get('continue-on-error', False))
