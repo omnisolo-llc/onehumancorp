@@ -185,8 +185,8 @@ export default function OrderDetailsPage() {
                   <span><input type="radio" name="shipping-rate" value={rate.id} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /> <span>{rate.carrier} {rate.service}</span>{typeof rate.days === "number" ? ` · ${rate.days} days` : ""}</span>
                   <span>${rate.amount.toFixed(2)}</span>
                 </label>
-              ))}<button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">Buy Label</button></div>}
-              {label && <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4"><p>{label.carrier} tracking: <strong>{label.trackingNumber}</strong></p><a href={label.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 underline">Open Shipping Label</a></div>}
+              ))}<button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">Buy Label & Print</button></div>}
+              {label && <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4"><h3 className="font-bold text-green-900">Label Purchased Successfully</h3><p>{label.carrier} tracking: <strong>{label.trackingNumber}</strong></p><p className="text-sm font-medium">Shipped</p><a href={label.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 underline">Open / Print Label</a></div>}
             </section>
           </>
         )}
