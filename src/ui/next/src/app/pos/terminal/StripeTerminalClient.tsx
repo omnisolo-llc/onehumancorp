@@ -293,7 +293,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
   return (
     <WalkthroughTarget id="pos-keypad">
-    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[200%] border border-[rgba(255,255,255,0.4)]">
+    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden translucent-glass-light">
 
       {!selectedMethod ? (
         <div className="flex flex-col space-y-3 slide-in-from-bottom animate-in duration-300">
@@ -332,7 +332,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {pendingReconciliation.length > 0 && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[20px] saturate-[150%] p-4">
-               <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[200%] border border-[rgba(255,255,255,0.4)] rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+               <div className="translucent-glass-light rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
                  <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
                  <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
                  <ul className="space-y-2 mb-6">
