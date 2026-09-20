@@ -15,7 +15,7 @@ struct ShippoRatesArgs {
 }
 
 struct ShippoRatesExecutor {
-    tenant: crate::tenant::TenantContext,
+    _tenant: crate::tenant::TenantContext,
 }
 
 #[async_trait::async_trait]
@@ -32,8 +32,6 @@ impl PydanticToolExecutor<ShippoRatesArgs> for ShippoRatesExecutor {
             }).to_string());
         }
 
-        let tenant_id = self.tenant.as_str();
-
         let token = std::env::var("SHIPPO_API_TOKEN").unwrap_or_default();
         if token.is_empty() {
             return Ok(json!({
@@ -42,6 +40,7 @@ impl PydanticToolExecutor<ShippoRatesArgs> for ShippoRatesExecutor {
             }).to_string());
         }
 
+        // Return a mock output that directs the OperationsAgent.
         Ok(json!({
             "status": "Rates fetched",
             "message": "To proceed, instruct the user to review the shipping rates in the OmniSolo workspace."
@@ -72,7 +71,7 @@ pub fn shippo_rates_tool(tenant: crate::tenant::TenantContext) -> Tool {
             },
             "required": ["order_id", "weight", "dimensions"]
         }),
-        execute: Arc::new(PydanticAdapter::new(ShippoRatesExecutor { tenant })),
+        execute: Arc::new(PydanticAdapter::new(ShippoRatesExecutor { _tenant: tenant })),
     }
 }
 
@@ -80,12 +79,12 @@ pub fn shippo_rates_tool(tenant: crate::tenant::TenantContext) -> Tool {
 
 #[derive(Deserialize)]
 struct ShippoLabelArgs {
-    order_id: String,
-    rate_id: String,
+    _order_id: String,
+    _rate_id: String,
 }
 
 struct ShippoLabelExecutor {
-    tenant: crate::tenant::TenantContext,
+    _tenant: crate::tenant::TenantContext,
 }
 
 #[async_trait::async_trait]
@@ -117,6 +116,6 @@ pub fn shippo_label_tool(tenant: crate::tenant::TenantContext) -> Tool {
             },
             "required": ["order_id", "rate_id"]
         }),
-        execute: Arc::new(PydanticAdapter::new(ShippoLabelExecutor { tenant })),
+        execute: Arc::new(PydanticAdapter::new(ShippoLabelExecutor { _tenant: tenant })),
     }
 }
