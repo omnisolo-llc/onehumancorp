@@ -133,7 +133,7 @@ export default function OnboardingWizard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ wizardState }),
+        body: JSON.stringify({ step: wizardState.step, wizardState }),
       });
     } catch (err) {
       console.error("Failed to sync onboarding state", err);
@@ -192,7 +192,7 @@ export default function OnboardingWizard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ step, ...wizardState }),
+        body: JSON.stringify({ step, wizardState }),
       });
 
       setSaveMessage("Draft Saved!");
@@ -306,7 +306,7 @@ export default function OnboardingWizard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ step, ...wizardState }),
+        body: JSON.stringify({ step, wizardState }),
       }).catch((err) => console.error("Failed to sync onboarding state", err));
     }, 1000); // debounce 1s
 
