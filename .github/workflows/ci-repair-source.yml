@@ -9,24 +9,40 @@ permissions:
   contents: read
 
 jobs:
-  source:
+  tools:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Archive tracked source only
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install immutable validation dependencies
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/ci-repair-source"
-          git rev-parse HEAD > "$RUNNER_TEMP/ci-repair-source/source-sha.txt"
-          git archive --format=tar.gz -o "$RUNNER_TEMP/ci-repair-source/source.tar.gz" HEAD
-          sha256sum "$RUNNER_TEMP/ci-repair-source/source.tar.gz" > "$RUNNER_TEMP/ci-repair-source/source.sha256"
+          npm ci --include=dev --no-audit --no-fund
+          npm --prefix src/ui/next ci --include=dev --no-audit --no-fund
+          npm --prefix src/cli ci --include=dev --no-audit --no-fund
+          git diff --exit-code
+      - name: Package pinned tools without credentials or application outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ci-repair-tools"
+          cp "$(command -v node)" "$RUNNER_TEMP/ci-repair-tools/node"
+          tar --exclude='*.ttf' --exclude='*.otf' --exclude='*.woff' --exclude='*.woff2' -czf "$RUNNER_TEMP/ci-repair-tools/node-dependencies.tar.gz" node_modules src/ui/next/node_modules src/cli/node_modules
+          git rev-parse HEAD > "$RUNNER_TEMP/ci-repair-tools/source-sha.txt"
+          sha256sum package-lock.json src/ui/next/package-lock.json src/cli/package-lock.json .node-version > "$RUNNER_TEMP/ci-repair-tools/input-locks.sha256"
+          cd "$RUNNER_TEMP/ci-repair-tools"
+          sha256sum node node-dependencies.tar.gz > artifacts.sha256
       - uses: actions/upload-artifact@v6
         with:
-          name: ci-repair-source-${{ github.sha }}
-          path: ${{ runner.temp }}/ci-repair-source
+          name: ci-repair-tools-${{ github.sha }}
+          path: ${{ runner.temp }}/ci-repair-tools
+          compression-level: 0
           retention-days: 1
           if-no-files-found: error
