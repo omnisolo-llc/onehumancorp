@@ -42,7 +42,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Manages booking calendars and sends reminders\n\
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
-                - Handles refund requests and returns").leak(),
+                - Handles refund requests and returns\n                - Manages shipping labels and compares multi-carrier logistics rates").leak(),
             allowed_tools: vec![
                 "read",
                 "write",
@@ -58,6 +58,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "booking_list_appointments",
                 "booking_create_appointment",
                 "booking_negotiate_time",
+                "shippo_rates",
+                "shippo_label",
                 "booking_reschedule",
             ],
             confidence_threshold: 0.85,
@@ -120,6 +122,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "booking_list_appointments",
                 "booking_create_appointment",
                 "booking_negotiate_time",
+                "shippo_rates",
+                "shippo_label",
             ],
             confidence_threshold: 0.90,
         },

@@ -52,6 +52,7 @@ pub mod restic;
 pub mod screenshot;
 pub mod skill;
 pub mod sleep;
+pub mod shippo;
 pub mod subagent;
 pub mod superpowers_tool;
 pub mod tail;
@@ -155,6 +156,8 @@ pub fn all_tools(
         task::task_update_tool(task_store.clone()),
         agent_tool::agent_stop_tool(),
         agent_tool::agent_status_tool(),
+        shippo::shippo_rates_tool(tenant.clone()),
+        shippo::shippo_label_tool(tenant.clone()),
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
