@@ -624,7 +624,7 @@ impl Department for OperationsAgent {
                     .unwrap_or("unknown");
                 if status == "Ready" {
                     format!(
-                        "Notify customer that order {} is ready for pickup via SMS/WhatsApp",
+                        "Draft shipping label for order {} (if delivery) or notify customer it is ready for pickup",
                         order_id
                     )
                 } else {

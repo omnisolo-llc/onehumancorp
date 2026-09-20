@@ -162,7 +162,7 @@ export default function OrderDetailsPage() {
         {status === "missing" && <p className="text-sm text-gray-600">This order was not found.</p>}
         {status === "ready" && order && (
           <>
-            <section className="app-card rounded-2xl border border-gray-200 bg-white/70 p-6 shadow-sm">
+            <section className="app-card translucent-glass-light rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-xl font-bold font-outfit text-gray-900">Order Summary</h2>
               <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                 <Field label="Order ID" value={order.id} />
@@ -172,20 +172,20 @@ export default function OrderDetailsPage() {
                 <Field label="Recorded total" value={typeof order.total_amount === "number" ? order.total_amount.toLocaleString(undefined, { style: "currency", currency: "USD" }) : "Unavailable"} />
               </dl>
             </section>
-            <section className="app-card rounded-2xl border border-gray-200 bg-white/70 p-6 shadow-sm">
+            <section className="app-card translucent-glass-light rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-lg font-bold font-outfit text-gray-900">Shipping</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="text-sm font-medium">Weight (oz)<input aria-label="Package weight in ounces" type="number" value={weight} onChange={(event) => setWeight(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
-                <label className="text-sm font-medium">Dimensions<input aria-label="Package dimensions" value={dimensions} onChange={(event) => setDimensions(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+                <label className="text-sm font-medium">Weight (oz)<input aria-label="Package weight in ounces" type="number" value={weight} onChange={(event) => setWeight(event.target.value)} className="glass-control mt-1 w-full rounded-lg border p-2" /></label>
+                <label className="text-sm font-medium">Dimensions<input aria-label="Package dimensions" value={dimensions} onChange={(event) => setDimensions(event.target.value)} className="glass-control mt-1 w-full rounded-lg border p-2" /></label>
               </div>
-              <button onClick={fetchRates} disabled={shippingPending} className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-white">Get Shipping Rates</button>
+              <button onClick={fetchRates} disabled={shippingPending} className="glass-control mt-4 rounded-lg bg-gray-900 px-4 py-2 text-white">Get Shipping Rates</button>
               {shippingError && <p className="mt-3 text-sm text-red-600" role="alert">{shippingError}</p>}
               {rates.length > 0 && <div className="mt-4 space-y-2">{rates.map((rate) => (
-                <label key={rate.id} className="flex items-center justify-between rounded-lg border p-3">
+                <label key={rate.id} className="glass-control flex items-center justify-between rounded-lg border p-3">
                   <span><input type="radio" name="shipping-rate" value={rate.id} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /> <span>{rate.carrier} {rate.service}</span>{typeof rate.days === "number" ? ` · ${rate.days} days` : ""}</span>
                   <span>${rate.amount.toFixed(2)}</span>
                 </label>
-              ))}<button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">Buy Label</button></div>}
+              ))}<button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="glass-control rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">Buy Label</button></div>}
               {label && <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4"><p>{label.carrier} tracking: <strong>{label.trackingNumber}</strong></p><a href={label.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 underline">Open Shipping Label</a></div>}
             </section>
           </>
