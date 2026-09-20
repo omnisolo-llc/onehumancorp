@@ -271,6 +271,12 @@ mod tests {
             Ok(("10".to_string(), "8".to_string(), "6".to_string()))
         );
         assert!(parcel_dimensions("10x8").is_err());
+        assert!(parcel_dimensions("10x8x-6").is_err());
+        assert!(parcel_dimensions("10x8x0").is_err());
+        assert!(parcel_dimensions("").is_err());
+        assert!(parcel_dimensions("abc").is_err());
+        assert!(parcel_dimensions("10x8xabc").is_err());
+        assert!(parcel_dimensions("10X8X6").is_ok());
     }
 
     #[test]
