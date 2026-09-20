@@ -1,0 +1,115 @@
+name: Apply reviewed CI repair
+on:
+  push:
+    branches: [fix/ci-head-parallel-evaluation]
+    paths: [.github/workflows/ci-repair-apply.yml]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.repository == 'omnisolo-llc/onehumancorp' && github.ref == 'refs/heads/fix/ci-head-parallel-evaluation'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Apply checksum-verified source repair and remove transport files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, gzip, hashlib, os, pathlib, subprocess
+          baseline = '6d848e02906f86a0e83cb3d9238f0ca7c5a96c31'
+          temporary = ['.github/workflows/ci-repair-apply.yml'] + [f'scripts/ci-repair-part-{i}.b64' for i in range(1, 4)]
+          changes = subprocess.check_output(['git', 'diff', '--name-only', baseline, 'HEAD'], text=True).splitlines()
+          if set(changes) != set(temporary):
+              raise SystemExit('Unexpected source changes since reviewed baseline; refusing to apply')
+          encoded = ''.join(pathlib.Path(name).read_text().strip() for name in temporary[1:])
+          patch = gzip.decompress(base64.b64decode(encoded, validate=True))
+          if hashlib.sha256(patch).hexdigest() != 'af7e9cd3030ce6d1a7a25a4960a92134d3d83a6cce8389ce2a4e0950905c0fc6':
+              raise SystemExit('Repair patch checksum mismatch')
+          subprocess.run(['git', 'apply', '--check', '--index', '-'], input=patch, check=True)
+          subprocess.run(['git', 'apply', '--index', '-'], input=patch, check=True)
+          subprocess.run(['git', 'rm', '--', *temporary], check=True)
+          changed = subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True)
+          pathlib.Path(os.environ['RUNNER_TEMP'], 'repair-allowed-paths').write_text(changed)
+          PY
+      - uses: ./.github/actions/setup-native
+        with:
+          role: repair-format
+          node-scope: all
+      - name: Install workflow test prerequisite
+        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      - name: Format only the repair and run executable regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          python3 - <<'PY'
+          import os, pathlib, subprocess
+          allowed = set(pathlib.Path(os.environ['RUNNER_TEMP'], 'repair-allowed-paths').read_text().splitlines())
+          changed = set(subprocess.check_output(['git', 'diff', '--name-only', 'HEAD'], text=True).splitlines())
+          if not changed.issubset(allowed):
+              raise SystemExit('Formatter modified unrelated source: ' + str(changed - allowed))
+          PY
+          cargo fmt --all -- --check
+          python3 .github/scripts/check_parallel_ci_test.py
+          python3 .github/scripts/check_checkout_paths_test.py
+          python3 .github/scripts/check_native_cache_test.py
+          npm run test:scripts
+          make lint-node
+          make test-contracts
+      - name: Upload validated Git objects without changing branch refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git add -A
+          python3 - <<'PYCODE'
+          import base64, json, os, pathlib, subprocess
+          repo = 'repos/omnisolo-llc/onehumancorp'
+          def api(path, payload):
+              result = subprocess.check_output(['gh', 'api', '--method', 'POST', repo + path, '--input', '-'], input=json.dumps(payload).encode())
+              return json.loads(result)
+          changed = subprocess.check_output(['git', 'diff', '--cached', '--name-only', '-z']).decode().strip('\0').split('\0')
+          entries = []
+          for name in changed:
+              index = subprocess.check_output(['git', 'ls-files', '--stage', '--', name], text=True).strip()
+              if not index:
+                  entries.append({'path': name, 'mode': '100644', 'type': 'blob', 'sha': None})
+                  continue
+              mode, expected, _ = index.split(None, 2)
+              data = subprocess.check_output(['git', 'show', ':' + name])
+              blob = api('/git/blobs', {'encoding': 'base64', 'content': base64.b64encode(data).decode()})
+              if blob['sha'] != expected:
+                  raise SystemExit('Blob content identity mismatch: ' + name)
+              entries.append({'path': name, 'mode': mode, 'type': 'blob', 'sha': blob['sha']})
+          base_tree = subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip()
+          tree = api('/git/trees', {'base_tree': base_tree, 'tree': entries})
+          expected_tree = subprocess.check_output(['git', 'write-tree'], text=True).strip()
+          if tree['sha'] != expected_tree:
+              raise SystemExit('Tree content identity mismatch')
+          out = pathlib.Path(os.environ['RUNNER_TEMP'], 'repair-evidence')
+          out.mkdir(exist_ok=True)
+          evidence = {'tree_sha': tree['sha'], 'parent_sha': os.environ['GITHUB_SHA'], 'changed_paths': changed, 'full_ci_passed': False}
+          (out / 'candidate-tree.json').write_text(json.dumps(evidence, indent=2))
+          print(json.dumps(evidence, indent=2))
+          PYCODE
+      - name: Preserve repair evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/repair-evidence"
+          git status --short > "$RUNNER_TEMP/repair-evidence/status.txt"
+          git rev-parse HEAD > "$RUNNER_TEMP/repair-evidence/head.txt"
+          git diff --binary 6d848e02906f86a0e83cb3d9238f0ca7c5a96c31 > "$RUNNER_TEMP/repair-evidence/result.patch"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: repair-preflight-evidence
+          path: ${{ runner.temp }}/repair-evidence
+          retention-days: 3
+          if-no-files-found: error
