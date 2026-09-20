@@ -386,3 +386,10 @@ mod tests {
         assert!(verified_rate_id("wrong", "tenant-a", "order-1", &signed).is_none());
     }
 }
+
+pub fn router(db: Arc<DB>) -> Router {
+    Router::new()
+        .route("/rates", post(fetch_rates))
+        .route("/label", post(purchase_label))
+        .with_state(db)
+}

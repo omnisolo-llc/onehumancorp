@@ -190,6 +190,19 @@ impl Department for OperationsAgent {
         }
 
         if event.event_type == "tenant.quote.requires_scheduling" {
+            let shipping_quote = event.payload.get("requires_shipping_quote").and_then(|v| v.as_bool()).unwrap_or(false);
+            if shipping_quote {
+                let _ = self
+                    .orchestrator
+                    .execute_action(
+                        DepartmentType::Operations,
+                        format!("Owner requests a shipping quote during interactive proposal generation. Request shipping rates across enabled carriers via Shippo API."),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        event.payload.clone(),
+                    )
+                    .await;
+            }
             let preferred_time = event
                 .payload
                 .get("preferred_time")
@@ -625,6 +638,11 @@ impl Department for OperationsAgent {
                 if status == "Ready" {
                     format!(
                         "Notify customer that order {} is ready for pickup via SMS/WhatsApp",
+                        order_id
+                    )
+                } else if status == "ready for fulfillment" || status == "ready_for_fulfillment" || status == "Ready for fulfillment" {
+                    format!(
+                        "Order {} is ready for fulfillment. Request shipping rates across enabled carriers via Shippo API. Purchase and generate a PDF shipping label. Register a tracking webhook to monitor package transit status. Draft a Shippo shipping label for review.",
                         order_id
                     )
                 } else {
