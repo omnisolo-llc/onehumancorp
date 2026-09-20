@@ -44,6 +44,63 @@ class CheckoutPathTests(unittest.TestCase):
             self.assertNotIn('synthetic-private-content', result.stderr + result.stdout)
 
 class WorkflowStartupTests(unittest.TestCase):
+    def test_developer_bootstrap_runs_on_a_fresh_runner_without_cached_setup(self):
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        jobs = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']
+        self.assertIn('native-init', jobs, 'make init needs a real hosted readiness check')
+        job = jobs['native-init']
+        self.assertEqual(job['runs-on'], 'ubuntu-24.04')
+        self.assertEqual(job['needs'], ['check-changes'])
+        self.assertEqual(job['permissions'], {'contents': 'read'})
+        self.assertLessEqual(job['timeout-minutes'], 20)
+        self.assertFalse(job.get('continue-on-error', False))
+        steps = job['steps']
+        commands = [step.get('run', '') for step in steps]
+        required = ['make init INIT_ARGS=--plan', 'make init INIT_ARGS=--yes',
+                    'make doctor', 'make init INIT_ARGS=--no-system']
+        positions = []
+        for command in required:
+            index = next((i for i, value in enumerate(commands) if value == command), None)
+            self.assertIsNotNone(index, command)
+            positions.append(index)
+            self.assertFalse(steps[index].get('continue-on-error', False))
+        self.assertEqual(positions, sorted(positions))
+        self.assertEqual(commands.count('make doctor'), 2)
+        actions = [step.get('uses', '') for step in steps]
+        self.assertFalse(any('cache' in action or 'setup-native' in action for action in actions))
+        self.assertNotIn('secrets.', str(job))
+        self.assertIn('git diff --exit-code', '\n'.join(commands))
+        self.assertIn('python3 scripts/init_dev_test.py', '\n'.join(commands))
+
+    def test_required_gate_cannot_ignore_bootstrap_failure_or_cancellation(self):
+        import os
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        jobs = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']
+        gate = jobs['ci-required']
+        self.assertIn('native-init', gate['needs'])
+        step = next(step for step in gate['steps'] if step.get('name') == 'Check required CI results')
+        self.assertEqual(step['env']['NATIVE_INIT_RESULT'], '${{ needs.native-init.result }}')
+        environment = {**os.environ, **{key: 'success' for key in step['env']},
+                       'EVENT_NAME': 'push', 'MARKDOWN_ONLY': 'false'}
+        for result in ('success', 'failure', 'cancelled', 'skipped', ''):
+            with self.subTest(result=result):
+                run = subprocess.run(['bash', '-c', step['run']], text=True, capture_output=True,
+                    env={**environment, 'NATIVE_INIT_RESULT': result}, timeout=10)
+                self.assertEqual(run.returncode == 0, result == 'success', run.stdout + run.stderr)
+        skipped = subprocess.run(['bash', '-c', step['run']], text=True, capture_output=True,
+            env={**environment, 'MARKDOWN_ONLY': 'true', 'NATIVE_INIT_RESULT': 'skipped'}, timeout=10)
+        self.assertEqual(skipped.returncode, 0, skipped.stdout + skipped.stderr)
+
+    def test_bootstrap_contracts_execute_before_expensive_builds(self):
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        jobs = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']
+        steps = jobs['check-changes']['steps']
+        self.assertTrue(any('python3 .github/scripts/check_checkout_paths_test.py' in step.get('run', '')
+                            and 'python3 scripts/init_dev_test.py' in step.get('run', '') for step in steps))
+
     def test_native_harness_tests_install_their_locked_external_executable(self):
         import json
         import yaml

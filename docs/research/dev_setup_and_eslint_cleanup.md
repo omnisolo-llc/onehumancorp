@@ -55,6 +55,12 @@ The final complete validation invocation returned exit code 0. A fingerprint of 
 
 Wrapper suites invoke some Python tests, so these counts must not be added into a purported unique-test total. Validation logs and the source snapshot are in ignored `target/init-lint-review/verified/`; they are local execution evidence, not files to publish as release assets.
 
+## GitHub Actions follow-up — 2026-09-20
+
+The CI workflow now tests the real developer initializer on a fresh Ubuntu 24.04 hosted runner, including plan, initialization, doctor, and a repeat run without further system-package changes. The new job is included in `CI Required` and therefore in the release workflow's reusable CI qualification. It is independent of the optimized, cached build/test lanes; no source test, lint rule, platform or release requirement was removed.
+
+Three added regression tests check the bootstrap job's actual commands/permissions, inexpensive preflight coverage, and the real Bash required-results script. The latter rejects failed/cancelled/empty/incorrectly skipped setup results while retaining the established documentation-only exception. The tests were run against the old workflow and failed before the job was implemented. Hosted installation and complete CI success still require results from the pushed revision; a local workflow-contract pass does not establish them.
+
 ## Evidence limitations
 
 The bootstrap's elevated package-install path was not executed against the user's host or clean Windows/macOS machines. `make doctor` correctly reported the existing host's missing `ayatana-appindicator3-0.1` prerequisite before initialization; no sudo installation or permission changes were made by this review. Successful bootstrap unit tests or a passing plan are not a claim that this uninitialized host is ready.

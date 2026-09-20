@@ -80,6 +80,14 @@ The package manifest binds source, dependency lock, build ID, Node version, OS a
 
 The Rust API runs separately, either locally or on a configured HTTPS host. Desktop owns only its packaged Node process; it must not claim to provision or supervise a missing Rust backend. Mobile builds point at explicit HTTPS `OMNISOLO_MOBILE_WEB_URL` and do not bundle a desktop Node runtime. Platform SDKs, signing keys, store enrollment and actual device/install tests remain separate release prerequisites.
 
+## Developer setup in GitHub Actions
+
+The required `Native developer bootstrap` job exercises the same `make init` entry point on an ephemeral Ubuntu 24.04 runner. It runs the no-write plan, initializes with `--yes`, verifies `make doctor`, repeats initialization with `--no-system`, verifies readiness again, and rejects any changes to tracked source/lockfiles or unexpected untracked files. It does not restore developer dependency/tool directories or call the role-specific CI setup action first. The runner's existing local Docker/Compose/Buildx service is a prerequisite, not a daemon installed by the initializer.
+
+Bootstrap regression and workflow-gate tests also run in the inexpensive `check-changes` job. A failed, cancelled or unexpectedly skipped initialization blocks `CI Required` on non-documentation changes. The release workflow reuses this CI workflow, so release qualification includes the setup check too. The existing Rust, ESLint/TypeScript, frontend/CLI/desktop unit, browser, deployment, security and performance gates remain required. Fast role-specific jobs retain their own caches; they do not run the full developer installation repeatedly.
+
+This adds hosted verification of the Linux setup path; it does not imply native Windows/macOS setup, signed release packages or all application tests have already passed. Read the actual run conclusion for the exact source revision.
+
 ## CI cache design
 
 `.github/actions/setup-native/action.yml` configures **dependency-only** caches by OS, architecture, runner image and job role. Rust-cache supplies the installed-compiler, Cargo manifest/lock, configuration and compiler-environment hashes, plus compatible dependency fallback behavior. A second manual manifest hash is not added to the job key. The `ohc-native-dependencies-v1` namespace retires previous caches containing workspace binaries. Source-bound workspace crates, installed toolchain executables, incremental graphs and failed builds are not saved; application/test binaries travel only as same-run artifacts. Cargo always revalidates fingerprints, and restored dependencies are not test results. Backend, desktop, release and cross-target jobs do not share incompatible target caches.

@@ -99,6 +99,11 @@ jobs:
           python3 scripts/release_pipeline_test.py
           node --test scripts/release-workflow.test.mjs
 
+      - name: Check developer bootstrap and required-job contracts
+        run: |
+          python3 .github/scripts/check_checkout_paths_test.py
+          python3 scripts/init_dev_test.py
+
       - name: Check tracked artifacts
         run: |
           .github/scripts/check_repo_hygiene_test.sh
@@ -130,6 +135,37 @@ jobs:
       - name: Audit UI npm lock
         working-directory: src/ui/next
         run: npm audit --omit=dev
+
+  native-init:
+    name: Native developer bootstrap
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      # Exercise the actual developer entry point, not a pre-populated dependency
+      # cache or setup-native shortcut. The hosted runner supplies local Docker;
+      # init installs/checks pinned tools, desktop libraries and the test browser.
+      - name: Preview the developer setup
+        run: make init INIT_ARGS=--plan
+      - name: Initialize a fresh developer environment
+        run: make init INIT_ARGS=--yes
+      - name: Verify developer environment readiness
+        run: make doctor
+      - name: Repeat initialization without privileged package changes
+        run: make init INIT_ARGS=--no-system
+      - name: Verify repeated initialization
+        run: make doctor
+      - name: Verify bootstrap contracts and immutable tracked inputs
+        run: |
+          python3 scripts/init_dev_test.py
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
 
   native-build:
     name: Native backend binaries
@@ -688,6 +724,7 @@ jobs:
     name: CI Required
     needs:
       - check-changes
+      - native-init
       - dependency-audit
       - native-build
       - native-test
@@ -717,6 +754,7 @@ jobs:
           NATIVE_E2E_RESULT: ${{ needs.native-e2e.result }}
           NATIVE_WEB_RESULT: ${{ needs.native-web.result }}
           NATIVE_NODE_RESULT: ${{ needs.native-node.result }}
+          NATIVE_INIT_RESULT: ${{ needs.native-init.result }}
           NATIVE_IMAGES_RESULT: ${{ needs.native-images.result }}
           NATIVE_DESKTOP_RESULT: ${{ needs.native-desktop.result }}
           KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}
@@ -732,6 +770,7 @@ jobs:
           echo "native-e2e: ${NATIVE_E2E_RESULT}"
           echo "native-web: ${NATIVE_WEB_RESULT}"
           echo "native-node: ${NATIVE_NODE_RESULT}"
+          echo "native-init: ${NATIVE_INIT_RESULT}"
           echo "native-images: ${NATIVE_IMAGES_RESULT}"
           echo "native-desktop: ${NATIVE_DESKTOP_RESULT}"
           echo "kind-e2e: ${KIND_E2E_RESULT}"
@@ -770,6 +809,7 @@ jobs:
             allow_success_or_skipped "native-e2e" "$NATIVE_E2E_RESULT"
             allow_success_or_skipped "native-web" "$NATIVE_WEB_RESULT"
             allow_success_or_skipped "native-node" "$NATIVE_NODE_RESULT"
+            allow_success_or_skipped "native-init" "$NATIVE_INIT_RESULT"
             allow_success_or_skipped "native-images" "$NATIVE_IMAGES_RESULT"
             allow_success_or_skipped "native-desktop" "$NATIVE_DESKTOP_RESULT"
             allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
@@ -781,6 +821,7 @@ jobs:
             require_success "native-e2e" "$NATIVE_E2E_RESULT"
             require_success "native-web" "$NATIVE_WEB_RESULT"
             require_success "native-node" "$NATIVE_NODE_RESULT"
+            require_success "native-init" "$NATIVE_INIT_RESULT"
             require_success "native-images" "$NATIVE_IMAGES_RESULT"
             require_success "native-desktop" "$NATIVE_DESKTOP_RESULT"
             require_success "kind-e2e" "$KIND_E2E_RESULT"
