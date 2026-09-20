@@ -145,6 +145,8 @@ pub fn all_tools(
         booking::booking_create_appointment_tool(booking_store.clone(), tenant.clone()),
         booking::booking_negotiate_time_tool(booking_store.clone(), tenant.clone()),
         booking::booking_reschedule_tool(booking_store.clone(), tenant.clone()),
+        shippo::shippo_rates_tool(tenant.clone()),
+        shippo::shippo_purchase_tool(tenant.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         toolsearch::toolsearch_tool(),
         task::task_create_tool(task_store.clone()),
@@ -278,3 +280,4 @@ pub mod agent_protocol;
 mod agent_protocol_test;
 #[cfg(test)]
 mod glob_test;
+pub mod shippo;
