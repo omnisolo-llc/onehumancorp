@@ -234,15 +234,15 @@ export default function FeedPage() {
                   </h3>
                   {item.proposed_action?.action_type === "Draft Booking" && (
                     <div className="flex items-center gap-2 mt-1">
-                      {item.context_payload?.deposit_status === 'paid' && (
+                      {(item.context_payload as any)?.deposit_status === 'paid' && (
                         <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200">
                           Deposit Paid
                         </span>
                       )}
-                      {item.context_payload?.travel_buffer_minutes > 0 && (
+                      {(item.context_payload as any)?.travel_buffer_minutes > 0 && (
                         <span className="bg-blue-50 text-blue-700 text-[10px] font-medium px-2 py-0.5 rounded border border-blue-100 flex items-center gap-1">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                          +{item.context_payload.travel_buffer_minutes}m buffer
+                          +{(item.context_payload as any).travel_buffer_minutes}m buffer
                         </span>
                       )}
                     </div>

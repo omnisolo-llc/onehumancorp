@@ -35,7 +35,7 @@ export default function CalendarPage() {
               rawDate: startDate,
               paymentStatus: b.status === 'confirmed' ? 'Paid' : 'Deposit Required',
               aiSummary: b.ai_summary || `AI Details for ${b.product_title || 'Service Booking'}`,
-              travelBufferMinutes: b.travel_buffer_minutes || 0
+              travelBufferMinutes: (b as any).travel_buffer_minutes || 0
             };
           });
           setAppointments(formattedAppointments);
@@ -152,10 +152,10 @@ export default function CalendarPage() {
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                      <span className="text-xs font-bold text-blue-800 uppercase tracking-wider block mb-1">AI Summary</span>
                      <p className="text-sm text-blue-900">{selectedAppointment.aiSummary}</p>
-                     {selectedAppointment.travelBufferMinutes > 0 && (
+                     {(selectedAppointment as any).travelBufferMinutes > 0 && (
                      <p className="text-sm text-blue-900 mt-2 font-medium flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Travel Buffer: {selectedAppointment.travelBufferMinutes} mins automatically blocked
+                        Travel Buffer: {(selectedAppointment as any).travelBufferMinutes} mins automatically blocked
                      </p>
                      )}
                   </div>
