@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { fireEvent,render,screen } from '@testing-library/react';
 import { beforeEach,describe,expect,it,vi } from 'vitest';
 import OrderDetailsPage from './page';
@@ -40,9 +41,9 @@ describe('OrderDetailsPage', () => {
     expect(JSON.parse(String(rateCall?.[1]?.body))).toEqual({ orderId: 'order-1', weight: '16', dimensions: '10x8x6' });
 
     fireEvent.click(screen.getByRole('radio', { name: /UPS Ground/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Buy Label' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Buy Label & Print' }));
     expect(await screen.findByText('1Z999')).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Open Shipping Label' }).getAttribute('href')).toBe('https://shippo-delivery-east.s3.amazonaws.com/order-1.pdf');
+    expect(screen.getByRole('link', { name: 'Print Label' }).getAttribute('href')).toBe('https://shippo-delivery-east.s3.amazonaws.com/order-1.pdf');
   });
 
   it('accepts the Rust string amount contract', async () => {
@@ -73,10 +74,10 @@ describe('OrderDetailsPage', () => {
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
     fireEvent.click(screen.getByRole('button', { name: 'Get Shipping Rates' }));
     fireEvent.click(await screen.findByRole('radio', { name: /UPS Ground/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Buy Label' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Buy Label & Print' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The shipping label could not be confirmed.');
-    expect(screen.queryByRole('link', { name: 'Open Shipping Label' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Print Label' })).toBeNull();
   });
 
   it('rejects malformed order fields and malformed rates', async () => {
