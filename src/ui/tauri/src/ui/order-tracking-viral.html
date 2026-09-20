@@ -134,6 +134,28 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
       }
     }
+
+    .translucent-glass-light {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .glass-control {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      width: 100%;
+      padding: 12px 16px;
+      box-sizing: border-box;
+      font-size: 15px;
+    }
+
   </style>
 </head>
 <body>
@@ -145,6 +167,29 @@
     <input type="text" id="tracking-number" placeholder="Enter Order # or Tracking #" />
 
     <button id="generate-btn">Generate Tracking Link</button>
+
+
+    <!-- Shippo Multi-Carrier Integration UI -->
+    <button id="ship-order-btn" style="margin-top: 20px; background-color: #34C759; box-shadow: 0 4px 14px 0 rgba(52, 199, 89, 0.39);">Ship Order 🚚</button>
+
+    <div id="shippo-modal" style="display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center;">
+      <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);" id="shippo-modal-overlay"></div>
+      <div class="container translucent-glass-light" style="position: relative; z-index: 101; max-width: 400px; padding: 25px; border-radius: 16px;">
+        <h2 style="font-size: 20px; margin-top: 0;">Ship Order</h2>
+        <p style="font-size: 14px; margin-bottom: 20px;">Enter package dimensions to retrieve discounted rates.</p>
+
+        <input type="text" id="shippo-weight" class="glass-control" placeholder="Weight (oz)" style="min-height: 44px; margin-bottom: 12px;"/>
+        <input type="text" id="shippo-dimensions" class="glass-control" placeholder="Dimensions (L x W x H)" style="min-height: 44px; margin-bottom: 20px;"/>
+
+        <button id="shippo-get-rates-btn" style="background-color: #0066FF; min-height: 44px;">Compare Rates</button>
+
+        <div id="shippo-rates-area" style="display: none; margin-top: 20px; text-align: left;">
+          <p style="font-weight: 600; margin-bottom: 10px;">Select a carrier:</p>
+          <div id="shippo-rates-list" style="margin-bottom: 20px;"></div>
+          <button id="shippo-print-label-btn" style="background-color: #34C759; min-height: 44px;">Print Label</button>
+        </div>
+      </div>
+    </div>
 
     <div id="result-area">
       <div class="card-preview">
@@ -193,6 +238,102 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Generate Tracking Link';
+      }
+    });
+
+
+    // Shippo Logic
+    document.getElementById('ship-order-btn').addEventListener('click', () => {
+      document.getElementById('shippo-modal').style.display = 'flex';
+    });
+    document.getElementById('shippo-modal-overlay').addEventListener('click', () => {
+      document.getElementById('shippo-modal').style.display = 'none';
+    });
+
+    let selectedRateId = null;
+
+    document.getElementById('shippo-get-rates-btn').addEventListener('click', async () => {
+      const weight = document.getElementById('shippo-weight').value;
+      const dims = document.getElementById('shippo-dimensions').value;
+      const btn = document.getElementById('shippo-get-rates-btn');
+
+      btn.textContent = 'Fetching Rates...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/v1/shippo/rates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weight: parseFloat(weight), dimensions: dims })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const list = document.getElementById('shippo-rates-list');
+          list.innerHTML = '';
+
+          if (data.rates && data.rates.length > 0) {
+            data.rates.slice(0, 3).forEach((rate, i) => {
+              const div = document.createElement('div');
+              div.style.padding = '10px';
+              div.style.marginBottom = '8px';
+              div.style.border = '1px solid rgba(0,0,0,0.1)';
+              div.style.borderRadius = '8px';
+              div.style.cursor = 'pointer';
+              div.style.display = 'flex';
+              div.style.justifyContent = 'space-between';
+              div.innerHTML = `<span><b>${rate.carrier}</b> ${rate.service}</span><span>$${rate.amount}</span>`;
+
+              div.addEventListener('click', () => {
+                Array.from(list.children).forEach(c => c.style.borderColor = 'rgba(0,0,0,0.1)');
+                div.style.borderColor = '#0066FF';
+                div.style.borderWidth = '2px';
+                selectedRateId = rate.id;
+              });
+
+              if (i === 0) {
+                div.click();
+              }
+
+              list.appendChild(div);
+            });
+            document.getElementById('shippo-rates-area').style.display = 'block';
+          }
+        }
+      } catch(e) {
+        console.error(e);
+      } finally {
+        btn.textContent = 'Compare Rates';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('shippo-print-label-btn').addEventListener('click', async () => {
+      if (!selectedRateId) return;
+      const btn = document.getElementById('shippo-print-label-btn');
+      btn.textContent = 'Purchasing...';
+      btn.disabled = true;
+      const orderId = document.getElementById('tracking-number').value || 'unknown';
+
+      try {
+        const res = await fetch('/api/v1/shippo/label', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rate_id: selectedRateId, order_id: orderId })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.label_url) {
+            window.open(data.label_url, '_blank');
+          }
+          document.getElementById('shippo-modal').style.display = 'none';
+        }
+      } catch(e) {
+        console.error(e);
+      } finally {
+        btn.textContent = 'Print Label';
+        btn.disabled = false;
       }
     });
 
