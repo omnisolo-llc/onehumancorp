@@ -36,8 +36,8 @@ pub struct AppSettings {
     pub product_telemetry_enabled: bool,
 }
 
-impl AppSettings {
-    pub fn default() -> Self {
+impl Default for AppSettings {
+    fn default() -> Self {
         AppSettings {
             listen_addr: "0.0.0.0:18789".to_string(),
             db_path: Some("ohc.db".to_string()),
@@ -217,7 +217,7 @@ mod tests {
         let settings = AppSettings::default();
         assert_eq!(settings.listen_addr, "0.0.0.0:18789");
         assert_eq!(settings.db_path, Some("ohc.db".to_string()));
-        assert_eq!(settings.voice_receptionist_enabled, false);
+        assert!(!settings.voice_receptionist_enabled);
         assert_eq!(settings.voice_receptionist_number, None);
         assert_eq!(
             settings.voice_receptionist_persona,

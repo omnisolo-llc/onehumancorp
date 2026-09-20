@@ -26,7 +26,7 @@ describe('GrowthReferralWidget', () => {
   });
 
   it('generates a link successfully', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ invite_link: 'https://cloud.omnisolo.co/invite/123' }),
     });
@@ -47,7 +47,7 @@ describe('GrowthReferralWidget', () => {
   });
 
   it('handles error when generating link', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: false,
     });
 
@@ -62,7 +62,7 @@ describe('GrowthReferralWidget', () => {
   });
 
   it('copies link to clipboard', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ invite_link: 'https://cloud.omnisolo.co/invite/123' }),
     });

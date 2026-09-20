@@ -87,7 +87,8 @@ describe("POST /api/v1/auth/logout", () => {
     [undefined, "missing"],
     ["__Host-omnisolo_session=not-a-jwe", "invalid"],
     ["__Host-omnisolo_session=one; __Host-omnisolo_session=two", "duplicate"],
-  ] as const)("is locally idempotent for %# sessions", async (cookie, _label) => {
+  ] as const)("is locally idempotent for %# sessions", async (cookie, label) => {
+    expect(label).toBeTruthy();
     const fetchImpl = vi.fn(async () => Response.json({ ok: true })) as typeof fetch;
     const response = await handleLogout(request(cookie), await dependencies(fetchImpl));
     expect(response.status).toBe(200);

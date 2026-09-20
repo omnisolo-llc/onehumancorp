@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function WorkIntakeWidgetPage() {
@@ -31,12 +31,7 @@ export default function WorkIntakeWidgetPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getThemeStyles = () => {
-    if (theme === 'dark') {
-      return { background: '#1D1D1F', color: '#ffffff', borderColor: '#333333' };
-    }
-    return { background: '#ffffff', color: '#111827', borderColor: '#e5e7eb' };
-  };
+
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50/50 via-white/50 to-blue-50/50">

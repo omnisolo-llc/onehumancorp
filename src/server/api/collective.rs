@@ -50,9 +50,13 @@ pub(crate) fn validate_tenant_id_for_invite(
     Ok(target_tenant_id.to_string())
 }
 
-fn authenticated_tenant(claims: &::server_common::Claims) -> Result<String, Response> {
-    signed_tenant_id(claims)
-        .ok_or_else(|| json_error(StatusCode::UNAUTHORIZED, "authentication required"))
+fn authenticated_tenant(claims: &::server_common::Claims) -> Result<String, Box<Response>> {
+    signed_tenant_id(claims).ok_or_else(|| {
+        Box::new(json_error(
+            StatusCode::UNAUTHORIZED,
+            "authentication required",
+        ))
+    })
 }
 
 async fn set_collective_bypass_role(
@@ -141,7 +145,7 @@ pub async fn get_nearby_tenants_handler(
     }
     let owner_tenant_id = match authenticated_tenant(&claims) {
         Ok(tenant_id) => tenant_id,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match list_nearby_tenants(&db, &owner_tenant_id).await {
         Ok(neighbors) => Json(serde_json::json!({ "neighbors": neighbors })).into_response(),
@@ -361,7 +365,7 @@ pub async fn invite_tenant_handler(
     }
     let owner_tenant_id = match authenticated_tenant(&claims) {
         Ok(tenant_id) => tenant_id,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let Some(target_tenant_id) = request.target_tenant_id.as_deref() else {
         return json_error(StatusCode::BAD_REQUEST, "target tenant id is required");

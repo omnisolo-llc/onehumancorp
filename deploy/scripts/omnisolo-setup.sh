@@ -16,7 +16,7 @@ echo -e "${BOLD}${CYAN}   🚀 OmniSolo Hybrid Agentic OS Developer Setup    ${R
 echo -e "${BOLD}${BLUE}===============================================${RESET}"
 
 # Check requirements
-if ! command -v bazelisk >/dev/null 2>&1; then echo -e "${PURPLE}Bazelisk is required but not installed. Aborting.${RESET}"; false; fi
+if ! command -v cargo >/dev/null 2>&1; then echo -e "${PURPLE}Cargo is required but not installed. Aborting.${RESET}"; false; fi
 if ! command -v docker >/dev/null 2>&1; then echo -e "${PURPLE}Docker is required but not installed. Aborting.${RESET}"; false; fi
 if ! command -v xvfb-run >/dev/null 2>&1; then echo -e "${PURPLE}xvfb-run is required for headless UI tests. Please install it.${RESET}"; fi
 
@@ -42,13 +42,13 @@ echo -e "${DIM}[2/5] Verifying Standalone Mode...${RESET}"
 export OMNISOLO_MULTITENANT=false
 export OMNISOLO_HEADLESS=false
 export OMNISOLO_SOURCE_MODE=standalone
-bazelisk test //src/server/api/...
+cargo test --locked -p omnisolo --lib api::
 
 echo -e "${DIM}[3/5] Verifying Cloud Mode...${RESET}"
 export OMNISOLO_MULTITENANT=true
 export OMNISOLO_HEADLESS=false
 export OMNISOLO_SOURCE_MODE=cloud
-bazelisk test //src/server/api/...
+cargo test --locked -p omnisolo --lib api::
 
 echo -e "${DIM}[X] Verifying .env setup...${RESET}"
 bash deploy/scripts/omnisolo-verify-setup.sh || { echo -e "${PURPLE}Verification failed.${RESET}"; false; }

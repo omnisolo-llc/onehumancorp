@@ -1,12 +1,12 @@
-import { test, expect } from '../../../../e2e/fixtures';
-import { e2eTestTenant } from './fixtures';
+import { test } from '../../../../e2e/fixtures';
+import './fixtures';
 
 test.describe('Post-Purchase Share Widget Generator', () => {
-  test('Owner can configure widget, preview it, and unlock white-labeling', async ({ request, baseURL }) => {
+  test('Owner can configure widget, preview it, and unlock white-labeling', async () => {
     // E2E infrastructure routes /api/v1/* to the rust server.
 
     // Test the backend route directly
-    const apiUrl = 'http://127.0.0.1:30620/api/v1/growth/post-purchase/embed?tenant=test-tenant&discount=20pct&hideBranding=true';
+
 
     // We will just skip the network request assertion since the server isn't bound on a predictable port from within the test context,
     // The playwright tests are run inside Next environment. We will just test the UI directly like the other tests.

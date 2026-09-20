@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { ApprovalRequest } from "../page";
 
 type Props = {
@@ -8,7 +8,7 @@ type Props = {
   departmentName: string;
   approvals: ApprovalRequest[];
   onBack: () => void;
-  onApprove: (id: string, editedPayload?: any) => void;
+  onApprove: (id: string, editedPayload?: import('@/lib/agent-feed-types').ActionPayload) => void;
   onReject: (id: string) => void;
 };
 
@@ -50,7 +50,7 @@ export default function ApprovalInbox({
     if (parts.length > 1) {
       try {
         return { desc: parts[0], payload: JSON.parse(parts[1]) };
-      } catch (e) {
+      } catch  {
         return { desc: parts[0], payload: null };
       }
     }

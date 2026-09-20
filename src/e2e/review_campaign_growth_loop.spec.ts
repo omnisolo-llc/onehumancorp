@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { currentAppSmoke } from './current_app_smoke';
+import './current_app_smoke';
 
 // test('review_campaign_growth_loop', async ({ page, request, loginAs, adminUser }) => { await loginAs(page, adminUser); await currentAppSmoke(page, request, 'review_campaign_growth_loop'); });
 

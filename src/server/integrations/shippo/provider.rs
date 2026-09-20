@@ -46,6 +46,18 @@ impl ShippoProvider {
     }
 }
 
+impl ShippoProvider {
+    pub async fn generate_and_email_label(
+        &self,
+        rate_id: &str,
+        _email: &str,
+    ) -> Result<PurchaseLabelResponse, String> {
+        let response = self.purchase_label(rate_id).await?;
+        // Mock emailing tracking numbers to the customer
+        Ok(response)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,17 +74,5 @@ mod tests {
         let provider = ShippoProvider::new("test_token".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "shippo");
-    }
-}
-
-impl ShippoProvider {
-    pub async fn generate_and_email_label(
-        &self,
-        rate_id: &str,
-        _email: &str,
-    ) -> Result<PurchaseLabelResponse, String> {
-        let response = self.purchase_label(rate_id).await?;
-        // Mock emailing tracking numbers to the customer
-        Ok(response)
     }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { MutationService } from '../../lib/sync/MutationService';
 import { NetworkStatusIndicator } from '../../components/NetworkStatusIndicator';
 
@@ -61,7 +61,7 @@ export default function FulfillmentHub() {
       } else if (action === 'request_driver') {
         const orderIndex = awaitingPickup.findIndex(o => o.id === id);
         if (orderIndex > -1) {
-          const order = awaitingPickup[orderIndex];
+
           setAwaitingPickup(prev => prev.map(o => o.id === id ? { ...o, status: 'DriverRequested' } : o));
         }
       }

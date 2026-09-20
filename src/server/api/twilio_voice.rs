@@ -260,7 +260,7 @@ pub async fn twilio_voice_status_handler(
                     .bind(&summary)
                     .bind(&summary)
                     .bind(&clean_caller)
-                    .bind(&customer_id)
+                    .bind(customer_id)
                     .execute(pool)
                     .await.map(|_| ())
                 },
@@ -273,7 +273,7 @@ pub async fn twilio_voice_status_handler(
                     .bind(&summary)
                     .bind(&summary)
                     .bind(&clean_caller)
-                    .bind(&customer_id)
+                    .bind(customer_id)
                     .execute(sqlite_pool)
                     .await.map(|_| ())
                 }
@@ -310,7 +310,7 @@ pub async fn twilio_voice_status_handler(
                     });
                     task.proposed_content = Some(proposed_content.to_string());
 
-                    let _ = task_manager.insert_task(task);
+                    task_manager.insert_task(task);
                 }
             }
 
@@ -338,7 +338,7 @@ pub async fn twilio_voice_status_handler(
                     });
                     task.proposed_content = Some(proposed_content.to_string());
 
-                    let _ = task_manager.insert_task(task);
+                    task_manager.insert_task(task);
                 }
             }
         }

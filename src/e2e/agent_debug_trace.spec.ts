@@ -14,7 +14,6 @@ test.describe('Agent Debug Trace UI', () => {
     // Since we enforce ZERO mock data, and the test database might be empty for swarm_checkpoints,
     // we just assert that the page loads without crashing and successfully displays the shell.
     // If the database has records with LLM-Recoverable errors, it will render them.
-    const recoverableBadge = page.locator('[data-testid="llm-recoverable-badge"]');
 
     // We don't force it to be visible because it depends on real db state,
     // but we ensure no generic application crash happened.

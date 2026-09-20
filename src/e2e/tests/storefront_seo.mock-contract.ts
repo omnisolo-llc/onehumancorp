@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Storefront Edge Cache & SEO Pre-rendering', () => {
-  let tenantId = '00000000-0000-0000-0000-000000000000';
-  let siteId = '11111111-1111-1111-1111-111111111111';
+  const tenantId = '00000000-0000-0000-0000-000000000000';
+  const siteId = '11111111-1111-1111-1111-111111111111';
 
   test('Storefront returns SEO metadata, JSON-LD schema, and appropriate cache headers', async ({ request }) => {
     // 1. We mock the tenant and site ID to verify edge middleware response headers and SEO injection

@@ -7,7 +7,7 @@ use tempfile::tempdir;
 #[tokio::test]
 async fn test_local_fs_provider() {
     let dir = tempdir().unwrap();
-    let provider = LocalFSProvider::new(dir.path().to_path_buf());
+    let provider = LocalFSProvider::for_workspace(dir.path().to_path_buf());
 
     // Test write and read
     provider
@@ -30,7 +30,7 @@ async fn test_local_fs_provider() {
 async fn test_cloud_fs_provider() {
     let dir = tempdir().unwrap();
     let tenant_id = "tenant-123".to_string();
-    let provider = CloudFSProvider::new(tenant_id.clone(), dir.path().to_path_buf());
+    let provider = CloudFSProvider::for_tenant(tenant_id.clone(), dir.path().to_path_buf());
 
     tokio::fs::create_dir_all(dir.path().join(&tenant_id))
         .await
@@ -58,7 +58,7 @@ async fn test_cloud_fs_provider() {
 #[tokio::test]
 async fn test_hybrid_fs_mcp_server() {
     let dir = tempdir().unwrap();
-    let provider = Arc::new(LocalFSProvider::new(dir.path().to_path_buf()));
+    let provider = Arc::new(LocalFSProvider::for_workspace(dir.path().to_path_buf()));
     let server = HybridFSMcpServer::new(provider);
 
     let tools = server.get_tools();
@@ -95,7 +95,7 @@ async fn test_hybrid_fs_mcp_server() {
 #[tokio::test]
 async fn test_server_search() {
     let dir = tempdir().unwrap();
-    let provider = Arc::new(LocalFSProvider::new(dir.path().to_path_buf()));
+    let provider = Arc::new(LocalFSProvider::for_workspace(dir.path().to_path_buf()));
     let server = HybridFSMcpServer::new(provider);
 
     let req = McpInvokeRequest {
@@ -121,7 +121,7 @@ async fn test_server_search() {
 #[tokio::test]
 async fn test_local_fs_provider_search() {
     let dir = tempdir().unwrap();
-    let provider = LocalFSProvider::new(dir.path().to_path_buf());
+    let provider = LocalFSProvider::for_workspace(dir.path().to_path_buf());
 
     tokio::fs::create_dir_all(dir.path().join("dir"))
         .await
@@ -140,7 +140,7 @@ async fn test_local_fs_provider_search() {
 #[tokio::test]
 async fn test_provider_path_traversal() {
     let dir = tempdir().unwrap();
-    let provider = LocalFSProvider::new(dir.path().to_path_buf());
+    let provider = LocalFSProvider::for_workspace(dir.path().to_path_buf());
 
     // Write a valid file
     provider.write_file("valid.txt", b"valid").await.unwrap();

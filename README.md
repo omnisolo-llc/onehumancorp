@@ -28,32 +28,32 @@ The harness provides a **Block-based Visual Workflow** engine (`visual_workflow.
 - **Parallel Fan-out/Fan-in**: Use `ParallelFork` to run multiple execution branches concurrently, and `ParallelJoin` to merge the state values.
 - **Client API endpoint**: Workflows can be submitted and run dynamically through the `/api/v1/workflow/run` endpoint using the Visual Workflow Client API (`visual_workflow_client.rs`).
 
-## Getting Started (Day 1 Onboarding)
+## Developer setup
 
-To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
-
-From the root of the repository, you must explicitly run the onboarding CLI:
+From a checkout, run as your normal user:
 
 ```bash
-./deploy/scripts/omnisolo_hybrid_cli.sh
+make init
+make doctor
 ```
 
-**What this does:**
-- 🚀 Guides you through the **Developer Setup**
-- ⚙️ Configures your **Environment Variables**
-- 🩺 Runs deep system **Diagnostics**
-- 🔄 Allows seamless switching between `cloud`, `standalone`, and `headless` modes
+`make init` installs the pinned Rust/Node toolchains, native Tauri libraries, locked npm trees (including the test harness), isolated Python tooling and Playwright Chromium. Repeat runs reuse matching successful dependency installs. It asks before elevated system-package installation and does not change global toolchain defaults, shell profiles, account permissions or application secrets.
 
-This premium onboarding flow eliminates friction and ensures maximum developer velocity for Day One setup.
+Start with Git, GNU Make and Python (3.11+ with venv support for the installed test environment), plus a local Docker installation with Compose and Buildx. On macOS, install Homebrew and Apple command-line tools first. Windows developers can use WSL2 for the full POSIX-based build/test environment; native Windows release prerequisites remain in the release guide. Missing prerequisites fail explicitly rather than reporting a partial setup as ready.
 
-### Local Build & Launch (Docker Hub Fallback)
-If you encounter Docker Hub rate limits (`You have reached your unauthenticated pull rate limit`), you can bypass them by building and loading the OCI images locally using Bazel:
+See [native development setup](docs/development/native-build.md) for noninteractive, preview and no-sudo modes. Application/deployment configuration through `deploy/scripts/omnisolo_hybrid_cli.sh` is separate from developer dependency setup.
+
+### Native build system
+
+The build uses **Cargo for Rust, npm for the Next.js application, and the Tauri CLI for desktop/mobile packaging**. Bazel is no longer a build or test dependency. Install the Rust toolchain in `rust-toolchain.toml` and Node version in `.node-version`, then follow [Native development and caching](docs/development/native-build.md).
+
 ```bash
-bazel run //deploy:load_all_images
-./deploy/scripts/prepare-compose-env.sh
-docker compose --env-file .omnisolo-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
+make init
+make lint
+make test
 ```
-This flow utilizes local `server`, `agent`, and `omnisolo-core` images without requiring an external pull. It also leverages your local cache for base images like Postgres and Valkey.
+
+`make test` runs the full Rust workspace, Node/frontend/CLI/desktop UI tests, contract checks and real-stack E2E after fresh builds. It requires native desktop dependencies, Docker and Playwright browsers; see the setup guide. `make lint` checks Rust formatting/Clippy, ESLint and TypeScript. `make test-backend` offers a focused headless lane. CI reuses dependency/compiler caches and passes built artifacts to consumers; a cache hit never substitutes for running tests.
 
 ## Identity
 
@@ -65,7 +65,9 @@ The platform implements a hybrid identity model:
 
 ## Product Vision & Market Strategy
 
-OmniSolo OneHumanCorp is a **Hybrid Agentic OS**. For a deep dive into the architecture and product positioning, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
+OmniSolo OneHumanCorp aims to be an **AI operations team for small business owners**, carrying supported work to verifiable results under delegated authority. The initial customer segment and commercial packaging remain under investigation; the previous exclusive digital-service segment and fixed subscription price are not settled decisions.
+
+Read the current section of **[RESEARCH.md](RESEARCH.md)** and the **[capability and usage-economics audit](docs/research/business_capability_and_usage_economics_audit.md)** for implemented assets, observed gaps, owner evidence, current competitors, and compute/API/BYOK evaluation. They supersede conflicting earlier pricing, segment and roadmap assumptions. The hybrid runtime is an implementation foundation, not proof that a business workflow is ready.
 
 ## Architecture
 
@@ -75,13 +77,14 @@ The platform supports four operating modes:
 |------|-----------------|------------------|-------|
 | **Cloud-native shared service** | Tauri v2 desktop client | Rust API server, Postgres, agents, optional Valkey and PowerSync | Set `OMNISOLO_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
 | **Headless cloud API** | Tauri desktop client | API-only Rust server | Set `OMNISOLO_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
-| **Desktop standalone** | Tauri v2 desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Valkey and PowerSync are not required for the standalone wrapper flow. |
+| **Desktop with local backend** | Tauri/Node client plus separately started Rust backend and SQLite-backed SIPDB | Optional explicitly configured integrations | Configure and validate local backend prerequisites; the desktop shell does not provision a missing backend. |
 | **Single-machine integration stack** | Full local Docker Compose stack | None | Useful for development, demos, and end-to-end verification on one machine. |
 
 ```mermaid
 graph TD;
     DesktopClient[Tauri v2 Desktop App\nStandalone or Remote] --> API[Rust Server / API];
-    LegacyWeb[Legacy Next.js Prototype] -.-> API;
+    Web[Next.js / Node web application] --> API;
+    DesktopClient --> Web;
     API --> Orchestration[Orchestration Hub];
     API --> Auth[JWT / OIDC Auth];
     Orchestration --> Agents[AI Agents - Invisible No-Code SMB Managers];
@@ -94,8 +97,8 @@ graph TD;
 
 | Directory | Language | Purpose |
 |-----------|----------|---------|
-| `src/ui/tauri/` | **Rust/HTML/JSON** | Canonical Tauri v2 desktop UI and packaged static frontend |
-| `src/ui/next/` | **React/TypeScript** | Legacy/prototype Next.js web client retained until route and asset references are fully audited |
+| `src/ui/tauri/` | **Rust/HTML/JSON** | Tauri desktop/mobile shell; desktop owns its packaged loopback Node server |
+| `src/ui/next/` | **React/TypeScript** | Maintained Next.js web UI and authenticated server routes, packaged from a fresh standalone build |
 | `src/server/` | **Rust** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
 | `src/agents/` | **Rust** | Built-in agent implementations |
 | `src/proto/` | **Protobuf** | gRPC service definitions |
@@ -112,7 +115,7 @@ The Swarm is powered by our custom orchestration engine which maintains stabilit
 
 ### Remote clients and standalone mode
 
-The Tauri v2 desktop app supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OmniSolo server over the API.
+The Tauri desktop shell owns the packaged Node web-server lifecycle and connects it to the Rust API at `BACKEND_URL` (default `http://127.0.0.1:18789`). Start/configure the Rust backend separately with native tooling or Compose. Remote backends require HTTPS; loopback development may use HTTP. Mobile packages connect to an explicitly configured HTTPS web deployment and do not try to run Node on a phone.
 
 Headless server deployments keep the API, auth, health probes, and metrics online while skipping static UI serving. That is the intended mode for mobile clients and desktop clients that should connect to cloud-hosted services instead of running a local backend.
 
@@ -137,9 +140,9 @@ Because we use local images built from source instead of pulling from Docker Hub
 
 1.  Build and load the local images into your Docker daemon:
     ```bash
-    npx @bazel/bazelisk run //deploy:load_all_images
+    bash deploy/load_all_images.sh
     ```
-    If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing base images, this local-first Bazel build flow is the required primary path to preload images into the Docker daemon.
+    This uses native multi-stage Docker builds and local image tags. Base images still need to be available locally or pulled from their registry; building locally does not bypass registry authentication or rate limits.
 
 2.  Use Docker Compose to launch the stack with the locally built images:
     ```bash
@@ -150,12 +153,9 @@ Because we use local images built from source instead of pulling from Docker Hub
       up -d
     ```
 
-Or you can use the automated script:
-```bash
-bazelisk run //:deploy_dev
-```
+The image loader only builds/loads local images; starting the configured Compose stack is a separate explicit operation.
 
-> **Note:** If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing images for `omnisolo/server:latest` or `valkey/pgvector`, the local-first Bazel build flow via `npx @bazel/bazelisk run //deploy:load_all_images` is the required primary path. Additionally, ensure you include the override file when running compose manually:
+> **Note:** Keep registry credentials outside the repository and authenticate or supply cached base images when required. Include the override file when using local image tags:
 > ```bash
 > ./deploy/scripts/prepare-compose-env.sh
 > docker compose --env-file .omnisolo-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
@@ -174,24 +174,30 @@ When the backend starts with an empty workforce, it now bootstraps an **internal
 
 For API-only remote-client deployments, set `OMNISOLO_HEADLESS=true` on the server.
 
-### Bazel (full build + test)
+### Native Rust and web checks
 
 ```bash
-# Build & Test the full system
-bazelisk build //...
-bazelisk test //...
+# Fast, focused checks; the Tauri package is deliberately separate.
+cargo test --locked -p server_services_billing
+cargo test --locked -p server_harness
+cargo test --locked -p server_pricing
 
-# Run the full UI E2E suite (requires Docker for postgres/redis)
-bazelisk test //src/e2e:playwright --nocache_test_results --local_test_jobs="$(nproc)" --jobs="$(nproc)"
+# Headless regression suite and web checks.
+cargo test --locked --workspace --exclude app
+npm run test:contracts
+npm run typecheck:web
+npm run test:web
+npm run build:web
 
-# Quick Local Dev (run these in separate terminals)
-bazelisk run //src/server:server
-bazelisk run //src/ui/tauri:app
+# Development (separate terminals, with the backend environment configured).
+cargo run --locked -p omnisolo --bin server
+npm run dev:web
+npm run desktop:dev
 ```
 
 ### E2E Tests with Playwright
 
-The `//src/e2e:playwright` target runs the full Playwright UI E2E suite against the real server, real browser UI, Postgres, and Redis. The Bazel aggregate includes every `*.spec.ts` file under `src/e2e/`, `src/ui/next/src/e2e/`, `src/ui/next/e2e/`, and top-level `e2e/`. The aggregate is split into shard targets that run in parallel when `--local_test_jobs` is greater than 1.
+The native Playwright runner builds on the actual Rust binaries, freshly packaged Next application, and isolated PostgreSQL/Valkey containers. CI partitions the complete discovered browser suite into four shards; it does not replace it with a smoke-test allowlist. See `playwright.config.ts` and `scripts/native-e2e.mjs` for the current discovery and environment contract.
 
 E2E tests follow a strict no-substitution contract:
 - Test data is seeded only through the database, using `src/e2e/e2e-seed.sql`.
@@ -207,53 +213,37 @@ Seeded E2E users:
 | Admin | `test@example.com` | `password123` |
 | Team member | `member@example.com` | `MemberPass123!` |
 
-Run the full Bazel-managed suite:
+Build the real native inputs and run the isolated suite:
 
 ```bash
-bazelisk test //src/e2e:playwright --nocache_test_results --local_test_jobs="$(nproc)" --jobs="$(nproc)"
+cargo build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
+npm run build:web
+npx --no-install playwright install chromium
+npm run test:e2e
+# Focus one test without changing complete CI discovery:
+npm run test:e2e -- src/e2e/native_business_regression.spec.ts --workers=1
 ```
 
-Run the local Playwright suite against an already running app:
-
-```bash
-DATABASE_URL=postgres://ohc:ohc@localhost:5432/ohc \
-REDIS_URL=redis://localhost:6379 \
-MINIMAX_API_KEY=... \
-npx playwright test
-```
-
-AI-generating tests may call the real MiniMax API. When a test validates generated output, it must use the AI judge helper in `src/e2e/ai-judge.ts`; the helper asks MiniMax to score the output from 0 to 10 and the test only passes when the score is greater than 9.
+The runner does not inherit production database or provider credentials. External integrations use explicit provider-boundary contract tests or clearly reported unavailable states. Live model/provider evaluations require a separately authorized environment and are not implicitly enabled by `npm run test:e2e`. A model judge or a visible heading is not proof of payment, persistence or business completion.
 
 Tests capture screenshots on every page to `test-results/screenshots/` and explicit `page.screenshot()` calls save to `test-results/*.png`.
 
-### Tauri v2 Desktop App
+### Tauri desktop, mobile and server builds
 
 ```bash
-bazelisk run //src/ui/tauri:app
+npm run desktop:build -- --debug --no-bundle
+npm run build:server
+npm run build:worker
 ```
 
-The app connects to the server at `http://127.0.0.1:18789` by default.
-
-### Legacy Web UI (Next.js Prototype)
-
-```bash
-cd src/ui/next && npm run dev
-```
-
-This starts the legacy Next.js development server on `http://localhost:3000`. Do not add new provider flows here; build new user-facing UI in Tauri.
-
-### Server binary
-
-```bash
-bazelisk run //src/server:server
-```
+Desktop release installers require the platform's native dependencies and signing configuration. Android/iOS builds require their SDKs and an explicit `OMNISOLO_MOBILE_WEB_URL`; see the native-build guide. These commands build artifacts—they do not publish or deploy them.
 
 ## Configuration
 
 | Variable | Description |
 |----------|-------------|
 | `GEMINI_API_KEY` | Google Gemini API key |
-| `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows, AI judge scoring, and `OMNISOLO_LLM_PROVIDER=minimax` agent runs |
+| `MINIMAX_API_KEY` | MiniMax API key for explicitly configured agent/evaluation runs; never inherited by the isolated native E2E runner |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI API key |
 | `OMNISOLO_LLM_PROVIDER` | Builtin agent provider: `openai`, `openai-compatible`, `minimax`, `anthropic`, or `ollama` |
@@ -278,9 +268,9 @@ bazelisk run //src/server:server
 | `OMNISOLO_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
 | `OMNISOLO_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
 | `OMNISOLO_DEFAULT_TENANT_ID` | Default tenant used by local E2E login when the browser form does not submit an explicit organization ID; defaults to `e2e-tenant` in the test harness |
-| `OMNISOLO_LLM_CONFIG_PATH` | Optional Tauri/built-in agent provider config path. Defaults to `.omnisolo/ai-provider.json` |
+| `OMNISOLO_CONNECTION_KEYS` / `OMNISOLO_CONNECTION_ACTIVE_KEY` | Runtime keyring and active key ID for encrypted, tenant-scoped provider connections; provision securely outside source control |
 
-Tauri packages static assets from `src/ui/tauri/next_out` via `src/ui/tauri/tauri.conf.json`. The `src/ui/next/out` tree is legacy/prototype output.
+Tauri packages a fresh Next standalone server from `target/native-web` plus a pinned, checksum-verified Node executable. The source/platform/architecture/Node/dependency manifest rejects stale or foreign build output. Historical `next_out`/`out` exports are not used as a fallback.
 
 Kubernetes secrets are used to inject credentials at runtime without committing them to source.
 
@@ -293,23 +283,10 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 - **Initial Setup:** `./deploy/scripts/omnisolo-setup.sh` (Generates `.env`, verifies builds, and provisions the workspace)
 - **Mode Switching:** `source deploy/scripts/omnisolo-mode.sh [cloud|standalone|headless]` (Configures environment variables for the current terminal session)
 
-### Build and Test
+### Build and test references
 
-- **Build all modules:** `bazelisk build //...`
-- **Run all tests:** `bazelisk test //...`
-- **Run E2E tests:** `bazelisk test //src/e2e:playwright`
-- **Run the server:** `bazelisk run //src/server:server`
-- **Launch the Tauri app:** `bazelisk run //src/ui/tauri:app`
-- **Run Rust lint with warnings as errors:** `bazelisk run //:rust_lint`
-- **Build the legacy Next.js prototype:** `cd src/ui/next && npm run build`
-- **Build the docs site:** `bazelisk run //:docs_build`
+[Native development and caching](docs/development/native-build.md) documents focused and complete test commands, cache boundaries, resource limits and release prerequisites. [Migration and remediation ledger](docs/research/native_migration_and_remediation.md) records implemented fixes, actual test evidence and remaining external validation. Historical documents may refer to deleted Bazel targets; they are not active build instructions.
 
 ## Deprecated
 
-### Next.js Prototype (Legacy)
-
-`src/ui/next/` remains in the repository while references to its routes and assets are audited. It is not the canonical UI, and new provider flows should be implemented in the Tauri app.
-
-### Slint and Flutter UI (Removed)
-
-The old `src/app/` Slint/Flutter UI has been removed. The canonical desktop UI is `src/ui/tauri/`; the remaining Next.js prototype under `src/ui/next/` is retained only while route and asset references are audited.
+Bazel build files and wrappers have been removed. Do not restore the old Bazel toolchain or substitute tracked HTML exports for fresh UI builds. The old Slint/Flutter UI is also removed; the maintained UI is Next.js inside the Tauri shell or a Node web deployment.

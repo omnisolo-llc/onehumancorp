@@ -1,6 +1,12 @@
 name: CI
 
 on:
+  workflow_call:
+    inputs:
+      performance_prefix:
+        description: Exact reusable-workflow job name prefix for timing evidence
+        type: string
+        default: ''
   push:
     branches: [main]
   pull_request:
@@ -8,9 +14,14 @@ on:
   schedule:
     - cron: "23 10 * * *"
   workflow_dispatch:
+    inputs:
+      cold_cache:
+        description: Disable compiler, Node-download and Next caches on fresh runners
+        type: boolean
+        default: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.event_name == 'schedule' && 'schedule' || github.event_name == 'workflow_dispatch' && format('manual/{0}', github.run_id) || github.ref }}
+  group: native-ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.event_name == 'schedule' && 'schedule' || github.event_name == 'workflow_dispatch' && format('manual/{0}', github.run_id) || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' }}
 
 env:
@@ -35,17 +46,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Validate migration identities before starting expensive builds
+        run: bash src/server/migrations/sqlx_migration_contract_test.sh
+
       - name: Reject active Chatwoot residue
         run: bash deploy/tests/no_chatwoot_residue_test.sh
 
       - name: Check if only markdown files changed
         id: check
+        env:
+          CI_PERFORMANCE_PREFIX: ${{ inputs.performance_prefix || '' }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ -n "$CI_PERFORMANCE_PREFIX" || "${{ github.ref_type }}" == tag ]]; then
+            echo "markdown-only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             git fetch origin "${{ github.base_ref }}"
             changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           elif [[ "${{ github.event_name }}" == "push" ]]; then
-            changed_files=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
+            before="${{ github.event.before }}"
+            if [[ "$before" == 0000000000000000000000000000000000000000 ]] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+              echo "markdown-only=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            changed_files=$(git diff --name-only "$before" "${{ github.sha }}")
           else
             echo "markdown-only=false" >> "$GITHUB_OUTPUT"
             echo "Full run; treating as non-markdown change set"
@@ -69,6 +93,18 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y python3-yaml
 
+      - name: Check native release identity and workflow contracts
+        run: |
+          python3 scripts/release_contract_test.py
+          python3 scripts/release_pipeline_test.py
+          node --test scripts/release-workflow.test.mjs
+
+      - name: Check developer bootstrap and required-job contracts
+        run: |
+          python3 .github/scripts/check_checkout_paths_test.py
+          python3 scripts/init_dev_test.py
+          python3 .github/scripts/check_native_cache_test.py
+
       - name: Check tracked artifacts
         run: |
           .github/scripts/check_repo_hygiene_test.sh
@@ -88,14 +124,11 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: .node-version
+          package-manager-cache: false
 
-      - name: Audit root pnpm lock
-        run: npx --yes pnpm@11.9.0 audit --prod
-
-      - name: Audit UI pnpm lock
-        working-directory: src/ui/next
-        run: npx --yes pnpm@11.9.0 audit --prod
+      # npm lockfiles are authoritative for the native Node build. Do not audit
+      # a second, stale package-manager resolution that the product never uses.
 
       - name: Audit root npm lock
         run: npm audit --omit=dev
@@ -104,407 +137,262 @@ jobs:
         working-directory: src/ui/next
         run: npm audit --omit=dev
 
-  bazel-build:
-    name: Bazel build (${{ matrix.name }})
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: linux-x86_64
-            runner: ubuntu-latest
-            bazel_config: linux_x86_64
-          - name: windows-x86_64
-            runner: ubuntu-latest
-            bazel_config: windows_x86_64
-          - name: android
-            runner: ubuntu-latest
-            bazel_config: linux_x86_64
-          # - name: windows-arm64
-          #  runner: windows-11-arm
-          #   bazel_config: windows_arm64
-          #- name: macos-aarch64
-          #  runner: macos-latest
-          #  bazel_config: macos_aarch64
-          #- name: macos-x86_64
-          #  runner: macos-15-intel
-          #  bazel_config: macos_x86_64
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Free runner disk space
-        if: startsWith(matrix.runner, 'ubuntu')
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
-      - name: Select Xcode
-        if: startsWith(matrix.name, 'macos-')
-        run: sudo xcode-select -s /Applications/Xcode.app
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, matrix.name, github.event.pull_request.number) || format('{0}-{1}', github.workflow, matrix.name) }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - Cargo.lock
-            - package-lock.json
-            - pnpm-lock.yaml
-            - src/server/Cargo.lock
-            - src/ui/next/package-lock.json
-          external-cache: true
-          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
-          # Fork PRs can still restore from the shared cache but do not save remote cache.
-          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-
-      - name: Build non-test artifacts
-        if: matrix.name != 'android'
-        run: |
-          bazelisk query '
-            kind(".* rule", //...)
-            except kind(".*_test rule", //...)
-            except filter(".*_test$", //...)
-            except attr("tags", "manual", //...)
-            except filter("(\\.aspect_rules_js/node_modules|node_modules)(/|$)", //...)
-            except //src/ui/...
-            except //deploy:all
-            except //release:all
-          ' > build-targets.txt
-          xargs -r bazelisk build \
-            --config=${{ matrix.bazel_config }} \
-            --config=remote-cache \
-            --skip_incompatible_explicit_targets \
-            --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
-            < build-targets.txt
-
-      - name: Install Linux Tauri desktop dependencies
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            pkg-config
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
-            || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
-
-      - name: Build Tauri desktop Bazel target
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          bazelisk build \
-            //src/ui/tauri:app \
-            --config=linux_x86_64 \
-            --//src/ui/tauri:build_tauri=true
-
-      - name: Build server web image tarball
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          bazelisk build //deploy:server_web_image_tar \
-            --config=linux_x86_64 \
-            --output_groups=+tarball
-
-      - name: Build Tauri Android Bazel targets
-        if: matrix.name == 'android'
-        run: |
-          bazelisk build \
-            //src/ui/tauri:tauri_android_apk \
-            //src/ui/tauri:tauri_android_aab \
-            --config=linux_x86_64
-
-      - name: Install iOS signing assets
-        if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        env:
-          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
-        run: |
-          for name in APPLE_CERTIFICATE_BASE64 APPLE_CERTIFICATE_PASSWORD APPLE_PROVISIONING_PROFILE_BASE64 KEYCHAIN_PASSWORD; do
-            if [[ -z "${!name}" ]]; then
-              echo "$name is required to build the iOS IPA" >&2
-              exit 1
-            fi
-          done
-          certificate_path="$RUNNER_TEMP/omnisolo-ios-signing.p12"
-          profile_path="$RUNNER_TEMP/omnisolo.mobileprovision"
-          keychain_path="$RUNNER_TEMP/omnisolo-signing.keychain-db"
-          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
-          echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
-          security set-keychain-settings -lut 21600 "$keychain_path"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
-          security import "$certificate_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
-          security list-keychain -d user -s "$keychain_path" $(security list-keychains -d user | sed s/\"//g)
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/omnisolo.mobileprovision"
-
-      - name: Build Tauri iOS Bazel target
-        if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
-
-      - name: Analyze Tauri iOS Bazel target
-        if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
-
-  bazel-test:
-    name: Bazel test (${{ matrix.name }})
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+  native-build:
+    name: Native backend binaries
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: shard 1/4
-            shard: 0
-            total: 4
-          - name: shard 2/4
-            shard: 1
-            total: 4
-          - name: shard 3/4
-            shard: 2
-            total: 4
-          - name: shard 4/4
-            shard: 3
-            total: 4
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
-
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
+      - name: Install native system libraries
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+      - uses: ./.github/actions/setup-native
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-shard{2}-pr{3}', github.workflow, github.job, matrix.shard, github.event.pull_request.number) || format('{0}-{1}-shard{2}', github.workflow, github.job, matrix.shard) }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - Cargo.lock
-            - package-lock.json
-            - pnpm-lock.yaml
-            - src/server/Cargo.lock
-            - src/ui/next/package-lock.json
-          external-cache: true
-          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
-          # Fork PRs can still restore from the shared cache but do not save remote cache.
-          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
-
-      - name: Test fast targets
-        run: |
-          set -euo pipefail
-          ALL_TARGETS=$(bazelisk query 'kind(test, //...) except kind(test_suite, //...) except attr(tags, "manual|e2e|requires-docker|local|no-sandbox", kind(test, //...))' | sort)
-          SHARD_TARGETS=$(echo "$ALL_TARGETS" | awk -v shard="${{ matrix.shard }}" -v total="${{ matrix.total }}" 'NR % total == shard')
-          echo "=== Testing targets for ${{ matrix.name }} ==="
-          echo "$SHARD_TARGETS"
-          TARGET_COUNT=$(echo "$SHARD_TARGETS" | grep -c . || true)
-          echo "Target count: $TARGET_COUNT"
-          if [[ "$TARGET_COUNT" -gt 0 ]]; then
-            echo "$SHARD_TARGETS" | xargs bazelisk test \
-              --config=remote-cache \
-              --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
-              --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox
-          else
-            echo "No targets assigned to this shard."
-          fi
-
-
-  bazel-test-e2e:
-    name: Bazel UI E2E (${{ matrix.name }})
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: spec coverage
-            target: //src/e2e:playwright_spec_coverage
-            artifact: playwright-ui-e2e-spec-coverage
-          - name: shard 1/4
-            target: //src/e2e:playwright_shard_1_of_4
-            artifact: playwright-ui-e2e-shard-1-of-4
-          - name: shard 2/4
-            target: //src/e2e:playwright_shard_2_of_4
-            artifact: playwright-ui-e2e-shard-2-of-4
-          - name: shard 3/4
-            target: //src/e2e:playwright_shard_3_of_4
-            artifact: playwright-ui-e2e-shard-3-of-4
-          - name: shard 4/4
-            target: //src/e2e:playwright_shard_4_of_4
-            artifact: playwright-ui-e2e-shard-4-of-4
-    env:
-      # E2E must never depend on or spend against a production provider key.
-      MINIMAX_API_KEY: "ci-e2e-placeholder-not-a-real-key"
-      PLAYWRIGHT_REPORT_RETENTION_DAYS: 30
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - Cargo.lock
-            - package-lock.json
-            - pnpm-lock.yaml
-            - src/server/Cargo.lock
-            - src/ui/next/package-lock.json
-          external-cache: true
-          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
-          # Fork PRs can still restore from the shared cache but do not save remote cache.
-          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
-
-      - name: Pull E2E Docker images
-        run: |
-          # Keep these identical to deploy/docker-compose.e2e.yml.
-          docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
-          docker pull mirror.gcr.io/library/redis:7@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
-
-      - name: Test Playwright UI E2E target
-        run: |
-          bazelisk test "${{ matrix.target }}" \
-            --test_env=SOURCE_REPO_ROOT="$GITHUB_WORKSPACE" \
-            --local_test_jobs="$(nproc)" \
-            --jobs="$(nproc)" \
-            --test_output=all \
-            --nocache_test_results
-
-      - name: Collect Playwright UI E2E report
+          role: backend-debug
+          node: 'false'
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Build Cargo binaries
+        run: cargo build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins --timings
+      - name: Preserve actual compiler timing evidence
         if: always()
-        env:
-          BAZEL_TARGET: ${{ matrix.target }}
-          ARTIFACT_NAME: ${{ matrix.artifact }}
-          MATRIX_NAME: ${{ matrix.name }}
-        run: |
-          bash .github/scripts/collect_playwright_report.sh
-
-      - name: Upload Playwright UI E2E report
-        id: upload-playwright-report
-        if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.artifact }}
-          path: ${{ runner.temp }}/playwright-ci-artifacts/${{ matrix.artifact }}
+          name: native-backend-compiler-timings
+          path: target/cargo-timings/*.html
           if-no-files-found: warn
-          retention-days: ${{ env.PLAYWRIGHT_REPORT_RETENTION_DAYS }}
+          retention-days: 7
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-linux-binaries
+          path: |
+            target/debug/server
+            target/debug/grpc-mtls-probe
+            target/debug/omnisolo-builtin-agent
+            target/debug/omnisolo-harness-worker
+          if-no-files-found: error
+          retention-days: 3
 
-      - name: Publish Playwright UI E2E report link
-        if: always()
-        env:
-          ARTIFACT_NAME: ${{ matrix.artifact }}
-          ARTIFACT_URL: ${{ steps.upload-playwright-report.outputs.artifact-url }}
+  native-test:
+    name: Native Rust tests
+    env:
+      # Keep memory-heavy test compilation separate; preserve the security
+      # lane's independent, deliberately minimal environment contract.
+      CARGO_BUILD_JOBS: "1"
+      RUST_TEST_THREADS: "1"
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install native system libraries
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+      - uses: ./.github/actions/setup-native
+        with:
+          role: backend-test
+          node-scope: harness
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Verify pinned native harness test prerequisites
         run: |
-          set -euo pipefail
-          fallback_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts"
-          artifact_url="${ARTIFACT_URL:-$fallback_url}"
-          {
-            echo "### Uploaded Playwright UI E2E report: ${{ matrix.name }}"
-            echo
-            echo "- Artifact: \`${ARTIFACT_NAME}\`"
-            echo "- Link: ${artifact_url}"
-            echo "- Retention: ${PLAYWRIGHT_REPORT_RETENTION_DAYS} days"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "$GITHUB_WORKSPACE/.github/test-tools/node_modules/.bin" >> "$GITHUB_PATH"
+          version="$(.github/test-tools/node_modules/.bin/opencode --version)"
+          test "$version" = '1.18.15'
+      - name: Lint the complete headless Rust workspace before linking tests
+        run: make lint-backend
+      - name: Test complete headless Cargo workspace
+        run: make test-backend
+
+  native-node:
+    name: Native Node quality gates
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-native
+        id: native-setup
+        with:
+          rust: 'false'
+          node-scope: all
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Install Python workflow-contract dependency
+        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      # Independent checks retain their own failing conclusions. A lint failure
+      # must not hide the entire unit suite, and no failed step is made optional.
+      - name: Test preserved deployment and security contracts
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
+        run: make test-contracts
+      - name: Lint JavaScript and TypeScript
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
+        run: npm run lint:node
+      - name: Typecheck web and CLI
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
+        run: |
+          npm run typecheck:web
+          npm --prefix src/cli run typecheck
+      - name: Run all Node, frontend, CLI and desktop UI tests
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
+        run: make test-node
+
+  native-web:
+    name: Native Next production build
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-native
+        with:
+          rust: 'false'
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+          node-scope: web
+      - uses: actions/cache/restore@v5
+        if: github.event.inputs.cold_cache != 'true'
+        id: next-cache
+        with:
+          path: src/ui/next/.next/cache
+          key: next-v2-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS || 'custom-image' }}-${{ hashFiles('.node-version', 'package-lock.json', 'src/ui/next/package-lock.json', 'src/ui/next/next.config.mjs') }}-${{ github.sha }}
+          restore-keys: next-v2-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS || 'custom-image' }}-${{ hashFiles('.node-version', 'package-lock.json', 'src/ui/next/package-lock.json', 'src/ui/next/next.config.mjs') }}-
+      # Publish this run's build promptly; independent quality gates remain
+      # required by CI Required and cannot be bypassed by a successful build.
+      - name: Build fresh Node server and assets
+        run: make build-web
+      - uses: actions/cache/save@v5
+        if: github.event.inputs.cold_cache != 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.next-cache.outputs.cache-hit != 'true'
+        with:
+          path: src/ui/next/.next/cache
+          key: ${{ steps.next-cache.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-web
+          path: target/native-web
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  native-desktop:
+    name: Native Tauri compile
+    needs: [check-changes, native-web]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Tauri system libraries
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - uses: ./.github/actions/setup-native
+        with:
+          role: desktop-debug
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+          node-scope: root
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-web
+          path: target/native-web
+      - name: Compile desktop with this run's Node build
+        env:
+          OMNISOLO_PREBUILT_WEB: target/native-web
+        run: npm run desktop:build -- --debug --no-bundle
+      - name: Lint desktop Rust (backend is checked in native-test)
+        run: cargo clippy --locked -p app --all-targets -- -D warnings
+      - name: Test desktop Rust
+        run: cargo test --locked -p app
+
+  native-e2e:
+    name: Native real-stack Playwright ${{ matrix.shard }}/4
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [1, 2, 3, 4]
+    needs: [check-changes, native-build, native-web]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-native
+        with:
+          rust: 'false'
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+          node-scope: root
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-linux-binaries
+          path: target/debug
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-web
+          path: target/native-web
+      - name: Install browser and native test inputs
+        run: |
+          chmod +x target/debug/server target/debug/omnisolo-builtin-agent target/debug/grpc-mtls-probe
+          npx --no-install playwright install --with-deps chromium
+      - name: Execute complete real-stack suite shard
+        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: native-playwright-results-${{ matrix.shard }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  native-images:
+    name: Shared native production images
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - name: Bind images to source before compilation
+        id: image-source
+        run: echo "digest=$(python3 scripts/native-images.py fingerprint)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - name: Build actual production server image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/docker/server/Dockerfile
+          target: server
+          load: true
+          push: false
+          tags: omnisolo/server:latest
+          no-cache: ${{ github.event.inputs.cold_cache == 'true' }}
+          cache-from: ${{ github.event.inputs.cold_cache != 'true' && 'type=gha,scope=native-production-linux-amd64' || '' }}
+          cache-to: ${{ github.event.inputs.cold_cache != 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'type=gha,mode=max,scope=native-production-linux-amd64' || '' }}
+      - name: Build agent using the same compiled production layers
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/docker/server/Dockerfile
+          target: agent
+          load: true
+          push: false
+          tags: omnisolo/agent:latest
+          cache-from: ${{ github.event.inputs.cold_cache != 'true' && 'type=gha,scope=native-production-linux-amd64' || '' }}
+      - name: Package verified images for both deployment suites
+        env:
+          EXPECTED_IMAGE_SOURCE: ${{ steps.image-source.outputs.digest }}
+        run: python3 scripts/native-images.py package --directory target/ci-images --expected-source "$EXPECTED_IMAGE_SOURCE"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-production-images
+          path: target/ci-images
+          if-no-files-found: error
+          retention-days: 3
 
   kind-e2e:
     name: Kind E2E
     needs:
       - check-changes
+      - native-images
+      - native-build
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -580,30 +468,20 @@ jobs:
           docker version
           docker info
 
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
+      - uses: actions/download-artifact@v7
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}-${{ github.job }}
-          repository-cache: true
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
-
+          name: native-production-images
+          path: target/ci-images
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-linux-binaries
+          path: target/debug
+      - name: Use this run's already compiled mTLS probe
+        run: chmod +x target/debug/grpc-mtls-probe
       - name: Restore Docker image cache
-        uses: actions/cache@v5
+        id: kind-image-cache
+        uses: actions/cache/restore@v5
+        if: github.event.inputs.cold_cache != 'true'
         with:
           path: /tmp/omnisolo-kind-images
           key: ${{ runner.os }}-${{ runner.arch }}-kind-images-18d16372b840-94365b275456
@@ -623,28 +501,25 @@ jobs:
             valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885 \
             -o /tmp/omnisolo-kind-images/images.tar
 
-      - name: Run Kind smoke test
-        run: |
-          command -v kind
-          command -v kubectl
-          command -v helm
-          command -v docker
-          command -v bazelisk
-          if [[ "${CI_ARCH}" == "arm64" ]]; then
-            BAZEL_PLATFORM_CONFIG=linux_arm64
-          else
-            BAZEL_PLATFORM_CONFIG=linux
-          fi
-          bazelisk test //deploy:kind_e2e_test \
-            --config="${BAZEL_PLATFORM_CONFIG}" \
-            --config=remote-cache \
-            --test_timeout=2700 \
-            --nocache_test_results
+      - name: Execute native kind-e2e probes
+        env:
+          OMNISOLO_PREBUILT_IMAGES: target/ci-images
+          OMNISOLO_GRPC_PROBE: target/debug/grpc-mtls-probe
+        run: bash deploy/tests/kind_e2e_test.sh
+
+      - name: Save verified base images from trusted main
+        uses: actions/cache/save@v5
+        if: github.event.inputs.cold_cache != 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.kind-image-cache.outputs.cache-hit != 'true'
+        with:
+          path: /tmp/omnisolo-kind-images
+          key: ${{ steps.kind-image-cache.outputs.cache-primary-key }}
 
   docker-e2e:
     name: Docker E2E
     needs:
       - check-changes
+      - native-images
+      - native-build
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -672,7 +547,9 @@ jobs:
           docker info
 
       - name: Restore Docker Compose image cache
-        uses: actions/cache@v5
+        id: compose-image-cache
+        uses: actions/cache/restore@v5
+        if: github.event.inputs.cold_cache != 'true'
         with:
           path: /tmp/omnisolo-docker-compose-images
           key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml', 'deploy/docker-compose.override.yml') }}
@@ -698,38 +575,28 @@ jobs:
             curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b \
             -o /tmp/omnisolo-docker-compose-images/images.tar
 
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
+      - uses: actions/download-artifact@v7
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}-${{ github.job }}
-          repository-cache: true
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
+          name: native-production-images
+          path: target/ci-images
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-linux-binaries
+          path: target/debug
+      - name: Use this run's already compiled mTLS probe
+        run: chmod +x target/debug/grpc-mtls-probe
+      - name: Execute native docker-e2e probes
+        env:
+          OMNISOLO_PREBUILT_IMAGES: target/ci-images
+          OMNISOLO_GRPC_PROBE: target/debug/grpc-mtls-probe
+        run: bash deploy/tests/docker_compose_e2e_test.sh
 
-      - name: Run Docker Compose smoke test
-        run: |
-          command -v docker
-          command -v curl
-          command -v bazelisk
-          bazelisk test //deploy:docker_compose_e2e_test \
-            --config=linux \
-            --config=remote-cache \
-            --test_timeout=1800 \
-            --nocache_test_results
+      - name: Save verified base images from trusted main
+        uses: actions/cache/save@v5
+        if: github.event.inputs.cold_cache != 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.compose-image-cache.outputs.cache-hit != 'true'
+        with:
+          path: /tmp/omnisolo-docker-compose-images
+          key: ${{ steps.compose-image-cache.outputs.cache-primary-key }}
 
   postgres-security:
     name: PostgreSQL tenant isolation
@@ -759,17 +626,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo build inputs
-        uses: actions/cache@v5
+      - uses: ./.github/actions/setup-native
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-postgres-security-${{ hashFiles('Cargo.lock', 'src/server/Cargo.lock', 'src/server/migrations/**') }}
-
+          role: postgres-security
+          node: 'false'
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
@@ -822,22 +683,29 @@ jobs:
           SQL
 
       - name: Run PostgreSQL tenant-isolation suite
-        run: "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"
+        run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"
 
   ci-required:
     name: CI Required
     needs:
       - check-changes
       - dependency-audit
-      - bazel-build
-      - bazel-test
-      - bazel-test-e2e
+      - native-build
+      - native-test
+      - native-e2e
+      - native-web
+      - native-node
+      - native-images
+      - native-desktop
       - kind-e2e
       - docker-e2e
       - postgres-security
     if: ${{ always() }}
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Check required CI results
         env:
@@ -845,9 +713,13 @@ jobs:
           MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}
           DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}
-          BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}
-          BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}
-          BAZEL_TEST_E2E_RESULT: ${{ needs.bazel-test-e2e.result }}
+          NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
+          NATIVE_TEST_RESULT: ${{ needs.native-test.result }}
+          NATIVE_E2E_RESULT: ${{ needs.native-e2e.result }}
+          NATIVE_WEB_RESULT: ${{ needs.native-web.result }}
+          NATIVE_NODE_RESULT: ${{ needs.native-node.result }}
+          NATIVE_IMAGES_RESULT: ${{ needs.native-images.result }}
+          NATIVE_DESKTOP_RESULT: ${{ needs.native-desktop.result }}
           KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}
           DOCKER_E2E_RESULT: ${{ needs.docker-e2e.result }}
           POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}
@@ -856,9 +728,13 @@ jobs:
 
           echo "dependency-audit: ${DEPENDENCY_AUDIT_RESULT}"
           echo "check-changes: ${CHECK_CHANGES_RESULT}"
-          echo "bazel-build: ${BAZEL_BUILD_RESULT}"
-          echo "bazel-test: ${BAZEL_TEST_RESULT}"
-          echo "bazel-test-e2e: ${BAZEL_TEST_E2E_RESULT}"
+          echo "native-build: ${NATIVE_BUILD_RESULT}"
+          echo "native-test: ${NATIVE_TEST_RESULT}"
+          echo "native-e2e: ${NATIVE_E2E_RESULT}"
+          echo "native-web: ${NATIVE_WEB_RESULT}"
+          echo "native-node: ${NATIVE_NODE_RESULT}"
+          echo "native-images: ${NATIVE_IMAGES_RESULT}"
+          echo "native-desktop: ${NATIVE_DESKTOP_RESULT}"
           echo "kind-e2e: ${KIND_E2E_RESULT}"
           echo "docker-e2e: ${DOCKER_E2E_RESULT}"
           echo "postgres-security: ${POSTGRES_SECURITY_RESULT}"
@@ -883,24 +759,62 @@ jobs:
 
           require_success "check-changes" "$CHECK_CHANGES_RESULT"
 
-          if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            require_success "bazel-build" "$BAZEL_BUILD_RESULT"
+          if [[ "$MARKDOWN_ONLY" != "true" || "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            require_success "native-build" "$NATIVE_BUILD_RESULT"
           else
-            allow_success_or_skipped "bazel-build" "$BAZEL_BUILD_RESULT"
+            allow_success_or_skipped "native-build" "$NATIVE_BUILD_RESULT"
           fi
 
           if [[ "$MARKDOWN_ONLY" == "true" ]]; then
             allow_success_or_skipped "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
-            allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"
-            allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
+            allow_success_or_skipped "native-test" "$NATIVE_TEST_RESULT"
+            allow_success_or_skipped "native-e2e" "$NATIVE_E2E_RESULT"
+            allow_success_or_skipped "native-web" "$NATIVE_WEB_RESULT"
+            allow_success_or_skipped "native-node" "$NATIVE_NODE_RESULT"
+            allow_success_or_skipped "native-images" "$NATIVE_IMAGES_RESULT"
+            allow_success_or_skipped "native-desktop" "$NATIVE_DESKTOP_RESULT"
             allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
             allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"
             allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"
           else
             require_success "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
-            require_success "bazel-test" "$BAZEL_TEST_RESULT"
-            require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
+            require_success "native-test" "$NATIVE_TEST_RESULT"
+            require_success "native-e2e" "$NATIVE_E2E_RESULT"
+            require_success "native-web" "$NATIVE_WEB_RESULT"
+            require_success "native-node" "$NATIVE_NODE_RESULT"
+            require_success "native-images" "$NATIVE_IMAGES_RESULT"
+            require_success "native-desktop" "$NATIVE_DESKTOP_RESULT"
             require_success "kind-e2e" "$KIND_E2E_RESULT"
             require_success "docker-e2e" "$DOCKER_E2E_RESULT"
             require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"
           fi
+      - uses: actions/checkout@v6
+        if: always()
+      - name: Measure complete CI critical path against the 30-minute budget
+        if: always()
+        env:
+          CI_PERFORMANCE_PREFIX: ${{ inputs.performance_prefix || '' }}
+          GH_TOKEN: ${{ github.token }}
+          COLD_CACHE: ${{ github.event.inputs.cold_cache }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/ci-performance
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" > target/ci-performance/jobs.json
+          args=()
+          if [[ "$COLD_CACHE" == true ]]; then args+=(--cold); fi
+          status=0
+          python3 scripts/ci-performance.py --jobs target/ci-performance/jobs.json \
+            --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
+            --job-prefix "$CI_PERFORMANCE_PREFIX" \
+            --budget-minutes 30 --output target/ci-performance "${args[@]}" || status=$?
+          if [[ -f target/ci-performance/performance.md ]]; then
+            cat target/ci-performance/performance.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: ci-performance-${{ github.run_attempt }}
+          path: target/ci-performance/performance.*
+          if-no-files-found: warn
+          retention-days: 14

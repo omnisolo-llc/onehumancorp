@@ -1,10 +1,24 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SyncManager } from './SyncManager';
+import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
+
+vi.mock('../../app/utils/offlineQueue', () => ({
+  enqueueAction: vi.fn().mockResolvedValue(undefined),
+  getActions: vi.fn().mockResolvedValue([]),
+  removeAction: vi.fn().mockResolvedValue(undefined),
+}));
+
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('SyncManager', () => {
   beforeEach(() => {
     // Reset singleton instance between tests
-    (SyncManager as any).instance = undefined;
+    Reflect.set(SyncManager, 'instance', undefined);
     vi.clearAllMocks();
   });
 
@@ -17,8 +31,29 @@ describe('SyncManager', () => {
   it('initializes with default properties', () => {
     const instance = SyncManager.getInstance();
     expect(instance).toBeDefined();
-    // @ts-ignore - accessing private properties for testing
-    expect(instance.syncInProgress).toBe(false);
+    expect(instance).toHaveProperty('syncInProgress', false);
+  });
+
+  it('normalizes ISO queue timestamps and rejects invalid ones without persisting', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const manager = SyncManager.getInstance();
+    await manager.enqueue({ id: 'order-1', type: 'UPDATE_ORDER_STATUS', payload: { order_id: 'order-1' }, timestamp: '2026-09-19T10:00:00Z' });
+    expect(enqueueAction).toHaveBeenCalledWith(expect.objectContaining({ timestamp: Date.parse('2026-09-19T10:00:00Z') }));
+    vi.mocked(enqueueAction).mockClear();
+    await expect(manager.enqueue({ id: 'bad', type: 'UPDATE_ORDER_STATUS', timestamp: 'not-a-date' })).rejects.toThrow('timestamp');
+    expect(enqueueAction).not.toHaveBeenCalled();
+  });
+
+  it.each(['triage_action', 'advisory_action', 'field_ops_status', 'fulfillment_action', 'generate_invoice'])('retains %s when the server rate-limits the operation', async (type) => {
+    vi.useFakeTimers();
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(getActions).mockResolvedValue([{ id: 'pending', type, timestamp: 1, payload: { id: 'pending', order_id: 'order', action: 'approve' } }]);
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 429, headers: { 'Retry-After': '1' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await SyncManager.getInstance().sync();
+    expect(fetchMock).toHaveBeenCalled();
+    expect(removeAction).not.toHaveBeenCalled();
   });
 
   it('maps general mutations correctly', () => {

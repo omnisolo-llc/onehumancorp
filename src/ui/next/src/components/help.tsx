@@ -152,7 +152,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
 
   const activeStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
 
-  const [highlightStyle, setHighlightStyle] = useState({});
+  const [, setHighlightStyle] = useState({});
 
   useEffect(() => {
     if (activeStep) {
@@ -269,7 +269,7 @@ export function HelpWidget() {
       const data = await response.json();
       const reply = normalizeChatReply(data);
       setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
-    } catch (err) {
+    } catch  {
       setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
     }
   };

@@ -1,31 +1,9 @@
-#[path = "persistence/capabilities.rs"]
-mod capabilities;
-mod db {
-    pub struct DB;
-
-    impl DB {
-        pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-            unreachable!("legacy PostgreSQL migrations are not used by SQLite persistence tests")
-        }
-
-        pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
-            unreachable!("legacy PostgreSQL migrations are not used by SQLite persistence tests")
-        }
-    }
-}
-#[path = "persistence/commands.rs"]
-mod commands;
-#[path = "persistence/connection.rs"]
-mod connection;
-#[path = "persistence/entities.rs"]
-mod entities;
-#[path = "persistence/migration.rs"]
-mod migration;
+// Exercise production persistence instead of compiling a second copy and a
+// stub DB. This also keeps migrations and command tests on identical types.
+use crate::persistence::{AppDatabase, commands, entities, migration};
 
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, PaginatorTrait, Set, Statement};
-
-use connection::AppDatabase;
 
 #[test]
 fn database_url_can_be_loaded_from_a_secret_file() {

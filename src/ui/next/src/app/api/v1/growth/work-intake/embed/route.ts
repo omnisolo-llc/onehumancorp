@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const rawTitle = searchParams.get('title') || 'Work Request';
     const rawBranding = searchParams.get('branding') !== 'false';
 
-    const tenant = escapeHtml(rawTenant);
+    escapeHtml(rawTenant);
     const encodedTenant = encodeURIComponent(rawTenant);
     const theme = escapeHtml(rawTheme);
     const title = escapeHtml(rawTitle);

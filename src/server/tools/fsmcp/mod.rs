@@ -105,12 +105,11 @@ impl FsMcpTool {
                 while let Ok(Some(entry)) = entries.next_entry().await {
                     if let Ok(metadata) = entry.metadata().await {
                         if metadata.is_file() {
-                            if let Ok(modified) = metadata.modified() {
-                                if let Ok(elapsed) = modified.elapsed() {
-                                    if elapsed > max_age {
-                                        let _ = tokio::fs::remove_file(entry.path()).await;
-                                    }
-                                }
+                            if let Ok(modified) = metadata.modified()
+                                && let Ok(elapsed) = modified.elapsed()
+                                && elapsed > max_age
+                            {
+                                let _ = tokio::fs::remove_file(entry.path()).await;
                             }
                         } else if metadata.is_dir() {
                             Self::cleanup_old_files(entry.path(), max_age).await;
@@ -168,12 +167,12 @@ impl FsMcpTool {
         if self.is_standalone {
             let full_path = clean_path_str(&self.local_base_dir, path).ok_or("Invalid path")?;
             let mut entries = Vec::new();
-            if full_path.is_dir() {
-                if let Ok(rd) = fs::read_dir(&full_path) {
-                    for entry in rd.flatten() {
-                        if let Some(name) = entry.file_name().to_str() {
-                            entries.push(name.to_string());
-                        }
+            if full_path.is_dir()
+                && let Ok(rd) = fs::read_dir(&full_path)
+            {
+                for entry in rd.flatten() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        entries.push(name.to_string());
                     }
                 }
             }

@@ -47,6 +47,12 @@ pub struct VoiceAIEdgeEngine {
     pub actions: Arc<Mutex<Vec<IntentAction>>>,
 }
 
+impl Default for VoiceAIEdgeEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VoiceAIEdgeEngine {
     pub fn new() -> Self {
         Self {

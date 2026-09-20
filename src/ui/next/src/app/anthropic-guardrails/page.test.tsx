@@ -11,7 +11,7 @@ describe("AnthropicGuardrailsPage", () => {
   });
 
   it("handles valid execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ result: "Tool executed successfully" }),
     });
@@ -37,7 +37,7 @@ describe("AnthropicGuardrailsPage", () => {
   });
 
   it("handles guardrail error execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Permission check failed" }),
     });

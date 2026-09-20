@@ -20,8 +20,7 @@ export default function CustomerReferralProgramPage() {
   useEffect(() => {
     const tid = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'my-store') : 'my-store';
     setTenant(tid);
-    if (typeof window !== 'undefined') {
-    }
+
   }, []);
 
   const embedUrl = cloudUrl(`/api/v1/growth/customer-referral/embed?tenant=${encodeURIComponent(tenant)}&give=${encodeURIComponent(giveAmount)}&get=${encodeURIComponent(getAmount)}&hideBranding=${removeBranding}`);

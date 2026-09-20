@@ -1,6 +1,8 @@
+pub mod contract;
 pub mod omnisolo_job_queue;
 pub mod pg_queue;
-pub mod queue;
+// Preserve the prior Rust module path for downstream users.
+pub use contract as queue;
 pub mod redis_lock;
 pub mod redis_queue;
 pub mod sqlite_queue;
@@ -10,9 +12,9 @@ mod omnisolo_job_queue_test;
 #[cfg(test)]
 mod queue_test;
 
+pub use contract::{Job, TaskQueue};
 pub use omnisolo_job_queue::{OmniSoloJob, OmniSoloJobQueue};
 pub use pg_queue::PgTaskQueue;
-pub use queue::{Job, TaskQueue};
 pub use redis_lock::RedisLock;
 pub use redis_queue::RedisTaskQueue;
 pub use sqlite_queue::SQLiteTaskQueue;

@@ -36,11 +36,11 @@ test.describe('Offline-First AI Sync Mesh', () => {
            const res = await page.evaluate(async () => {
               const fetchRes = await fetch('/api/v1/sync/power_sync_pull');
               if (!fetchRes.ok) return false;
-              const json = await fetchRes.json();
+              await fetchRes.json();
               return true;
            });
            return res;
-        } catch (e) {
+        } catch  {
             return false;
         }
     }, { timeout: 15000 }).toBe(true);

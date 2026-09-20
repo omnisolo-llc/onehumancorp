@@ -34,7 +34,9 @@ impl ReverseTunnelServer {
 
         let msg = ServerToProxy {
             request_id: uuid::Uuid::new_v4().to_string(),
-            payload: Some(::server_omnisolo::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req)),
+            payload: Some(
+                ::server_omnisolo::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req),
+            ),
         };
 
         match sender.send(Ok(msg)).await {
@@ -76,8 +78,12 @@ impl McpReverseTunnelService for ReverseTunnelServer {
                             // but currently the proxy unauthenticated connection is enough
                             active_spiffe_id = Some(reg.spiffe_id.clone());
 
-                            let agent_id =
-                                reg.spiffe_id.split('/').last().unwrap_or("").to_string();
+                            let agent_id = reg
+                                .spiffe_id
+                                .split('/')
+                                .next_back()
+                                .unwrap_or("")
+                                .to_string();
                             active_agent_id = Some(agent_id.clone());
                             connections.insert(agent_id, tx.clone());
 
@@ -91,7 +97,9 @@ impl McpReverseTunnelService for ReverseTunnelServer {
                             )
                             .await;
                         }
-                        ::server_omnisolo::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
+                        ::server_omnisolo::mcp_proxy::proxy_to_server::Payload::InvokeResponse(
+                            res,
+                        ) => {
                             info!(
                                 "Received response for {}: success={}",
                                 msg.request_id, res.success

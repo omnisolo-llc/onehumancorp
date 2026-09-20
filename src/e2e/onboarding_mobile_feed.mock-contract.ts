@@ -1,3 +1,5 @@
+import * as nativePathModule from 'node:path';
+import * as nativeFsModule from 'node:fs';
 import { test, expect } from '@playwright/test';
 
 test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
@@ -11,14 +13,14 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
   test('Persona: Maya completes zero-click onboarding and approves welcome action on mobile', async ({ page }) => {
     // 1. Start from home
     const workspaceRoot = process.env.TEST_WORKSPACE
-        ? require('path').join(process.env.TEST_SRCDIR || require('path').resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
-        : require('path').resolve(__dirname, '..', '..');
+        ? nativePathModule.join(process.env.TEST_SRCDIR || nativePathModule.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
+        : nativePathModule.resolve(__dirname, '..', '..');
     await page.route('http://mock/index.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/index.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(workspaceRoot, 'src/ui/tauri/src/ui/index.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     await page.route('http://mock/dashboard.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(workspaceRoot, 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     await page.route('**/api/v1/ui/unified_inbox_feed*', async route => {
@@ -27,7 +29,7 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
-          invoke: async (cmd, args) => {
+          invoke: async (cmd) => {
             if (cmd === 'start_onboarding') {
               return { success: true, message: 'OK', organization_id: 'test-org' };
             }
@@ -75,11 +77,11 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
     await expect(page.locator('#triage-section h2')).toHaveText('Command Center');
 
     // 8. Verify initial welcome card from OnboardingAgent
-    const welcomeCard = page.locator('[data-testid="onboarding-welcome-card"]');
+    page.locator('[data-testid="onboarding-welcome-card"]');
     await page.waitForTimeout(500);
 
     // 9. Interaction Audit: Verify "Review Storefront" button works
-    const reviewBtn = page.locator('[data-testid="onboarding-welcome-card"] #reputation-engine-link');
+    page.locator('[data-testid="onboarding-welcome-card"] #reputation-engine-link');
     await page.waitForTimeout(500);
     // const box = await reviewBtn.boundingBox(); expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
 

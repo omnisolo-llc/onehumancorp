@@ -95,48 +95,48 @@ async fn post_orders_handler(
             let status = p.get("status").and_then(|v| v.as_str()).unwrap_or("");
             let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
 
-            if !order_id.is_empty() && !status.is_empty() {
-                if let Ok(mut tx) = pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                        .await
-                        .is_err()
-                    {
-                        continue;
-                    }
-                    if !client_mutation_id.is_empty() {
-                        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+            if !order_id.is_empty()
+                && !status.is_empty()
+                && let Ok(mut tx) = pool.begin().await
+            {
+                if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                    .await
+                    .is_err()
+                {
+                    continue;
+                }
+                if !client_mutation_id.is_empty() {
+                    let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
                             .bind(client_mutation_id)
                             .bind(&tenant_id)
                             .fetch_one(&mut *tx)
                             .await
                             .unwrap_or((0,));
 
-                        if exists.0 > 0 {
-                            let _ = tx.rollback().await;
-                            continue; // Idempotency check hit, skip duplicate
-                        }
+                    if exists.0 > 0 {
+                        let _ = tx.rollback().await;
+                        continue; // Idempotency check hit, skip duplicate
+                    }
 
-                        let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                    let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
                             .bind(client_mutation_id)
                             .bind(&tenant_id)
                             .execute(&mut *tx)
                             .await;
-                    }
+                }
 
-                    let update_res = sqlx::query(
-                        "UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3",
-                    )
-                    .bind(status)
-                    .bind(order_id)
-                    .bind(&tenant_id)
-                    .execute(&mut *tx)
-                    .await;
+                let update_res =
+                    sqlx::query("UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(status)
+                        .bind(order_id)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await;
 
-                    if update_res.is_ok() {
-                        let _ = tx.commit().await;
-                    } else {
-                        let _ = tx.rollback().await;
-                    }
+                if update_res.is_ok() {
+                    let _ = tx.commit().await;
+                } else {
+                    let _ = tx.rollback().await;
                 }
             }
         }
@@ -213,49 +213,50 @@ pub async fn post_inventory_handler(
                 .unwrap_or(false);
             let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
 
-            if !item_id.is_empty() {
-                if let Ok(mut tx) = pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                        .await
-                        .is_err()
-                    {
-                        continue;
-                    }
-                    if !client_mutation_id.is_empty() {
-                        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+            if !item_id.is_empty()
+                && let Ok(mut tx) = pool.begin().await
+            {
+                if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                    .await
+                    .is_err()
+                {
+                    continue;
+                }
+                if !client_mutation_id.is_empty() {
+                    let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
                             .bind(client_mutation_id)
                             .bind(&tenant_id)
                             .fetch_one(&mut *tx)
                             .await
                             .unwrap_or((0,));
 
-                        if exists.0 > 0 {
-                            let _ = tx.rollback().await;
-                            continue;
-                        }
+                    if exists.0 > 0 {
+                        let _ = tx.rollback().await;
+                        continue;
+                    }
 
-                        let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                    let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
                             .bind(client_mutation_id)
                             .bind(&tenant_id)
                             .execute(&mut *tx)
                             .await;
-                    }
+                }
 
-                    // Update centralized inventory level
-                    let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
+                // Update centralized inventory level
+                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
                         .bind(quantity_change)
                         .bind(item_id)
                         .bind(&tenant_id)
                         .fetch_optional(&mut *tx)
                         .await;
 
-                    let mut inv_lvl_id: String = "".to_string();
-                    if let Ok(Some(row)) = &update_res {
-                        inv_lvl_id = sqlx::Row::get(row, "id");
-                    } else if let Ok(None) = &update_res {
-                        // Insert if not exists
-                        inv_lvl_id = uuid::Uuid::new_v4().to_string();
-                        let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
+                let mut inv_lvl_id: String = "".to_string();
+                if let Ok(Some(row)) = &update_res {
+                    inv_lvl_id = sqlx::Row::get(row, "id");
+                } else if let Ok(None) = &update_res {
+                    // Insert if not exists
+                    inv_lvl_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
                             .bind(&inv_lvl_id)
                             .bind(&tenant_id)
                             .bind(item_id)
@@ -263,21 +264,21 @@ pub async fn post_inventory_handler(
                             .bind(quantity_change)
                             .execute(&mut *tx)
                             .await;
-                    }
+                }
 
-                    if !inv_lvl_id.is_empty() && quantity_change != 0 {
-                        let t_id = uuid::Uuid::new_v4().to_string();
-                        let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'adjustment', $4)")
+                if !inv_lvl_id.is_empty() && quantity_change != 0 {
+                    let t_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'adjustment', $4)")
                              .bind(&t_id)
                              .bind(&tenant_id)
                              .bind(&inv_lvl_id)
                              .bind(quantity_change)
                              .execute(&mut *tx)
                              .await;
-                    }
+                }
 
-                    // Sync to legacy products for compatibility
-                    let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
+                // Sync to legacy products for compatibility
+                let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
                         .bind(quantity_change)
                         .bind(is_sold_out)
                         .bind(item_id)
@@ -285,48 +286,47 @@ pub async fn post_inventory_handler(
                         .execute(&mut *tx)
                         .await;
 
-                    if update_legacy.is_ok() {
-                        let _ = tx.commit().await;
+                if update_legacy.is_ok() {
+                    let _ = tx.commit().await;
 
-                        if let Some(client) = crate::get_redis_client() {
-                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                                let invalidation_topic = "cache_invalidation_events";
-                                let invalidation_payload = serde_json::json!({
-                                    "event": "inventory.updated",
-                                    "tags": [
-                                        format!("tenant-id:{}", tenant_id),
-                                        format!("entity:product:{}", item_id)
-                                    ]
-                                })
-                                .to_string();
-                                let _: Result<(), _> = redis::cmd("PUBLISH")
-                                    .arg(invalidation_topic)
-                                    .arg(invalidation_payload)
-                                    .query_async(&mut conn)
-                                    .await;
-                            }
-                        }
-
-                        let edge_cache = crate::builder::edge::get_edge_cache();
-                        edge_cache
-                            .invalidate_by_tag(&format!("entity:product:{}", item_id))
+                    if let Some(client) = crate::get_redis_client()
+                        && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                    {
+                        let invalidation_topic = "cache_invalidation_events";
+                        let invalidation_payload = serde_json::json!({
+                            "event": "inventory.updated",
+                            "tags": [
+                                format!("tenant-id:{}", tenant_id),
+                                format!("entity:product:{}", item_id)
+                            ]
+                        })
+                        .to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH")
+                            .arg(invalidation_topic)
+                            .arg(invalidation_payload)
+                            .query_async(&mut conn)
                             .await;
-                        edge_cache
-                            .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
-                            .await;
-
-                        let item_id_owned = item_id.to_string();
-                        let tenant_id_owned = tenant_id.to_string();
-                        tokio::spawn(async move {
-                            let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                            cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned))
-                                .await;
-                            cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned))
-                                .await;
-                        });
-                    } else {
-                        let _ = tx.rollback().await;
                     }
+
+                    let edge_cache = crate::builder::edge::get_edge_cache();
+                    edge_cache
+                        .invalidate_by_tag(&format!("entity:product:{}", item_id))
+                        .await;
+                    edge_cache
+                        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
+                        .await;
+
+                    let item_id_owned = item_id.to_string();
+                    let tenant_id_owned = tenant_id.to_string();
+                    tokio::spawn(async move {
+                        let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+                        cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned))
+                            .await;
+                        cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned))
+                            .await;
+                    });
+                } else {
+                    let _ = tx.rollback().await;
                 }
             }
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState,useRef } from "react";
 import Head from "next/head";
 import { useProPlan } from '../components/useProPlan';
 

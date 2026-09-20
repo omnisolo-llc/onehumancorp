@@ -1,5 +1,25 @@
 #[cfg(test)]
 mod ml_resilience_tests {
+    use crate::queue::{Job, MemoryTaskQueue, TaskQueue};
+
+    fn job(id: &str, tenant: &str, status: &str) -> Job {
+        let now = chrono::Utc::now();
+        Job {
+            id: id.into(),
+            tenant_id: tenant.into(),
+            parent_task_id: String::new(),
+            job_type: "operations".into(),
+            payload: "{}".into(),
+            status: status.into(),
+            retry_count: 0,
+            max_retries: 3,
+            next_retry_at: now,
+            locked_until: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
     #[tokio::test]
     async fn test_agent_timeout_and_retry_rule() {
         // ML-Resilience Rule 1: AI agent jobs must have a 60-second timeout with automatic retry (max 3 attempts).
@@ -13,20 +33,81 @@ mod ml_resilience_tests {
     }
 
     #[tokio::test]
-    async fn test_agent_failure_no_cascade_and_idempotent() {
-        // ML-Resilience Rule 2 & 3: Failures must never cause cascading failures, and never corrupt customer data (use idempotent ops)
-        // Chaos tests in orchestration/chaos_test.rs already cover corrupting data intentionally
-        // and expecting safe error handling instead of panics.
-        assert!(true, "Cascading failure prevention verified by chaos tests");
+    async fn failed_job_does_not_complete_or_block_another_tenant_job() {
+        let queue = MemoryTaskQueue::new();
+        queue
+            .enqueue(job("failed", "tenant-a", "QUEUED"))
+            .await
+            .unwrap();
+        queue
+            .enqueue(job("healthy", "tenant-b", "QUEUED"))
+            .await
+            .unwrap();
+        let first = queue
+            .dequeue(vec!["operations".into()])
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(first.id, "failed");
+        assert!(
+            queue
+                .fail(&first.id, "tenant-b", "wrong tenant")
+                .await
+                .is_err()
+        );
+        queue
+            .fail(&first.id, "tenant-a", "provider unavailable")
+            .await
+            .unwrap();
+        let second = queue
+            .dequeue(vec!["operations".into()])
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (second.id.as_str(), second.tenant_id.as_str()),
+            ("healthy", "tenant-b")
+        );
+        assert!(queue.complete(&second.id, "tenant-a").await.is_err());
+        queue.complete(&second.id, "tenant-b").await.unwrap();
+        queue.complete(&second.id, "tenant-b").await.unwrap();
+        assert!(
+            queue
+                .dequeue(vec!["operations".into()])
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
-    async fn test_agent_fallback_paused_state() {
-        // ML-Resilience Rule 4: When LLM API is unavailable, agents must enter a "paused" state and notify the owner/operator.
-        // This is verified by test_llm_api_failure_recovery in orchestration/chaos_test.rs
+    async fn paused_job_is_not_dispatched_until_explicitly_requeued() {
+        // This verifies queue pause semantics, not an unperformed live LLM call.
+        let queue = MemoryTaskQueue::new();
+        let mut paused = job("paused", "tenant-a", "PAUSED");
+        queue.enqueue(paused.clone()).await.unwrap();
         assert!(
-            true,
-            "LLM fallback PAUSED verified by orchestration chaos test"
+            queue
+                .dequeue(vec!["operations".into()])
+                .await
+                .unwrap()
+                .is_none()
+        );
+        paused.status = "QUEUED".into();
+        queue.requeue(paused).await.unwrap();
+        let resumed = queue
+            .dequeue(vec!["operations".into()])
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(resumed.id, "paused");
+        assert_eq!(resumed.status, "IN_PROGRESS");
+        assert!(
+            queue
+                .dequeue(vec!["operations".into()])
+                .await
+                .unwrap()
+                .is_none()
         );
     }
 
@@ -36,8 +117,11 @@ mod ml_resilience_tests {
         let mut tracker = omnisolo_builtin_agent::budget::BudgetTracker::default();
         let budget = 1000;
         let global_turn_tokens = 800; // < 900 (90%)
-        let decision =
-            omnisolo_builtin_agent::budget::check_token_budget(&mut tracker, budget, global_turn_tokens);
+        let decision = omnisolo_builtin_agent::budget::check_token_budget(
+            &mut tracker,
+            budget,
+            global_turn_tokens,
+        );
         // It should continue since we haven't reached 1000 or diminishing returns
         assert_eq!(
             decision.action,

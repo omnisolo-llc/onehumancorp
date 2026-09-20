@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
   const tenantId = `tenant-${Math.random().toString(36).substring(7)}`;
-  let basePrice = 5000; // $50
+  const basePrice = 5000; // $50
 
   test('Customer receives instant edge price updates and owner approves', async ({ page, request }) => {
     // 1. Setup tenant & pricing rules
@@ -14,7 +14,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
       }
     });
 
-    const createRuleRes = await request.post('http://127.0.0.1:8081/api/v1/quoting/pricing-rules', {
+    await request.post('http://127.0.0.1:8081/api/v1/quoting/pricing-rules', {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'admin'

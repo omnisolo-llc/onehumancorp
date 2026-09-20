@@ -1,3 +1,5 @@
+import * as nativeFsModule from 'node:fs';
+import * as nativePathModule from 'node:path';
 import * as fs from 'fs';
 import * as path from 'path';
 import { test, expect } from '@playwright/test';
@@ -8,7 +10,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -100,7 +102,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -123,7 +125,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
             try {
                 return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-            } catch(e) {
+            } catch {
                 return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
             }
         })();
@@ -168,7 +170,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -206,7 +208,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -252,7 +254,7 @@ test.describe('OmniSolo Setup Wizard Form Configuration', () => {
           const content = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -312,14 +314,14 @@ test.describe('OmniSolo Setup Wizard Form Configuration', () => {
 
 test.describe('OmniSolo Setup Wizard Dark Mode', () => {
   test.beforeEach(async ({ page }) => {
-    const fs = require('fs');
-    const path = require('path');
+    const fs = nativeFsModule;
+    const path = nativePathModule;
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();

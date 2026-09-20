@@ -3,11 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
+import ProviderConnections from "./ProviderConnections";
 
 declare global {
   interface Window {
     fbAsyncInit: () => void;
-    FB: any;
+    FB?: {
+      init(options: { appId?: string; cookie?: boolean; xfbml?: boolean; version: string }): void;
+      login(callback: (response: { authResponse?: { accessToken: string } }) => void, options: { scope: string }): void;
+    };
   }
 }
 
@@ -159,7 +163,7 @@ export default function Integrations() {
       setShowWhatsAppModal(false);
       setStatusMessage("Twilio for WhatsApp connected.");
       router.push('/inbox');
-    } catch (e) {
+    } catch  {
       setStatusMessage("Failed to connect Twilio for WhatsApp.");
     }
   };
@@ -177,9 +181,9 @@ export default function Integrations() {
       };
 
       (function(d, s, id) {
-        var js, fjs = d.getElementsByTagName(s)[0];
+        const fjs = d.getElementsByTagName(s)[0];
         if (d.getElementById(id)) return;
-        js = d.createElement(s) as HTMLScriptElement;
+        const js = d.createElement(s) as HTMLScriptElement;
         js.id = id;
         js.src = "https://connect.facebook.net/en_US/sdk.js";
         if (fjs && fjs.parentNode) {
@@ -215,7 +219,7 @@ export default function Integrations() {
       };
 
       if (typeof window !== "undefined" && window.FB) {
-        window.FB.login((response: any) => {
+        window.FB.login((response) => {
           if (response.authResponse) {
             doBackendConnect(response.authResponse.accessToken);
           } else {
@@ -225,7 +229,7 @@ export default function Integrations() {
       } else {
         setStatusMessage("WhatsApp Cloud API signup is unavailable because the Meta SDK did not load.");
       }
-    } catch (e) {
+    } catch  {
       setStatusMessage("Failed to connect WhatsApp Cloud API.");
     }
   };
@@ -236,6 +240,7 @@ export default function Integrations() {
       subtitle="Supercharge your workflow by connecting your favorite marketing, finance, and operations tools."
     >
       <div className="flex flex-col font-inter">
+        <ProviderConnections />
         {/* Twilio for WhatsApp Connect Modal */}
         {showWhatsAppModal && (
           <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">

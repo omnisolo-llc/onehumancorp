@@ -104,6 +104,12 @@ impl TaskQueue for MemoryTaskQueue {
     }
 }
 
+impl Default for MemoryTaskQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,11 +180,5 @@ mod tests {
             let manager = TaskSchedulerManager::from_env(queue);
             assert!(!manager.is_cloud);
         });
-    }
-}
-
-impl Default for MemoryTaskQueue {
-    fn default() -> Self {
-        Self::new()
     }
 }

@@ -6,16 +6,16 @@ test.describe('Voice Assistant Offline Sync', () => {
 
     // Mock MediaRecorder
     await page.addInitScript(() => {
-      window.MediaRecorder = class MockMediaRecorder {
+      class MockMediaRecorder {
         state = 'inactive';
-        ondataavailable = null;
-        onstop = null;
+        ondataavailable: ((event: BlobEvent) => void) | null = null;
+        onstop: ((event: Event) => void) | null = null;
         constructor() {}
         start() {
           this.state = 'recording';
           setTimeout(() => {
             if (this.ondataavailable) {
-              this.ondataavailable({ data: new Blob(['mock audio'], { type: 'audio/webm' }) } as any);
+              this.ondataavailable(new BlobEvent('dataavailable', { data: new Blob(['mock audio'], { type: 'audio/webm' }) }));
             }
           }, 100);
         }
@@ -25,10 +25,11 @@ test.describe('Voice Assistant Offline Sync', () => {
             this.onstop(new Event('stop'));
           }
         }
-      } as any;
-      (navigator as any).mediaDevices = {
+      }
+      Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: MockMediaRecorder });
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
         getUserMedia: () => Promise.resolve(new MediaStream()),
-      };
+      } });
     });
 
     await page.goto('/dashboard');

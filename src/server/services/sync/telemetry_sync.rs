@@ -57,9 +57,6 @@ impl TelemetrySyncDaemon {
         if self.cloud_url.is_empty() {
             return Ok(());
         }
-        if self.cloud_url.is_empty() {
-            return Ok(());
-        }
         let rows = query(
             "SELECT id, metric_name, metric_type, value, labels_json, timestamp
              FROM telemetry_buffer WHERE sync_status = 'pending' LIMIT 100",
@@ -97,7 +94,7 @@ impl TelemetrySyncDaemon {
             let num_cpus = std::thread::available_parallelism()
                 .map(|n| n.get())
                 .unwrap_or(4);
-            let chunk_size = std::cmp::max(1, (extracted_data.len() + num_cpus - 1) / num_cpus);
+            let chunk_size = std::cmp::max(1, extracted_data.len().div_ceil(num_cpus));
 
             let mut iter = extracted_data.into_iter();
             let mut handles = Vec::new();
@@ -125,12 +122,10 @@ impl TelemetrySyncDaemon {
             }
 
             let results = futures::future::join_all(handles).await;
-            for res in results {
-                if let Ok(chunk_res) = res {
-                    for (id, json) in chunk_res {
-                        ids.push(id);
-                        batch.push(json);
-                    }
+            for chunk_res in results.into_iter().flatten() {
+                for (id, json) in chunk_res {
+                    ids.push(id);
+                    batch.push(json);
                 }
             }
         } else {
@@ -202,8 +197,22 @@ mod tests {
     use std::time::Instant;
 
     #[tokio::test]
-    async fn test_telemetry_metrics_update() {
-        assert!(true);
+    async fn unconfigured_telemetry_does_not_access_storage_or_network() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+            .unwrap();
+        pool.close().await;
+        for mode in [
+            perf::CoordinatorMode::Sequential,
+            perf::CoordinatorMode::Parallel,
+        ] {
+            let daemon = TelemetrySyncDaemon::with_mode(pool.clone(), String::new(), mode);
+            tokio::time::timeout(std::time::Duration::from_millis(50), daemon.sync_metrics())
+                .await
+                .expect("Unconfigured telemetry must return without waiting for I/O")
+                .expect("An absent destination must not attempt to use the closed database");
+        }
+        assert!(pool.is_closed());
     }
 
     #[tokio::test]

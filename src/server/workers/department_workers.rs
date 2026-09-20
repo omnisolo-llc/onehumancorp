@@ -191,8 +191,7 @@ impl OperationsWorker {
                         }
                         _ => {
                             attempts += 1;
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32)))
-                                .await;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
                         }
                     }
                 }
@@ -265,25 +264,24 @@ impl OperationsWorker {
                                     .execute(&db.pool)
                                     .await;
 
-                                    if let Some(client) = crate::get_redis_client() {
-                                        if let Ok(mut conn) =
+                                    if let Some(client) = crate::get_redis_client()
+                                        && let Ok(mut conn) =
                                             client.get_multiplexed_async_connection().await
-                                        {
-                                            let invalidation_topic = "cache_invalidation_events";
-                                            let invalidation_payload = serde_json::json!({
-                                                "event": "inventory.updated",
-                                                "tags": [
-                                                    format!("tenant-id:{}", tenant_id),
-                                                    format!("entity:product:{}", product_id)
-                                                ]
-                                            })
-                                            .to_string();
-                                            let _: Result<(), _> = redis::cmd("PUBLISH")
-                                                .arg(invalidation_topic)
-                                                .arg(invalidation_payload)
-                                                .query_async(&mut conn)
-                                                .await;
-                                        }
+                                    {
+                                        let invalidation_topic = "cache_invalidation_events";
+                                        let invalidation_payload = serde_json::json!({
+                                            "event": "inventory.updated",
+                                            "tags": [
+                                                format!("tenant-id:{}", tenant_id),
+                                                format!("entity:product:{}", product_id)
+                                            ]
+                                        })
+                                        .to_string();
+                                        let _: Result<(), _> = redis::cmd("PUBLISH")
+                                            .arg(invalidation_topic)
+                                            .arg(invalidation_payload)
+                                            .query_async(&mut conn)
+                                            .await;
                                     }
 
                                     let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (tenant_id = $2 OR tenant_id = $2)")
@@ -317,25 +315,24 @@ impl OperationsWorker {
                                     .execute(pool)
                                     .await;
 
-                                    if let Some(client) = crate::get_redis_client() {
-                                        if let Ok(mut conn) =
+                                    if let Some(client) = crate::get_redis_client()
+                                        && let Ok(mut conn) =
                                             client.get_multiplexed_async_connection().await
-                                        {
-                                            let invalidation_topic = "cache_invalidation_events";
-                                            let invalidation_payload = serde_json::json!({
-                                                "event": "inventory.updated",
-                                                "tags": [
-                                                    format!("tenant-id:{}", tenant_id),
-                                                    format!("entity:product:{}", product_id)
-                                                ]
-                                            })
-                                            .to_string();
-                                            let _: Result<(), _> = redis::cmd("PUBLISH")
-                                                .arg(invalidation_topic)
-                                                .arg(invalidation_payload)
-                                                .query_async(&mut conn)
-                                                .await;
-                                        }
+                                    {
+                                        let invalidation_topic = "cache_invalidation_events";
+                                        let invalidation_payload = serde_json::json!({
+                                            "event": "inventory.updated",
+                                            "tags": [
+                                                format!("tenant-id:{}", tenant_id),
+                                                format!("entity:product:{}", product_id)
+                                            ]
+                                        })
+                                        .to_string();
+                                        let _: Result<(), _> = redis::cmd("PUBLISH")
+                                            .arg(invalidation_topic)
+                                            .arg(invalidation_payload)
+                                            .query_async(&mut conn)
+                                            .await;
                                     }
 
                                     let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id = ?)")
@@ -489,7 +486,7 @@ impl OperationsWorker {
                                                     }
                                                 }
                                                 tokio::time::sleep(Duration::from_secs(
-                                                    2u64.pow(attempts as u32),
+                                                    2u64.pow(attempts),
                                                 ))
                                                 .await;
                                             }
@@ -939,8 +936,7 @@ impl CustomerSuccessWorker {
                                 .execute(&db.pool)
                                 .await;
                             }
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32)))
-                                .await;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
                         }
                     }
                 }
@@ -981,8 +977,7 @@ impl CustomerSuccessWorker {
                                 if attempts == MAX_RETRIES {
                                     final_status = "PAUSED";
                                 }
-                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32)))
-                                    .await;
+                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
                             }
                         }
                     }
@@ -1103,90 +1098,84 @@ impl PromoterWorker {
                 .subscribe_teammate_mesh("products_inbox".to_string())
                 .await;
             while let Ok(event) = product_rx.recv().await {
-                if event.action == "ProductCreated"
+                if (event.action == "ProductCreated"
                     || event.action == "ProductUpdated"
                     || event.action == "tenant.product.created"
-                    || event.action == "tenant.product.updated"
+                    || event.action == "tenant.product.updated")
+                    && let Ok(payload_str) = String::from_utf8(event.payload.clone())
+                    && let Ok(payload_json) =
+                        serde_json::from_str::<serde_json::Value>(&payload_str)
                 {
-                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
-                        if let Ok(payload_json) =
-                            serde_json::from_str::<serde_json::Value>(&payload_str)
+                    let org_id = payload_json
+                        .get("tenant_id")
+                        .and_then(|o| o.as_str())
+                        .unwrap_or("system")
+                        .to_string();
+                    let mut product_id = String::new();
+                    let mut product_name = String::new();
+                    if let Some(pid) = payload_json
+                        .get("product_id")
+                        .and_then(|p| p.as_str())
+                        .or_else(|| payload_json.get("id").and_then(|p| p.as_str()))
+                    {
+                        product_id = pid.to_string();
+                        if let Some(client) = crate::get_redis_client()
+                            && let Ok(mut conn) = client.get_multiplexed_async_connection().await
                         {
-                            let org_id = payload_json
-                                .get("tenant_id")
-                                .and_then(|o| o.as_str())
-                                .unwrap_or("system")
-                                .to_string();
-                            let mut product_id = String::new();
-                            let mut product_name = String::new();
-                            if let Some(pid) = payload_json
-                                .get("product_id")
-                                .and_then(|p| p.as_str())
-                                .or_else(|| payload_json.get("id").and_then(|p| p.as_str()))
-                            {
-                                product_id = pid.to_string();
-                                if let Some(client) = crate::get_redis_client() {
-                                    if let Ok(mut conn) =
-                                        client.get_multiplexed_async_connection().await
-                                    {
-                                        let invalidation_topic = "cache_invalidation_events";
-                                        let invalidation_payload = serde_json::json!({
-                                            "event": "inventory.updated",
-                                            "tags": [
-                                                format!("tenant-id:{}", org_id),
-                                                format!("entity:product:{}", pid)
-                                            ]
-                                        })
-                                        .to_string();
-                                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                                            .arg(invalidation_topic)
-                                            .arg(invalidation_payload)
-                                            .query_async(&mut conn)
-                                            .await;
-                                    }
-                                }
-                            }
-                            if let Some(name) = payload_json.get("name").and_then(|p| p.as_str()) {
-                                product_name = name.to_string();
-                            }
+                            let invalidation_topic = "cache_invalidation_events";
+                            let invalidation_payload = serde_json::json!({
+                                "event": "inventory.updated",
+                                "tags": [
+                                    format!("tenant-id:{}", org_id),
+                                    format!("entity:product:{}", pid)
+                                ]
+                            })
+                            .to_string();
+                            let _: Result<(), _> = redis::cmd("PUBLISH")
+                                .arg(invalidation_topic)
+                                .arg(invalidation_payload)
+                                .query_async(&mut conn)
+                                .await;
+                        }
+                    }
+                    if let Some(name) = payload_json.get("name").and_then(|p| p.as_str()) {
+                        product_name = name.to_string();
+                    }
 
-                            if !product_id.is_empty() && !product_name.is_empty() {
-                                // Double check if already created draft
-                                let sanitized_name =
-                                    product_name.replace("%", "\\%").replace("_", "\\_");
-                                match &db_for_products.store {
+                    if !product_id.is_empty() && !product_name.is_empty() {
+                        // Double check if already created draft
+                        let sanitized_name = product_name.replace("%", "\\%").replace("_", "\\_");
+                        match &db_for_products.store {
                                     crate::db::DbStore::Postgres => {
                                         if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_feed_items WHERE tenant_id = $1 AND proposed_action::text LIKE $2")
                                             .bind(&org_id)
                                             .bind(format!("%{}%", sanitized_name))
-                                            .fetch_one(&db_for_products.pool).await {
-                                                if count > 0 {
+                                            .fetch_one(&db_for_products.pool).await
+                                                && count > 0 {
                                                     continue;
                                                 }
-                                        }
                                     },
                                     crate::db::DbStore::Sqlite(pool) => {
                                         if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_feed_items WHERE tenant_id = ? AND proposed_action LIKE ?")
                                             .bind(&org_id)
                                             .bind(format!("%{}%", sanitized_name))
-                                            .fetch_one(pool).await {
-                                                if count > 0 {
+                                            .fetch_one(pool).await
+                                                && count > 0 {
                                                     continue;
                                                 }
-                                        }
                                     }
                                 }
-                                let prompt = format!(
-                                    "You are The Promoter, an AI social media manager. Generate 3 variant captions (TikTok, Instagram, Facebook) to promote the new product '{}'. Format the output as JSON with keys 'tiktok', 'instagram', 'facebook'.",
-                                    product_name
-                                );
+                        let prompt = format!(
+                            "You are The Promoter, an AI social media manager. Generate 3 variant captions (TikTok, Instagram, Facebook) to promote the new product '{}'. Format the output as JSON with keys 'tiktok', 'instagram', 'facebook'.",
+                            product_name
+                        );
 
-                                let mut drafted_msg = r#"{"tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}"#.to_string();
+                        let mut drafted_msg = r#"{"tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}"#.to_string();
 
-                                let mut attempts = 0;
-                                while attempts < MAX_RETRIES {
-                                    let ai_op = async {
-                                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                        let mut attempts = 0;
+                        while attempts < MAX_RETRIES {
+                            let ai_op = async {
+                                if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                             let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                                 prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                                 from_agent_id: "The Promoter".into(),
@@ -1195,73 +1184,61 @@ impl PromoterWorker {
                                                 return Ok(res.into_inner().content);
                                             }
                                         }
-                                        Err("AI call failed".to_string())
-                                    };
+                                Err("AI call failed".to_string())
+                            };
 
-                                    match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
-                                        Ok(Ok(content)) => {
-                                            drafted_msg = content;
-                                            break;
-                                        }
-                                        _ => {
-                                            attempts += 1;
-                                            if attempts == MAX_RETRIES {
-                                                break;
-                                            }
-                                            tokio::time::sleep(std::time::Duration::from_secs(
-                                                2u64.pow(attempts as u32),
-                                            ))
-                                            .await;
-                                        }
-                                    }
+                            match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                Ok(Ok(content)) => {
+                                    drafted_msg = content;
+                                    break;
                                 }
-
-                                let mut parsed: serde_json::Value = serde_json::from_str(
-                                    &drafted_msg,
-                                )
-                                .unwrap_or(serde_json::json!({
-                                    "tiktok": "Check out our new product!",
-                                    "instagram": "New arrival! Link in bio.",
-                                    "facebook": "We just added a new product to our store."
-                                }));
-
-                                if let Some(obj) = parsed.as_object_mut() {
-                                    obj.insert(
-                                        "feature_type".to_string(),
-                                        serde_json::json!("social_post_draft"),
-                                    );
-                                    obj.insert(
-                                        "product_name".to_string(),
-                                        serde_json::json!(product_name),
-                                    );
-
-                                    for platform in
-                                        ["tiktok", "instagram", "facebook", "twitter", "linkedin"]
-                                            .iter()
-                                    {
-                                        if let Some(v) = obj.get_mut(*platform) {
-                                            if let Some(s) = v.as_str() {
-                                                if !s.contains("OmniSolo") {
-                                                    *v = serde_json::json!(format!(
-                                                        "{}\n\n⚡ OmniSolo",
-                                                        s
-                                                    ));
-                                                }
-                                            }
-                                        }
+                                _ => {
+                                    attempts += 1;
+                                    if attempts == MAX_RETRIES {
+                                        break;
                                     }
+                                    tokio::time::sleep(std::time::Duration::from_secs(
+                                        2u64.pow(attempts),
+                                    ))
+                                    .await;
                                 }
+                            }
+                        }
 
-                                let task_id = Uuid::new_v4().to_string();
-                                let _title = format!("Draft Social Post: {}", product_name);
-                                let description =
-                                    "New product detected! Schedule a post to drive sales?";
-                                let _proposed_content =
-                                    serde_json::to_string(&parsed).unwrap_or_default();
+                        let mut parsed: serde_json::Value = serde_json::from_str(&drafted_msg)
+                            .unwrap_or(serde_json::json!({
+                                "tiktok": "Check out our new product!",
+                                "instagram": "New arrival! Link in bio.",
+                                "facebook": "We just added a new product to our store."
+                            }));
 
-                                match &db_for_products.store {
-                                    crate::db::DbStore::Postgres => {
-                                        let _ = sqlx::query(
+                        if let Some(obj) = parsed.as_object_mut() {
+                            obj.insert(
+                                "feature_type".to_string(),
+                                serde_json::json!("social_post_draft"),
+                            );
+                            obj.insert("product_name".to_string(), serde_json::json!(product_name));
+
+                            for platform in
+                                ["tiktok", "instagram", "facebook", "twitter", "linkedin"].iter()
+                            {
+                                if let Some(v) = obj.get_mut(*platform)
+                                    && let Some(s) = v.as_str()
+                                    && !s.contains("OmniSolo")
+                                {
+                                    *v = serde_json::json!(format!("{}\n\n⚡ OmniSolo", s));
+                                }
+                            }
+                        }
+
+                        let task_id = Uuid::new_v4().to_string();
+                        let _title = format!("Draft Social Post: {}", product_name);
+                        let description = "New product detected! Schedule a post to drive sales?";
+                        let _proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
+
+                        match &db_for_products.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query(
                                             "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
                                         )
                                         .bind(&task_id)
@@ -1273,38 +1250,34 @@ impl PromoterWorker {
                                         .execute(&db_for_products.pool)
                                         .await;
 
-                                        // Also notify SSE stream if available
-                                        if let Ok(client) = redis::Client::open(
-                                            std::env::var("REDIS_URL").unwrap_or_else(|_| {
-                                                "redis://127.0.0.1:6379".to_string()
-                                            }),
-                                        ) {
-                                            if let Ok(mut conn) =
-                                                client.get_multiplexed_async_connection().await
-                                            {
-                                                let payload_str = serde_json::json!({
-                                                    "event_type": "approval_request",
-                                                    "data": {
-                                                        "id": &task_id,
-                                                        "tenant_id": &org_id,
-                                                        "department": "marketing",
-                                                        "description": &description,
-                                                        "status": "DRAFT",
-                                                        "payload": &parsed
-                                                    }
-                                                })
-                                                .to_string();
-                                                let _: redis::RedisResult<()> =
-                                                    redis::cmd("PUBLISH")
-                                                        .arg(format!("agent_feed:{}", org_id))
-                                                        .arg(payload_str)
-                                                        .query_async(&mut conn)
-                                                        .await;
-                                            }
+                                // Also notify SSE stream if available
+                                if let Ok(client) = redis::Client::open(
+                                    std::env::var("REDIS_URL")
+                                        .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
+                                ) && let Ok(mut conn) =
+                                    client.get_multiplexed_async_connection().await
+                                {
+                                    let payload_str = serde_json::json!({
+                                        "event_type": "approval_request",
+                                        "data": {
+                                            "id": &task_id,
+                                            "tenant_id": &org_id,
+                                            "department": "marketing",
+                                            "description": &description,
+                                            "status": "DRAFT",
+                                            "payload": &parsed
                                         }
-                                    }
-                                    crate::db::DbStore::Sqlite(pool) => {
-                                        let _ = sqlx::query(
+                                    })
+                                    .to_string();
+                                    let _: redis::RedisResult<()> = redis::cmd("PUBLISH")
+                                        .arg(format!("agent_feed:{}", org_id))
+                                        .arg(payload_str)
+                                        .query_async(&mut conn)
+                                        .await;
+                                }
+                            }
+                            crate::db::DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query(
                                             "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
                                         )
                                         .bind(&task_id)
@@ -1315,8 +1288,6 @@ impl PromoterWorker {
                                         .bind("PENDING_APPROVAL")
                                         .execute(pool)
                                         .await;
-                                    }
-                                }
                             }
                         }
                     }
@@ -1331,63 +1302,62 @@ impl PromoterWorker {
                 .subscribe_teammate_mesh("promoter_inbox".to_string())
                 .await;
             while let Ok(event) = promoter_rx.recv().await {
-                if event.action == "OnboardingStarted" {
-                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
-                        if let Ok(payload_json) =
-                            serde_json::from_str::<serde_json::Value>(&payload_str)
-                        {
-                            let session_id = payload_json
-                                .get("session_id")
-                                .and_then(|s| s.as_str())
-                                .unwrap_or("")
-                                .to_string();
-                            let bio = payload_json
-                                .get("bio")
-                                .and_then(|b| b.as_str())
-                                .unwrap_or("")
-                                .to_string();
-                            let tenant_id = payload_json
-                                .get("tenant_id")
-                                .and_then(|o| o.as_str())
-                                .unwrap_or("system")
-                                .to_string();
+                if event.action == "OnboardingStarted"
+                    && let Ok(payload_str) = String::from_utf8(event.payload.clone())
+                    && let Ok(payload_json) =
+                        serde_json::from_str::<serde_json::Value>(&payload_str)
+                {
+                    let session_id = payload_json
+                        .get("session_id")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let bio = payload_json
+                        .get("bio")
+                        .and_then(|b| b.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let tenant_id = payload_json
+                        .get("tenant_id")
+                        .and_then(|o| o.as_str())
+                        .unwrap_or("system")
+                        .to_string();
 
-                            if !session_id.is_empty() {
-                                let prompt = format!(
-                                    "Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Real Estate, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.",
-                                    bio
-                                );
+                    if !session_id.is_empty() {
+                        let prompt = format!(
+                            "Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Real Estate, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.",
+                            bio
+                        );
 
-                                let mut resolved_payload = serde_json::json!({});
+                        let mut resolved_payload = serde_json::json!({});
 
-                                let mut attempts = 0;
-                                while attempts < MAX_RETRIES {
-                                    let ai_op = async {
-                                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                        let mut attempts = 0;
+                        while attempts < MAX_RETRIES {
+                            let ai_op = async {
+                                if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                             let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                                 prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                                 from_agent_id: "setup_wizard".to_string(),
                                             };
-                                            if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
+                                            if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await
+                                                && let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
                                                     return Ok(v);
                                                 }
-                                            }
                                         }
-                                        Err("AI call failed".to_string())
-                                    };
+                                Err("AI call failed".to_string())
+                            };
 
-                                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
-                                        Ok(Ok(v)) => {
-                                            resolved_payload = v;
-                                            break;
-                                        }
-                                        _ => {
-                                            attempts += 1;
-                                            if attempts == MAX_RETRIES {
-                                                match &db_for_onboarding.store {
-                                                    crate::db::DbStore::Postgres => {
-                                                        let _ = sqlx::query(
+                            match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                Ok(Ok(v)) => {
+                                    resolved_payload = v;
+                                    break;
+                                }
+                                _ => {
+                                    attempts += 1;
+                                    if attempts == MAX_RETRIES {
+                                        match &db_for_onboarding.store {
+                                            crate::db::DbStore::Postgres => {
+                                                let _ = sqlx::query(
                                                             r#"
                                                             INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                             VALUES ($1, $2, 'AI Agent Paused: Onboarding', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please generate your storefront later.')
@@ -1397,9 +1367,9 @@ impl PromoterWorker {
                                                         .bind(&tenant_id)
                                                         .execute(&db_for_onboarding.pool)
                                                         .await;
-                                                    }
-                                                    crate::db::DbStore::Sqlite(pool) => {
-                                                        let _ = sqlx::query(
+                                            }
+                                            crate::db::DbStore::Sqlite(pool) => {
+                                                let _ = sqlx::query(
                                                             r#"
                                                             INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                             VALUES (?, ?, 'AI Agent Paused: Onboarding', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please generate your storefront later.')
@@ -1409,35 +1379,27 @@ impl PromoterWorker {
                                                         .bind(&tenant_id)
                                                         .execute(pool)
                                                         .await;
-                                                    }
-                                                }
                                             }
-                                            tokio::time::sleep(Duration::from_secs(
-                                                2u64.pow(attempts as u32),
-                                            ))
-                                            .await;
                                         }
                                     }
+                                    tokio::time::sleep(Duration::from_secs(2u64.pow(attempts)))
+                                        .await;
                                 }
-
-                                let out_payload =
-                                    serde_json::to_vec(&resolved_payload).unwrap_or_default();
-
-                                let out_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
-                                    agent_id: "promoter".to_string(),
-                                    action: "StorefrontGenerated".to_string(),
-                                    status: "completed".to_string(),
-                                    payload: out_payload,
-                                    msg_id: Uuid::new_v4().to_string(),
-                                };
-                                let _ = hub
-                                    .publish_teammate_event(
-                                        format!("onboarding_{}", session_id),
-                                        out_event,
-                                    )
-                                    .await;
                             }
                         }
+
+                        let out_payload = serde_json::to_vec(&resolved_payload).unwrap_or_default();
+
+                        let out_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
+                            agent_id: "promoter".to_string(),
+                            action: "StorefrontGenerated".to_string(),
+                            status: "completed".to_string(),
+                            payload: out_payload,
+                            msg_id: Uuid::new_v4().to_string(),
+                        };
+                        let _ = hub
+                            .publish_teammate_event(format!("onboarding_{}", session_id), out_event)
+                            .await;
                     }
                 }
             }
@@ -1643,9 +1605,9 @@ impl AdvisorWorker {
                                 ..Default::default()
                             }),
                         };
-                        if let Ok(_) = client
+                        if client
                             .publish_mesh_event(tonic::Request::new(publish_req))
-                            .await
+                            .await.is_ok()
                         {
                             return Ok(());
                         }
@@ -1687,10 +1649,8 @@ impl AdvisorWorker {
                                 }
                             }
                         }
-                        tokio::time::sleep(std::time::Duration::from_secs(
-                            2u64.pow(attempts as u32),
-                        ))
-                        .await;
+                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts)))
+                            .await;
                     }
                 }
             }
@@ -1949,7 +1909,7 @@ mod tests {
                     || title.contains("AI Agent Paused")
             );
             // Either the dynamic LLM response or fallback string should be here
-            assert!(content.contains("Hello, do you have vegan cakes?") || content.len() > 0);
+            assert!(content.contains("Hello, do you have vegan cakes?") || !content.is_empty());
             assert_eq!(approval_status, "PENDING");
 
             // Verify task was marked PAUSED (since AI call fails in test environment)
@@ -1990,10 +1950,10 @@ mod tests {
 
             let mut gross_sales = 0.0;
             for (action_type, state_change) in ledger_entries {
-                if action_type == "order_created" {
-                    if let Some(total) = state_change.get("total_amount").and_then(|v| v.as_f64()) {
-                        gross_sales += total;
-                    }
+                if action_type == "order_created"
+                    && let Some(total) = state_change.get("total_amount").and_then(|v| v.as_f64())
+                {
+                    gross_sales += total;
                 }
             }
 

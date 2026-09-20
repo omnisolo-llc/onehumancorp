@@ -4,6 +4,12 @@ use std::collections::HashMap;
 
 pub struct InteractiveWizard;
 
+impl Default for InteractiveWizard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InteractiveWizard {
     pub fn new() -> Self {
         InteractiveWizard

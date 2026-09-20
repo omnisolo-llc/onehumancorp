@@ -12,7 +12,7 @@ describe("ActorModelPage", () => {
   });
 
   it("handles successful execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ result: "Success result" })
     });
@@ -30,7 +30,7 @@ describe("ActorModelPage", () => {
   });
 
   it("handles execution failure", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Failed to execute" })
     });

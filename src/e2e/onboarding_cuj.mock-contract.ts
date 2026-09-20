@@ -1,3 +1,4 @@
+import * as nativePathModule from 'node:path';
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -6,9 +7,9 @@ test.describe('Onboarding Wizard CUJ', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => window.localStorage.clear());
     const workspaceRoot = process.env.TEST_WORKSPACE
-        ? require('path').join(process.env.TEST_SRCDIR || require('path').resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
-        : require('path').resolve(__dirname, '..', '..');
-    const tauriUiDir = require('path').join(workspaceRoot, 'src/ui/tauri/src/ui');
+        ? nativePathModule.join(process.env.TEST_SRCDIR || nativePathModule.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
+        : nativePathModule.resolve(__dirname, '..', '..');
+    const tauriUiDir = nativePathModule.join(workspaceRoot, 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });

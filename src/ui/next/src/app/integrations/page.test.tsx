@@ -10,8 +10,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock('../../components/TooltipRegistry', () => ({
-  TooltipProvider: ({ children }: any) => children,
-  WithTooltip: ({ children }: any) => children,
+  TooltipProvider: ({ children }: { children?: import('react').ReactNode }) => children,
+  WithTooltip: ({ children }: { children?: import('react').ReactNode }) => children,
 }));
 
 describe("Integrations", () => {
@@ -25,7 +25,7 @@ describe("Integrations", () => {
   });
 
   it("does not call an unimplemented OAuth contract or mark it connected", async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
@@ -40,7 +40,7 @@ describe("Integrations", () => {
   });
 
   it('requires Twilio credentials and explicit backend connection confirmation', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
       if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'pending' }) });
       return Promise.resolve({ ok: false, json: async () => ({}) });
@@ -64,7 +64,7 @@ describe("Integrations", () => {
   });
 
   it('marks Twilio connected only when the backend confirms it is usable', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
       if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'connected', usable: true }) });
       return Promise.resolve({ ok: false, json: async () => ({}) });

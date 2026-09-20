@@ -156,17 +156,17 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     .or_else(|_| {
                         serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj])
                     });
-                if let Ok(items_array) = parsed_items {
-                    if let Some(first) = items_array.first() {
-                        p_id_owned = first
-                            .get("product_id")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string());
-                        qty = first
-                            .get("quantity")
-                            .and_then(|v| v.as_i64())
-                            .map(|v| v as i32);
-                    }
+                if let Ok(items_array) = parsed_items
+                    && let Some(first) = items_array.first()
+                {
+                    p_id_owned = first
+                        .get("product_id")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    qty = first
+                        .get("quantity")
+                        .and_then(|v| v.as_i64())
+                        .map(|v| v as i32);
                 }
             }
             let p_id = p_id_owned.as_deref();
@@ -175,13 +175,15 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 // Idempotency key uses the transaction_id to prevent double charges
                 match client
                     .create_terminal_payment_intent(
-                        &job.tenant_id,
-                        amount_cents,
-                        "usd", // Assuming USD for now, or use payload.currency
-                        p_id,
-                        qty,
-                        None,
-                        &transaction_id,
+                        crate::integrations::stripe::terminal::TerminalPaymentRequest {
+                            tenant_id: &job.tenant_id,
+                            amount_cents,
+                            currency: "usd", // Existing USD-only offline contract.
+                            product_id: p_id,
+                            quantity: qty,
+                            order_id: None,
+                            idempotency_key: transaction_id,
+                        },
                     )
                     .await
                 {
@@ -486,8 +488,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             "client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions"
                         );
                     } else {
-                        if !inventory_already_deducted {
-                            if let Err(e) = sqlx::query(
+                        if !inventory_already_deducted
+                            && let Err(e) = sqlx::query(
                                 "UPDATE pos_terminal_sessions
                                  SET sync_status = 'CONFLICTS_PENDING',
                                      pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
@@ -501,164 +503,160 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             .await {
                                 tracing::error!("Failed to update pos_terminal_sessions: {}", e);
                             }
-                        }
                     }
                 }
 
-                if let Some(client) = crate::get_redis_client() {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let invalidation_topic = "cache_invalidation_events";
-                        let invalidation_payload = serde_json::json!({
-                            "event": "inventory.updated",
-                            "tags": [
-                                format!("tenant-id:{}", job.tenant_id),
-                                format!("entity:product:{}", product_id)
-                            ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
-                    }
+                if let Some(client) = crate::get_redis_client()
+                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                {
+                    let invalidation_topic = "cache_invalidation_events";
+                    let invalidation_payload = serde_json::json!({
+                        "event": "inventory.updated",
+                        "tags": [
+                            format!("tenant-id:{}", job.tenant_id),
+                            format!("entity:product:{}", product_id)
+                        ]
+                    })
+                    .to_string();
+                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                        .arg(invalidation_topic)
+                        .arg(invalidation_payload)
+                        .query_async(&mut conn)
+                        .await;
                 }
             }
         }
 
         // Support payload formatted directly for the transaction items array
-        if let Some(items) = payload.get("payload") {
-            if let Some(items_str) = items.as_str() {
-                let parsed_items = serde_json::from_str::<Vec<serde_json::Value>>(items_str)
-                    .or_else(|_| {
-                        serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj])
-                    });
-                if let Ok(items_array) = parsed_items {
-                    let order_id = uuid::Uuid::new_v4().to_string();
-                    let amount_cents = payload_amount_cents;
-                    let total_amount = (amount_cents as f64) / 100.0;
-                    let customer_id = payload.get("customer_id").and_then(|v| v.as_str());
+        if let Some(items) = payload.get("payload")
+            && let Some(items_str) = items.as_str()
+        {
+            let parsed_items =
+                serde_json::from_str::<Vec<serde_json::Value>>(items_str).or_else(|_| {
+                    serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj])
+                });
+            if let Ok(items_array) = parsed_items {
+                let order_id = uuid::Uuid::new_v4().to_string();
+                let amount_cents = payload_amount_cents;
+                let total_amount = (amount_cents as f64) / 100.0;
+                let customer_id = payload.get("customer_id").and_then(|v| v.as_str());
 
-                    let mut translated_notes = None;
-                    if let Some(notes) = payload.get("notes").and_then(|v| v.as_str()) {
-                        let tenant_locale: String = sqlx::query_scalar(
-                            "SELECT locale FROM tenant_settings WHERE tenant_id = $1",
+                let mut translated_notes = None;
+                if let Some(notes) = payload.get("notes").and_then(|v| v.as_str()) {
+                    let tenant_locale: String = sqlx::query_scalar(
+                        "SELECT locale FROM tenant_settings WHERE tenant_id = $1",
+                    )
+                    .bind(&job.tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None)
+                    .unwrap_or_else(|| "en".to_string());
+                    let target_language = if tenant_locale.starts_with("ar") {
+                        "Arabic"
+                    } else if tenant_locale.starts_with("es") {
+                        "Spanish"
+                    } else {
+                        "English"
+                    };
+                    if let Ok(t) =
+                        crate::api::agents::translation::translate_inbox_message_with_llm(
+                            &job.tenant_id,
+                            "kitchen",
+                            notes,
+                            target_language,
                         )
-                        .bind(&job.tenant_id)
-                        .fetch_optional(&mut *tx)
                         .await
-                        .unwrap_or(None)
-                        .unwrap_or_else(|| "en".to_string());
-                        let target_language = if tenant_locale.starts_with("ar") {
-                            "Arabic"
-                        } else if tenant_locale.starts_with("es") {
-                            "Spanish"
-                        } else {
-                            "English"
-                        };
-                        if let Ok(t) =
-                            crate::api::agents::translation::translate_inbox_message_with_llm(
-                                &job.tenant_id,
-                                "kitchen",
-                                notes,
-                                target_language,
-                            )
-                            .await
-                        {
-                            translated_notes = Some(t.translated_content);
-                        }
+                    {
+                        translated_notes = Some(t.translated_content);
                     }
+                }
 
-                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status, notes, translated_notes) VALUES ($1, $2, $3, $4, 'completed', $5, $6) ON CONFLICT DO NOTHING")
+                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status, notes, translated_notes) VALUES ($1, $2, $3, $4, 'completed', $5, $6) ON CONFLICT DO NOTHING")
                         .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).bind(payload.get("notes").and_then(|v| v.as_str())).bind(translated_notes).execute(&mut *tx).await;
 
-                    for item in items_array {
-                        let product_id = item
-                            .get("product_id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
-                        if product_id.is_empty() {
-                            continue;
-                        }
+                for item in items_array {
+                    let product_id = item
+                        .get("product_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+                    if product_id.is_empty() {
+                        continue;
+                    }
 
-                        let item_id = uuid::Uuid::new_v4().to_string();
-                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+                    let item_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
                             .bind(&item_id).bind(&job.tenant_id).bind(&order_id).bind(product_id).bind(qty).bind(total_amount).execute(&mut *tx).await;
 
-                        let locker: Box<dyn crate::orchestration::locks::DistributedLock> =
-                            if crate::is_standalone_runtime() {
-                                if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
-                                    Box::new(
-                                        crate::orchestration::locks::StandaloneLock::with_pool(
-                                            pool,
-                                        ),
-                                    )
-                                } else {
-                                    Box::new(crate::orchestration::locks::StandaloneLock::new())
-                                }
+                    let locker: Box<dyn crate::orchestration::locks::DistributedLock> =
+                        if crate::is_standalone_runtime() {
+                            if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                                Box::new(crate::orchestration::locks::StandaloneLock::with_pool(
+                                    pool,
+                                ))
                             } else {
-                                if let Ok(client) = redis::Client::open(
-                                    std::env::var("REDIS_URL")
-                                        .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
-                                ) {
-                                    Box::new(crate::orchestration::locks::RedisLock::new(client))
-                                } else if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
-                                    Box::new(
-                                        crate::orchestration::locks::StandaloneLock::with_pool(
-                                            pool,
-                                        ),
-                                    )
-                                } else {
-                                    Box::new(crate::orchestration::locks::StandaloneLock::new())
-                                }
-                            };
-
-                        let mut _lock_guard = match locker
-                            .acquire_resource(&job.tenant_id, "inventory", product_id)
-                            .await
-                        {
-                            Ok(guard) => guard,
-                            Err(_) => {
-                                tracing::warn!(
-                                    "Failed to acquire lock for offline sync reconciliation: inventory:{}",
-                                    product_id
-                                );
-                                continue;
+                                Box::new(crate::orchestration::locks::StandaloneLock::new())
+                            }
+                        } else {
+                            if let Ok(client) = redis::Client::open(
+                                std::env::var("REDIS_URL")
+                                    .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
+                            ) {
+                                Box::new(crate::orchestration::locks::RedisLock::new(client))
+                            } else if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                                Box::new(crate::orchestration::locks::StandaloneLock::with_pool(
+                                    pool,
+                                ))
+                            } else {
+                                Box::new(crate::orchestration::locks::StandaloneLock::new())
                             }
                         };
 
-                        let current_stock_res = sqlx::query("SELECT available_quantity, inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                    let mut _lock_guard = match locker
+                        .acquire_resource(&job.tenant_id, "inventory", product_id)
+                        .await
+                    {
+                        Ok(guard) => guard,
+                        Err(_) => {
+                            tracing::warn!(
+                                "Failed to acquire lock for offline sync reconciliation: inventory:{}",
+                                product_id
+                            );
+                            continue;
+                        }
+                    };
+
+                    let current_stock_res = sqlx::query("SELECT available_quantity, inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                             .bind(product_id)
                             .bind(&job.tenant_id)
                             .fetch_optional(&mut *tx)
                             .await;
 
-                        if let Ok(Some(row)) = current_stock_res {
-                            let mut stock: i32 = sqlx::Row::get(&row, "available_quantity");
+                    if let Ok(Some(row)) = current_stock_res {
+                        let mut stock: i32 = sqlx::Row::get(&row, "available_quantity");
 
-                            let inventory_already_deducted = payload
-                                .get("inventory_already_deducted")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false);
+                        let inventory_already_deducted = payload
+                            .get("inventory_already_deducted")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
 
-                            if inventory_already_deducted {
-                                // Add back the deducted amount to check if there was a conflict before it was deducted synchronously
-                                stock += qty as i32;
-                            }
+                        if inventory_already_deducted {
+                            // Add back the deducted amount to check if there was a conflict before it was deducted synchronously
+                            stock += qty as i32;
+                        }
 
-                            let is_conflict = stock < qty as i32;
+                        let is_conflict = stock < qty as i32;
 
-                            if !inventory_already_deducted {
-                                let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                        if !inventory_already_deducted {
+                            let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                                     .bind(qty)
                                     .bind(product_id)
                                     .bind(&job.tenant_id)
                                     .execute(&mut *tx)
                                     .await;
-                            }
+                        }
 
-                            let inventory_level_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
+                        let inventory_level_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
                                 .bind(qty)
                                 .bind(product_id)
                                 .bind(&job.tenant_id)
@@ -666,10 +664,10 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .await
                                 .map_err(|e| e.to_string())?;
 
-                            if let Some(row) = inventory_level_res {
-                                let level_id: String = sqlx::Row::get(&row, "id");
-                                let tx_id = uuid::Uuid::new_v4().to_string();
-                                sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'OFFLINE_POS_SYNC', -$4)")
+                        if let Some(row) = inventory_level_res {
+                            let level_id: String = sqlx::Row::get(&row, "id");
+                            let tx_id = uuid::Uuid::new_v4().to_string();
+                            sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'OFFLINE_POS_SYNC', -$4)")
                                     .bind(&tx_id)
                                     .bind(&job.tenant_id)
                                     .bind(level_id)
@@ -677,22 +675,22 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                     .execute(&mut *tx)
                                     .await
                                     .map_err(|e| e.to_string())?;
-                            }
+                        }
 
-                            let new_stock = std::cmp::max(0, stock - qty as i32);
+                        let new_stock = std::cmp::max(0, stock - qty as i32);
 
-                            // Emit an inventory depletion event for AI Operations Agent
-                            let depletion_event_id = uuid::Uuid::new_v4().to_string();
-                            let depletion_payload = serde_json::json!({
-                                "event": "inventory_depleted",
-                                "transaction_id": transaction_id,
-                                "product_id": product_id,
-                                "quantity_deducted": qty,
-                                "remaining_stock": new_stock
-                            })
-                            .to_string();
+                        // Emit an inventory depletion event for AI Operations Agent
+                        let depletion_event_id = uuid::Uuid::new_v4().to_string();
+                        let depletion_payload = serde_json::json!({
+                            "event": "inventory_depleted",
+                            "transaction_id": transaction_id,
+                            "product_id": product_id,
+                            "quantity_deducted": qty,
+                            "remaining_stock": new_stock
+                        })
+                        .to_string();
 
-                            let _ = sqlx::query(
+                        let _ = sqlx::query(
                                 "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
                                  VALUES ($1, $2, 'terminal', 'operations', 'record_pos_transaction', 'Pending', 0.99, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                             )
@@ -702,8 +700,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             .execute(&mut *tx)
                             .await;
 
-                            // Draft success card in agent feed
-                            let _ = sqlx::query(
+                        // Draft success card in agent feed
+                        let _ = sqlx::query(
                                 "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'terminal', $3, $4, 'PENDING_APPROVAL', NOW(), NOW())"
                             )
                             .bind(uuid::Uuid::new_v4().to_string())
@@ -719,53 +717,53 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             .execute(&mut *tx)
                             .await;
 
-                            if new_stock <= 5 && !is_conflict {
-                                let action_request_id = uuid::Uuid::new_v4().to_string();
-                                let payload = serde_json::json!({
-                                    "product_id": product_id,
-                                    "remaining_stock": new_stock,
-                                    "suggested_action": "Restock Item"
-                                })
-                                .to_string();
-                                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        if new_stock <= 5 && !is_conflict {
+                            let action_request_id = uuid::Uuid::new_v4().to_string();
+                            let payload = serde_json::json!({
+                                "product_id": product_id,
+                                "remaining_stock": new_stock,
+                                "suggested_action": "Restock Item"
+                            })
+                            .to_string();
+                            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await
                                     .map_err(|e| e.to_string())?;
 
-                                let job_id = uuid::Uuid::new_v4().to_string();
+                            let job_id = uuid::Uuid::new_v4().to_string();
 
-                                let message = if new_stock == 0 {
-                                    format!(
-                                        "{} sold out. Would you like to draft a restock order?",
-                                        product_id
-                                    )
-                                } else {
-                                    format!(
-                                        "Stock for product {} has dropped to {}.",
-                                        product_id, new_stock
-                                    )
-                                };
+                            let message = if new_stock == 0 {
+                                format!(
+                                    "{} sold out. Would you like to draft a restock order?",
+                                    product_id
+                                )
+                            } else {
+                                format!(
+                                    "Stock for product {} has dropped to {}.",
+                                    product_id, new_stock
+                                )
+                            };
 
-                                let job_payload = serde_json::json!({
-                                    "product_id": product_id,
-                                    "remaining_stock": new_stock,
-                                    "threshold": 5,
-                                    "message": message
-                                })
-                                .to_string();
-                                sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                            let job_payload = serde_json::json!({
+                                "product_id": product_id,
+                                "remaining_stock": new_stock,
+                                "threshold": 5,
+                                "message": message
+                            })
+                            .to_string();
+                            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                                     .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
                                     .map_err(|e| e.to_string())?;
 
-                                let feed_id = uuid::Uuid::new_v4().to_string();
-                                let feed_payload = serde_json::json!({
-                                    "product_id": product_id,
-                                    "remaining_stock": new_stock,
-                                    "message": message,
-                                });
-                                let proposed_action = serde_json::json!({
-                                    "action": "Review and approve restock order"
-                                });
-                                let _ = sqlx::query(
+                            let feed_id = uuid::Uuid::new_v4().to_string();
+                            let feed_payload = serde_json::json!({
+                                "product_id": product_id,
+                                "remaining_stock": new_stock,
+                                "message": message,
+                            });
+                            let proposed_action = serde_json::json!({
+                                "action": "Review and approve restock order"
+                            });
+                            let _ = sqlx::query(
                                     "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'operations', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
                                 )
                                 .bind(&feed_id)
@@ -774,20 +772,20 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .bind(&proposed_action)
                                 .execute(&mut *tx)
                                 .await;
-                            }
+                        }
 
-                            if is_conflict {
-                                let ai_task_id = uuid::Uuid::new_v4().to_string();
+                        if is_conflict {
+                            let ai_task_id = uuid::Uuid::new_v4().to_string();
 
-                                let notification_id = uuid::Uuid::new_v4().to_string();
-                                let notification_payload = serde_json::json!({
+                            let notification_id = uuid::Uuid::new_v4().to_string();
+                            let notification_payload = serde_json::json!({
                                     "product_id": product_id,
                                     "expected_stock": qty,
                                     "actual_stock": stock,
                                     "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
                                 }).to_string();
 
-                                let _ = sqlx::query(
+                            let _ = sqlx::query(
                                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                                      VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
                                 )
@@ -797,7 +795,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .execute(&mut *tx)
                                 .await;
 
-                                let ai_payload = serde_json::json!({
+                            let ai_payload = serde_json::json!({
                                     "transaction_id": transaction_id,
                                     "product_id": product_id,
                                     "expected_stock": qty,
@@ -805,7 +803,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                     "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
                                 }).to_string();
 
-                                let _ = sqlx::query(
+                            let _ = sqlx::query(
                                     "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
                                      VALUES ($1, $2, 'POS_INVENTORY_CONFLICT_RESOLUTION', $3::jsonb, 'PENDING')"
                                 )
@@ -815,16 +813,16 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .execute(&mut *tx)
                                 .await;
 
-                                // Trigger an actionable push notification event via Operations Agent
-                                let notification_id = uuid::Uuid::new_v4().to_string();
-                                let notification_payload = serde_json::json!({
+                            // Trigger an actionable push notification event via Operations Agent
+                            let notification_id = uuid::Uuid::new_v4().to_string();
+                            let notification_payload = serde_json::json!({
                                     "product_id": product_id,
                                     "expected_stock": qty,
                                     "actual_stock": stock,
                                     "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
                                 }).to_string();
 
-                                let _ = sqlx::query(
+                            let _ = sqlx::query(
                                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                                      VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
                                 )
@@ -834,20 +832,20 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .execute(&mut *tx)
                                 .await;
 
-                                let conflict_payload = serde_json::json!([{
-                                    "transaction_id": transaction_id,
-                                    "product_id": product_id,
-                                    "shortage": (qty as i32) - stock,
-                                    "timestamp": chrono::Utc::now().to_rfc3339()
-                                }]);
+                            let conflict_payload = serde_json::json!([{
+                                "transaction_id": transaction_id,
+                                "product_id": product_id,
+                                "shortage": (qty as i32) - stock,
+                                "timestamp": chrono::Utc::now().to_rfc3339()
+                            }]);
 
-                                if client_id.is_empty() {
-                                    tracing::warn!(
-                                        "client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions"
-                                    );
-                                } else {
-                                    if !inventory_already_deducted {
-                                        if let Err(e) = sqlx::query(
+                            if client_id.is_empty() {
+                                tracing::warn!(
+                                    "client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions"
+                                );
+                            } else {
+                                if !inventory_already_deducted
+                                        && let Err(e) = sqlx::query(
                                             "UPDATE pos_terminal_sessions
                                              SET sync_status = 'CONFLICTS_PENDING',
                                                  pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
@@ -861,30 +859,26 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                         .await {
                                             tracing::error!("Failed to update pos_terminal_sessions: {}", e);
                                         }
-                                    }
-                                }
                             }
+                        }
 
-                            if let Some(client) = crate::get_redis_client() {
-                                if let Ok(mut conn) =
-                                    client.get_multiplexed_async_connection().await
-                                {
-                                    let invalidation_topic = "cache_invalidation_events";
-                                    let invalidation_payload = serde_json::json!({
-                                        "event": "inventory.updated",
-                                        "tags": [
-                                            format!("tenant-id:{}", job.tenant_id),
-                                            format!("entity:product:{}", product_id)
-                                        ]
-                                    })
-                                    .to_string();
-                                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                                        .arg(invalidation_topic)
-                                        .arg(invalidation_payload)
-                                        .query_async(&mut conn)
-                                        .await;
-                                }
-                            }
+                        if let Some(client) = crate::get_redis_client()
+                            && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                        {
+                            let invalidation_topic = "cache_invalidation_events";
+                            let invalidation_payload = serde_json::json!({
+                                "event": "inventory.updated",
+                                "tags": [
+                                    format!("tenant-id:{}", job.tenant_id),
+                                    format!("entity:product:{}", product_id)
+                                ]
+                            })
+                            .to_string();
+                            let _: Result<(), _> = redis::cmd("PUBLISH")
+                                .arg(invalidation_topic)
+                                .arg(invalidation_payload)
+                                .query_async(&mut conn)
+                                .await;
                         }
                     }
                 }

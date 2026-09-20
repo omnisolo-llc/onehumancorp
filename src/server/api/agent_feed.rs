@@ -236,11 +236,7 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String, gzip: bool) {
             }
         }
         // Flush any remaining messages
-        if !batch.is_empty() {
-            if flush_batch(&mut sender, &mut batch, gzip).await.is_err() {
-                return;
-            }
-        }
+        if !batch.is_empty() && flush_batch(&mut sender, &mut batch, gzip).await.is_err() {}
     });
 
     let mut recv_task = tokio::spawn(async move {
@@ -496,61 +492,60 @@ async fn update_feed_item_state(
             .await;
 
             // Notify via Redis Pub/Sub for WebSockets
-            if let Some(client) = Some(get_redis_client()) {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let payload_str = serde_json::json!({
-                        "event_type": "approval_decision",
-                        "data": {
-                            "request_id": id,
-                            "status": payload.state,
-                            "department": updated_item.event_source
-                        }
-                    })
-                    .to_string();
-                    let topic = format!("agent_feed:{}", tenant_id);
-                    let _: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
-                        .arg(topic)
-                        .arg(payload_str)
-                        .query_async(&mut conn)
-                        .await;
-                }
+            if let Some(client) = Some(get_redis_client())
+                && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+            {
+                let payload_str = serde_json::json!({
+                    "event_type": "approval_decision",
+                    "data": {
+                        "request_id": id,
+                        "status": payload.state,
+                        "department": updated_item.event_source
+                    }
+                })
+                .to_string();
+                let topic = format!("agent_feed:{}", tenant_id);
+                let _: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
+                    .arg(topic)
+                    .arg(payload_str)
+                    .query_async(&mut conn)
+                    .await;
             }
 
-            if payload.state == "APPROVED" {
-                if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
-                    let mut is_incident = false;
-                    let mut feature_type = None;
-                    let mut dispatch_payload = None;
+            if payload.state == "APPROVED"
+                && let Ok(Some(item)) = repo.get(&tenant_id, &id).await
+            {
+                let mut is_incident = false;
+                let mut feature_type = None;
+                let mut dispatch_payload = None;
 
-                    if item.event_source == "incident_resolution" {
-                        is_incident = true;
-                        dispatch_payload = item.context_payload.clone().map(|p| p.0);
-                    } else if let Some(ref pl) = item
-                        .proposed_action
-                        .clone()
-                        .or(item.context_payload.clone())
-                    {
-                        if let Some(ft) = pl.get("feature_type").and_then(|v| v.as_str()) {
-                            feature_type = Some(ft.to_string());
-                            dispatch_payload = Some(pl.0.clone());
-                        }
-                    }
+                if item.event_source == "incident_resolution" {
+                    is_incident = true;
+                    dispatch_payload = item.context_payload.clone().map(|p| p.0);
+                } else if let Some(ref pl) = item
+                    .proposed_action
+                    .clone()
+                    .or(item.context_payload.clone())
+                    && let Some(ft) = pl.get("feature_type").and_then(|v| v.as_str())
+                {
+                    feature_type = Some(ft.to_string());
+                    dispatch_payload = Some(pl.0.clone());
+                }
 
-                    if is_incident || feature_type.is_some() {
-                        let job_payload = serde_json::json!({
-                             "action_id": id,
-                             "tenant_id": tenant_id,
-                             "is_incident": is_incident,
-                             "feature_type": feature_type,
-                             "payload": dispatch_payload,
-                             "event_source": item.event_source
-                        });
-                        let pool_arc = std::sync::Arc::new(pool.clone());
-                        let job_queue = crate::orchestration::queue::OmniSoloJobQueue::new(pool_arc);
-                        let _ = job_queue
-                            .enqueue(&tenant_id, "agent_feed_action", &job_payload)
-                            .await;
-                    }
+                if is_incident || feature_type.is_some() {
+                    let job_payload = serde_json::json!({
+                         "action_id": id,
+                         "tenant_id": tenant_id,
+                         "is_incident": is_incident,
+                         "feature_type": feature_type,
+                         "payload": dispatch_payload,
+                         "event_source": item.event_source
+                    });
+                    let pool_arc = std::sync::Arc::new(pool.clone());
+                    let job_queue = crate::orchestration::queue::OmniSoloJobQueue::new(pool_arc);
+                    let _ = job_queue
+                        .enqueue(&tenant_id, "agent_feed_action", &job_payload)
+                        .await;
                 }
             }
 
@@ -728,42 +723,42 @@ mod tests {
 
         let redis_url =
             std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-        if let Ok(client) = redis::Client::open(redis_url) {
-            if client.get_connection().is_ok() {
-                let ws_url = format!("ws://{}/ws", addr);
-                let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
+        if let Ok(client) = redis::Client::open(redis_url)
+            && client.get_connection().is_ok()
+        {
+            let ws_url = format!("ws://{}/ws", addr);
+            let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
 
-                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let topic = "agent_feed:test_batch_tenant";
+            let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+            let topic = "agent_feed:test_batch_tenant";
 
-                // Publish 5 messages rapidly — they should be batched
-                for i in 0..5 {
-                    let payload = format!("{{\"seq\":{}}}", i);
-                    let _: () = redis::cmd("PUBLISH")
-                        .arg(topic)
-                        .arg(payload)
-                        .query_async(&mut conn)
-                        .await
-                        .unwrap();
-                }
-
-                let msg = tokio::time::timeout(std::time::Duration::from_secs(3), ws_stream.next())
+            // Publish 5 messages rapidly — they should be batched
+            for i in 0..5 {
+                let payload = format!("{{\"seq\":{}}}", i);
+                let _: () = redis::cmd("PUBLISH")
+                    .arg(topic)
+                    .arg(payload)
+                    .query_async(&mut conn)
                     .await
-                    .expect("Timeout waiting for batch")
-                    .expect("Stream closed")
-                    .expect("Error receiving message");
+                    .unwrap();
+            }
 
-                assert!(msg.is_text());
-                let text = msg.to_text().unwrap();
-                let parsed: serde_json::Value = serde_json::from_str(text).expect("Invalid JSON");
-                assert_eq!(parsed["type"], "batch");
-                let items = parsed["items"].as_array().expect("items not an array");
-                assert_eq!(items.len(), 5);
-                for i in 0..5 {
-                    assert_eq!(items[i], serde_json::json!({"seq": i}));
-                }
+            let msg = tokio::time::timeout(std::time::Duration::from_secs(3), ws_stream.next())
+                .await
+                .expect("Timeout waiting for batch")
+                .expect("Stream closed")
+                .expect("Error receiving message");
+
+            assert!(msg.is_text());
+            let text = msg.to_text().unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(text).expect("Invalid JSON");
+            assert_eq!(parsed["type"], "batch");
+            let items = parsed["items"].as_array().expect("items not an array");
+            assert_eq!(items.len(), 5);
+            for (i, item) in items.iter().enumerate() {
+                assert_eq!(*item, serde_json::json!({"seq": i}));
             }
         }
     }

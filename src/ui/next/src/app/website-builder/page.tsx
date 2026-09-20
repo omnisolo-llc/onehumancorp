@@ -72,7 +72,7 @@ export default function WebsiteBuilderPage() {
 
 
 
-  const { startWalkthrough } = useWalkthrough();
+  useWalkthrough();
 
   // Read state from server on mount
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function WebsiteBuilderPage() {
         if (data.builderState.status) setStatus(data.builderState.status);
       }
       if (data && data.wizardState && Object.keys(data.wizardState).length > 0) {
-        let localState: any = null;
+        let localState: { wizardStep?: number; businessName?: string } | null = null;
         try {
           const localStr = localStorage.getItem('website-builder-storage');
           if (localStr) {
@@ -164,37 +164,9 @@ export default function WebsiteBuilderPage() {
 
 
 
-  const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
-    setStatus(newStatus);
-    localStorage.setItem("omnisolo_builder_status", newStatus);
-  };
 
-  const handleGenerate = async () => {
-    setStatus("generating");
 
-    try {
-      const response = await fetch('/api/v1/builder/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: bio })
-      });
 
-      const data = await response.json();
-      const blocks = data.pages[0].blocks.map((b: any) => ({
-        type: b.block_type === 'HeroBlock' ? 'Hero' :
-              b.block_type === 'ProductGridBlock' ? 'Catalog' :
-              b.block_type === 'ServiceBookingBlock' ? 'Booking' :
-              b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
-        props: b.content
-      }));
-      setBlocks(blocks);
-      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(blocks));
-      updateStatus("draft");
-    } catch (error) {
-      console.error("Failed to generate storefront", error);
-      updateStatus("idle");
-    }
-  };
 
   const handleMoveBlock = (fromIndex: number, toIndex: number) => {
     moveBlock(fromIndex, toIndex);

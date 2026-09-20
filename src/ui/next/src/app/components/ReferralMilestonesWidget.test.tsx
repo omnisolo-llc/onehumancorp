@@ -1,8 +1,7 @@
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render,screen,waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReferralMilestonesWidget from './ReferralMilestonesWidget';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi,describe,it,expect,beforeEach } from 'vitest';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -80,7 +79,7 @@ describe('ReferralMilestonesWidget', () => {
 
   it('renders nothing when data fetch fails', async () => {
     // suppress the console.error output to prevent test noise / crash
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     mockFetch.mockRejectedValueOnce(new Error('Test mock Network error'));
 
     const { container } = render(<ReferralMilestonesWidget tenantId="test-tenant" />);

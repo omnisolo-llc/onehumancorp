@@ -10,7 +10,7 @@ test.describe('Agentic Field Service Scheduling & Quoting', () => {
         };
 
         // Push an event indicating a lead came in. We use the webhook endpoint which acts like an intake.
-        const res = await request.post('/api/v1/webhook', {
+        await request.post('/api/v1/webhook', {
             headers: {
                 'x-tenant-id': 'default_tenant',
                 'content-type': 'application/json'

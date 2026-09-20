@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Actionable Daily Briefing on Dashboard', () => {
   const tenantId = 'daily-brief-test-tenant';
-  let triageItemId: string;
+
 
   test.beforeEach(async ({ request }) => {
     // Navigate and set local storage for auth

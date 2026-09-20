@@ -12,8 +12,9 @@ test.describe('Advisory Insights User Journey', () => {
 
     // Simulate user flow by activating advisory dash
     await page.evaluate(() => {
-        if (typeof (window as any).showScreen === 'function') {
-            (window as any).showScreen('advisory-dashboard-screen');
+        const legacyWindow = window as Window & { showScreen?: (screen: string) => void };
+        if (typeof legacyWindow.showScreen === 'function') {
+            legacyWindow.showScreen('advisory-dashboard-screen');
         } else {
             // Mock UI change to test logic without full HTML mock
             document.body.innerHTML += '<div id="advisory-dashboard-summary">Your top seller was lemonade. Tuesday was your busiest day.</div>';

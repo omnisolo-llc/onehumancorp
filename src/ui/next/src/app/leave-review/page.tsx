@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter,useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
 function LeaveReviewContent() {
@@ -13,8 +13,8 @@ function LeaveReviewContent() {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [referralLink, setReferralLink] = useState('');
+  const [submitted] = useState(false);
+  const [referralLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [submitError, setSubmitError] = useState('');
 

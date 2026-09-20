@@ -18,7 +18,7 @@ test.describe('Keyboard Navigation CUJ', () => {
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
-          invoke: async (cmd, args) => {
+          invoke: async () => {
             return null;
           }
         }

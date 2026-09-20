@@ -1,10 +1,12 @@
+import * as nativeFsModule from 'node:fs';
+import * as nativePathModule from 'node:path';
 import { test, expect } from '@playwright/test';
 
 test.describe('Wizard Cross Device E2E', () => {
 
-  test.beforeEach(async ({ page, context }) => {
-    const fs = require('fs');
-    const path = require('path');
+  test.beforeEach(async ({ context }) => {
+    const fs = nativeFsModule;
+    const path = nativePathModule;
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await context.route('**/setup.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
@@ -49,7 +51,7 @@ test.describe('Wizard Cross Device E2E', () => {
       try {
         const state = JSON.parse(stateStr);
         return state.business_name;
-      } catch (e) {
+      } catch  {
         return '';
       }
     }, {
@@ -65,8 +67,8 @@ test.describe('Wizard Cross Device E2E', () => {
     // 4. Simulate a cross-device session with a new browser context
 
 
-    const fs = require('fs');
-    const path = require('path');
+    const fs = nativeFsModule;
+    const path = nativePathModule;
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     const newContext = await browser.newContext();
     await newContext.route('**/setup.html', async route => {

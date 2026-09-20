@@ -25,7 +25,7 @@ describe('useVisualWorkflow', () => {
         result: { output: 'workflow success' },
       }),
     };
-    (global.fetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(mockResponse);
 
     const { result } = renderHook(() => useVisualWorkflow());
 
@@ -38,9 +38,12 @@ describe('useVisualWorkflow', () => {
     expect(result.current.error).toBeNull();
 
     // Verify fetch was called with correct parameters
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    const fetchCall = vi.mocked(global.fetch, { partial: true }).mock.calls[0];
     expect(fetchCall[0]).toContain('/rpc');
-    const body = JSON.parse(fetchCall[1].body);
+    const requestBody = fetchCall[1]?.body;
+    expect(typeof requestBody).toBe('string');
+    if (typeof requestBody !== 'string') throw new Error('Expected serialized workflow request');
+    const body = JSON.parse(requestBody);
     expect(body.method).toBe('execute_visual_workflow');
   });
 
@@ -51,7 +54,7 @@ describe('useVisualWorkflow', () => {
         result: {},
       }),
     };
-    (global.fetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(mockResponse);
 
     const { result } = renderHook(() => useVisualWorkflow());
 
@@ -69,7 +72,7 @@ describe('useVisualWorkflow', () => {
       ok: false,
       status: 500,
     };
-    (global.fetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(mockResponse);
 
     const { result } = renderHook(() => useVisualWorkflow());
 
@@ -88,7 +91,7 @@ describe('useVisualWorkflow', () => {
         error: { message: 'Workflow compilation failed' },
       }),
     };
-    (global.fetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(mockResponse);
 
     const { result } = renderHook(() => useVisualWorkflow());
 
@@ -107,7 +110,7 @@ describe('useVisualWorkflow', () => {
         error: {},
       }),
     };
-    (global.fetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(mockResponse);
 
     const { result } = renderHook(() => useVisualWorkflow());
 
@@ -120,7 +123,7 @@ describe('useVisualWorkflow', () => {
   });
 
   it('should handle arbitrary error', async () => {
-    (global.fetch as any).mockRejectedValue(new Error('Network disconnected'));
+    vi.mocked(global.fetch, { partial: true }).mockRejectedValue(new Error('Network disconnected'));
 
     const { result } = renderHook(() => useVisualWorkflow());
 
@@ -133,7 +136,7 @@ describe('useVisualWorkflow', () => {
   });
 
   it('should handle arbitrary error with fallback message', async () => {
-    (global.fetch as any).mockRejectedValue({});
+    vi.mocked(global.fetch, { partial: true }).mockRejectedValue({});
 
     const { result } = renderHook(() => useVisualWorkflow());
 

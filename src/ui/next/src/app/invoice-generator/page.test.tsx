@@ -1,7 +1,6 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render,screen,fireEvent } from '@testing-library/react';
 import InvoiceGeneratorPage from './page';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi,describe,it,expect,beforeEach } from 'vitest';
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {

@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -40,8 +41,8 @@ export default function LeadGenCampaignPage() {
       }
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'An error occurred'));
     } finally {
       setLoading(false);
     }

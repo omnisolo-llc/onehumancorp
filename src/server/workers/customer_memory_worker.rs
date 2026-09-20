@@ -170,11 +170,11 @@ impl CustomerMemoryWorker {
 
                     match tokio::time::timeout(Duration::from_secs(30), llm_call).await {
                         Ok(Ok(reply)) => {
-                            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply) {
-                                if parsed.is_object() {
-                                    context_graph = parsed;
-                                    break;
-                                }
+                            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply)
+                                && parsed.is_object()
+                            {
+                                context_graph = parsed;
+                                break;
                             }
                             retry_count += 1;
                             if retry_count < max_retries {
@@ -202,16 +202,16 @@ impl CustomerMemoryWorker {
                             .bind(&tenant_id).bind(&customer_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
                         let mut final_context = context_graph;
-                        if let Some(r) = current_context {
-                            if let Ok(val) = r.try_get::<serde_json::Value, _>("context_graph") {
-                                // Merge logic could be more sophisticated, but simple replacement/merge
-                                if let (Some(obj1), Some(obj2)) =
-                                    (val.as_object(), final_context.as_object_mut())
-                                {
-                                    for (k, v) in obj1 {
-                                        if !obj2.contains_key(k) {
-                                            obj2.insert(k.clone(), v.clone());
-                                        }
+                        if let Some(r) = current_context
+                            && let Ok(val) = r.try_get::<serde_json::Value, _>("context_graph")
+                        {
+                            // Merge logic could be more sophisticated, but simple replacement/merge
+                            if let (Some(obj1), Some(obj2)) =
+                                (val.as_object(), final_context.as_object_mut())
+                            {
+                                for (k, v) in obj1 {
+                                    if !obj2.contains_key(k) {
+                                        obj2.insert(k.clone(), v.clone());
                                     }
                                 }
                             }
@@ -242,16 +242,14 @@ impl CustomerMemoryWorker {
                             .bind(&tenant_id).bind(&customer_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
                         let mut final_context = context_graph;
-                        if let Some(r) = current_context {
-                            if let Ok(val) = r.try_get::<serde_json::Value, _>("context_graph") {
-                                if let (Some(obj1), Some(obj2)) =
-                                    (val.as_object(), final_context.as_object_mut())
-                                {
-                                    for (k, v) in obj1 {
-                                        if !obj2.contains_key(k) {
-                                            obj2.insert(k.clone(), v.clone());
-                                        }
-                                    }
+                        if let Some(r) = current_context
+                            && let Ok(val) = r.try_get::<serde_json::Value, _>("context_graph")
+                            && let (Some(obj1), Some(obj2)) =
+                                (val.as_object(), final_context.as_object_mut())
+                        {
+                            for (k, v) in obj1 {
+                                if !obj2.contains_key(k) {
+                                    obj2.insert(k.clone(), v.clone());
                                 }
                             }
                         }

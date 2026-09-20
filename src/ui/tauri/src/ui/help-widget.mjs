@@ -1,3 +1,5 @@
+import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './safe-help-content.mjs';
+
 // --- Global Tooltip & Walkthrough Logic ---
 
     // Tooltips
@@ -73,17 +75,17 @@
         }
     });
 
-    document.addEventListener('touchend', (e) => {
+    document.addEventListener('touchend', () => {
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
 
-    document.addEventListener('touchmove', (e) => {
+    document.addEventListener('touchmove', () => {
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
 
-    document.addEventListener('touchcancel', (e) => {
+    document.addEventListener('touchcancel', () => {
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
@@ -91,7 +93,7 @@
     // Walkthroughs
     if (!window.startWalkthrough) {
         window.startWalkthrough = function(steps) {
-            if (!steps || steps.length === 0) return;
+            if (!Array.isArray(steps) || steps.length === 0 || steps.some(step => !step || typeof step !== 'object')) return;
 
             let currentStep = 0;
 
@@ -108,7 +110,7 @@
             document.body.appendChild(bubble);
 
             function renderStep() {
-                const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } bubble.setAttribute('aria-label', (step.title || 'Tour') + ' walkthrough step');
+                const step = steps[currentStep];
 
                 document.querySelectorAll('.walkthrough-highlight, .omnisolo-walkthrough-highlight').forEach(el => {
                     el.classList.remove('walkthrough-highlight', 'omnisolo-walkthrough-highlight', 'glassmorphism');
@@ -117,23 +119,15 @@
                 el.style.pointerEvents = '';
                 });
 
-                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
-
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="omnisolo-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" class="glassmorphism" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #2563eb; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                    </div>
-                `;
-
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
+                let target = typeof step.targetId === 'string' ? document.getElementById(step.targetId) : null;
+                if (!target && typeof (step.selector || step.targetId) === 'string') {
+                    try { target = document.querySelector(step.selector || step.targetId); }
+                    catch { /* An invalid remote selector must not strand the walkthrough. */ }
+                }
+                const controls = renderWalkthroughStep(bubble, step, currentStep, steps.length);
+                controls.close.onclick = closeWalkthrough;
+                if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+                controls.next.onclick = () => {
                     if (currentStep === steps.length - 1) {
                         closeWalkthrough();
                     } else {
@@ -562,14 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tab.getAttribute("data-target") === "tab-videos") {
                 fetch("/api/v1/videos").then(r => r.json()).then(data => {
                     const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
-                    vl.innerHTML = "";
-                    data.forEach(v => {
-                        vl.innerHTML += `<div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, \"\\'\")}', '${v.duration}'); } else { this.innerHTML = '<h4 style=\'margin: 0 0 8px 0; font-size: 14px;\'>${v.title.replace(/'/g, \"\\'\")}</h4><video controls style=\'width: 100%; border-radius: 4px;\'><source src=\'${v.video_url}\' type=\'video/mp4\'>Your browser does not support the video tag.</video>'; }">` +
-                            `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
-                            `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
-                            `</div>`;
-                    });
-                }).catch(e => {
+                    renderHelpVideos(vl, data);
+                }).catch(() => {
                     const errVl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     if (errVl) errVl.innerHTML = "Error loading videos.";
                 });
@@ -585,10 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendMessage(text, sender, link = null) {
         const msg = document.createElement('div');
         msg.className = `omnisolo-chat-msg ${sender}`;
-        msg.innerHTML = text;
-        if (link && link.url && link.title) {
-            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
-        }
+        renderHelpMessage(msg, text, link);
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -617,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 appendMessage(data, 'agent');
             }
-        } catch (e) {
+        } catch  {
             appendMessage("I'm sorry, I'm having trouble connecting right now.", 'agent');
         }
     }

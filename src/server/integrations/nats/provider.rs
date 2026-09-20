@@ -106,10 +106,12 @@ mod tests {
         assert_eq!(received.load(Ordering::SeqCst), 1);
     }
 
+    type MessageHandler = Box<dyn Fn(Vec<u8>) + Send + Sync>;
+
     // A shared mock that acts as a real broker between the instances
     struct SharedBrokerMock {
         published_messages: Arc<AtomicUsize>,
-        handlers: std::sync::RwLock<Vec<Box<dyn Fn(Vec<u8>) + Send + Sync>>>,
+        handlers: std::sync::RwLock<Vec<MessageHandler>>,
     }
 
     #[async_trait]

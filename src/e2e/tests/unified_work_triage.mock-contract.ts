@@ -8,19 +8,13 @@ test.describe('AI Unified Work Triage Architecture', () => {
         await page.click('#login-btn');
         try {
             await page.waitForURL('**/dashboard*', { timeout: 3000 });
-        } catch(e) {
+        } catch {
             console.log('Skipping dashboard wait to handle dev environment routing');
         }
         await page.goto('/ui/triage.html');
 
         const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'default');
 
-        const webhookPayload = {
-            tenant_id: tenantId,
-            source: 'Instagram DM',
-            identifier: 'sarah_bakes',
-            message: 'Hi, do you make vegan chocolate cakes? I am ready to pay.'
-        };
 
         // We will seed the database with a pending draft containing the magic token directly,
         // to robustly test the payment link parsing without relying on the LLM to output the exact magic token string.

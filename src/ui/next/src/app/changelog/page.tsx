@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import React,{ useEffect,useState } from "react";
 import { motion } from "framer-motion";
 
 type ChangelogSection = {
@@ -32,7 +31,7 @@ function parseLinks(text: string): React.ReactNode {
   }
 
   if (lastIndex < text.length) {
-    parts.push(<span key={key++}>{text.substring(lastIndex)}</span>);
+    parts.push(<span key={key}>{text.substring(lastIndex)}</span>);
   }
 
   return parts.length > 0 ? <>{parts}</> : text;

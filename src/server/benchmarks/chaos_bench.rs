@@ -185,15 +185,27 @@ mod tests {
 
     #[tokio::test]
     async fn test_caching_strategy_resilience() {
-        // Simulates caching strategy behavior ensuring it doesn't break when Redis is unavailable.
-        let retries = 0;
-        let mut success = false;
-        while retries < 3 {
-            // Emulate hitting memory cache
-            success = true;
-            break;
-        }
-        assert!(success, "Caching strategy must be resilient");
+        // Exercise the actual in-process cache, which requires no Redis service.
+        // Remote-to-local fallback is covered by the orchestration state tests.
+        let cache = ::server_pricing::prompt_caching::PromptCache::with_capacity(
+            Duration::from_secs(60),
+            2,
+        );
+        cache.set("tenant-a/first", "verified cached response", 7);
+        let hit = cache
+            .get("tenant-a/first")
+            .expect("local cache must retain the response");
+        assert_eq!(hit.text, "verified cached response");
+        assert_eq!(hit.token_count, 7);
+        assert!(cache.get("tenant-b/first").is_none());
+        cache.set("tenant-a/second", "second", 2);
+        cache.set("tenant-a/third", "third", 3);
+        assert_eq!(cache.get("tenant-a/third").unwrap().text, "third");
+        let retained = ["tenant-a/first", "tenant-a/second", "tenant-a/third"]
+            .iter()
+            .filter(|key| cache.get(key).is_some())
+            .count();
+        assert!(retained <= 2, "local cache must enforce its capacity");
     }
 
     #[tokio::test]

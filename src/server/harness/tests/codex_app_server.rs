@@ -516,7 +516,7 @@ fn codex_notifications_map_deltas_completion_and_usage_with_native_cursor() {
         )
         .unwrap();
     assert_eq!(completion.final_text.as_deref(), Some("hello"));
-    assert!(completion.terminal == false);
+    assert!(!completion.terminal);
 
     let usage = codec
         .decode_notification(

@@ -1,15 +1,43 @@
-#[cfg(omnisolo_bazel)]
-use crate::integrations::mercadopago::client::MercadoPagoClient;
-#[cfg(omnisolo_bazel)]
-use crate::integrations::razorpay::client::RazorpayClient;
 use serde::{Deserialize, Serialize};
-#[cfg(not(omnisolo_bazel))]
-use server_integrations_mercadopago::client::MercadoPagoClient;
-#[cfg(not(omnisolo_bazel))]
-use server_integrations_razorpay::client::RazorpayClient;
 
 use super::payout_batcher::PayoutBatcher;
-use super::routing::{PaymentMethod, PaymentRouter};
+
+#[cfg(test)]
+mod missing_configuration_tests {
+    use super::*;
+    #[tokio::test]
+    async fn absent_provider_never_fabricates_external_success() {
+        for key in ["", "sk_test_123", "sk_test_mock", "placeholder"] {
+            let client = StripeClient::new(key.into());
+            assert!(client.create_payment_link("service", 100).await.is_err());
+            assert!(
+                client
+                    .create_checkout_session("service", "client", 1.0, None, None, None)
+                    .await
+                    .is_err()
+            );
+            assert!(
+                client
+                    .create_billing_portal_session("cus_fixture", None)
+                    .await
+                    .is_err()
+            );
+            assert!(client.cancel_subscription("sub_fixture").await.is_err());
+            assert!(
+                client
+                    .create_draft_invoice("cus_fixture", 100, "service")
+                    .await
+                    .is_err()
+            );
+            assert!(
+                client
+                    .finalize_and_send_invoice("in_fixture")
+                    .await
+                    .is_err()
+            );
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StripeSubscription {
@@ -43,7 +71,14 @@ impl StripeClient {
 
     pub fn require_api_key(&self) -> Result<&str, String> {
         let key = self.api_key.trim();
-        if key.is_empty() || key == "sk_test_123" || key == "sk_test" {
+        if key.is_empty()
+            || key == "sk_test_123"
+            || key == "sk_test"
+            || key.contains("mock")
+            || key.contains("placeholder")
+            || key.len() > 4096
+            || key.chars().any(char::is_control)
+        {
             return Err("Stripe API key is required".to_string());
         }
         Ok(key)
@@ -58,13 +93,10 @@ impl StripeClient {
         name: &str,
         amount_cents: i64,
     ) -> Result<String, String> {
-        let api_key_res = self.require_api_key();
-        if api_key_res.is_err() {
-            // Mock response if no real key
-            let id = uuid::Uuid::new_v4().simple().to_string();
-            return Ok(format!("https://buy.stripe.com/test_{}", &id[0..16]));
+        let api_key = self.require_api_key()?;
+        if name.trim().is_empty() || !(1..=99_999_999).contains(&amount_cents) {
+            return Err("A description and valid amount are required".into());
         }
-        let api_key = api_key_res.unwrap();
         let client = reqwest::Client::new();
 
         // 1. Create a Product
@@ -148,131 +180,22 @@ impl StripeClient {
         product_id: Option<String>,
         target_currency: Option<String>,
     ) -> Result<String, String> {
-        let pm = PaymentRouter::optimize_payment_method(amount_usd);
-        let savings = PaymentRouter::calculate_fee_savings(amount_usd);
-        tracing::info!(
-            "💰 Miser telemetry: Payment method optimized. Saved ${} in fees",
-            savings
-        );
-
-        // For MercadoPago and others not routed to Stripe Checkout
-        match pm {
-            PaymentMethod::Razorpay => {
-                let api_key = std::env::var("RAZORPAY_API_KEY").unwrap_or_default();
-                let api_secret = std::env::var("RAZORPAY_API_SECRET").unwrap_or_default();
-                let rzp_client = RazorpayClient::new(api_key, api_secret);
-                return rzp_client
-                    .create_checkout_preference(price_id_or_name, customer_id)
-                    .await;
-            }
-            PaymentMethod::MercadoPago => {
-                if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
-                    let mp_client = MercadoPagoClient::new(token);
-                    return mp_client
-                        .create_checkout_preference(price_id_or_name, customer_id)
-                        .await;
-                } else {
-                    return Err("Mercado Pago access token is required".to_string());
-                }
-            }
-            PaymentMethod::Alipay => {
-                return Err(
-                    "Alipay checkout is not configured for Stripe checkout sessions".to_string(),
-                );
-            }
-            _ => {} // Fall through for ACH and CreditCard to Stripe API
-        }
-
-        let api_key_res = self.require_api_key();
-        if api_key_res.is_err() {
-            // Mock behavior for testing if no real key is configured
-            return match pm {
-                PaymentMethod::Ach => {
-                    Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
-                }
-                _ => Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string()),
-            };
-        }
-
-        let api_key = api_key_res.unwrap();
-        let amount_cents = (amount_usd * 100.0).round() as i64;
-
-        let mut form = std::collections::HashMap::new();
-        form.insert(
-            "success_url".to_string(),
-            "https://example.com/success".to_string(),
-        );
-        form.insert(
-            "cancel_url".to_string(),
-            "https://example.com/cancel".to_string(),
-        );
-        if let Some(interval) = subscription_interval {
-            form.insert("mode".to_string(), "subscription".to_string());
-            form.insert(
-                "line_items[0][price_data][recurring][interval]".to_string(),
-                interval,
-            );
-        } else {
-            form.insert("mode".to_string(), "payment".to_string());
-        }
-        let currency = target_currency
-            .unwrap_or_else(|| "usd".to_string())
-            .to_lowercase();
-        form.insert("line_items[0][price_data][currency]".to_string(), currency);
-        let display_name = if price_id_or_name.trim().is_empty() {
-            "Checkout".to_string()
-        } else {
-            price_id_or_name.to_string()
-        };
-        form.insert(
-            "line_items[0][price_data][product_data][name]".to_string(),
-            display_name,
-        );
-        form.insert(
-            "line_items[0][price_data][unit_amount]".to_string(),
-            amount_cents.to_string(),
-        );
-        form.insert("line_items[0][quantity]".to_string(), "1".to_string());
-        form.insert("client_reference_id".to_string(), customer_id.to_string());
-        if let Some(pid) = product_id {
-            form.insert("metadata[product_id]".to_string(), pid);
-        }
-
-        match pm {
-            PaymentMethod::Ach => {
-                form.insert(
-                    "payment_method_types[0]".to_string(),
-                    "us_bank_account".to_string(),
-                );
-            }
-            _ => {
-                form.insert("payment_method_types[0]".to_string(), "card".to_string());
-            }
-        }
-
-        let res = reqwest::Client::new()
-            .post(format!("{}/v1/checkout/sessions", Self::api_base()))
-            .basic_auth(api_key, Some(""))
-            .form(&form)
-            .send()
-            .await
-            .map_err(|e| format!("Stripe Checkout request failed: {}", e))?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let text = res.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error ({}): {}", status, text));
-        }
-
-        let json: serde_json::Value = res
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        let url = json["url"]
-            .as_str()
-            .ok_or_else(|| "Missing url in response".to_string())?;
-
-        Ok(url.to_string())
+        // Legacy callers represent a new interactive checkout. Durable workflows
+        // must use create_checkout_session_idempotent with their persisted ID.
+        let amount_cents = super::safe_checkout::money_minor_units(amount_usd)?;
+        let operation_id = format!("checkout:{}", uuid::Uuid::new_v4());
+        let receipt = self
+            .create_checkout_session_idempotent(super::safe_checkout::CheckoutRequest {
+                name: price_id_or_name,
+                reference: customer_id,
+                amount_cents,
+                interval: subscription_interval.as_deref(),
+                product: product_id.as_deref(),
+                currency: target_currency.as_deref().unwrap_or("usd"),
+                operation_id: &operation_id,
+            })
+            .await?;
+        Ok(receipt.url)
     }
 
     pub async fn create_billing_portal_session(
@@ -280,11 +203,7 @@ impl StripeClient {
         customer_id: &str,
         return_url_base: Option<&str>,
     ) -> Result<String, String> {
-        let api_key_res = self.require_api_key();
-        if api_key_res.is_err() {
-            return Ok("/pricing".to_string());
-        }
-        let api_key = api_key_res.unwrap();
+        let api_key = self.require_api_key()?;
 
         let mut form = std::collections::HashMap::new();
         form.insert("customer".to_string(), customer_id.to_string());
@@ -399,16 +318,10 @@ impl StripeClient {
         &self,
         subscription_id: &str,
     ) -> Result<StripeSubscription, String> {
-        let api_key_res = self.require_api_key();
-        if api_key_res.is_err() {
-            // Mock response if no real key
-            return Ok(StripeSubscription {
-                id: "sub_test_...".to_string(),
-                status: "canceled".to_string(),
-                current_period_end: 1714560000,
-            });
+        let api_key = self.require_api_key()?;
+        if !super::safe_checkout::valid_provider_id(subscription_id, "sub_") {
+            return Err("Invalid subscription identity".into());
         }
-        let api_key = api_key_res.unwrap();
 
         let res = reqwest::Client::new()
             .delete(format!(
@@ -482,17 +395,12 @@ impl StripeClient {
         amount_cents: i64,
         description: &str,
     ) -> Result<StripeInvoice, String> {
-        let api_key_res = self.require_api_key();
-        if api_key_res.is_err() {
-            // Mock response if no real key
-            return Ok(StripeInvoice {
-                id: format!("in_draft_{}", uuid::Uuid::new_v4()),
-                amount_due: amount_cents,
-                status: "draft".to_string(),
-                invoice_pdf: None,
-            });
+        let api_key = self.require_api_key()?;
+        if !super::safe_checkout::valid_provider_id(customer_id, "cus_")
+            || !(1..=99_999_999).contains(&amount_cents)
+        {
+            return Err("Invalid invoice customer or amount".into());
         }
-        let api_key = api_key_res.unwrap();
 
         let client = reqwest::Client::new();
         // 1. Create an invoice item
@@ -558,17 +466,10 @@ impl StripeClient {
         &self,
         invoice_id: &str,
     ) -> Result<StripeInvoice, String> {
-        let api_key_res = self.require_api_key();
-        if api_key_res.is_err() {
-            // Mock response if no real key
-            return Ok(StripeInvoice {
-                id: invoice_id.to_string(),
-                amount_due: 0,
-                status: "open".to_string(),
-                invoice_pdf: Some("https://pay.stripe.com/invoice/mock/pdf".to_string()),
-            });
+        let api_key = self.require_api_key()?;
+        if !super::safe_checkout::valid_provider_id(invoice_id, "in_") {
+            return Err("Invalid invoice identity".into());
         }
-        let api_key = api_key_res.unwrap();
         let client = reqwest::Client::new();
 
         let res_inv = client
@@ -612,12 +513,9 @@ impl StripeClient {
         amount_cents: i64,
         batcher: &PayoutBatcher,
     ) -> Result<Option<String>, String> {
-        let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
-        if let Some(total_cents) = payout_amount {
-            // Execute real payout call here...
-            Ok(Some(format!("po_test_{}", total_cents)))
-        } else {
-            Ok(None)
-        }
+        // Do not remove queued amounts or invent a payout receipt. Real payout
+        // execution requires an approved destination and durable reconciliation.
+        let _ = (account_id, amount_cents, batcher);
+        Err("Automated payouts are unavailable; use the verified provider dashboard".into())
     }
 }

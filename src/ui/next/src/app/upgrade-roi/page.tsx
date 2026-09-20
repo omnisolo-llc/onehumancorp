@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function UpgradeROIPage() {
@@ -11,7 +11,7 @@ export default function UpgradeROIPage() {
   // Growth assumptions with Pro Plan (Advanced AI Marketing + SEO + Review Automation)
   const conversionUplift = 0.25; // 25% increase in conversions
   const aovUplift = 0.15; // 15% increase in Average Order Value from AI cross-selling
-  const proPlanCost = 79; // $79/mo
+   // $79/mo
 
   const currentRevenue = monthlyOrders * averageOrderValue;
 
@@ -20,7 +20,7 @@ export default function UpgradeROIPage() {
   const projectedRevenue = projectedOrders * projectedAOV;
 
   const revenueIncrease = projectedRevenue - currentRevenue;
-  const netProfitIncrease = revenueIncrease - proPlanCost;
+
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">

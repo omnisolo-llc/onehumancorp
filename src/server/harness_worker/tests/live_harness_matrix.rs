@@ -659,10 +659,9 @@ fn append_assistant_text(content: &Value, text: &mut String) {
                 if matches!(
                     part.get("type").and_then(Value::as_str),
                     Some("text" | "output_text")
-                ) {
-                    if let Some(value) = part.get("text").and_then(Value::as_str) {
-                        text.push_str(value);
-                    }
+                ) && let Some(value) = part.get("text").and_then(Value::as_str)
+                {
+                    text.push_str(value);
                 }
             }
         }

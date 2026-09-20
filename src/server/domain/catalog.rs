@@ -16,25 +16,12 @@ pub async fn handle_create_product(
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    let price_str = payload.get("price").and_then(|v| {
-        if v.is_string() {
-            v.as_str()
-        } else if v.is_number() {
-            None
-        }
-        // Will handle in a moment if it's a number
-        else {
-            None
-        }
-    });
-
-    let price_f64 = if let Some(s) = price_str {
-        s.parse::<f64>().unwrap_or(0.0)
-    } else if let Some(n) = payload.get("price").and_then(|v| v.as_f64()) {
-        n
-    } else {
-        0.0
-    };
+    let price = payload.get("price");
+    let price_f64 = price
+        .and_then(Value::as_str)
+        .and_then(|value| value.parse::<f64>().ok())
+        .or_else(|| price.and_then(Value::as_f64))
+        .unwrap_or(0.0);
 
     let price_cents = (price_f64 * 100.0).round() as i64;
     let item_type = payload

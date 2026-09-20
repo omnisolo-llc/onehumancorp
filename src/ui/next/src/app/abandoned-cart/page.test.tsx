@@ -1,8 +1,7 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import React from 'react';
+import { render,screen,fireEvent,waitFor } from '@testing-library/react';
 import AbandonedCartPage from './page';
 import { useRouter } from 'next/navigation';
-import { expect, test, vi, describe, beforeEach, afterEach } from 'vitest';
+import { expect,test,vi,describe,beforeEach,afterEach } from 'vitest';
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
@@ -10,11 +9,11 @@ vi.mock('next/navigation', () => ({
 
 describe('AbandonedCartPage', () => {
   beforeEach(() => {
-    (useRouter as any).mockReturnValue({
+    vi.mocked(useRouter, { partial: true }).mockReturnValue({
       push: vi.fn(),
     });
     vi.clearAllMocks();
-    global.fetch = vi.fn() as any;
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
@@ -37,7 +36,7 @@ describe('AbandonedCartPage', () => {
 
   test('calls API and displays result', async () => {
     const mockMessage = 'Hi Alice, you left some items in your cart.';
-    (global.fetch as any).mockResolvedValue({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ message: mockMessage }),
     });
@@ -55,7 +54,7 @@ describe('AbandonedCartPage', () => {
     expect(screen.getByText('Generating...')).toBeDefined();
 
     await waitFor(() => {
-      expect(screen.getByText((content, element) => content.includes(mockMessage) && content.includes('⚡ Powered by OmniSolo'))).toBeDefined();
+      expect(screen.getByText((content) => content.includes(mockMessage) && content.includes('⚡ Powered by OmniSolo'))).toBeDefined();
     });
 
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/campaign/generate-cart', expect.objectContaining({
@@ -65,7 +64,7 @@ describe('AbandonedCartPage', () => {
   });
 
   test('displays error message on failed request', async () => {
-    (global.fetch as any).mockResolvedValue({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
       ok: false,
     });
 

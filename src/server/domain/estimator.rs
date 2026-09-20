@@ -7,17 +7,16 @@ pub async fn handle_proposal_action(
     payload: &Value,
     pool: &PgPool,
 ) -> Result<(), sqlx::Error> {
-    if let Some(action) = payload.get("action").and_then(|v| v.as_str()) {
-        if action == "approve" {
-            if let Some(proposal_id) = payload.get("proposal_id").and_then(|v| v.as_str()) {
-                tracing::info!("Approved quote draft: {}", proposal_id);
-                sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+    if let Some(action) = payload.get("action").and_then(|v| v.as_str())
+        && action == "approve"
+        && let Some(proposal_id) = payload.get("proposal_id").and_then(|v| v.as_str())
+    {
+        tracing::info!("Approved quote draft: {}", proposal_id);
+        sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
                     .bind(Uuid::parse_str(proposal_id).unwrap_or_default())
                     .bind(tenant_id)
                     .execute(pool)
                     .await?;
-            }
-        }
     }
     Ok(())
 }
@@ -98,22 +97,22 @@ Task: Extract the scope of work and identify the closest matching service from t
             tools: vec![],
         };
 
-        if let Ok(resp) = llm.chat(req).await {
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&resp.message.content) {
-                if let Some(title) = parsed.get("matched_service_title").and_then(|t| t.as_str()) {
-                    matched_service_name = title.to_string();
+        if let Ok(resp) = llm.chat(req).await
+            && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&resp.message.content)
+        {
+            if let Some(title) = parsed.get("matched_service_title").and_then(|t| t.as_str()) {
+                matched_service_name = title.to_string();
 
-                    // Try to find the matched service by title to get the ID
-                    if let Some(matched_service) = services
-                        .iter()
-                        .find(|s| s.name.to_lowercase() == title.to_lowercase())
-                    {
-                        matched_service_item_id = Some(matched_service.id);
-                    }
+                // Try to find the matched service by title to get the ID
+                if let Some(matched_service) = services
+                    .iter()
+                    .find(|s| s.name.to_lowercase() == title.to_lowercase())
+                {
+                    matched_service_item_id = Some(matched_service.id);
                 }
-                if let Some(price) = parsed.get("matched_price_cents").and_then(|p| p.as_i64()) {
-                    matched_price_cents = price;
-                }
+            }
+            if let Some(price) = parsed.get("matched_price_cents").and_then(|p| p.as_i64()) {
+                matched_price_cents = price;
             }
         }
     } else {

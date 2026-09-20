@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Viral Gift Cards Loop', () => {
-  test('should generate a gift card with a referral loop link', async ({ page, request }) => {
+  test('should generate a gift card with a referral loop link', async ({ page }) => {
     // Navigate to the Gift Cards page
     await page.goto('/gift-cards');
 
@@ -18,7 +18,7 @@ test.describe('Viral Gift Cards Loop', () => {
 
     // The share modal should be visible
     await expect(page.getByText('Share Your Gift Card')).toBeVisible();
-    await expect(page.locator('input[aria-label="Gift Card Link"]')).toHaveValue(/https?:\/\/[^\/]+\/gift-card\?amount=150&ref=.*$/);
+    await expect(page.locator('input[aria-label="Gift Card Link"]')).toHaveValue(/https?:\/\/[^/]+\/gift-card\?amount=150&ref=.*$/);
 
     // Verify the "OmniSolo" footer link
     const poweredByLink = page.locator('a', { hasText: '⚡ OmniSolo' });

@@ -125,12 +125,11 @@ impl DepartmentHandoffManager {
                 if let Ok(r) = row {
                     use sqlx::Row;
                     let mut history_arr: Vec<serde_json::Value> = vec![];
-                    if let Ok(history_str) = r.try_get::<String, _>("routing_history") {
-                        if let Ok(parsed) =
+                    if let Ok(history_str) = r.try_get::<String, _>("routing_history")
+                        && let Ok(parsed) =
                             serde_json::from_str::<Vec<serde_json::Value>>(&history_str)
-                        {
-                            history_arr = parsed;
-                        }
+                    {
+                        history_arr = parsed;
                     }
                     history_arr.push(new_history_entry);
                     let new_history_str = serde_json::to_string(&history_arr).unwrap_or_default();

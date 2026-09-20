@@ -1,5 +1,8 @@
 import { request as playwrightRequest, type FullConfig } from '@playwright/test';
 import { authenticateRequest } from './authenticate';
+import { chmod } from 'node:fs/promises';
+import { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER } from './identities';
+import { saveAuthenticatedState } from '../../scripts/playwright/session-state.mjs';
 
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
@@ -12,15 +15,15 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error('PLAYWRIGHT_STORAGE_STATE is required for E2E global setup.');
   }
 
-  // The Bazel test runner starts a local postgres instance on a random port and exports it via DATABASE_URL
+  // The native runner starts an isolated PostgreSQL instance on a random port.
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required; E2E tests must use the Bazel-provided PostgreSQL database.');
+    throw new Error('DATABASE_URL is required; E2E tests must use the isolated test PostgreSQL database.');
   }
 
   // Ensure there are no hardcoded localhost:5432 ports in use
   if (databaseUrl.includes('localhost:5432') && process.env.CI) {
-    throw new Error('E2E tests must use the Bazel-provided random PostgreSQL port, not localhost:5432.');
+    throw new Error('E2E tests must use the isolated random PostgreSQL port, not localhost:5432.');
   }
 
   let appReady = false;
@@ -41,15 +44,20 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error(`E2E application did not become ready at ${baseURL}.`);
   }
 
-  const request = await playwrightRequest.newContext({ baseURL });
-  try {
-    await authenticateRequest(request, {
-      username: 'test@example.com',
-      password: 'password123',
-      organizationId: 'e2e-tenant',
-    }, new URL(baseURL).origin);
-    await request.storageState({ path: storageStatePath });
-  } finally {
-    await request.dispose();
+  const directory = process.env.OMNISOLO_E2E_SESSION_STATE_DIR;
+  const actors = directory ? [E2E_ADMIN_USER, E2E_MEMBER_USER, E2E_UNLIMITED_ADMIN_USER] : [E2E_ADMIN_USER];
+  for (const actor of actors) {
+    const request = await playwrightRequest.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+    try {
+      const user = await authenticateRequest(request, {
+        username: actor.email, password: actor.password, organizationId: actor.organizationId,
+      }, new URL(baseURL).origin);
+      const state = await request.storageState();
+      if (directory) await saveAuthenticatedState(directory, new URL(baseURL).origin, actor, user, state);
+      if (actor === E2E_ADMIN_USER) {
+        await request.storageState({ path: storageStatePath });
+        await chmod(storageStatePath, 0o600);
+      }
+    } finally { await request.dispose(); }
   }
 }

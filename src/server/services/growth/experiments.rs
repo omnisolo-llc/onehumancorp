@@ -12,6 +12,12 @@ pub struct ExperimentManager {
     experiments: RwLock<HashMap<String, Experiment>>,
 }
 
+impl Default for ExperimentManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ExperimentManager {
     pub fn new() -> Self {
         ExperimentManager {

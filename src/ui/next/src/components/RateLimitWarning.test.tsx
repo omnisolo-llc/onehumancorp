@@ -1,12 +1,11 @@
-import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render,screen,fireEvent } from '@testing-library/react';
+import { describe,it,expect,vi,beforeEach,afterEach } from 'vitest';
 
 // We must use dynamic imports to mock fetch BEFORE the module evaluates.
 describe('RateLimitWarning', () => {
   let originalFetch: typeof global.fetch;
-  let RateLimitWarningProvider: any;
-  let useRateLimitWarning: any;
+  let RateLimitWarningProvider: typeof import('./RateLimitWarning').RateLimitWarningProvider;
+  let useRateLimitWarning: typeof import('./RateLimitWarning').useRateLimitWarning;
 
   beforeEach(async () => {
     originalFetch = global.fetch;

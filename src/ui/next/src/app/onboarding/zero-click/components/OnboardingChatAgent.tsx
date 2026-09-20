@@ -11,11 +11,11 @@ interface IntakeData {
   categories: string[];
   location?: string;
   target_audience?: string;
-  initial_products: { name: string; price: string }[];
+  initial_products: { name: string; price: string; description?: string; variants?: string[] }[];
 }
 
 interface OnboardingChatAgentProps {
-  onComplete: (data: any) => void;
+  onComplete: (data: import('@/lib/builder-types').OnboardingResult) => void;
 }
 
 export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
@@ -31,7 +31,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
       try {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      } catch (e) {
+      } catch  {
         // Ignore scroll errors in tests
       }
     }
@@ -106,7 +106,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         price_type: 'fixed',
         location: intakeData.location || 'Online',
         target_audience: intakeData.target_audience || 'Everyone',
-        initial_products: intakeData.initial_products.map((p: any) => ({
+        initial_products: intakeData.initial_products.map((p) => ({
           name: p.name,
           price: p.price,
           description: p.description || '',

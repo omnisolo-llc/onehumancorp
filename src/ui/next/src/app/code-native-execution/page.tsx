@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 import React, { useState } from 'react';
 
 export default function CodeNativeExecutionPage() {
@@ -25,8 +26,8 @@ export default function CodeNativeExecutionPage() {
       }
 
       setResult(JSON.stringify(data.results, null, 2));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }

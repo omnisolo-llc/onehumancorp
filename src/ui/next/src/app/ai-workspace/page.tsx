@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React,{ useState,useEffect,useMemo } from 'react';
 import { AppShell } from '../components/AppShell';
 
 // Unique IDs for accessibility and testing
@@ -128,10 +128,10 @@ export default function AIWorkspacePage() {
     { id: 'r3', text: 'Submit weekly cost dashboard metrics', time: 'Friday at 6:00 PM', active: false },
   ]);
   const [newReminderText, setNewReminderText] = useState('');
-  const [newReminderTime, setNewReminderTime] = useState('Tomorrow at 9:00 AM');
+  const [newReminderTime] = useState('Tomorrow at 9:00 AM');
 
   // 6. Goal Tracking State
-  const [goals, setGoals] = useState<Goal[]>([
+  const [goals] = useState<Goal[]>([
     { id: 'g1', title: 'Deploy AI Framework MVP', target: 10, current: 7, unit: 'Milestones', category: 'Engineering' },
     { id: 'g2', title: 'Automate Business Workflows', target: 5, current: 2, unit: 'Automations', category: 'Operations' },
     { id: 'g3', title: 'Establish Note Knowledge Base', target: 20, current: 12, unit: 'Documents', category: 'Productivity' },
@@ -338,7 +338,7 @@ export default function AIWorkspacePage() {
       setCalendarSyncStatus('synced');
       setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       
-      const newSyncedEvents: any[] = [];
+      const newSyncedEvents: typeof events = [];
       if (google) {
         newSyncedEvents.push({
           id: 'esync_g1',
@@ -421,7 +421,7 @@ export default function AIWorkspacePage() {
     );
   }, [notes, searchQuery]);
 
-  const filteredEvents = useMemo(() => {
+  useMemo(() => {
     if (!searchQuery.trim()) return events;
     const q = searchQuery.toLowerCase();
     return events.filter((e) =>
@@ -937,7 +937,7 @@ export default function AIWorkspacePage() {
                     />
                     <select
                       value={newTaskPriority}
-                      onChange={(e) => setNewTaskPriority(e.target.value as any)}
+                      onChange={(e) => setNewTaskPriority(e.target.value as Parameters<typeof setNewTaskPriority>[0])}
                       className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="Low">Low Priority</option>

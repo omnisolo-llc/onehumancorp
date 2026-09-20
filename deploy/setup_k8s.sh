@@ -61,4 +61,4 @@ else
     echo "--- Local K8s skipped or failed. Falling back to single-docker mode ---"
 fi
 echo ""
-echo "Run the application easily using: bazelisk run //:up"
+echo "Run the application using: bash deploy/deploy_dev.sh"

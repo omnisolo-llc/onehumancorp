@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
 
 describe("OnboardingWizard", () => {
     const renderOnboardingWizard = async () => {
-    let view: any;
+    let view: ReturnType<typeof render>;
     await act(async () => {
       view = render(
         <TooltipProvider>
@@ -54,12 +54,12 @@ describe("OnboardingWizard", () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn().mockImplementation((url) => {
+    global.fetch = vi.fn().mockImplementation(() => {
       return Promise.resolve({
         ok: true,
         json: async () => ({ wizardState: { bio: "Draft Bio" } }),
       });
-    }) as any;
+    });
   });
 
   afterEach(() => {
@@ -68,7 +68,7 @@ describe("OnboardingWizard", () => {
   });
 
   it("shows a visible loading state while onboarding data is restored", () => {
-    global.fetch = vi.fn(() => new Promise(() => {})) as any;
+    global.fetch = vi.fn<typeof fetch>(() => new Promise<Response>(() => {}));
 
     render(
       <TooltipProvider>
@@ -97,7 +97,7 @@ describe("OnboardingWizard", () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
@@ -220,7 +220,7 @@ describe("OnboardingWizard", () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
@@ -269,7 +269,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
+    expect(screen.getAllByRole("button", { name: /Next/i }).pop()).toBeVisible();
     await user.type(sellInput, "{Enter}");
 
     // Chat Step 3
@@ -314,7 +314,7 @@ describe("OnboardingWizard", () => {
       screen.getByText("Website Template");
     });
 
-    const launchButton = screen.getAllByRole("button", { name: /Approve \& Publish/i }).pop()!;
+    const launchButton = screen.getAllByRole("button", { name: /Approve & Publish/i }).pop()!;
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -340,7 +340,7 @@ describe("OnboardingWizard", () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
@@ -382,7 +382,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
+    expect(screen.getAllByRole("button", { name: /Next/i }).pop()).toBeVisible();
     await user.type(sellInput, "{Enter}");
 
     // Chat Step 3
@@ -431,19 +431,14 @@ describe("OnboardingWizard", () => {
     });
 
     // Mock start failure
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
       if (url === "/api/v1/onboarding/intake" || url === "/api/v1/onboarding/start") {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          clone: () => ({
-            json: async () => ({ error: "Failed to start onboarding" }),
-          }),
-          json: async () => ({ error: "Failed to start onboarding" }),
-        });
+        return Promise.resolve(Response.json(
+          { error: "Failed to start onboarding" }, { status: 500 },
+        ));
       }
       return Promise.resolve({
         ok: true,
@@ -458,7 +453,7 @@ describe("OnboardingWizard", () => {
       );
     }
 
-    const launchButton = screen.getAllByRole("button", { name: /Approve \& Publish/i }).pop()!;
+    const launchButton = screen.getAllByRole("button", { name: /Approve & Publish/i }).pop()!;
 
     await user.click(launchButton);
 
@@ -567,7 +562,7 @@ describe("OnboardingWizard", () => {
     expect(continueButton).not.toBeDisabled();
 
     // Find the input element that is associated with the 'Business Type' label
-    const inputs = screen.getAllByRole("textbox");
+    screen.getAllByRole("textbox");
     const businessTypeInput = screen.getByDisplayValue("Bakery");
 
     // Clear the input to trigger validation
@@ -699,7 +694,7 @@ describe("OnboardingWizard", () => {
     const user = userEvent.setup({ delay: null });
 
     let fetchCalls = 0;
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/draft") {
         fetchCalls++;
         if (fetchCalls < 2) {
@@ -745,7 +740,7 @@ describe("OnboardingWizard", () => {
   });
 
   it("loads draft state correctly on mount", async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/draft") {
         return Promise.resolve({
           ok: true,
@@ -817,7 +812,7 @@ describe("OnboardingWizard", () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock draft API success
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/draft") {
         return Promise.resolve({
           ok: true,
@@ -894,7 +889,7 @@ describe("OnboardingWizard", () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock the draft save success
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/draft") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
@@ -979,30 +974,24 @@ describe("OnboardingWizard", () => {
   it("Instant Build: completes end-to-end flow with correct API calls", async () => {
     const user = userEvent.setup({ delay: null });
 
-    let fetchCalls: any[] = [];
+    const fetchCalls: { url: Parameters<typeof fetch>[0]; options?: RequestInit }[] = [];
     global.fetch = vi.fn().mockImplementation((url, options) => {
       fetchCalls.push({ url, options });
 
       if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ organization_id: "org_123" }),
-        });
+        return Promise.resolve(Response.json({ organization_id: "org_123" }, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/launch")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({}),
-        });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/state")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/draft")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
 
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     act(() => {
@@ -1030,6 +1019,7 @@ describe("OnboardingWizard", () => {
     expect(startZeroClickCall.options.headers).toEqual({
       "Content-Type": "application/json",
     });
+    if (typeof startZeroClickCall?.options?.body !== 'string') throw new Error('Expected JSON instant-build request');
     const startZeroBody = JSON.parse(startZeroClickCall.options.body);
     expect(startZeroBody.prompt).toContain("I consult startups in SF.");
 
@@ -1054,7 +1044,7 @@ describe("OnboardingWizard", () => {
           json: () => Promise.resolve({ error: "Failed to generate your business" }),
         });
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     act(() => {
@@ -1163,9 +1153,10 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let startRequestPayload: any = null;
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    let startRequestPayload: unknown = null;
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string, options?: RequestInit) => {
       if (url === "/api/v1/onboarding/start") {
+        if (typeof options?.body !== 'string') throw new Error('Expected JSON onboarding request');
         startRequestPayload = JSON.parse(options.body);
         return Promise.resolve({
           ok: true,
@@ -1186,7 +1177,7 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    const launchButton = await screen.findAllByRole("button", { name: /Approve \& Publish/i }).then(els => els[0]);
+    const launchButton = await screen.findAllByRole("button", { name: /Approve & Publish/i }).then(els => els[0]);
     await user.click(launchButton);
 
     await waitFor(() => {
@@ -1194,7 +1185,7 @@ describe("OnboardingWizard", () => {
     });
 
     expect(startRequestPayload).toBeDefined();
-    expect(startRequestPayload.initial_products).toEqual([
+    expect(startRequestPayload).toHaveProperty('initial_products', [
       { name: "Custom AI Product", price: "99" },
     ]);
   });
@@ -1284,16 +1275,9 @@ describe("OnboardingWizard", () => {
     // Mock API
     global.fetch = vi.fn().mockImplementation((url) => {
       if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: () => Promise.resolve({ error: "Intake Error" }),
-        });
+        return Promise.resolve(Response.json({ error: "Intake Error" }, { status: 500 }));
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     await renderOnboardingWizard();

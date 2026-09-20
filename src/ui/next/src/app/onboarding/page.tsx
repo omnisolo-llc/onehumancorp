@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+
+import { errorMessage } from '@/lib/errors';
+import { useEffect,useState,useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboardingStore } from "./store";
 import { SetupIcon } from "./components/SetupIcon";
@@ -90,11 +92,11 @@ export default function OnboardingWizard() {
           try {
             const result = await response.clone().json();
             errMsg = result.error || result.message || errMsg;
-          } catch (e) {}
+          } catch  { /* Optional local state or response decoding failed; retain the existing fallback. */ }
           throw new Error(errMsg);
         }
         return response;
-      } catch (err: any) {
+      } catch (err) {
         if (i === retries - 1) throw err;
         await new Promise((res) => setTimeout(res, backoff * Math.pow(2, i)));
       }
@@ -102,7 +104,7 @@ export default function OnboardingWizard() {
     throw new Error("Max retries reached");
   };
 
-  const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
+  const syncStateToBackend = async (overrideState: Partial<import("./store").OnboardingState> & { skipped?: boolean } = {}) => {
     const wizardState = {
       step,
       chatStep,
@@ -185,7 +187,7 @@ export default function OnboardingWizard() {
         instantImageUrl,
       };
 
-      const res = await fetchWithRetry("/api/v1/onboarding/draft", {
+      await fetchWithRetry("/api/v1/onboarding/draft", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -195,9 +197,9 @@ export default function OnboardingWizard() {
 
       setSaveMessage("Draft Saved!");
       setTimeout(() => setSaveMessage(""), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      updateState({ error: err.message || "An error occurred saving draft" });
+      updateState({ error: errorMessage(err, '') || "An error occurred saving draft" });
     } finally {
       updateState({ isLoading: false });
     }
@@ -214,7 +216,7 @@ export default function OnboardingWizard() {
         .catch(() => null),
     ])
       .then(([draftData, stateData]) => {
-        const isValid = (d: any) => d && Object.keys(d).length > 0;
+        const isValid = (d: unknown) => typeof d === 'object' && d !== null && Object.keys(d).length > 0;
         let data = isValid(draftData) ? draftData : stateData;
         if (isValid(data)) {
           if (data.wizardState) data = data.wizardState;
@@ -405,10 +407,10 @@ export default function OnboardingWizard() {
             ? String(intakeData.initial_products[0].price)
             : intakeData.initial_products?.[0]?.price || "10.00",
       }); // Go to review step
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       updateState({
-        error: err.message || "Backend connection failed. Please try again.",
+        error: errorMessage(err, '') || "Backend connection failed. Please try again.",
       });
       updateState({ step: 1 });
       syncStateToBackend({ step: 1 });
@@ -520,9 +522,9 @@ export default function OnboardingWizard() {
           window.location.href = "/success.html";
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      updateState({ error: err.message || "Failed to send chat message" });
+      updateState({ error: errorMessage(err, '') || "Failed to send chat message" });
     } finally {
       updateState({ isLoading: false });
     }
@@ -555,7 +557,7 @@ export default function OnboardingWizard() {
         },
       );
 
-      let result: any = {};
+      let result: import("@/lib/builder-types").OnboardingResult;
       try {
         result = await startRes.json();
         if (!startRes.ok) {
@@ -591,11 +593,11 @@ export default function OnboardingWizard() {
       ) {
         window.location.href = "/success.html";
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       updateState({
         step: -1,
-        error: err.message || "Backend connection failed. Please try again.",
+        error: errorMessage(err, '') || "Backend connection failed. Please try again.",
       });
       syncStateToBackend({ step: -1 });
     } finally {
@@ -656,10 +658,10 @@ export default function OnboardingWizard() {
       if (!launchRes.ok) throw new Error("Launch failed");
       updateState({ step: 5 });
       syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       updateState({
-        error: err.message || "Backend connection failed. Please try again.",
+        error: errorMessage(err, '') || "Backend connection failed. Please try again.",
       });
       updateState({ step: 3 });
       syncStateToBackend({ step: 3 });
@@ -1642,7 +1644,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => {
                       updateState({ businessName: e.target.value });
                       setValidationErrors((prev) => {
-                        const { businessName, ...rest } = prev;
+                        const rest = { ...prev }; delete rest.businessName;
                         return rest;
                       });
                     }}
@@ -1665,7 +1667,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => {
                       updateState({ businessType: e.target.value });
                       setValidationErrors((prev) => {
-                        const { businessType, ...rest } = prev;
+                        const rest = { ...prev }; delete rest.businessType;
                         return rest;
                       });
                     }}
@@ -1730,7 +1732,7 @@ export default function OnboardingWizard() {
                           }));
                         } else {
                           setValidationErrors((prev) => {
-                            const { firstProductPrice, ...rest } = prev;
+                            const rest = { ...prev }; delete rest.firstProductPrice;
                             return rest;
                           });
                         }

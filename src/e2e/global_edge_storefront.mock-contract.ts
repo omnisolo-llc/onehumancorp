@@ -1,4 +1,4 @@
-import { test, expect, request as playwrightRequest } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
 
@@ -6,7 +6,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     const tenantId = '11111111-1111-1111-1111-111111111111';
     const productId = '22222222-2222-2222-2222-222222222222';
 
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
 
     const headers = res.headers();
     // ETag is returned
@@ -16,18 +16,18 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     // Let's hit the actual API with our test and see the headers returned.
   });
 
-  test('validates storefront cache invalidation on inventory update', async ({ request, page }) => {
+  test('validates storefront cache invalidation on inventory update', async ({ request }) => {
     // Attempt to access frontend page and cache miss, triggering cache builder
     const tenantId = '11111111-1111-1111-1111-111111111111';
     const productId = '22222222-2222-2222-2222-222222222222';
 
     // 1. Initial hit should result in a cache miss from our local edge caching middleware
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(res.status()).toBe(200);
     expect(res.headers()['x-cache']).toBe('MISS');
 
     // 2. Second hit should be a cache hit
-    let hitRes = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const hitRes = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(hitRes.status()).toBe(200);
     expect(hitRes.headers()['x-cache']).toBe('HIT');
 
@@ -47,26 +47,26 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     await new Promise(r => setTimeout(r, 100));
 
     // 4. Hit cache again and verify regeneration logic is invoked (should be MISS again)
-    let refreshed = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const refreshed = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(refreshed.status()).toBe(200);
     expect(refreshed.headers()['x-cache']).toBe('MISS');
   });
 
-  test('generates edge storefront with premium styling and seo tags injected via builder', async ({ request, page }) => {
+  test('generates edge storefront with premium styling and seo tags injected via builder', async ({ request }) => {
     const tenantId = '11111111-1111-1111-1111-111111111111';
     const productId = '22222222-2222-2222-2222-222222222222';
 
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
-    let text = await res.text();
+    const res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const text = await res.text();
     // Validating fallback SEO or html tags
     expect(text).toContain('<!DOCTYPE html>');
   });
 
-  test('handles edge cache miss dynamically and creates fallback', async ({ request, page }) => {
+  test('handles edge cache miss dynamically and creates fallback', async ({ request }) => {
     const tenantId = 'invalid-tenant-id';
     const productId = 'invalid-product-id';
 
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(res.status()).toBe(400); // Bad Request from Uuid parse fail
   });
 
@@ -75,7 +75,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     const tenantId = '00000000-0000-0000-0000-000000000000';
     const productId = '00000000-0000-0000-0000-000000000000';
 
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(res.status()).toBe(200);
 
     const headers = res.headers();
@@ -88,17 +88,17 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     expect(headers['surrogate-key']).toEqual(headers['cache-tag']);
   });
 
-  test('isolates tenant data with explicit tenant-id tags', async ({ request, page }) => {
+  test('isolates tenant data with explicit tenant-id tags', async ({ request }) => {
     const tenantId = '00000000-0000-0000-0000-000000000000';
     const productId = '00000000-0000-0000-0000-000000000000';
 
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    const res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(res.status()).toBe(200);
     // Should display simple fallback logic
     expect(await res.text()).toContain('Product 00000000-0000-0000-0000-000000000000 not found');
   });
 
-  test('validates cache regeneration after offline POS sync deduction', async ({ request, page }) => {
+  test('validates cache regeneration after offline POS sync deduction', async ({ request }) => {
     // Analogous to updating POS orders invalidation endpoint
     const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/orchestration/event', {
       data: {

@@ -25,16 +25,16 @@ test.describe('Instant Setup CUJ', () => {
             } else {
                 await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Mocked ' + filename + '</body></html>' });
             }
-        } catch (e) {
+        } catch  {
             await route.continue();
         }
     });
 
     // mock the tauri backend
     await page.addInitScript(() => {
-        (window as any).__TAURI__ = {
+        (window as Window & { __TAURI__?: unknown }).__TAURI__ = {
             core: {
-                invoke: async (cmd, args) => {
+                invoke: async (cmd) => {
                     if (cmd === 'start_onboarding') {
                         return { success: true, organization_id: "mock_org_id" };
                     }

@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inject Styles
     const style = document.createElement('style');
-    style.textContent = \`
+    style.textContent = `
         .voice-recording { animation: pulse-red 1.5s infinite; background: #ef4444 !important; border-color: #f87171 !important; transform: scale(1.1); }
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-    \`;
+    `;
     document.head.appendChild(style);
 
     // 2. Inject UI
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.className = 'w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none glassmorphism border border-white/40';
     btn.style.cssText = 'width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; pointer-events: auto;';
 
-    btn.innerHTML = \`<svg id="voice-mic-icon" style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>\`;
+    btn.innerHTML = `<svg id="voice-mic-icon" style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>`;
 
     container.appendChild(statusDiv);
     container.appendChild(btn);
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let mediaRecorder = null;
     let audioChunks = [];
     let stoppedEarly = false;
-    const voiceIcon = document.getElementById("voice-mic-icon");
+    document.getElementById("voice-mic-icon");
 
     async function startVoiceRecording(e) {
         if (e && e.cancelable) e.preventDefault();
@@ -193,17 +193,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch("/api/v1/voice/command", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
-                    "x-spiffe-id": \`spiffe://ohc/org/\${localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default"}/agent/ui\`
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ audio_data: base64Audio })
             });
             if (!res.ok) throw new Error("Voice command failed");
             const data = await res.json();
+            if (typeof data.transcription !== 'string' || !data.transcription.trim()) {
+                throw new Error('Voice command did not return a transcription');
+            }
 
             // Display Result Card
             micIndicator.style.display = 'none';
-            overlayStatus.innerHTML = 'Action Prepared!';
+            overlayStatus.textContent = 'Transcription received — review before continuing';
             overlayStatus.style.color = '#22c55e'; // Success green
 
             resultCard.style.display = 'flex';
@@ -215,6 +217,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('voice-result-text').textContent = text;
 
             // Add a hidden id or text for testing purposes
+            const previousStatus = document.getElementById('voice-transcription-text');
+            if (previousStatus) previousStatus.remove();
             const hiddenStatus = document.createElement('div');
             hiddenStatus.id = 'voice-transcription-text';
             hiddenStatus.style.display = 'none';

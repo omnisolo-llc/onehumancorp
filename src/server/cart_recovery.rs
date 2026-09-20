@@ -521,9 +521,9 @@ async fn recovery_message_for(
 
         let req = omnisolo_builtin_agent::types::ChatRequest {
             model: "default".to_string(),
-            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
+            system: ::server_pricing::compression::reduce_tokens(system_prompt),
             messages: vec![omnisolo_builtin_agent::types::Message::user(
-                &::server_pricing::compression::reduce_tokens(&user_prompt),
+                ::server_pricing::compression::reduce_tokens(&user_prompt),
             )],
             tools: vec![],
             max_tokens: 500,

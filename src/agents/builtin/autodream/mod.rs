@@ -115,7 +115,7 @@ impl AutoDreamWorker {
              };
 
 
-             db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
+             db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, ::server_lib::db::MemoryContent { content: &summary, embedding: &embedding, source_type: "SESSION_SUMMARY" }).await?;
 
         }
         
@@ -165,7 +165,7 @@ impl AutoDreamWorker {
             let source_type = format!("TASK_{}", table.to_uppercase());
             
             // Insert into the proper KAIROS knowledge_embeddings table
-            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, ::server_lib::db::MemoryContent { content: &summary, embedding: &embedding, source_type: &source_type }).await?;
             db.mark_task_auto_dreamed("system", &id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
@@ -280,7 +280,7 @@ impl AutoDreamWorker {
                     let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = uuid::Uuid::new_v4().to_string();
                     
-                    db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
+                    db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, ::server_lib::db::MemoryContent { content: &context_data, embedding: &emb_str, source_type: "SESSION_DATA" }).await?;
                     
 
                     sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")

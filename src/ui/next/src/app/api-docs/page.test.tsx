@@ -8,7 +8,7 @@ import { TooltipProvider } from '../../components/TooltipRegistry';
 // Mock SwaggerUI to avoid running an actual parser in tests
 vi.mock('swagger-ui-react', () => {
   return {
-    default: (props: any) => (
+    default: (props: { spec?: { paths?: Record<string, unknown> } }) => (
       <div data-testid="swagger-ui-mock">
         Mocked Swagger UI
         {props.spec?.paths?.['/api/v1/help'] && <span>HasHelpPath</span>}
@@ -20,10 +20,7 @@ vi.mock('swagger-ui-react', () => {
 
 describe('ApiDocsPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ paths: { '/api/v1/help': {}, '/api/v1/tooltips': {} } }),
-      ok: true
-    }) as any;
+    global.fetch = vi.fn().mockResolvedValue(Response.json({ paths: { '/api/v1/help': {}, '/api/v1/tooltips': {} } }, { status: 200 }));
   });
 
   afterEach(() => {
@@ -49,10 +46,7 @@ describe('ApiDocsPage', () => {
   });
 
   it('displays an error message when fetch fails', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      json: () => Promise.resolve({}),
-    }) as any;
+    global.fetch = vi.fn().mockResolvedValue(Response.json({}, { status: 500 }));
 
     render(
       <TooltipProvider>
@@ -67,7 +61,7 @@ describe('ApiDocsPage', () => {
   });
 
   it('displays an error message when fetch throws an exception', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error')) as any;
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     render(
       <TooltipProvider>

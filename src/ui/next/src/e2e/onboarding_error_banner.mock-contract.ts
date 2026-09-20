@@ -49,8 +49,8 @@ test.describe('Onboarding Error Banner UI', () => {
     // Check that it has the premium glassmorphism styling
     const bannerContainer = errorBanner.locator('..');
     await expect(bannerContainer).toHaveClass(/backdrop-blur/);
-    await expect(bannerContainer).toHaveClass(/border-\[\#FF3B30\]\/50/);
-    await expect(bannerContainer).toHaveClass(/text-\[\#FF3B30\]/);
+    await expect(bannerContainer).toHaveClass(/border-\[#FF3B30\]\/50/);
+    await expect(bannerContainer).toHaveClass(/text-\[#FF3B30\]/);
     await expect(bannerContainer).toHaveClass(/animate-shake/);
   });
 

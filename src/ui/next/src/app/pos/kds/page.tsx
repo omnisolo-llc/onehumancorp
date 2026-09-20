@@ -1,14 +1,15 @@
 "use client";
+import type { OrderRecord, SaleProduct } from '@/lib/business-records';
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function KDSPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [inventory, setInventory] = useState<SaleProduct[]>([]);
   const [language, setLanguage] = useState<'en' | 'ar'>('en');
   const [isOffline, setIsOffline] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [syncing] = useState(false);
 
   // Network listener
   useEffect(() => {
@@ -175,7 +176,7 @@ export default function KDSPage() {
                   </span>
                 </div>
                 <ul className="mb-4 text-gray-700 font-medium">
-                  {order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
+                  {order.items.map((item, idx) => <li key={idx}>• {typeof item === "string" ? item : item.name || item.description || item.product_id}</li>)}
                 </ul>
                 {order.translated_notes && (
                   <div className="mb-4 p-2 bg-blue-50 text-blue-800 text-sm rounded-lg border border-blue-100">

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Edge Caching Coordinator - High Traffic Event', () => {
-  test('simulates high traffic, updates inventory, and verifies cache invalidation', async ({ request, page }) => {
+  test('simulates high traffic, updates inventory, and verifies cache invalidation', async ({ request }) => {
     // 1. We assume test tenant and product ID
     const tenantId = '33333333-3333-3333-3333-333333333333';
     const productId = '44444444-4444-4444-4444-444444444444';

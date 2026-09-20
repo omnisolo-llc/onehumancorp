@@ -1,6 +1,5 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render,screen,fireEvent,waitFor } from '@testing-library/react';
+import { describe,it,expect,vi,beforeEach } from 'vitest';
 import SocialProofNudgePage from './page';
 
 vi.mock('next/navigation', () => ({
@@ -40,14 +39,14 @@ describe('SocialProofNudgePage', () => {
     fireEvent.change(locationInput, { target: { value: 'Alice from Wonderland' } });
 
     // The component splits the location display differently. It shows "Alice from Wonderland purchased"
-    expect(screen.getByText((content, element) => content.startsWith('Alice from Wonderland'))).toBeDefined();
+    expect(screen.getByText((content) => content.startsWith('Alice from Wonderland'))).toBeDefined();
     expect(screen.getByText(/data-location="Alice from Wonderland"/)).toBeDefined();
   });
 
   it('escapes hostile values in generated HTML attributes', () => {
     render(<SocialProofNudgePage />);
     fireEvent.change(screen.getByPlaceholderText('e.g. Signature Coffee Blend'), {
-      target: { value: '\"><script>alert(1)</script>&' },
+      target: { value: '"><script>alert(1)</script>&' },
     });
 
     const code = document.querySelector('#embed-code')?.textContent ?? '';

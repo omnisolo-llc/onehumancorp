@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test.describe('POS Checkout - Centralized Inventory', () => {
   test('Prevents double booking with Redis lock', async ({ page }) => {

@@ -45,7 +45,7 @@ export default function OrdersPage() {
         if (!res.ok) throw new Error("Failed to load orders from the database");
         const data = await res.json();
         setOrders(Array.isArray(data) ? data : []);
-      } catch (e: any) {
+      } catch (e) {
         setError(e?.message || "Failed to load orders");
       } finally {
         setLoading(false);

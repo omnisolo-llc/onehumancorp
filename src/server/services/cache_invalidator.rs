@@ -102,33 +102,31 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                 });
                 futures::future::join_all(futures).await;
 
-                if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {
-                    if let (Ok(tenant_id), Ok(product_id)) =
+                if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str)
+                    && let (Ok(tenant_id), Ok(product_id)) =
                         (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str))
-                    {
-                        let site_id_res = sqlx::query_scalar::<_, uuid::Uuid>(
+                {
+                    let site_id_res = sqlx::query_scalar::<_, uuid::Uuid>(
                             "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
                         )
                         .bind(tenant_id)
                         .fetch_one(&pool)
                         .await;
 
-                        if let Ok(_site_id) = site_id_res {
-                            info!(
-                                "Pre-warming cache for product: {} tenant: {}",
-                                product_id, tenant_id
-                            );
-                            let cache_key =
-                                format!("storefront:product:{}:{}", tenant_id, product_id);
-                            let _ = crate::builder::edge::regenerate_product_cache(
-                                pool.clone(),
-                                tenant_id,
-                                product_id,
-                                cache_key,
-                                edge_cache.clone(),
-                            )
-                            .await;
-                        }
+                    if let Ok(_site_id) = site_id_res {
+                        info!(
+                            "Pre-warming cache for product: {} tenant: {}",
+                            product_id, tenant_id
+                        );
+                        let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
+                        let _ = crate::builder::edge::regenerate_product_cache(
+                            pool.clone(),
+                            tenant_id,
+                            product_id,
+                            cache_key,
+                            edge_cache.clone(),
+                        )
+                        .await;
                     }
                 }
             }

@@ -47,11 +47,10 @@ impl Tracker {
     }
 
     pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
-        if let Some(limiter) = self.rate_limiter.take() {
-            if let Ok(l) = Arc::try_unwrap(limiter) {
-                self.rate_limiter = Some(Arc::new(l.with_db(pool)));
-            } else {
-            }
+        if let Some(limiter) = self.rate_limiter.take()
+            && let Ok(l) = Arc::try_unwrap(limiter)
+        {
+            self.rate_limiter = Some(Arc::new(l.with_db(pool)));
         }
         self
     }
@@ -83,10 +82,10 @@ impl Tracker {
         delta_bytes: i64,
         agent_id: Option<&str>,
     ) -> Result<RateLimitStatus, String> {
-        if let Some(auditor) = &self.auditor {
-            if let Some(aid) = agent_id {
-                auditor.record_agent_storage(aid, delta_bytes);
-            }
+        if let Some(auditor) = &self.auditor
+            && let Some(aid) = agent_id
+        {
+            auditor.record_agent_storage(aid, delta_bytes);
         }
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
@@ -312,20 +311,11 @@ impl Tracker {
         }
     }
 
-    pub fn summary(&self, _scope: &str) -> TokenSummary {
-        let total_tokens = if let Some(auditor) = &self.auditor {
-            auditor.get_total_tokens()
-        } else {
-            0
-        };
-        let total_cached_tokens = if let Some(auditor) = &self.auditor {
-            auditor.get_total_cached_tokens()
-        } else {
-            0
-        };
+    /// Summarize the caller's tenant, never reinterpret a missing scope as global.
+    pub fn summary(&self, tenant_id: &str) -> TokenSummary {
         TokenSummary {
-            total_tokens,
-            total_cached_tokens,
+            total_tokens: self.get_tenant_tokens(tenant_id),
+            total_cached_tokens: self.get_tenant_cached_tokens(tenant_id),
         }
     }
 }
@@ -339,5 +329,36 @@ pub struct TokenSummary {
 impl Default for Tracker {
     fn default() -> Self {
         Tracker::new()
+    }
+}
+
+#[cfg(test)]
+mod scope_tests {
+    use super::*;
+    use crate::services::billing::auditor::{AuditEvent, CostAuditor};
+
+    #[test]
+    fn tracker_summary_honors_the_requested_tenant() {
+        let auditor = Arc::new(CostAuditor::new(Default::default()));
+        for (tenant, input, cached) in [("owner-a", 100, 20), ("owner-b", 900, 70)] {
+            auditor.record_event(AuditEvent {
+                tenant_id: tenant.into(),
+                agent_id: "shared".into(),
+                input_tokens: input,
+                output_tokens: 5,
+                cached_input_tokens: cached,
+                local_embedding_tokens: 0,
+            });
+        }
+        let mut tracker = Tracker::new();
+        tracker.set_auditor(auditor);
+        let a = tracker.summary("owner-a");
+        assert_eq!((a.total_tokens, a.total_cached_tokens), (105, 20));
+        let b = tracker.summary("owner-b");
+        assert_eq!((b.total_tokens, b.total_cached_tokens), (905, 70));
+        for missing in ["", "unknown", "global"] {
+            let result = tracker.summary(missing);
+            assert_eq!((result.total_tokens, result.total_cached_tokens), (0, 0));
+        }
     }
 }

@@ -13,10 +13,7 @@ describe('TrialExtensionPage', () => {
 
     // Mock global fetch
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ message: 'Trial extended successfully' }),
-      } as Response)
+      Promise.resolve(Response.json({ message: 'Trial extended successfully' }, { status: 200 }) as Response)
     );
   });
 

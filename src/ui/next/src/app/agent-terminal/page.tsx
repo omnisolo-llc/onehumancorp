@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 import React, { useState, useEffect } from 'react';
 
 export default function AgentTerminalPage() {
@@ -49,8 +50,8 @@ export default function AgentTerminalPage() {
 
       const data = await res.json();
       setOutput((prev) => [...prev, data.output]);
-    } catch (err: any) {
-      setOutput((prev) => [...prev, `Error: ${err.message}`]);
+    } catch (err: unknown) {
+      setOutput((prev) => [...prev, `Error: ${errorMessage(err)}`]);
     } finally {
       setLoading(false);
     }

@@ -991,7 +991,7 @@ impl BookingEngineService for NativeBookingService {
             let s_id: String = r.get("service_id");
             let req = ::server_omnisolo::app::ServiceResourceRequirement {
                 resource_type: r.get("resource_type"),
-                quantity: r.get::<i32, _>("quantity") as i32,
+                quantity: r.get::<i32, _>("quantity"),
             };
             reqs_map.entry(s_id).or_default().push(req);
         }
@@ -1582,8 +1582,8 @@ impl BookingEngineService for NativeBookingService {
         )
         .bind(&tenant_id)
         .bind(&service_id)
-        .bind(&start_time)
-        .bind(&end_time)
+        .bind(start_time)
+        .bind(end_time)
         .fetch_one(&mut *tx)
         .await
         {
@@ -1719,7 +1719,7 @@ impl BookingEngineService for NativeBookingService {
         let reserve_result = inventory_service
             .reserve_inventory(&req.tenant_id, &req.service_id, 1, 300)
             .await
-            .map_err(|e| Status::internal(e))?;
+            .map_err(Status::internal)?;
 
         if !reserve_result.success {
             return Err(Status::resource_exhausted(reserve_result.error_message));

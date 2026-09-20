@@ -1,4 +1,7 @@
 "use client";
+import type { AgentFeedData, AgentFeedItem, ActivityItem, TriageItem } from '@/lib/agent-feed-types';
+import type { Step } from '@/components/Walkthrough';
+import type { ApprovalRequest } from '../team/page';
 import { MorningBriefingCard } from "./MorningBriefingCard";
 import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
@@ -21,7 +24,7 @@ import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
-import { ReviewFeedCard } from './ReviewFeedCard';
+import './ReviewFeedCard';
 
 import { PromoterCard } from "./PromoterCard";
 import { GrowBusinessCard } from "./GrowBusinessCard";
@@ -106,41 +109,28 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
-  const [approvals, setApprovals] = useState<any[]>([]);
-  const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
+  const [, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [dashboardData, setDashboardData] = useState<AgentFeedData & { initialAgentFeed?: AgentFeedData }>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
-  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [initialTriage, setInitialTriage] = useState<any[]>([]);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<(AgentFeedItem | ApprovalRequest)[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [initialTriage, setInitialTriage] = useState<TriageItem[]>([]);
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
-  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
-  const [actionMessage, setActionMessage] = useState("");
+  useState<"idle" | "running" | "complete">("idle");
+  const [actionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
   const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
 
-  const handleApproveDraft = async (approvalId: string) => {
-    try {
-      const res = await fetch(`/api/v1/agents/approvals/${approvalId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved: true })
-      });
-      if (res.ok) {
-        setDashboardData((prev: any) => ({ ...prev, pendingReviews: prev.pendingReviews.filter((a: any) => a.id !== approvalId) }));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
+
 
   useEffect(() => {
     fetch("/api/v1/walkthrough/dashboard")
@@ -232,14 +222,14 @@ export default function Dashboard() {
         const approvalsData = unifiedData?.pending_approvals || [];
         const agentFeedData = { items: unifiedData?.agent_feed || [] };
 
-        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
+        setDashboardData((prev) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
         if (approvalsData && Array.isArray(approvalsData) && approvalsData.length > 0 && !agentFeedData.items?.length) {
-            setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED" && i.status !== "PAUSED"));
-            setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED" || i.status === "PAUSED"));
+            setPendingApprovals(approvalsData.filter((i: ApprovalRequest) => i.status !== "APPROVED" && i.status !== "REJECTED" && i.status !== "PAUSED"));
+            setActivities(approvalsData.filter((i: ApprovalRequest) => i.status === "APPROVED" || i.status === "REJECTED" || i.status === "PAUSED").map((i: ApprovalRequest) => ({ id: i.id, department: i.department, event_type: i.status, payload: { original_payload: { ...i.payload, description: i.description } }, created_at: i.created_at })));
         } else if (agentFeedData && agentFeedData.items) {
-            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
-            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
+            setPendingApprovals(agentFeedData.items.filter((i: AgentFeedItem) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
+            setActivities(agentFeedData.items.filter((i: AgentFeedItem) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: AgentFeedItem) => ({
                 id: a.id,
                 event_type: a.lifecycle_state,
                 department: a.event_source,
@@ -272,7 +262,7 @@ export default function Dashboard() {
         if (unifiedData.triage) {
           setInitialTriage(unifiedData.triage);
         }
-      } catch (e: any) {
+      } catch (e) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
         setLoading(false);

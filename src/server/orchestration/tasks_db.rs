@@ -163,7 +163,7 @@ impl TaskDbService {
                     })
                     .ok()
             })
-            .unwrap_or_else(|| chrono::Utc::now());
+            .unwrap_or_else(chrono::Utc::now);
 
         let updated_str_opt: Option<String> = row.try_get("updated_at").unwrap_or(None);
         let dt_updated = updated_str_opt
@@ -178,7 +178,7 @@ impl TaskDbService {
                     })
                     .ok()
             })
-            .unwrap_or_else(|| chrono::Utc::now());
+            .unwrap_or_else(chrono::Utc::now);
 
         SharedTask {
             id: row.get("id"),

@@ -65,7 +65,7 @@ test.describe('Viral Chat Embed Loop', () => {
               aiMsg.textContent = "I'm a demo agent embedded from OmniSolo! In a real environment, I would connect to the backend API to answer your request.";
               messages!.appendChild(aiMsg);
               messages!.scrollTop = messages!.scrollHeight;
-          } catch(e) {}
+          } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
         }
 
         sendBtn!.addEventListener('click', sendMessage);

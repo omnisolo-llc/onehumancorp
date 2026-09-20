@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
 import { SyncManager } from '../../lib/sync/SyncManager';
 import { getActions } from '../utils/offlineQueue';
@@ -13,7 +13,7 @@ type ApprovalRequest = {
   description: string;
   status: string;
   action_risk: string;
-  payload?: any;
+  payload?: { context?: import("@/lib/agent-feed-types").ActionContext & { product_name?: string } };
 };
 
 export default function ActionCenterPage() {
@@ -50,7 +50,7 @@ export default function ActionCenterPage() {
       try {
         const actions = await getActions();
         setOfflineActionsCount(actions.length);
-      } catch (err) {}
+      } catch  { /* Optional local state or response decoding failed; retain the existing fallback. */ }
     };
     updateOfflineCount();
 
@@ -144,7 +144,7 @@ export default function ActionCenterPage() {
     }
   };
 
-  const extractPayload = (description: string, rawPayload: any) => {
+  const extractPayload = (description: string, rawPayload: ApprovalRequest['payload']) => {
     if (rawPayload && typeof rawPayload === 'object' && Object.keys(rawPayload).length > 0) {
       return rawPayload;
     }
@@ -152,7 +152,7 @@ export default function ActionCenterPage() {
     if (parts.length > 1) {
       try {
         return JSON.parse(parts[1]);
-      } catch (e) {
+      } catch  {
         return null;
       }
     }

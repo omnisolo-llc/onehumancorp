@@ -72,7 +72,8 @@ go.work.sum
 /bazel-*
 
 coverage_html/
-/coverage/
+# Coverage reports at root and nested packages are generated, never source.
+coverage/
 /artifacts/
 
 # See https://www.dartlang.org/guides/libraries/private-files
@@ -116,6 +117,9 @@ Chart.lock
 !/README.md
 !/CHANGELOG.md
 !/RELEASE_NOTES.md
+# Canonical business strategy and repository agent instructions
+!/RESEARCH.md
+!/AGENTS.md
 
 # Golang is not allowed in this project
 *.go
@@ -126,6 +130,7 @@ Chart.lock
 
 # Tauri v2 generated ACL/capability schemas
 /src/ui/tauri/gen/
+/src/ui/tauri/native-resources/
 site/
 
 playwright-report/
@@ -134,6 +139,9 @@ debian-binary
 /srcs/
 /scratch/
 *.db
+# A misconfigured SQLite test can create this file; it is not a source asset
+# and its colon makes the repository impossible to check out on Windows.
+:memory:
 
 dummy.*
 dummy_*

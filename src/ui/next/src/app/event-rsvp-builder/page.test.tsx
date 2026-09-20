@@ -1,6 +1,5 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render,screen,fireEvent } from '@testing-library/react';
+import { describe,it,expect,vi,beforeEach } from 'vitest';
 import EventRSVPBuilderPage from './page';
 
 vi.mock('next/navigation', () => ({
@@ -42,7 +41,7 @@ describe('EventRSVPBuilderPage', () => {
     render(<EventRSVPBuilderPage />);
 
     // Check initial iframe URL
-    const iframe = screen.getByTitle(/Event RSVP Builder/i) as HTMLIFrameElement | null;
+    screen.getByTitle(/Event RSVP Builder/i) as HTMLIFrameElement | null;
     const initialIframe = document.querySelector('iframe');
     expect(initialIframe?.src).toContain('title=Summer%20Pop-up%20Shop');
 

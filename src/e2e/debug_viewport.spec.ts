@@ -15,7 +15,7 @@ test.describe('Unified Agent Feed Viewport Constraint', () => {
 
     const buttons = page.locator('div.glassmorphism button');
     const buttonCount = await buttons.count();
-    let failedButtons = [];
+    const failedButtons = [];
     for (let i = 0; i < buttonCount; i++) {
         const box = await buttons.nth(i).boundingBox();
         if (box && box.height < 44) {

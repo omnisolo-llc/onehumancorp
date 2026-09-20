@@ -1,15 +1,17 @@
 "use client";
 import { Suspense } from "react";
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SyncManager } from '../../lib/sync/SyncManager';
+import type { QuotePayload, BusinessLineItem } from '@/lib/business-records';
+type EditableLineItem = BusinessLineItem & { is_optional?: boolean };
 
 function QuotingContent() {
   const searchParams = useSearchParams();
   const quoteId = searchParams.get('id');
 
-  const [quoteData, setQuoteData] = useState<any>(null);
-  const [lineItems, setLineItems] = useState<any[]>([]);
+  const [quoteData, setQuoteData] = useState<{ quote: QuotePayload; line_items: EditableLineItem[] } | null>(null);
+  const [lineItems, setLineItems] = useState<EditableLineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -34,7 +36,7 @@ function QuotingContent() {
         } else {
           setError('Failed to fetch quote');
         }
-      } catch (err) {
+      } catch  {
         setError('Error connecting to server');
       } finally {
         setLoading(false);
@@ -44,7 +46,7 @@ function QuotingContent() {
     fetchQuote();
   }, [quoteId]);
 
-  const handleItemChange = (id: string, field: string, value: any) => {
+  const handleItemChange = <K extends keyof EditableLineItem,>(id: string, field: K, value: EditableLineItem[K]) => {
     setLineItems(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, [field]: value };
@@ -56,7 +58,7 @@ function QuotingContent() {
   const handleApproveAndSend = async () => {
     if (!quoteData || !quoteId) return;
 
-    const totalAmountCents = lineItems.reduce((sum: number, item: any) => sum + (item.unit_price_cents * item.quantity), 0);
+    const totalAmountCents = lineItems.reduce((sum, item) => sum + (item.unit_price_cents * item.quantity), 0);
 
     const updatePayload = {
       total_amount_cents: totalAmountCents,
@@ -111,7 +113,7 @@ function QuotingContent() {
   }
 
   const { quote } = quoteData;
-  const totalCents = lineItems.reduce((sum: number, item: any) => sum + (item.unit_price_cents * item.quantity), 0);
+  const totalCents = lineItems.reduce((sum, item) => sum + (item.unit_price_cents * item.quantity), 0);
   const total = (totalCents / 100).toFixed(2);
 
   return (
@@ -133,7 +135,7 @@ function QuotingContent() {
           <div className="p-6 md:p-8">
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-[#1D1D1F] border-b border-gray-200 pb-2">Line Items</h3>
-              {lineItems.map((item: any) => (
+              {lineItems.map((item) => (
                 <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50 border border-gray-100">
                   <div className="flex-1">
                     <h4 className="font-medium text-[#1D1D1F]">{item.description}</h4>

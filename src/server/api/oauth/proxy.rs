@@ -89,9 +89,9 @@ pub async fn handle_oauth_callback(Query(query): Query<OAuthCallbackQuery>) -> i
             let mut redirect_url = format!(
                 "{}/{}/oauth/callback#code={}&state={}",
                 tunnel_base_url,
-                urlencoding::encode(&tunnel_id),
+                urlencoding::encode(tunnel_id),
                 urlencoding::encode(&query.code),
-                urlencoding::encode(&actual_state)
+                urlencoding::encode(actual_state)
             );
             for (k, v) in query.extra {
                 redirect_url.push_str(&format!(
@@ -128,7 +128,8 @@ pub async fn handle_oauth_callback(Query(query): Query<OAuthCallbackQuery>) -> i
     "OAuth callback received. You can close this window.".into_response()
 }
 
-pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>>
+{
     Router::new().route("/callback", get(handle_oauth_callback))
 }
 

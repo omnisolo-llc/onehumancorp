@@ -12,7 +12,7 @@ describe("PydanticValidationPage", () => {
   });
 
   it("handles valid execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         result: "Validation passed successfully",
@@ -44,7 +44,7 @@ describe("PydanticValidationPage", () => {
   });
 
   it("handles validation error execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Validation Failed" }),
     });

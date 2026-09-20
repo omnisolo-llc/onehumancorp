@@ -16,10 +16,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 test("does not expose backend API route names in the orders UI", async () => {
-  global.fetch = vi.fn(() => Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve([]),
-  })) as any;
+  global.fetch = vi.fn(() => Promise.resolve(Response.json([], { status: 200 })));
 
   await act(async () => {
     render(

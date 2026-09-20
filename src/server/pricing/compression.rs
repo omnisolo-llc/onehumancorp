@@ -469,6 +469,29 @@ mod tests {
     }
 
     #[test]
+    fn every_supported_upload_format_still_decodes_and_converts_to_webp() {
+        use image::{DynamicImage, GenericImageView, ImageFormat};
+        for format in [
+            ImageFormat::Png,
+            ImageFormat::Jpeg,
+            ImageFormat::Gif,
+            ImageFormat::Bmp,
+            ImageFormat::WebP,
+        ] {
+            let image = DynamicImage::new_rgb8(12, 8);
+            let mut encoded = Cursor::new(Vec::new());
+            image
+                .write_to(&mut encoded, format)
+                .expect("encode input fixture");
+            let (converted, mime) = optimize_image(encoded.get_ref(), 6)
+                .expect("configured upload format must remain supported");
+            assert_eq!(mime, "image/webp");
+            let decoded = image::load_from_memory(&converted).expect("decode WebP output");
+            assert_eq!(decoded.dimensions(), (6, 4), "input format {format:?}");
+        }
+    }
+
+    #[test]
     fn test_optimize_image_invalid() {
         let invalid_data = vec![0, 1, 2, 3];
         let result = optimize_image(&invalid_data, 5);

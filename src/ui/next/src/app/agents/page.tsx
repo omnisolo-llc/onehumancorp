@@ -1,22 +1,19 @@
 'use client';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React,{ useCallback,useEffect,useMemo,useState } from 'react';
 import Link from 'next/link';
 import { AgentMetrics } from './components/AgentMetrics';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
-import { InteractiveWalkthrough, WalkthroughTarget } from '../../components/Walkthrough';
+import { InteractiveWalkthrough,WalkthroughTarget } from '../../components/Walkthrough';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { useProPlan } from '../components/useProPlan';
 import { useAuthenticatedPolling } from '../../hooks/useAuthenticatedPolling';
 import {
-  automations,
-  connectors,
-  expertTeams,
-  experts,
-  exploreTemplates,
-  memories,
-  remoteAssistants,
-  skillMarket,
-  type ExpertCatalogItem,
+connectors,
+expertTeams,
+experts,
+exploreTemplates,remoteAssistants,
+skillMarket,
+type ExpertCatalogItem
 } from './catalog';
 type Panel =
   | 'browse'
@@ -214,7 +211,7 @@ export default function AgentsPage() {
         ...current.filter((workflow) => workflow.id !== workflowId),
       ]);
       setPanel('results');
-    } catch (err) {
+    } catch  {
       setRunError('Expert service is unavailable.');
     } finally {
       setRunning(false);
@@ -1111,7 +1108,7 @@ function AutomationsPanel() {
   );
 }
 function MemoryPanel() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<{ id: string; source_type: string; owner_override: boolean; content: string; reference_count: number; reliability_score: number }[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMemories = async () => {
@@ -1153,7 +1150,7 @@ function MemoryPanel() {
         <p className="text-xs text-zinc-555 dark:text-zinc-400">No consolidated memories found.</p>
       ) : (
         <div className="space-y-3">
-          {items.map((memory: any) => (
+          {items.map((memory) => (
             <div key={memory.id} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-4 text-xs flex flex-col gap-2">
               <div className="flex justify-between items-start">
                 <div className="font-bold text-zinc-900 dark:text-white">{memory.source_type}</div>
@@ -1276,7 +1273,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
            console.warn("Visual workflow API failed, falling back to legacy workflow endpoint");
         }
       }
-    } catch (e) {
+    } catch  {
       // Not JSON or other error, fallback to legacy
     }
 

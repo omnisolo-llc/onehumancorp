@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import './fixtures';
 
 test.describe('Smart Quotes & Deposit Architecture', () => {
   test('Voice command generates quote and creates Action Card', async ({ page }) => {

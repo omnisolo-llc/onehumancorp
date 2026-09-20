@@ -1,4 +1,11 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Build scripts run here before any threads are created. Bundle the compiler
+    // through Cargo.lock instead of requiring a manually installed protoc.
+    let protoc = protoc_bin_vendored::protoc_bin_path()?;
+    unsafe {
+        std::env::set_var("PROTOC", protoc);
+    }
+
     let protos = [
         "../../../src/proto/agent.proto",
         "../../../src/proto/agent_service.proto",

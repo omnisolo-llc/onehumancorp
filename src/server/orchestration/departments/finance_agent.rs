@@ -62,7 +62,7 @@ impl Department for FinanceAgent {
                 "feature_type": "dispute_resolution",
                 "dispute_id": event.payload.get("id").and_then(|v| v.as_str()).unwrap_or(""),
                 "original_message": "Customer claimed charge was unauthorized.",
-                "generated_response": "I've processed a refund for the disputed amount based on the bank's feedback.",
+                "generated_response": "This payment dispute needs review. No refund has been executed; verify the provider record before authorizing any financial action.",
                 "refund_amount": event.payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0) / 100,
                 "operational_action": "Mark transaction as disputed in ledger",
                 "sender_id": "@customer",
@@ -99,7 +99,7 @@ impl Department for FinanceAgent {
                     }
                 ],
                 "drafted_email": {
-                    "generated_message": format!("Hi team, attached is the invoice for the completion of the {} phase. Please let me know if you have any questions.", milestone_name),
+                    "generated_message": format!("Draft for review: prepare and verify the invoice for the {} phase before sending it to the customer.", milestone_name),
                     "suggested_channel": "email"
                 }
             });

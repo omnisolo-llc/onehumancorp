@@ -1,9 +1,8 @@
 import '@testing-library/jest-dom';
-import React from 'react';
-import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
+import { render,screen,act,waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HelpWidget, WalkthroughProvider, shouldShowMobileHelpLauncher } from './help';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { HelpWidget,WalkthroughProvider,shouldShowMobileHelpLauncher } from './help';
+import { describe,it,expect,vi,beforeEach,afterEach } from 'vitest';
 import { TooltipProvider } from './TooltipRegistry';
 
 const navigationMocks = vi.hoisted(() => ({
@@ -23,70 +22,40 @@ describe('HelpWidget', () => {
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.includes('/api/v1/walkthrough/store-setup')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([{ targetId: 'bio-input-tooltip', title: 'Test', content: 'Test Content' }])
-        });
+        return Promise.resolve(Response.json([{ targetId: 'bio-input-tooltip', title: 'Test', content: 'Test Content' }], { status: 200 }));
       }
       if (url.includes('/api/v1/walkthrough/pos')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([{ targetId: 'pos-keypad', title: 'Mock Walkthrough', content: 'Mock Content' }])
-        });
+        return Promise.resolve(Response.json([{ targetId: 'pos-keypad', title: 'Mock Walkthrough', content: 'Mock Content' }], { status: 200 }));
       }
       if (url.includes('/api/v1/walkthrough/assistant')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([])
-        });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       if (url.includes('/api/v1/walkthrough/meeting-room')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(null) // test null fallback
-        });
+        return Promise.resolve(Response.json(null, { status: 200 }));
       }
       if (url.includes('/api/v1/help/search')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([])
-        });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       if (url.includes('/api/v1/help')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
+        return Promise.resolve(Response.json([
             { title: "Test Article", desc: "A test article", link: "/help/test", category: "Test Category" },
             { title: "Another Article", desc: "A test article 2", link: "/help/test2" } // No category
-          ])
-        });
+          ], { status: 200 }));
       }
       if (url.includes('/api/v1/videos')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
+        return Promise.resolve(Response.json([
             { id: 1, title: "Test Video", duration: "1:00", video_url: "http://example.com/video.mp4" }
-          ])
-        });
+          ], { status: 200 }));
       }
       if (url.includes('/api/v1/changelog')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
+        return Promise.resolve(Response.json([
             { version: "1.0", contentLines: ["- Added feature A", "### Big update"], screenshot_url: "" }
-          ])
-        });
+          ], { status: 200 }));
       }
       if (url.includes('/api/v1/chat')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ reply: "Hello from AI", link: { url: "https://example.com", title: "Example" } })
-        });
+        return Promise.resolve(Response.json({ reply: "Hello from AI", link: { url: "https://example.com", title: "Example" } }, { status: 200 }));
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([])
-      });
+      return Promise.resolve(Response.json([], { status: 200 }));
     });
   });
 
@@ -117,7 +86,7 @@ describe('HelpWidget', () => {
       await new Promise(r => setTimeout(r, 20));
     });
 
-    const requestedUrls = (global.fetch as any).mock.calls.map(([url]: [string]) => url);
+    const requestedUrls = vi.mocked(global.fetch, { partial: true }).mock.calls.map(([url]: [string]) => url);
     expect(requestedUrls).not.toContain('/api/v1/help');
     expect(requestedUrls).not.toContain('/api/v1/videos');
   });
@@ -415,12 +384,9 @@ describe('HelpWidget', () => {
   it('handles chat fetch error', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
         if (url.includes('/api/v1/chat')) {
-            return Promise.resolve({
-              ok: false,
-              json: () => Promise.resolve({})
-            });
+            return Promise.resolve(Response.json({}, { status: 500 }));
         }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
     });
 
     const user = userEvent.setup();
@@ -446,12 +412,9 @@ describe('HelpWidget', () => {
   it('can open and close video player', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.includes('/api/v1/videos')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1, title: 'Video 1', duration: '1:00', video_url: 'http://video' }]),
-        });
+        return Promise.resolve(Response.json([{ id: 1, title: 'Video 1', duration: '1:00', video_url: 'http://video' }], { status: 200 }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      return Promise.resolve(Response.json([], { status: 200 }));
     });
 
     const user = userEvent.setup();
@@ -476,12 +439,9 @@ describe('HelpWidget', () => {
   it('can open and close video player by clicking outside', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.includes('/api/v1/videos')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1, title: 'Video 1', duration: '1:00', video_url: 'http://video' }]),
-        });
+        return Promise.resolve(Response.json([{ id: 1, title: 'Video 1', duration: '1:00', video_url: 'http://video' }], { status: 200 }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      return Promise.resolve(Response.json([], { status: 200 }));
     });
 
     const user = userEvent.setup();
@@ -507,12 +467,9 @@ describe('HelpWidget', () => {
   it('prevents closing video player when clicking inside the video wrapper', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.includes('/api/v1/videos')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1, title: 'Video 1', duration: '1:00', video_url: 'http://video' }]),
-        });
+        return Promise.resolve(Response.json([{ id: 1, title: 'Video 1', duration: '1:00', video_url: 'http://video' }], { status: 200 }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      return Promise.resolve(Response.json([], { status: 200 }));
     });
 
     const user = userEvent.setup();
@@ -549,9 +506,9 @@ describe('HelpWidget', () => {
   it('clears chat', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.includes('/api/v1/chat')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ reply: 'Hello again' }) });
+        return Promise.resolve(Response.json({ reply: 'Hello again' }, { status: 200 }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      return Promise.resolve(Response.json([], { status: 200 }));
     });
 
     const user = userEvent.setup();
@@ -588,15 +545,12 @@ describe('HelpWidget', () => {
   it('does not render protocol-relative agent links', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url.includes('/api/v1/chat')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
+        return Promise.resolve(Response.json({
             reply: 'Here is a link',
             link: { url: '//untrusted.example/path', title: 'Untrusted' },
-          }),
-        });
+          }, { status: 200 }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      return Promise.resolve(Response.json([], { status: 200 }));
     });
 
     const user = userEvent.setup();

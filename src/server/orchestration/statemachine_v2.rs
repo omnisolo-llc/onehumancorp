@@ -158,31 +158,26 @@ impl StateMachine {
                 Box::new(move |msg| {
                     let sm = self.clone();
                     tokio::spawn(async move {
-                        if let Ok(payload) = String::from_utf8(msg.payload.clone()) {
-                            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&payload) {
-                                if let (Some(tenant), Some(task_id), Some(action)) = (
-                                    json.get("tenant_id").and_then(|v| v.as_str()),
-                                    json.get("task_id").and_then(|v| v.as_str()),
-                                    json.get("action").and_then(|v| v.as_str()),
-                                ) {
-                                    let agent_id = msg.agent_id.as_str();
-                                    let _ = match action {
-                                        "ready" => sm.transition_to_ready(tenant, task_id).await,
-                                        "in_progress" => {
-                                            sm.transition_to_in_progress(tenant, task_id, agent_id)
-                                                .await
-                                        }
-                                        "completed" => {
-                                            sm.transition_to_completed(tenant, task_id).await
-                                        }
-                                        "blocked" => {
-                                            sm.transition_to_blocked(tenant, task_id).await
-                                        }
-                                        "failed" => sm.transition_to_failed(tenant, task_id).await,
-                                        _ => Ok(()),
-                                    };
+                        if let Ok(payload) = String::from_utf8(msg.payload.clone())
+                            && let Ok(json) = serde_json::from_str::<serde_json::Value>(&payload)
+                            && let (Some(tenant), Some(task_id), Some(action)) = (
+                                json.get("tenant_id").and_then(|v| v.as_str()),
+                                json.get("task_id").and_then(|v| v.as_str()),
+                                json.get("action").and_then(|v| v.as_str()),
+                            )
+                        {
+                            let agent_id = msg.agent_id.as_str();
+                            let _ = match action {
+                                "ready" => sm.transition_to_ready(tenant, task_id).await,
+                                "in_progress" => {
+                                    sm.transition_to_in_progress(tenant, task_id, agent_id)
+                                        .await
                                 }
-                            }
+                                "completed" => sm.transition_to_completed(tenant, task_id).await,
+                                "blocked" => sm.transition_to_blocked(tenant, task_id).await,
+                                "failed" => sm.transition_to_failed(tenant, task_id).await,
+                                _ => Ok(()),
+                            };
                         }
                     });
                 }),

@@ -227,22 +227,22 @@ impl BaseAgent for BusinessAdvisoryAgent {
         }
 
         // Handle execution of the weekly health report action (e.g., if user approves the suggestion)
-        if let Some(context) = payload.get("context") {
-            if context
+        if let Some(context) = payload.get("context")
+            && context
                 .get("weekly_health_report")
                 .and_then(|v| v.as_bool())
                 == Some(true)
-            {
-                let tenant_id = payload
-                    .get("tenant_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("system");
+        {
+            let tenant_id = payload
+                .get("tenant_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("system");
 
-                // Dispatch a job to The Promoter
-                let mut attempts = 0;
-                while attempts < 3 {
-                    let ai_op = async {
-                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+            // Dispatch a job to The Promoter
+            let mut attempts = 0;
+            while attempts < 3 {
+                let ai_op = async {
+                    if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                             let publish_req = ::server_omnisolo::orchestration::PublishMeshEventRequest {
                                 event: Some(::server_omnisolo::orchestration::MeshEvent {
                                     event_id: uuid::Uuid::new_v4().to_string(),
@@ -256,22 +256,21 @@ impl BaseAgent for BusinessAdvisoryAgent {
                                     ..Default::default()
                                 }),
                             };
-                            if let Ok(_) = client.publish_mesh_event(tonic::Request::new(publish_req)).await {
+                            if client.publish_mesh_event(tonic::Request::new(publish_req)).await.is_ok() {
                                 return Ok(());
                             }
                         }
-                        Err("Hub call failed".to_string())
-                    };
+                    Err("Hub call failed".to_string())
+                };
 
-                    match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
-                        Ok(Ok(_)) => {
-                            break;
-                        }
-                        _ => {
-                            attempts += 1;
-                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts)))
-                                .await;
-                        }
+                match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                    Ok(Ok(_)) => {
+                        break;
+                    }
+                    _ => {
+                        attempts += 1;
+                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts)))
+                            .await;
                     }
                 }
             }

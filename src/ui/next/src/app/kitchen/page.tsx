@@ -1,12 +1,13 @@
 "use client";
+import type { OrderRecord, SaleProduct } from '@/lib/business-records';
 
 import React, { useState, useEffect } from "react";
 import { AppShell } from "../components/AppShell";
 import { SyncManager } from "../../lib/sync/SyncManager";
 
 export default function KitchenView() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [menu, setMenu] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [menu, setMenu] = useState<SaleProduct[]>([]);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function KitchenView() {
                     <span className="bg-[#0071E3]/10 text-[#0071E3] text-xs font-bold px-2 py-1 rounded">NEW</span>
                   </div>
                   <ul className="list-disc list-inside mb-3">
-                    {order.items?.map((item: any, idx: number) => <li key={idx} className="text-sm">{item.name || item.product_id}</li>)}
+                    {order.items?.map((item, idx) => <li key={idx} className="text-sm">{item.name || item.product_id}</li>)}
                   </ul>
                   {order.notes && (
                     <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-lg p-3 mb-4">

@@ -1,4 +1,5 @@
 
+
 import { test, expect } from './fixtures';
 
 
@@ -7,7 +8,7 @@ test.describe('Mobile Payload Optimization', () => {
   let headers = {};
 
   test.beforeAll(async () => {
-    const crypto = require('crypto');
+
     function base64url(source) {
       return Buffer.from(source).toString('base64')
         .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');

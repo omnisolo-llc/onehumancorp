@@ -33,6 +33,5 @@ export async function GET(request: Request): Promise<Response> {
   return privateJson(200, { workspaces, deleted: [] });
 }
 
-export function PATCH(_request: Request): Response {
-  return privateJson(405, { error: "workspace mutation unavailable" });
-}
+export const PATCH: (request: Request) => Response = () =>
+  privateJson(405, { error: "workspace mutation unavailable" });

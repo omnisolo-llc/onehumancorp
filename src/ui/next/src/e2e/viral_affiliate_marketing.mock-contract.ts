@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Autonomous Influencer and Affiliate Marketing Engine', () => {
-    test('customer signs up as an affiliate via checkout success, and commission is tracked in owner dashboard', async ({ page, browser }) => {
+    test('customer signs up as an affiliate via checkout success, and commission is tracked in owner dashboard', async ({ page }) => {
         // Step 1: Simulate a successful checkout, exposing the affiliate widget
         await page.goto('/checkout');
 

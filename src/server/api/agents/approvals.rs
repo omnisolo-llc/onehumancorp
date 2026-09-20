@@ -29,6 +29,7 @@ pub struct PaginationQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DecisionRequest {
     pub approved: bool,
     pub edited_payload: Option<serde_json::Value>,
@@ -623,6 +624,29 @@ async fn decide_approval(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<DecisionRequest>,
 ) -> impl IntoResponse {
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(DecisionResponse { success: false }),
+        )
+            .into_response();
+    }
+    if id.len() > 255
+        || payload
+            .edited_payload
+            .as_ref()
+            .is_some_and(|value| value.to_string().len() > 65536)
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(DecisionResponse { success: false }),
+        )
+            .into_response();
+    }
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
         None => {
@@ -680,37 +704,6 @@ async fn list_ledger_entries(
             Json(serde_json::json!({ "error": e })),
         )
             .into_response(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_approvals_cache_initialization() {
-        let tenant_id = "test_tenant";
-        let cache_key = format!("approvals:{}:none:20:false", tenant_id);
-        let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(None));
-
-        let initial_val = cache.get(&cache_key).await;
-        assert!(initial_val.is_none(), "Cache should be empty initially");
-
-        let dummy_resp = ApprovalsResponse {
-            pending_approvals: vec![],
-            next_cursor: None,
-        };
-
-        cache
-            .set(
-                &cache_key,
-                dummy_resp.clone(),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
-
-        let cached_val = cache.get(&cache_key).await;
-        assert!(cached_val.is_some(), "Cache should hit after set");
     }
 }
 
@@ -835,13 +828,13 @@ async fn simulate_autonomous_booking_quote(
     let proposed_slot_id = uuid::Uuid::new_v4().to_string();
 
     // Acquire Redis Redlock for the slot
-    if let Ok(redis_url) = std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
-        if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url)
-        {
-            let _ = redis_lock
-                .acquire_lock(&tenant_id, "booking_slot", &proposed_slot_id, 600)
-                .await;
-        }
+    if let Ok(redis_url) =
+        std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL"))
+        && let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url)
+    {
+        let _ = redis_lock
+            .acquire_lock(&tenant_id, "booking_slot", &proposed_slot_id, 600)
+            .await;
     }
 
     let payload = serde_json::json!({
@@ -923,5 +916,36 @@ async fn simulate_lead_recovery(
             )
                 .into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_approvals_cache_initialization() {
+        let tenant_id = "test_tenant";
+        let cache_key = format!("approvals:{}:none:20:false", tenant_id);
+        let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(None));
+
+        let initial_val = cache.get(&cache_key).await;
+        assert!(initial_val.is_none(), "Cache should be empty initially");
+
+        let dummy_resp = ApprovalsResponse {
+            pending_approvals: vec![],
+            next_cursor: None,
+        };
+
+        cache
+            .set(
+                &cache_key,
+                dummy_resp.clone(),
+                std::time::Duration::from_secs(60),
+            )
+            .await;
+
+        let cached_val = cache.get(&cache_key).await;
+        assert!(cached_val.is_some(), "Cache should hit after set");
     }
 }

@@ -7,7 +7,7 @@ export default function AiTimeSavingsWidget() {
   const [hasClaimed, setHasClaimed] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const { claimTrial } = useProPlan();
-  const [savingsData, setSavingsData] = useState<any>(null);
+  const [savingsData, setSavingsData] = useState<{ hours_saved: number; inquiries_handled?: number; appointments_scheduled?: number } | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {

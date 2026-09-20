@@ -36,8 +36,8 @@ impl TaskRepository {
                 .bind(&task.description)
                 .bind(&task.status)
                 .bind(&task.assigned_agent_role)
-                .bind(&task.created_at)
-                .bind(&task.updated_at)
+                .bind(task.created_at)
+                .bind(task.updated_at)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -58,8 +58,8 @@ impl TaskRepository {
                 .bind(&task.description)
                 .bind(&task.status)
                 .bind(&task.assigned_agent_role)
-                .bind(&task.created_at)
-                .bind(&task.updated_at)
+                .bind(task.created_at)
+                .bind(task.updated_at)
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;

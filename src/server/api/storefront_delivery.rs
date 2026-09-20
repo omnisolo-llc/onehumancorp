@@ -300,11 +300,57 @@ fn set_storefront_headers(
 }
 
 #[cfg(test)]
-
 mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::header::CACHE_CONTROL;
 
     #[test]
-    fn test_storefront_headers_dummy() {
-        assert!(true);
+    fn storefront_headers_bind_cache_tags_to_tenant_and_etag_to_content() {
+        let tenant = Uuid::from_u128(1);
+        let mut response = axum::response::Response::new(Body::empty());
+        set_storefront_headers(
+            &mut response,
+            "<h1>Store</h1>",
+            tenant,
+            Some(vec!["catalog:published".into()]),
+        );
+        assert_eq!(
+            response.headers()["Cache-Tag"],
+            format!("tenant-id:{tenant}, catalog:published")
+        );
+        assert_eq!(
+            response.headers()["Surrogate-Key"],
+            format!("tenant-id:{tenant} catalog:published")
+        );
+        assert_eq!(
+            response.headers()[CACHE_CONTROL],
+            "public, s-maxage=60, stale-while-revalidate=86400"
+        );
+        let expected = format!("\"{:x}\"", Sha256::digest(b"<h1>Store</h1>"));
+        assert_eq!(response.headers()["ETag"], expected);
+        let previous = response.headers()["ETag"].clone();
+        set_storefront_headers(&mut response, "<h1>Updated</h1>", Uuid::from_u128(2), None);
+        assert_ne!(response.headers()["ETag"], previous);
+        assert_eq!(
+            response.headers()["Cache-Tag"],
+            format!("tenant-id:{}", Uuid::from_u128(2))
+        );
+    }
+
+    #[test]
+    fn storefront_custom_tags_cannot_inject_http_headers() {
+        let mut response = axum::response::Response::new(Body::empty());
+        set_storefront_headers(
+            &mut response,
+            "content",
+            Uuid::from_u128(1),
+            Some(vec!["tag\r\nSet-Cookie: forged=1".into()]),
+        );
+        assert!(!response.headers().contains_key("Set-Cookie"));
+        assert!(!response.headers().contains_key("Cache-Tag"));
+        assert!(!response.headers().contains_key("Surrogate-Key"));
+        assert!(response.headers().contains_key("ETag"));
+        assert!(response.headers().contains_key(CACHE_CONTROL));
     }
 }

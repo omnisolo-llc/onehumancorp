@@ -439,7 +439,9 @@ mod tests {
     use super::*;
     use crate::llm::LlmClient;
     use crate::tools::{Tool, ToolExecutor};
-    use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
+    use omnisolo_builtin_agent_core::types::{
+        ChatRequest, ChatResponse, Message, ToolError, Usage,
+    };
 
     struct MockLlm {
         pub response_text: String,

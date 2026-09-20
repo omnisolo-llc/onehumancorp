@@ -52,7 +52,6 @@ pub mod restic;
 pub mod screenshot;
 pub mod skill;
 pub mod sleep;
-pub mod shipping;
 pub mod subagent;
 pub mod superpowers_tool;
 pub mod tail;
@@ -112,7 +111,9 @@ pub fn all_tools(
     agent_llm: Option<std::sync::Arc<dyn omnisolo_builtin_agent_llm::LlmClient>>,
     llm: Option<std::sync::Arc<dyn omnisolo_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<
-        Arc<tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+        Arc<
+            tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>,
+        >,
     >,
 
     task_store: SharedTaskStore,
@@ -121,7 +122,6 @@ pub fn all_tools(
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
     observation_store: Arc<dashmap::DashMap<String, String>>,
     tenant: tenant::TenantContext,
-    pool: Option<sqlx::PgPool>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
@@ -181,10 +181,6 @@ pub fn all_tools(
         aider_pair_programming::aider_pair_programming_tool(),
         superpowers_tool::superpowers_skill_tool(),
     ];
-
-    if let Some(pool) = pool {
-        tools.push(shipping::shipping_rate_proposal_tool(pool));
-    }
 
     if let Some(llm) = agent_llm {
         tools.push(llm_judge::llm_judge_tool(llm, "gemini-2.5-pro".to_string()));

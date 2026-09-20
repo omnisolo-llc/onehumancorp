@@ -83,6 +83,12 @@ pub struct DefaultMemoryEmbeddingApi {
     client: crate::minimax::LocalLLMClient,
 }
 
+impl Default for DefaultMemoryEmbeddingApi {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefaultMemoryEmbeddingApi {
     pub fn new() -> Self {
         Self {
@@ -178,10 +184,9 @@ impl AgentMemoryPipeline {
 
                     let mut customer_id_val = serde_json::Value::Null;
                     if let Ok(parsed_ctx) = serde_json::from_str::<serde_json::Value>(&context_data)
+                        && let Some(cid) = parsed_ctx.get("customer_id")
                     {
-                        if let Some(cid) = parsed_ctx.get("customer_id") {
-                            customer_id_val = cid.clone();
-                        }
+                        customer_id_val = cid.clone();
                     }
                     let metadata = serde_json::json!({
                         "customer_id": customer_id_val
@@ -322,10 +327,9 @@ impl AgentMemoryPipeline {
 
                     let mut customer_id_val = serde_json::Value::Null;
                     if let Ok(parsed_ctx) = serde_json::from_str::<serde_json::Value>(&context_data)
+                        && let Some(cid) = parsed_ctx.get("customer_id")
                     {
-                        if let Some(cid) = parsed_ctx.get("customer_id") {
-                            customer_id_val = cid.clone();
-                        }
+                        customer_id_val = cid.clone();
                     }
                     let metadata = serde_json::json!({
                         "customer_id": customer_id_val
@@ -429,8 +433,8 @@ impl AgentMemoryPipeline {
     }
 
     pub async fn process_fs_memories(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let memory_dir =
-            std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".agent-task/memory".to_string());
+        let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR")
+            .unwrap_or_else(|_| ".agent-task/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
 
         if !path.exists() {
@@ -441,7 +445,7 @@ impl AgentMemoryPipeline {
 
         while let Some(entry) = entries.next_entry().await? {
             let file_path = entry.path();
-            if file_path.is_file() && file_path.extension().map_or(false, |ext| ext == "yml") {
+            if file_path.is_file() && file_path.extension().is_some_and(|ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&file_path).await?;
 
                 match tokio::time::timeout(
@@ -522,9 +526,7 @@ impl AgentMemoryPipeline {
 }
 
 #[cfg(test)]
-
 mod tests {
-    // use super::*
     use super::*;
     use std::sync::{
         Arc,
@@ -591,24 +593,104 @@ mod tests {
         assert!(POSTGRES_FAILURE_RESET_SQL.contains("agent_id = $2"));
     }
 
+    struct FixtureSummaryApi;
+
+    #[async_trait]
+    impl MemorySummaryApi for FixtureSummaryApi {
+        async fn summarize(&self, prompt: &str) -> Result<String, String> {
+            assert!(prompt.contains("client-a"));
+            Ok("boundary-test-summary".to_owned())
+        }
+    }
+
     #[tokio::test]
     async fn test_agent_memory_pipeline_sqlite() {
-        let pg_pool = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://dummy")
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
             .unwrap();
-        let db_mock = Arc::new(DB {
-            pool: pg_pool,
-            store: DbStore::Sqlite(
-                sqlx::sqlite::SqlitePoolOptions::new()
-                    .connect_lazy("sqlite::memory:")
-                    .unwrap(),
-            ),
+        for schema in [
+            "CREATE TABLE agents(id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)",
+            "CREATE TABLE agent_session_data(session_id TEXT PRIMARY KEY, agent_id TEXT NOT NULL, context_data TEXT NOT NULL, _sync_status TEXT, last_accessed TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE consolidated_memory(id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT NOT NULL, source_type TEXT NOT NULL, content TEXT NOT NULL, embedding TEXT NOT NULL, metadata TEXT NOT NULL)",
+        ] {
+            sqlx::query(schema).execute(&pool).await.unwrap();
+        }
+        sqlx::query("INSERT INTO agents VALUES ('agent-a','tenant-a')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let original = r#"{"customer_id":"client-a","preference":"morning appointments"}"#;
+        sqlx::query("INSERT INTO agent_session_data(session_id,agent_id,context_data) VALUES('session-a','agent-a',?)")
+            .bind(original).execute(&pool).await.unwrap();
+        let db = Arc::new(DB {
+            pool: crate::db::secure_pg_pool_options()
+                .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: DbStore::Sqlite(pool.clone()),
         });
-        let _pipe =
-            AgentMemoryPipeline::new(db_mock, Arc::new(MockEmbeddingApi { succeeds: true }));
-        assert!(true);
-        return;
+        let failed = AgentMemoryPipeline::new_with_apis(
+            db.clone(),
+            Arc::new(MockEmbeddingApi { succeeds: false }),
+            Arc::new(FixtureSummaryApi),
+            std::time::Duration::from_secs(1),
+        );
+        failed.process_session_data().await.unwrap();
+        let source: (String, String) = sqlx::query_as(
+            "SELECT context_data,_sync_status FROM agent_session_data WHERE session_id='session-a'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(source, (original.to_owned(), "pending".to_owned()));
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM consolidated_memory")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "A failed embedding must not look like a completed memory"
+        );
+
+        let successful = AgentMemoryPipeline::new_with_apis(
+            db,
+            Arc::new(MockEmbeddingApi { succeeds: true }),
+            Arc::new(FixtureSummaryApi),
+            std::time::Duration::from_secs(1),
+        );
+        successful.process_session_data().await.unwrap();
+        successful.process_session_data().await.unwrap();
+        let records: Vec<(String,String,String,String,String,String)> = sqlx::query_as(
+            "SELECT tenant_id,agent_id,source_type,content,embedding,metadata FROM consolidated_memory")
+            .fetch_all(&pool).await.unwrap();
+        assert_eq!(
+            records.len(),
+            1,
+            "A repeated sweep must not duplicate a completed session"
+        );
+        let (tenant, agent, source, content, embedding, metadata) = &records[0];
+        assert_eq!(
+            (tenant.as_str(), agent.as_str(), source.as_str()),
+            ("tenant-a", "agent-a", "SESSION_DATA")
+        );
+        assert_eq!(content, "boundary-test-summary");
+        assert_eq!(
+            serde_json::from_str::<Vec<f32>>(embedding).unwrap(),
+            vec![0.5; 1536]
+        );
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(metadata).unwrap()["customer_id"],
+            "client-a"
+        );
+        let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_session_data")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            remaining, 0,
+            "The source is removed only after memory persistence succeeds"
+        );
     }
 
     #[tokio::test]

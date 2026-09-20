@@ -6,7 +6,7 @@ use chrono::Utc;
 use sqlx::Row;
 use std::sync::Arc;
 
-use super::MeshLockGuard;
+use super::{MeshLockGuard, StateTransition};
 use crate::orchestration::mesh::TeammateMesh;
 
 pub struct StandaloneStateManager {
@@ -21,15 +21,18 @@ impl StandaloneStateManager {
 
     async fn transition_state_inner(
         &self,
-        task_id: &str,
-        _tenant_id: &str,
-        from_state: &str,
-        to_state: &str,
-        agent_id: Option<&str>,
-        reason: Option<&str>,
+        transition: StateTransition<'_>,
         _lock_guard: &MeshLockGuard,
         sqlite_pool: &sqlx::Pool<sqlx::Sqlite>,
     ) -> Result<(), String> {
+        let StateTransition {
+            task_id,
+            tenant_id: _tenant_id,
+            from_state,
+            to_state,
+            agent_id,
+            reason,
+        } = transition;
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state
@@ -165,12 +168,14 @@ impl StateManager for StandaloneStateManager {
             )
             .await?;
             self.transition_state_inner(
-                task_id,
-                tenant_id,
-                from_state,
-                to_state,
-                agent_id,
-                reason,
+                StateTransition {
+                    task_id,
+                    tenant_id,
+                    from_state,
+                    to_state,
+                    agent_id,
+                    reason,
+                },
                 &lock_guard,
                 sqlite_pool,
             )

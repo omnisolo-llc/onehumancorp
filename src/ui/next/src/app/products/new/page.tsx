@@ -21,7 +21,7 @@ function AutoCatalogContent() {
   const [minPrice, setMinPrice] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [subscriptionInterval, setSubscriptionInterval] = useState('monthly');
-  const [subscriptionCutoff, setSubscriptionCutoff] = useState('5');
+  const [subscriptionCutoff] = useState('5');
   const [isSplitEnabled, setIsSplitEnabled] = useState(false);
   const [splitContact, setSplitContact] = useState('');
   const [splitPercentage, setSplitPercentage] = useState<number>(70);
@@ -52,7 +52,7 @@ function AutoCatalogContent() {
         const formData = new FormData();
         const optimizedBlob = await optimizeImage(e.target.files[0]);
         const ext = optimizedBlob.type === 'image/webp' ? '.webp' : e.target.files[0].name.substring(e.target.files[0].name.lastIndexOf('.'));
-        formData.append('image', optimizedBlob, e.target.files[0].name.replace(/\.[^\.]+$/, ext));
+        formData.append('image', optimizedBlob, e.target.files[0].name.replace(/\.[^.]+$/, ext));
 
         const response = await fetch('/api/v1/auto-catalog', {
           method: 'POST',

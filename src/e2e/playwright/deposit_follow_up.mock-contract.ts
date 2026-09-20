@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Quote Deposit Follow-up', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('Deposit State Machine generates an automated follow-up when quote deposit is unpaid after 48 hours', async ({ page, request }) => {
+  test('Deposit State Machine generates an automated follow-up when quote deposit is unpaid after 48 hours', async ({ page }) => {
     // 1. Simulate the webhook/agent action background task
     const tenantId = 'default';
 

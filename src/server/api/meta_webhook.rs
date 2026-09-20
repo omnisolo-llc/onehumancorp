@@ -40,10 +40,10 @@ pub async fn meta_webhook_get_handler(Query(query): Query<MetaVerifyQuery>) -> i
 
     if let (Some(mode), Some(token), Some(challenge)) =
         (query.mode, query.verify_token, query.challenge)
+        && mode == "subscribe"
+        && token == verify_token
     {
-        if mode == "subscribe" && token == verify_token {
-            return (StatusCode::OK, challenge).into_response();
-        }
+        return (StatusCode::OK, challenge).into_response();
     }
 
     StatusCode::FORBIDDEN.into_response()
@@ -113,47 +113,48 @@ pub async fn meta_webhook_post_handler(
                 }
             } else if let Some(changes) = entry.get("changes").and_then(|c| c.as_array()) {
                 for change in changes {
-                    if let Some(value) = change.get("value") {
-                        if let Some(messages) = value.get("messages").and_then(|m| m.as_array()) {
-                            for message in messages {
-                                let sender_id = message
-                                    .get("from")
-                                    .and_then(|f| f.as_str())
+                    if let Some(value) = change.get("value")
+                        && let Some(messages) = value.get("messages").and_then(|m| m.as_array())
+                    {
+                        for message in messages {
+                            let sender_id = message
+                                .get("from")
+                                .and_then(|f| f.as_str())
+                                .unwrap_or("unknown");
+                            let display_phone_number = value
+                                .get("metadata")
+                                .and_then(|m| m.get("display_phone_number"))
+                                .and_then(|p| p.as_str())
+                                .unwrap_or("test_tenant");
+                            let text = if let Some(t) = message
+                                .get("text")
+                                .and_then(|t| t.get("body"))
+                                .and_then(|b| b.as_str())
+                            {
+                                t.to_string()
+                            } else if let Some(img) = message.get("image") {
+                                let id =
+                                    img.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
+                                let caption =
+                                    img.get("caption").and_then(|c| c.as_str()).unwrap_or("");
+                                format!("![Image]({}) {}", id, caption).trim().to_string()
+                            } else if let Some(audio) = message.get("audio") {
+                                let id = audio
+                                    .get("id")
+                                    .and_then(|i| i.as_str())
                                     .unwrap_or("unknown");
-                                let display_phone_number = value
-                                    .get("metadata")
-                                    .and_then(|m| m.get("display_phone_number"))
-                                    .and_then(|p| p.as_str())
-                                    .unwrap_or("test_tenant");
-                                let text = if let Some(t) = message
-                                    .get("text")
-                                    .and_then(|t| t.get("body"))
-                                    .and_then(|b| b.as_str())
-                                {
-                                    t.to_string()
-                                } else if let Some(img) = message.get("image") {
-                                    let id =
-                                        img.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
-                                    let caption =
-                                        img.get("caption").and_then(|c| c.as_str()).unwrap_or("");
-                                    format!("![Image]({}) {}", id, caption).trim().to_string()
-                                } else if let Some(audio) = message.get("audio") {
-                                    let id = audio
-                                        .get("id")
-                                        .and_then(|i| i.as_str())
-                                        .unwrap_or("unknown");
-                                    format!("[Audio]({})", id)
-                                } else {
-                                    "".to_string()
-                                };
+                                format!("[Audio]({})", id)
+                            } else {
+                                "".to_string()
+                            };
 
-                                let pool = &state.db.pool;
-                                let clean_phone_number = display_phone_number
-                                    .replace("+", "")
-                                    .replace("whatsapp:", "");
-                                let resolved_tenant_id = match &state.db.store {
-                                    crate::db::DbStore::Postgres => {
-                                        let mut tid = sqlx::query_scalar::<_, String>(
+                            let pool = &state.db.pool;
+                            let clean_phone_number = display_phone_number
+                                .replace("+", "")
+                                .replace("whatsapp:", "");
+                            let resolved_tenant_id = match &state.db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let mut tid = sqlx::query_scalar::<_, String>(
                                               "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
                                           )
                                           .bind(display_phone_number)
@@ -161,30 +162,29 @@ pub async fn meta_webhook_post_handler(
                                           .fetch_optional(pool)
                                           .await.unwrap_or(None);
 
-                                        if tid.is_none() {
-                                            tid = sqlx::query_scalar::<_, String>(
+                                    if tid.is_none() {
+                                        tid = sqlx::query_scalar::<_, String>(
                                                   "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 OR sms_critical_phone = $2 OR voice_receptionist_number = $2 LIMIT 1"
                                               )
                                               .bind(display_phone_number)
                                               .bind(&clean_phone_number)
                                               .fetch_optional(pool)
                                               .await.unwrap_or(None);
-                                        }
-
-                                        match tid {
-                                            Some(id) => id,
-                                            None if display_phone_number
-                                                == "tenant-whatsapp-id"
-                                                || display_phone_number.contains("1234567890")
-                                                || sender_id.contains("1234567890") =>
-                                            {
-                                                "e2e-tenant".to_string()
-                                            }
-                                            None => "test_tenant".to_string(),
-                                        }
                                     }
-                                    crate::db::DbStore::Sqlite(sqlite_pool) => {
-                                        let mut tid = sqlx::query_scalar::<_, String>(
+
+                                    match tid {
+                                        Some(id) => id,
+                                        None if display_phone_number == "tenant-whatsapp-id"
+                                            || display_phone_number.contains("1234567890")
+                                            || sender_id.contains("1234567890") =>
+                                        {
+                                            "e2e-tenant".to_string()
+                                        }
+                                        None => "test_tenant".to_string(),
+                                    }
+                                }
+                                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                    let mut tid = sqlx::query_scalar::<_, String>(
                                               "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
                                           )
                                           .bind(display_phone_number)
@@ -192,8 +192,8 @@ pub async fn meta_webhook_post_handler(
                                           .fetch_optional(sqlite_pool)
                                           .await.unwrap_or(None);
 
-                                        if tid.is_none() {
-                                            tid = sqlx::query_scalar::<_, String>(
+                                    if tid.is_none() {
+                                        tid = sqlx::query_scalar::<_, String>(
                                                   "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? OR sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
                                               )
                                               .bind(display_phone_number)
@@ -202,38 +202,36 @@ pub async fn meta_webhook_post_handler(
                                               .bind(&clean_phone_number)
                                               .fetch_optional(sqlite_pool)
                                               .await.unwrap_or(None);
-                                        }
-
-                                        match tid {
-                                            Some(id) => id,
-                                            None if display_phone_number
-                                                == "tenant-whatsapp-id"
-                                                || display_phone_number.contains("1234567890")
-                                                || sender_id.contains("1234567890") =>
-                                            {
-                                                "e2e-tenant".to_string()
-                                            }
-                                            None => "test_tenant".to_string(),
-                                        }
                                     }
-                                };
 
-                                if !text.is_empty() {
-                                    tracing::info!(
-                                        "Received Meta WhatsApp message from {}: {}",
-                                        sender_id,
-                                        text
-                                    );
-                                    let source = "whatsapp".to_string();
-                                    process_omnichannel_message(
-                                        &state,
-                                        resolved_tenant_id,
-                                        source,
-                                        sender_id.to_string(),
-                                        text.to_string(),
-                                    )
-                                    .await;
+                                    match tid {
+                                        Some(id) => id,
+                                        None if display_phone_number == "tenant-whatsapp-id"
+                                            || display_phone_number.contains("1234567890")
+                                            || sender_id.contains("1234567890") =>
+                                        {
+                                            "e2e-tenant".to_string()
+                                        }
+                                        None => "test_tenant".to_string(),
+                                    }
                                 }
+                            };
+
+                            if !text.is_empty() {
+                                tracing::info!(
+                                    "Received Meta WhatsApp message from {}: {}",
+                                    sender_id,
+                                    text
+                                );
+                                let source = "whatsapp".to_string();
+                                process_omnichannel_message(
+                                    &state,
+                                    resolved_tenant_id,
+                                    source,
+                                    sender_id.to_string(),
+                                    text.to_string(),
+                                )
+                                .await;
                             }
                         }
                     }
@@ -261,32 +259,6 @@ fn valid_meta_signature(secret: &str, signature_header: Option<&str>, body: &[u8
     };
     mac.update(body);
     mac.verify_slice(&signature_bytes).is_ok()
-}
-
-#[cfg(test)]
-mod signature_tests {
-    use super::*;
-
-    #[test]
-    fn meta_signatures_fail_closed_and_validate_the_raw_body() {
-        let body = br#"{"event":"message"}"#;
-        let mut mac = Hmac::<Sha256>::new_from_slice(b"configured-secret").unwrap();
-        mac.update(body);
-        let signature = format!("sha256={}", hex::encode(mac.finalize().into_bytes()));
-
-        assert!(valid_meta_signature(
-            "configured-secret",
-            Some(&signature),
-            body
-        ));
-        assert!(!valid_meta_signature("", Some(&signature), body));
-        assert!(!valid_meta_signature("configured-secret", None, body));
-        assert!(!valid_meta_signature(
-            "configured-secret",
-            Some(&signature),
-            b"changed"
-        ));
-    }
 }
 
 async fn process_omnichannel_message(
@@ -424,4 +396,30 @@ async fn process_omnichannel_message(
     tokio::spawn(async move {
         let _ = orchestrator_clone.dispatch_event(event).await;
     });
+}
+
+#[cfg(test)]
+mod signature_tests {
+    use super::*;
+
+    #[test]
+    fn meta_signatures_fail_closed_and_validate_the_raw_body() {
+        let body = br#"{"event":"message"}"#;
+        let mut mac = Hmac::<Sha256>::new_from_slice(b"configured-secret").unwrap();
+        mac.update(body);
+        let signature = format!("sha256={}", hex::encode(mac.finalize().into_bytes()));
+
+        assert!(valid_meta_signature(
+            "configured-secret",
+            Some(&signature),
+            body
+        ));
+        assert!(!valid_meta_signature("", Some(&signature), body));
+        assert!(!valid_meta_signature("configured-secret", None, body));
+        assert!(!valid_meta_signature(
+            "configured-secret",
+            Some(&signature),
+            b"changed"
+        ));
+    }
 }

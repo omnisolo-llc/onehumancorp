@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Viral Post Generator', () => {
-  test('should allow owner to generate post and handle paywall', async ({ page, context }) => {
+  test('should allow owner to generate post and handle paywall', async ({ page }) => {
     // 1. Navigate to dashboard
     await page.goto('/dashboard');
 
