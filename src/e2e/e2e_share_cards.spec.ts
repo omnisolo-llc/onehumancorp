@@ -3,7 +3,7 @@ import * as nativePathModule from 'node:path';
 import { test, expect } from '@playwright/test';
 test.describe('Viral Share Cards Generator E2E', () => {
     test('Should allow user to preview and attempt to remove branding (soft paywall)', async ({ page }) => {
-        const fs = nativeFsModule;
+        await nativeFsModule;
         const path = nativePathModule;
         const filePath = path.resolve('src/ui/tauri/src/ui/share-cards.html');
         await page.goto(`file://${filePath}`);
