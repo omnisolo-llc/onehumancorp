@@ -32,3 +32,33 @@ jobs:
           path: ${{ runner.temp }}/ci-repair-source
           if-no-files-found: error
           retention-days: 1
+  tooling:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-native
+        with:
+          rust: 'false'
+          node-scope: all
+          cache: 'true'
+      - name: Archive locked public dependencies and pinned runtime only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ci-repair-tooling"
+          tar -czf "$RUNNER_TEMP/ci-repair-tooling/dependencies.tar.gz" node_modules src/ui/next/node_modules src/cli/node_modules
+          cp "$(command -v node)" "$RUNNER_TEMP/ci-repair-tooling/node"
+          cp .node-version "$RUNNER_TEMP/ci-repair-tooling/node-version.txt"
+          sha256sum package-lock.json src/ui/next/package-lock.json src/cli/package-lock.json > "$RUNNER_TEMP/ci-repair-tooling/lockfiles.sha256"
+          cd "$RUNNER_TEMP/ci-repair-tooling"
+          sha256sum dependencies.tar.gz node > SHA256SUMS
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-tooling-${{ github.sha }}
+          path: ${{ runner.temp }}/ci-repair-tooling
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
