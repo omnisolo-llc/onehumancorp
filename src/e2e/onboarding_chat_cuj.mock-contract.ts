@@ -77,7 +77,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
                 await route.fulfill({
                     response,
                 });
-            } catch (e) {
+            } catch  {
                 await route.abort('failed');
             }
         }

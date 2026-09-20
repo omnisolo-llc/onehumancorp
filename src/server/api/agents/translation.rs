@@ -102,29 +102,6 @@ pub fn parse_inbox_translation(
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_translation_json_with_original_content() {
-        let parsed = parse_inbox_translation(
-            "¿Tienes pastel vegano mañana?",
-            "en",
-            r#"{"source_language":"es","translated_content":"Do you have vegan cake tomorrow?"}"#,
-        )
-        .unwrap();
-
-        assert_eq!(parsed.original_content, "¿Tienes pastel vegano mañana?");
-        assert_eq!(parsed.source_language.as_deref(), Some("es"));
-        assert_eq!(
-            parsed.translated_content,
-            "Do you have vegan cake tomorrow?"
-        );
-        assert_eq!(parsed.target_language, "en");
-    }
-}
-
 pub async fn generate_inbox_draft_reply(
     tenant_id: &str,
     source: &str,
@@ -153,5 +130,28 @@ pub async fn generate_inbox_draft_reply(
                 .reason(&compressed_prompt)
                 .await
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_translation_json_with_original_content() {
+        let parsed = parse_inbox_translation(
+            "¿Tienes pastel vegano mañana?",
+            "en",
+            r#"{"source_language":"es","translated_content":"Do you have vegan cake tomorrow?"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(parsed.original_content, "¿Tienes pastel vegano mañana?");
+        assert_eq!(parsed.source_language.as_deref(), Some("es"));
+        assert_eq!(
+            parsed.translated_content,
+            "Do you have vegan cake tomorrow?"
+        );
+        assert_eq!(parsed.target_language, "en");
     }
 }

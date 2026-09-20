@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import { useState } from "react";
 import { useWalkthrough } from "../../components/help";
@@ -6,7 +7,7 @@ import { WalkthroughTarget } from "../../components/Walkthrough";
 
 export default function VisualWorkflowPage() {
   const { startWalkthrough } = useWalkthrough();
-  const [nodes, setNodes] = useState<{ id: string; type: string; data: any }[]>([]);
+  const [nodes, setNodes] = useState<{ id: string; type: string; data: { prompt_template?: string; name?: string } }[]>([]);
   const [edges, setEdges] = useState<{ id: string; source: string; target: string; condition?: string }[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState<string>("Hello world");
@@ -49,8 +50,8 @@ export default function VisualWorkflowPage() {
       });
       const data = await res.json();
       setResult(JSON.stringify(data, null, 2));
-    } catch (e: any) {
-      setResult(`Error: ${e.message}`);
+    } catch (e: unknown) {
+      setResult(`Error: ${errorMessage(e)}`);
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from 'react';
+import { useEffect,useState,Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
@@ -17,7 +17,7 @@ function ProposalViewContent() {
         const utf8Encoded = escape(atob(base64Str));
         const decoded = JSON.parse(decodeURIComponent(utf8Encoded));
         setData(decoded);
-      } catch (e) {
+      } catch  {
         console.error("Failed to decode proposal data");
       }
     }

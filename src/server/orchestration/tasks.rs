@@ -79,10 +79,10 @@ impl TaskDecompositionService {
             if dep_id == task_id {
                 return Err("Circular dependency detected".to_string());
             }
-            if visited.insert(dep_id.clone()) {
-                if let Ok(dep_task) = self.get_task(&dep_id).await {
-                    to_visit.extend(dep_task.dependencies);
-                }
+            if visited.insert(dep_id.clone())
+                && let Ok(dep_task) = self.get_task(&dep_id).await
+            {
+                to_visit.extend(dep_task.dependencies);
             }
         }
         Ok(())
@@ -124,8 +124,8 @@ impl TaskDecompositionService {
                 .bind(&payload)
                 .bind(&deliberation)
                 .bind(task.depth)
-                .bind(&task.created_at)
-                .bind(&task.updated_at)
+                .bind(task.created_at)
+                .bind(task.updated_at)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -161,8 +161,8 @@ impl TaskDecompositionService {
                 .bind(payload_str)
                 .bind(deliberation_str)
                 .bind(task.depth)
-                .bind(&task.created_at)
-                .bind(&task.updated_at)
+                .bind(task.created_at)
+                .bind(task.updated_at)
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -448,7 +448,7 @@ impl TaskDecompositionService {
             updated_at: row.get("updated_at"),
             action_risk: row
                 .get::<Option<String>, _>("action_risk")
-                .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                .map(|s| crate::tasks::ActionRisk::from_label(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -503,7 +503,7 @@ impl TaskDecompositionService {
             updated_at: dt_updated,
             action_risk: row
                 .get::<Option<String>, _>("action_risk")
-                .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                .map(|s| crate::tasks::ActionRisk::from_label(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -543,12 +543,11 @@ impl TaskDecompositionService {
                         let mut obj = val.as_object().cloned().unwrap_or_default();
 
                         let task_id: String = row.get("id");
-                        if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await {
-                            if let Ok(handoff_val) =
+                        if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await
+                            && let Ok(handoff_val) =
                                 serde_json::from_str::<serde_json::Value>(&handoff)
-                            {
-                                obj.insert("handoff_context".to_string(), handoff_val);
-                            }
+                        {
+                            obj.insert("handoff_context".to_string(), handoff_val);
                         }
 
                         serde_json::to_string(&obj).unwrap_or_else(|_| "{}".to_string())
@@ -569,7 +568,7 @@ impl TaskDecompositionService {
                     updated_at: dt_updated,
                     action_risk: row
                         .get::<Option<String>, _>("action_risk")
-                        .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                        .map(|s| crate::tasks::ActionRisk::from_label(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -634,12 +633,11 @@ impl TaskDecompositionService {
                         >(&payload_str)
                         .unwrap_or_default();
 
-                        if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await {
-                            if let Ok(handoff_val) =
+                        if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await
+                            && let Ok(handoff_val) =
                                 serde_json::from_str::<serde_json::Value>(&handoff)
-                            {
-                                obj.insert("handoff_context".to_string(), handoff_val);
-                            }
+                        {
+                            obj.insert("handoff_context".to_string(), handoff_val);
                         }
 
                         serde_json::to_string(&obj).unwrap_or_else(|_| "{}".to_string())
@@ -657,7 +655,7 @@ impl TaskDecompositionService {
                     updated_at: dt_updated,
                     action_risk: row
                         .get::<Option<String>, _>("action_risk")
-                        .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                        .map(|s| crate::tasks::ActionRisk::from_label(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -820,17 +818,17 @@ impl TaskDecompositionService {
         agent_id: &str,
     ) -> Result<(), String> {
         let now = Utc::now();
-        if new_status == "COMPLETED" {
-            if let Ok(task) = self.get_task(id).await {
-                let now_ms = now.timestamp_millis();
-                let updated_ms = task.updated_at.timestamp_millis();
-                let latency = ((now_ms - updated_ms).max(0) as f64) / 1000.0;
-                ::server_telemetry::record_mission_execution_latency(
-                    &task.organization_id,
-                    ::server_telemetry::get_deployment_mode(),
-                    latency,
-                );
-            }
+        if new_status == "COMPLETED"
+            && let Ok(task) = self.get_task(id).await
+        {
+            let now_ms = now.timestamp_millis();
+            let updated_ms = task.updated_at.timestamp_millis();
+            let latency = ((now_ms - updated_ms).max(0) as f64) / 1000.0;
+            ::server_telemetry::record_mission_execution_latency(
+                &task.organization_id,
+                ::server_telemetry::get_deployment_mode(),
+                latency,
+            );
         }
         match &self.db.store {
             DbStore::Postgres => {
@@ -1007,7 +1005,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1044,7 +1044,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1163,7 +1165,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1200,7 +1204,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1325,7 +1331,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1362,7 +1370,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1397,7 +1407,7 @@ mod tests {
         let _ = service.create_task(task1).await; // Might fail if DB is not migrated, that's fine.
 
         // If creation succeeded (DB migrated), let's proceed to task 2
-        if let Ok(_) = service.get_task("task-pg-1").await {
+        if service.get_task("task-pg-1").await.is_ok() {
             let task2 = crate::tasks::SharedTask {
                 id: "task-pg-2".to_string(),
                 organization_id: "org-pg".to_string(),
@@ -1488,7 +1498,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1525,7 +1537,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }

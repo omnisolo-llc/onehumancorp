@@ -1,11 +1,10 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
 test.describe('Mobile Unified Feed MVP', () => {
   // Use a mobile viewport to simulate 375px
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('should load the unified feed and process agent cards', async ({ adminPage: page }) => {
+  test('should load the unified feed and process agent cards', async ({ page }) => {
     // We will inject the feed UI HTML to test it directly in isolation,
     // or navigate to a test route if it were integrated in the app.
     // For this E2E test, we will navigate to the page and verify the interactions.

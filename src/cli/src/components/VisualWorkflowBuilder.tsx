@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { useVisualWorkflow } from '../hooks/useVisualWorkflow.js';
+import { useVisualWorkflow, type Node } from '../hooks/useVisualWorkflow.js';
 import { MarkdownText } from './MarkdownText.js';
 import { ErrorState } from './ErrorState.js';
 
@@ -10,6 +10,8 @@ export interface VisualWorkflowBuilderProps {
 
 export const VisualWorkflowBuilder: React.FC<VisualWorkflowBuilderProps> = ({ onBack }) => {
   const [nodes, setNodes] = useState<{ id: string; type: string }[]>([]);
+  // Deleting a node must not let a later node reuse an existing identity.
+  const nextNodeId = useRef(1);
   const [selectedNodeIndex, setSelectedNodeIndex] = useState(0);
   const [mode, setMode] = useState<'view' | 'add'>('view');
 
@@ -28,10 +30,10 @@ export const VisualWorkflowBuilder: React.FC<VisualWorkflowBuilderProps> = ({ on
         setMode('add');
       } else if (input === 'r') {
         // Build graph and run
-        const graphNodes = nodes.map(n => {
-            if (n.type === 'Input') return { id: n.id, type: { Input: { name: 'in' } } };
-            if (n.type === 'Llm') return { id: n.id, type: { Llm: { prompt_template: 'Process: {{in}}' } } };
-            return { id: n.id, type: { Output: null } };
+        const graphNodes: Node[] = nodes.map(n => {
+            if (n.type === 'Input') return { id: n.id, node_type: { type: 'Input', name: 'in' } };
+            if (n.type === 'Llm') return { id: n.id, node_type: { type: 'Llm', prompt_template: 'Process: {{in}}' } };
+            return { id: n.id, node_type: { type: 'Output' } };
         });
 
         const edges = [];
@@ -39,7 +41,7 @@ export const VisualWorkflowBuilder: React.FC<VisualWorkflowBuilderProps> = ({ on
             edges.push({ source: nodes[i].id, target: nodes[i+1].id });
         }
 
-        runWorkflow({ nodes: graphNodes as any, edges }, { in: 'test data' });
+        void runWorkflow({ nodes: graphNodes, edges }, { in: 'test data' });
       } else if (key.upArrow || input === 'k') {
         if (nodes.length > 0) {
           setSelectedNodeIndex(Math.max(0, selectedNodeIndex - 1));
@@ -63,15 +65,15 @@ export const VisualWorkflowBuilder: React.FC<VisualWorkflowBuilderProps> = ({ on
       }
 
       if (input === '1') {
-        setNodes([...nodes, { id: `node_${nodes.length + 1}`, type: 'Input' }]);
+        setNodes([...nodes, { id: `node_${nextNodeId.current++}`, type: 'Input' }]);
         setMode('view');
         setSelectedNodeIndex(nodes.length);
       } else if (input === '2') {
-        setNodes([...nodes, { id: `node_${nodes.length + 1}`, type: 'Llm' }]);
+        setNodes([...nodes, { id: `node_${nextNodeId.current++}`, type: 'Llm' }]);
         setMode('view');
         setSelectedNodeIndex(nodes.length);
       } else if (input === '3') {
-        setNodes([...nodes, { id: `node_${nodes.length + 1}`, type: 'Output' }]);
+        setNodes([...nodes, { id: `node_${nextNodeId.current++}`, type: 'Output' }]);
         setMode('view');
         setSelectedNodeIndex(nodes.length);
       }

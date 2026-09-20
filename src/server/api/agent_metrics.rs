@@ -48,9 +48,9 @@ pub struct AgentMetrics {
 async fn snapshot(hub: &Hub, org: &str) -> Vec<AgentMetrics> {
     let costs: HashMap<_, _> = hub
         .get_cost_auditor()
-        .get_agent_costs_snapshot()
+        .tenant_agent_snapshot(org)
         .into_iter()
-        .map(|(id, cost, _, _, _, _)| (id, cost))
+        .map(|(id, usage)| (id, usage.cost_usd))
         .collect();
     let mut rows = Vec::new();
     for agent in hub.get_agents_by_org(org).await {
@@ -81,7 +81,7 @@ async fn get_metrics(
 ) -> Result<Json<Vec<AgentMetrics>>, StatusCode> {
     let org = claims
         .organization_id
-        .filter(|org| !org.is_empty())
+        .filter(|org| !org.is_empty() && org.trim() == org)
         .ok_or(StatusCode::UNAUTHORIZED)?;
     Ok(Json(snapshot(&hub, &org).await))
 }
@@ -91,7 +91,7 @@ async fn stream_metrics(
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
     let org = claims
         .organization_id
-        .filter(|org| !org.is_empty())
+        .filter(|org| !org.is_empty() && org.trim() == org)
         .ok_or(StatusCode::UNAUTHORIZED)?;
     let interval = tokio::time::interval(Duration::from_secs(5));
     let events = stream::unfold(
@@ -115,6 +115,47 @@ async fn stream_metrics(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn agent_metrics_do_not_merge_costs_for_shared_agent_ids() {
+        use crate::services::billing::auditor::AuditEvent;
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+            .unwrap();
+        let (sender, _receiver) = tokio::sync::mpsc::channel(1);
+        let hub = Hub::new(sender, pool);
+        hub.register_agent(server_omnisolo::orchestration::Agent {
+            id: "shared".into(),
+            organization_id: "owner-a".into(),
+            ..Default::default()
+        })
+        .await;
+        let auditor = hub.get_cost_auditor();
+        for (tenant, count) in [("owner-a", 100), ("owner-b", 900)] {
+            auditor.record_event(AuditEvent {
+                tenant_id: tenant.into(),
+                agent_id: "shared".into(),
+                input_tokens: count,
+                output_tokens: 0,
+                cached_input_tokens: 0,
+                local_embedding_tokens: 0,
+            });
+        }
+        // The default inference tariff is deliberately unconfigured/zero.
+        // Supply explicit unequal costs so this regression cannot pass with
+        // an all-zero or globally aggregated snapshot.
+        auditor.record_manual_cost("shared", "owner-a", 125);
+        auditor.record_manual_cost("shared", "owner-b", 900);
+        let metrics = snapshot(&hub, "owner-a").await;
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].cost_accumulated, 1.25);
+        assert_eq!(
+            metrics[0].cost_accumulated,
+            auditor.get_tenant_cost("owner-a")
+        );
+        assert_ne!(metrics[0].cost_accumulated, auditor.get_total_cost());
+        assert!(snapshot(&hub, "owner-b").await.is_empty());
+    }
 
     #[test]
     fn measurements_report_actual_duration_and_error_rate() {

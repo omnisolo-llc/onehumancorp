@@ -140,36 +140,21 @@ async fn replay_from_redis(
     let mut messages = Vec::new();
     if let Ok(sequence) = entries.into_sequence() {
         for entry in sequence {
-            if let Ok(entry_parts) = entry.into_sequence() {
-                if entry_parts.len() >= 2 {
-                    if let Ok(fields) = entry_parts[1].clone().into_sequence() {
-                        for field_pair in fields {
-                            if let Ok(kv) = field_pair.into_sequence() {
-                                if kv.len() == 2 {
-                                    if let redis::Value::BulkString(key_bytes) = &kv[0] {
-                                        if key_bytes == b"payload" {
-                                            if let redis::Value::BulkString(payload_bytes) = &kv[1]
-                                            {
-                                                if let Ok(payload) =
-                                                    String::from_utf8(payload_bytes.clone())
-                                                {
-                                                    if let Some((ch, topic, data, seq)) =
-                                                        parse_envelope(&payload)
-                                                    {
-                                                        if topic_filter.map_or(true, |t| topic == t)
-                                                        {
-                                                            messages.push(build_envelope(
-                                                                &ch, &topic, data, seq,
-                                                            ));
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+            if let Ok(entry_parts) = entry.into_sequence()
+                && entry_parts.len() >= 2
+                && let Ok(fields) = entry_parts[1].clone().into_sequence()
+            {
+                for field_pair in fields {
+                    if let Ok(kv) = field_pair.into_sequence()
+                        && kv.len() == 2
+                        && let redis::Value::BulkString(key_bytes) = &kv[0]
+                        && key_bytes == b"payload"
+                        && let redis::Value::BulkString(payload_bytes) = &kv[1]
+                        && let Ok(payload) = String::from_utf8(payload_bytes.clone())
+                        && let Some((ch, topic, data, seq)) = parse_envelope(&payload)
+                        && topic_filter.is_none_or(|t| topic == t)
+                    {
+                        messages.push(build_envelope(&ch, &topic, data, seq));
                     }
                 }
             }

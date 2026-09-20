@@ -1,13 +1,13 @@
 import { test, expect } from './fixtures';
-import { E2E_ADMIN_USER } from './fixtures';
+import './fixtures';
 
 async function navigateToTrialExtension(page: any) {
   try {
     await page.goto('/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-  } catch (e) {
+  } catch  {
     try {
       await page.goto('http://127.0.0.1:3000/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-    } catch(e) {}
+    } catch {}
   }
 }
 

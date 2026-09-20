@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { AgentFeedCard, ActionRequiredDraft } from '../AgentFeedCard';
 
@@ -56,7 +56,7 @@ describe('AgentFeedCard', () => {
         expect(mockApprove).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onEdit with draft_id when Edit button is clicked', () => {
+    it('saves the edited response with the draft identity only after Save', async () => {
         const mockApprove = vi.fn();
         const mockEdit = vi.fn();
 
@@ -71,8 +71,33 @@ describe('AgentFeedCard', () => {
         const editButton = screen.getByRole('button', { name: 'Edit Draft' });
         fireEvent.click(editButton);
 
-        expect(mockEdit).toHaveBeenCalledWith('draft-123');
-        expect(mockEdit).toHaveBeenCalledTimes(1);
+        expect(mockEdit).not.toHaveBeenCalled();
+        const editor = screen.getByRole('textbox', { name: 'Draft response' });
+        fireEvent.change(editor, { target: { value: 'The owner-approved revised response.' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => {
+            expect(mockEdit).toHaveBeenCalledWith('draft-123', 'The owner-approved revised response.');
+            expect(mockEdit).toHaveBeenCalledTimes(1);
+            expect(screen.queryByRole('textbox')).toBeNull();
+        });
+    });
+
+    it('keeps unsaved text visible when persistence fails and never approves it', async () => {
+        const onEdit = vi.fn().mockRejectedValue(new Error('Unavailable'));
+        const onApprove = vi.fn();
+        render(<AgentFeedCard draft={mockDraft} onApprove={onApprove} onEdit={onEdit} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Edit Draft' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'Draft response' }), {
+            target: { value: 'Keep this unsaved response.' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('not saved'));
+        expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Keep this unsaved response.');
+        expect(onApprove).not.toHaveBeenCalled();
+        expect(onEdit).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(screen.queryByRole('textbox')).toBeNull();
+        expect(screen.getByText(mockDraft.response)).toBeDefined();
     });
 
     it('renders "Unknown User" if customer_name is not provided', () => {

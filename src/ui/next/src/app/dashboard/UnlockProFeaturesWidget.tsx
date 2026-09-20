@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState,useEffect } from "react";
 
 export function UnlockProFeaturesWidget() {
   const [invitesSent, setInvitesSent] = useState(0);
   const [tenantId, setTenantId] = useState("default");
   const [isCopied, setIsCopied] = useState(false);
-  const [isShared, setIsShared] = useState(false);
+  const [, setIsShared] = useState(false);
   const targetInvites = 3;
 
   useEffect(() => {

@@ -238,13 +238,10 @@ async fn handle_webhook(
         }
         .unwrap_or_else(|_| vec![0.0; 1536]);
 
-        let context = match orchestrator
+        let context = orchestrator
             .query_long_term_memory(&tenant_id, &query_embedding, 5)
             .await
-        {
-            Ok(c) => c,
-            Err(_) => vec![],
-        };
+            .unwrap_or_default();
 
         let drafted_message = format!(
             "Hi there! Based on your request for '{}', I've put together a drafted proposal. The estimated scope will cost around ${}, including standard services.",

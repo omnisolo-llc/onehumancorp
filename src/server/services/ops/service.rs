@@ -372,7 +372,7 @@ impl OpsService for MyOpsService {
         request: Request<ScaleRequest>,
     ) -> Result<Response<ScaleResponse>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
-            .map_err(|e| Status::unauthenticated(e))?;
+            .map_err(Status::unauthenticated)?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() {
             "system".to_string()
@@ -466,7 +466,7 @@ impl OpsService for MyOpsService {
             },
         ];
 
-        let stream = tokio_stream::iter(events).map(|e| Ok(e));
+        let stream = tokio_stream::iter(events).map(Ok);
         Ok(Response::new(
             Box::pin(stream) as Self::StreamScaleEventsStream
         ))
@@ -477,7 +477,7 @@ impl OpsService for MyOpsService {
         request: Request<EmptyRequest>,
     ) -> Result<Response<PruneMissionsResponse>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
-            .map_err(|e| Status::unauthenticated(e))?;
+            .map_err(Status::unauthenticated)?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() {
             "system".to_string()

@@ -132,7 +132,7 @@ impl Department for DummyDepartment {
             action_risk: risk.clone(),
             payload: None,
         };
-        self.orchestrator.add_approval_request(req.clone()).await;
+        self.orchestrator.add_approval_request(req.clone()).await?;
         Ok(req)
     }
 
@@ -256,7 +256,8 @@ impl DepartmentOrchestrator {
                                 Err(_) => {
                                     last_err = format!(
                                         "AI timeout: Event handling exceeded {} seconds",
-                                        omnisolo_builtin_agent::agent::agent_task_timeout().as_secs()
+                                        omnisolo_builtin_agent::agent::agent_task_timeout()
+                                            .as_secs()
                                     );
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
@@ -305,7 +306,7 @@ impl DepartmentOrchestrator {
                                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, \'PAUSED\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
-                                    .bind(format!("AI Agent Paused: {}", dep_type.to_string()))
+                                    .bind(format!("AI Agent Paused: {}", dep_type))
                                     .bind(serde_json::json!({"description": "The AI agent is paused because the AI service is unavailable."}))
                                     .bind(serde_json::json!({"proposed_content": "System is paused. Please manually check the relevant work."}))
                                     .execute(&self.db.pool)
@@ -337,7 +338,7 @@ impl DepartmentOrchestrator {
                                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, \'PAUSED\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
-                                    .bind(format!("AI Agent Paused: {}", dep_type.to_string()))
+                                    .bind(format!("AI Agent Paused: {}", dep_type))
                                     .bind(serde_json::json!({"description": "The AI agent is paused because the AI service is unavailable."}).to_string())
                                     .bind(serde_json::json!({"proposed_content": "System is paused. Please manually check the relevant work."}).to_string())
                                     .execute(pool)
@@ -465,10 +466,13 @@ impl DepartmentOrchestrator {
         _action_payload: serde_json::Value,
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
-        let within_budget = self.check_ai_budget(&tenant_id, cost).await.unwrap_or(true);
+        let within_budget = self
+            .check_ai_budget(&tenant_id, cost)
+            .await
+            .map_err(|_| "Unable to verify AI action budget".to_string())?;
         if !within_budget {
             tracing::info!(
-                "💰 Miser telemetry: Tenant {} soft limit reached. Action allowed. Please upgrade your plan.",
+                "Tenant {} action budget exhausted; action was not admitted.",
                 tenant_id
             ); // pii-safe
             return Err(
@@ -488,7 +492,7 @@ impl DepartmentOrchestrator {
                     action_risk: ActionRisk::AutoExecute,
                     payload: Some(_action_payload),
                 };
-                self.add_approval_request(req.clone()).await;
+                self.add_approval_request(req.clone()).await?;
                 Ok(req.clone())
             }
             ActionRisk::DraftForReview => {
@@ -501,13 +505,9 @@ impl DepartmentOrchestrator {
                     action_risk: ActionRisk::DraftForReview,
                     payload: Some(_action_payload),
                 };
-                self.add_approval_request(req.clone()).await;
-
-                let _ = crate::dispatch_critical_sms(
-                    "draft_approval",
-                    &format!("{} requires your approval: {}", department, description),
-                )
-                .await;
+                self.add_approval_request(req.clone()).await?;
+                // The persisted in-app feed is the default notification. Paid
+                // external notifications require a separate authorized policy.
 
                 Ok(req.clone())
             }
@@ -538,7 +538,10 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn add_approval_request(&self, req: ApprovalRequest) {
+    pub async fn add_approval_request(&self, req: ApprovalRequest) -> Result<(), String> {
+        if req.tenant_id.trim().is_empty() || req.id.trim().is_empty() {
+            return Err("An approval requires tenant and request identities".into());
+        }
         let now = Utc::now();
         let status_str = match req.status {
             ApprovalStatus::PendingApproval => "DRAFT",
@@ -547,21 +550,21 @@ impl DepartmentOrchestrator {
             ApprovalStatus::Paused => "PAUSED",
         };
 
-        if req.action_risk == ActionRisk::DraftForReview {
-            if let Some(payload) = &req.payload {
-                if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup")
-                    || payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft")
-                {
-                    let task_id = uuid::Uuid::new_v4().to_string();
-                    let action_payload_str = serde_json::to_string(payload).unwrap_or_default();
-                    let context_msg = req.description.clone();
-                    let db = self.db.clone();
-                    let tenant_id = req.tenant_id.clone();
+        if req.action_risk == ActionRisk::DraftForReview
+            && let Some(payload) = &req.payload
+            && (payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup")
+                || payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft"))
+        {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let action_payload_str = serde_json::to_string(payload).unwrap_or_default();
+            let context_msg = req.description.clone();
+            let db = self.db.clone();
+            let tenant_id = req.tenant_id.clone();
 
-                    tokio::spawn(async move {
-                        match &db.store {
-                            crate::db::DbStore::Postgres => {
-                                let _ = sqlx::query(
+            tokio::spawn(async move {
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query(
                                     "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'System', 'high', $3, 'pending'); INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (gen_random_uuid(), $1, $2, 'Approve Draft', $4::jsonb)"
                                 )
                                 .bind(&task_id)
@@ -571,9 +574,9 @@ impl DepartmentOrchestrator {
                                 .bind(&action_payload_str)
                                 .execute(&db.pool)
                                 .await;
-                            }
-                            crate::db::DbStore::Sqlite(_) => {
-                                let _ = sqlx::query(
+                    }
+                    crate::db::DbStore::Sqlite(_) => {
+                        let _ = sqlx::query(
                                     "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, 'System', 'high', ?, 'pending'); INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (lower(hex(randomblob(16))), ?, ?, 'Approve Draft', json(?))"
                                 )
                                 .bind(&task_id)
@@ -583,11 +586,9 @@ impl DepartmentOrchestrator {
                                 .bind(&action_payload_str)
                                 .execute(&db.pool)
                                 .await;
-                            }
-                        }
-                    });
+                    }
                 }
-            }
+            });
         }
 
         let _lifecycle_state = match req.status {
@@ -599,14 +600,19 @@ impl DepartmentOrchestrator {
 
         match &self.db.store {
             DbStore::Postgres => {
-                if let Ok(mut tx) = self.db.pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id)
-                        .await
-                        .is_ok()
-                    {
-                        let context_payload = serde_json::json!({"description": req.description});
+                let mut tx = self
+                    .db
+                    .pool
+                    .begin()
+                    .await
+                    .map_err(|_| "Approval storage unavailable")?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id)
+                    .await
+                    .map_err(|_| "Approval tenant context unavailable")?;
+                {
+                    let context_payload = serde_json::json!({"description": req.description});
 
-                        let _ = sqlx::query(
+                    sqlx::query(
                             "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
                         )
                         .bind(&req.id)
@@ -618,10 +624,9 @@ impl DepartmentOrchestrator {
                         .bind(now)
                         .bind(now)
                         .execute(&mut *tx)
-                        .await;
+                        .await.map_err(|_| "Unable to persist approval")?;
 
-                        let _ = tx.commit().await;
-                    }
+                    tx.commit().await.map_err(|_| "Unable to commit approval")?;
                 }
             }
             DbStore::Sqlite(pool) => {
@@ -629,7 +634,7 @@ impl DepartmentOrchestrator {
                     serde_json::json!({"description": req.description}).to_string();
                 let proposed_action_str = req.payload.clone().unwrap_or_default().to_string();
 
-                let _ = sqlx::query(
+                sqlx::query(
                     "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 )
                 .bind(&req.id)
@@ -641,7 +646,7 @@ impl DepartmentOrchestrator {
                 .bind(now)
                 .bind(now)
                 .execute(pool)
-                .await;
+                .await.map_err(|_| "Unable to persist approval")?;
             }
         }
 
@@ -661,6 +666,7 @@ impl DepartmentOrchestrator {
         let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
         let topic = format!("agent_feed:{}", req.tenant_id);
         let _ = self.mesh.publish(&topic, payload_bytes).await;
+        Ok(())
     }
 
     pub async fn get_pending_approvals(
@@ -724,10 +730,7 @@ impl DepartmentOrchestrator {
                         let payload_opt: Option<serde_json::Value> =
                             match row.try_get::<String, _>("payload") {
                                 Ok(p) => serde_json::from_str(&p).unwrap_or(None),
-                                Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
-                                    Ok(p) => Some(p),
-                                    Err(_) => None,
-                                },
+                                Err(_) => row.try_get::<serde_json::Value, _>("payload").ok(),
                             };
                         results.push(ApprovalRequest {
                             id: row.get("id"),
@@ -911,10 +914,7 @@ impl DepartmentOrchestrator {
                         let payload_opt: Option<serde_json::Value> =
                             match row.try_get::<String, _>("payload") {
                                 Ok(p) => serde_json::from_str(&p).unwrap_or(None),
-                                Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
-                                    Ok(p) => Some(p),
-                                    Err(_) => None,
-                                },
+                                Err(_) => row.try_get::<serde_json::Value, _>("payload").ok(),
                             };
                         results.push(ApprovalRequest {
                             id: row.get("id"),
@@ -994,7 +994,7 @@ impl DepartmentOrchestrator {
         approved: bool,
         edited_payload: Option<serde_json::Value>,
     ) -> Result<(), String> {
-        let lock_key = format!("ohc:lock:agent_approval:{}", request_id);
+        let lock_key = format!("ohc:lock:agent_approval:{}:{}", tenant_id, request_id);
 
         let lock_acquired = self.mesh.acquire_lock(&lock_key, "orchestrator", 60).await;
         if let Ok(acquired) = lock_acquired {
@@ -1017,7 +1017,7 @@ impl DepartmentOrchestrator {
                         .is_ok()
                     {
                         let updated = if let Some(ref ep) = edited_payload {
-                            sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2, proposed_action = $3 WHERE id = $4 AND tenant_id = $5 RETURNING event_source as department, proposed_action as payload")
+                            sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2, proposed_action = $3 WHERE id = $4 AND tenant_id = $5 AND lifecycle_state = 'PENDING_APPROVAL' RETURNING event_source as department, proposed_action as payload")
                                 .bind(new_status)
                                 .bind(now)
                                 .bind(ep)
@@ -1026,7 +1026,7 @@ impl DepartmentOrchestrator {
                                 .fetch_optional(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING event_source as department, proposed_action as payload")
+                            sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 AND lifecycle_state = 'PENDING_APPROVAL' RETURNING event_source as department, proposed_action as payload")
                                 .bind(new_status)
                                 .bind(now)
                                 .bind(request_id)
@@ -1034,8 +1034,10 @@ impl DepartmentOrchestrator {
                                 .fetch_optional(&mut *tx)
                                 .await
                         };
-                        let _ = tx.commit().await;
-                        updated
+                        match tx.commit().await {
+                            Ok(()) => updated,
+                            Err(error) => Err(error),
+                        }
                     } else {
                         Err(sqlx::Error::Configuration(
                             "failed to set tenant context".into(),
@@ -1053,10 +1055,7 @@ impl DepartmentOrchestrator {
                         let payload_val: Option<serde_json::Value> =
                             match r.try_get::<String, _>("payload") {
                                 Ok(p) => serde_json::from_str(&p).unwrap_or(None),
-                                Err(_) => match r.try_get::<serde_json::Value, _>("payload") {
-                                    Ok(p) => Some(p),
-                                    Err(_) => None,
-                                },
+                                Err(_) => r.try_get::<serde_json::Value, _>("payload").ok(),
                             };
                         Some((dep, payload_val))
                     }
@@ -1073,7 +1072,7 @@ impl DepartmentOrchestrator {
             DbStore::Sqlite(pool) => {
                 let row = if let Some(ref ep) = edited_payload {
                     let ep_str = serde_json::to_string(ep).unwrap_or_default();
-                    sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ?, proposed_action = ? WHERE id = ? AND tenant_id = ? RETURNING event_source as department, proposed_action as payload")
+                    sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ?, proposed_action = ? WHERE id = ? AND tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' RETURNING event_source as department, proposed_action as payload")
                         .bind(new_status)
                         .bind(now)
                         .bind(ep_str)
@@ -1082,7 +1081,7 @@ impl DepartmentOrchestrator {
                         .fetch_optional(pool)
                         .await
                 } else {
-                    sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING event_source as department, proposed_action as payload")
+                    sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ? WHERE id = ? AND tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' RETURNING event_source as department, proposed_action as payload")
                         .bind(new_status)
                         .bind(now)
                         .bind(request_id)
@@ -1219,8 +1218,8 @@ impl DepartmentOrchestrator {
                             ));
                         }
 
-                        if !inbox_message_id.is_empty() {
-                            if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                        if !inbox_message_id.is_empty()
+                            && let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
                                 .bind(&generated_reply)
                                 .bind(inbox_message_id)
                                 .bind(tenant_id)
@@ -1229,7 +1228,6 @@ impl DepartmentOrchestrator {
                             {
                                 tracing::error!("Failed to update inbox_messages for autonomous quote: {}", e);
                             }
-                        }
 
                         if let DbStore::Postgres = &self.db.store {
                             // Convert string times to DateTime
@@ -1489,8 +1487,8 @@ impl DepartmentOrchestrator {
                                 tracing::error!("Failed to insert invoice: {}", e);
                             }
 
-                            if !inbox_message_id.is_empty() {
-                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                            if !inbox_message_id.is_empty()
+                                && let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
                                     .bind(&generated_reply)
                                     .bind(inbox_message_id)
                                     .bind(tenant_id)
@@ -1499,7 +1497,6 @@ impl DepartmentOrchestrator {
                                 {
                                     tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
                                 }
-                            }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents, expires_at, stripe_payment_link) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
@@ -1563,8 +1560,8 @@ impl DepartmentOrchestrator {
                                 tracing::error!("Failed to insert invoice: {}", e);
                             }
 
-                            if !inbox_message_id.is_empty() {
-                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ?, status = 'auto_replied' WHERE id = ? AND tenant_id = ?")
+                            if !inbox_message_id.is_empty()
+                                && let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ?, status = 'auto_replied' WHERE id = ? AND tenant_id = ?")
                                     .bind(&generated_reply)
                                     .bind(inbox_message_id)
                                     .bind(tenant_id)
@@ -1573,26 +1570,24 @@ impl DepartmentOrchestrator {
                                 {
                                     tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
                                 }
-                            }
                         }
                     }
                 }
 
                 // If this is a stockout restock and price approval, execute the price change and dispatch a job
-                if let Some(payload) = payload_to_use {
-                    if payload.get("feature_type").and_then(|v| v.as_str())
+                if let Some(payload) = payload_to_use
+                    && payload.get("feature_type").and_then(|v| v.as_str())
                         == Some("stockout_restock_and_price")
-                    {
-                        if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str())
-                        {
-                            let new_price = payload
-                                .get("new_price")
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(0.0);
-                            let new_price_cents = (new_price * 100.0) as i64;
+                    && let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str())
+                {
+                    let new_price = payload
+                        .get("new_price")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0);
+                    let new_price_cents = (new_price * 100.0) as i64;
 
-                            if let DbStore::Postgres = &self.db.store {
-                                let _ = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
+                    if let DbStore::Postgres = &self.db.store {
+                        let _ = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
                                     .bind(new_price)
                                     .bind(new_price_cents)
                                     .bind(product_id)
@@ -1600,67 +1595,64 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await;
 
-                                // Dispatch simulated reorder to job queue
-                                let job_id = uuid::Uuid::new_v4().to_string();
-                                let reorder_quantity = payload
-                                    .get("suggested_reorder_quantity")
-                                    .and_then(|v| v.as_i64())
-                                    .unwrap_or(50);
-                                let job_payload = serde_json::json!({
-                                    "action": "reorder_stock",
-                                    "product_id": product_id,
-                                    "quantity": reorder_quantity,
-                                });
-                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, queue_name, payload, status) VALUES ($1, $2, 'operations_queue', $3, 'pending')")
+                        // Dispatch simulated reorder to job queue
+                        let job_id = uuid::Uuid::new_v4().to_string();
+                        let reorder_quantity = payload
+                            .get("suggested_reorder_quantity")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(50);
+                        let job_payload = serde_json::json!({
+                            "action": "reorder_stock",
+                            "product_id": product_id,
+                            "quantity": reorder_quantity,
+                        });
+                        let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, queue_name, payload, status) VALUES ($1, $2, 'operations_queue', $3, 'pending')")
                                     .bind(&job_id)
                                     .bind(tenant_id)
                                     .bind(&job_payload)
                                     .execute(&self.db.pool)
                                     .await;
-                            } else if let DbStore::Sqlite(pool) = &self.db.store {
-                                let _ = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
+                    } else if let DbStore::Sqlite(pool) = &self.db.store {
+                        let _ = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
                                     .bind(new_price)
                                     .bind(new_price_cents)
                                     .bind(product_id)
                                     .bind(tenant_id)
                                     .execute(pool)
                                     .await;
-                            }
-                        }
                     }
                 }
 
                 // If this is a Smart Pricing approval, execute the price change in the database directly.
-                if let Some(payload) = payload_to_use {
-                    if payload
+                if let Some(payload) = payload_to_use
+                    && payload
                         .get("context")
                         .and_then(|c| c.get("smart_pricing"))
                         .and_then(|v| v.as_bool())
                         .unwrap_or(false)
-                    {
-                        if let Some(product_id) = payload
-                            .get("context")
-                            .and_then(|c| c.get("product_id"))
-                            .and_then(|v| v.as_str())
-                        {
-                            let _discount_amount = payload
-                                .get("context")
-                                .and_then(|c| c.get("discount_amount"))
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(0.0);
-                            let now = Utc::now();
-                            let _expires_at = now + chrono::Duration::days(2);
-                            let _id = uuid::Uuid::new_v4().to_string();
+                    && let Some(product_id) = payload
+                        .get("context")
+                        .and_then(|c| c.get("product_id"))
+                        .and_then(|v| v.as_str())
+                {
+                    let _discount_amount = payload
+                        .get("context")
+                        .and_then(|c| c.get("discount_amount"))
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0);
+                    let now = Utc::now();
+                    let _expires_at = now + chrono::Duration::days(2);
+                    let _id = uuid::Uuid::new_v4().to_string();
 
-                            let new_price = payload
-                                .get("context")
-                                .and_then(|c| c.get("new_price"))
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(0.0);
-                            let new_price_cents = (new_price * 100.0) as i64;
+                    let new_price = payload
+                        .get("context")
+                        .and_then(|c| c.get("new_price"))
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0);
+                    let new_price_cents = (new_price * 100.0) as i64;
 
-                            // Update base price in products table directly
-                            if let DbStore::Postgres = &self.db.store {
+                    // Update base price in products table directly
+                    if let DbStore::Postgres = &self.db.store {
                                 if let Err(e) = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
                                     .bind(new_price)
                                     .bind(new_price_cents)
@@ -1673,8 +1665,8 @@ impl DepartmentOrchestrator {
                                     let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                                     return Err(format!("Failed to activate smart pricing discount: {}", e));
                                 }
-                            } else if let DbStore::Sqlite(pool) = &self.db.store {
-                                if let Err(e) = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
+                            } else if let DbStore::Sqlite(pool) = &self.db.store
+                                && let Err(e) = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
                                     .bind(new_price)
                                     .bind(new_price_cents)
                                     .bind(product_id)
@@ -1686,31 +1678,27 @@ impl DepartmentOrchestrator {
                                     let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                                     return Err(format!("Failed to activate smart pricing discount: {}", e));
                                 }
-                            }
 
-                            let product_name = payload
-                                .get("context")
-                                .and_then(|c| c.get("product_name"))
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("Item");
-                            let draft_desc =
-                                format!("Draft promotional email for {}", product_name);
-                            let draft_payload = serde_json::json!({
-                                "feature_type": "promotional_email_draft",
-                                "product_name": product_name,
-                                "new_price": new_price
-                            });
-                            let _ = self
-                                .execute_action(
-                                    DepartmentType::Marketing,
-                                    draft_desc,
-                                    tenant_id.to_string(),
-                                    ActionRisk::DraftForReview,
-                                    draft_payload,
-                                )
-                                .await;
-                        }
-                    }
+                    let product_name = payload
+                        .get("context")
+                        .and_then(|c| c.get("product_name"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Item");
+                    let draft_desc = format!("Draft promotional email for {}", product_name);
+                    let draft_payload = serde_json::json!({
+                        "feature_type": "promotional_email_draft",
+                        "product_name": product_name,
+                        "new_price": new_price
+                    });
+                    let _ = self
+                        .execute_action(
+                            DepartmentType::Marketing,
+                            draft_desc,
+                            tenant_id.to_string(),
+                            ActionRisk::DraftForReview,
+                            draft_payload,
+                        )
+                        .await;
                 }
 
                 // If this is an Ambassador Reply approval, update the message and dispatch event
@@ -1880,12 +1868,12 @@ impl DepartmentOrchestrator {
                 // Add to ledger
                 if let crate::db::DbStore::Postgres = &self.db.store {
                     let entry_id = Uuid::new_v4().to_string();
-                    if let Ok(mut tx) = self.db.pool.begin().await {
-                        if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+                    if let Ok(mut tx) = self.db.pool.begin().await
+                        && ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
                             .await
                             .is_ok()
-                        {
-                            let _ = sqlx::query(
+                    {
+                        let _ = sqlx::query(
                                 "INSERT INTO ohc_universal_ledger (id, tenant_id, event_type, department, payload, created_at)
                                  VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)"
                             )
@@ -1896,8 +1884,7 @@ impl DepartmentOrchestrator {
                             .bind(&payload)
                             .execute(&mut *tx)
                             .await;
-                            let _ = tx.commit().await;
-                        }
+                        let _ = tx.commit().await;
                     }
                 }
             } else {
@@ -2108,7 +2095,7 @@ impl DepartmentOrchestrator {
 
         let mut total_duration = chrono::Duration::zero();
         for i in 0..(orders.len() - 1) {
-            total_duration = total_duration + (orders[i].0 - orders[i + 1].0);
+            total_duration += orders[i].0 - orders[i + 1].0;
         }
 
         let avg_duration = total_duration / (orders.len() as i32 - 1);
@@ -2412,8 +2399,8 @@ impl DepartmentOrchestrator {
                     .bind(&c.phone)
                     .bind(&c.mood)
                     .bind(&prefs_str)
-                    .bind(&c.created_at.unwrap_or(now))
-                    .bind(&now)
+                    .bind(c.created_at.unwrap_or(now))
+                    .bind(now)
                     .execute(&self.db.pool)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -2431,7 +2418,7 @@ impl DepartmentOrchestrator {
                 if exists {
                     sqlx::query("UPDATE customer360 SET mood = ?, updated_at = ? WHERE tenant_id = ? AND customer_id = ?")
                         .bind(&c.mood)
-                        .bind(&now)
+                        .bind(now)
                         .bind(&c.tenant_id)
                         .bind(&c.customer_id)
                         .execute(pool)
@@ -2446,8 +2433,8 @@ impl DepartmentOrchestrator {
                         .bind(&c.phone)
                         .bind(&c.mood)
                         .bind(&prefs_str)
-                        .bind(&c.created_at.unwrap_or(now))
-                        .bind(&now)
+                        .bind(c.created_at.unwrap_or(now))
+                        .bind(now)
                         .execute(pool)
                         .await
                         .map_err(|e| e.to_string())?;
@@ -2561,7 +2548,7 @@ impl DepartmentOrchestrator {
                     .bind(tenant_id)
                     .bind(customer_id)
                     .bind(points)
-                    .bind(&now)
+                    .bind(now)
                     .fetch_one(&self.db.pool)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -2581,7 +2568,7 @@ impl DepartmentOrchestrator {
                     total_points = curr_points + points;
                     sqlx::query("UPDATE loyalty_ledger SET points_balance = points_balance + ?, last_updated = ? WHERE tenant_id = ? AND customer_id = ?")
                         .bind(points)
-                        .bind(&now)
+                        .bind(now)
                         .bind(tenant_id)
                         .bind(customer_id)
                         .execute(pool)
@@ -2595,7 +2582,7 @@ impl DepartmentOrchestrator {
                         .bind(tenant_id)
                         .bind(customer_id)
                         .bind(points)
-                        .bind(&now)
+                        .bind(now)
                         .execute(pool)
                         .await
                         .map_err(|e| e.to_string())?;
@@ -2755,22 +2742,58 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {
-        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
-            return;
-        }
-        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
         let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
-
-        let orchestrator = DepartmentOrchestrator::new(db, mesh);
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+        assert!(orchestrator.departments.read().await.is_empty());
+        assert!(orchestrator.event_subscriptions.read().await.is_empty());
 
         let dummy = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
             DepartmentType::Operations,
             vec!["test_event".to_string()],
-            Arc::new(orchestrator),
+            orchestrator.clone(),
         )));
-        let _ = dummy;
-        assert!(true);
+        orchestrator.register_department(dummy.clone()).await;
+        assert_eq!(orchestrator.departments.read().await.len(), 1);
+        assert!(
+            orchestrator
+                .departments
+                .read()
+                .await
+                .contains_key(&DepartmentType::Operations)
+        );
+        assert_eq!(
+            orchestrator
+                .event_subscriptions
+                .read()
+                .await
+                .get("test_event"),
+            Some(&vec![DepartmentType::Operations])
+        );
+        assert_eq!(
+            dummy.read().await.department_type(),
+            DepartmentType::Operations
+        );
+        assert!(
+            dummy
+                .read()
+                .await
+                .received_events
+                .lock()
+                .unwrap()
+                .is_empty()
+        );
     }
 }
 

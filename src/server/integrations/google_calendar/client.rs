@@ -87,27 +87,27 @@ impl RealGoogleCalendarClient {
 }
 
 fn created_event_reference(json: &Value) -> Result<String, String> {
-    if let Some(hangout_link) = json["hangoutLink"].as_str() {
-        if !hangout_link.trim().is_empty() {
-            return Ok(hangout_link.to_string());
-        }
+    if let Some(hangout_link) = json["hangoutLink"].as_str()
+        && !hangout_link.trim().is_empty()
+    {
+        return Ok(hangout_link.to_string());
     }
 
-    if let Some(entry_points) = json["conferenceData"]["entryPoints"].as_array() {
-        if let Some(video_uri) = entry_points.iter().find_map(|entry_point| {
+    if let Some(entry_points) = json["conferenceData"]["entryPoints"].as_array()
+        && let Some(video_uri) = entry_points.iter().find_map(|entry_point| {
             let is_video = entry_point["entryPointType"].as_str() == Some("video");
             entry_point["uri"]
                 .as_str()
                 .filter(|uri| is_video && !uri.trim().is_empty())
-        }) {
-            return Ok(video_uri.to_string());
-        }
+        })
+    {
+        return Ok(video_uri.to_string());
     }
 
-    if let Some(event_id) = json["id"].as_str() {
-        if !event_id.trim().is_empty() {
-            return Ok(event_id.to_string());
-        }
+    if let Some(event_id) = json["id"].as_str()
+        && !event_id.trim().is_empty()
+    {
+        return Ok(event_id.to_string());
     }
 
     Err(
@@ -237,7 +237,7 @@ impl RealGoogleCalendarClient {
                         .as_array()
                         .ok_or_else(|| "Missing items array in response".to_string())?
                         .iter()
-                        .filter_map(|item| {
+                        .map(|item| {
                             let start = item["start"]["dateTime"]
                                 .as_str()
                                 .or_else(|| item["start"]["date"].as_str())
@@ -246,12 +246,12 @@ impl RealGoogleCalendarClient {
                                 .as_str()
                                 .or_else(|| item["end"]["date"].as_str())
                                 .map(|s| s.to_string());
-                            Some(CalendarEvent {
+                            CalendarEvent {
                                 id: item["id"].as_str().map(|s| s.to_string()),
                                 summary: item["summary"].as_str().map(|s| s.to_string()),
                                 start,
                                 end,
-                            })
+                            }
                         })
                         .collect();
                     Ok(events)
@@ -291,26 +291,25 @@ mod tests {
                 assert!(read > 0, "client closed connection before sending request");
                 request.extend_from_slice(&buffer[..read]);
 
-                if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
-                    {
-                        header_end = Some(index + 4);
-                        let headers = String::from_utf8_lossy(&request[..index]);
-                        content_length = headers
-                            .lines()
-                            .find_map(|line| {
-                                line.strip_prefix("content-length: ")
-                                    .or_else(|| line.strip_prefix("Content-Length: "))
-                            })
-                            .and_then(|value| value.trim().parse::<usize>().ok())
-                            .unwrap_or(0);
-                    }
+                if header_end.is_none()
+                    && let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                {
+                    header_end = Some(index + 4);
+                    let headers = String::from_utf8_lossy(&request[..index]);
+                    content_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            line.strip_prefix("content-length: ")
+                                .or_else(|| line.strip_prefix("Content-Length: "))
+                        })
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
                 }
 
-                if let Some(body_start) = header_end {
-                    if request.len() >= body_start + content_length {
-                        break;
-                    }
+                if let Some(body_start) = header_end
+                    && request.len() >= body_start + content_length
+                {
+                    break;
                 }
             }
 

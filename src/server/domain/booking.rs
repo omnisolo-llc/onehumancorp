@@ -1,9 +1,6 @@
 use serde_json::Value;
 use sqlx::PgPool;
 
-#[cfg(omnisolo_bazel)]
-use crate::integrations::stripe::client::StripeClient;
-#[cfg(not(omnisolo_bazel))]
 use server_integrations_stripe::client::StripeClient;
 
 pub async fn handle_booking_action(
@@ -66,7 +63,11 @@ pub async fn handle_booking_approval(
     Ok(())
 }
 
-pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn handle_autonomous_quote_action(
+    tenant_id: &str,
+    payload: &Value,
+    pool: &PgPool,
+) -> Result<(), sqlx::Error> {
     tracing::info!("Handling autonomous quote action for tenant: {}", tenant_id); // pii-safe
 
     let proposed_slot_id = payload
@@ -145,19 +146,17 @@ pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, po
         // Release the Redis Redlock explicitly as it was just a temporary hold during quote generation
         if let Ok(redis_url) =
             std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL"))
-        {
-            if let Ok(redis_lock) =
+            && let Ok(redis_lock) =
                 crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url)
-            {
-                let _ = redis_lock
-                    .release_lock(
-                        tenant_id,
-                        "booking_slot",
-                        proposed_slot_id,
-                        proposed_slot_id,
-                    )
-                    .await; // Note lock_val is not saved, so we can't reliably delete it unless we store it. Since it expires in 10 mins anyway, it's fine.
-            }
+        {
+            let _ = redis_lock
+                .release_lock(
+                    tenant_id,
+                    "booking_slot",
+                    proposed_slot_id,
+                    proposed_slot_id,
+                )
+                .await; // Note lock_val is not saved, so we can't reliably delete it unless we store it. Since it expires in 10 mins anyway, it's fine.
         }
     }
 

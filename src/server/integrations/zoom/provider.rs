@@ -38,6 +38,18 @@ impl ZoomProvider {
     }
 }
 
+impl ZoomProvider {
+    pub async fn generate_meeting_for_booking(
+        &self,
+        _booking_id: &str,
+        topic: &str,
+    ) -> Result<String, String> {
+        let link = self.create_meeting(topic).await?;
+        // Attach link to booking record in DB
+        Ok(link)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -54,17 +66,5 @@ mod tests {
         let provider = ZoomProvider::new("test_token".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "zoom");
-    }
-}
-
-impl ZoomProvider {
-    pub async fn generate_meeting_for_booking(
-        &self,
-        _booking_id: &str,
-        topic: &str,
-    ) -> Result<String, String> {
-        let link = self.create_meeting(topic).await?;
-        // Attach link to booking record in DB
-        Ok(link)
     }
 }

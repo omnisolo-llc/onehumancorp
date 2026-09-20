@@ -1,15 +1,7 @@
 import { chmod, mkdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
-import {
-  HYDRATION_FAILURE_PATTERN,
-  classifyConsoleError,
-  expectedShellCounts,
-  failureReasons,
-  isCoverageComplete,
-  PUBLIC_AUTH_ROUTES,
-  shouldFailAudit,
-} from './visual-audit-policy.mjs';
+import { HYDRATION_FAILURE_PATTERN, classifyConsoleError, failureReasons, isCoverageComplete, PUBLIC_AUTH_ROUTES, shouldFailAudit } from './visual-audit-policy.mjs';
 import { loginForVisualAudit } from './visual-audit-auth.mjs';
 import { discoverPageRoutes, shardAuditCases } from './visual-audit-routes.mjs';
 
@@ -366,7 +358,10 @@ try {
     if (!result.screenshotWritten) continue;
     try {
       const screenshotStat = await stat(result.screenshot);
-      if (!screenshotStat.isFile()) throw new Error('screenshot path is not a file');
+      if (!screenshotStat.isFile()) {
+        result.screenshotWritten = false;
+        result.screenshotError ||= 'screenshot verification failed: screenshot path is not a file';
+      }
     } catch (error) {
       result.screenshotWritten = false;
       result.screenshotError ||= redactAndLimit(

@@ -1,5 +1,5 @@
-import { test, expect } from '../../../../e2e/fixtures';
-import { e2eTestTenant } from './fixtures';
+import { test } from '../../../../e2e/fixtures';
+import './fixtures';
 
 test.describe('Post-Purchase Share Widget Generator', () => {
   test('Owner can configure widget, preview it, and unlock white-labeling', async ({ request, baseURL }) => {

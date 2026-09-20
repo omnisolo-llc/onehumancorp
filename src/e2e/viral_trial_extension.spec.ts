@@ -10,7 +10,7 @@ test.describe('Viral Trial Extension Loop', () => {
     try {
         await expect(extensionLink).toBeVisible({ timeout: 5000 });
         await extensionLink.click();
-    } catch(e) {
+    } catch {
         // sometimes there's no link, we just go direct
         await page.goto('/trial-extension');
     }

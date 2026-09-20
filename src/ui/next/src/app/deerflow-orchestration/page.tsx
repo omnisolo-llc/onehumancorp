@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 import { useState } from 'react';
 
 export default function DeerFlowOrchestration() {
@@ -27,8 +28,8 @@ export default function DeerFlowOrchestration() {
         throw new Error(data.error || 'Something went wrong');
       }
       setResult(data.result);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }

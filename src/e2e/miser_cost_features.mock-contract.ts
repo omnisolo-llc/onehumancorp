@@ -66,7 +66,7 @@ test.describe('Miser Cost Features E2E', () => {
     try {
       await page.waitForURL('**/checkout?tier=Starter', { timeout: 5000 });
       await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 5000 });
-    } catch (e) {
+    } catch  {
       // Allow environment checkout URL timeouts since stripe keys are mocked/absent in the pure e2e env
     }
   });
@@ -95,7 +95,7 @@ test.describe('Miser Cost Features E2E', () => {
     try {
       await page.waitForURL('**/checkout?tier=Pro', { timeout: 5000 });
       await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 5000 });
-    } catch (e) {
+    } catch  {
       // Allow environment checkout URL timeouts since stripe keys are mocked/absent in the pure e2e env
     }
   });
@@ -123,7 +123,7 @@ test.describe('Miser Cost Features E2E', () => {
     try {
       await page.waitForURL('**/checkout?tier=Business', { timeout: 5000 });
       await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 5000 });
-    } catch (e) {
+    } catch  {
       // Allow environment checkout URL timeouts since stripe keys are mocked/absent in the pure e2e env
     }
   });

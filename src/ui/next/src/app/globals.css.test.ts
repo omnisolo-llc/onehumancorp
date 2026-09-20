@@ -13,7 +13,7 @@ describe('Global CSS Standards', () => {
          path.resolve(__dirname, 'globals.css'),
          path.resolve(process.cwd(), 'src/ui/next/src/app/globals.css'),
        ];
-       let globalsPath = possiblePaths.find(p => fs.existsSync(p));
+       const globalsPath = possiblePaths.find(p => fs.existsSync(p));
        if (globalsPath) {
            const content = fs.readFileSync(globalsPath, 'utf8');
            expect(content).toContain('blur(30px) saturate(210%)');
@@ -22,7 +22,7 @@ describe('Global CSS Standards', () => {
            expect(content).not.toContain('blur(40px)');
            expect(content).not.toContain('saturate(200%)');
        }
-    } catch (e) {
+    } catch  {
        // Ignore if not found
     }
     expect(true).toBe(true);
@@ -34,12 +34,12 @@ describe('Global CSS Standards', () => {
          path.resolve(__dirname, 'globals.css'),
          path.resolve(process.cwd(), 'src/ui/next/src/app/globals.css'),
        ];
-       let globalsPath = possiblePaths.find(p => fs.existsSync(p));
+       const globalsPath = possiblePaths.find(p => fs.existsSync(p));
        if (globalsPath) {
            const content = fs.readFileSync(globalsPath, 'utf8');
            expect(content).not.toContain('@apply bg-white/65');
        }
-    } catch (e) {
+    } catch  {
        // Ignore if not found
     }
   });

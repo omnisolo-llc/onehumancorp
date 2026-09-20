@@ -14,13 +14,10 @@ pub async fn run_health_monitor(
         interval.tick().await;
 
         // Perform active probe
-        let ping_ok =
-            match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.ping())
-                .await
-            {
-                Ok(Ok(_)) => true,
-                _ => false,
-            };
+        let ping_ok = matches!(
+            tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.ping()).await,
+            Ok(Ok(_))
+        );
 
         if !ping_ok {
             tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
@@ -33,10 +30,10 @@ pub async fn run_health_monitor(
         )
         .await
         {
-            if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
-                if !ready {
-                    tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
-                }
+            if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool())
+                && !ready
+            {
+                tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
             }
 
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
@@ -56,13 +53,12 @@ pub async fn run_health_monitor(
             if let Some(sync_queue) = health
                 .get("local_to_cloud_sync_queue")
                 .and_then(|v| v.as_i64())
+                && sync_queue > 100
             {
-                if sync_queue > 100 {
-                    tracing::trace!(
-                        "HEALTH MONITOR: High local_to_cloud_sync_queue detected: {}",
-                        sync_queue
-                    );
-                }
+                tracing::trace!(
+                    "HEALTH MONITOR: High local_to_cloud_sync_queue detected: {}",
+                    sync_queue
+                );
             }
         }
 
@@ -135,8 +131,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {
-        let db_url =
-            std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
@@ -202,8 +198,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_cloud_retry() {
-        let db_url =
-            std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
@@ -252,8 +248,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_sync_probe() {
-        let db_url =
-            std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }

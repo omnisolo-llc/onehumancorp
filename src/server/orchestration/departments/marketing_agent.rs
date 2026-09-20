@@ -295,23 +295,23 @@ impl Department for MarketingAgent {
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
 
-            if !product_id.is_empty() {
-                if let Ok((seo_title, seo_desc, seo_schema)) = self
+            if !product_id.is_empty()
+                && let Ok((seo_title, seo_desc, seo_schema)) = self
                     .seo_client
                     .generate_seo_metadata(name, description, item_type, price)
                     .await
-                {
-                    if let Ok(orchestrator) = self.orchestrator() {
-                        let pool = orchestrator.db().pool.clone();
-                        let tenant_id_str = event.tenant_id.clone();
-                        let product_id_str = product_id.to_string();
+                && let Ok(orchestrator) = self.orchestrator()
+            {
+                let pool = orchestrator.db().pool.clone();
+                let tenant_id_str = event.tenant_id.clone();
+                let product_id_str = product_id.to_string();
 
-                        // Spawn a task to update DB, invalidate cache, and enqueue publish job
-                        let seo_schema_clone = seo_schema.clone();
-                        tokio::spawn(async move {
-                            if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
-                                // Update DB
-                                let _ = sqlx::query("UPDATE products SET seo_title = $1, seo_description = $2, seo_schema_json = $3 WHERE tenant_id = $4 AND id = $5")
+                // Spawn a task to update DB, invalidate cache, and enqueue publish job
+                let seo_schema_clone = seo_schema.clone();
+                tokio::spawn(async move {
+                    if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
+                        // Update DB
+                        let _ = sqlx::query("UPDATE products SET seo_title = $1, seo_description = $2, seo_schema_json = $3 WHERE tenant_id = $4 AND id = $5")
                                     .bind(seo_title)
                                     .bind(seo_desc)
                                     .bind(seo_schema_clone)
@@ -320,83 +320,70 @@ impl Department for MarketingAgent {
                                     .execute(&pool)
                                     .await;
 
-                                // Invalidate cache
-                                let invalidation_event = serde_json::json!({
-                                    "event": "tenant.product.updated",
-                                    "tags": [
-                                        format!("tenant-id:{}", tenant_id_str),
-                                        format!("entity:product:{}", product_id_str)
-                                    ]
-                                });
+                        // Invalidate cache
+                        let invalidation_event = serde_json::json!({
+                            "event": "tenant.product.updated",
+                            "tags": [
+                                format!("tenant-id:{}", tenant_id_str),
+                                format!("entity:product:{}", product_id_str)
+                            ]
+                        });
 
-                                if let Some(redis_client) = crate::get_redis_client() {
-                                    if let Ok(mut conn) =
-                                        redis_client.get_multiplexed_async_connection().await
-                                    {
-                                        use redis::AsyncCommands;
-                                        let _: Result<(), _> = conn
-                                            .publish(
-                                                "cache_invalidation_events",
-                                                invalidation_event.to_string(),
-                                            )
-                                            .await;
-                                    }
-                                } else {
-                                    let cache = crate::builder::edge::get_edge_cache();
-                                    cache
-                                        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str))
-                                        .await;
-                                    cache
-                                        .invalidate_by_tag(&format!(
-                                            "entity:product:{}",
-                                            product_id_str
-                                        ))
-                                        .await;
-                                    let cdn_cache =
-                                        crate::utils::edge_caching_middleware::get_cdn_cache();
-                                    cdn_cache
-                                        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str))
-                                        .await;
-                                    cdn_cache
-                                        .invalidate_by_tag(&format!(
-                                            "entity:product:{}",
-                                            product_id_str
-                                        ))
-                                        .await;
-                                }
-
-                                // Proactively pre-render the product cache
-                                if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
-                                    let cache_key = format!(
-                                        "storefront:product:{}:{}",
-                                        tenant_id, product_uuid
-                                    );
-                                    let cache = crate::builder::edge::get_edge_cache();
-                                    let _ = crate::builder::edge::regenerate_product_cache(
-                                        pool.clone(),
-                                        tenant_id,
-                                        product_uuid,
-                                        cache_key,
-                                        cache.clone(),
+                        if let Some(redis_client) = crate::get_redis_client() {
+                            if let Ok(mut conn) =
+                                redis_client.get_multiplexed_async_connection().await
+                            {
+                                use redis::AsyncCommands;
+                                let _: Result<(), _> = conn
+                                    .publish(
+                                        "cache_invalidation_events",
+                                        invalidation_event.to_string(),
                                     )
                                     .await;
-                                }
-
-                                // Trigger site publish job for all sites for the tenant
-                                if let Ok(sites) =
-                                    crate::builder::db::list_sites(&pool, tenant_id).await
-                                {
-                                    for site in sites {
-                                        let _ = crate::builder::jobs::enqueue_publish_site_job(
-                                            &pool, tenant_id, site.id,
-                                        )
-                                        .await;
-                                    }
-                                }
                             }
-                        });
+                        } else {
+                            let cache = crate::builder::edge::get_edge_cache();
+                            cache
+                                .invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str))
+                                .await;
+                            cache
+                                .invalidate_by_tag(&format!("entity:product:{}", product_id_str))
+                                .await;
+                            let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                            cdn_cache
+                                .invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str))
+                                .await;
+                            cdn_cache
+                                .invalidate_by_tag(&format!("entity:product:{}", product_id_str))
+                                .await;
+                        }
+
+                        // Proactively pre-render the product cache
+                        if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
+                            let cache_key =
+                                format!("storefront:product:{}:{}", tenant_id, product_uuid);
+                            let cache = crate::builder::edge::get_edge_cache();
+                            let _ = crate::builder::edge::regenerate_product_cache(
+                                pool.clone(),
+                                tenant_id,
+                                product_uuid,
+                                cache_key,
+                                cache.clone(),
+                            )
+                            .await;
+                        }
+
+                        // Trigger site publish job for all sites for the tenant
+                        if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_id).await {
+                            for site in sites {
+                                let _ = crate::builder::jobs::enqueue_publish_site_job(
+                                    &pool, tenant_id, site.id,
+                                )
+                                .await;
+                            }
+                        }
                     }
-                }
+                });
             }
         }
 
@@ -570,36 +557,36 @@ impl Department for MarketingAgent {
                 .unwrap_or("Service");
             let media = event.payload.get("media").and_then(|v| v.as_array());
 
-            if let Some(media_array) = media {
-                if !media_array.is_empty() {
-                    let media_url = media_array[0].as_str().unwrap_or("");
+            if let Some(media_array) = media
+                && !media_array.is_empty()
+            {
+                let media_url = media_array[0].as_str().unwrap_or("");
 
-                    let draft_copy = format!(
-                        "Beautiful new {} completed recently. Completed on time and on budget.",
-                        service_name.to_lowercase()
-                    );
+                let draft_copy = format!(
+                    "Beautiful new {} completed recently. Completed on time and on budget.",
+                    service_name.to_lowercase()
+                );
 
-                    let payload = serde_json::json!({
-                        "feature_type": "case_study",
-                        "service_name": service_name,
-                        "media_url": media_url,
-                        "draft_copy": draft_copy
-                    });
+                let payload = serde_json::json!({
+                    "feature_type": "case_study",
+                    "service_name": service_name,
+                    "media_url": media_url,
+                    "draft_copy": draft_copy
+                });
 
-                    let description = format!("Draft portfolio case study for {}", service_name);
+                let description = format!("Draft portfolio case study for {}", service_name);
 
-                    return self
-                        .orchestrator()?
-                        .execute_action(
-                            DepartmentType::Marketing,
-                            description,
-                            event.tenant_id.clone(),
-                            risk,
-                            payload,
-                        )
-                        .await
-                        .map(|_| ());
-                }
+                return self
+                    .orchestrator()?
+                    .execute_action(
+                        DepartmentType::Marketing,
+                        description,
+                        event.tenant_id.clone(),
+                        risk,
+                        payload,
+                    )
+                    .await
+                    .map(|_| ());
             }
         }
 

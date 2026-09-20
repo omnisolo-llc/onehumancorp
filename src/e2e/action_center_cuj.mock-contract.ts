@@ -37,9 +37,7 @@ test.describe('Advisor Agent CUJ', () => {
 
     // Wait for either a pending recommendation or the empty state.
     // The description usually says "Draft weekly business health report"
-    const approvalLocator = page.getByText('Draft weekly business health report').first();
     const approveButton = page.getByRole('button', { name: 'Approve & Send' }).first();
-    const dismissButton = page.getByRole('button', { name: 'Dismiss' }).first();
 
     await expect(page.getByText(/All Caught Up!|Draft weekly business health report/)).toBeVisible({ timeout: 15000 });
 

@@ -35,7 +35,7 @@ export const ShiftReassignmentCard: React.FC<ShiftReassignmentCardProps> = ({
       ? JSON.parse(approval.proposed_action)
       : approval.proposed_action;
 
-  let shiftContext = context?.context || "Action Required: Shift Coverage";
+  const shiftContext = context?.context || "Action Required: Shift Coverage";
 
   let newStaffName = "a replacement";
   let originalStaffName = "a staff member";

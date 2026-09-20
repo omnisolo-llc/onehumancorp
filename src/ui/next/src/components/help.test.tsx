@@ -1,9 +1,8 @@
 import '@testing-library/jest-dom';
-import React from 'react';
-import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
+import { render,screen,act,waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HelpWidget, WalkthroughProvider, shouldShowMobileHelpLauncher } from './help';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { HelpWidget,WalkthroughProvider,shouldShowMobileHelpLauncher } from './help';
+import { describe,it,expect,vi,beforeEach,afterEach } from 'vitest';
 import { TooltipProvider } from './TooltipRegistry';
 
 const navigationMocks = vi.hoisted(() => ({
@@ -117,7 +116,7 @@ describe('HelpWidget', () => {
       await new Promise(r => setTimeout(r, 20));
     });
 
-    const requestedUrls = (global.fetch as any).mock.calls.map(([url]: [string]) => url);
+    const requestedUrls = vi.mocked(global.fetch, { partial: true }).mock.calls.map(([url]: [string]) => url);
     expect(requestedUrls).not.toContain('/api/v1/help');
     expect(requestedUrls).not.toContain('/api/v1/videos');
   });

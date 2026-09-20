@@ -312,10 +312,10 @@ fn parse_json_object(raw: &str) -> Result<Value, String> {
                 }
                 let mut stream =
                     serde_json::Deserializer::from_str(&raw[idx..]).into_iter::<Value>();
-                if let Some(Ok(value)) = stream.next() {
-                    if value.is_object() {
-                        return Ok(value);
-                    }
+                if let Some(Ok(value)) = stream.next()
+                    && value.is_object()
+                {
+                    return Ok(value);
                 }
             }
             Err("failed to extract agent JSON object".to_string())

@@ -12,7 +12,7 @@ describe("VerificationLoopsPage", () => {
   });
 
   it("handles valid execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ result: { message: "Verification passed successfully." } }),
     });
@@ -39,7 +39,7 @@ describe("VerificationLoopsPage", () => {
   });
 
   it("handles validation error execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Verification Loop Failed" }),
     });

@@ -1,4 +1,5 @@
 use crate::db::DB;
+use ::server_harness::middleware::{connection_vault::ConnectionVault, usage_ledger::UsageLedger};
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -9,12 +10,37 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+pub fn connection_vault(db: &DB) -> Result<ConnectionVault, String> {
+    let ledger = match &db.store {
+        crate::db::DbStore::Postgres => UsageLedger::Postgres(db.pool.clone()),
+        crate::db::DbStore::Sqlite(pool) => UsageLedger::Sqlite(pool.clone()),
+    };
+    ConnectionVault::from_environment(ledger).map_err(|error| error.to_string())
+}
+
+pub async fn stripe_key_for_tenant(db: &DB, tenant: &str) -> Result<String, String> {
+    if std::env::var_os("OMNISOLO_CONNECTION_KEYS").is_some() {
+        // A missing/revoked tenant key must never fall back to another payer.
+        return connection_vault(db)?
+            .read_key(tenant, "stripe")
+            .await
+            .map(|key| key.to_string())
+            .map_err(|error| error.to_string());
+    }
+    if crate::is_standalone_runtime() {
+        return std::env::var("STRIPE_API_KEY")
+            .map_err(|_| "Payment connection is not configured".into());
+    }
+    Err("A verified tenant payment connection is required".into())
+}
+
 #[derive(Clone)]
 pub struct ToolIntegrationsApiState {
     pub db: Arc<DB>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConnectIntegrationRequest {
     pub bot_token: Option<String>,
     pub api_token: Option<String>,
@@ -49,7 +75,6 @@ fn connection_response(
     )
 }
 
-#[derive(Debug)]
 struct ValidatedConnectIntegration {
     integration_id: String,
     bot_token: Option<String>,
@@ -119,12 +144,26 @@ fn validate_connect_request(
 }
 
 pub async fn connect_integration_handler(
-    State(_state): State<ToolIntegrationsApiState>,
+    State(state): State<ToolIntegrationsApiState>,
     axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
     Path(id): Path<String>,
     Json(payload): Json<ConnectIntegrationRequest>,
 ) -> impl IntoResponse {
-    let Some(_tenant_id) = user
+    if !user
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return connection_response(
+            StatusCode::FORBIDDEN,
+            false,
+            "Owner approval is required",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    }
+    let Some(tenant_id) = user
         .organization_id
         .filter(|value| !value.trim().is_empty())
     else {
@@ -150,6 +189,45 @@ pub async fn connect_integration_handler(
             .into_response();
         }
     };
+    if matches!(validated.integration_id.as_str(), "openai_api" | "stripe") {
+        let Some(secret) = validated.api_token.as_deref() else {
+            return connection_response(
+                StatusCode::BAD_REQUEST,
+                false,
+                "An API key is required; subscription tokens are not accepted",
+                "unavailable",
+                false,
+            )
+            .into_response();
+        };
+        let vault = match connection_vault(&state.db) {
+            Ok(vault) => vault,
+            Err(_) => {
+                return connection_response(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    false,
+                    "Connection encryption is not configured",
+                    "unavailable",
+                    false,
+                )
+                .into_response();
+            }
+        };
+        if vault.initialize().await.is_err() {
+            return connection_response(
+                StatusCode::SERVICE_UNAVAILABLE,
+                false,
+                "Connection storage is unavailable",
+                "unavailable",
+                false,
+            )
+            .into_response();
+        }
+        return match vault.verify_and_store(&tenant_id,&validated.integration_id,secret).await {
+            Ok(_) => connection_response(StatusCode::OK,true,"Provider API key verified and encrypted; available to supported tenant-scoped routes","verified",true).into_response(),
+            Err(_) => connection_response(StatusCode::BAD_GATEWAY,false,"Provider verification failed; no connection was stored","unavailable",false).into_response(),
+        };
+    }
     tracing::info!(
         integration_id = %validated.integration_id,
         bot_token_supplied = validated.bot_token.is_some(),
@@ -237,7 +315,7 @@ pub async fn get_integrations_handler(
         }
     };
 
-    let integrations = rows
+    let mut integrations: Vec<IntegrationInfo> = rows
         .into_iter()
         .map(|(id, status)| IntegrationInfo {
             status: if status == "connected" {
@@ -250,6 +328,18 @@ pub async fn get_integrations_handler(
         })
         .collect();
 
+    if let Ok(vault) = connection_vault(&state.db)
+        && let Ok(verified) = vault.list(&tenant_id).await
+    {
+        for connection in verified {
+            integrations.retain(|entry| entry.id != connection.provider);
+            integrations.push(IntegrationInfo {
+                id: connection.provider,
+                usable: connection.state == "verified",
+                status: connection.state,
+            });
+        }
+    }
     Json(GetIntegrationsResponse {
         success: true,
         integrations,
@@ -258,11 +348,147 @@ pub async fn get_integrations_handler(
     .into_response()
 }
 
+async fn refresh_integration_handler(
+    State(state): State<ToolIntegrationsApiState>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    if !user
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return connection_response(
+            StatusCode::FORBIDDEN,
+            false,
+            "Owner approval is required",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    }
+    let Some(tenant) = user
+        .organization_id
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return connection_response(
+            StatusCode::UNAUTHORIZED,
+            false,
+            "Authenticated organization required",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    };
+    if !matches!(id.as_str(), "openai_api" | "stripe") {
+        return connection_response(
+            StatusCode::NOT_IMPLEMENTED,
+            false,
+            "Provider revalidation is not supported",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    }
+    let Ok(vault) = connection_vault(&state.db) else {
+        return connection_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            false,
+            "Connection encryption is not configured",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    };
+    match vault.refresh(&tenant, &id).await {
+        Ok(_) => connection_response(
+            StatusCode::OK,
+            true,
+            "Connection reverified with the provider",
+            "verified",
+            true,
+        )
+        .into_response(),
+        Err(_) => connection_response(
+            StatusCode::BAD_GATEWAY,
+            false,
+            "Connection could not be reverified; no new authorization was granted",
+            "verification_required",
+            false,
+        )
+        .into_response(),
+    }
+}
+
+async fn revoke_integration_handler(
+    State(state): State<ToolIntegrationsApiState>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    if !user
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return connection_response(
+            StatusCode::FORBIDDEN,
+            false,
+            "Owner approval is required",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    }
+    let Some(tenant) = user
+        .organization_id
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return connection_response(
+            StatusCode::UNAUTHORIZED,
+            false,
+            "Authenticated organization required",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    };
+    let Ok(vault) = connection_vault(&state.db) else {
+        return connection_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            false,
+            "Connection vault unavailable",
+            "unavailable",
+            false,
+        )
+        .into_response();
+    };
+    match vault.revoke(&tenant, &id).await {
+        Ok(()) => connection_response(
+            StatusCode::OK,
+            true,
+            "Connection revoked for new requests; accepted provider requests may still finish",
+            "revoked",
+            false,
+        )
+        .into_response(),
+        Err(_) => connection_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            false,
+            "Unable to revoke connection",
+            "unavailable",
+            false,
+        )
+        .into_response(),
+    }
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     let state = ToolIntegrationsApiState { db };
     Router::new()
         .route("/", get(get_integrations_handler))
         .route("/{id}/connect", post(connect_integration_handler))
+        .route("/{id}/verify", post(refresh_integration_handler))
+        .route("/{id}", axum::routing::delete(revoke_integration_handler))
         .with_state(state)
 }
 

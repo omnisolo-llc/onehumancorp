@@ -1,0 +1,9 @@
+{
+  "name": "ohc-harness-test-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned provider-free executable prerequisites for native harness integration tests",
+  "dependencies": {
+    "opencode-ai": "1.18.15"
+  }
+}

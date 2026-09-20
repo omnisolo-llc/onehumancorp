@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { expect, test, describe, vi, beforeEach } from 'vitest';
+import { render,screen,waitFor } from '@testing-library/react';
+import { expect,test,describe,vi,beforeEach } from 'vitest';
 import { act } from 'react';
 
 // Real TooltipProvider wrapper

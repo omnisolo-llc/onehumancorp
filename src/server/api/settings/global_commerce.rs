@@ -16,10 +16,12 @@ pub struct GlobalCommerceSettings {
     pub enabled_currencies: Vec<String>,
 }
 
-fn tenant_id(claims: &::server_common::Claims) -> Result<&str, Response> {
+fn tenant_id(claims: &::server_common::Claims) -> Result<&str, Box<Response>> {
     let tenant_id = claims.organization_id.as_deref().unwrap_or_default().trim();
     if tenant_id.is_empty() || tenant_id.eq_ignore_ascii_case("system") {
-        return Err((StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response());
+        return Err(Box::new(
+            (StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response(),
+        ));
     }
     Ok(tenant_id)
 }
@@ -50,7 +52,7 @@ fn valid_settings(settings: &GlobalCommerceSettings) -> bool {
 
 fn normalize_settings(
     mut settings: GlobalCommerceSettings,
-) -> Result<GlobalCommerceSettings, Response> {
+) -> Result<GlobalCommerceSettings, Box<Response>> {
     settings.base_currency = settings.base_currency.trim().to_ascii_uppercase();
     if settings.base_currency.len() != 3
         || !settings
@@ -58,11 +60,13 @@ fn normalize_settings(
             .chars()
             .all(|character| character.is_ascii_uppercase())
     {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "base_currency must be a three-letter ISO currency code",
-        )
-            .into_response());
+        return Err(Box::new(
+            (
+                StatusCode::BAD_REQUEST,
+                "base_currency must be a three-letter ISO currency code",
+            )
+                .into_response(),
+        ));
     }
 
     const SUPPORTED: [&str; 6] = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"];
@@ -72,7 +76,9 @@ fn normalize_settings(
             .iter()
             .any(|currency| !SUPPORTED.contains(&currency.trim().to_ascii_uppercase().as_str()))
     {
-        return Err((StatusCode::BAD_REQUEST, "unsupported currency").into_response());
+        return Err(Box::new(
+            (StatusCode::BAD_REQUEST, "unsupported currency").into_response(),
+        ));
     }
 
     let mut currencies = settings
@@ -95,11 +101,13 @@ fn normalize_settings(
     currencies.sort();
     currencies.dedup();
     if currencies.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "enabled_currencies must contain at least one currency",
-        )
-            .into_response());
+        return Err(Box::new(
+            (
+                StatusCode::BAD_REQUEST,
+                "enabled_currencies must contain at least one currency",
+            )
+                .into_response(),
+        ));
     }
     settings.enabled_currencies = currencies;
     Ok(settings)
@@ -131,7 +139,7 @@ pub async fn get_settings(
 ) -> Response {
     let tenant_id = match tenant_id(&claims) {
         Ok(tenant_id) => tenant_id,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
 
     if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
@@ -237,14 +245,14 @@ pub async fn update_settings(
 ) -> Response {
     let tenant_id = match tenant_id(&claims) {
         Ok(tenant_id) => tenant_id,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if !valid_settings(&payload) {
         return (StatusCode::BAD_REQUEST, "invalid currency settings").into_response();
     }
     let payload = match normalize_settings(payload) {
         Ok(payload) => payload,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let enabled_json = match serde_json::to_string(&payload.enabled_currencies) {
         Ok(value) => value,

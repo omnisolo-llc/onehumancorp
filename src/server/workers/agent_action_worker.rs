@@ -56,32 +56,30 @@ impl AgentActionWorker {
                     let process_future = async {
                         let mut task_success = true;
                         if is_incident {
-                            if let Some(payload_val) = dispatch_payload {
-                                if let Err(e) =
+                            if let Some(payload_val) = dispatch_payload
+                                && let Err(e) =
                                     crate::domain::incidents::handle_incident_resolution(
                                         tenant_id,
                                         &sqlx::types::Json(payload_val.clone()),
                                         &self.pool,
                                     )
                                     .await
-                                {
-                                    tracing::error!("Incident resolution failed: {}", e);
-                                    task_success = false;
-                                }
+                            {
+                                tracing::error!("Incident resolution failed: {}", e);
+                                task_success = false;
                             }
                         } else if let Some(ft) = feature_type {
-                            if let Some(payload_val) = dispatch_payload {
-                                if let Err(e) = crate::domain::action_router::dispatch_action(
+                            if let Some(payload_val) = dispatch_payload
+                                && let Err(e) = crate::domain::action_router::dispatch_action(
                                     ft,
                                     tenant_id,
                                     &sqlx::types::Json(payload_val.clone()),
                                     &self.pool,
                                 )
                                 .await
-                                {
-                                    tracing::error!("Action dispatch failed: {}", e);
-                                    task_success = false;
-                                }
+                            {
+                                tracing::error!("Action dispatch failed: {}", e);
+                                task_success = false;
                             }
                         } else {
                             // Invalid malformed payload: missing feature_type or is_incident flag
@@ -175,7 +173,6 @@ impl AgentActionWorker {
 }
 
 #[cfg(test)]
-
 mod tests {
 
     #[tokio::test]

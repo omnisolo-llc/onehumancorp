@@ -5,11 +5,11 @@ import { useMarketplace } from './useMarketplace.js';
 
 describe('useMarketplace', () => {
   beforeEach(() => {
-    global.fetch = vi.fn() as any;
+    global.fetch = vi.fn();
   });
 
   test('fetches and returns agents successfully', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         jsonrpc: '2.0',
@@ -30,7 +30,7 @@ describe('useMarketplace', () => {
   });
 
   test('handles fetch errors', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: false,
       status: 500
     });
@@ -46,7 +46,7 @@ describe('useMarketplace', () => {
   });
 
   test('handles JSON-RPC error with message', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         error: { message: 'Custom RPC Error' }
@@ -63,7 +63,7 @@ describe('useMarketplace', () => {
   });
 
   test('handles JSON-RPC error without message', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         error: {}
@@ -80,7 +80,7 @@ describe('useMarketplace', () => {
   });
 
   test('handles fetch missing result property', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         jsonrpc: '2.0',
@@ -99,7 +99,7 @@ describe('useMarketplace', () => {
   });
 
   test('handles unknown error format', async () => {
-    (global.fetch as any).mockRejectedValueOnce('Network disconnected');
+    vi.mocked(global.fetch, { partial: true }).mockRejectedValueOnce('Network disconnected');
 
     const { result } = renderHook(() => useMarketplace());
 

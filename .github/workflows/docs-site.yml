@@ -32,27 +32,14 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements_lock.txt
 
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
+      - name: Install pinned documentation dependencies
+        run: python -m pip install -r docs/requirements_lock.txt
 
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}
-          repository-cache: true
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-
-      - name: Build docs site
-        run: bazelisk run //:docs_build
+      - name: Build docs site natively
+        run: python -m mkdocs build
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v5

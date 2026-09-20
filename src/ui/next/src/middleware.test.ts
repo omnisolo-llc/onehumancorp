@@ -15,11 +15,11 @@ function request(path: string, cookie?: string): NextRequest {
   }) as NextRequest;
 }
 
-describe("Next authentication middleware adapter", () => {
+describe("Next authentication proxy adapter", () => {
   beforeEach(async () => {
     vi.resetModules();
     for (const name of AUTH_ENVIRONMENT) vi.stubEnv(name, undefined);
-    const { _resetLiveDependencies } = await import("./middleware");
+    const { _resetLiveDependencies } = await import("./proxy");
     _resetLiveDependencies();
   });
 
@@ -29,9 +29,9 @@ describe("Next authentication middleware adapter", () => {
   });
 
   it("serves reviewed framework assets without loading authentication configuration", async () => {
-    const { middleware } = await import("./middleware");
+    const { proxy } = await import("./proxy");
 
-    const response = await middleware(request("/_next/static/chunks/login.js"));
+    const response = await proxy(request("/_next/static/chunks/login.js"));
 
     expect(response.status).toBe(200);
     expect(response.headers.has("cache-control")).toBe(false);
@@ -39,9 +39,9 @@ describe("Next authentication middleware adapter", () => {
 
   it("fails closed with private output when authentication configuration is unavailable", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const { middleware } = await import("./middleware");
+    const { proxy } = await import("./proxy");
 
-    const response = await middleware(request("/dashboard"));
+    const response = await proxy(request("/dashboard"));
 
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
@@ -57,9 +57,9 @@ describe("Next authentication middleware adapter", () => {
       "OMNISOLO_WEB_SESSION_SECRET",
       "Ww7LSLEn9AaAN6IT5kwJ0yGqVO11CMI9nOEqi7wF10I",
     );
-    const { middleware } = await import("./middleware");
+    const { proxy } = await import("./proxy");
 
-    const response = await middleware(
+    const response = await proxy(
       request("/orders?tab=open", "__Host-omnisolo_session=malformed"),
     );
 
@@ -82,9 +82,9 @@ describe("Next authentication middleware adapter", () => {
       "OMNISOLO_WEB_SESSION_SECRET",
       "Ww7LSLEn9AaAN6IT5kwJ0yGqVO11CMI9nOEqi7wF10I",
     );
-    const { middleware } = await import("./middleware");
+    const { proxy } = await import("./proxy");
 
-    const response = await middleware(
+    const response = await proxy(
       new Request("http://localhost:3000/dashboard") as NextRequest,
     );
 

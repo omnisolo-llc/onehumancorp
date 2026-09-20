@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
@@ -32,7 +33,7 @@ function money(cents: number | undefined) {
 
 export default function PipelinePage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -47,8 +48,8 @@ export default function PipelinePage() {
       if (!res.ok) throw new Error("Failed to load pipeline opportunities");
       const data = await res.json();
       setOpportunities(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load opportunities");
+    } catch (e: unknown) {
+      setError(errorMessage(e, "Failed to load opportunities"));
     } finally {
       setLoading(false);
     }

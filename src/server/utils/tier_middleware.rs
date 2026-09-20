@@ -71,11 +71,11 @@ pub async fn tier_middleware(
     }
 
     let mut res = next.run(req).await;
-    if let Some(msg) = warning_msg {
-        if let Ok(header_value) = axum::http::HeaderValue::from_str(&msg) {
-            res.headers_mut()
-                .insert("x-ratelimit-warning", header_value);
-        }
+    if let Some(msg) = warning_msg
+        && let Ok(header_value) = axum::http::HeaderValue::from_str(&msg)
+    {
+        res.headers_mut()
+            .insert("x-ratelimit-warning", header_value);
     }
     res
 }
@@ -127,45 +127,45 @@ mod tests {
     async fn test_tier_middleware_blocks_over_limit() {
         let redis_url =
             std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-        if let Ok(client) = redis::Client::open(redis_url) {
-            if client.get_multiplexed_async_connection().await.is_ok() {
-                let limiter = Arc::new(RedisRateLimiter::new(client.clone()));
-                let _ = limiter.set_tenant_tier("test_tenant", PlanTier::Free).await;
+        if let Ok(client) = redis::Client::open(redis_url)
+            && client.get_multiplexed_async_connection().await.is_ok()
+        {
+            let limiter = Arc::new(RedisRateLimiter::new(client.clone()));
+            let _ = limiter.set_tenant_tier("test_tenant", PlanTier::Free).await;
 
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let _: () = conn
-                    .set("tenant:test_tenant:actions_used", 101)
-                    .await
-                    .unwrap();
+            let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+            let _: () = conn
+                .set("tenant:test_tenant:actions_used", 101)
+                .await
+                .unwrap();
 
-                let app = setup_test_router(limiter).await;
-                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-                let addr = listener.local_addr().unwrap();
-                tokio::spawn(async move {
-                    axum::serve(listener, app).await.unwrap();
-                });
+            let app = setup_test_router(limiter).await;
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            tokio::spawn(async move {
+                axum::serve(listener, app).await.unwrap();
+            });
 
-                let client = reqwest::Client::new();
-                let _res = client
-                    .get(&format!("http://{}/api/v1/protected/action", addr))
-                    .send()
-                    .await
-                    .unwrap();
+            let client = reqwest::Client::new();
+            let _res = client
+                .get(format!("http://{}/api/v1/protected/action", addr))
+                .send()
+                .await
+                .unwrap();
 
-                let month_key = chrono::Utc::now().format("%Y-%m").to_string();
-                let _: () = conn
-                    .set(format!("tenant:system:actions_used:{}", month_key), 101)
-                    .await
-                    .unwrap();
-                let res2 = client
-                    .get(&format!("http://{}/api/v1/protected/action", addr))
-                    .send()
-                    .await
-                    .unwrap();
+            let month_key = chrono::Utc::now().format("%Y-%m").to_string();
+            let _: () = conn
+                .set(format!("tenant:system:actions_used:{}", month_key), 101)
+                .await
+                .unwrap();
+            let res2 = client
+                .get(format!("http://{}/api/v1/protected/action", addr))
+                .send()
+                .await
+                .unwrap();
 
-                assert_eq!(res2.status(), StatusCode::OK);
-                assert!(res2.headers().contains_key("x-ratelimit-warning"));
-            }
+            assert_eq!(res2.status(), StatusCode::OK);
+            assert!(res2.headers().contains_key("x-ratelimit-warning"));
         }
     }
 }

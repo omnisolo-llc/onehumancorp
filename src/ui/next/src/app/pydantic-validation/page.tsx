@@ -1,5 +1,6 @@
 'use client';
-import React, { useState } from 'react';
+import { errorMessage } from '@/lib/errors';
+import { useState } from 'react';
 
 export default function PydanticValidationPage() {
   const [toolName, setToolName] = useState('');
@@ -19,7 +20,7 @@ export default function PydanticValidationPage() {
       let parsedPayload;
       try {
         parsedPayload = JSON.parse(payload);
-      } catch (e) {
+      } catch  {
         throw new Error('Invalid JSON format in payload');
       }
 
@@ -42,8 +43,8 @@ export default function PydanticValidationPage() {
       }
 
       setResult(data.result || 'Validation passed successfully');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }

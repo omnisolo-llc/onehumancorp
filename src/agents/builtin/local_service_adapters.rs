@@ -71,7 +71,10 @@ pub struct ExistingBlobBackend {
     kind: LocalServiceKind,
 }
 impl ExistingBlobBackend {
-    pub fn new(selected: Arc<dyn crate::memory_store::OmniSoloMemory>, kind: LocalServiceKind) -> Self {
+    pub fn new(
+        selected: Arc<dyn crate::memory_store::OmniSoloMemory>,
+        kind: LocalServiceKind,
+    ) -> Self {
         Self { selected, kind }
     }
 }
@@ -362,10 +365,12 @@ mod tests {
             Some(Uuid::new_v4()),
         );
         let build = |memory_root: &str, blob_root: &str| {
-            let mut run = crate::agent::AgentRunConfig::default();
-            run.long_term_memory = Some(Arc::new(crate::json_store::NamespaceJsonStore::new(
-                memory_root,
-            )));
+            let run = crate::agent::AgentRunConfig {
+                long_term_memory: Some(Arc::new(crate::json_store::NamespaceJsonStore::new(
+                    memory_root,
+                ))),
+                ..Default::default()
+            };
             gateway_for_agent_run(
                 &run,
                 LocalServiceRegistry::with_defaults(),
@@ -1046,9 +1051,11 @@ mod browser_backend_tests {
             Some(uuid::Uuid::new_v4()),
             Some(uuid::Uuid::new_v4()),
         );
-        let mut policy = crate::agent::AgentRunConfig::default();
-        policy.hil_spectrum = crate::types::HumanInLoopSpectrum::Autonomous;
-        policy.permission_architecture = crate::types::PermissionArchitecture::Permissive;
+        let policy = crate::agent::AgentRunConfig {
+            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: crate::types::PermissionArchitecture::Permissive,
+            ..Default::default()
+        };
         let tool =
             crate::tools::screenshot::screenshot_tool(Some(root.clone()), Arc::new(CaptureRunner));
         let mut excluded_policy = policy.clone();

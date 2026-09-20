@@ -1,7 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render,screen,fireEvent } from '@testing-library/react';
+import { describe,it,expect,vi,beforeEach,afterEach } from 'vitest';
 import { UnlockProFeaturesWidget } from './UnlockProFeaturesWidget';
-import * as React from 'react';
 
 // Mock clipboard
 Object.assign(navigator, {

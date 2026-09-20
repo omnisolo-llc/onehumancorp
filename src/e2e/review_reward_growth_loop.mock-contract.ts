@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { E2E_ADMIN_USER } from './fixtures';
+import './fixtures';
 
 test.describe.serial('Review Reward Growth Loop', () => {
   test('should allow owner to create an embeddable review widget with viral loop', async ({ page, adminUser, loginAs }) => {

@@ -248,7 +248,7 @@ pub async fn twilio_webhook_post_handler(
                 .bind(&text)
                 .bind(&text)
                 .bind(&clean_sender_id)
-                .bind(&customer_id)
+                .bind(customer_id)
                 .execute(pool)
                 .await.map(|_| ())
             },
@@ -262,7 +262,7 @@ pub async fn twilio_webhook_post_handler(
                 .bind(&text)
                 .bind(&text)
                 .bind(&clean_sender_id)
-                .bind(&customer_id)
+                .bind(customer_id)
                 .execute(sqlite_pool)
                 .await.map(|_| ())
             }
@@ -441,7 +441,7 @@ pub async fn twilio_voice_webhook_handler(
                 .bind(&user_text)
                 .bind(&user_text)
                 .bind(&clean_sender_id)
-                .bind(&customer_id)
+                .bind(customer_id)
                 .execute(pool)
                 .await.map(|_| ())
             },
@@ -454,7 +454,7 @@ pub async fn twilio_voice_webhook_handler(
                 .bind(&user_text)
                 .bind(&user_text)
                 .bind(&clean_sender_id)
-                .bind(&customer_id)
+                .bind(customer_id)
                 .execute(sqlite_pool)
                 .await.map(|_| ())
             }

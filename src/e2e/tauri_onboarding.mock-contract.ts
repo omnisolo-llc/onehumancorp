@@ -1,3 +1,4 @@
+import * as nativeFsModule from 'node:fs';
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -214,7 +215,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // 2. Simulate Cross-Device Resume (Closing Page, Reopening, Checking State via Backend invoke mock)
     const savedStateStr = await page.evaluate(() => {
-        try { return sessionStorage.getItem('mockState'); } catch(e) { return null; }
+        try { return sessionStorage.getItem('mockState'); } catch { return null; }
     });
 
     const newContext = await browser.newContext();
@@ -240,7 +241,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     await newPage.evaluate((stateStr) => {
         if (stateStr) {
-            try { sessionStorage.setItem('mockState', stateStr); } catch(e) {}
+            try { sessionStorage.setItem('mockState', stateStr); } catch {}
         }
     }, savedStateStr);
 
@@ -338,7 +339,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
     await page.route('http://mock/setup.html', async route => {
-        const fs = require('fs');
+        const fs = nativeFsModule;
         const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
@@ -384,7 +385,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
     await page.route('http://mock/setup.html', async route => {
-        const content = require('fs').readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        const content = nativeFsModule.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
     await page.route('**/api/v1/tooltips', async route => {

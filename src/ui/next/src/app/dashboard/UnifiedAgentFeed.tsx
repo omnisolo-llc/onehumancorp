@@ -3,23 +3,12 @@
 import { useEffect, useState, useMemo } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
-import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
-import { InstagramDMCard } from "./InstagramDMCard";
+import "./AmbassadorReplyCard";
+import "./InstagramDMCard";
 import { AgentActionCard } from "../../components/feed/AgentActionCard";
 import { GroupedAgentActionCard } from "../../components/feed/GroupedAgentActionCard";
 
-type TriageItem = {
-  id: string;
-  tenant_id: string;
-  customer_id?: string;
-  source?: string;
-  priority?: string;
-  context?: string;
-  action_type?: string;
-  action_payload?: string;
-  status?: string;
-  created_at: string;
-};
+
 
 type AgentFeedItem = {
   id: string;
@@ -32,33 +21,13 @@ type AgentFeedItem = {
   updated_at: string;
 };
 
-type ApprovalsResponse = {
-  pending_approvals: AgentFeedItem[];
-  next_cursor?: string | null;
-};
 
-type OmniSoloLedgerEntry = {
-  id: string;
-  tenant_id: string;
-  event_type: string;
-  department: string;
-  payload: any;
-  created_at: string;
-};
 
-type LedgerResponse = {
-  entries: OmniSoloLedgerEntry[];
-};
 
-type ApprovalRequest = {
-  id: string;
-  tenant_id: string;
-  department: string;
-  description: string;
-  status: string;
-  action_risk: string;
-  payload: any;
-};
+
+
+
+
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
@@ -133,7 +102,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           if (a.payload && a.payload.id) ids.add(a.payload.id);
         });
         setQueuedActionIds(ids);
-      } catch (err) {}
+      } catch  {}
     };
     updateOfflineCount();
 
@@ -259,11 +228,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                               draftReply = parsed.action_payload;
                           }
                       }
-                  } catch (e) {
+                  } catch  {
                       // ignore parse errors
                   }
 
-                  let customerMessage = ti.context || ti.customer_message || "Message requires attention";
+                  const customerMessage = ti.context || ti.customer_message || "Message requires attention";
 
                   return {
                     id: ti.id,
@@ -711,7 +680,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         return (
                           p?.context?.description || p?.original_payload?.description || "Action completed"
                         );
-                      } catch (e) {
+                      } catch  {
                         return "Action completed";
                       }
                     })()}

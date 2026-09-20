@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 
 export default function ViralGrowthWidget({
   tenantId = 'omnisolo',

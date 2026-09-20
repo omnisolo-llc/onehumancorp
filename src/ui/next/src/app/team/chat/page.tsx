@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export type ActionCard = {
@@ -110,7 +110,7 @@ export default function TeamChatPage() {
           error: { retryMessage: userMsg },
         } : msg));
       }
-    } catch (e) {
+    } catch  {
       setMessages(prev => prev.map(msg => msg.id === pendingMsgId ? {
         ...msg,
         content: 'Action needs attention',

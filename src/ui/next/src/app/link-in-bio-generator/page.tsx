@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
@@ -34,7 +34,7 @@ export default function LinkInBioGeneratorPage() {
              setRemoveBranding(data.remove_branding || false);
           }
         }
-      } catch (e) {
+      } catch  {
         // ignore
       }
     };

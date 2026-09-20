@@ -1,8 +1,7 @@
 import '@testing-library/jest-dom';
-import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render,screen,fireEvent,waitFor,act } from '@testing-library/react';
 import { InteractiveWalkthrough } from './Walkthrough';
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { describe,it,expect,vi,beforeEach,afterEach,beforeAll,afterAll } from 'vitest';
 
 describe('Walkthrough Component', () => {
   let originalEnv: string | undefined;

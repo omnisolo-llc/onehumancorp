@@ -62,13 +62,11 @@ impl SkillBlueprint {
 
         // Validate reports_to targets exist
         for role in &self.roles {
-            if !role.reports_to.is_empty() {
-                if !roles_map.contains_key(&role.reports_to) {
-                    return Err(format!(
-                        "role {} reports to unknown role: {}",
-                        role.id, role.reports_to
-                    ));
-                }
+            if !role.reports_to.is_empty() && !roles_map.contains_key(&role.reports_to) {
+                return Err(format!(
+                    "role {} reports to unknown role: {}",
+                    role.id, role.reports_to
+                ));
             }
         }
 

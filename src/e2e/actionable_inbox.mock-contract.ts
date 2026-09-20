@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { e2eDbQuery } from './db_utils';
+import './db_utils';
 
 test.describe('Actionable Inbox UX flow for owners on mobile', () => {
   test.use({ viewport: { width: 375, height: 667 } });

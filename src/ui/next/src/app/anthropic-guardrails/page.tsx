@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 import React, { useState } from 'react';
 
 export default function AnthropicGuardrailsPage() {
@@ -37,8 +38,8 @@ export default function AnthropicGuardrailsPage() {
       }
 
       setResult(data.result || 'Validation passed successfully');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }

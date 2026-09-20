@@ -59,6 +59,12 @@ pub struct McpGateway {
     active_executions: RwLock<std::collections::HashMap<String, Instant>>,
 }
 
+impl Default for McpGateway {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl McpGateway {
     pub fn new() -> Self {
         Self {
@@ -123,10 +129,11 @@ impl McpGateway {
         drop(reg);
 
         // SPIFFE authorization check
-        if let Some(required_id) = &tool.required_spiffe_id {
-            if spiffe_id != required_id && required_id != "*" {
-                return Err("Unauthorized SPIFFE ID for this tool".to_string());
-            }
+        if let Some(required_id) = &tool.required_spiffe_id
+            && spiffe_id != required_id
+            && required_id != "*"
+        {
+            return Err("Unauthorized SPIFFE ID for this tool".to_string());
         }
 
         if let Some(rate) = tool.rate_limit {
@@ -252,10 +259,10 @@ mod tests {
                 .await;
             if res.is_ok() {
                 success_count += 1;
-            } else if let Err(e) = res {
-                if e == "429 Too Many Requests" {
-                    rate_limited_count += 1;
-                }
+            } else if let Err(e) = res
+                && e == "429 Too Many Requests"
+            {
+                rate_limited_count += 1;
             }
         }
 

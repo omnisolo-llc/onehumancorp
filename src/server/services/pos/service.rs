@@ -4,7 +4,6 @@ use ::server_omnisolo::app::{
     StartTerminalSessionResponse, SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
     UpdateTerminalSessionStatusRequest, UpdateTerminalSessionStatusResponse,
 };
-use prost::Message;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -257,21 +256,18 @@ impl PosService for MyPosService {
         }
 
         let mut pending_reconciliation_str = String::new();
-        if let Ok(mut session_tx) = pool.begin().await {
-            if let Ok(row) = sqlx::query("SELECT pending_reconciliation FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2")
+        if let Ok(mut session_tx) = pool.begin().await
+            && let Ok(row) = sqlx::query("SELECT pending_reconciliation FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2")
                 .bind(&session_id)
                 .bind(&tenant_id)
                 .fetch_optional(&mut *session_tx)
                 .await
-            {
-                if let Some(record) = row {
+                && let Some(record) = row {
                     let pr: Option<serde_json::Value> = sqlx::Row::try_get(&record, "pending_reconciliation").unwrap_or(None);
                     if let Some(serde_json::Value::Array(arr)) = pr {
                         pending_reconciliation_str = serde_json::to_string(&arr).unwrap_or_default();
                     }
                 }
-            }
-        }
 
         Ok(Response::new(SyncOfflineTransactionsResponse {
             success: failed_ids.is_empty(),

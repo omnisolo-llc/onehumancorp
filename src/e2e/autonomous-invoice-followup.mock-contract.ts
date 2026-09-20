@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { E2E_ADMIN_USER } from './fixtures';
-import { v4 as uuidv4 } from 'uuid';
-import { e2eConfig } from './playwright.config';
+import 'uuid';
+import './playwright.config';
 
 test.describe('Autonomous Invoice Drafting and Follow-Up', () => {
   test('Finance agent drafts invoice for completed milestone and follows up when overdue', async ({ page }) => {

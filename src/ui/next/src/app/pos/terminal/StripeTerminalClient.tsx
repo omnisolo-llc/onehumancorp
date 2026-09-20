@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
-import { SyncManager } from '../../../lib/sync/SyncManager';
+import '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
 import { WalkthroughTarget } from '../../../components/Walkthrough';
 
@@ -22,7 +22,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const [connectedReader, setConnectedReader] = useState<any>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [reserving, setReserving] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId] = useState<string | null>(null);
   const [pendingReconciliation, setPendingReconciliation] = useState<any[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
@@ -170,7 +170,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             return;
         }
         lockId = intentData.lock_id || '';
-    } catch (e) {
+    } catch  {
         setStatus('Failed to fetch payment intent');
         if (onOptimisticRollback) onOptimisticRollback();
         return;
@@ -200,7 +200,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             } else {
                 setStatus('Failed to capture intent');
             }
-        } catch (e) {
+        } catch  {
             setStatus('Failed to capture intent');
         }
       }
@@ -286,7 +286,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
          setStatus('Cash sale recorded.');
          if (onSuccess) onSuccess();
-     } catch (e) {
+     } catch  {
          setStatus('Error processing cash sale');
      }
   };
@@ -453,7 +453,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    } else {
                      setStatus('Failed to send link');
                    }
-                 } catch (e) {
+                 } catch  {
                    setStatus('Network error');
                  } finally {
                    setReserving(false);

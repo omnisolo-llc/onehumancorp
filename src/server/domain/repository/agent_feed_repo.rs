@@ -122,8 +122,7 @@ impl AgentFeedRepository {
             crate::db::DbStore::Sqlite(_) => false,
         };
         let query = if mobile_optimized {
-            if is_pg {
-                r#"
+            r#"
                 SELECT id, tenant_id, event_source, NULL as context_payload, NULL as proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
                 UNION ALL
                 SELECT id, tenant_id, department as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
@@ -137,22 +136,6 @@ impl AgentFeedRepository {
                 SELECT id, tenant_id, 'invoices' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
                 ORDER BY created_at DESC LIMIT $2 OFFSET $3
                 "#
-            } else {
-                r#"
-                SELECT id, tenant_id, event_source, NULL as context_payload, NULL as proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
-                UNION ALL
-                SELECT id, tenant_id, department as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
-                UNION ALL
-                SELECT id, tenant_id, 'orders' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
-                UNION ALL
-                SELECT id, tenant_id, 'invoices' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
-                ORDER BY created_at DESC LIMIT $2 OFFSET $3
-                "#
-            }
         } else {
             if is_pg {
                 r#"

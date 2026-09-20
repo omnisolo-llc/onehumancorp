@@ -119,10 +119,10 @@ impl CustomerMemoryGraphService {
             }
         };
 
-        if let Some(mem_row) = memory_context_record {
-            if let Ok(context_graph) = mem_row.try_get::<serde_json::Value, _>("context_graph") {
-                summary.context_graph = Some(context_graph);
-            }
+        if let Some(mem_row) = memory_context_record
+            && let Ok(context_graph) = mem_row.try_get::<serde_json::Value, _>("context_graph")
+        {
+            summary.context_graph = Some(context_graph);
         }
 
         tx.commit().await?;

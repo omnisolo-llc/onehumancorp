@@ -1,15 +1,14 @@
 use axum::{
-    extract::{Extension, State, Json},
-    Router,
+    extract::{Extension, Json, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::post,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::sync::Arc;
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct WalkupPayload {
     pub message: String,
 }
@@ -23,12 +22,6 @@ pub struct WalkupResponse {
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<crate::db::DB>,
-}
-
-pub fn walkup_routes<S: Clone + Send + Sync + 'static>(state: AppState) -> Router<S> {
-    Router::new()
-        .route("/", post(handle_walkup))
-        .with_state(state)
 }
 
 fn signed_tenant_id(claims: &::server_common::Claims) -> Option<&str> {
@@ -47,32 +40,53 @@ pub async fn handle_walkup(
     let Some(tenant_id) = signed_tenant_id(&claims) else {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(WalkupResponse { success: false, structured_order: None }),
+            Json(WalkupResponse {
+                success: false,
+                structured_order: None,
+            }),
         )
             .into_response();
     };
-    let message = &payload.message;
+    let message = payload.message.trim();
+    if message.is_empty() || message.chars().count() > 4_000 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(WalkupResponse {
+                success: false,
+                structured_order: None,
+            }),
+        )
+            .into_response();
+    }
 
     let target_language: String = {
         let language = match &state.db.store {
-            crate::db::DbStore::Postgres => sqlx::query(
-                "SELECT language_preference FROM tenants WHERE id = $1",
-            )
-            .bind(tenant_id)
-            .fetch_optional(&state.db.pool)
-            .await
-            .ok()
-            .flatten()
-            .and_then(|row| row.try_get::<Option<String>, _>("language_preference").ok().flatten()),
-            crate::db::DbStore::Sqlite(pool) => sqlx::query(
-                "SELECT language_preference FROM tenants WHERE id = ?",
-            )
-            .bind(tenant_id)
-            .fetch_optional(pool)
-            .await
-            .ok()
-            .flatten()
-            .and_then(|row| row.try_get::<Option<String>, _>("language_preference").ok().flatten()),
+            crate::db::DbStore::Postgres => {
+                sqlx::query("SELECT language_preference FROM tenants WHERE id = $1")
+                    .bind(tenant_id)
+                    .fetch_optional(&state.db.pool)
+                    .await
+                    .ok()
+                    .flatten()
+                    .and_then(|row| {
+                        row.try_get::<Option<String>, _>("language_preference")
+                            .ok()
+                            .flatten()
+                    })
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("SELECT language_preference FROM tenants WHERE id = ?")
+                    .bind(tenant_id)
+                    .fetch_optional(pool)
+                    .await
+                    .ok()
+                    .flatten()
+                    .and_then(|row| {
+                        row.try_get::<Option<String>, _>("language_preference")
+                            .ok()
+                            .flatten()
+                    })
+            }
         };
         language.unwrap_or_else(|| "en".to_string())
     };
@@ -122,27 +136,38 @@ pub async fn handle_walkup(
 
         if intent == "Order" {
             let item_id = uuid::Uuid::new_v4().to_string();
-            match &state.db.store {
+            let persisted = match &state.db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query(
+                    let mut tx = match state.db.pool.begin().await {
+                        Ok(tx) => tx,
+                        Err(_) => return storage_failure(),
+                    };
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_err() {
+                        return storage_failure();
+                    }
+                    if sqlx::query(
                         "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'Multilingual Interceptor Agent', 'high', $3, 'pending')",
                     )
                     .bind(&item_id)
                     .bind(tenant_id)
                     .bind(translated_text)
-                    .execute(&state.db.pool)
-                    .await;
+                    .execute(&mut *tx)
+                    .await.is_err() { return storage_failure(); }
+                    tx.commit().await.map(|_| ())
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    let _ = sqlx::query(
+                    sqlx::query(
                         "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, 'Multilingual Interceptor Agent', 'high', ?, 'pending')",
                     )
                     .bind(&item_id)
                     .bind(tenant_id)
                     .bind(translated_text)
                     .execute(pool)
-                    .await;
+                    .await.map(|_| ())
                 }
+            };
+            if persisted.is_err() {
+                return storage_failure();
             }
 
             return (
@@ -154,12 +179,32 @@ pub async fn handle_walkup(
             )
                 .into_response();
         }
+        // A understood non-order is not represented as a placed order.
+        return (
+            StatusCode::OK,
+            Json(WalkupResponse {
+                success: true,
+                structured_order: None,
+            }),
+        )
+            .into_response();
     }
 
     (
-        StatusCode::OK,
+        StatusCode::BAD_GATEWAY,
         Json(WalkupResponse {
-            success: true,
+            success: false,
+            structured_order: None,
+        }),
+    )
+        .into_response()
+}
+
+fn storage_failure() -> axum::response::Response {
+    (
+        StatusCode::SERVICE_UNAVAILABLE,
+        Json(WalkupResponse {
+            success: false,
             structured_order: None,
         }),
     )
@@ -169,6 +214,48 @@ pub async fn handle_walkup(
 #[cfg(test)]
 mod tests {
     use super::signed_tenant_id;
+
+    #[test]
+    fn walkup_payload_rejects_spoofed_tenant_fields() {
+        assert!(
+            serde_json::from_str::<super::WalkupPayload>(
+                r#"{"message":"One order","tenant_id":"other-business"}"#
+            )
+            .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn walkup_rejects_empty_input_before_database_or_model_access() {
+        use axum::Json;
+        use axum::extract::{Extension, State};
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let db = crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: crate::db::DbStore::Sqlite(pool),
+        };
+        let response = super::handle_walkup(
+            State(super::AppState {
+                db: std::sync::Arc::new(db),
+            }),
+            Extension(claims(Some("tenant-a"))),
+            Json(super::WalkupPayload {
+                message: "  ".into(),
+            }),
+        )
+        .await;
+        use axum::response::IntoResponse;
+        assert_eq!(
+            response.into_response().status(),
+            axum::http::StatusCode::BAD_REQUEST
+        );
+    }
 
     fn claims(organization_id: Option<&str>) -> ::server_common::Claims {
         ::server_common::Claims {
@@ -186,7 +273,10 @@ mod tests {
 
     #[test]
     fn walkup_tenant_comes_only_from_verified_non_system_claims() {
-        assert_eq!(signed_tenant_id(&claims(Some(" tenant-7 "))), Some("tenant-7"));
+        assert_eq!(
+            signed_tenant_id(&claims(Some(" tenant-7 "))),
+            Some("tenant-7")
+        );
         assert_eq!(signed_tenant_id(&claims(None)), None);
         assert_eq!(signed_tenant_id(&claims(Some("system"))), None);
         assert_eq!(signed_tenant_id(&claims(Some("  "))), None);

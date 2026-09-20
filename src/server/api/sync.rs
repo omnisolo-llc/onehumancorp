@@ -39,7 +39,7 @@ pub async fn ws_sync_handler(
             if cfg!(test) && headers.get("x-mock-auth").is_some() {
                 query.tenant_id.clone()
             } else {
-                return err;
+                return err.into_response();
             }
         }
     };
@@ -275,63 +275,62 @@ mod tests {
 
         let redis_url =
             std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-        if let Ok(client) = redis::Client::open(redis_url) {
-            if client.get_connection().is_ok() {
-                let ws_url = format!("ws://{}/ws?tenant_id=test_tenant", addr);
+        if let Ok(client) = redis::Client::open(redis_url)
+            && client.get_connection().is_ok()
+        {
+            let ws_url = format!("ws://{}/ws?tenant_id=test_tenant", addr);
 
-                let mut request =
-                    tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
-                        ws_url,
-                    )
-                    .unwrap();
-                request
-                    .headers_mut()
-                    .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
-                let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
+            let mut request =
+                tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
+                    ws_url,
+                )
+                .unwrap();
+            request
+                .headers_mut()
+                .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
+            let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
 
-                // Sleep briefly to ensure server has subscribed to the pubsub topic
-                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            // Sleep briefly to ensure server has subscribed to the pubsub topic
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-                // Publish mock message
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let topic = "inventory:test_tenant";
-                let payload = "{\"event\":\"inventory_updated\"}";
-                let _: () = redis::cmd("PUBLISH")
-                    .arg(topic)
-                    .arg(payload)
-                    .query_async(&mut conn)
-                    .await
-                    .unwrap();
+            // Publish mock message
+            let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+            let topic = "inventory:test_tenant";
+            let payload = "{\"event\":\"inventory_updated\"}";
+            let _: () = redis::cmd("PUBLISH")
+                .arg(topic)
+                .arg(payload)
+                .query_async(&mut conn)
+                .await
+                .unwrap();
 
-                let msg = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
-                    .await
-                    .expect("Timeout")
-                    .expect("Stream closed")
-                    .expect("Error receiving");
+            let msg = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                .await
+                .expect("Timeout")
+                .expect("Stream closed")
+                .expect("Error receiving");
 
-                assert!(msg.is_text());
-                assert_eq!(msg.to_text().unwrap(), payload);
+            assert!(msg.is_text());
+            assert_eq!(msg.to_text().unwrap(), payload);
 
-                // Publish tenant event message
-                let topic2 = "tenant_events:test_tenant";
-                let payload2 = "{\"event\":\"notification\"}";
-                let _: () = redis::cmd("PUBLISH")
-                    .arg(topic2)
-                    .arg(payload2)
-                    .query_async(&mut conn)
-                    .await
-                    .unwrap();
+            // Publish tenant event message
+            let topic2 = "tenant_events:test_tenant";
+            let payload2 = "{\"event\":\"notification\"}";
+            let _: () = redis::cmd("PUBLISH")
+                .arg(topic2)
+                .arg(payload2)
+                .query_async(&mut conn)
+                .await
+                .unwrap();
 
-                let msg2 =
-                    tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
-                        .await
-                        .expect("Timeout")
-                        .expect("Stream closed")
-                        .expect("Error receiving");
+            let msg2 = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                .await
+                .expect("Timeout")
+                .expect("Stream closed")
+                .expect("Error receiving");
 
-                assert!(msg2.is_text());
-                assert_eq!(msg2.to_text().unwrap(), payload2);
-            }
+            assert!(msg2.is_text());
+            assert_eq!(msg2.to_text().unwrap(), payload2);
         }
     }
 
@@ -363,52 +362,52 @@ mod tests {
 
         let redis_url =
             std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-        if let Ok(client) = redis::Client::open(redis_url) {
-            if client.get_connection().is_ok() {
-                let ws_url = format!("ws://{}/ws?tenant_id=test_batch", addr);
+        if let Ok(client) = redis::Client::open(redis_url)
+            && client.get_connection().is_ok()
+        {
+            let ws_url = format!("ws://{}/ws?tenant_id=test_batch", addr);
 
-                let mut request =
-                    tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
-                        ws_url,
-                    )
-                    .unwrap();
-                request
-                    .headers_mut()
-                    .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
-                let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
+            let mut request =
+                tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
+                    ws_url,
+                )
+                .unwrap();
+            request
+                .headers_mut()
+                .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
+            let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
 
-                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let topic = "inventory:test_batch";
+            let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+            let topic = "inventory:test_batch";
 
-                // Publish 5 messages rapidly - they should be batched
-                for i in 0..5 {
-                    let payload = format!("{{\"seq\":{}}}", i);
-                    let _: () = redis::cmd("PUBLISH")
-                        .arg(topic)
-                        .arg(payload)
-                        .query_async(&mut conn)
-                        .await
-                        .unwrap();
-                }
-
-                // Wait for batch to arrive (50ms window + buffer)
-                let msg = tokio::time::timeout(std::time::Duration::from_secs(3), ws_stream.next())
+            // Publish 5 messages rapidly - they should be batched
+            for i in 0..5 {
+                let payload = format!("{{\"seq\":{}}}", i);
+                let _: () = redis::cmd("PUBLISH")
+                    .arg(topic)
+                    .arg(payload)
+                    .query_async(&mut conn)
                     .await
-                    .expect("Timeout waiting for batch")
-                    .expect("Stream closed")
-                    .expect("Error receiving message");
+                    .unwrap();
+            }
 
-                assert!(msg.is_text());
-                let text = msg.to_text().unwrap();
-                let parsed: serde_json::Value = serde_json::from_str(text).expect("Invalid JSON");
-                assert_eq!(parsed["type"], "batch");
-                let items = parsed["items"].as_array().expect("items not an array");
-                assert_eq!(items.len(), 5);
-                for i in 0..5 {
-                    assert_eq!(items[i], serde_json::json!({"seq": i}));
-                }
+            // Wait for batch to arrive (50ms window + buffer)
+            let msg = tokio::time::timeout(std::time::Duration::from_secs(3), ws_stream.next())
+                .await
+                .expect("Timeout waiting for batch")
+                .expect("Stream closed")
+                .expect("Error receiving message");
+
+            assert!(msg.is_text());
+            let text = msg.to_text().unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(text).expect("Invalid JSON");
+            assert_eq!(parsed["type"], "batch");
+            let items = parsed["items"].as_array().expect("items not an array");
+            assert_eq!(items.len(), 5);
+            for (i, item) in items.iter().enumerate() {
+                assert_eq!(*item, serde_json::json!({"seq": i}));
             }
         }
     }

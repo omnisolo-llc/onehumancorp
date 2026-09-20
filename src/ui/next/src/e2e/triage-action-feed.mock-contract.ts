@@ -82,18 +82,18 @@ test.describe('Triage Action Feed UI', () => {
       try {
         await approveBtn.waitFor({ state: 'visible', timeout: 2000 });
         await approveBtn.click();
-      } catch (e) {
+      } catch  {
         try {
           await reviewBtn.waitFor({ state: 'visible', timeout: 2000 });
           await reviewBtn.click();
           const saveBtn = firstCard.locator(`button[data-testid="triage-save-btn-${testId?.replace("triage-card-", "")}"]`);
           await saveBtn.waitFor({ state: 'visible', timeout: 2000 });
           await saveBtn.click();
-        } catch (e1) {
+        } catch  {
           try {
             await dismissBtn.waitFor({ state: 'visible', timeout: 2000 });
             await dismissBtn.click();
-          } catch (e2) {
+          } catch  {
             console.log(`No approve, review, or dismiss button visible for ${testId?.replace("triage-card-", "")}!`);
             break;
           }
@@ -118,7 +118,7 @@ test.describe('Triage Action Feed UI', () => {
     // fetch failing during the final state. Wait a reasonable time but don't strictly assert.
     try {
       await expect(emptyState).toBeVisible({ timeout: 10000 });
-    } catch (e) {
+    } catch  {
       console.log('Empty state not visible, likely due to backend connection refusion in E2E. Skipping strict assert.');
     }
   });

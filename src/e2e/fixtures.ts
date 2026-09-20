@@ -2,35 +2,22 @@ import { test as base, expect, type Browser, type BrowserContext, type Page } fr
 import { authenticateRequest } from './authenticate';
 import { E2E_SEED_DATA } from '../ui/next/src/lib/e2eSeedData';
 
-export const E2E_ADMIN_USER = {
-  email: process.env.OMNISOLO_E2E_ADMIN_EMAIL ?? process.env.OMNISOLO_ADMIN_EMAIL ?? 'test@example.com',
-  password: process.env.OMNISOLO_E2E_ADMIN_PASSWORD ?? process.env.OMNISOLO_ADMIN_PASSWORD ?? 'password123',
-  role: 'ADMIN',
-  organizationId: process.env.OMNISOLO_E2E_ADMIN_ORGANIZATION_ID ?? process.env.OMNISOLO_ADMIN_ORGANIZATION_ID ?? 'e2e-tenant',
-} as const;
-
-export const E2E_UNLIMITED_ADMIN_USER = {
-  email: 'pro@example.com',
-  password: 'password123',
-  role: 'ADMIN',
-  organizationId: 'e2e-tenant-unlimited',
-} as const;
-
-export const E2E_MEMBER_USER = {
-  email: 'member@example.com',
-  password: 'MemberPass123!',
-  role: 'OPERATOR',
-  organizationId: 'e2e-tenant',
-} as const;
-
-type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_UNLIMITED_ADMIN_USER | typeof E2E_MEMBER_USER;
+import { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER, type E2EUser } from './identities';
+import { loadAuthenticatedState } from '../../scripts/playwright/session-state.mjs';
+export { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER } from './identities';
 
 async function loginAsAtBaseURL(page: Page, user: E2EUser, baseURL: string) {
-  await authenticateRequest(page.request, {
-    username: user.email,
-    password: user.password,
-    organizationId: user.organizationId,
-  }, new URL(baseURL).origin);
+  const origin = new URL(baseURL).origin;
+  const directory = process.env.OMNISOLO_E2E_SESSION_STATE_DIR;
+  if (directory) {
+    // Setup authenticated each actor against the real backend. Restore only a
+    // matching, unexpired state; missing states fail rather than storming login.
+    await page.context().setStorageState(await loadAuthenticatedState(directory, origin, user));
+  } else {
+    await authenticateRequest(page.request, {
+      username: user.email, password: user.password, organizationId: user.organizationId,
+    }, origin);
+  }
   await page.goto(new URL('/dashboard', baseURL).toString());
 }
 
@@ -54,22 +41,14 @@ export const test = base.extend<{
   memberPage: Page;
   seedData: typeof E2E_SEED_DATA;
 }>({
-  adminUser: async ({}, use) => {
-    await use(E2E_ADMIN_USER);
-  },
-  unlimitedAdminUser: async ({}, use) => {
-    await use(E2E_UNLIMITED_ADMIN_USER);
-  },
-  memberUser: async ({}, use) => {
-    await use(E2E_MEMBER_USER);
-  },
+  adminUser: E2E_ADMIN_USER,
+  unlimitedAdminUser: E2E_UNLIMITED_ADMIN_USER,
+  memberUser: E2E_MEMBER_USER,
   loginAs: async ({ baseURL }, use) => {
     if (!baseURL) throw new Error('Playwright baseURL is required for E2E login.');
     await use((page, user) => loginAsAtBaseURL(page, user, baseURL));
   },
-  seedData: async ({}, use) => {
-    await use(E2E_SEED_DATA);
-  },
+  seedData: E2E_SEED_DATA,
   context: async ({ context }, use) => {
     rejectNetworkStubbing(context);
     await use(context);

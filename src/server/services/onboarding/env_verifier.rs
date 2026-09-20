@@ -20,7 +20,10 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         database_url: String::new(),
     };
 
-    let mut mode = env_vars.get("OMNISOLO_SOURCE_MODE").cloned().unwrap_or_default();
+    let mut mode = env_vars
+        .get("OMNISOLO_SOURCE_MODE")
+        .cloned()
+        .unwrap_or_default();
 
     if mode.is_empty() {
         if env_vars.contains_key("KUBERNETES_SERVICE_HOST") {
@@ -36,16 +39,16 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
     config.mode = mode.to_lowercase();
 
-    if let Some(mt) = env_vars.get("OMNISOLO_MULTITENANT") {
-        if mt.to_lowercase() == "true" {
-            config.multi_tenant = true;
-        }
+    if let Some(mt) = env_vars.get("OMNISOLO_MULTITENANT")
+        && mt.to_lowercase() == "true"
+    {
+        config.multi_tenant = true;
     }
 
-    if let Some(hl) = env_vars.get("OMNISOLO_HEADLESS") {
-        if hl.to_lowercase() == "true" {
-            config.headless = true;
-        }
+    if let Some(hl) = env_vars.get("OMNISOLO_HEADLESS")
+        && hl.to_lowercase() == "true"
+    {
+        config.headless = true;
     }
 
     if config.mode == "cloud" && !config.multi_tenant {
@@ -96,10 +99,10 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     let mut telemetry_enabled = false;
-    if let Some(tel) = env_vars.get("OMNISOLO_TELEMETRY_ENABLED") {
-        if tel.to_lowercase() == "true" {
-            telemetry_enabled = true;
-        }
+    if let Some(tel) = env_vars.get("OMNISOLO_TELEMETRY_ENABLED")
+        && tel.to_lowercase() == "true"
+    {
+        telemetry_enabled = true;
     }
 
     let mut is_standalone = ::server_config::get().standalone;
@@ -111,10 +114,10 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         config.telemetry_enabled = telemetry_enabled;
     } else {
         config.telemetry_enabled = true;
-        if let Some(tel) = env_vars.get("OMNISOLO_TELEMETRY_ENABLED") {
-            if tel.to_lowercase() == "false" {
-                config.telemetry_enabled = false;
-            }
+        if let Some(tel) = env_vars.get("OMNISOLO_TELEMETRY_ENABLED")
+            && tel.to_lowercase() == "false"
+        {
+            config.telemetry_enabled = false;
         }
     }
 
@@ -198,7 +201,10 @@ mod tests {
     #[test]
     fn test_verify_environment_thin_client() {
         let mut env = HashMap::new();
-        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "thin_client".to_string());
+        env.insert(
+            "OMNISOLO_SOURCE_MODE".to_string(),
+            "thin_client".to_string(),
+        );
         env.insert(
             "OMNISOLO_API_ENDPOINT".to_string(),
             "https://cloud.omnisolo.co".to_string(),
@@ -213,7 +219,10 @@ mod tests {
     #[test]
     fn test_verify_environment_thin_client_missing_endpoint() {
         let mut env = HashMap::new();
-        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "thin_client".to_string());
+        env.insert(
+            "OMNISOLO_SOURCE_MODE".to_string(),
+            "thin_client".to_string(),
+        );
 
         let res = verify_environment(&env);
         assert!(res.is_err());

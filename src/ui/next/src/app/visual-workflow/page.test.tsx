@@ -54,7 +54,7 @@ describe("VisualWorkflowPage", () => {
   });
 
   it("calls fetch when running the workflow", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       json: async () => ({ success: true, result: "mocked result" })
     });
 
@@ -68,7 +68,7 @@ describe("VisualWorkflowPage", () => {
   });
 
   it("handles fetch errors when running the workflow", async () => {
-    (global.fetch as any).mockRejectedValueOnce(new Error("Network Error"));
+    vi.mocked(global.fetch, { partial: true }).mockRejectedValueOnce(new Error("Network Error"));
 
     render(<VisualWorkflowPage />);
     fireEvent.click(screen.getByText("Run Workflow"));

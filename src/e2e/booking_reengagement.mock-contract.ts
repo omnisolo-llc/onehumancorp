@@ -14,7 +14,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
         try {
             await pool.query('SELECT 1');
         } catch (e) {
-            throw new Error('Database not available, this must work for the test!');
+            throw new Error('Database not available, this must work for the test!', { cause: e });
         }
 
         // Setup tenant

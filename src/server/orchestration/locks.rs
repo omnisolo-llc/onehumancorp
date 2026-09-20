@@ -58,10 +58,8 @@ impl LockGuard {
 
 impl Drop for LockGuard {
     fn drop(&mut self) {
-        if !self.released {
-            if self.redis_client.is_some() || self.sqlite_pool.is_some() {
-                // Warning: Dropped without release. The distributed lock will expire via TTL naturally.
-            }
+        if !self.released && (self.redis_client.is_some() || self.sqlite_pool.is_some()) {
+            // Warning: Dropped without release. The distributed lock will expire via TTL naturally.
         }
     }
 }
@@ -69,6 +67,12 @@ impl Drop for LockGuard {
 pub struct StandaloneLock {
     pool: Option<sqlx::SqlitePool>,
     pub local_locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
+}
+
+impl Default for StandaloneLock {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl StandaloneLock {

@@ -73,25 +73,20 @@ describe('MasterMenu', () => {
   });
 
   it('handles keyboard interaction (exit option)', async () => {
-    const originalExit = process.exit;
-    let exitCode: number | undefined;
-    (process as any).exit = (code: number) => {
-      exitCode = code;
-    };
-
-    const { stdin } = render(<MasterMenu />);
-
-    // Press down arrow enough times to reach "Exit"
-    for (let i = 0; i < 15; i++) {
+    // A test intercepts process termination; it must restore the real function
+    // even if a keyboard or assertion failure occurs.
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    try {
+      const { stdin } = render(<MasterMenu />);
+      for (let i = 0; i < 15; i++) {
         stdin.write('\x1B[B');
         await delay(10);
+      }
+      stdin.write('\r');
+      await delay(10);
+      expect(exit).toHaveBeenCalledWith(0);
+    } finally {
+      exit.mockRestore();
     }
-
-    stdin.write('\r');
-    await delay(10);
-
-    expect(exitCode).toBe(0);
-
-    process.exit = originalExit;
   });
 });

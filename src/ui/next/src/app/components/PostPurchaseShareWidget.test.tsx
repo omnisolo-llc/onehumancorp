@@ -47,7 +47,7 @@ describe('PostPurchaseShareWidget', () => {
     fireEvent.click(whatsappButton);
 
     expect(window.open).toHaveBeenCalled();
-    const urlArg = (window.open as any).mock.calls[0][0];
+    const urlArg = vi.mocked(window.open, { partial: true }).mock.calls[0][0];
     expect(urlArg).toContain('wa.me');
     expect(urlArg).toContain('Cool%20Store');
   });
@@ -58,7 +58,7 @@ describe('PostPurchaseShareWidget', () => {
     fireEvent.click(twitterButton);
 
     expect(window.open).toHaveBeenCalled();
-    const urlArg = (window.open as any).mock.calls[0][0];
+    const urlArg = vi.mocked(window.open, { partial: true }).mock.calls[0][0];
     expect(urlArg).toContain('twitter.com');
     expect(urlArg).toContain('Cool%20Store');
     expect(urlArg).toContain('Powered%20by%20OmniSolo'); // Verifying loop branding

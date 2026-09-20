@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 export function DashboardViralInviteWidget() {
   const [copied, setCopied] = useState(false);
-  const [tenantId, setTenantId] = useState("default-team");
+  const [, setTenantId] = useState("default-team");
   const [referralLink, setReferralLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

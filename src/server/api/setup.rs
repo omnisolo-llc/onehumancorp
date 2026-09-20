@@ -529,7 +529,10 @@ mod tests {
         temp_env::async_with_vars(
             [
                 ("OMNISOLO_SETUP_TOKEN", None),
-                ("OMNISOLO_SETUP_TOKEN_FILE", Some(missing_path.to_str().unwrap())),
+                (
+                    "OMNISOLO_SETUP_TOKEN_FILE",
+                    Some(missing_path.to_str().unwrap()),
+                ),
             ],
             async move {
                 let response = router(db)

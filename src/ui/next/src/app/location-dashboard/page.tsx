@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 
 interface Task {
   id: string;
@@ -40,7 +40,7 @@ export default function LocationManagerDashboard() {
           setAlerts(data.alerts || []);
           setStaff(data.staff || []);
         }
-      } catch (error) {
+      } catch  {
         // Silently handle error
       }
     };
@@ -63,7 +63,7 @@ export default function LocationManagerDashboard() {
           const data = await response.json();
           setEscalationDraft(data.draft || '');
         }
-      } catch (error) {
+      } catch  {
         // Silently handle error
       } finally {
         setIsDrafting(false);
@@ -82,7 +82,7 @@ export default function LocationManagerDashboard() {
            draft: escalationDraft
         })
       });
-    } catch (e) {
+    } catch  {
       // Handle error implicitly
     }
     setShowEscalationModal(false);

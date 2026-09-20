@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect,useState,useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboardingStore } from "./store";
 import { SetupIcon } from "./components/SetupIcon";
@@ -90,7 +90,7 @@ export default function OnboardingWizard() {
           try {
             const result = await response.clone().json();
             errMsg = result.error || result.message || errMsg;
-          } catch (e) {}
+          } catch  {}
           throw new Error(errMsg);
         }
         return response;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
+import '../components/PoweredByOmniSolo';
 import { useProPlan } from '../components/useProPlan';
 
 export default function DiscountCodeGeneratorPage() {

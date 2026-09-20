@@ -127,7 +127,7 @@ impl OrganizationExt for Organization {
         match self.tier.as_str() {
             "Starter" => 1000,
             "Pro" => -1,
-            "Free" | _ => 100,
+            _ => 100,
         }
     }
 

@@ -119,10 +119,10 @@ impl DistributedLock for MemoryBus {
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut locks = self.locks.lock().await;
-        if let Some((current_owner, _)) = locks.get(resource) {
-            if current_owner == owner {
-                locks.remove(resource);
-            }
+        if let Some((current_owner, _)) = locks.get(resource)
+            && current_owner == owner
+        {
+            locks.remove(resource);
         }
         Ok(())
     }
@@ -235,15 +235,13 @@ impl IpcBus {
 
         let path_str_opt = if let Some(p) = db_url.strip_prefix("sqlite://") {
             Some(p)
-        } else if let Some(p) = db_url.strip_prefix("sqlite:") {
-            Some(p)
         } else {
-            None
+            db_url.strip_prefix("sqlite:")
         };
 
         if let Some(path_str) = path_str_opt {
             let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
-            if db_path.to_str().unwrap_or("") != "memory:" {
+            if !matches!(db_path.to_str(), Some(":memory:" | "memory:")) {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::OpenOptionsExt;
@@ -251,6 +249,7 @@ impl IpcBus {
                         .read(true)
                         .write(true)
                         .create(true)
+                        .truncate(false)
                         .mode(0o600)
                         .open(db_path)
                     {
@@ -269,6 +268,7 @@ impl IpcBus {
                     let _ = std::fs::OpenOptions::new()
                         .write(true)
                         .create(true)
+                        .truncate(false)
                         .open(db_path);
                 }
             }
@@ -553,24 +553,24 @@ impl DistributedLock for NatsBus {
 
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
             let entry_str = String::from_utf8_lossy(&entry.value);
-            if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
-                if let Ok(exp) = stored_exp.parse::<i64>() {
-                    if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
-                        match self
-                            .kv
-                            .update(
-                                resource,
-                                payload.clone().into_bytes().into(),
-                                entry.revision,
-                            )
-                            .await
-                        {
-                            Ok(_) => return Ok(true),
-                            Err(_) => return Ok(false),
-                        }
-                    } else {
-                        return Ok(false);
+            if let Some((stored_owner, stored_exp)) = entry_str.split_once(':')
+                && let Ok(exp) = stored_exp.parse::<i64>()
+            {
+                if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
+                    match self
+                        .kv
+                        .update(
+                            resource,
+                            payload.clone().into_bytes().into(),
+                            entry.revision,
+                        )
+                        .await
+                    {
+                        Ok(_) => return Ok(true),
+                        Err(_) => return Ok(false),
                     }
+                } else {
+                    return Ok(false);
                 }
             }
         }
@@ -590,15 +590,15 @@ impl DistributedLock for NatsBus {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
             let entry_str = String::from_utf8_lossy(&entry.value);
-            if let Some((stored_owner, _)) = entry_str.split_once(':') {
-                if stored_owner == owner {
-                    // Update with immediately expired lock to allow atomic replacement
-                    let payload = format!("{}:0", owner);
-                    let _ = self
-                        .kv
-                        .update(resource, payload.into_bytes().into(), entry.revision)
-                        .await;
-                }
+            if let Some((stored_owner, _)) = entry_str.split_once(':')
+                && stored_owner == owner
+            {
+                // Update with immediately expired lock to allow atomic replacement
+                let payload = format!("{}:0", owner);
+                let _ = self
+                    .kv
+                    .update(resource, payload.into_bytes().into(), entry.revision)
+                    .await;
             }
         }
         Ok(())

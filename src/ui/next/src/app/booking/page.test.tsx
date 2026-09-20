@@ -15,7 +15,7 @@ describe('BookingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSearchParams.mockReturnValue(new URLSearchParams('tenant=test-store&service_id=service-real'));
-    (global.fetch as any).mockResolvedValue({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
       ok: true,
       json: async () => ({ success: true }),
     });
@@ -40,7 +40,7 @@ describe('BookingPage', () => {
   });
 
   it('submits the form and shows the success screen with OneTapReferral', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         available_slots: [{ start_time: "2026-10-10T09:00:00Z", end_time: "2026-10-10T10:00:00Z" }]
@@ -93,7 +93,7 @@ describe('BookingPage', () => {
   });
 
   it('keeps the form visible when reservation confirmation fails', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         available_slots: [{ start_time: "2026-10-10T09:00:00Z", end_time: "2026-10-10T10:00:00Z" }]
@@ -115,7 +115,7 @@ describe('BookingPage', () => {
   });
 
   it('rejects malformed availability slots', async () => {
-    (global.fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ available_slots: [{ start_time: 'not-a-date', end_time: 'also-bad' }] }) });
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({ ok: true, json: async () => ({ available_slots: [{ start_time: 'not-a-date', end_time: 'also-bad' }] }) });
     render(<BookingPage />);
     fireEvent.change(document.querySelector('input[type="date"]') as HTMLInputElement, { target: { value: '2026-10-10' } });
     expect(await screen.findByText(/Available times could not be loaded/)).toBeDefined();
@@ -123,7 +123,7 @@ describe('BookingPage', () => {
   });
 
   it('requires a booking id and does not expose dummy Stripe checkout links', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ available_slots: [{ start_time: '2026-10-10T09:00:00Z', end_time: '2026-10-10T10:00:00Z' }] }),
     }).mockResolvedValueOnce({
@@ -145,7 +145,7 @@ describe('BookingPage', () => {
   });
 
   it('fails closed when the reservation response has no booking id', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ available_slots: [{ start_time: '2026-10-10T09:00:00Z', end_time: '2026-10-10T10:00:00Z' }] }),
     }).mockResolvedValueOnce({

@@ -242,8 +242,6 @@ async fn test_dag_workflow() {
     assert!(tasks_after.iter().any(|t| t.id == child_id));
 }
 
-use super::cloud::CloudStateManager;
-
 #[tokio::test]
 async fn test_missing_dependency_blocking() {
     let pool = SqlitePoolOptions::new()
@@ -343,13 +341,12 @@ async fn test_missing_dependency_blocking() {
     assert_eq!(tasks[0].id, "task-1");
 }
 
-// Mock testing CloudStateManager for test coverage requirements without hitting SQLite syntax panics
+// Exercise persisted DAG pause/replay semantics; SQLite is not cloud certification.
 #[tokio::test]
-async fn test_cloud_dag_workflow_mock() {
+async fn paused_parent_blocks_child_and_replay_cannot_duplicate_transition() {
     let db = setup_db().await;
-    // For unit coverage we instantiate it
     let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
-    let _state_manager = CloudStateManager::new(db.clone(), mesh);
+    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
@@ -370,13 +367,90 @@ async fn test_cloud_dag_workflow_mock() {
             .unwrap();
     }
 
-    // Since we know CloudStateManager executes raw Postgres syntax `WHERE id = $1::uuid FOR UPDATE`,
-    // calling `state_manager.transition_state()` directly will fail the test environment SQLite database.
-    // However, instantiating it and running a mock path verifies the components are valid.
-
-    // In order to achieve the coverage required while passing the SQLite sandbox, we test Standalone fully
-    // and rely on structural type coverage for CloudStateManager.
-    assert!(true);
+    state_manager
+        .transition_state(
+            &parent_id,
+            "default_tenant",
+            "PENDING",
+            "PAUSED",
+            Some("agent-a"),
+            Some("provider unavailable"),
+        )
+        .await
+        .unwrap();
+    assert!(
+        state_manager
+            .pull_available_tasks(10)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        state_manager
+            .transition_state(
+                &child_id,
+                "default_tenant",
+                "PENDING",
+                "IN_PROGRESS",
+                Some("agent-a"),
+                None
+            )
+            .await
+            .is_err()
+    );
+    assert!(
+        state_manager
+            .transition_state(
+                &parent_id,
+                "another-tenant",
+                "PAUSED",
+                "COMPLETED",
+                None,
+                None
+            )
+            .await
+            .is_err()
+    );
+    state_manager
+        .transition_state(
+            &parent_id,
+            "default_tenant",
+            "PAUSED",
+            "COMPLETED",
+            Some("agent-a"),
+            Some("owner resolved exception"),
+        )
+        .await
+        .unwrap();
+    assert!(
+        state_manager
+            .transition_state(
+                &parent_id,
+                "default_tenant",
+                "PAUSED",
+                "COMPLETED",
+                Some("agent-a"),
+                None
+            )
+            .await
+            .is_err()
+    );
+    let ready = state_manager.pull_available_tasks(10).await.unwrap();
+    assert_eq!(ready.len(), 1);
+    assert_eq!(ready[0].id, child_id);
+    let DbStore::Sqlite(pool) = &db.store else {
+        panic!("Expected the isolated SQLite fixture");
+    };
+    let transitions: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM state_machine_transitions WHERE entity_id=?")
+            .bind(&parent_id)
+            .fetch_one(pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        transitions, 2,
+        "Rejected/replayed transitions must not produce duplicate evidence"
+    );
 }
 
 struct SleepingMockMesh;

@@ -9,7 +9,7 @@ test.describe('Universal Edge-Cached Storefront & Agentic SEO Pre-rendering', ()
 
     // Creating product would normally push to Edge cache. We will mock the DB in tests
     // or test the cache directly by fetching storefront delivery route.
-    let initialRes = await request.get(`${baseUrl}/api/v1/storefront/${tenantId}/44444444-4444-4444-4444-444444444444`);
+    const initialRes = await request.get(`${baseUrl}/api/v1/storefront/${tenantId}/44444444-4444-4444-4444-444444444444`);
 
     // If the server is offline entirely in test environment, playwright will throw a connection refused, failing loudly.
     // If it's online, we expect a 200 (fallback string or real HTML).

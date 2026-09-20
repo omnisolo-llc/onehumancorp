@@ -1164,8 +1164,8 @@ struct OpenHandsProcessAdapter {
 
 /// Ask the Python shim to unwind its native process group and temporary homes.
 /// SIGKILL alone would strand grandchildren launched by the CLI.
+#[cfg(unix)]
 fn request_shim_shutdown(child: &Child) {
-    #[cfg(unix)]
     if let Some(pid) = child.id().and_then(|pid| i32::try_from(pid).ok()) {
         unsafe extern "C" {
             #[link_name = "kill"]
@@ -1176,6 +1176,11 @@ fn request_shim_shutdown(child: &Child) {
         let _ = unsafe { signal_process(pid, 15) };
     }
 }
+
+// Non-Unix platforms have no POSIX SIGTERM; preserve the existing bounded
+// wait/kill behavior in reap_shim_child without compiling an unused parameter.
+#[cfg(not(unix))]
+fn request_shim_shutdown(_: &Child) {}
 
 async fn reap_shim_child(mut child: Child) {
     if tokio::time::timeout(std::time::Duration::from_secs(3), child.wait())
@@ -5192,7 +5197,6 @@ fn descriptor_for_spec(spec: &ProcessHarnessSpec) -> HarnessDescriptor {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Mutex, OnceLock};
     use std::time::Duration;
 
     use chrono::Utc;
@@ -5709,18 +5713,12 @@ mod tests {
         adapter.terminate().await.unwrap();
     }
 
-    fn environment_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-    }
-
-    #[tokio::test]
-    async fn process_adapter_does_not_inherit_ambient_parent_environment() {
-        let _guard = environment_lock().lock().unwrap();
-        unsafe {
-            std::env::set_var("UNRELATED_DEPLOYMENT_SECRET", "CANARY-AMBIENT-7KQ9");
-        }
-        let script = r#"
+    #[test]
+    fn process_adapter_does_not_inherit_ambient_parent_environment() {
+        crate::ambient_test::with_ambient_canary(
+            "middleware::harness::tests::process_adapter_does_not_inherit_ambient_parent_environment",
+            async {
+                let script = r#"
 while IFS= read -r line; do
   id=$(printf '%s' "$line" | sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p')
   ambient=false
@@ -5732,24 +5730,23 @@ while IFS= read -r line; do
   printf '{"request_id":"%s","ok":true,"payload":{"events":[{"event_type":"assistant.text","durable":true,"payload":{"ambient":%s,"explicit":%s,"path":%s}}],"final_text":"ok"}}\n' "$id" "$ambient" "$explicit" "$path"
 done
 "#;
-        let mut adapter = ProcessHarnessAdapter::new(
-            ProcessHarnessSpec::command("/bin/sh", ["-c", script], "future")
-                .with_protocol(HarnessProtocolKind::Custom)
-                .with_environment("OPENAI_API_KEY", "explicit-key"),
-        );
-        let execution = adapter
-            .execute(request(), "attempt-1", "prompt", None)
-            .await
-            .unwrap();
+                let mut adapter = ProcessHarnessAdapter::new(
+                    ProcessHarnessSpec::command("/bin/sh", ["-c", script], "future")
+                        .with_protocol(HarnessProtocolKind::Custom)
+                        .with_environment("OPENAI_API_KEY", "explicit-key"),
+                );
+                let execution = adapter
+                    .execute(request(), "attempt-1", "prompt", None)
+                    .await
+                    .unwrap();
 
-        unsafe {
-            std::env::remove_var("UNRELATED_DEPLOYMENT_SECRET");
-        }
-        assert_eq!(
-            execution.events[0].payload,
-            json!({"ambient": false, "explicit": true, "path": true})
+                assert_eq!(
+                    execution.events[0].payload,
+                    json!({"ambient": false, "explicit": true, "path": true})
+                );
+                adapter.terminate().await.unwrap();
+            },
         );
-        adapter.terminate().await.unwrap();
     }
 
     #[test]

@@ -6,7 +6,6 @@ use sqlx::SqlitePool;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
-use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
 
@@ -62,6 +61,9 @@ macro_rules! validate_tenant_id_sqlx {
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 static GLOBAL_MYSQL_POOL: OnceLock<MySqlPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
+// Release executables must migrate successfully outside the source checkout.
+// Embedding also binds each SQL checksum to the exact compiled revision.
+static POSTGRES_MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./src/server/migrations");
 
 pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 
@@ -285,6 +287,13 @@ pub fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, s
         .map_err(|e| sqlx::Error::Decode(Box::new(e)))
 }
 
+/// Content and its embedding provenance are passed as a single record.
+pub struct MemoryContent<'a> {
+    pub content: &'a str,
+    pub embedding: &'a str,
+    pub source_type: &'a str,
+}
+
 impl DB {
     pub async fn query_available_slots(
         &self,
@@ -403,10 +412,7 @@ impl DB {
     }
 
     pub fn is_sqlite(&self) -> bool {
-        match &self.store {
-            DbStore::Sqlite(_) => true,
-            _ => false,
-        }
+        matches!(&self.store, DbStore::Sqlite(_))
     }
 
     pub fn is_mysql(&self) -> bool {
@@ -419,7 +425,8 @@ impl DB {
                 .database_url
                 .clone()
                 .unwrap_or_else(|| {
-                    let default_path = crate::config::get_safe_user_dir().join("omnisolo-standalone.db");
+                    let default_path =
+                        crate::config::get_safe_user_dir().join("omnisolo-standalone.db");
                     format!("sqlite://{}", default_path.to_string_lossy())
                 })
         });
@@ -460,63 +467,58 @@ impl DB {
             // Ensure secure directory creation for SQLite database in Standalone mode
             let path_str_opt = if let Some(p) = database_url.strip_prefix("sqlite://") {
                 Some(p)
-            } else if let Some(p) = database_url.strip_prefix("sqlite:") {
-                Some(p)
             } else {
-                None
+                database_url.strip_prefix("sqlite:")
             };
             if let Some(path_str) = path_str_opt {
                 let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
-                if let Some(parent) = db_path.parent() {
-                    if !parent.as_os_str().is_empty() {
-                        #[cfg(unix)]
+                if let Some(parent) = db_path.parent()
+                    && !parent.as_os_str().is_empty()
+                {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::DirBuilderExt;
+                        let mut builder = std::fs::DirBuilder::new();
+                        // Enforce strict 0700 permissions for standalone SQLite
+                        builder.recursive(true).mode(0o700);
+                        if let Err(e) = builder.create(parent)
+                            && e.kind() != std::io::ErrorKind::AlreadyExists
                         {
-                            use std::os::unix::fs::DirBuilderExt;
-                            let mut builder = std::fs::DirBuilder::new();
-                            // Enforce strict 0700 permissions for standalone SQLite
-                            builder.recursive(true).mode(0o700);
-                            if let Err(e) = builder.create(parent) {
-                                if e.kind() != std::io::ErrorKind::AlreadyExists {
+                            ::server_telemetry::record_error_signal(
+                                "[bug] Failed to securely create DB directory",
+                            );
+                            tracing::error!("Failed to securely create DB directory: {}", e);
+                            return Err(e.into());
+                        }
+
+                        // Regardless of whether it was just created or already existed,
+                        // enforce strict 0700 permissions to fix TOCTOU vulnerabilities.
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(metadata) = std::fs::metadata(parent) {
+                            let mut perms = metadata.permissions();
+                            if (perms.mode() & 0o777) != 0o700 {
+                                perms.set_mode(0o700);
+                                if let Err(set_err) = std::fs::set_permissions(parent, perms) {
                                     ::server_telemetry::record_error_signal(
-                                        "[bug] Failed to securely create DB directory",
+                                        "[bug] Failed to securely update DB directory permissions",
                                     );
                                     tracing::error!(
-                                        "Failed to securely create DB directory: {}",
-                                        e
+                                        "Failed to securely update DB directory permissions: {}",
+                                        set_err
                                     );
-                                    return Err(e.into());
-                                }
-                            }
-
-                            // Regardless of whether it was just created or already existed,
-                            // enforce strict 0700 permissions to fix TOCTOU vulnerabilities.
-                            use std::os::unix::fs::PermissionsExt;
-                            if let Ok(metadata) = std::fs::metadata(parent) {
-                                let mut perms = metadata.permissions();
-                                if (perms.mode() & 0o777) != 0o700 {
-                                    perms.set_mode(0o700);
-                                    if let Err(set_err) = std::fs::set_permissions(parent, perms) {
-                                        ::server_telemetry::record_error_signal(
-                                            "[bug] Failed to securely update DB directory permissions",
-                                        );
-                                        tracing::error!(
-                                            "Failed to securely update DB directory permissions: {}",
-                                            set_err
-                                        );
-                                        return Err(set_err.into());
-                                    }
+                                    return Err(set_err.into());
                                 }
                             }
                         }
-                        #[cfg(not(unix))]
-                        {
-                            if let Err(e) = std::fs::create_dir_all(parent) {
-                                ::server_telemetry::record_error_signal(
-                                    "[bug] Failed to create DB directory",
-                                );
-                                tracing::error!("Failed to create DB directory: {}", e);
-                                return Err(e.into());
-                            }
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        if let Err(e) = std::fs::create_dir_all(parent) {
+                            ::server_telemetry::record_error_signal(
+                                "[bug] Failed to create DB directory",
+                            );
+                            tracing::error!("Failed to create DB directory: {}", e);
+                            return Err(e.into());
                         }
                     }
                 }
@@ -536,7 +538,7 @@ impl DB {
                         #[cfg(target_os = "macos")]
                         opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                        let file = opts.open(&db_path)?;
+                        let file = opts.open(db_path)?;
                         let metadata = file.metadata()?;
                         let mut perms = metadata.permissions();
                         if (perms.mode() & 0o777) != 0o600 {
@@ -565,13 +567,13 @@ impl DB {
                                     aux_opts.custom_flags(0x00020000); // O_NOFOLLOW
                                     #[cfg(target_os = "macos")]
                                     aux_opts.custom_flags(0x0100); // O_NOFOLLOW
-                                    if let Ok(file) = aux_opts.open(ext_path) {
-                                        if let Ok(metadata) = file.metadata() {
-                                            let mut p = metadata.permissions();
-                                            if (p.mode() & 0o777) != 0o600 {
-                                                p.set_mode(0o600);
-                                                let _ = file.set_permissions(p);
-                                            }
+                                    if let Ok(file) = aux_opts.open(ext_path)
+                                        && let Ok(metadata) = file.metadata()
+                                    {
+                                        let mut p = metadata.permissions();
+                                        if (p.mode() & 0o777) != 0o600 {
+                                            p.set_mode(0o600);
+                                            let _ = file.set_permissions(p);
                                         }
                                     }
                                 } else {
@@ -581,13 +583,13 @@ impl DB {
                                     opts.custom_flags(0x00020000); // O_NOFOLLOW
                                     #[cfg(target_os = "macos")]
                                     opts.custom_flags(0x0100); // O_NOFOLLOW
-                                    if let Ok(file) = opts.open(ext_path) {
-                                        if let Ok(metadata) = file.metadata() {
-                                            let mut p = metadata.permissions();
-                                            if (p.mode() & 0o777) != 0o600 {
-                                                p.set_mode(0o600);
-                                                let _ = file.set_permissions(p);
-                                            }
+                                    if let Ok(file) = opts.open(ext_path)
+                                        && let Ok(metadata) = file.metadata()
+                                    {
+                                        let mut p = metadata.permissions();
+                                        if (p.mode() & 0o777) != 0o600 {
+                                            p.set_mode(0o600);
+                                            let _ = file.set_permissions(p);
                                         }
                                     }
                                 }
@@ -606,7 +608,11 @@ impl DB {
             // sqlite-vec is optional at runtime. The memory repository probes for
             // vec_distance_cosine and falls back to in-process cosine sorting when
             // the extension is unavailable, which keeps desktop/CI startup robust.
-            if std::env::var("OMNISOLO_SQLITE_VEC_EXTENSION").ok().as_deref() == Some("enabled") {
+            if std::env::var("OMNISOLO_SQLITE_VEC_EXTENSION")
+                .ok()
+                .as_deref()
+                == Some("enabled")
+            {
                 conn_opts = conn_opts.extension("sqlite_vec");
             }
 
@@ -1213,9 +1219,7 @@ impl DB {
                     .execute(&mut *migration_conn)
                     .await?;
 
-                let migrator =
-                    sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                let migration_result = migrator.run(&mut *migration_conn).await;
+                let migration_result = POSTGRES_MIGRATOR.run(&mut *migration_conn).await;
 
                 let unlock_result = sqlx::query("SELECT pg_advisory_unlock($1);")
                     .bind(POSTGRES_MIGRATION_LOCK_KEY)
@@ -1319,7 +1323,7 @@ impl DB {
                         PRIMARY KEY (task_id, depends_on_task_id)
                     );
 
-                    DROP TABLE IF EXISTS shared_tasks;
+                    -- Startup migrations must preserve existing owner tasks.
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
                         organization_id TEXT NOT NULL,
@@ -4014,10 +4018,13 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         org_id: &str,
         agent_id: &str,
         task_id: &str,
-        content: &str,
-        embedding: &str,
-        source_type: &str,
+        memory: MemoryContent<'_>,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let MemoryContent {
+            content,
+            embedding,
+            source_type,
+        } = memory;
         validate_tenant_id_box!(org_id);
 
         if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
@@ -4071,10 +4078,13 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         org_id: &str,
         agent_id: &str,
         task_id: &str,
-        content: &str,
-        embedding: &str,
-        source_type: &str,
+        memory: MemoryContent<'_>,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let MemoryContent {
+            content,
+            embedding,
+            source_type,
+        } = memory;
         validate_tenant_id_box!(org_id);
 
         if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
@@ -4252,7 +4262,23 @@ mod tests {
         };
 
         db.run_migrations().await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, description, status) VALUES ('restart-proof', 'tenant-a', 'Preserve owner work', 'An existing task', 'IN_PROGRESS')")
+            .execute(&pool).await.unwrap();
         db.run_migrations().await.unwrap();
+        let saved: (String, String, String) = sqlx::query_as(
+            "SELECT organization_id, title, status FROM shared_tasks WHERE id = 'restart-proof'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            saved,
+            (
+                "tenant-a".into(),
+                "Preserve owner work".into(),
+                "IN_PROGRESS".into()
+            )
+        );
 
         for (table, columns) in [
             ("orders", &["is_consumable", "estimated_duration_days"][..]),
@@ -4640,9 +4666,11 @@ mod autodream_db_tests {
                 org_id,
                 agent_id,
                 task_id,
-                content,
-                embedding,
-                source_type,
+                MemoryContent {
+                    content,
+                    embedding,
+                    source_type,
+                },
             )
             .await;
         assert!(result.is_ok() || result.is_err()); // test db may not be migrated
@@ -4698,9 +4726,11 @@ mod autodream_db_tests {
             "org-1",
             "agent-1",
             "task-1",
-            "test content",
-            "[0.1, 0.2]",
-            "document",
+            MemoryContent {
+                content: "test content",
+                embedding: "[0.1, 0.2]",
+                source_type: "document",
+            },
         )
         .await
         .expect("Database URL or operation failed in test");
@@ -4939,8 +4969,8 @@ mod e2e_tenant_isolation_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -5042,8 +5072,8 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -5121,6 +5151,28 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
 }
 
 #[cfg(test)]
+mod embedded_postgres_migration_tests {
+    #[tokio::test]
+    async fn embedded_migrations_match_every_repository_version_and_checksum() {
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/server/migrations");
+        let disk = sqlx::migrate::Migrator::new(source).await.unwrap();
+        let bundled: Vec<_> = super::POSTGRES_MIGRATOR.iter().collect();
+        let expected: Vec<_> = disk.iter().collect();
+        assert!(
+            !bundled.is_empty(),
+            "empty migrations must never pass packaging"
+        );
+        assert_eq!(bundled.len(), expected.len());
+        for (actual, expected) in bundled.iter().zip(expected.iter()) {
+            assert_eq!(actual.version, expected.version);
+            assert_eq!(actual.description, expected.description);
+            assert_eq!(actual.sql, expected.sql);
+            assert_eq!(actual.checksum, expected.checksum);
+        }
+    }
+}
+
+#[cfg(test)]
 mod e2e_search_workspace_tests {
     use super::*;
 
@@ -5130,8 +5182,8 @@ mod e2e_search_workspace_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .expect("Database URL or operation failed in test");
 
         // Set up Postgres Pool
         let pg_pool = sqlx::postgres::PgPoolOptions::new()

@@ -24,7 +24,7 @@ describe('Expert Team API Chaos Resiliency', () => {
     });
 
     it('gracefully handles timeout injected after fetch (simulating malformed response processing delay)', async () => {
-        (global.fetch as any).mockResolvedValueOnce({
+        vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
             ok: true,
             json: async () => ({ result: { output: 'Success' } }),
         });
