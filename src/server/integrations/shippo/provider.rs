@@ -79,7 +79,10 @@ mod tests {
     #[tokio::test]
     async fn test_generate_and_email_label_fails_without_credentials() {
         let provider = ShippoProvider::new("dummy_token".to_string());
-        let err = provider.generate_and_email_label("rate_123", "test@example.com").await.unwrap_err();
+        let err = provider
+            .generate_and_email_label("rate_123", "test@example.com")
+            .await
+            .unwrap_err();
         assert!(err.contains("Shippo API token is required"));
     }
 
