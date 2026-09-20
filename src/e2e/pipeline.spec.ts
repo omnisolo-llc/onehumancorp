@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Opportunity Pipeline Engine', () => {
-  const tenantId = 'test-tenant';
+
 
   test('Owner reviews opportunities and changes their stage', async ({ page }) => {
     // Navigate to Pipeline

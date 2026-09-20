@@ -979,25 +979,19 @@ describe("OnboardingWizard", () => {
       fetchCalls.push({ url, options });
 
       if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ organization_id: "org_123" }),
-        });
+        return Promise.resolve(Response.json({ organization_id: "org_123" }, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/launch")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({}),
-        });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/state")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/draft")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
 
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     act(() => {
@@ -1050,7 +1044,7 @@ describe("OnboardingWizard", () => {
           json: () => Promise.resolve({ error: "Failed to generate your business" }),
         });
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     act(() => {
@@ -1281,16 +1275,9 @@ describe("OnboardingWizard", () => {
     // Mock API
     global.fetch = vi.fn().mockImplementation((url) => {
       if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: () => Promise.resolve({ error: "Intake Error" }),
-        });
+        return Promise.resolve(Response.json({ error: "Intake Error" }, { status: 500 }));
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     await renderOnboardingWizard();

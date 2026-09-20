@@ -11,7 +11,7 @@ inputs:
     description: Install Rust and restore compiled dependencies
     default: 'true'
   node-scope:
-    description: Locked dependency trees to install (root, web, or all)
+    description: Locked dependencies (root; web=root+Next; all=root+Next+CLI; harness=only test tools)
     default: all
   cache:
     description: Restore/save caches; false exercises a fresh-runner cold build
@@ -44,6 +44,8 @@ runs:
         # One-time namespace change retires the old source-artifact-heavy cache.
         prefix-key: ohc-native-dependencies-v1
         shared-key: native-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS || 'custom-image' }}-${{ inputs.role }}
+        # Retain the default compiler inputs and include native TLS/SDK configuration.
+        env-vars: CARGO CC CFLAGS CXX CMAKE RUST OPENSSL PKG_CONFIG VCPKG SDKROOT MACOSX_DEPLOYMENT_TARGET
         # rust-cache supplies compiler/environment/Cargo lock+manifest hashes and
         # compatible dependency fallbacks. Do not duplicate them in a job key.
         cache-on-failure: 'false'
@@ -66,13 +68,25 @@ runs:
       if: inputs.node == 'true'
       id: npm-cache
       shell: bash
-      run: echo "path=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+      env:
+        NODE_SCOPE: ${{ inputs.node-scope }}
+        NPM_LOCK_HASH: ${{ inputs.node-scope == 'harness' && hashFiles('.github/test-tools/package-lock.json') || inputs.node-scope == 'root' && hashFiles('package-lock.json') || inputs.node-scope == 'web' && hashFiles('package-lock.json', 'src/ui/next/package-lock.json') || inputs.node-scope == 'all' && hashFiles('package-lock.json', 'src/ui/next/package-lock.json', 'src/cli/package-lock.json') || '' }}
+      run: |
+        set -euo pipefail
+        case "$NODE_SCOPE" in root|web|all|harness) ;; *) echo 'Invalid native Node dependency scope' >&2; exit 1 ;; esac
+        [[ "$NPM_LOCK_HASH" =~ ^[a-f0-9]{64}$ ]] || { echo 'Missing npm lockfile cache identity' >&2; exit 1; }
+        # Cache content-addressed downloads only, never npm logs/config or installed trees.
+        echo "path=$(npm config get cache)/_cacache" >> "$GITHUB_OUTPUT"
+        echo "lock-hash=$NPM_LOCK_HASH" >> "$GITHUB_OUTPUT"
     - uses: actions/cache/restore@v5
       if: inputs.node == 'true' && inputs.cache == 'true'
       id: npm-restore
       with:
         path: ${{ steps.npm-cache.outputs.path }}
-        key: npm-${{ runner.os }}-${{ runner.arch }}-${{ inputs.node-scope }}-${{ hashFiles('.node-version', 'package-lock.json', 'src/ui/next/package-lock.json', 'src/cli/package-lock.json') }}
+        key: npm-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.node-version') }}-${{ inputs.node-scope }}-${{ steps.npm-cache.outputs.lock-hash }}
+        # Reuse older verified downloads within this platform/Node/scope only;
+        # npm ci still installs and integrity-checks the current locked tree.
+        restore-keys: npm-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.node-version') }}-${{ inputs.node-scope }}-
     - name: Install locked Node dependencies
       if: inputs.node == 'true'
       shell: bash
@@ -80,16 +94,20 @@ runs:
         NODE_SCOPE: ${{ inputs.node-scope }}
       run: |
         set -euo pipefail
-        case "$NODE_SCOPE" in root|web|all) ;; *) echo 'Invalid native Node dependency scope' >&2; exit 1 ;; esac
-        npm ci --prefer-offline --no-audit --no-fund
-        if [[ "$NODE_SCOPE" != root ]]; then
-          npm --prefix src/ui/next ci --prefer-offline --no-audit --no-fund
-        fi
-        if [[ "$NODE_SCOPE" == all ]]; then
-          npm --prefix src/cli ci --prefer-offline --no-audit --no-fund
+        case "$NODE_SCOPE" in root|web|all|harness) ;; *) echo 'Invalid native Node dependency scope' >&2; exit 1 ;; esac
+        if [[ "$NODE_SCOPE" == harness ]]; then
+          npm ci --prefix .github/test-tools --include=dev --prefer-offline --no-audit --no-fund
+        else
+          npm ci --include=dev --prefer-offline --no-audit --no-fund
+          if [[ "$NODE_SCOPE" != root ]]; then
+            npm --prefix src/ui/next ci --include=dev --prefer-offline --no-audit --no-fund
+          fi
+          if [[ "$NODE_SCOPE" == all ]]; then
+            npm --prefix src/cli ci --include=dev --prefer-offline --no-audit --no-fund
+          fi
         fi
     - uses: actions/cache/save@v5
-      if: inputs.node == 'true' && inputs.cache == 'true' && steps.npm-restore.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      if: success() && inputs.node == 'true' && inputs.cache == 'true' && steps.npm-restore.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
       with:
         path: ${{ steps.npm-cache.outputs.path }}
         key: ${{ steps.npm-restore.outputs.cache-primary-key }}

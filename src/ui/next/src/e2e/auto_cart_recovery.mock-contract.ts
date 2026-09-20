@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Automated Cart Recovery Growth Loop', () => {
-  test('Merchant enables auto-recovery via soft paywall trial extension', async ({ page, request }) => {
+  test('Merchant enables auto-recovery via soft paywall trial extension', async ({ page }) => {
     // 1. Merchant navigates to cart recovery page
     await page.goto('/cart-recovery');
 
@@ -27,7 +27,7 @@ test.describe('Automated Cart Recovery Growth Loop', () => {
 
     // We intercept the window.open call which happens in claimTrialExtension
     await page.evaluate(() => {
-        window.open = function() { return null as any; };
+        window.open = function() { return null; };
     });
 
     await shareBtn.click();

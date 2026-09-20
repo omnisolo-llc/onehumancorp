@@ -15,7 +15,7 @@ describe('Walkthrough Component', () => {
     process.env.NEXT_PUBLIC_E2E = originalEnv;
   });
 
-  let mockGetElementById: any;
+  let mockGetElementById: import('vitest').MockInstance<typeof document.getElementById>;
 
   beforeEach(() => {
     mockGetElementById = vi.spyOn(document, 'getElementById').mockImplementation((id) => {
@@ -110,7 +110,7 @@ describe('Walkthrough Component', () => {
   it('calls onClose when skip button is clicked', async () => {
     const handleClose = vi.fn();
 
-    const { container } = render(
+    render(
       <InteractiveWalkthrough
         steps={[
           { targetId: 'test-target', title: 'Step 1', content: 'content 1' },
@@ -223,7 +223,7 @@ describe('Walkthrough Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Top Step')).toBeInTheDocument();
     });
-    let bubble = screen.getByRole('dialog');
+    expect(screen.getByRole('dialog')).toBeVisible();
 
     // Test Left
     rerender(
@@ -238,7 +238,7 @@ describe('Walkthrough Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Left Step')).toBeInTheDocument();
     });
-    bubble = screen.getByRole('dialog');
+    expect(screen.getByRole('dialog')).toBeVisible();
 
     // Test Right
     rerender(
@@ -253,7 +253,7 @@ describe('Walkthrough Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Right Step')).toBeInTheDocument();
     });
-    bubble = screen.getByRole('dialog');
+    expect(screen.getByRole('dialog')).toBeVisible();
   });
 
   it('moves a top walkthrough below a target near the viewport edge', async () => {

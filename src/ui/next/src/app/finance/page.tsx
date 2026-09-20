@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
+import type { InvoiceRecord } from '@/lib/business-records';
 
 export default function FinancePage() {
-    const [invoices, setInvoices] = useState<any[]>([]);
+    const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDraftModal, setShowDraftModal] = useState(false);
-    const [draftInvoice, setDraftInvoice] = useState<any>(null);
+    const [draftInvoice, setDraftInvoice] = useState<InvoiceRecord | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const fetchInvoices = async () => {
@@ -103,7 +104,7 @@ export default function FinancePage() {
                             <div className="mb-8">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Line Items</label>
                                 <div className="space-y-4">
-                                    {draftInvoice.line_items?.map((item: any, idx: number) => (
+                                    {draftInvoice.line_items?.map((item, idx) => (
                                         <div key={idx} className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                                             <div className="flex-1">
                                                 <input type="text" className="w-full bg-transparent font-medium text-gray-900 dark:text-white text-sm focus:outline-none" defaultValue={item.description} />

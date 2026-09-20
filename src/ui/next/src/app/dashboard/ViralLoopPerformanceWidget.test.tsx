@@ -40,17 +40,14 @@ describe('ViralLoopPerformanceWidget', () => {
   });
 
   it('fetches and displays metrics successfully', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    global.fetch = vi.fn().mockResolvedValue(Response.json({
         total_invites: 42,
         metrics: {
           active_referrals: 15,
           revenue: 1250.50,
           pending_rewards: 150.00
         }
-      })
-    });
+      }, { status: 200 }));
 
     render(React.createElement(ViralLoopPerformanceWidget));
 

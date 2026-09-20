@@ -38,6 +38,9 @@ const pageWithFrameworkPrefix = { method: "GET", invocation: "page", matcher: { 
 // @ts-expect-error framework asset prefixes are GET-only
 const postFrameworkAsset = { method: "POST", invocation: "asset", matcher: { kind: "framework-prefix", path: "/_next/static/" }, reason: "invalid POST framework asset", owner: "framework" } as const satisfies PublicRouteEntry;
 
+// These values also remain compile-time negative contract checks above.
+void [routeHandlerWithoutApi, pageWithApi, pageWithFrameworkPrefix, postFrameworkAsset];
+
 describe("bootstrap public contracts", () => {
   it("declares all and only the bootstrap public contracts", () => {
     expect(PUBLIC_ROUTE_ENTRIES).toEqual([

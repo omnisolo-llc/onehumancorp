@@ -1,14 +1,16 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import React, { useEffect, useState } from 'react';
-import { loadStripeTerminal } from '@stripe/terminal-js';
+import { loadStripeTerminal, type Terminal, type Reader } from '@stripe/terminal-js';
 import '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
 import { WalkthroughTarget } from '../../../components/Walkthrough';
 
 interface StripeTerminalClientProps {
   onSuccess?: () => void;
-  cart?: { product: any, quantity: number }[];
+  cart?: import("@/lib/business-records").CartItem[];
   amount: number;
   productId: string;
   tenantId: string;
@@ -17,20 +19,20 @@ interface StripeTerminalClientProps {
 }
 
 export default function StripeTerminalClient({ amount, productId, cart, tenantId, onOptimisticReserve, onOptimisticRollback, onSuccess }: StripeTerminalClientProps) {
-  const [terminal, setTerminal] = useState<any>(null);
-  const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
-  const [connectedReader, setConnectedReader] = useState<any>(null);
+  const [terminal, setTerminal] = useState<Terminal | null>(null);
+  const [discoveredReaders, setDiscoveredReaders] = useState<Reader[]>([]);
+  const [connectedReader, setConnectedReader] = useState<Reader | null>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [reserving, setReserving] = useState(false);
   const [sessionId] = useState<string | null>(null);
-  const [pendingReconciliation, setPendingReconciliation] = useState<any[]>([]);
+  const [pendingReconciliation, setPendingReconciliation] = useState<{ product_id: string; shortage: number }[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
 
 
   useEffect(() => {
-    const handleReconciliation = (e: any) => {
-      if (e.detail && e.detail.pending_reconciliation) {
+    const handleReconciliation = (e: Event) => {
+      if (e instanceof CustomEvent && e.detail && e.detail.pending_reconciliation) {
         setPendingReconciliation(e.detail.pending_reconciliation);
       }
     };
@@ -76,7 +78,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     if (!terminal) return;
     setStatus('Discovering readers...');
     const discoverResult = await terminal.discoverReaders({ simulated: typeof window !== 'undefined' && window.location.hostname === 'localhost' });
-    if (discoverResult.error) {
+    if ('error' in discoverResult) {
       setStatus('Failed to discover readers: ' + discoverResult.error.message);
     } else if (discoverResult.discoveredReaders.length === 0) {
       setStatus('No readers found.');
@@ -86,11 +88,11 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
   };
 
-  const connectReader = async (reader: any) => {
+  const connectReader = async (reader: Reader) => {
     if (!terminal) return;
     setStatus('Connecting to reader...');
     const connectResult = await terminal.connectReader(reader);
-    if (connectResult.error) {
+    if ('error' in connectResult) {
       setStatus('Failed to connect to reader: ' + connectResult.error.message);
     } else {
       setConnectedReader(connectResult.reader);
@@ -154,8 +156,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     setStatus('Waiting for card tap...');
 
     // We must create an intent first by calling the backend
-    let intentSecret = '';
-    let lockId = '';
+    let intentSecret: string;
+    let lockId: string;
     try {
         const intentRes = await fetch('/api/v1/payments/terminal/intent', {
             method: 'POST',
@@ -177,13 +179,13 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
 
     const res = await terminal.collectPaymentMethod(intentSecret);
-    if (res.error) {
+    if ('error' in res) {
       setStatus('Payment failed: ' + res.error.message);
       if (onOptimisticRollback) onOptimisticRollback();
     } else {
       setStatus('Processing payment...');
       const processRes = await terminal.processPayment(res.paymentIntent);
-      if (processRes.error) {
+      if ('error' in processRes) {
         setStatus('Payment failed: ' + processRes.error.message);
         if (onOptimisticRollback) onOptimisticRollback();
       } else {
@@ -398,8 +400,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                   }
                   if (onOptimisticReserve) onOptimisticReserve();
                   await processPayment();
-                } catch(e: any) {
-                  setStatus('Error: ' + e.message);
+                } catch(e) {
+                  setStatus('Error: ' + errorMessage(e, ''));
                 } finally {
                   setReserving(false);
                 }
@@ -423,8 +425,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                      });
                    }
                    await processCashSale();
-                 } catch(e: any) {
-                   setStatus('Error: ' + e.message);
+                 } catch(e) {
+                   setStatus('Error: ' + errorMessage(e, ''));
                  } finally {
                    setReserving(false);
                  }

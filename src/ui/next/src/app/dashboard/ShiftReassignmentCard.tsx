@@ -1,15 +1,6 @@
 import React from "react";
 
-type AgentFeedItem = {
-  id: string;
-  tenant_id?: string;
-  event_source: string;
-  context_payload: any;
-  proposed_action: any;
-  lifecycle_state: string;
-  created_at: string;
-  updated_at?: string;
-};
+import type { AgentFeedItem } from '@/lib/agent-feed-types';
 
 interface ShiftReassignmentCardProps {
   approval: AgentFeedItem;
@@ -38,14 +29,10 @@ export const ShiftReassignmentCard: React.FC<ShiftReassignmentCardProps> = ({
   const shiftContext = context?.context || "Action Required: Shift Coverage";
 
   let newStaffName = "a replacement";
-  let originalStaffName = "a staff member";
 
   if (proposedAction && typeof proposedAction === "object") {
      if (proposedAction.new_staff_name) {
        newStaffName = proposedAction.new_staff_name;
-     }
-     if (proposedAction.original_staff_name) {
-       originalStaffName = proposedAction.original_staff_name;
      }
   }
 

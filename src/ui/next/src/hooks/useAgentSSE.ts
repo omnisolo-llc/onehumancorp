@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface SSEOptions {
   agentId: string;
-  onMessage: (data: any) => void;
+  onMessage: (data: unknown) => void;
   onError?: (error: Event) => void;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;

@@ -137,6 +137,16 @@ def main() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
         (
+            "      - native-node\n",
+            "",
+            "missing required Node quality dependency",
+        ),
+        (
+            "          NATIVE_NODE_RESULT: ${{ needs.native-node.result }}",
+            "          NATIVE_NODE_RESULT: success",
+            "fabricated Node quality success",
+        ),
+        (
             "  check-changes:\n    name: Check what files changed\n    runs-on: ubuntu-latest",
             "  check-changes:\n    name: Check what files changed\n    runs-on: oci-runner",
             "unreliable check-changes runner",

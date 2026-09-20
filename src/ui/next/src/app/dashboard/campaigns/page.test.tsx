@@ -49,16 +49,13 @@ const responses: Record<string, unknown> = {
 };
 
 function jsonResponse(data: unknown) {
-  return Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve(data),
-  });
+  return Promise.resolve(Response.json(data, { status: 200 }));
 }
 
 describe("CampaignOrchestrationPage", () => {
   it("loads tenant-scoped dashboard data and exposes campaign orchestration paths", async () => {
     localStorage.setItem("business_display_name", "tenant-123");
-    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/api/v1/growth/campaign/generate-review")) {
         return jsonResponse({ message: "Hi Alice, please review order-1001" });
@@ -69,7 +66,7 @@ describe("CampaignOrchestrationPage", () => {
 
       return jsonResponse({});
     });
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock;
 
     render(
       <TooltipProvider>

@@ -5,7 +5,7 @@ import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralBeforeAfterSliderPage() {
-  const router = useRouter();
+  useRouter();
   const [tenant, setTenant] = useState('my-business');
   const [title, setTitle] = useState('Our Work');
   const [beforeUrl, setBeforeUrl] = useState('https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800');

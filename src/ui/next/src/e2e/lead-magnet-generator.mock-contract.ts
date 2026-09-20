@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Lead Magnet Generator Growth Loop', () => {
-  test('Merchant uses Lead Magnet Generator and sees soft paywall', async ({ page, request, loginAs, adminUser }) => {
+  test('Merchant uses Lead Magnet Generator and sees soft paywall', async ({ page, loginAs, adminUser }) => {
     // Navigate and login
     await loginAs(page, adminUser);
 

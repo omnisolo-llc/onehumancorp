@@ -41,7 +41,7 @@ describe('EventRSVPBuilderPage', () => {
     render(<EventRSVPBuilderPage />);
 
     // Check initial iframe URL
-    const iframe = screen.getByTitle(/Event RSVP Builder/i) as HTMLIFrameElement | null;
+    screen.getByTitle(/Event RSVP Builder/i) as HTMLIFrameElement | null;
     const initialIframe = document.querySelector('iframe');
     expect(initialIframe?.src).toContain('title=Summer%20Pop-up%20Shop');
 

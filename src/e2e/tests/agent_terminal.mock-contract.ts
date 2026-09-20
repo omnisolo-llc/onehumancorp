@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Agent Terminal Multi-Backend UI', () => {
-    test('Simulate changing backend and running a command', async ({ page, request }) => {
+    test('Simulate changing backend and running a command', async ({ page }) => {
         // Mock the API responses
         await page.route('/api/v1/payments/terminal/backend', async route => {
             if (route.request().method() === 'GET') {

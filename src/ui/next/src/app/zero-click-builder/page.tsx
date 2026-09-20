@@ -31,7 +31,7 @@ export default function ZeroClickBuilderPage() {
         throw new Error('Failed to generate store');
       }
 
-      const data = await response.json();
+      await response.json();
       setBuilderState('success');
     } catch (err) {
       console.error(err);

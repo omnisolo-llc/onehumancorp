@@ -136,7 +136,8 @@ describe("protected-by-default auth middleware", () => {
     ],
   ] as const)(
     "returns JSON 401 for a protected %s",
-    async (input, _kind) => {
+    async (input, invocation) => {
+      expect(['route-handler', 'server-action']).toContain(invocation);
       const outcome = await evaluateAuthMiddleware(input, await dependencies());
       expect(outcome).toMatchObject({ kind: "response", status: 401 });
       expect(outcome.headers.get("content-type")).toContain("application/json");

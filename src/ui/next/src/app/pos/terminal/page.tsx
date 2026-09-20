@@ -28,10 +28,10 @@ export default function POSTerminal() {
   const [locked, setLocked] = useState(true);
   const [clockedIn, setClockedIn] = useState(false);
   const [activeStaff, setActiveStaff] = useState<TerminalStaff | null>(null);
-  const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<import("@/lib/business-records").SaleProduct[]>([]);
   useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
+  const [selectedProduct] = useState<import("@/lib/business-records").SaleProduct | null>(null);
+  const [cart, setCart] = useState<import("@/lib/business-records").CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutComplete, setCheckoutComplete] = useState(false);
   const [customerEmail, setCustomerEmail] = useState('');
@@ -209,7 +209,7 @@ export default function POSTerminal() {
     await SyncManager.getInstance().enqueue(event);
   };
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: import("@/lib/business-records").SaleProduct) => {
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
@@ -219,8 +219,8 @@ export default function POSTerminal() {
     });
   };
 
-  const cartTotal = cart.reduce((sum: number, item: any) => sum + (item.product.price_cents * item.quantity), 0);
-  const cartItemCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (item.product.price_cents * item.quantity), 0);
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleKeypadPress = (val: string) => {
     setChargeAmount(prev => {
@@ -241,10 +241,7 @@ export default function POSTerminal() {
     setChargeAmount('0');
   };
 
-  const handleSelectProduct = (product: any) => {
-    setSelectedProduct(product);
-    setOrderStatus('');
-  };
+
 
   const handleOptimisticReserve = (productId: string) => {
     setInventory(prev => prev.map(p => {
@@ -418,7 +415,7 @@ export default function POSTerminal() {
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
-                 className="charge-btn glass-control w-full py-4 bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
+                 className="charge-btn w-full py-4 bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
                >
                  {t('Clock In')}
                </button>
@@ -431,7 +428,7 @@ export default function POSTerminal() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn glass-control min-h-[44px] min-w-[44px] p-4 text-left shadow-lg bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)] ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)] ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-[#0066FF] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

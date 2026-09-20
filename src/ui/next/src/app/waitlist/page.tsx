@@ -1,5 +1,7 @@
 "use client";
 
+
+import { errorMessage as describeError } from '@/lib/errors';
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
@@ -41,8 +43,8 @@ export default function WaitlistPage() {
       }
 
       setIsSuccess(true);
-    } catch (error: any) {
-      setErrorMessage(error.message || "An error occurred.");
+    } catch (error) {
+      setErrorMessage(describeError(error, '') || "An error occurred.");
     } finally {
       setIsSubmitting(false);
     }
