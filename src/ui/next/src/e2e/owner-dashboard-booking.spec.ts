@@ -6,7 +6,7 @@ test.describe('Owner Dashboard Bookings', () => {
     await expect(page.getByTestId('owner-dashboard-bookings')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Bookings Management' })).toBeVisible();
 
-    const feedLink = page.getByRole('link', { name: 'Go to Feed' });
+    const feedLink = page.getByRole('link', { name: 'View Feed' });
     await expect(feedLink).toBeVisible();
     await feedLink.click();
     await expect(page).toHaveURL(/.*\/feed/);
