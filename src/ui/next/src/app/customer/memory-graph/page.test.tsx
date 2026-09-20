@@ -14,15 +14,24 @@ vi.mock('@/app/components/PoweredByOmniSolo', () => ({
 }));
 
 describe('CustomerMemoryGraph Component', () => {
+  it.each([null, { events: {} }, { customer_name: 42 }, { events: [{ raw_content: {} }] }])(
+    'rejects malformed history without inventing customer facts: %j', async (payload) => {
+      vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => Response.json(payload)));
+      render(<CustomerMemoryGraph />);
+      expect(await screen.findByText('Failed to fetch customer history.')).toBeVisible();
+      expect(screen.queryByText('High Intent')).not.toBeInTheDocument();
+    },
+  );
+
   it('renders loading state initially', () => {
-    render(<CustomerMemoryGraph />);
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(() => new Promise<Response>(() => {})));
+    const view = render(<CustomerMemoryGraph />);
     expect(screen.getByText('Loading customer history...')).toBeInTheDocument();
+    view.unmount();
   });
 
   it('renders error state on fetch failure', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-    });
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => new Response(null, { status: 503 })));
 
     render(<CustomerMemoryGraph />);
 
@@ -51,10 +60,7 @@ describe('CustomerMemoryGraph Component', () => {
       ],
     };
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockData),
-    });
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => Response.json(mockData)));
 
     render(<CustomerMemoryGraph />);
 
@@ -77,8 +83,9 @@ describe('CustomerMemoryGraph Component', () => {
       expect(screen.getByText('instagram')).toBeInTheDocument();
 
       // Check for action buttons
-      expect(screen.getByText('Draft Reply')).toBeInTheDocument();
-      expect(screen.getByText('Issue Refund')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Draft Reply' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Issue Refund' })).toBeDisabled();
+      expect(screen.queryByText('High Intent')).not.toBeInTheDocument();
     });
   });
 
@@ -89,10 +96,7 @@ describe('CustomerMemoryGraph Component', () => {
       events: [],
     };
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockData),
-    });
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => Response.json(mockData)));
 
     render(<CustomerMemoryGraph />);
 

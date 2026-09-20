@@ -99,7 +99,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
         page.waitForResponse(res => res.url().includes('/api/v1/billing/create-checkout-session'), { timeout: 10000 }),
         starterButton.click(),
       ]);
-    } catch(e) {
+    } catch {
       // Skipping strict URL validation due to likely environment checkout API timeout
     }
 
@@ -109,7 +109,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     try {
       await page.waitForURL(/\/checkout\?tier=Starter/, { timeout: 5000 });
       await expect(page.getByText('Plan Upgrade').or(page.getByRole('heading', { name: 'Complete Your Upgrade' }))).toBeVisible({ timeout: 15000 });
-    } catch (e) {
+    } catch  {
       // In local isolated test environments the Stripe checkout session endpoint might fail or error,
       // which is acceptable for UI-focused tests if the API call was at least dispatched.
       // Skipping strict URL validation due to likely environment checkout API timeout

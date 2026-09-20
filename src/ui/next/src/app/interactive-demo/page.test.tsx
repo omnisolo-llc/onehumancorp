@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import InteractiveDemoPage from './page';
 
@@ -8,11 +8,11 @@ describe('InteractiveDemoPage embed output', () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem('business_display_name', 'tenant/one?x=1&y="two"');
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => Response.json({ current_plan: 'free' })));
   });
 
-  it('escapes user text and URL-encodes the referral tenant', () => {
-    render(<InteractiveDemoPage />);
+  it('escapes user text and URL-encodes the referral tenant', async () => {
+    await act(async () => { render(<InteractiveDemoPage />); });
     fireEvent.change(screen.getByDisplayValue('My Interactive Demo'), {
       target: { value: '</h3><script>alert(`x`)</script>&' },
     });

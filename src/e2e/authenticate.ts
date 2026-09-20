@@ -22,7 +22,7 @@ export async function authenticateRequest(
   request: APIRequestContext,
   credentials: E2ECredentials,
   origin: string,
-): Promise<void> {
+): Promise<unknown> {
   const response = await request.post('/api/v1/auth/login', {
     headers: {
       origin,
@@ -43,4 +43,9 @@ export async function authenticateRequest(
       `E2E authentication failed with HTTP ${response.status()}: ${body || '<empty response>'}`,
     );
   }
+  const result: unknown = await response.json();
+  if (!result || typeof result !== 'object' || !('user' in result)) {
+    throw new Error('Authentication did not return the verified user contract');
+  }
+  return result.user;
 }

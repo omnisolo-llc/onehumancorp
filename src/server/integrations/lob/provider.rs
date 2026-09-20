@@ -1,4 +1,4 @@
-use crate::integrations::lob::client::{Address, LobClient, PostcardRequest};
+use crate::integrations::lob::client::{LobClient, PostcardRequest};
 
 pub struct LobProvider {
     client: LobClient,
@@ -11,33 +11,8 @@ impl LobProvider {
         }
     }
 
-    pub async fn send_postcard(
-        &self,
-        description: &str,
-        name: &str,
-        address_line1: &str,
-        city: &str,
-        state: &str,
-        zip: &str,
-        front_html: &str,
-        back_html: &str,
-    ) -> Result<String, String> {
-        let req = PostcardRequest {
-            description: description.to_string(),
-            to: Address {
-                name: name.to_string(),
-                address_line1: address_line1.to_string(),
-                address_line2: None,
-                address_city: city.to_string(),
-                address_state: state.to_string(),
-                address_zip: zip.to_string(),
-                address_country: "US".to_string(),
-            },
-            front: front_html.to_string(),
-            back: back_html.to_string(),
-        };
-
-        match self.client.create_postcard(&req).await {
+    pub async fn send_postcard(&self, request: &PostcardRequest) -> Result<String, String> {
+        match self.client.create_postcard(request).await {
             Ok(res) => Ok(res.id),
             Err(e) => Err(e),
         }

@@ -19,7 +19,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('renders loading state initially and then fetches data successfully', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({
           ok: true,
@@ -54,7 +54,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles fetch failure for briefing gracefully', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: false });
       }
@@ -72,7 +72,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles empty briefing gracefully', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       }
@@ -90,7 +90,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles fetch exception for briefing gracefully', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.reject(new Error('network error'));
       }
@@ -113,7 +113,7 @@ describe('MorningBriefingCard', () => {
       { id: '2', source: 'Decision Assistant', context: 'Dismiss Item', action_type: 'Dismiss' }
     ];
 
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -168,7 +168,7 @@ describe('MorningBriefingCard', () => {
       { id: '1', source: 'Decision Assistant', context: 'Approve Item', action_type: 'Approve' }
     ];
 
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -203,7 +203,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles insight chat correctly', async () => {
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -245,7 +245,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles insight chat failures gracefully', async () => {
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -278,7 +278,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles insight chat exception gracefully', async () => {
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -311,7 +311,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('does not send empty chat message', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -345,7 +345,7 @@ describe('MorningBriefingCard', () => {
 
 
   it('handles resTriage ok branch', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -363,7 +363,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles empty action_type branch', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -381,7 +381,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles chat fallback reply correctly', async () => {
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -413,9 +413,9 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles chat empty or loading branch', async () => {
-    let resolveChatPromise: any;
-    const chatPromise = new Promise((resolve) => { resolveChatPromise = resolve; });
-    (global.fetch as any).mockImplementation((url: string, options: any) => {
+    let resolveChatPromise: (response: Partial<Response>) => void;
+    const chatPromise = new Promise<Partial<Response>>((resolve) => { resolveChatPromise = resolve; });
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -460,7 +460,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles resTriage root items object fallback branch', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
@@ -478,7 +478,7 @@ describe('MorningBriefingCard', () => {
   });
 
   it('handles resTriage failure branch', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }

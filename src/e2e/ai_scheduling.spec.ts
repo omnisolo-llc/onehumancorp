@@ -1,1 +1,1 @@
-import { test, expect } from './fixtures';
+import './fixtures';

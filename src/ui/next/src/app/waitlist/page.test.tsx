@@ -22,7 +22,7 @@ describe('WaitlistPage', () => {
   const mockPush = vi.fn();
 
   beforeEach(() => {
-    (navigation.useRouter as any).mockReturnValue({ push: mockPush });
+    vi.mocked(navigation.useRouter, { partial: true }).mockReturnValue({ push: mockPush });
     vi.clearAllMocks();
 
     // Clear mock fetch
@@ -51,7 +51,7 @@ describe('WaitlistPage', () => {
         referral_link: 'https://example.com/ref/123'
       })
     };
-    (global.fetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(mockResponse);
 
     await act(async () => {
       render(<WaitlistPage />);
@@ -87,7 +87,7 @@ describe('WaitlistPage', () => {
       ok: false,
       json: async () => ({})
     };
-    (global.fetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(mockResponse);
 
     await act(async () => {
       render(<WaitlistPage />);

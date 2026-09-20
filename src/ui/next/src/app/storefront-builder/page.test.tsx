@@ -9,8 +9,8 @@ vi.mock('../../components/Walkthrough', () => ({
   InteractiveWalkthrough: () => null
 }));
 vi.mock('../../components/TooltipRegistry', () => ({
-  TooltipProvider: ({ children }: any) => <>{children}</>,
-  WithTooltip: ({ children }: any) => <div>{children}</div>
+  TooltipProvider: ({ children }: { children?: import('react').ReactNode }) => <>{children}</>,
+  WithTooltip: ({ children }: { children?: import('react').ReactNode }) => <div>{children}</div>
 }));
 vi.mock('../../components/help', () => ({
   useWalkthrough: () => ({ startWalkthrough: vi.fn() })
@@ -49,7 +49,7 @@ describe('StorefrontBuilderPage', () => {
     const button = screen.getByText('Build My Storefront');
     expect(button.className).not.toContain('cursor-not-allowed');
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         pages: [{
@@ -77,7 +77,7 @@ describe('StorefrontBuilderPage', () => {
     const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         pages: [{
@@ -94,7 +94,7 @@ describe('StorefrontBuilderPage', () => {
       expect(screen.getByText('1-Tap Launch')).toBeTruthy();
     });
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ domain: 'test' })
     });
@@ -112,7 +112,7 @@ describe('StorefrontBuilderPage', () => {
     const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         pages: [{

@@ -2,6 +2,9 @@ use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+type MutationFuture =
+    futures::future::BoxFuture<'static, Result<Option<serde_json::Value>, String>>;
+
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct OfflineMutation {
     pub transaction_id: String,
@@ -95,11 +98,7 @@ pub async fn offline_sync_handler(
         .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
         .await;
 
-    let mut futures: Vec<
-        std::pin::Pin<
-            Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>,
-        >,
-    > = Vec::new();
+    let mut futures: Vec<MutationFuture> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
         let cache_clone = cache.clone();
@@ -281,8 +280,8 @@ pub async fn offline_sync_handler(
                         .execute(&mut *db_tx)
                         .await;
 
-                    if let Some(client) = crate::get_redis_client() {
-                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    if let Some(client) = crate::get_redis_client()
+                        && let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                             let invalidation_topic = "cache_invalidation_events";
                             let invalidation_payload = serde_json::json!({
                                 "event": "inventory.updated",
@@ -293,7 +292,6 @@ pub async fn offline_sync_handler(
                             }).to_string();
                             let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                         }
-                    }
 
                     if is_conflict {
                         let ai_task_id = uuid::Uuid::new_v4().to_string();
@@ -370,8 +368,8 @@ pub async fn offline_sync_handler(
                     let redis_tenant_id = tenant_id_clone.clone();
                     let redis_product_id = mutation.product_id.clone();
                     tokio::spawn(async move {
-                        if let Some(client) = redis_client_opt {
-                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        if let Some(client) = redis_client_opt
+                            && let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                                 let topic = format!("inventory:{}", redis_tenant_id);
                                 let payload = serde_json::json!({
                                     "event": "inventory_updated",
@@ -380,7 +378,6 @@ pub async fn offline_sync_handler(
                                 }).to_string();
                                 let _: () = redis::cmd("PUBLISH").arg(topic.trim()).arg(payload).query_async(&mut conn).await.unwrap_or(());
                             }
-                        }
                     });
 
                     if let Err(e) = db_tx.commit().await { return Err(e.to_string()); }
@@ -509,8 +506,8 @@ pub async fn offline_sync_handler(
                         let redis_tenant_id = tenant_id_clone.clone();
                         let redis_product_id = mutation.product_id.clone();
                         tokio::spawn(async move {
-                            if let Some(client) = redis_client_opt {
-                                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            if let Some(client) = redis_client_opt
+                                && let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                                     let topic = format!("inventory:{}", redis_tenant_id);
                                     let payload = serde_json::json!({
                                         "event": "inventory_updated",
@@ -519,7 +516,6 @@ pub async fn offline_sync_handler(
                                     }).to_string();
                                     let _: () = redis::cmd("PUBLISH").arg(topic.trim()).arg(payload).query_async(&mut conn).await.unwrap_or(());
                                 }
-                            }
                         });
 
                         db_tx.commit().await.unwrap();
@@ -731,7 +727,7 @@ pub async fn sync_events_handler(
                 } else {
                     let _ = tx.rollback().await;
                 }
-                return ("failed", 1);
+                ("failed", 1)
             } else {
                 let res1 = sqlx::query(
                     "INSERT INTO sync_events (id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4)"
@@ -759,7 +755,7 @@ pub async fn sync_events_handler(
                 } else {
                     let _ = tx.rollback().await;
                 }
-                return ("failed", 1);
+                ("failed", 1)
             }
         }));
     }
@@ -770,13 +766,11 @@ pub async fn sync_events_handler(
     let mut applied_count = 0;
     let mut conflict_count = 0;
 
-    for res in results {
-        if let Ok((status, count)) = res {
-            match status {
-                "applied" => applied_count += count,
-                "conflict" => conflict_count += count,
-                _ => {}
-            }
+    for (status, count) in results.into_iter().flatten() {
+        match status {
+            "applied" => applied_count += count,
+            "conflict" => conflict_count += count,
+            _ => {}
         }
     }
 
@@ -1356,13 +1350,13 @@ pub async fn operation_intents_handler(
         .fetch_one(&mut *tx)
         .await;
 
-        if let Ok((count,)) = exists {
-            if count > 0 {
-                // Already processed
-                let _ = tx.rollback().await;
-                applied_count += 1; // It was previously applied (idempotency)
-                continue;
-            }
+        if let Ok((count,)) = exists
+            && count > 0
+        {
+            // Already processed
+            let _ = tx.rollback().await;
+            applied_count += 1; // It was previously applied (idempotency)
+            continue;
         }
 
         // Insert into operation_intents

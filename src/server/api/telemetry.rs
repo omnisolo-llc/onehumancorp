@@ -94,14 +94,14 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         )
                         .await;
 
-                        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-                            if let Ok(client) = redis::Client::open(redis_url) {
-                                let limiter =
-                                    ::server_pricing::rate_limit::RedisRateLimiter::new(client);
-                                let _ = limiter
-                                    .record_token_usage(&tenant_id, &model_clone, count_clone)
-                                    .await;
-                            }
+                        if let Ok(redis_url) = std::env::var("REDIS_URL")
+                            && let Ok(client) = redis::Client::open(redis_url)
+                        {
+                            let limiter =
+                                ::server_pricing::rate_limit::RedisRateLimiter::new(client);
+                            let _ = limiter
+                                .record_token_usage(&tenant_id, &model_clone, count_clone)
+                                .await;
                         }
                     });
                 }

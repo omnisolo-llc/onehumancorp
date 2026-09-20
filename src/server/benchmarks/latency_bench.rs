@@ -179,7 +179,7 @@ pub async fn bench_api_response_time() {
         .unwrap_or(10);
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    let bg_handle = tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
+    let bg_handle = tokio::spawn(async move { while rx.recv().await.is_some() {} });
 
     // Cloud setup
     if database_url.starts_with("postgres") {
@@ -347,7 +347,7 @@ pub async fn bench_api_response_time() {
 pub async fn bench_agent_snapshot() {
     tracing::info!("Benchmarking Agent Snapshot Fetching...");
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
+    tokio::spawn(async move { while rx.recv().await.is_some() {} });
 
     let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
@@ -507,7 +507,7 @@ pub async fn bench_agent_snapshot() {
 pub async fn bench_dashboard_snapshot() {
     tracing::info!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    let bg_handle = tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
+    let bg_handle = tokio::spawn(async move { while rx.recv().await.is_some() {} });
 
     let database_url = std::env::var("OMNISOLO_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
@@ -680,7 +680,7 @@ pub async fn bench_dashboard_snapshot() {
             "Mobile payload optimization should clear transcripts"
         );
         assert!(
-            res_desktop.meetings[0].transcript.len() > 0,
+            !res_desktop.meetings[0].transcript.is_empty(),
             "Desktop payload should contain transcripts"
         );
     }
@@ -824,7 +824,7 @@ pub async fn bench_get_analytics() {
     };
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    let bg_handle = tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
+    let bg_handle = tokio::spawn(async move { while rx.recv().await.is_some() {} });
     let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
     // Pre-populate some agents and meetings for the analytics calculation
@@ -1085,14 +1085,13 @@ mod tests {
 
         let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
-        if database_url.starts_with("postgres") {
-            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new()
+        if database_url.starts_with("postgres")
+            && let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new()
                 .connect(&database_url)
                 .await
-            {
-                let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
-                bench_queue("Postgres_Stress", pg_queue).await;
-            }
+        {
+            let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
+            bench_queue("Postgres_Stress", pg_queue).await;
         }
     }
 

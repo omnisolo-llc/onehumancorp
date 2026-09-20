@@ -25,7 +25,7 @@ test.describe('Instant Setup CUJ', () => {
             } else {
                 await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Mocked ' + filename + '</body></html>' });
             }
-        } catch (e) {
+        } catch  {
             await route.continue();
         }
     });

@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@playwright/test": ["./node_modules/@playwright/test"],
+      "@/*": ["./src/ui/next/src/*"]
+    }
+  },
+  "include": ["playwright.config.ts", "src/e2e/**/*.ts", "src/ui/next/src/e2e/**/*.ts", "src/ui/next/e2e/**/*.ts"]
+}

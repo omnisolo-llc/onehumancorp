@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import Link from 'next/link';
 
 export default function InvoiceGeneratorPage() {
@@ -10,7 +10,7 @@ export default function InvoiceGeneratorPage() {
 
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [transactionCurrency, setTransactionCurrency] = useState('USD');
-  const [exchangeRate, setExchangeRate] = useState(1.0);
+  const [exchangeRate] = useState(1.0);
 
   const [shareLink, setShareLink] = useState('');
   const [copied, setCopied] = useState(false);

@@ -68,7 +68,7 @@ function renderMessageContent(content: string): ReactNode {
     } else if (!mediaType || mediaType.startsWith("image/")) {
       nodes.push(
         <span className="my-2 block" key={`image-${tokenIndex}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- customer media uses an external, runtime URL */}
+          {/* Customer media uses an external runtime URL rather than a build-time image asset. */}
           <img
             src={url}
             alt={alt}
@@ -193,7 +193,7 @@ function InboxWorkspace({
       try {
         const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
         return payload && payload.inbox_message_id === selected.id;
-      } catch (e) {
+      } catch  {
         return false;
       }
     });
@@ -282,7 +282,7 @@ function InboxWorkspace({
         try {
           const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
           return payload && payload.inbox_message_id === inboxMessageId;
-        } catch (e) {
+        } catch  {
           return false;
         }
       });
@@ -471,7 +471,7 @@ function InboxWorkspace({
                       if (activeApproval && activeApproval.payload) {
                         try {
                           parsedPayload = typeof activeApproval.payload === 'string' ? JSON.parse(activeApproval.payload) : activeApproval.payload;
-                        } catch(e) {}
+                        } catch {}
                         if (parsedPayload && parsedPayload.action_type === "Draft Quote") {
                            let amount = 0;
                            if (parsedPayload.total_amount_cents !== undefined && parsedPayload.total_amount_cents !== null) {

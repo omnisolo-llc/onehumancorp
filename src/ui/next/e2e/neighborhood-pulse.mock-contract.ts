@@ -2,9 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Neighborhood Pulse Dashboard UI', () => {
   test('should display neighborhood pulse card when neighbors are found', async ({ page }) => {
-    // Intercept API call to mock a response that returns neighbors
-      }
-    });
+    // Historical contract fixture: requires the named seeded neighbors below.
+    // It is not part of the real-stack *.spec.ts discovery.
 
     // Navigate to dashboard
     await page.goto('/dashboard');

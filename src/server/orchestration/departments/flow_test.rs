@@ -816,17 +816,16 @@ async fn test_redlock_prevents_double_booking_during_quote() {
         if req
             .description
             .contains("Action Required: Approve Estimate for Handyman Fix")
+            && let Some(payload) = req.payload
         {
-            if let Some(payload) = req.payload {
-                if payload
-                    .get("proposed_slot_id")
-                    .and_then(|v| v.as_str())
-                    .is_some()
-                {
-                    soft_locked_count += 1;
-                } else {
-                    failed_to_lock_count += 1;
-                }
+            if payload
+                .get("proposed_slot_id")
+                .and_then(|v| v.as_str())
+                .is_some()
+            {
+                soft_locked_count += 1;
+            } else {
+                failed_to_lock_count += 1;
             }
         }
     }

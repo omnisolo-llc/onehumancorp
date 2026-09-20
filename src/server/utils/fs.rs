@@ -14,7 +14,8 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
     let filename = filename.as_ref();
     let dir = filename
         .parent()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid filename"))?;
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
 
     fs::create_dir_all(dir)?;
 
@@ -29,10 +30,11 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
         .map(char::from)
         .collect();
 
-    let mut tmp_name = std::env::temp_dir();
-    tmp_name.push("omnisolo-atomic-writes");
-    let _ = fs::create_dir_all(&tmp_name);
-    tmp_name.push(format!("{}.{}.tmp", base_name_str, random_suffix));
+    // Renaming is atomic only within one filesystem. Stage next to the
+    // destination, never in a global temp directory with a copy fallback.
+    let tmp_name = dir.join(format!(
+        ".omnisolo-atomic-{base_name_str}.{random_suffix}.tmp"
+    ));
 
     let mut options = fs::OpenOptions::new();
     options.write(true).create_new(true);
@@ -40,10 +42,7 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
     #[cfg(unix)]
     options.mode(_mode);
 
-    let mut file = match options.open(&tmp_name) {
-        Ok(f) => f,
-        Err(e) => return Err(e),
-    };
+    let mut file = options.open(&tmp_name)?;
 
     if let Err(e) = file.write_all(data) {
         drop(file);
@@ -59,15 +58,6 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
     drop(file); // Close file
 
     if let Err(e) = fs::rename(&tmp_name, filename) {
-        if e.raw_os_error() == Some(18) {
-            // EXDEV
-            if let Err(e2) = fs::copy(&tmp_name, filename) {
-                let _ = fs::remove_file(&tmp_name);
-                return Err(e2);
-            }
-            let _ = fs::remove_file(&tmp_name);
-            return Ok(());
-        }
         let _ = fs::remove_file(&tmp_name); // Try to clean up
         return Err(e);
     }
@@ -76,76 +66,31 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
 }
 
 pub fn cleanup_stale_temp_files() {
-    let tmp_dir = std::env::temp_dir();
-
-    // Clean up .tmp files created by omnisolo-atomic-writes
-    let mut atomic_tmp = tmp_dir.clone();
-    atomic_tmp.push("omnisolo-atomic-writes");
-    if let Ok(entries) = std::fs::read_dir(&atomic_tmp) {
-        let now = std::time::SystemTime::now();
-        for entry in entries.flatten() {
-            if let Ok(meta) = entry.metadata() {
-                if let Ok(modified) = meta.modified() {
-                    if let Ok(duration) = now.duration_since(modified) {
-                        if duration.as_secs() > 3600 {
-                            let _ = std::fs::remove_file(entry.path());
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Clean up .tmp_py_*.py, *.tmp.rs, and general *.tmp files in /tmp created by agents
-    if let Ok(entries) = std::fs::read_dir(&tmp_dir) {
-        let now = std::time::SystemTime::now();
-        for entry in entries.flatten() {
-            let file_name = entry.file_name().to_string_lossy().to_string();
-            let mut should_delete = false;
-
-            if file_name.starts_with(".tmp_py_") && file_name.ends_with(".py") {
-                should_delete = true;
-            } else if file_name.ends_with(".tmp.rs") {
-                should_delete = true;
-            } else if file_name.ends_with(".tmp") {
-                should_delete = true;
-            } else if file_name.ends_with(".log") && file_name.starts_with("test_") {
-                should_delete = true;
-            }
-
-            if should_delete {
-                if let Ok(meta) = entry.metadata() {
-                    if let Ok(modified) = meta.modified() {
-                        if let Ok(duration) = now.duration_since(modified) {
-                            if duration.as_secs() > 3600 {
-                                let _ = std::fs::remove_file(entry.path());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Clean up .tmp files created by agents/builtin/json_store.rs
-    let omnisolo_runtime_dir =
+    let runtime =
         std::env::var("OMNISOLO_RUNTIME_DIR").unwrap_or_else(|_| ".omnisolo/runtime".to_string());
-    let memory_dir = std::path::PathBuf::from(omnisolo_runtime_dir).join("memory");
-    if let Ok(entries) = std::fs::read_dir(&memory_dir) {
+    cleanup_owned_temp_files(&std::env::temp_dir(), Path::new(&runtime));
+}
+
+fn cleanup_owned_temp_files(temp: &Path, runtime: &Path) {
+    // Only application-owned namespaces are eligible. A *.tmp/*.log suffix in
+    // the shared host temp directory is not evidence that this app owns it.
+    for directory in [temp.join("omnisolo-atomic-writes"), runtime.join("memory")] {
+        if !fs::symlink_metadata(&directory).is_ok_and(|meta| meta.is_dir()) {
+            continue; // Never follow a substituted directory symlink.
+        }
+        let Ok(entries) = fs::read_dir(&directory) else {
+            continue;
+        };
         let now = std::time::SystemTime::now();
         for entry in entries.flatten() {
-            if let Some(ext) = entry.path().extension() {
-                if ext == "tmp" {
-                    if let Ok(meta) = entry.metadata() {
-                        if let Ok(modified) = meta.modified() {
-                            if let Ok(duration) = now.duration_since(modified) {
-                                if duration.as_secs() > 3600 {
-                                    let _ = std::fs::remove_file(entry.path());
-                                }
-                            }
-                        }
-                    }
-                }
+            if entry.path().extension().is_some_and(|ext| ext == "tmp")
+                && let Ok(meta) = fs::symlink_metadata(entry.path())
+                && meta.is_file()
+                && let Ok(modified) = meta.modified()
+                && let Ok(age) = now.duration_since(modified)
+                && age.as_secs() > 3600
+            {
+                let _ = fs::remove_file(entry.path());
             }
         }
     }
@@ -186,8 +131,86 @@ mod tests {
     }
 
     #[test]
+    fn failed_atomic_replace_preserves_destination_and_removes_staging() {
+        let root = std::env::temp_dir().join(format!("ohc-atomic-{}", rand::random::<u64>()));
+        fs::create_dir_all(root.join("destination")).unwrap();
+        fs::write(root.join("destination/keep"), b"original").unwrap();
+        assert!(write_file_atomic(root.join("destination"), b"replacement", 0o600).is_err());
+        assert_eq!(
+            fs::read(root.join("destination/keep")).unwrap(),
+            b"original"
+        );
+        assert_eq!(
+            fs::read_dir(&root).unwrap().count(),
+            1,
+            "staging file leaked"
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn cleanup_preserves_foreign_stale_files_and_only_removes_owned_stale_temps() {
+        let root = std::env::temp_dir().join(format!("ohc-cleanup-{}", rand::random::<u64>()));
+        fs::create_dir_all(root.join("omnisolo-atomic-writes")).unwrap();
+        fs::create_dir_all(root.join("runtime/memory")).unwrap();
+        let old = std::time::SystemTime::now() - std::time::Duration::from_secs(7200);
+        let names = [
+            "foreign.tmp",
+            "test_foreign.log",
+            "foreign.tmp.rs",
+            ".tmp_py_foreign.py",
+            "omnisolo-atomic-writes/owned.tmp",
+            "runtime/memory/owned.tmp",
+            "runtime/memory/keep.json",
+        ];
+        for name in names {
+            let mut file = fs::File::create(root.join(name)).unwrap();
+            file.write_all(b"preserve unless owned temporary").unwrap();
+            file.set_modified(old).unwrap();
+        }
+        fs::write(root.join("runtime/memory/fresh.tmp"), b"fresh").unwrap();
+        cleanup_owned_temp_files(&root, &root.join("runtime"));
+        for name in &names[..4] {
+            assert!(root.join(name).exists(), "deleted foreign file {name}");
+        }
+        assert!(!root.join(names[4]).exists());
+        assert!(!root.join(names[5]).exists());
+        assert!(root.join(names[6]).exists());
+        assert!(root.join("runtime/memory/fresh.tmp").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cleanup_does_not_follow_directory_or_file_symlinks() {
+        use std::os::unix::fs::symlink;
+        let root =
+            std::env::temp_dir().join(format!("ohc-cleanup-links-{}", rand::random::<u64>()));
+        fs::create_dir_all(root.join("foreign")).unwrap();
+        fs::create_dir_all(root.join("runtime/memory")).unwrap();
+        let file = fs::File::create(root.join("foreign/keep.tmp")).unwrap();
+        file.set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(7200))
+            .unwrap();
+        symlink(root.join("foreign"), root.join("omnisolo-atomic-writes")).unwrap();
+        symlink(
+            root.join("foreign/keep.tmp"),
+            root.join("runtime/memory/link.tmp"),
+        )
+        .unwrap();
+        cleanup_owned_temp_files(&root, &root.join("runtime"));
+        assert!(root.join("foreign/keep.tmp").exists());
+        assert!(
+            fs::symlink_metadata(root.join("runtime/memory/link.tmp"))
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn test_cleanup_stale_temp_files() {
-        let tmp_dir = std::env::temp_dir();
+        let tmp_dir = std::env::temp_dir().join(format!("ohc-fresh-{}", rand::random::<u64>()));
         let atomic_tmp = tmp_dir.join("omnisolo-atomic-writes");
         let _ = std::fs::create_dir_all(&atomic_tmp);
 
@@ -197,13 +220,11 @@ mod tests {
         let fresh_rs = tmp_dir.join("fresh.tmp.rs");
         std::fs::write(&fresh_rs, b"fresh_rs").unwrap();
 
-        super::cleanup_stale_temp_files();
+        cleanup_owned_temp_files(&tmp_dir, &tmp_dir.join("runtime"));
 
         assert!(fresh_atomic.exists(), "fresh atomic file should be kept");
         assert!(fresh_rs.exists(), "fresh rs file should be kept");
 
-        // Clean up
-        let _ = std::fs::remove_file(fresh_atomic);
-        let _ = std::fs::remove_file(fresh_rs);
+        fs::remove_dir_all(tmp_dir).unwrap();
     }
 }

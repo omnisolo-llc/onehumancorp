@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { e2eAdmin as adminPage } from './fixtures';
+import './fixtures';
 
 test.describe('Hermes Cross-Session Recall E2E', () => {
   test('User can navigate to cross-session recall and see initial state', async ({ page }) => {

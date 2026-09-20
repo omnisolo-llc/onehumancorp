@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 export function OneTapReferral({ tenantId, source, style }: { tenantId: string, source: string, style?: React.CSSProperties }) {
   const [copied, setCopied] = useState(false);
-  const referralLink = `/onboarding?ref=${tenantId}&source=${source}`;
+  const referralLink = `/onboarding?ref=${encodeURIComponent(tenantId)}&source=${encodeURIComponent(source)}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
@@ -11,7 +11,7 @@ export function OneTapReferral({ tenantId, source, style }: { tenantId: string, 
   };
 
   return (
-    <div className="one-tap-referral p-4 bg-indigo-50/50 backdrop-blur-[30px] saturate-[210%] border border-indigo-100 rounded-xl shadow-sm text-center">
+    <div style={style} className="one-tap-referral p-4 bg-indigo-50/50 backdrop-blur-[30px] saturate-[210%] border border-indigo-100 rounded-xl shadow-sm text-center">
       <h3 className="font-bold font-outfit text-indigo-900 mb-1">Refer & Earn $50</h3>
       <p className="text-xs text-indigo-700 mb-3">Invite a friend to OmniSolo OneHumanCorp and you both get rewarded!</p>
       <div className="flex gap-2 justify-center">

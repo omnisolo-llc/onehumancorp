@@ -1058,8 +1058,8 @@ mod tests {
         let config = WorkerConfig::from_input(input).unwrap();
         let spec = config.process_spec.as_ref().unwrap();
         let selection = spec.resolved_model.as_ref().unwrap();
-        assert!(spec.environment.get(OPENAI_API_KEY).is_none());
-        assert!(spec.environment.get(OPENAI_API_BASE_URL).is_none());
+        assert!(!spec.environment.contains_key(OPENAI_API_KEY));
+        assert!(!spec.environment.contains_key(OPENAI_API_BASE_URL));
         assert_eq!(
             spec.environment.get(OPENAI_MODEL),
             Some(&"gpt-5.6-luna".to_owned())
@@ -1110,8 +1110,8 @@ mod tests {
 
         let config = WorkerConfig::from_input(input).unwrap();
         let spec = config.process_spec.as_ref().unwrap();
-        assert!(spec.environment.get("OPENAI_BASE_URL").is_none());
-        assert!(spec.environment.get(OPENAI_API_KEY).is_none());
+        assert!(!spec.environment.contains_key("OPENAI_BASE_URL"));
+        assert!(!spec.environment.contains_key(OPENAI_API_KEY));
         assert!(spec.api_base_url.is_none());
         assert!(spec.args.is_empty());
     }
@@ -1126,7 +1126,7 @@ mod tests {
         assert_eq!(selection.provider_route, "openai");
         assert_eq!(config.default_resolved_model.as_ref(), Some(selection));
         assert_eq!(config.api_base_url, spec.api_base_url);
-        assert!(spec.environment.get(OPENAI_API_KEY).is_none());
+        assert!(!spec.environment.contains_key(OPENAI_API_KEY));
         assert!(spec.api_base_url.is_none());
     }
 
@@ -1214,7 +1214,7 @@ mod tests {
         let config = WorkerConfig::from_input(input).unwrap();
         let spec = config.process_spec.as_ref().unwrap();
         let selection = spec.resolved_model.as_ref().unwrap();
-        assert!(spec.environment.get(OPENAI_API_KEY).is_none());
+        assert!(!spec.environment.contains_key(OPENAI_API_KEY));
         assert!(spec.api_base_url.is_none());
         assert_eq!(
             config.provider_api_key.as_ref().map(SecretValue::expose),
@@ -1386,8 +1386,8 @@ mod tests {
         .unwrap()
         .unwrap();
 
-        assert!(spec.environment.get("OPENAI_API_KEY").is_none());
-        assert!(spec.environment.get("OPENAI_API_BASE_URL").is_none());
+        assert!(!spec.environment.contains_key("OPENAI_API_KEY"));
+        assert!(!spec.environment.contains_key("OPENAI_API_BASE_URL"));
         assert!(spec.api_base_url.is_none());
         assert!(!spec.args.iter().any(|arg| arg.contains("model_provider")));
         assert_eq!(spec.args.last().map(String::as_str), Some("--stdio"));

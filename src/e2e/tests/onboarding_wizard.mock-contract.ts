@@ -1,10 +1,12 @@
+import * as nativeFsModule from 'node:fs';
+import * as nativePathModule from 'node:path';
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
 
   test.beforeEach(async ({ page }) => {
-    const fs = require('fs');
-    const path = require('path');
+    const fs = nativeFsModule;
+    const path = nativePathModule;
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');

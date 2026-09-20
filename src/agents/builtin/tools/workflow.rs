@@ -282,8 +282,14 @@ async fn run_builtin_agent(
         }
     }
     if disable_tools {
-        envs.push(("OMNISOLO_AGENT_DISABLE_TOOLS".to_string(), "true".to_string()));
-        envs.push(("OMNISOLO_AGENT_TASK_TIMEOUT_SECS".to_string(), "240".to_string()));
+        envs.push((
+            "OMNISOLO_AGENT_DISABLE_TOOLS".to_string(),
+            "true".to_string(),
+        ));
+        envs.push((
+            "OMNISOLO_AGENT_TASK_TIMEOUT_SECS".to_string(),
+            "240".to_string(),
+        ));
         envs.push(("OMNISOLO_LLM_TIMEOUT_SECS".to_string(), "180".to_string()));
         envs.push(("OMNISOLO_MAX_TOKENS".to_string(), "1200".to_string()));
         if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {

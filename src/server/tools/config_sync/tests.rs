@@ -130,5 +130,5 @@ async fn test_config_sync_push_and_get() {
     let get_json: serde_json::Value = serde_json::from_str(&get_res.payload).unwrap();
     assert_eq!(get_json["status"], "success");
     assert!(get_json.get("hash").is_some());
-    assert!(get_json["hash"].as_str().unwrap().len() > 0);
+    assert!(!get_json["hash"].as_str().unwrap().is_empty());
 }

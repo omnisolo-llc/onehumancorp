@@ -23,24 +23,20 @@ vi.mock('next/navigation', () => {
 })
 
 // Mock next/link
-vi.mock('next/link', () => {
+vi.mock('next/link', async () => {
+  const { createElement } = await vi.importActual<typeof import('react')>('react');
   return {
-    default: ({ children, href, ...rest }: any) => {
-      // @ts-ignore
-      const React = require('react')
-      return React.createElement('a', { href, ...rest }, children)
-    }
-  }
+    default: ({ children, href, ...rest }: import('react').AnchorHTMLAttributes<HTMLAnchorElement>) =>
+      createElement('a', { href, ...rest }, children),
+  };
 })
 
 // Mock next/image
-vi.mock('next/image', () => ({
-  default: (props: any) => {
-    // @ts-ignore
-    const React = require('react')
-    return React.createElement('img', props)
-  }
-}))
+vi.mock('next/image', async () => {
+  const { createElement } = await vi.importActual<typeof import('react')>('react');
+  return { default: (props: import('react').ImgHTMLAttributes<HTMLImageElement>) =>
+    createElement('img', props) };
+})
 
 // Mock dompurify
 vi.mock('dompurify', () => ({
@@ -53,14 +49,10 @@ vi.mock('dompurify', () => ({
 vi.mock('next/server', () => {
   return {
     NextResponse: class extends Response {
-      static json(data: any, init?: any) {
-        return new Response(JSON.stringify(data), {
-          ...init,
-          headers: {
-            ...init?.headers,
-            'Content-Type': 'application/json',
-          },
-        })
+      static json(data: unknown, init?: ResponseInit) {
+        const headers = new Headers(init?.headers);
+        headers.set('Content-Type', 'application/json');
+        return new Response(JSON.stringify(data), { ...init, headers });
       }
       static redirect(url: string, status?: number) {
         return new Response(null, {
@@ -76,32 +68,13 @@ vi.mock('next/server', () => {
   }
 })
 
-// Add fetch mock if needed
-if (typeof global.fetch === 'undefined') {
-  global.fetch = vi.fn().mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
-    // Mock for dashboard metrics and other relative URLs in tests
-    return Promise.resolve(new Response(JSON.stringify({}), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-    }));
-  }) as any
-} else {
-  // Override existing global.fetch for Vitest env if it throws Invalid URL on relative paths
-  const originalFetch = global.fetch;
-  global.fetch = vi.fn().mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
-    if (typeof url === 'string' && url.startsWith('/')) {
-        return Promise.resolve(new Response(JSON.stringify({
-            ok: true,
-            // Provide sensible defaults for the failed API calls in tests
-            metrics: {}, approvals: [], workflows: [], milestones: []
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        }));
-    }
-    return originalFetch(url, init);
-  }) as any
-}
+// Each component test owns its explicit API-boundary fixtures. An unspecified
+// request is neither invented success nor permission to contact a live service.
+// Direct assignment keeps vi.unstubAllGlobals() in individual tests from restoring
+// native network access; their own stubs restore this blocked baseline instead.
+global.fetch = vi.fn<typeof fetch>(async () => {
+  throw new Error('Browser unit tests must explicitly mock their transport boundary');
+});
 
 // Add standard window mocks
 if (typeof window !== 'undefined') {
@@ -140,30 +113,6 @@ if (typeof window !== 'undefined') {
   })
 }
 
-// Add fetch mock if needed
-const originalFetch2 = global.fetch;
-global.fetch = vi.fn().mockImplementation(async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
-    let urlString = '';
-    if (typeof url === 'string') {
-        urlString = url;
-    } else if (url instanceof URL) {
-        urlString = url.toString();
-    } else if (url instanceof Request) {
-        urlString = url.url;
-    }
-
-    if (urlString.startsWith('/')) {
-        return Promise.resolve(new Response(JSON.stringify({
-            ok: true,
-            entries: [], metrics: {}, approvals: [], workflows: [], milestones: []
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        }));
-    }
-    return originalFetch2(url, init);
-}) as any;
-
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -188,29 +137,22 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// Silence React act() warnings
-const originalError = console.error;
-console.error = (...args: any[]) => {
-  if (typeof args[0] === 'string' && (args[0].includes('not configured to support act') || args[0].includes('was not wrapped in act') || args[0].includes('Sync WebSocket error'))) {
-    return;
-  }
-  originalError(...args);
-};
-
 // Set IS_REACT_ACT_ENVIRONMENT
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+  value: true, writable: true, configurable: true,
+});
 
 // Mock Worker
-class Worker {
-  constructor(stringUrl: string) {}
-  onmessage: (this: Worker, ev: MessageEvent) => any = () => {};
-  postMessage(message: any): void {}
-  terminate(): void {}
-  addEventListener(): void {}
-  removeEventListener(): void {}
-  dispatchEvent(): boolean { return false; }
+class TestWorker extends EventTarget {
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onmessageerror: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: ErrorEvent) => void) | null = null;
+  postMessage = vi.fn<(message: unknown, transfer?: Transferable[]) => void>();
+  terminate = vi.fn<() => void>();
 }
-global.Worker = Worker as any;
+Object.defineProperty(globalThis, 'Worker', {
+  value: TestWorker, writable: true, configurable: true,
+});
 
 // Mock navigator.locks
 if (typeof navigator !== 'undefined') {

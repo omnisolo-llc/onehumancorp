@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { e2eTenant } from './fixtures';
+import './fixtures';
 
 test.describe('Diagnostics UI', () => {
   test('loads real health and metrics data', async ({ page }) => {

@@ -104,7 +104,7 @@ async fn grpc_worker_service_routes_health_control_and_fenced_attempts() {
         fencing_token: "lease-fence-1".to_owned(),
         kind: "execute".to_owned(),
         correlation_id: String::new(),
-        idempotency_key: Some("command-1".to_owned()).unwrap_or_default(),
+        idempotency_key: "command-1".to_owned(),
         payload_schema: "omnisolo.attempt.command.v1".to_owned(),
         payload_version: 1,
         payload: Vec::new(),
@@ -368,19 +368,17 @@ async fn grpc_attempt_context_carries_validated_local_service_bindings_to_the_wo
         .unwrap()
         .binding_id
         .to_string();
-    let script = format!(
-        r#"
+    let script = r#"
 while IFS= read -r line; do
   request_id=$(printf '%s' "$line" | sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p')
   if printf '%s' "$line" | grep -q '"local_services"' \
     && printf '%s' "$line" | grep -q '"service_id":"omnisolo.memory"'; then
-    printf '{{"request_id":"%s","ok":true,"payload":{{"native_session_id":"local-services-session","events":[],"final_text":"local-services-bound"}}}}\n' "$request_id"
+    printf '{"request_id":"%s","ok":true,"payload":{"native_session_id":"local-services-session","events":[],"final_text":"local-services-bound"}}\n' "$request_id"
   else
-    printf '{{"request_id":"%s","ok":false,"error":"local service binding missing"}}\n' "$request_id"
+    printf '{"request_id":"%s","ok":false,"error":"local service binding missing"}\n' "$request_id"
   fi
 done
-"#
-    );
+"#.to_string();
     let service = HarnessWorkerGrpcService::with_process_spec(
         ProcessHarnessSpec::command("/bin/sh", ["-c".to_owned(), script], "codex")
             .with_protocol(server_harness::middleware::harness::HarnessProtocolKind::Custom),
@@ -1207,7 +1205,8 @@ done
 #[allow(dead_code)]
 fn service_is_tonic_server_compatible<T: HarnessWorkerService>(
     service: T,
-) -> server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer<T> {
+) -> server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer<T>
+{
     server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer::new(
         service,
     )

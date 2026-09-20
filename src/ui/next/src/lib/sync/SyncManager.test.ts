@@ -4,7 +4,7 @@ import { SyncManager } from './SyncManager';
 describe('SyncManager', () => {
   beforeEach(() => {
     // Reset singleton instance between tests
-    (SyncManager as any).instance = undefined;
+    Reflect.set(SyncManager, 'instance', undefined);
     vi.clearAllMocks();
   });
 
@@ -17,8 +17,7 @@ describe('SyncManager', () => {
   it('initializes with default properties', () => {
     const instance = SyncManager.getInstance();
     expect(instance).toBeDefined();
-    // @ts-ignore - accessing private properties for testing
-    expect(instance.syncInProgress).toBe(false);
+    expect(instance).toHaveProperty('syncInProgress', false);
   });
 
   it('maps general mutations correctly', () => {

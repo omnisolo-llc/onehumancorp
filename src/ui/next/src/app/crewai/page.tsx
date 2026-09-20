@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -31,8 +32,8 @@ export default function CrewAIPage() {
 
       const data = await res.json();
       setReport(data.report);
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'An unexpected error occurred'));
     } finally {
       setLoading(false);
     }

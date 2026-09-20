@@ -311,18 +311,16 @@ pub async fn get_daily_work_handler(
                         if !mobile_optimized {
                             if let Ok(Some(v)) = r.try_get::<Option<serde_json::Value>, _>("customer_info") {
                                 map.insert("customer_info".to_string(), v);
-                            } else if let Ok(Some(s)) = r.try_get::<Option<String>, _>("customer_info") {
-                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                            } else if let Ok(Some(s)) = r.try_get::<Option<String>, _>("customer_info")
+                                && let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
                                     map.insert("customer_info".to_string(), v);
                                 }
-                            }
                             if let Ok(Some(v)) = r.try_get::<Option<serde_json::Value>, _>("suggested_actions") {
                                 map.insert("suggested_actions".to_string(), v);
-                            } else if let Ok(Some(s)) = r.try_get::<Option<String>, _>("suggested_actions") {
-                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                            } else if let Ok(Some(s)) = r.try_get::<Option<String>, _>("suggested_actions")
+                                && let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
                                     map.insert("suggested_actions".to_string(), v);
                                 }
-                            }
                         }
 
                         serde_json::Value::Object(map)

@@ -1,7 +1,7 @@
 use sqlx::Row;
 pub mod cart_recovery;
 pub mod persistence;
-#[cfg(all(test, not(omnisolo_bazel)))]
+#[cfg(test)]
 mod persistence_commands_test;
 pub mod rag_sync;
 pub mod redis_pool;
@@ -148,7 +148,7 @@ pub fn get_redis_client() -> Option<redis::Client> {
         return None;
     }
     REDIS_CLIENT
-        .get_or_init(|| crate::redis_pool::get_redis_client())
+        .get_or_init(crate::redis_pool::get_redis_client)
         .clone()
 }
 
@@ -305,8 +305,8 @@ async fn proxy_agent_rpc_handler(
             .into_response();
     }
 
-    let raw_origin =
-        std::env::var("OMNISOLO_AGENT_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let raw_origin = std::env::var("OMNISOLO_AGENT_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let Ok(url) = agent_rpc_url(&raw_origin) else {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
@@ -328,10 +328,10 @@ async fn proxy_agent_rpc_handler(
         .header("x-tenant-id", tenant_id)
         .header("x-user-id", &claims.sub)
         .json(&payload);
-    if let Ok(token) = std::env::var("OMNISOLO_AGENT_TOKEN") {
-        if !token.trim().is_empty() {
-            request = request.bearer_auth(token);
-        }
+    if let Ok(token) = std::env::var("OMNISOLO_AGENT_TOKEN")
+        && !token.trim().is_empty()
+    {
+        request = request.bearer_auth(token);
     }
     let Ok(upstream) = request.send().await else {
         return (
@@ -498,23 +498,24 @@ async fn apply_omni_inbox_action(
             .ok_or(OmniInboxActionError::NotFound)?;
 
             let mut dispatch = None;
-            if payload.approved {
-                if let Some(reply) = payload.edited_reply.as_deref() {
-                    sqlx::query(
-                        "INSERT INTO inbox_messages
+            if payload.approved
+                && let Some(reply) = payload.edited_reply.as_deref()
+            {
+                sqlx::query(
+                    "INSERT INTO inbox_messages
                          (id, tenant_id, source, content, draft_reply, status)
                          VALUES ($1, $2, $3, $4, '', 'sent')",
-                    )
-                    .bind(format!("msg-{}", uuid::Uuid::new_v4()))
-                    .bind(tenant_id)
-                    .bind("Omni Inbox Action")
-                    .bind(reply)
-                    .execute(&mut *tx)
-                    .await?;
+                )
+                .bind(format!("msg-{}", uuid::Uuid::new_v4()))
+                .bind(tenant_id)
+                .bind("Omni Inbox Action")
+                .bind(reply)
+                .execute(&mut *tx)
+                .await?;
 
-                    if let (Some(source), Some(sender_id)) = (source, sender_id) {
-                        if source == "whatsapp" || source == "sms" {
-                            if let Some((integration_id, account_sid, auth_token, from_phone)) =
+                if let (Some(source), Some(sender_id)) = (source, sender_id)
+                        && (source == "whatsapp" || source == "sms")
+                            && let Some((integration_id, account_sid, auth_token, from_phone)) =
                                 sqlx::query_as::<_, (String, String, String, String)>(
                                     "SELECT integration_id, COALESCE(bot_token, ''),
                                             COALESCE(api_token, ''), COALESCE(from_phone, '')
@@ -540,9 +541,6 @@ async fn apply_omni_inbox_action(
                                     from_phone,
                                 });
                             }
-                        }
-                    }
-                }
             }
             tx.commit().await?;
             Ok(dispatch)
@@ -569,23 +567,24 @@ async fn apply_omni_inbox_action(
             .await?;
 
             let mut dispatch = None;
-            if payload.approved {
-                if let Some(reply) = payload.edited_reply.as_deref() {
-                    sqlx::query(
-                        "INSERT INTO inbox_messages
+            if payload.approved
+                && let Some(reply) = payload.edited_reply.as_deref()
+            {
+                sqlx::query(
+                    "INSERT INTO inbox_messages
                          (id, tenant_id, source, content, draft_reply, status)
                          VALUES (?, ?, ?, ?, '', 'sent')",
-                    )
-                    .bind(format!("msg-{}", uuid::Uuid::new_v4()))
-                    .bind(tenant_id)
-                    .bind("Omni Inbox Action")
-                    .bind(reply)
-                    .execute(&mut *tx)
-                    .await?;
+                )
+                .bind(format!("msg-{}", uuid::Uuid::new_v4()))
+                .bind(tenant_id)
+                .bind("Omni Inbox Action")
+                .bind(reply)
+                .execute(&mut *tx)
+                .await?;
 
-                    if let (Some(source), Some(sender_id)) = (source, sender_id) {
-                        if source == "whatsapp" || source == "sms" {
-                            if let Some((integration_id, account_sid, auth_token, from_phone)) =
+                if let (Some(source), Some(sender_id)) = (source, sender_id)
+                        && (source == "whatsapp" || source == "sms")
+                            && let Some((integration_id, account_sid, auth_token, from_phone)) =
                                 sqlx::query_as::<_, (String, String, String, String)>(
                                     "SELECT integration_id, COALESCE(bot_token, ''),
                                             COALESCE(api_token, ''), COALESCE(from_phone, '')
@@ -611,9 +610,6 @@ async fn apply_omni_inbox_action(
                                     from_phone,
                                 });
                             }
-                        }
-                    }
-                }
             }
             tx.commit().await?;
             Ok(dispatch)
@@ -764,10 +760,10 @@ pub fn workflow_agent_binary() -> String {
     std::env::var("OMNISOLO_BUILTIN_AGENT_BINARY")
         .or_else(|_| std::env::var("OMNISOLO_AGENT_BINARY"))
         .unwrap_or_else(|_| {
-            if crate::is_standalone_runtime() {
-                if let Ok(exe_path) = std::env::current_exe() {
-                    return exe_path.to_string_lossy().to_string();
-                }
+            if crate::is_standalone_runtime()
+                && let Ok(exe_path) = std::env::current_exe()
+            {
+                return exe_path.to_string_lossy().to_string();
             }
             if let Ok(exe_path) = std::env::current_exe() {
                 let agent_name = if cfg!(windows) {
@@ -803,12 +799,12 @@ pub fn workflow_agent_task(workflow: &str, task: &str) -> String {
 
 fn set_workflow_result(id: &str, status: &str, output: Option<String>, error: Option<String>) {
     let registry = get_workflow_registry();
-    if let Ok(mut workflows) = registry.write() {
-        if let Some(record) = workflows.iter_mut().find(|record| record.id == id) {
-            record.status = status.to_string();
-            record.output = output;
-            record.error = error;
-        }
+    if let Ok(mut workflows) = registry.write()
+        && let Some(record) = workflows.iter_mut().find(|record| record.id == id)
+    {
+        record.status = status.to_string();
+        record.output = output;
+        record.error = error;
     }
 }
 
@@ -818,40 +814,35 @@ pub fn dispatch_workflow(record: WorkflowRecord) {
     let task = workflow_agent_task(&record.workflow, &record.task);
 
     tokio::spawn(async move {
-        if crate::is_standalone_runtime() {
-            if let Some(svc) = BUILTIN_AGENT_SERVICE.get() {
-                use omnisolo_builtin_agent::proto::agent_service::agent_service_server::AgentService;
-                let req = omnisolo_builtin_agent::proto::agent_service::SubAgentRequest {
-                    task: task.clone(),
-                    working_dir: String::new(),
-                    parent_context_json: String::new(),
-                    ..Default::default()
-                };
-                match svc.dispatch_to_sub_agent(svc.trusted_request(req)).await {
-                    Ok(resp) => {
-                        let inner = resp.into_inner();
-                        if !inner.error.is_empty() {
-                            set_workflow_result(
-                                &id,
-                                "failed",
-                                Some(inner.result),
-                                Some(inner.error),
-                            );
-                        } else {
-                            set_workflow_result(&id, "completed", Some(inner.result), None);
-                        }
-                    }
-                    Err(e) => {
-                        set_workflow_result(
-                            &id,
-                            "failed",
-                            None,
-                            Some(format!("In-process agent error: {}", e)),
-                        );
+        if crate::is_standalone_runtime()
+            && let Some(svc) = BUILTIN_AGENT_SERVICE.get()
+        {
+            use omnisolo_builtin_agent::proto::agent_service::agent_service_server::AgentService;
+            let req = omnisolo_builtin_agent::proto::agent_service::SubAgentRequest {
+                task: task.clone(),
+                working_dir: String::new(),
+                parent_context_json: String::new(),
+                ..Default::default()
+            };
+            match svc.dispatch_to_sub_agent(svc.trusted_request(req)).await {
+                Ok(resp) => {
+                    let inner = resp.into_inner();
+                    if !inner.error.is_empty() {
+                        set_workflow_result(&id, "failed", Some(inner.result), Some(inner.error));
+                    } else {
+                        set_workflow_result(&id, "completed", Some(inner.result), None);
                     }
                 }
-                return;
+                Err(e) => {
+                    set_workflow_result(
+                        &id,
+                        "failed",
+                        None,
+                        Some(format!("In-process agent error: {}", e)),
+                    );
+                }
             }
+            return;
         }
 
         let output = tokio::process::Command::new(&binary)
@@ -985,8 +976,11 @@ pub mod voice;
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
+pub mod rpc_error;
+
 pub mod services {
-    pub mod billing;
+    // Compile the canonical workspace crate once; preserve the public path.
+    pub use ::server_services_billing as billing;
     pub mod chat;
     pub mod dashboard;
     pub mod growth;
@@ -994,15 +988,11 @@ pub mod services {
     pub mod sync;
     pub mod wizard;
 
-    #[cfg(not(omnisolo_bazel))]
     pub mod intake;
 
-    #[cfg(omnisolo_bazel)]
-    pub use ::server_services_b2b as b2b;
     pub mod agent;
     pub mod agent_feed;
     pub mod autodream;
-    #[cfg(not(omnisolo_bazel))]
     pub mod b2b;
     pub mod booking;
     pub mod cache_invalidator;
@@ -1071,25 +1061,20 @@ where
 }
 
 #[cfg(test)]
-fn authenticated_spiffe_id(
-    standalone: bool,
-    claimed_identity: Option<&str>,
-    peer_certificate_der: Option<&[u8]>,
-) -> Result<String, tonic::Status> {
-    ::server_auth::peer_identity::authenticated_spiffe_id(
-        standalone,
-        claimed_identity,
-        peer_certificate_der,
-    )
-}
+use ::server_auth::peer_identity::authenticated_spiffe_id;
 
-fn spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
-    ::server_auth::peer_identity::authenticate_spiffe_request(
-        &mut req,
-        crate::is_standalone_runtime(),
-    )?;
-    tracing::info!("Authenticated verified SPIFFE identity.");
-    Ok(req)
+#[derive(Clone, Copy)]
+struct SpiffeInterceptor;
+
+impl tonic::service::Interceptor for SpiffeInterceptor {
+    fn call(&mut self, mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+        ::server_auth::peer_identity::authenticate_spiffe_request(
+            &mut req,
+            crate::is_standalone_runtime(),
+        )?;
+        tracing::info!("Authenticated verified SPIFFE identity.");
+        Ok(req)
+    }
 }
 
 fn grpc_bind_host(standalone: bool) -> &'static str {
@@ -1695,8 +1680,10 @@ impl HubService for MyHubService {
     async fn route_semantic(
         &self,
         request: tonic::Request<::server_omnisolo::orchestration::SemanticRoutingRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::SemanticRoutingResponse>, tonic::Status>
-    {
+    ) -> Result<
+        tonic::Response<::server_omnisolo::orchestration::SemanticRoutingResponse>,
+        tonic::Status,
+    > {
         let req = request.into_inner();
         let internal_req = crate::orchestration::router::SemanticRoutingRequest {
             tenant_id: req.tenant_id,
@@ -1733,10 +1720,10 @@ impl HubService for MyHubService {
 
         let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
 
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx).map(|res| match res {
-            Ok(msg) => Ok(msg),
-            Err(e) => Err(Status::internal(e.to_string())),
-        });
+        let rx_stream = futures::TryStreamExt::map_err(
+            tokio_stream::wrappers::BroadcastStream::new(rx),
+            |error| Status::internal(error.to_string()),
+        );
 
         let full_stream = drained_stream.chain(rx_stream);
 
@@ -1821,10 +1808,12 @@ impl HubService for MyHubService {
             })),
         };
 
-        let (_, _) = tokio::join!(
+        let (dispatch, approval) = tokio::join!(
             self.dept_orchestrator.dispatch_event(ops_event),
             self.dept_orchestrator.add_approval_request(cs_approval)
         );
+        dispatch.map_err(|_| Status::internal("Unable to persist custom-order work"))?;
+        approval.map_err(|_| Status::internal("Unable to persist custom-order approval"))?;
 
         Ok(Response::new(TriggerCustomOrderResponse { success: true }))
     }
@@ -1848,13 +1837,15 @@ impl HubService for MyHubService {
                 .create_task_with_plan(
                     req.organization_id.clone(),
                     String::new(),
-                    req.task_id.clone(),
-                    filtered_deps,
+                    crate::tasks::TaskPlan {
+                        parent_plan_id: req.task_id.clone(),
+                        dependencies: filtered_deps,
+                    },
                     st.title,
                     st.description,
                     st.priority,
                 )
-                .map_err(|e| Status::internal(e))?;
+                .map_err(Status::internal)?;
         }
 
         Ok(Response::new(DecomposeTaskResponse { success: true }))
@@ -1863,7 +1854,8 @@ impl HubService for MyHubService {
     async fn get_my_plan(
         &self,
         request: tonic::Request<::server_omnisolo::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::MyPlanResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::MyPlanResponse>, tonic::Status>
+    {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -1917,8 +1909,10 @@ impl HubService for MyHubService {
     async fn get_cost_dashboard(
         &self,
         request: tonic::Request<::server_omnisolo::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::CostDashboardResponse>, tonic::Status>
-    {
+    ) -> Result<
+        tonic::Response<::server_omnisolo::orchestration::CostDashboardResponse>,
+        tonic::Status,
+    > {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -1929,7 +1923,9 @@ impl HubService for MyHubService {
             &auth_info.org_id
         };
         static COST_DASHBOARD_CACHE: std::sync::OnceLock<
-            server_utils::cache::HybridCache<::server_omnisolo::orchestration::CostDashboardResponse>,
+            server_utils::cache::HybridCache<
+                ::server_omnisolo::orchestration::CostDashboardResponse,
+            >,
         > = std::sync::OnceLock::new();
         let cache = COST_DASHBOARD_CACHE
             .get_or_init(|| server_utils::cache::HybridCache::new(self.hub.redis_client()));
@@ -2176,10 +2172,10 @@ impl HubService for MyHubService {
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN")
             .ok()
-            .map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+            .map(crate::integrations::mercadopago::client::MercadoPagoClient::new);
         let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN")
             .ok()
-            .map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
+            .map(crate::integrations::alipay::client::AlipayClient::new);
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -2222,7 +2218,7 @@ impl HubService for MyHubService {
                 )
                 .await
         }
-        .map_err(|e| tonic::Status::internal(e))?;
+        .map_err(tonic::Status::internal)?;
 
         Ok(tonic::Response::new(
             ::server_omnisolo::orchestration::SelectPlanResponse {
@@ -2245,15 +2241,15 @@ impl HubService for MyHubService {
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN")
             .ok()
-            .map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+            .map(crate::integrations::mercadopago::client::MercadoPagoClient::new);
         let _alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN")
             .ok()
-            .map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
+            .map(crate::integrations::alipay::client::AlipayClient::new);
 
         client
             .cancel_subscription(&req.plan_id)
             .await
-            .map_err(|e| tonic::Status::internal(e))?;
+            .map_err(tonic::Status::internal)?;
 
         Ok(tonic::Response::new(
             ::server_omnisolo::orchestration::CancelSubscriptionResponse { success: true },
@@ -2263,8 +2259,10 @@ impl HubService for MyHubService {
     async fn download_invoice(
         &self,
         _request: tonic::Request<::server_omnisolo::orchestration::DownloadInvoiceRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::DownloadInvoiceResponse>, tonic::Status>
-    {
+    ) -> Result<
+        tonic::Response<::server_omnisolo::orchestration::DownloadInvoiceResponse>,
+        tonic::Status,
+    > {
         Ok(tonic::Response::new(
             ::server_omnisolo::orchestration::DownloadInvoiceResponse {
                 pdf_url: "https://invoice.stripe.com/...".to_string(),
@@ -2294,7 +2292,7 @@ impl HubService for MyHubService {
         let token = client
             .create_terminal_connection_token(&tenant_id)
             .await
-            .map_err(|e| tonic::Status::internal(e))?;
+            .map_err(tonic::Status::internal)?;
 
         Ok(tonic::Response::new(
             ::server_omnisolo::orchestration::CreateTerminalTokenResponse {
@@ -2325,7 +2323,8 @@ impl HubService for MyHubService {
     async fn handle_config_wizard(
         &self,
         _request: tonic::Request<::server_omnisolo::orchestration::AgentConfig>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status>
+    {
         tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -2336,7 +2335,8 @@ impl HubService for MyHubService {
     async fn handle_prompt_tuning(
         &self,
         _request: tonic::Request<::server_omnisolo::orchestration::PromptTuningConfig>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status>
+    {
         tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -2790,34 +2790,37 @@ impl HubService for MyHubService {
                 req.description,
                 req.priority,
             )
-            .map_err(|e| Status::internal(e))?;
+            .map_err(Status::internal)?;
 
-        Ok(Response::new(::server_omnisolo::orchestration::SharedTask {
-            id: task.id,
-            organization_id: task.organization_id,
-            parent_plan_id: task.parent_plan_id,
-            dependencies: task.dependencies,
-            title: task.title,
-            description: task.description.unwrap_or_default(),
-            status: task.status,
-            assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-            priority: task.priority,
-            payload: task.payload,
-            locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
-            created_at_unix: task.created_at.timestamp(),
-            updated_at_unix: task.updated_at.timestamp(),
-            action_risk: match task.action_risk {
-                Some(crate::tasks::ActionRisk::Low) => 1,
-                Some(crate::tasks::ActionRisk::High) => 2,
-                _ => 0,
+        Ok(Response::new(
+            ::server_omnisolo::orchestration::SharedTask {
+                id: task.id,
+                organization_id: task.organization_id,
+                parent_plan_id: task.parent_plan_id,
+                dependencies: task.dependencies,
+                title: task.title,
+                description: task.description.unwrap_or_default(),
+                status: task.status,
+                assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+                priority: task.priority,
+                payload: task.payload,
+                locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
+                created_at_unix: task.created_at.timestamp(),
+                updated_at_unix: task.updated_at.timestamp(),
+                action_risk: match task.action_risk {
+                    Some(crate::tasks::ActionRisk::Low) => 1,
+                    Some(crate::tasks::ActionRisk::High) => 2,
+                    _ => 0,
+                },
+                approval_status: task.approval_status.unwrap_or_default(),
+                proposed_content: task.proposed_content.unwrap_or_default(),
             },
-            approval_status: task.approval_status.unwrap_or_default(),
-            proposed_content: task.proposed_content.unwrap_or_default(),
-        }))
+        ))
     }
 
-    type PollTasksStream =
-        Pin<Box<dyn Stream<Item = Result<::server_omnisolo::orchestration::SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<
+        Box<dyn Stream<Item = Result<::server_omnisolo::orchestration::SharedTask, Status>> + Send>,
+    >;
 
     async fn poll_tasks(
         &self,
@@ -2829,35 +2832,33 @@ impl HubService for MyHubService {
             .task_manager()
             .poll_tasks(&req.agent_id, req.limit as usize);
 
-        let mapped_tasks: Vec<Result<::server_omnisolo::orchestration::SharedTask, Status>> = tasks
+        let mapped_tasks: Vec<::server_omnisolo::orchestration::SharedTask> = tasks
             .into_iter()
-            .map(|task| {
-                Ok(::server_omnisolo::orchestration::SharedTask {
-                    id: task.id,
-                    organization_id: task.organization_id,
-                    parent_plan_id: task.parent_plan_id,
-                    dependencies: task.dependencies,
-                    title: task.title,
-                    description: task.description.unwrap_or_default(),
-                    status: task.status,
-                    assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-                    priority: task.priority,
-                    payload: task.payload,
-                    locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
-                    created_at_unix: task.created_at.timestamp(),
-                    updated_at_unix: task.updated_at.timestamp(),
-                    action_risk: match task.action_risk {
-                        Some(crate::tasks::ActionRisk::Low) => 1,
-                        Some(crate::tasks::ActionRisk::High) => 2,
-                        _ => 0,
-                    },
-                    approval_status: task.approval_status.unwrap_or_default(),
-                    proposed_content: task.proposed_content.unwrap_or_default(),
-                })
+            .map(|task| ::server_omnisolo::orchestration::SharedTask {
+                id: task.id,
+                organization_id: task.organization_id,
+                parent_plan_id: task.parent_plan_id,
+                dependencies: task.dependencies,
+                title: task.title,
+                description: task.description.unwrap_or_default(),
+                status: task.status,
+                assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+                priority: task.priority,
+                payload: task.payload,
+                locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
+                created_at_unix: task.created_at.timestamp(),
+                updated_at_unix: task.updated_at.timestamp(),
+                action_risk: match task.action_risk {
+                    Some(crate::tasks::ActionRisk::Low) => 1,
+                    Some(crate::tasks::ActionRisk::High) => 2,
+                    _ => 0,
+                },
+                approval_status: task.approval_status.unwrap_or_default(),
+                proposed_content: task.proposed_content.unwrap_or_default(),
             })
             .collect();
 
-        let stream = tokio_stream::iter(mapped_tasks);
+        let stream = tokio_stream::iter(mapped_tasks).map(Ok);
         Ok(Response::new(Box::pin(stream) as Self::PollTasksStream))
     }
 
@@ -2872,19 +2873,19 @@ impl HubService for MyHubService {
                 self.hub
                     .task_manager()
                     .review_task(&req.task_id, &req.agent_id)
-                    .map_err(|e| Status::internal(e))?;
+                    .map_err(Status::internal)?;
             }
             "COMPLETED" => {
                 self.hub
                     .task_manager()
                     .complete_task(&req.task_id, &req.agent_id, req.result)
-                    .map_err(|e| Status::internal(e))?;
+                    .map_err(Status::internal)?;
             }
             _ => {
                 self.hub
                     .task_manager()
                     .update_task_status(&req.task_id, req.status)
-                    .map_err(|e| Status::internal(e))?;
+                    .map_err(Status::internal)?;
             }
         }
 
@@ -2909,7 +2910,7 @@ impl HubService for MyHubService {
         self.dept_orchestrator
             .decide_approval(&req.task_id, &org_id, req.is_approved, None)
             .await
-            .map_err(|e| Status::internal(e))?;
+            .map_err(Status::internal)?;
 
         Ok(Response::new(ApproveTaskResponse { success: true }))
     }
@@ -2932,14 +2933,13 @@ impl HubService for MyHubService {
                     proposed_content = draft.as_str().unwrap_or("").to_string();
                 } else if let Some(r#gen) = payload.get("generated_response") {
                     proposed_content = r#gen.as_str().unwrap_or("").to_string();
-                } else if let Some(r#gen) = payload.get("action_type") {
-                    if r#gen.as_str() == Some("DRAFT_EMAIL") {
+                } else if let Some(r#gen) = payload.get("action_type")
+                    && r#gen.as_str() == Some("DRAFT_EMAIL") {
                         proposed_content = "Drafted email...".to_string();
                     }
-                }
             }
-            if proposed_content.is_empty() && task.payload.is_some() {
-                proposed_content = serde_json::to_string(&task.payload.unwrap()).unwrap_or_default();
+            if proposed_content.is_empty() && let Some(payload) = &task.payload {
+                proposed_content = serde_json::to_string(payload).unwrap_or_default();
             }
 
             ::server_omnisolo::orchestration::SharedTask {
@@ -3020,12 +3020,10 @@ impl HubService for MyHubService {
         request: Request<AgentCapabilities>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let md = request.metadata();
-        let spiffe_id = crate::auth::extract_spiffe_id_from_metadata(md)
-            .map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id =
+            crate::auth::extract_spiffe_id_from_metadata(md).map_err(Status::unauthenticated)?;
 
-        if let Err(e) = crate::auth::grpc::validate_spiffe_id(&spiffe_id) {
-            return Err(e);
-        }
+        crate::auth::grpc::validate_spiffe_id(&spiffe_id)?;
 
         let req = request.into_inner();
         if req.agent_id.is_empty() {
@@ -3047,10 +3045,10 @@ impl HubService for MyHubService {
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
 
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx).map(|res| match res {
-            Ok(caps) => Ok(caps),
-            Err(e) => Err(Status::internal(e.to_string())),
-        });
+        let rx_stream = futures::TryStreamExt::map_err(
+            tokio_stream::wrappers::BroadcastStream::new(rx),
+            |error| Status::internal(error.to_string()),
+        );
 
         Ok(Response::new(
             Box::pin(rx_stream) as Self::DiscoverAgentsStream
@@ -3064,12 +3062,10 @@ impl HubService for MyHubService {
         request: Request<::server_omnisolo::orchestration::PublishMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let md = request.metadata();
-        let spiffe_id = crate::auth::extract_spiffe_id_from_metadata(md)
-            .map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id =
+            crate::auth::extract_spiffe_id_from_metadata(md).map_err(Status::unauthenticated)?;
 
-        if let Err(e) = crate::auth::grpc::validate_spiffe_id(&spiffe_id) {
-            return Err(e);
-        }
+        crate::auth::grpc::validate_spiffe_id(&spiffe_id)?;
 
         let req = request.into_inner();
         if let Some(event) = req.event {
@@ -3103,10 +3099,10 @@ impl HubService for MyHubService {
 
         let rx = self.hub.subscribe_mesh_events(req.topic).await;
 
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx).map(|res| match res {
-            Ok(event) => Ok(event),
-            Err(e) => Err(Status::internal(e.to_string())),
-        });
+        let rx_stream = futures::TryStreamExt::map_err(
+            tokio_stream::wrappers::BroadcastStream::new(rx),
+            |error| Status::internal(error.to_string()),
+        );
 
         Ok(Response::new(
             Box::pin(rx_stream) as Self::StreamMeshEventsStream
@@ -3121,12 +3117,10 @@ impl HubService for MyHubService {
         request: Request<PublishTeammateMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let md = request.metadata();
-        let spiffe_id = crate::auth::extract_spiffe_id_from_metadata(md)
-            .map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id =
+            crate::auth::extract_spiffe_id_from_metadata(md).map_err(Status::unauthenticated)?;
 
-        if let Err(e) = crate::auth::grpc::validate_spiffe_id(&spiffe_id) {
-            return Err(e);
-        }
+        crate::auth::grpc::validate_spiffe_id(&spiffe_id)?;
 
         let req = request.into_inner();
         if req.channel.is_empty() {
@@ -3153,10 +3147,10 @@ impl HubService for MyHubService {
 
         let rx = self.hub.subscribe_teammate_mesh(req.topic).await;
 
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx).map(|res| match res {
-            Ok(event) => Ok(event),
-            Err(e) => Err(Status::internal(e.to_string())),
-        });
+        let rx_stream = futures::TryStreamExt::map_err(
+            tokio_stream::wrappers::BroadcastStream::new(rx),
+            |error| Status::internal(error.to_string()),
+        );
 
         Ok(Response::new(
             Box::pin(rx_stream) as Self::StreamTeammateMeshStream
@@ -3319,7 +3313,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .as_ref()
         .is_none_or(|database| database.backend() != crate::persistence::DatabaseBackend::MySql);
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
-    if std::env::var("OMNISOLO_AGENT_TOKEN").is_err() && std::env::var("OMNISOLO_AGENT_SPIFFE_ID").is_err() {
+    if std::env::var("OMNISOLO_AGENT_TOKEN").is_err()
+        && std::env::var("OMNISOLO_AGENT_SPIFFE_ID").is_err()
+    {
         unsafe {
             std::env::set_var("OMNISOLO_AGENT_TOKEN", "e2e-dummy-token");
             std::env::set_var(
@@ -3394,7 +3390,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             Some(cb),
         ));
     if legacy_sqlx_background_enabled {
-        let _ = consolidation_worker.spawn_background_task();
+        // The worker has already spawned; detach its handle until runtime shutdown.
+        drop(consolidation_worker.spawn_background_task());
     }
 
     let retention_job =
@@ -3592,6 +3589,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .read(true)
                 .write(true)
                 .create(true)
+                .truncate(false)
                 .mode(0o600)
                 .open(_db_path)?;
 
@@ -3610,8 +3608,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     const MESH_TRANSPORT_STARTUP_ATTEMPTS: u32 = 30;
     let mut attempt = 1;
     let mesh_transport = loop {
-        match omnisolo_builtin_agent::mesh::transport::create_transport(redis_url.as_deref(), is_cloud)
-            .await
+        match omnisolo_builtin_agent::mesh::transport::create_transport(
+            redis_url.as_deref(),
+            is_cloud,
+        )
+        .await
         {
             Ok(transport) => break transport,
             Err(error) if is_cloud && attempt < MESH_TRANSPORT_STARTUP_ATTEMPTS => {
@@ -3657,10 +3658,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ));
     if legacy_sqlx_background_enabled {
         agent_action_worker.start();
-        let _ = crate::workers::invoice_followup_worker::start_invoice_followup_worker(
-            db.clone(),
-            dept_orchestrator.clone(),
-        );
+        drop(crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone()));
     }
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(
@@ -3726,37 +3724,32 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let orch_clone = dept_orchestrator.clone();
     tokio::spawn(async move {
         while let Ok(event) = products_rx.recv().await {
-            if event.action == "ProductCreated"
+            if (event.action == "ProductCreated"
                 || event.action == "ProductUpdated"
                 || event.action == "tenant.product.created"
-                || event.action == "tenant.product.updated"
+                || event.action == "tenant.product.updated")
+                && let Ok(payload_str) = String::from_utf8(event.payload.clone())
+                && let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str)
             {
-                if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
-                    if let Ok(payload_json) =
-                        serde_json::from_str::<serde_json::Value>(&payload_str)
-                    {
-                        let tenant_id = payload_json
-                            .get("organization_id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("system")
-                            .to_string();
-                        let event_type = if event.action == "ProductCreated"
-                            || event.action == "tenant.product.created"
-                        {
-                            "tenant.product.created".to_string()
-                        } else {
-                            "tenant.product.updated".to_string()
-                        };
-                        let dept_event =
-                            crate::orchestration::departments::types::DepartmentEvent {
-                                id: uuid::Uuid::new_v4().to_string(),
-                                tenant_id,
-                                event_type,
-                                payload: payload_json,
-                            };
-                        let _ = orch_clone.dispatch_event(dept_event).await;
-                    }
-                }
+                let tenant_id = payload_json
+                    .get("organization_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("system")
+                    .to_string();
+                let event_type = if event.action == "ProductCreated"
+                    || event.action == "tenant.product.created"
+                {
+                    "tenant.product.created".to_string()
+                } else {
+                    "tenant.product.updated".to_string()
+                };
+                let dept_event = crate::orchestration::departments::types::DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id,
+                    event_type,
+                    payload: payload_json,
+                };
+                let _ = orch_clone.dispatch_event(dept_event).await;
             }
         }
     });
@@ -4898,14 +4891,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 "context_payload": {"description": "A new simulated event needs your attention."},
                 "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}
             });
-            if let Ok(payload_str) = serde_json::to_string(&item_json) {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                        .arg(topic)
-                        .arg(payload_str)
-                        .query_async(&mut conn)
-                        .await;
-                }
+            if let Ok(payload_str) = serde_json::to_string(&item_json)
+                && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+            {
+                let _: Result<(), _> = redis::cmd("PUBLISH")
+                    .arg(topic)
+                    .arg(payload_str)
+                    .query_async(&mut conn)
+                    .await;
             }
         }
 
@@ -5031,9 +5024,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let id = format!("mock-{}", uuid::Uuid::new_v4());
 
         // Create an incoming message and draft a reply synchronously for the mock (so E2E doesn't have to wait for the job queue).
-        let draft_reply = format!(
-            "Yes, we do! I have a slot open. A 6-inch vegan cake starts at $50. Would you like to book?"
-        );
+        let draft_reply = "Yes, we do! I have a slot open. A 6-inch vegan cake starts at $50. Would you like to book?".to_string();
 
         match &db.store {
             crate::db::DbStore::Postgres => {
@@ -7287,23 +7278,23 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                 .await
                                 .ok()?;
                                 for approval in &mut res {
-                                    if let Some(obj) = approval.as_object_mut() {
-                                        if !obj.contains_key("lifecycle_state") {
-                                            let status = obj
-                                                .get("status")
-                                                .and_then(|s| s.as_str())
-                                                .unwrap_or("PENDING");
-                                            let lifecycle_state =
-                                                if status == "DRAFT" || status == "PENDING" {
-                                                    "PENDING_APPROVAL"
-                                                } else {
-                                                    status
-                                                };
-                                            obj.insert(
-                                                "lifecycle_state".to_string(),
-                                                serde_json::json!(lifecycle_state),
-                                            );
-                                        }
+                                    if let Some(obj) = approval.as_object_mut()
+                                        && !obj.contains_key("lifecycle_state")
+                                    {
+                                        let status = obj
+                                            .get("status")
+                                            .and_then(|s| s.as_str())
+                                            .unwrap_or("PENDING");
+                                        let lifecycle_state =
+                                            if status == "DRAFT" || status == "PENDING" {
+                                                "PENDING_APPROVAL"
+                                            } else {
+                                                status
+                                            };
+                                        obj.insert(
+                                            "lifecycle_state".to_string(),
+                                            serde_json::json!(lifecycle_state),
+                                        );
                                     }
                                 }
                                 Some(res)
@@ -7432,9 +7423,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
         let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
-        let needs_pending_approvals = fields.map_or(true, |f| f.contains("pending_approvals"));
-        let needs_ledger = fields.map_or(true, |f| f.contains("ledger") || f.contains("entries"));
-        let needs_agent_feed = fields.map_or(true, |f| f.contains("agent_feed"));
+        let needs_pending_approvals = fields.is_none_or(|f| f.contains("pending_approvals"));
+        let needs_ledger = fields.is_none_or(|f| f.contains("ledger") || f.contains("entries"));
+        let needs_agent_feed = fields.is_none_or(|f| f.contains("agent_feed"));
 
         let (approvals_res, ledger_res, agent_feed_res) = tokio::join!(
             tokio::spawn({
@@ -7461,23 +7452,23 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                 .await
                                 .ok()?;
                                 for approval in &mut res {
-                                    if let Some(obj) = approval.as_object_mut() {
-                                        if !obj.contains_key("lifecycle_state") {
-                                            let status = obj
-                                                .get("status")
-                                                .and_then(|s| s.as_str())
-                                                .unwrap_or("PENDING");
-                                            let lifecycle_state =
-                                                if status == "DRAFT" || status == "PENDING" {
-                                                    "PENDING_APPROVAL"
-                                                } else {
-                                                    status
-                                                };
-                                            obj.insert(
-                                                "lifecycle_state".to_string(),
-                                                serde_json::json!(lifecycle_state),
-                                            );
-                                        }
+                                    if let Some(obj) = approval.as_object_mut()
+                                        && !obj.contains_key("lifecycle_state")
+                                    {
+                                        let status = obj
+                                            .get("status")
+                                            .and_then(|s| s.as_str())
+                                            .unwrap_or("PENDING");
+                                        let lifecycle_state =
+                                            if status == "DRAFT" || status == "PENDING" {
+                                                "PENDING_APPROVAL"
+                                            } else {
+                                                status
+                                            };
+                                        obj.insert(
+                                            "lifecycle_state".to_string(),
+                                            serde_json::json!(lifecycle_state),
+                                        );
                                     }
                                 }
                                 Some(res)
@@ -7989,13 +7980,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let t = tenant_id.clone();
             let cache_key_bg = cache_key.clone();
             tokio::spawn(async move {
-                if let Ok(metrics) = load_ui_dashboard_metrics(&db, &t, mobile_optimized).await {
-                    if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                        let res =
-                            serde_json::to_value(metrics).unwrap_or_else(|_| serde_json::json!({}));
-                        c.set(&cache_key_bg, res, std::time::Duration::from_secs(10))
-                            .await;
-                    }
+                if let Ok(metrics) = load_ui_dashboard_metrics(&db, &t, mobile_optimized).await
+                    && let Some(c) = UI_DASHBOARD_METRICS_CACHE.get()
+                {
+                    let res =
+                        serde_json::to_value(metrics).unwrap_or_else(|_| serde_json::json!({}));
+                    c.set(&cache_key_bg, res, std::time::Duration::from_secs(10))
+                        .await;
                 }
             });
             let fields = query.fields.as_deref();
@@ -8272,7 +8263,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .await
             {
                 tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = omnisolo_job_queue_clone.complete(&job.id, &job.tenant_id).await;
+                let _ = omnisolo_job_queue_clone
+                    .complete(&job.id, &job.tenant_id)
+                    .await;
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
@@ -8558,13 +8551,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 axum::response::Json(serde_json::json!({ "reply": reply }))
             }
         }))
-        .route("/api/v1/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
-            let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
-            let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
-            let url = format!("https://www.mercadopago.com/checkout/v1/redirect?pref_id={}_{}", tenant_id, amount_cents);
-            axum::response::Json(serde_json::json!({
-                "checkout_url": url
-            }))
+        .route("/api/v1/checkout/mercadopago", axum::routing::post(|| async {
+            // Do not mint a provider-looking URL without a verified preference.
+            (axum::http::StatusCode::NOT_IMPLEMENTED, axum::Json(serde_json::json!({
+                "success": false,
+                "code": "provider_connection_required",
+                "message": "A verified Mercado Pago checkout connection is required; no payment session was created."
+            })))
         }))
         .route("/api/v1/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
@@ -8590,6 +8583,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }))
         .route("/api/v1/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .nest("/api/v1/integrations", crate::api::tool_integrations::router(db.clone()))
+        .route("/api/v1/walkup", axum::routing::post(api::walkup::handle_walkup)
+            .with_state(api::walkup::AppState { db: db.clone() })
+            .route_layer(axum::middleware::from_fn_with_state(
+                http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
                 .route("/api/v1/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/v1/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
         .route("/api/v1/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
@@ -9837,9 +9834,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     grpc_server
-        .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_omnisolo::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
-        .add_service(::server_omnisolo::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
+        .add_service(HubServiceServer::with_interceptor(hub_service, SpiffeInterceptor))
+        .add_service(::server_omnisolo::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), SpiffeInterceptor))
+        .add_service(::server_omnisolo::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, SpiffeInterceptor))
         .add_service(::server_omnisolo::orchestration::auth_service_server::AuthServiceServer::new(
             ::server_auth::AuthServiceServerImpl::new(
                 store,
@@ -9850,14 +9847,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 },
             ),
         ))
-        .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
-        .add_service(::server_omnisolo::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
-        .add_service(::server_omnisolo::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
-        .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
-        .add_service(::server_omnisolo::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client() }, spiffe_interceptor))
-        .add_service(::server_omnisolo::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
-        .add_service(::server_omnisolo::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
-        .add_service(::server_omnisolo::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
+        .add_service(GrowthServiceServer::with_interceptor(growth_service, SpiffeInterceptor))
+        .add_service(::server_omnisolo::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, SpiffeInterceptor))
+        .add_service(::server_omnisolo::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), SpiffeInterceptor))
+        .add_service(BillingServiceServer::with_interceptor(billing_service, SpiffeInterceptor))
+        .add_service(::server_omnisolo::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client() }, SpiffeInterceptor))
+        .add_service(::server_omnisolo::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), SpiffeInterceptor))
+        .add_service(::server_omnisolo::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, SpiffeInterceptor))
+        .add_service(::server_omnisolo::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), SpiffeInterceptor))
 
         .serve(addr)
         .await?;
@@ -10461,7 +10458,7 @@ mod tests {
             .unwrap();
 
         let current = store.get();
-        assert_eq!(current.voice_receptionist_enabled, true);
+        assert!(current.voice_receptionist_enabled);
         assert_eq!(
             current.voice_receptionist_number,
             Some("+15551112222".to_string())
@@ -10478,7 +10475,7 @@ mod tests {
         // Test unsetting
         store.set_voice_settings(true, None, None, None).unwrap();
         let updated = store.get();
-        assert_eq!(updated.voice_receptionist_enabled, true);
+        assert!(updated.voice_receptionist_enabled);
         assert_eq!(updated.voice_receptionist_number, None);
         assert_eq!(updated.voice_receptionist_persona, None);
         assert_eq!(updated.voice_receptionist_instructions, None);
@@ -10541,7 +10538,7 @@ async fn test_api_settings_voice() {
         .unwrap();
 
     let updated = settings_store.get();
-    assert_eq!(updated.voice_receptionist_enabled, false);
+    assert!(!updated.voice_receptionist_enabled);
     assert_eq!(
         updated.voice_receptionist_number,
         Some("+15551112222".to_string())

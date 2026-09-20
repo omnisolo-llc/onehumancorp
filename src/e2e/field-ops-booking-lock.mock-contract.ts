@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { memberPage } from './fixtures';
+import './fixtures';
 import { e2eDbQuery as executeSql } from './db_utils';
 
 test.describe('Agentic Field Service Scheduling & Quoting', () => {

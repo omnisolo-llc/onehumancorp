@@ -11,7 +11,7 @@ describe("ExpertTeamPage", () => {
   });
 
   it("handles valid execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ result: "Final Expert Synthesis Output" }),
     });
@@ -37,7 +37,7 @@ describe("ExpertTeamPage", () => {
   });
 
   it("handles validation error execution", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Pre-flight failed" }),
     });

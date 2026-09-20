@@ -68,16 +68,16 @@ mod chaos_network_tests {
                     match tokio::net::TcpStream::connect(addr).await {
                         Ok(mut stream) => {
                             let msg = b"hello";
-                            if let Err(_) = stream.write_all(msg).await {
+                            if stream.write_all(msg).await.is_err() {
                                 return Err("broken pipe".to_string());
                             }
 
                             let mut buf = vec![0; 5];
-                            if let Err(_) = stream.read_exact(&mut buf).await {
+                            if stream.read_exact(&mut buf).await.is_err() {
                                 return Err("connection reset".to_string());
                             }
 
-                            if &buf == msg {
+                            if buf == msg {
                                 Ok(())
                             } else {
                                 Err("data mismatch".to_string())

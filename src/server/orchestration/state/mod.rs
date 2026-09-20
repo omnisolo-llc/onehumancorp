@@ -10,6 +10,17 @@ use crate::tasks::SharedTask;
 use async_trait::async_trait;
 use std::sync::Arc;
 
+/// Identity and intent travel together through either persistence backend.
+/// The public StateManager contract remains unchanged.
+pub(crate) struct StateTransition<'a> {
+    pub task_id: &'a str,
+    pub tenant_id: &'a str,
+    pub from_state: &'a str,
+    pub to_state: &'a str,
+    pub agent_id: Option<&'a str>,
+    pub reason: Option<&'a str>,
+}
+
 #[async_trait]
 pub trait StateManager: Send + Sync {
     async fn transition_state(

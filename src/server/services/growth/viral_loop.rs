@@ -9,6 +9,12 @@ pub struct ViralLoopTracker {
     invites_accepted_metric: Counter<u64>,
 }
 
+impl Default for ViralLoopTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ViralLoopTracker {
     pub fn new() -> Self {
         let meter = global::meter("ohc.growth");

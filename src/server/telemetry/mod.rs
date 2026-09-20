@@ -1829,17 +1829,17 @@ mod additional_tests {
         assert_eq!(metric_name, "ohc_autodream_sync_duration_seconds");
         record_autodream_sync_duration(0.25, "Standalone");
 
-        let dashboard = fs::read_to_string("../monitoring/dashboards/omnisolo-hybrid-telemetry.json")
-            .or_else(|_| {
-                fs::read_to_string("../../monitoring/dashboards/omnisolo-hybrid-telemetry.json").or_else(
-                    |_| {
-                        fs::read_to_string(
-                            "src/server/monitoring/dashboards/omnisolo-hybrid-telemetry.json",
-                        )
-                    },
-                )
-            })
-            .expect("hybrid telemetry dashboard should be readable");
+        let dashboard =
+            fs::read_to_string("../monitoring/dashboards/omnisolo-hybrid-telemetry.json")
+                .or_else(|_| {
+                    fs::read_to_string("../../monitoring/dashboards/omnisolo-hybrid-telemetry.json")
+                        .or_else(|_| {
+                            fs::read_to_string(
+                                "src/server/monitoring/dashboards/omnisolo-hybrid-telemetry.json",
+                            )
+                        })
+                })
+                .expect("hybrid telemetry dashboard should be readable");
         assert!(dashboard.contains(metric_name));
     }
 }

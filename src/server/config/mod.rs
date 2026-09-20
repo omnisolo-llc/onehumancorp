@@ -90,7 +90,6 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
         // Optional file
         .add_source(::config::File::with_name("omnisolo").required(false))
         .add_source(::config::File::with_name("~/.openclaw/omnisolo").required(false))
-
         // Env vars with OMNISOLO_ prefix
         .add_source(::config::Environment::with_prefix("OmniSolo"))
         // Env vars without prefix (for standard ones like DATABASE_URL)
@@ -110,7 +109,6 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
 
     Ok(cfg)
 }
-
 
 fn is_real_directory(path: &Path) -> bool {
     std::fs::symlink_metadata(path)
@@ -223,8 +221,9 @@ impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
         let is_test =
             std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
-        let env_standalone =
-            std::env::var("OMNISOLO_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+        let env_standalone = std::env::var("OMNISOLO_STANDALONE_MODE")
+            .unwrap_or_else(|_| "false".to_string())
+            == "true";
         let has_database_source =
             cfg.database_url.is_some() || std::env::var_os("DATABASE_URL_FILE").is_some();
         let is_standalone = env_standalone || cfg.standalone || (!is_test && !has_database_source);
@@ -280,7 +279,12 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 use std::os::unix::fs::OpenOptionsExt;
                 use std::os::unix::fs::PermissionsExt;
 
-                let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("omnisolo-standalone.db");
+                let db_path = sqlite_url
+                    .strip_prefix("sqlite://")
+                    .unwrap_or(sqlite_url.as_str())
+                    .split('?')
+                    .next()
+                    .unwrap_or("omnisolo-standalone.db");
                 if let Some(parent) = std::path::Path::new(db_path).parent()
                     && !parent.as_os_str().is_empty()
                 {

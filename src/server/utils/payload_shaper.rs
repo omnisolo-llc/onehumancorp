@@ -23,7 +23,7 @@ pub fn parse_fields(fields: &str) -> std::collections::HashMap<String, FieldNode
                 // Find matching parenthesis
                 let mut nested_str = String::new();
                 let mut depth = 1;
-                while let Some(nc) = chars.next() {
+                for nc in chars.by_ref() {
                     if nc == '(' {
                         depth += 1;
                     } else if nc == ')' {

@@ -1,5 +1,7 @@
 import { test, expect } from './fixtures';
 
+type QueueAction = { id: string; type: string; amount?: number; notes?: string; timestamp?: string };
+
 test.describe('Degradation Validation (Chaos Engineering)', () => {
 
   test('frontend fail-safes when backend latency spikes >2s or connection drops', async ({ page, context, adminUser, loginAs }) => {
@@ -19,14 +21,14 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
       }));
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
+        req.onupgradeneeded = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) {
                 db.createObjectStore('actions', { keyPath: 'id' });
             }
         };
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
@@ -45,17 +47,17 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     await page.evaluate(() => window.dispatchEvent(new Event('storage')));
 
-    const q1: any = await page.evaluate(() => {
-      return new Promise((resolve) => {
+    const q1 = await page.evaluate(() => {
+      return new Promise<QueueAction[]>((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
+        req.onupgradeneeded = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) {
                 db.createObjectStore('actions', { keyPath: 'id' });
             }
         };
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
             const reqAll = tx.objectStore('actions').getAll();
@@ -81,14 +83,14 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
+        req.onupgradeneeded = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) {
                 db.createObjectStore('actions', { keyPath: 'id' });
             }
         };
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
@@ -110,17 +112,17 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     await page.evaluate(() => window.dispatchEvent(new Event('storage')));
 
-    const q2: any = await page.evaluate(() => {
-      return new Promise((resolve) => {
+    const q2 = await page.evaluate(() => {
+      return new Promise<QueueAction[]>((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
+        req.onupgradeneeded = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) {
                 db.createObjectStore('actions', { keyPath: 'id' });
             }
         };
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
             const reqAll = tx.objectStore('actions').getAll();
@@ -130,7 +132,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
       });
     });
 
-    const tapToPayTxns = q2.filter((q: any) => q.type === 'tap_to_pay');
+    const tapToPayTxns = q2.filter((q) => q.type === 'tap_to_pay');
     expect(tapToPayTxns.length).toBeGreaterThan(0);
     expect(tapToPayTxns[0].amount).toBe(500);
   });
@@ -145,14 +147,14 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
+        req.onupgradeneeded = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) {
                 db.createObjectStore('actions', { keyPath: 'id' });
             }
         };
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
@@ -172,17 +174,17 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     await page.evaluate(() => window.dispatchEvent(new Event('storage')));
 
-    const q3: any = await page.evaluate(() => {
-      return new Promise((resolve) => {
+    const q3 = await page.evaluate(() => {
+      return new Promise<QueueAction[]>((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
+        req.onupgradeneeded = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) {
                 db.createObjectStore('actions', { keyPath: 'id' });
             }
         };
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
             const reqAll = tx.objectStore('actions').getAll();
@@ -192,7 +194,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
       });
     });
 
-    const draftQuotes = q3.filter((q: any) => q.type === 'draft_quote');
+    const draftQuotes = q3.filter((q) => q.type === 'draft_quote');
     expect(draftQuotes.length).toBeGreaterThan(0);
     expect(draftQuotes[0].notes).toBe('{"custom": "quote data"}');
   });
@@ -222,14 +224,14 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
+        req.onupgradeneeded = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) {
                 db.createObjectStore('actions', { keyPath: 'id' });
             }
         };
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
@@ -265,11 +267,11 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     await page.waitForTimeout(2000);
 
     // 4. Verify queue was emptied by SyncManager
-    const q4: any = await page.evaluate(() => {
-      return new Promise((resolve) => {
+    const q4 = await page.evaluate(() => {
+      return new Promise<QueueAction[]>((resolve) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        req.onsuccess = (e: any) => {
-            const db = e.target.result;
+        req.onsuccess = () => {
+            const db = req.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
             const reqAll = tx.objectStore('actions').getAll();

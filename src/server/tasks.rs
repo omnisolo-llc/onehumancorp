@@ -82,7 +82,8 @@ impl ActionRisk {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    /// Read a persisted risk label; unknown labels remain explicitly unspecified.
+    pub fn from_label(s: &str) -> Self {
         match s.to_uppercase().as_str() {
             "LOW" => ActionRisk::Low,
             "HIGH" => ActionRisk::High,
@@ -91,11 +92,24 @@ impl ActionRisk {
     }
 }
 
+#[derive(Default)]
+pub struct TaskPlan {
+    pub parent_plan_id: String,
+    pub dependencies: Vec<String>,
+}
+
+type TaskBroadcaster = Arc<dyn Fn(SharedTask, String) + Send + Sync>;
+
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
-    pub(crate) broadcaster:
-        std::sync::RwLock<Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>>,
+    pub(crate) broadcaster: std::sync::RwLock<Option<TaskBroadcaster>>,
+}
+
+impl Default for TaskManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TaskManager {
@@ -115,10 +129,7 @@ impl TaskManager {
         }
     }
 
-    pub fn set_broadcaster(
-        &self,
-        broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>,
-    ) {
+    pub fn set_broadcaster(&self, broadcaster: TaskBroadcaster) {
         *self.broadcaster.write().unwrap_or_else(|e| e.into_inner()) = Some(broadcaster);
     }
 
@@ -139,8 +150,7 @@ impl TaskManager {
         self.create_task_with_plan(
             org_id,
             mission_id,
-            String::new(),
-            vec![],
+            TaskPlan::default(),
             title,
             description,
             priority,
@@ -151,12 +161,15 @@ impl TaskManager {
         &self,
         org_id: String,
         mission_id: String,
-        parent_plan_id: String,
-        dependencies: Vec<String>,
+        plan: TaskPlan,
         title: String,
         description: String,
         priority: String,
     ) -> Result<SharedTask, String> {
+        let TaskPlan {
+            parent_plan_id,
+            dependencies,
+        } = plan;
         let id = uuid::Uuid::new_v4().to_string();
         self.check_circular_dependency(&id, &dependencies)?;
         let now = Utc::now();
@@ -216,10 +229,10 @@ impl TaskManager {
             if dep_id == task_id {
                 return Err("Circular dependency detected".to_string());
             }
-            if visited.insert(dep_id.clone()) {
-                if let Some(dep_task) = tasks.get(&dep_id) {
-                    to_visit.extend(dep_task.dependencies.clone());
-                }
+            if visited.insert(dep_id.clone())
+                && let Some(dep_task) = tasks.get(&dep_id)
+            {
+                to_visit.extend(dep_task.dependencies.clone());
             }
         }
         Ok(())
@@ -243,7 +256,7 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
-            self.broadcast(&task, "task_status_updated");
+            self.broadcast(task, "task_status_updated");
             Ok(())
         } else {
             Err("task not found".to_string())
@@ -263,7 +276,7 @@ impl TaskManager {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
-                self.broadcast(&task, "task_claimed");
+                self.broadcast(task, "task_claimed");
                 return Ok(Some(task.clone()));
             }
         }
@@ -276,7 +289,7 @@ impl TaskManager {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
-                self.broadcast(&task, "task_review");
+                self.broadcast(task, "task_review");
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -482,11 +495,12 @@ impl TaskManager {
         };
 
         let db_clone = self.db.read().unwrap_or_else(|e| e.into_inner()).clone();
-        if let Some(db) = db_clone {
-            if let Some(new_payload) = &new_payload_opt {
-                match &db.store {
-                    crate::db::DbStore::Postgres => {
-                        let _res = sqlx::query(
+        if let Some(db) = db_clone
+            && let Some(new_payload) = &new_payload_opt
+        {
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let _res = sqlx::query(
                             "UPDATE shared_tasks_decomposition SET approval_status = $1, status = $2, payload = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
                         )
                         .bind(&new_approval_status)
@@ -498,9 +512,9 @@ impl TaskManager {
                         .execute(&db.pool)
                         .await
                         .map_err(|e| e.to_string())?;
-                    }
-                    crate::db::DbStore::Sqlite(pool) => {
-                        let _res = sqlx::query(
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let _res = sqlx::query(
                             "UPDATE shared_tasks_decomposition SET approval_status = ?, status = ?, payload = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
                         )
                         .bind(&new_approval_status)
@@ -512,7 +526,6 @@ impl TaskManager {
                         .execute(pool)
                         .await
                         .map_err(|e| e.to_string())?;
-                    }
                 }
             }
         }
@@ -525,7 +538,7 @@ impl TaskManager {
                 task.payload = payload;
             }
             task.updated_at = new_updated_at;
-            self.broadcast(&task, "task_approved");
+            self.broadcast(task, "task_approved");
         }
 
         Ok(())

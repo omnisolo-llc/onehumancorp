@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import './fixtures';
 
 test.describe('Share & Save Viral Loop in Checkout', () => {
   test('User sees Share & Save widget, shares, and gets discount', async ({ page }) => {

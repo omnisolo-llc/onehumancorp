@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { useParams } from 'next/navigation';
 
 interface Link {
@@ -38,7 +38,7 @@ export default function PublicBioPage() {
             links: [{ title: 'Visit Store', url: '/' }]
           });
         }
-      } catch (e) {
+      } catch  {
          setConfig({
             store_name: tenant,
             bio: 'Welcome to my storefront!',

@@ -1,5 +1,6 @@
 "use client";
 import { Suspense } from "react";
+import { parseMemorySummary, type CustomerMemorySummary } from './memorySummary';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
@@ -11,28 +12,28 @@ function CustomerMemoryGraphContent() {
   const tenantId = searchParams.get('tenantId') || 'default-tenant-id';
 
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<CustomerMemorySummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setData(null);
+    setError(null);
     const fetchMemoryGraph = async () => {
       try {
-        const res = await fetch(`/api/v1/memory/summary/${customerId}`);
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        } else {
-          setError('Failed to fetch customer history.');
-        }
-      } catch (err) {
-        console.error('Failed to fetch memory graph', err);
-        setError('An error occurred.');
+        const res = await fetch(`/api/v1/memory/summary/${encodeURIComponent(customerId)}`, { signal: controller.signal });
+        if (!res.ok) throw new Error('Customer history unavailable');
+        const summary = parseMemorySummary(await res.json());
+        if (!controller.signal.aborted) setData(summary);
+      } catch {
+        if (!controller.signal.aborted) setError('Failed to fetch customer history.');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
-
-    fetchMemoryGraph();
+    void fetchMemoryGraph();
+    return () => controller.abort();
   }, [customerId]);
 
   if (loading) {
@@ -82,7 +83,6 @@ function CustomerMemoryGraphContent() {
              </div>
              <div>
                <h1 className="text-2xl font-bold">Customer Context</h1>
-               <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">High Intent</span>
                {data?.segments && data.segments.map((s: string) => <span key={s} className="ml-1 inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">{s}</span>)}
              </div>
           </div>
@@ -91,7 +91,7 @@ function CustomerMemoryGraphContent() {
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
               {summary}
             </p>
-            <p className="text-xs text-gray-500 mt-2">{data?.total_interactions || interactions.length} total interactions recorded.</p>
+            <p className="text-xs text-gray-500 mt-2">{data?.total_interactions ?? interactions.length} total interactions recorded.</p>
           </div>
 
           {contextGraph && (
@@ -108,10 +108,10 @@ function CustomerMemoryGraphContent() {
            <h2 className="text-lg font-bold mb-4 ml-1">Timeline</h2>
            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 dark:before:via-gray-700 before:to-transparent">
 
-             {interactions.length === 0 ? <div className="text-center p-4">No interaction history found.</div> : interactions.map((interaction: any, idx: number) => (
+             {interactions.length === 0 ? <div className="text-center p-4">No interaction history found.</div> : interactions.map((interaction, idx) => (
                <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-800 text-gray-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                     {getIcon(interaction.channel || interaction.type)}
+                     {getIcon(interaction.channel || interaction.type || '')}
                   </div>
                   <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 shadow-sm rounded-xl">
                      <div className="flex items-center justify-between mb-1">
@@ -126,9 +126,10 @@ function CustomerMemoryGraphContent() {
            </div>
 
            <div className="mt-8 flex justify-center gap-4">
-               <button className="px-4 py-2 bg-blue-600 text-white rounded-md">Draft Reply</button>
-               <button className="px-4 py-2 bg-red-600 text-white rounded-md">Issue Refund</button>
+               <button disabled aria-describedby="customer-action-limit" className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50">Draft Reply</button>
+               <button disabled aria-describedby="customer-action-limit" className="px-4 py-2 bg-red-600 text-white rounded-md disabled:opacity-50">Issue Refund</button>
            </div>
+           <p id="customer-action-limit" className="mt-3 text-center text-sm text-gray-600 dark:text-gray-300">Reply and refund actions are not connected on this history page. No message or payment action has been performed.</p>
         </div>
 
       </div>

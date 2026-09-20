@@ -18,14 +18,14 @@ vi.mock('../components/PoweredByOmniSolo', () => ({
 
 describe('MyPlanPage', () => {
   const mockPush = vi.fn();
-  let originalWindowLocation: any;
+  let originalWindowLocation: Location;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as any).mockReturnValue({ push: mockPush });
+    vi.mocked(useRouter, { partial: true }).mockReturnValue({ push: mockPush });
     global.fetch = vi.fn();
 
-    (global.fetch as any).mockImplementation(async (url) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -45,12 +45,15 @@ describe('MyPlanPage', () => {
     });
 
     originalWindowLocation = window.location;
-    delete (window as any).location;
-    window.location = { ...originalWindowLocation, href: '' } as any;
+    Object.defineProperty(window, 'location', {
+      configurable: true, writable: true, value: { ...originalWindowLocation, href: '' },
+    });
   });
 
   afterEach(() => {
-    window.location = originalWindowLocation;
+    Object.defineProperty(window, 'location', {
+      configurable: true, writable: true, value: originalWindowLocation,
+    });
   });
 
   it('renders the plan page', async () => {
@@ -62,7 +65,7 @@ describe('MyPlanPage', () => {
   });
 
   it('renders soft limit reached message', async () => {
-    (global.fetch as any).mockImplementation(async (url) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -97,7 +100,7 @@ describe('MyPlanPage', () => {
   });
 
   it('renders unlimited limits properly for 0 limits', async () => {
-    (global.fetch as any).mockImplementation(async (url) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -133,12 +136,12 @@ describe('MyPlanPage', () => {
 
   it('initiates manage billing flow', async () => {
     const mockPortalUrl = 'https://billing.stripe.com/p/session/test_123';
-    let resolvePortal: any;
-    const portalPromise = new Promise((resolve) => {
+    let resolvePortal: () => void;
+    const portalPromise = new Promise<void>((resolve) => {
       resolvePortal = resolve;
     });
 
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,

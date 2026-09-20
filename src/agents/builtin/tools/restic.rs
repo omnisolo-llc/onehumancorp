@@ -39,7 +39,8 @@ impl PydanticToolExecutor<ResticArgs> for ResticExecutor {
 
         let env_vars = vec![("RESTIC_PASSWORD".to_string(), password.clone())];
 
-        let mode = std::env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
+        let mode =
+            std::env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
         if mode == "cloud" {
             return Err(ToolError::LlmRecoverable(
                 "restic: unsupported in cloud mode".to_string(),

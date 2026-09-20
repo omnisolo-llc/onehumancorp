@@ -47,6 +47,12 @@ pub struct MemoryTaskQueue {
     role_queues: DashMap<String, Mutex<VecDeque<String>>>,
 }
 
+impl Default for MemoryTaskQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryTaskQueue {
     pub fn new() -> Self {
         MemoryTaskQueue {
@@ -105,12 +111,12 @@ impl TaskQueue for MemoryTaskQueue {
                 }
                 // Pop until we find a valid pending job, or queue is empty
                 while let Some(job_id) = q.pop_front() {
-                    if let Some(mut job_ref) = self.jobs.get_mut(&job_id) {
-                        if job_ref.status == "QUEUED" {
-                            job_ref.status = "IN_PROGRESS".to_string();
-                            job_ref.updated_at = Utc::now();
-                            return Ok(Some(job_ref.clone()));
-                        }
+                    if let Some(mut job_ref) = self.jobs.get_mut(&job_id)
+                        && job_ref.status == "QUEUED"
+                    {
+                        job_ref.status = "IN_PROGRESS".to_string();
+                        job_ref.updated_at = Utc::now();
+                        return Ok(Some(job_ref.clone()));
                     }
                 }
             }
@@ -166,22 +172,21 @@ impl TaskQueue for MemoryTaskQueue {
         let mut to_update = Vec::new();
 
         for job in self.jobs.iter() {
-            if job.status == "RUNNING" && job.updated_at < stale_threshold {
-                to_update.push(job.id.clone());
-            } else if job.status == "QUEUED" && job.created_at < stagnant_threshold {
+            if (job.status == "RUNNING" && job.updated_at < stale_threshold)
+                || (job.status == "QUEUED" && job.created_at < stagnant_threshold)
+            {
                 to_update.push(job.id.clone());
             }
         }
 
         for id in to_update {
-            if let Some(mut job) = self.jobs.get_mut(&id) {
-                if (job.status == "RUNNING" && job.updated_at < stale_threshold)
-                    || (job.status == "QUEUED" && job.created_at < stagnant_threshold)
-                {
-                    job.status = "FAILED".to_string();
-                    job.updated_at = Utc::now();
-                    count += 1;
-                }
+            if let Some(mut job) = self.jobs.get_mut(&id)
+                && ((job.status == "RUNNING" && job.updated_at < stale_threshold)
+                    || (job.status == "QUEUED" && job.created_at < stagnant_threshold))
+            {
+                job.status = "FAILED".to_string();
+                job.updated_at = Utc::now();
+                count += 1;
             }
         }
 
@@ -286,7 +291,7 @@ impl TaskQueue for PostgresTaskQueue {
             let bursts_threshold = 10;
             if depth > bursts_threshold {
                 let delay_seconds = (depth - bursts_threshold) * 5;
-                run_after = run_after + chrono::Duration::seconds(delay_seconds);
+                run_after += chrono::Duration::seconds(delay_seconds);
             }
             *current_depths.get_mut(&org_id).unwrap() += 1;
 
@@ -300,7 +305,7 @@ impl TaskQueue for PostgresTaskQueue {
         }
 
         builder.push_values(
-            prepared_jobs.into_iter(),
+            prepared_jobs,
             |mut b, (id, org_id, parent_task_id, new_payload, run_after)| {
                 b.push_bind(id)
                     .push_bind(org_id)
@@ -355,7 +360,7 @@ impl TaskQueue for PostgresTaskQueue {
         let bursts_threshold = 10;
         if depth > bursts_threshold {
             let delay_seconds = (depth - bursts_threshold) * 5;
-            run_after = run_after + chrono::Duration::seconds(delay_seconds);
+            run_after += chrono::Duration::seconds(delay_seconds);
         }
 
         sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
@@ -398,7 +403,7 @@ impl TaskQueue for PostgresTaskQueue {
 
             let mut j = Job {
                 id,
-                tenant_id: tenant_id,
+                tenant_id,
                 parent_task_id,
                 job_type: String::new(),
                 payload: payload.clone(),
@@ -577,13 +582,18 @@ pub trait JobQueue: Send + Sync {
 }
 
 pub struct InMemJobQueue {
-    topics: DashMap<
-        String,
-        (
-            mpsc::Sender<Vec<u8>>,
-            Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>,
-        ),
-    >,
+    topics: DashMap<String, TopicChannel>,
+}
+
+type TopicChannel = (
+    mpsc::Sender<Vec<u8>>,
+    Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>,
+);
+
+impl Default for InMemJobQueue {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InMemJobQueue {
@@ -593,22 +603,57 @@ impl InMemJobQueue {
         }
     }
 
-    fn get_or_create_topic(
-        &self,
-        topic: &str,
-    ) -> (
-        mpsc::Sender<Vec<u8>>,
-        Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>,
-    ) {
-        if let Some(t) = self.topics.get(topic) {
-            return t.value().clone();
-        }
+    fn get_or_create_topic(&self, topic: &str) -> TopicChannel {
+        // Creation and publication must share the same map entry lock. A
+        // get-then-insert race returned disconnected receivers to first callers.
+        self.topics
+            .entry(topic.to_owned())
+            .or_insert_with(|| {
+                let (tx, rx) = mpsc::channel(10000);
+                (tx, Arc::new(tokio::sync::Mutex::new(rx)))
+            })
+            .value()
+            .clone()
+    }
+}
 
-        let (tx, rx) = mpsc::channel(10000);
-        let rx = Arc::new(tokio::sync::Mutex::new(rx));
-        let t = (tx, rx);
-        self.topics.insert(topic.to_string(), t.clone());
-        t
+#[cfg(test)]
+mod topic_creation_regressions {
+    use super::*;
+
+    #[test]
+    fn native_cleanup_concurrent_topic_creation_has_one_receiver() {
+        let queue = InMemJobQueue::new();
+        let barrier = std::sync::Barrier::new(8);
+        let receivers = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|_| {
+                    let queue = &queue;
+                    let barrier = &barrier;
+                    scope.spawn(move || {
+                        (0..32)
+                            .map(|index| {
+                                barrier.wait();
+                                queue.get_or_create_topic(&format!("new-topic-{index}")).1
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap())
+                .collect::<Vec<_>>()
+        });
+        for group in &receivers[1..] {
+            for (first, receiver) in receivers[0].iter().zip(group) {
+                assert!(
+                    Arc::ptr_eq(first, receiver),
+                    "Concurrent first callers received different queues"
+                );
+            }
+        }
+        assert_eq!(queue.topics.len(), 32);
     }
 }
 
@@ -899,25 +944,21 @@ impl QueueManager {
                                 tracing::debug!("QueueManager dispatched job: {}", job.id);
 
                                 // Inject Queue Health Statistics into the payload specifically for The Advisor / Business Advisory
-                                if let Some(agent_role) = job.payload.get("agent_role").and_then(|r| r.as_str()) {
-                                    if agent_role == "The Advisor" || agent_role == "Business Advisory" {
+                                if let Some(agent_role) = job.payload.get("agent_role").and_then(|r| r.as_str())
+                                    && (agent_role == "The Advisor" || agent_role == "Business Advisory") {
                                         // Retrieve metrics directly from global OTel or known variables.
                                         // For simplicity, we just format the payload with queue_depth if possible.
                                         // But queue count can be found via a query or we can just pass a queue_health object.
-                                        let queue_depth: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM sub_agent_queue WHERE status = 'QUEUED'")
+                                        let queue_depth: Option<i64> = sqlx::query_scalar("SELECT COUNT(*) FROM sub_agent_queue WHERE status = 'QUEUED'")
                                             .fetch_one(&self.pool)
-                                            .await {
-                                            Ok(c) => c,
-                                            Err(_) => 0,
-                                        };
+                                            .await.ok();
                                         if let Some(payload_obj) = job.payload.as_object_mut() {
                                             payload_obj.insert("queue_health".to_string(), serde_json::json!({
                                                 "swarm_queue_depth": queue_depth,
-                                                "status": if queue_depth > 50 { "BACKLOGGED" } else { "HEALTHY" }
+                                                "status": match queue_depth { Some(depth) if depth > 50 => "BACKLOGGED", Some(_) => "HEALTHY", None => "UNKNOWN" }
                                             }));
                                         }
                                     }
-                                }
 
                                 let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                                 let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
@@ -1159,7 +1200,7 @@ impl TaskQueue for SqliteTaskQueue {
         let mut builder = sqlx::QueryBuilder::new(
             "INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) ",
         );
-        builder.push_values(jobs.into_iter(), |mut b, job| {
+        builder.push_values(jobs, |mut b, job| {
             b.push_bind(job.id)
                 .push_bind(job.tenant_id)
                 .push_bind(job.parent_task_id)
@@ -1421,47 +1462,46 @@ impl TaskQueue for RedisTaskQueue {
             .await
             .map_err(|e| e.to_string())?;
 
-        if let Some((_, payload_bytes)) = result {
-            if let Ok(queue_job) =
+        if let Some((_, payload_bytes)) = result
+            && let Ok(queue_job) =
                 <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..])
-            {
-                let job = Job {
-                    id: queue_job.id.clone(),
-                    tenant_id: queue_job.tenant_id,
-                    parent_task_id: queue_job.parent_task_id,
-                    job_type: queue_job.agent_role.clone(),
-                    payload: queue_job.payload,
-                    status: queue_job.status,
-                    retry_count: queue_job.attempts,
-                    max_retries: queue_job.max_attempts,
-                    next_retry_at: chrono::DateTime::from_timestamp_millis(queue_job.run_after_ms)
-                        .unwrap_or_else(chrono::Utc::now),
-                    locked_until: if queue_job.locked_until_ms > 0 {
-                        Some(
-                            chrono::DateTime::from_timestamp_millis(queue_job.locked_until_ms)
-                                .unwrap_or_else(chrono::Utc::now),
-                        )
-                    } else {
-                        None
-                    },
-                    created_at: chrono::DateTime::from_timestamp_millis(queue_job.created_at_ms)
-                        .unwrap_or_else(chrono::Utc::now),
-                    updated_at: chrono::DateTime::from_timestamp_millis(queue_job.updated_at_ms)
-                        .unwrap_or_else(chrono::Utc::now),
-                };
-                if roles.contains(&job.job_type) {
-                    let _: () = redis::cmd("HSET")
-                        .arg(format!("{}_processing", self.queue_name))
-                        .arg(&job.id)
-                        .arg(&payload_bytes)
-                        .query_async(&mut conn)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                    return Ok(Some(job));
+        {
+            let job = Job {
+                id: queue_job.id.clone(),
+                tenant_id: queue_job.tenant_id,
+                parent_task_id: queue_job.parent_task_id,
+                job_type: queue_job.agent_role.clone(),
+                payload: queue_job.payload,
+                status: queue_job.status,
+                retry_count: queue_job.attempts,
+                max_retries: queue_job.max_attempts,
+                next_retry_at: chrono::DateTime::from_timestamp_millis(queue_job.run_after_ms)
+                    .unwrap_or_else(chrono::Utc::now),
+                locked_until: if queue_job.locked_until_ms > 0 {
+                    Some(
+                        chrono::DateTime::from_timestamp_millis(queue_job.locked_until_ms)
+                            .unwrap_or_else(chrono::Utc::now),
+                    )
                 } else {
-                    // Not intended for this worker role, push it back.
-                    let _ = self.enqueue(job).await;
-                }
+                    None
+                },
+                created_at: chrono::DateTime::from_timestamp_millis(queue_job.created_at_ms)
+                    .unwrap_or_else(chrono::Utc::now),
+                updated_at: chrono::DateTime::from_timestamp_millis(queue_job.updated_at_ms)
+                    .unwrap_or_else(chrono::Utc::now),
+            };
+            if roles.contains(&job.job_type) {
+                let _: () = redis::cmd("HSET")
+                    .arg(format!("{}_processing", self.queue_name))
+                    .arg(&job.id)
+                    .arg(&payload_bytes)
+                    .query_async(&mut conn)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                return Ok(Some(job));
+            } else {
+                // Not intended for this worker role, push it back.
+                let _ = self.enqueue(job).await;
             }
         }
         Ok(None)
@@ -1476,21 +1516,20 @@ impl TaskQueue for RedisTaskQueue {
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-        if let Some(payload_bytes) = result {
-            if let Ok(queue_job) =
+        if let Some(payload_bytes) = result
+            && let Ok(queue_job) =
                 <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..])
-            {
-                if queue_job.tenant_id != tenant_id {
-                    return Err("tenant mismatch".to_string());
-                }
-                let _: () = redis::cmd("HDEL")
-                    .arg(&processing_key)
-                    .arg(job_id)
-                    .query_async(&mut conn)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                return Ok(());
+        {
+            if queue_job.tenant_id != tenant_id {
+                return Err("tenant mismatch".to_string());
             }
+            let _: () = redis::cmd("HDEL")
+                .arg(&processing_key)
+                .arg(job_id)
+                .query_async(&mut conn)
+                .await
+                .map_err(|e| e.to_string())?;
+            return Ok(());
         }
         Err("job not found".to_string())
     }
@@ -1504,21 +1543,20 @@ impl TaskQueue for RedisTaskQueue {
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-        if let Some(payload_bytes) = result {
-            if let Ok(queue_job) =
+        if let Some(payload_bytes) = result
+            && let Ok(queue_job) =
                 <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..])
-            {
-                if queue_job.tenant_id != tenant_id {
-                    return Err("tenant mismatch".to_string());
-                }
-                let _: () = redis::cmd("HDEL")
-                    .arg(&processing_key)
-                    .arg(job_id)
-                    .query_async(&mut conn)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                return Ok(());
+        {
+            if queue_job.tenant_id != tenant_id {
+                return Err("tenant mismatch".to_string());
             }
+            let _: () = redis::cmd("HDEL")
+                .arg(&processing_key)
+                .arg(job_id)
+                .query_async(&mut conn)
+                .await
+                .map_err(|e| e.to_string())?;
+            return Ok(());
         }
         Err("job not found".to_string())
     }
@@ -1569,25 +1607,24 @@ impl TaskQueue for RedisTaskQueue {
         for (job_id, payload_bytes) in hash_map {
             if let Ok(mut queue_job) =
                 <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..])
+                && queue_job.updated_at_ms < stale_threshold_ms
             {
-                if queue_job.updated_at_ms < stale_threshold_ms {
-                    // Fail the job and remove from processing queue
-                    queue_job.status = "FAILED".to_string();
-                    queue_job.updated_at_ms = Utc::now().timestamp_millis();
+                // Fail the job and remove from processing queue
+                queue_job.status = "FAILED".to_string();
+                queue_job.updated_at_ms = Utc::now().timestamp_millis();
 
-                    let mut pipe = redis::pipe();
-                    pipe.atomic();
-                    // We remove it from the processing queue. It's marked FAILED.
-                    // The job payload itself is dropped since it's failed, but we could re-enqueue if needed.
-                    // The original implementation deletes it when complete or failed, so we HDEL here.
-                    let _: () = redis::cmd("HDEL")
-                        .arg(&processing_key)
-                        .arg(&job_id)
-                        .query_async(&mut conn)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                    stale_count += 1;
-                }
+                let mut pipe = redis::pipe();
+                pipe.atomic();
+                // We remove it from the processing queue. It's marked FAILED.
+                // The job payload itself is dropped since it's failed, but we could re-enqueue if needed.
+                // The original implementation deletes it when complete or failed, so we HDEL here.
+                let _: () = redis::cmd("HDEL")
+                    .arg(&processing_key)
+                    .arg(&job_id)
+                    .query_async(&mut conn)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                stale_count += 1;
             }
         }
 
@@ -1611,21 +1648,19 @@ impl TaskQueue for RedisTaskQueue {
             for item in items {
                 if let Ok(queue_job) =
                     <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&item[..])
+                    && queue_job.status == "QUEUED"
+                    && queue_job.created_at_ms < stagnant_threshold_ms
                 {
-                    if queue_job.status == "QUEUED"
-                        && queue_job.created_at_ms < stagnant_threshold_ms
-                    {
-                        // Use LREM to safely remove just this specific stagnant item payload.
-                        // LREM key 1 value removes the first occurrence of the exact value.
-                        let mut pipe = redis::pipe();
-                        pipe.atomic();
-                        pipe.cmd("LREM").arg(&self.queue_name).arg(1).arg(&item);
-                        let _: () = pipe
-                            .query_async(&mut conn)
-                            .await
-                            .map_err(|e| e.to_string())?;
-                        stale_count += 1;
-                    }
+                    // Use LREM to safely remove just this specific stagnant item payload.
+                    // LREM key 1 value removes the first occurrence of the exact value.
+                    let mut pipe = redis::pipe();
+                    pipe.atomic();
+                    pipe.cmd("LREM").arg(&self.queue_name).arg(1).arg(&item);
+                    let _: () = pipe
+                        .query_async(&mut conn)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    stale_count += 1;
                 }
             }
         }

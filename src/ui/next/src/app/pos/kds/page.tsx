@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function KDSPage() {
@@ -8,7 +8,7 @@ export default function KDSPage() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [language, setLanguage] = useState<'en' | 'ar'>('en');
   const [isOffline, setIsOffline] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [syncing] = useState(false);
 
   // Network listener
   useEffect(() => {

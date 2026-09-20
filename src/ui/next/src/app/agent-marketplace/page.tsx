@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -30,8 +31,8 @@ export default function AgentMarketplacePage() {
      }
      const data: Agent[] = await res.json();
      setAgents(data);
-   } catch (err: any) {
-     setError(err.message || 'An error occurred while fetching agents');
+   } catch (err: unknown) {
+     setError(errorMessage(err, 'An error occurred while fetching agents'));
    } finally {
      setLoading(false);
    }

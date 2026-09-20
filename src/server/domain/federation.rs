@@ -14,6 +14,12 @@ pub struct FederatedRegistry {
     agents: RwLock<HashMap<String, FederatedAgent>>,
 }
 
+impl Default for FederatedRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FederatedRegistry {
     pub fn new() -> Self {
         FederatedRegistry {

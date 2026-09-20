@@ -157,8 +157,8 @@ impl DailyOpsRoutineWorker {
                              .bind(&context_payload_json)
                              .bind(&proposed_action_json)
                              .bind(&lifecycle_state)
-                             .bind(&created_at)
-                             .bind(&updated_at)
+                             .bind(created_at)
+                             .bind(updated_at)
                              .execute(&mut *conn)
                              .await;
                         }

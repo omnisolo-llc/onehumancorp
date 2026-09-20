@@ -272,7 +272,7 @@ impl Department for OperationsAgent {
                 let pool = crate::db::get_pool();
                 let staff_res: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT id, name, role FROM ohc_staff_member WHERE tenant_id = $1 AND phone_number = $2 LIMIT 1")
                     .bind(&event.tenant_id)
-                    .bind(&sender_id)
+                    .bind(sender_id)
                     .fetch_one(&pool).await;
 
                 if let Ok((staff_id, staff_name, role)) = staff_res {
@@ -335,57 +335,57 @@ impl Department for OperationsAgent {
             }
         }
 
-        if event.event_type == "agent:operations:approved" {
-            if let Some(payload) = event.payload.get("original_payload") {
-                if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
-                    if feature_type == "shift_reassignment" {
-                        let shift_id = payload
-                            .get("shift_id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        let proposed_staff_id = payload
-                            .get("proposed_staff_id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        let _proposed_staff_name = payload
-                            .get("proposed_staff_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
+        if event.event_type == "agent:operations:approved"
+            && let Some(payload) = event.payload.get("original_payload")
+            && let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str())
+            && feature_type == "shift_reassignment"
+        {
+            let shift_id = payload
+                .get("shift_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let proposed_staff_id = payload
+                .get("proposed_staff_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let _proposed_staff_name = payload
+                .get("proposed_staff_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
-                        if !shift_id.is_empty() && !proposed_staff_id.is_empty() {
-                            let pool = crate::db::get_pool();
-                            let _ = sqlx::query("UPDATE shifts SET staff_id = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3")
+            if !shift_id.is_empty() && !proposed_staff_id.is_empty() {
+                let pool = crate::db::get_pool();
+                let _ = sqlx::query("UPDATE shifts SET staff_id = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3")
                                 .bind(proposed_staff_id)
                                 .bind(shift_id)
                                 .bind(&event.tenant_id)
                                 .execute(&pool)
                                 .await;
 
-                            // Get replacement staff's phone number and send them an SMS
-                            if let Ok(phone) = sqlx::query_scalar::<_, String>("SELECT phone_number FROM ohc_staff_member WHERE id = $1 AND tenant_id = $2")
-                                .bind(proposed_staff_id)
-                                .bind(&event.tenant_id)
-                                .fetch_one(&pool)
-                                .await {
-
-                                // We simulate sending SMS via twilio worker by pushing a job or we can just log it here.
-                                // The architecture specifies: "Dispatch SMS to Replacement Staff"
-                                let sms_payload = serde_json::json!({
-                                    "to": phone,
-                                    "message": "You have been reassigned to a new shift. Please check your app for details."
-                                });
-                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'send_sms', $3, 'PENDING')")
+                // Get replacement staff's phone number and send them an SMS
+                if let Ok(phone) = sqlx::query_scalar::<_, String>(
+                    "SELECT phone_number FROM ohc_staff_member WHERE id = $1 AND tenant_id = $2",
+                )
+                .bind(proposed_staff_id)
+                .bind(&event.tenant_id)
+                .fetch_one(&pool)
+                .await
+                {
+                    // We simulate sending SMS via twilio worker by pushing a job or we can just log it here.
+                    // The architecture specifies: "Dispatch SMS to Replacement Staff"
+                    let sms_payload = serde_json::json!({
+                        "to": phone,
+                        "message": "You have been reassigned to a new shift. Please check your app for details."
+                    });
+                    let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'send_sms', $3, 'PENDING')")
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
                                     .bind(sms_payload.to_string())
                                     .execute(&pool)
                                     .await;
-                            }
-                        }
-                        return Ok(());
-                    }
                 }
             }
+            return Ok(());
         }
 
         if event.event_type == "POS_SALE_COMPLETED" {
@@ -553,7 +553,7 @@ impl Department for OperationsAgent {
                     .bind(&route_id)
                     .bind(&event.tenant_id)
                     .bind(&staff_profile_id)
-                    .bind(&route_date)
+                    .bind(route_date)
                     .execute(&pool)
                     .await;
 

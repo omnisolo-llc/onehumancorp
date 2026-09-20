@@ -11,8 +11,11 @@ pub struct BudgetManager {
 
 impl BudgetManager {
     pub fn new(limit: f64) -> Self {
+        // Invalid limits fail closed; retain the explicit legacy MAX sentinel.
         let total_limit_cents = if limit == f64::MAX {
             i64::MAX
+        } else if !limit.is_finite() || limit < 0.0 || limit * 100.0 >= i64::MAX as f64 {
+            0
         } else {
             (limit * 100.0).round() as i64
         };
@@ -42,6 +45,12 @@ impl BudgetManager {
     }
 
     pub fn record_spend(&self, amount: f64) -> Result<bool, String> {
+        if amount < 0.0 {
+            return Err("spend amount cannot be negative".to_string());
+        }
+        if !amount.is_finite() || amount * 100.0 >= i64::MAX as f64 {
+            return Err("spend amount must be finite and bounded".to_string());
+        }
         let amount_cents = (amount * 100.0).round() as i64;
         self.record_spend_cents(amount_cents)
     }
@@ -61,8 +70,18 @@ impl BudgetManager {
             ); // pii-safe
         }
 
-        let previous_current = self.current.fetch_add(amount_cents, Ordering::SeqCst);
-        let final_current = previous_current + amount_cents;
+        // Atomic admission: reject overspend/overflow without changing state.
+        if self
+            .current
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                current
+                    .checked_add(amount_cents)
+                    .filter(|next| *next <= self.total_limit_cents)
+            })
+            .is_err()
+        {
+            return Ok(false);
+        }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
             && amount_cents > 0
@@ -77,11 +96,7 @@ impl BudgetManager {
             );
         }
 
-        if final_current > self.total_limit_cents {
-            Ok(false)
-        } else {
-            Ok(true)
-        }
+        Ok(true)
     }
 
     pub fn get_remaining(&self) -> f64 {
@@ -144,6 +159,38 @@ mod tests {
     use super::*;
 
     #[test]
+    fn concurrent_admission_never_exceeds_limit() {
+        let manager = std::sync::Arc::new(BudgetManager::new(1.0));
+        let workers: Vec<_> = (0..32)
+            .map(|_| {
+                let manager = manager.clone();
+                std::thread::spawn(move || manager.record_spend_cents(10).unwrap())
+            })
+            .collect();
+        let admitted = workers
+            .into_iter()
+            .map(|worker| usize::from(worker.join().unwrap()))
+            .sum::<usize>();
+        assert_eq!(admitted, 10);
+        assert_eq!(manager.get_remaining_cents(), 0);
+    }
+
+    #[test]
+    fn invalid_amounts_and_overflow_fail_closed() {
+        for limit in [f64::NAN, f64::INFINITY, -1.0] {
+            assert!(!BudgetManager::new(limit).record_spend_cents(1).unwrap());
+        }
+        let manager = BudgetManager::new(f64::MAX);
+        assert!(manager.record_spend_cents(i64::MAX).unwrap());
+        assert!(!manager.record_spend_cents(1).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 0);
+        for amount in [f64::NAN, f64::INFINITY, f64::MAX] {
+            assert!(manager.record_spend(amount).is_err());
+        }
+        assert_eq!(manager.get_remaining_cents(), 0);
+    }
+
+    #[test]
     fn test_budget_manager() {
         let manager = BudgetManager::new(100.0);
 
@@ -152,17 +199,16 @@ mod tests {
         assert!(manager.record_spend(50.0).unwrap());
         assert_eq!(manager.get_remaining(), 50.0);
 
-        // Exceed budget, it's a soft limit so it returns false but updates current
-        assert!(!(manager.record_spend(60.0).unwrap()));
-        assert_eq!(manager.get_remaining(), -10.0);
+        // Rejected admission must not debit the remaining balance.
+        assert!(!manager.record_spend(60.0).unwrap());
+        assert_eq!(manager.get_remaining(), 50.0);
 
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 
-        // test cents (soft limit still applies)
-        assert!(!(manager.record_spend_cents(1000).unwrap())); // spend $10
-        assert_eq!(manager.get_remaining(), -20.0);
-        assert_eq!(manager.get_remaining_cents(), -2000);
+        assert!(manager.record_spend_cents(1000).unwrap()); // spend $10
+        assert_eq!(manager.get_remaining(), 40.0);
+        assert_eq!(manager.get_remaining_cents(), 4000);
     }
 
     #[test]
@@ -175,10 +221,9 @@ mod tests {
         assert_eq!(manager.get_remaining(), 0.0);
         assert_eq!(manager.get_remaining_cents(), 0);
 
-        // Even an epsilon more should be over the limit (soft limit handled as false)
-        assert!(!(manager.record_spend(0.01).unwrap()));
-        let rem = manager.get_remaining();
-        assert!(rem < -0.009 && rem > -0.011);
+        // One extra cent must be rejected without changing the balance.
+        assert!(!manager.record_spend(0.01).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 0);
     }
 
     #[test]

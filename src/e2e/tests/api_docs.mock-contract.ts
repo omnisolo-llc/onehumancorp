@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from '../fixtures';
+import '../fixtures';
 
 test.describe('API Docs Page', () => {
   test('loads correctly and displays Swagger UI with correct styling', async ({ page }) => {

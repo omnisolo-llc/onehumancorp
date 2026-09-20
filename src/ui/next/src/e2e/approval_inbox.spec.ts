@@ -45,7 +45,7 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     // Look for Approval tag
     const approvalTag = page.locator('span', { hasText: 'Approval' }).first();
     await expect(approvalTag).toBeVisible();
-    await expect(approvalTag).toHaveClass(/bg-\[\#0066FF\]\/10/);
+    await expect(approvalTag).toHaveClass(/bg-\[#0066FF\]\/10/);
   });
 
   test('should display action buttons for proposals', async ({ page }) => {

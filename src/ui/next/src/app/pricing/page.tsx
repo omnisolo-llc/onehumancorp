@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
-import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
+import '../components/ViralTrialExtensionWidget';
 import { PricingCard } from './PricingCard';
 
 

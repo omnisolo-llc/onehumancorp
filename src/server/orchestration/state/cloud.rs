@@ -5,7 +5,7 @@ use chrono::Utc;
 use sqlx::Row;
 use std::sync::Arc;
 
-use super::MeshLockGuard;
+use super::{MeshLockGuard, StateTransition};
 use crate::orchestration::mesh::TeammateMesh;
 
 pub struct CloudStateManager {
@@ -20,14 +20,17 @@ impl CloudStateManager {
 
     async fn transition_state_inner(
         &self,
-        task_id: &str,
-        _tenant_id: &str,
-        from_state: &str,
-        to_state: &str,
-        agent_id: Option<&str>,
-        reason: Option<&str>,
+        transition: StateTransition<'_>,
         _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
+        let StateTransition {
+            task_id,
+            tenant_id: _tenant_id,
+            from_state,
+            to_state,
+            agent_id,
+            reason,
+        } = transition;
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx)
             .await
@@ -159,12 +162,14 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             )
             .await?;
             self.transition_state_inner(
-                task_id,
-                tenant_id,
-                from_state,
-                to_state,
-                agent_id,
-                reason,
+                StateTransition {
+                    task_id,
+                    tenant_id,
+                    from_state,
+                    to_state,
+                    agent_id,
+                    reason,
+                },
                 &lock_guard,
             )
             .await

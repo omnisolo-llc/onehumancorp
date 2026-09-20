@@ -18,12 +18,12 @@ async fn setup_db() -> Option<(PgPool, Uuid)> {
     }
     let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
     let tenant_id = Uuid::new_v4();
-    let tenant_id_clone = tenant_id.clone();
+    let tenant_id_clone = tenant_id;
 
     let pool = sqlx::postgres::PgPoolOptions::new()
         .acquire_timeout(Duration::from_millis(50))
         .before_acquire(move |conn, _meta| {
-            let t_id = tenant_id_clone.clone();
+            let t_id = tenant_id_clone;
             Box::pin(async move {
                 use sqlx::Executor;
                 conn.execute(format!("SET app.current_tenant = '{}'", t_id).as_str())
@@ -212,7 +212,7 @@ async fn test_builder_api() {
 
     // Create Site
     let res = match client
-        .post(&format!("{}/builder/sites", base_url))
+        .post(format!("{}/builder/sites", base_url))
         .json(&serde_json::json!({"domain": "api-test.com"}))
         .send()
         .await
@@ -231,7 +231,7 @@ async fn test_builder_api() {
 
     // List Sites
     let res = client
-        .get(&format!("{}/builder/sites", base_url))
+        .get(format!("{}/builder/sites", base_url))
         .send()
         .await
         .unwrap();
@@ -239,7 +239,7 @@ async fn test_builder_api() {
 
     // Create Page
     let res = client
-        .post(&format!("{}/builder/sites/{}/pages", base_url, site.id))
+        .post(format!("{}/builder/sites/{}/pages", base_url, site.id))
         .json(&serde_json::json!({"path": "/about", "title": "About"}))
         .send()
         .await
@@ -249,7 +249,7 @@ async fn test_builder_api() {
     assert_eq!(page.path, "/about");
 
     // Create Block
-    let res = client.post(&format!("{}/builder/pages/{}/blocks", base_url, page.id))
+    let res = client.post(format!("{}/builder/pages/{}/blocks", base_url, page.id))
         .json(&serde_json::json!({"block_type": "HeroBlock", "content": {"headline": "Hero", "subtitle": "Sub"}, "sort_order": 0}))
         .send().await.unwrap();
     assert_eq!(res.status(), 200);
@@ -258,7 +258,7 @@ async fn test_builder_api() {
 
     // Get Full Site Structure
     let res = client
-        .get(&format!("{}/builder/sites/{}", base_url, site.id))
+        .get(format!("{}/builder/sites/{}", base_url, site.id))
         .send()
         .await
         .unwrap();
@@ -272,7 +272,7 @@ async fn test_builder_api() {
 
     // Update Block
     let res = client
-        .put(&format!("{}/builder/blocks/{}", base_url, block.id))
+        .put(format!("{}/builder/blocks/{}", base_url, block.id))
         .json(&serde_json::json!({"content": {"headline": "Updated Hero", "subtitle": "Sub"}}))
         .send()
         .await
@@ -281,7 +281,7 @@ async fn test_builder_api() {
 
     // Publish Site
     let res = client
-        .post(&format!("{}/builder/sites/{}/publish", base_url, site.id))
+        .post(format!("{}/builder/sites/{}/publish", base_url, site.id))
         .send()
         .await
         .unwrap();
@@ -289,7 +289,7 @@ async fn test_builder_api() {
 
     // Edge Cache Test
     let res = client
-        .get(&format!(
+        .get(format!(
             "{}/builder/edge/{}/{}",
             base_url, tenant_id, site.id
         ))
@@ -379,7 +379,7 @@ async fn test_builder_generate_and_publish_draft() {
 
     // 0. Generate the brand toolbox
     let res = match client
-        .post(&format!("{}/builder/brand_toolbox/generate", base_url))
+        .post(format!("{}/builder/brand_toolbox/generate", base_url))
         .json(&serde_json::json!({
             "description": "I am a handyman who offers fast local repairs",
             "website_url": "https://example.com",
@@ -409,10 +409,7 @@ async fn test_builder_generate_and_publish_draft() {
     let toolbox_id = toolbox.id.expect("generated toolbox should be persisted");
 
     let res = client
-        .get(&format!(
-            "{}/builder/brand_toolbox/{}",
-            base_url, toolbox_id
-        ))
+        .get(format!("{}/builder/brand_toolbox/{}", base_url, toolbox_id))
         .send()
         .await
         .unwrap();
@@ -421,7 +418,7 @@ async fn test_builder_generate_and_publish_draft() {
     assert_eq!(fetched_toolbox.id, Some(toolbox_id));
 
     let res = client
-        .get(&format!("{}/builder/brand_toolbox", base_url))
+        .get(format!("{}/builder/brand_toolbox", base_url))
         .send()
         .await
         .unwrap();
@@ -434,7 +431,7 @@ async fn test_builder_generate_and_publish_draft() {
     );
 
     let res = client
-        .post(&format!(
+        .post(format!(
             "{}/builder/brand_toolbox/{}/publish_website",
             base_url, toolbox_id
         ))
@@ -482,7 +479,7 @@ async fn test_builder_generate_and_publish_draft() {
 
     // 2. Publish Draft
     let res = client
-        .post(&format!("{}/builder/publish_draft", base_url))
+        .post(format!("{}/builder/publish_draft", base_url))
         .json(&serde_json::json!({"domain": "handyman-draft.com", "draft": draft}))
         .send()
         .await

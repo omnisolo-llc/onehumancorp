@@ -12,12 +12,10 @@ const escapeHtml = (unsafe: string) => {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const tenant = searchParams.get('tenant') || 'my-store';
   const q = escapeHtml(searchParams.get('q') || 'What flavor should we make next?');
   const opts = searchParams.get('opts') || 'Chocolate,Vanilla,Strawberry';
   const theme = searchParams.get('theme') || 'light';
   const email = searchParams.get('email') === 'true';
-  const hideBranding = searchParams.get('hideBranding') === 'true';
 
   const options = opts.split(',').filter(o => o.trim() !== '').map(escapeHtml);
 
@@ -25,7 +23,7 @@ export async function GET(request: Request) {
   const bgColor = isDark ? '#111111' : '#ffffff';
   const textColor = isDark ? '#ffffff' : '#1D1D1F';
   const borderColor = isDark ? '#333333' : '#e5e7eb';
-  const optBg = isDark ? 'transparent' : 'transparent';
+  const optBg = 'transparent';
   const optHoverBg = isDark ? '#1f2937' : '#f9fafb';
   const btnBg = '#0071E3';
   const btnHoverBg = '#0077ED';
@@ -146,7 +144,7 @@ export async function GET(request: Request) {
     }
     .submit-btn:disabled {
       background-color: ${isDark ? '#374151' : '#e5e7eb'};
-      color: ${isDark ? '#9ca3af' : '#9ca3af'};
+      color: #9ca3af;
       cursor: not-allowed;
     }
     .success-state {

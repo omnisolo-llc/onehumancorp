@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# CI passes only this run's downloaded production-image artifact. The loader
+# checks source, archive checksum and actual loaded image IDs before reuse.
+if [[ -n "${OMNISOLO_PREBUILT_IMAGES:-}" ]]; then
+  artifact="$OMNISOLO_PREBUILT_IMAGES"
+  [[ "$artifact" == /* ]] || artifact="$ROOT/$artifact"
+  exec python3 "$ROOT/scripts/native-images.py" load --directory "$artifact"
+fi
+# Native Docker builds; no credentials or registry writes are required.
+docker build -f "$ROOT/deploy/docker/server/Dockerfile" --target server -t omnisolo/server:latest "$ROOT"
+docker build -f "$ROOT/deploy/docker/server/Dockerfile" --target agent -t omnisolo/agent:latest "$ROOT"
+docker tag omnisolo/server:latest omnisolo/mono-core:latest

@@ -1,7 +1,7 @@
 #![allow(clippy::all)]
 pub use ::server_common as common;
-pub use ::server_omnisolo as ohc;
 pub use ::server_oidc as oidc;
+pub use ::server_omnisolo as ohc;
 
 pub mod email;
 pub mod grpc;
@@ -139,7 +139,8 @@ pub async fn api_key_auth_middleware(
     let mut matched_member_id = None;
     let mut matched_org_id = None;
 
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db =
+        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
     if has_db {
         let pool = crate::db::get_pool();
         if let Ok(Some(row)) =

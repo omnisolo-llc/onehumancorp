@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { adminPage } from './fixtures';
+import './fixtures';
 
 test.describe('Autonomous Booking System', () => {
     test('end-to-end booking flow: dashboard view, availability fetch, and submission', async ({ page, adminUser, loginAs }) => {

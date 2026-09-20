@@ -1,7 +1,23 @@
 import React from 'react';
 
+type ReplyContext = {
+  source?: string;
+  past_orders?: string;
+  context_used?: string;
+  original_message?: string;
+  generated_response?: string;
+  original_payload?: ReplyContext;
+};
+
+type ReplyApproval = {
+  lifecycle_state?: string;
+  payload?: ReplyContext;
+  proposed_action?: ReplyContext;
+  context_payload?: ReplyContext;
+};
+
 type AmbassadorReplyCardProps = {
-  approval: any;
+  approval: ReplyApproval;
   onApprove?: () => void;
   onDismiss?: () => void;
   isEditing?: boolean;
@@ -85,7 +101,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
             className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
             rows={4}
             value={editContent}
-            onChange={(e) => setEditContent && setEditContent(e.target.value)}
+            onChange={(e) => setEditContent?.(e.target.value)}
             data-testid="feed-edit-input"
             autoFocus
           />
@@ -93,7 +109,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onSaveEdit && onSaveEdit();
+                onSaveEdit?.();
               }}
               className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Save & Send Draft"
@@ -104,7 +120,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onCancelEdit && onCancelEdit();
+                onCancelEdit?.();
               }}
               className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Cancel Edit"

@@ -8,7 +8,7 @@ describe("CFOAgentCard", () => {
   });
 
   it("renders safe to spend data", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         money_in: 500,

@@ -11,11 +11,11 @@ vi.mock('../components/useProPlan', () => ({
 describe('DiscountCodeGeneratorPage', () => {
   beforeEach(() => {
     localStorage.clear();
-    localStorage.setItem('business_display_name', '\"><script>globalThis.tenantPwned=true</script>');
+    localStorage.setItem('business_display_name', '"><script>globalThis.tenantPwned=true</script>');
   });
 
   it('encodes every user-controlled value in the copied iframe and referral attributes', async () => {
-    const hostile = '\"><script>globalThis.pwned=true</script>&line=one two';
+    const hostile = '"><script>globalThis.pwned=true</script>&line=one two';
     render(<DiscountCodeGeneratorPage />);
 
     fireEvent.change(screen.getByPlaceholderText('e.g. 20% or $10'), { target: { value: hostile } });
@@ -26,6 +26,6 @@ describe('DiscountCodeGeneratorPage', () => {
     expect(snippet).not.toContain('<script>');
     expect(snippet).not.toContain(hostile);
     expect(snippet).toContain(encodeURIComponent(hostile));
-    expect(snippet).toContain(encodeURIComponent('\"><script>globalThis.tenantPwned=true</script>'));
+    expect(snippet).toContain(encodeURIComponent('"><script>globalThis.tenantPwned=true</script>'));
   });
 });

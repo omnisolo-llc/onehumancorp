@@ -198,7 +198,7 @@ export async function GET(request: Request) {
         'Cache-Control': 'public, max-age=300, s-maxage=300',
       },
     });
-  } catch (error) {
+  } catch  {
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

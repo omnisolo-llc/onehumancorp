@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+aes-gcm = "0.10.3"
+zeroize = "1.8"
 axum = "0.8.1"
 server_common = { path = "../common" }
 server_telemetry = { path = "../telemetry" }

@@ -44,8 +44,8 @@ export const useMarketplace = () => {
       }
 
       setAgents(data.result || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch marketplace agents.');
+    } catch (err: unknown) {
+      setError(err instanceof Error && err.message ? err.message : 'Failed to fetch marketplace agents.');
     } finally {
       setLoading(false);
     }

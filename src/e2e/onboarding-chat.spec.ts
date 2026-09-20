@@ -1,8 +1,9 @@
+import * as nativePathModule from 'node:path';
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Chat Flow', () => {
   test.beforeEach(async ({ page }) => {
-    const htmlPath = require('path').resolve('src/ui/tauri/src/ui/setup.html');
+    const htmlPath = nativePathModule.resolve('src/ui/tauri/src/ui/setup.html');
     await page.goto(`file://${htmlPath}`);
   });
 

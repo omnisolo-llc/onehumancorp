@@ -38,10 +38,10 @@ pub async fn stream_agent(
         .as_deref()
         .filter(|org| !org.is_empty())
         .ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
-    if !hub
+    if hub
         .get_agent(&agent_id)
         .await
-        .is_some_and(|agent| agent.organization_id == org)
+        .is_none_or(|agent| agent.organization_id != org)
     {
         return Err(axum::http::StatusCode::NOT_FOUND);
     }

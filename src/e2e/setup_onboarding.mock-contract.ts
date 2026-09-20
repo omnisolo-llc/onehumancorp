@@ -1,9 +1,11 @@
+import * as nativeFsModule from 'node:fs';
+import * as nativePathModule from 'node:path';
 import { test, expect } from '@playwright/test';
 
 test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   // Route to local file like setup.spec.ts
-  const fs = require('fs');
-  const path = require('path');
+  const fs = nativeFsModule;
+  const path = nativePathModule;
   const tauriUiDir = process.env.RUNFILES_DIR
         ? path.join(process.env.RUNFILES_DIR, '_main', 'src', 'ui', 'tauri', 'src', 'ui')
         : path.join(process.cwd(), '..', '..', 'src', 'ui', 'tauri', 'src', 'ui');

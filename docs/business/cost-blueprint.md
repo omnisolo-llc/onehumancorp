@@ -1,5 +1,7 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
+> **Superseded cost assumptions — 2026-09-18.** The current offer, illustrative unit economics and measurement rules are in [RESEARCH.md](../../RESEARCH.md). Target all variable serving costs, including retries and support, at or below 30% of subscription revenue after onboarding. Model names, resource figures and Go-specific tuning below are historical/unverified; inspect the current Rust implementation and measure before acting. Do not change billing or remove existing local support based on this archive.
+
 # OmniSolo Hybrid Architecture: Cost Blueprint
 
 ## 1. Token ROI Audit

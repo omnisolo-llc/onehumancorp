@@ -15,6 +15,21 @@ pub struct AuditEvent {
     pub local_embedding_tokens: i64,
 }
 
+/// Export-only message: it has already been accounted for. Keeping this a
+/// different type from ingress prevents the telemetry worker from feeding it
+/// back into the accounting queue.
+#[derive(Clone)]
+pub struct AccountedAuditEvent {
+    pub event: AuditEvent,
+    pub cost_usd: f64,
+}
+
+#[derive(Clone, Default)]
+pub struct TenantAgentUsage {
+    pub cost_usd: f64,
+    pub tokens: i64,
+}
+
 pub struct ComputeEvent {
     pub agent_id: String,
     pub tenant_id: String,
@@ -41,19 +56,42 @@ pub struct CostAuditor {
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
     agent_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
+    tenant_agents: Mutex<HashMap<(String, String), TenantAgentUsage>>,
     tenant_cached_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     pub tenant_api_calls: Mutex<HashMap<String, u64>>,
     pub tenant_email_sends: Mutex<HashMap<String, u64>>,
     tenant_anomalies: Mutex<HashMap<String, Vec<String>>>,
     tenant_cost_history: Mutex<HashMap<String, Vec<f64>>>,
-    telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
+    telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AccountedAuditEvent>>,
     api_calls_counter: opentelemetry::metrics::Counter<u64>,
     email_sends_counter: opentelemetry::metrics::Counter<u64>,
     llm_cost_counter: Counter<u64>,
     storage_savings_counter: Counter<u64>,
     bandwidth_savings_counter: Counter<u64>,
     compute_cost_counter: Counter<u64>,
+}
+
+/// One-way pipeline used by the production Hub and regression tests.
+pub fn event_pipeline(
+    config: CostConfig,
+) -> (
+    std::sync::Arc<CostAuditor>,
+    tokio::sync::mpsc::UnboundedSender<AuditEvent>,
+    tokio::sync::mpsc::UnboundedReceiver<AccountedAuditEvent>,
+) {
+    let (ingress_tx, mut ingress_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (export_tx, export_rx) = tokio::sync::mpsc::unbounded_channel();
+    let mut auditor = CostAuditor::new(config);
+    auditor.set_telemetry_tx(export_tx);
+    let auditor = std::sync::Arc::new(auditor);
+    let worker = auditor.clone();
+    tokio::spawn(async move {
+        while let Some(event) = ingress_rx.recv().await {
+            worker.record_event(event);
+        }
+    });
+    (auditor, ingress_tx, export_rx)
 }
 
 impl CostAuditor {
@@ -87,6 +125,7 @@ impl CostAuditor {
             tenant_payment_fees: Mutex::new(HashMap::new()),
             agent_tokens: Mutex::new(HashMap::new()),
             tenant_tokens: Mutex::new(HashMap::new()),
+            tenant_agents: Mutex::new(HashMap::new()),
             tenant_cached_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
             tenant_api_calls: Mutex::new(HashMap::new()),
@@ -103,11 +142,33 @@ impl CostAuditor {
         }
     }
 
-    pub fn set_telemetry_tx(&mut self, tx: tokio::sync::mpsc::UnboundedSender<AuditEvent>) {
+    pub fn set_telemetry_tx(
+        &mut self,
+        tx: tokio::sync::mpsc::UnboundedSender<AccountedAuditEvent>,
+    ) {
         self.telemetry_tx = Some(tx);
     }
 
     pub fn record_event(&self, event: AuditEvent) -> f64 {
+        if event.tenant_id.trim().is_empty()
+            || event.agent_id.trim().is_empty()
+            || [
+                event.input_tokens,
+                event.output_tokens,
+                event.cached_input_tokens,
+                event.local_embedding_tokens,
+            ]
+            .iter()
+            .any(|tokens| *tokens < 0)
+            || event
+                .input_tokens
+                .checked_add(event.output_tokens)
+                .is_none()
+        {
+            tracing::warn!("Rejected invalid usage event; counters unchanged");
+            return 0.0;
+        }
+
         let cost = calculator::calculate_cost_with_config(
             event.input_tokens,
             event.output_tokens,
@@ -141,9 +202,7 @@ impl CostAuditor {
 
         // Detect anomalies (Dynamic threshold check)
         let mut cost_history = self.tenant_cost_history.lock().unwrap();
-        let history = cost_history
-            .entry(event.tenant_id.clone())
-            .or_insert_with(Vec::new);
+        let history = cost_history.entry(event.tenant_id.clone()).or_default();
 
         let avg_cost = if history.is_empty() {
             0.0
@@ -161,7 +220,7 @@ impl CostAuditor {
             let mut anomalies = self.tenant_anomalies.lock().unwrap();
             anomalies
                 .entry(event.tenant_id.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(msg);
         } else if cost > 10.0 {
             tracing::warn!(
@@ -196,8 +255,25 @@ impl CostAuditor {
             &[KeyValue::new("agent_id", event.agent_id.clone())],
         );
 
-        if let Some(tx) = &self.telemetry_tx {
-            let _ = tx.send(event.clone());
+        {
+            let mut scoped = self.tenant_agents.lock().unwrap();
+            let usage = scoped
+                .entry((event.tenant_id.clone(), event.agent_id.clone()))
+                .or_default();
+            usage.cost_usd += cost;
+            usage.tokens = usage
+                .tokens
+                .saturating_add(event.input_tokens + event.output_tokens);
+        }
+        if let Some(tx) = &self.telemetry_tx
+            && tx
+                .send(AccountedAuditEvent {
+                    event,
+                    cost_usd: cost,
+                })
+                .is_err()
+        {
+            tracing::warn!("Usage telemetry exporter unavailable; accounting was not repeated");
         }
 
         cost
@@ -328,6 +404,19 @@ impl CostAuditor {
         result
     }
 
+    /// Snapshot only the authenticated tenant, including when agent IDs collide.
+    /// Legacy global snapshots are operator telemetry and must not serve tenants.
+    pub fn tenant_agent_snapshot(&self, tenant_id: &str) -> Vec<(String, TenantAgentUsage)> {
+        let scoped = self.tenant_agents.lock().unwrap();
+        let mut result: Vec<_> = scoped
+            .iter()
+            .filter(|((tenant, _), _)| tenant == tenant_id)
+            .map(|((_, agent), usage)| (agent.clone(), usage.clone()))
+            .collect();
+        result.sort_by(|left, right| left.0.cmp(&right.0));
+        result
+    }
+
     pub fn record_agent_storage(&self, agent_id: &str, bytes: i64) {
         let mut agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
         let current_bytes = agent_storage_bytes.entry(agent_id.to_string()).or_insert(0);
@@ -402,6 +491,16 @@ impl CostAuditor {
     }
 
     pub fn record_manual_cost(&self, agent_id: &str, tenant_id: &str, cost_cents: i64) {
+        if agent_id.trim().is_empty() || tenant_id.trim().is_empty() || cost_cents < 0 {
+            return;
+        }
+        self.tenant_agents
+            .lock()
+            .unwrap()
+            .entry((tenant_id.to_string(), agent_id.to_string()))
+            .or_default()
+            .cost_usd += cost_cents as f64 / 100.0;
+
         let cost = cost_cents as f64 / 100.0;
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let current_cost = agent_costs.entry(agent_id.to_string()).or_insert(0.0);
@@ -476,7 +575,7 @@ impl CostAuditor {
                 .entry(tenant_id.to_string())
                 .or_insert(0.0);
 
-            use crate::integrations::stripe::routing::{PaymentMethod, PaymentRouter};
+            use server_integrations_stripe::routing::{PaymentMethod, PaymentRouter};
             let method = PaymentRouter::optimize_payment_method(amount);
 
             let savings = PaymentRouter::calculate_fee_savings(amount);
@@ -507,6 +606,21 @@ impl CostAuditor {
         let network_cost =
             calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
         let total = compute_cost + network_cost;
+        if !total.is_finite()
+            || total < 0.0
+            || event.compute_hours < 0.0
+            || event.network_egress_bytes < 0
+            || event.tenant_id.trim().is_empty()
+            || event.agent_id.trim().is_empty()
+        {
+            return 0.0;
+        }
+        self.tenant_agents
+            .lock()
+            .unwrap()
+            .entry((event.tenant_id.clone(), event.agent_id.clone()))
+            .or_default()
+            .cost_usd += total;
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let mut total_cost = self.total_cost.lock().unwrap();
@@ -800,7 +914,7 @@ mod tests {
         let auditor = CostAuditor::new(config);
 
         let original_bytes = 1024 * 1024 * 1024 * 2; // 2GB
-        let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
+        let compressed_bytes = 1024 * 1024 * 1024; // 1GB
 
         let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
         assert_eq!(savings, 0.1);
@@ -823,7 +937,7 @@ mod tests {
         let auditor = CostAuditor::new(config);
 
         let original_bytes = 1024 * 1024 * 1024 * 3; // 3GB
-        let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
+        let compressed_bytes = 1024 * 1024 * 1024; // 1GB
 
         let savings =
             auditor.record_bandwidth_compression("test_tenant", original_bytes, compressed_bytes);

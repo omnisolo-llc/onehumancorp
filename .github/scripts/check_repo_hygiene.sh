@@ -24,6 +24,10 @@ report_path() {
   report "$message: $rendered"
 }
 
+if ! python3 "$script_dir/check_checkout_paths.py"; then
+  fail=1
+fi
+
 if ! python3 "$script_dir/check_tracked_bazel_credentials.py" > "$credential_matches"; then
   report 'unable to scan tracked files for Bazel API credential headers'
 else

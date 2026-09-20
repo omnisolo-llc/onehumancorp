@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -37,8 +38,8 @@ export default function ReviewCampaignBuilderPage() {
 
       const data = await res.json();
       setGeneratedDraft(data.message || '');
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Something went wrong'));
     } finally {
       setIsGenerating(false);
     }

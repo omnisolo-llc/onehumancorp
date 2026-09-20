@@ -1,0 +1,15 @@
+# Explicitly bounded parallelism avoids resource thrashing on small developer
+# hosts. CARGO_BUILD_JOBS overrides this for larger machines or serial checks.
+[build]
+jobs = 2
+
+[alias]
+check-backend = "check --locked -p omnisolo -p omnisolo_harness_worker --all-targets"
+test-backend = "test --locked -p omnisolo --lib"
+test-pricing = "test --locked -p server_pricing"
+
+[net]
+retry = 3
+
+[registries.crates-io]
+protocol = "sparse"

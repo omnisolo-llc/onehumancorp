@@ -10,12 +10,15 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
-    messages:
-        RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::ChatMessage>>>,
-    instances:
-        RwLock<std::collections::HashMap<String, ::server_omnisolo::orchestration::IntegrationInstance>>,
-    pull_requests:
-        RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::PullRequest>>>,
+    messages: RwLock<
+        std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::ChatMessage>>,
+    >,
+    instances: RwLock<
+        std::collections::HashMap<String, ::server_omnisolo::orchestration::IntegrationInstance>,
+    >,
+    pull_requests: RwLock<
+        std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::PullRequest>>,
+    >,
     issues: RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<
@@ -146,14 +149,12 @@ pub struct IntegrationsRegistry {
             std::sync::Arc<crate::integrations::taxjar::provider::TaxJarProvider>,
         >,
     >,
-    #[cfg(not(omnisolo_bazel))]
     slack_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
             std::sync::Arc<crate::integrations::slack::provider::SlackProvider>,
         >,
     >,
-    #[cfg(not(omnisolo_bazel))]
     google_analytics_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
@@ -162,14 +163,12 @@ pub struct IntegrationsRegistry {
             >,
         >,
     >,
-    #[cfg(not(omnisolo_bazel))]
     github_api_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
             std::sync::Arc<crate::integrations::github_api::provider::GitHubProvider>,
         >,
     >,
-    #[cfg(not(omnisolo_bazel))]
     outlook_calendar_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
@@ -178,6 +177,12 @@ pub struct IntegrationsRegistry {
             >,
         >,
     >,
+}
+
+impl Default for IntegrationsRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl IntegrationsRegistry {
@@ -226,13 +231,9 @@ impl IntegrationsRegistry {
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             taxjar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            #[cfg(not(omnisolo_bazel))]
             slack_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            #[cfg(not(omnisolo_bazel))]
             google_analytics_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            #[cfg(not(omnisolo_bazel))]
             github_api_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            #[cfg(not(omnisolo_bazel))]
             outlook_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
@@ -276,7 +277,7 @@ impl IntegrationsRegistry {
 
         let mut msgs = self.messages.write().unwrap();
         msgs.entry(integration_id.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(msg.clone());
 
         // Attempt real delivery
@@ -284,120 +285,106 @@ impl IntegrationsRegistry {
         if let Some(creds) = creds_map.get(integration_id) {
             let text = format!("[{}] {}", from_agent, content);
             match integration_id {
-                "telegram" => {
-                    if !creds.bot_token.is_empty() {
-                        let chat_id = if !creds.chat_id.is_empty() {
-                            creds.chat_id.clone()
-                        } else {
-                            channel.to_string()
-                        };
-                        tokio::spawn(send_telegram_message(
-                            creds.bot_token.clone(),
-                            chat_id,
-                            text,
-                        ));
-                    }
+                "telegram" if !creds.bot_token.is_empty() => {
+                    let chat_id = if !creds.chat_id.is_empty() {
+                        creds.chat_id.clone()
+                    } else {
+                        channel.to_string()
+                    };
+                    tokio::spawn(send_telegram_message(
+                        creds.bot_token.clone(),
+                        chat_id,
+                        text,
+                    ));
                 }
-                "discord" => {
-                    if !creds.webhook_url.is_empty() {
-                        tokio::spawn(send_discord_webhook(
-                            creds.webhook_url.clone(),
-                            from_agent.to_string(),
-                            content.to_string(),
-                        ));
-                    }
+                "discord" if !creds.webhook_url.is_empty() => {
+                    tokio::spawn(send_discord_webhook(
+                        creds.webhook_url.clone(),
+                        from_agent.to_string(),
+                        content.to_string(),
+                    ));
                 }
-                "slack" => {
-                    if !creds.bot_token.is_empty() {
-                        #[cfg(not(omnisolo_bazel))]
-                        {
-                            let channel_id = if !creds.chat_id.is_empty() {
-                                creds.chat_id.clone()
-                            } else {
-                                channel.to_string()
-                            };
-                            let text = format!("[{}] {}", from_agent, content);
-                            let clients = self.slack_clients.read().unwrap();
-                            if let Some(client) = clients.get(integration_id) {
-                                let client = client.clone();
-                                tokio::spawn(async move {
-                                    if let Err(e) = client.send_message(&channel_id, &text).await {
-                                        ::server_telemetry::record_error_signal(
-                                            "[bug] Failed to send Slack message",
-                                        );
-                                        tracing::warn!("Failed to send Slack message: {}", e);
-                                    }
-                                });
+                "slack" if !creds.bot_token.is_empty() => {
+                    let channel_id = if !creds.chat_id.is_empty() {
+                        creds.chat_id.clone()
+                    } else {
+                        channel.to_string()
+                    };
+                    let text = format!("[{}] {}", from_agent, content);
+                    let clients = self.slack_clients.read().unwrap();
+                    if let Some(client) = clients.get(integration_id) {
+                        let client = client.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = client.send_message(&channel_id, &text).await {
+                                ::server_telemetry::record_error_signal(
+                                    "[bug] Failed to send Slack message",
+                                );
+                                tracing::warn!("Failed to send Slack message: {}", e);
                             }
-                        }
+                        });
                     }
                 }
-                "twilio" => {
-                    if !creds.from_phone.is_empty() {
-                        let to = if !creds.chat_id.is_empty() {
-                            creds.chat_id.clone()
-                        } else {
-                            channel.to_string()
-                        };
-                        let from = creds.from_phone.clone();
-                        let text = content.to_string();
+                "twilio" if !creds.from_phone.is_empty() => {
+                    let to = if !creds.chat_id.is_empty() {
+                        creds.chat_id.clone()
+                    } else {
+                        channel.to_string()
+                    };
+                    let from = creds.from_phone.clone();
+                    let text = content.to_string();
 
-                        let clients = self.twilio_clients.read().unwrap();
-                        if let Some(client) = clients.get(integration_id) {
-                            let client = client.clone();
-                            tokio::spawn(async move {
-                                let result = if to.starts_with("whatsapp:")
-                                    || from.starts_with("whatsapp:")
-                                {
+                    let clients = self.twilio_clients.read().unwrap();
+                    if let Some(client) = clients.get(integration_id) {
+                        let client = client.clone();
+                        tokio::spawn(async move {
+                            let result =
+                                if to.starts_with("whatsapp:") || from.starts_with("whatsapp:") {
                                     client.send_whatsapp(&to, &from, &text).await
                                 } else {
                                     client.send_sms(&to, &from, &text).await
                                 };
-                                if let Err(e) = result {
-                                    ::server_telemetry::record_error_signal(
-                                        "[bug] Failed to send Twilio SMS",
-                                    );
-                                    tracing::warn!("Failed to send Twilio SMS: {}", e);
-                                }
-                            });
-                        }
+                            if let Err(e) = result {
+                                ::server_telemetry::record_error_signal(
+                                    "[bug] Failed to send Twilio SMS",
+                                );
+                                tracing::warn!("Failed to send Twilio SMS: {}", e);
+                            }
+                        });
                     }
                 }
-                "meta" | "whatsapp" | "whatsapp_cloud_api" => {
-                    if !creds.api_token.is_empty() {
-                        let to = if !creds.chat_id.is_empty() {
-                            creds.chat_id.clone()
-                        } else {
-                            channel.to_string()
-                        };
-                        let text = content.to_string();
+                "meta" | "whatsapp" | "whatsapp_cloud_api" if !creds.api_token.is_empty() => {
+                    let to = if !creds.chat_id.is_empty() {
+                        creds.chat_id.clone()
+                    } else {
+                        channel.to_string()
+                    };
+                    let text = content.to_string();
 
-                        let client = {
-                            let clients = self.meta_clients.read().unwrap();
-                            clients.get(integration_id).cloned()
-                        };
-                        if let Some(client) = client {
-                            let client = client.clone();
-                            let is_whatsapp = integration_id == "whatsapp"
-                                || integration_id == "whatsapp_cloud_api";
-                            tokio::spawn(async move {
-                                // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
-                                // Otherwise we default to whatsapp
-                                let platform = if is_whatsapp || to.contains("whatsapp") {
-                                    "whatsapp"
-                                } else if to.contains("instagram") {
-                                    "instagram"
-                                } else {
-                                    "facebook"
-                                };
-                                if let Err(e) = client.send_message(platform, &to, &text).await {
-                                    ::server_telemetry::record_error_signal(
-                                        "[bug] Failed to send Meta message",
-                                    );
-                                    tracing::warn!("Failed to send Meta message: {}", e);
-                                }
-                            });
-                        }
+                    let client = {
+                        let clients = self.meta_clients.read().unwrap();
+                        clients.get(integration_id).cloned()
+                    };
+                    if let Some(client) = client {
+                        let client = client.clone();
+                        let is_whatsapp =
+                            integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api";
+                        tokio::spawn(async move {
+                            // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
+                            // Otherwise we default to whatsapp
+                            let platform = if is_whatsapp || to.contains("whatsapp") {
+                                "whatsapp"
+                            } else if to.contains("instagram") {
+                                "instagram"
+                            } else {
+                                "facebook"
+                            };
+                            if let Err(e) = client.send_message(platform, &to, &text).await {
+                                ::server_telemetry::record_error_signal(
+                                    "[bug] Failed to send Meta message",
+                                );
+                                tracing::warn!("Failed to send Meta message: {}", e);
+                            }
+                        });
                     }
                 }
                 _ => {}
@@ -692,8 +679,6 @@ impl IntegrationsRegistry {
                 ),
             );
         }
-
-        #[cfg(not(omnisolo_bazel))]
         if integration_id == "slack" {
             let mut clients = self.slack_clients.write().unwrap();
             clients.insert(
@@ -703,8 +688,6 @@ impl IntegrationsRegistry {
                 )),
             );
         }
-
-        #[cfg(not(omnisolo_bazel))]
         if integration_id == "google_analytics" {
             let mut clients = self.google_analytics_clients.write().unwrap();
             clients.insert(
@@ -717,7 +700,6 @@ impl IntegrationsRegistry {
                 ),
             );
         }
-        #[cfg(not(omnisolo_bazel))]
         if integration_id == "github_api" {
             let mut clients = self.github_api_clients.write().unwrap();
             clients.insert(
@@ -729,7 +711,6 @@ impl IntegrationsRegistry {
                 ),
             );
         }
-        #[cfg(not(omnisolo_bazel))]
         if integration_id == "outlook_calendar" {
             let mut clients = self.outlook_calendar_clients.write().unwrap();
             clients.insert(
@@ -767,14 +748,14 @@ impl IntegrationsRegistry {
 
     pub fn create_pull_request(
         &self,
-        integration_id: &str,
-        _repository: &str,
-        title: &str,
-        body: &str,
-        source_branch: &str,
-        target_branch: &str,
-        created_by: &str,
+        request: &::server_omnisolo::orchestration::CreatePrRequest,
     ) -> Result<::server_omnisolo::orchestration::PullRequest, String> {
+        let integration_id = request.integration_id.as_str();
+        let title = request.title.as_str();
+        let body = request.body.as_str();
+        let source_branch = request.source_branch.as_str();
+        let target_branch = request.target_branch.as_str();
+        let created_by = request.created_by.as_str();
         let pr = ::server_omnisolo::orchestration::PullRequest {
             id: format!("pr-{}", Utc::now().timestamp()),
             title: title.to_string(),
@@ -788,7 +769,7 @@ impl IntegrationsRegistry {
 
         let mut prs = self.pull_requests.write().unwrap();
         prs.entry(integration_id.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(pr.clone());
 
         Ok(pr)
@@ -829,14 +810,14 @@ impl IntegrationsRegistry {
 
     pub fn create_issue(
         &self,
-        integration_id: &str,
-        _project: &str,
-        title: &str,
-        description: &str,
-        created_by: &str,
-        priority: &str,
-        labels: Vec<String>,
+        request: &::server_omnisolo::orchestration::CreateIssueRequest,
     ) -> Result<::server_omnisolo::orchestration::Issue, String> {
+        let integration_id = request.integration_id.as_str();
+        let title = request.title.as_str();
+        let description = request.description.as_str();
+        let created_by = request.created_by.as_str();
+        let priority = request.priority.as_str();
+        let labels = request.labels.clone();
         let issue = ::server_omnisolo::orchestration::Issue {
             id: format!("issue-{}", Utc::now().timestamp()),
             title: title.to_string(),
@@ -852,7 +833,7 @@ impl IntegrationsRegistry {
         let mut issues = self.issues.write().unwrap();
         issues
             .entry(integration_id.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(issue.clone());
 
         Ok(issue)

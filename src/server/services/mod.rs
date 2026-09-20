@@ -1,6 +1,7 @@
 pub mod dashboard;
 pub mod wizard;
-pub mod billing;
+// A native package keeps billing regression builds independent of the server.
+pub use ::server_services_billing as billing;
 pub mod growth;
 pub mod onboarding;
 pub mod sync;

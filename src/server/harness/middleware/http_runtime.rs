@@ -265,7 +265,6 @@ fn substitute(value: &str, address: SocketAddr, base_url: &str) -> String {
 mod tests {
     use std::io::{Read, Write};
     use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
-    use std::sync::{Mutex, OnceLock};
     use std::time::Duration;
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -342,42 +341,35 @@ mod tests {
         .with_readiness(Duration::from_secs(2), Duration::from_millis(10))
     }
 
-    fn environment_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-    }
+    #[test]
+    fn ambient_parent_environment_is_not_inherited() {
+        crate::ambient_test::with_ambient_canary(
+            "middleware::http_runtime::tests::ambient_parent_environment_is_not_inherited",
+            async {
+                let runtime = HttpProcessRuntime::spawn(
+                    child_config("environment").with_environment("OPENAI_API_KEY", "explicit-key"),
+                )
+                .await
+                .unwrap();
+                let mut stream = TcpStream::connect(runtime.address()).await.unwrap();
+                stream
+                    .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                    .await
+                    .unwrap();
+                let mut response = Vec::new();
+                tokio::time::timeout(Duration::from_secs(1), stream.read_to_end(&mut response))
+                    .await
+                    .unwrap()
+                    .unwrap();
 
-    #[tokio::test]
-    async fn ambient_parent_environment_is_not_inherited() {
-        let _guard = environment_lock().lock().unwrap();
-        unsafe {
-            std::env::set_var("UNRELATED_DEPLOYMENT_SECRET", "CANARY-AMBIENT-7KQ9");
-        }
-        let runtime = HttpProcessRuntime::spawn(
-            child_config("environment").with_environment("OPENAI_API_KEY", "explicit-key"),
-        )
-        .await
-        .unwrap();
-        let mut stream = TcpStream::connect(runtime.address()).await.unwrap();
-        stream
-            .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
-            .await
-            .unwrap();
-        let mut response = Vec::new();
-        tokio::time::timeout(Duration::from_secs(1), stream.read_to_end(&mut response))
-            .await
-            .unwrap()
-            .unwrap();
-
-        unsafe {
-            std::env::remove_var("UNRELATED_DEPLOYMENT_SECRET");
-        }
-        let response = String::from_utf8(response).unwrap();
-        assert!(
-            response.ends_with("false:true:true"),
-            "response: {response}"
+                let response = String::from_utf8(response).unwrap();
+                assert!(
+                    response.ends_with("false:true:true"),
+                    "response: {response}"
+                );
+                runtime.shutdown().await.unwrap();
+            },
         );
-        runtime.shutdown().await.unwrap();
     }
 
     #[tokio::test]

@@ -416,7 +416,7 @@ async fn test_shared_task_orchestrator_dependencies() {
     // real execution depends on DB migrations running, so we check if creation succeeds first.
     let result = orchestrator.create_task(task1).await;
 
-    if let Ok(_) = result {
+    if result.is_ok() {
         // Task 2: pending, depends on Task 1
         let task2 = SharedTaskV4 {
             id: "task_2_pg".to_string(),

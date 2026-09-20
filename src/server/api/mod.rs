@@ -25,6 +25,7 @@ pub mod health;
 pub mod onboarding;
 pub mod syndication_handler;
 pub mod telemetry;
+pub mod usage_api;
 
 pub mod agent_feed;
 pub mod audio_command;
@@ -62,7 +63,7 @@ pub mod storefront_delivery;
 pub mod tool_integrations;
 pub mod unified_inbox_webhook;
 pub mod unified_ws;
-mod walkup;
+pub(crate) mod walkup;
 pub mod work_triage;
 mod ws_batch;
 pub(crate) mod ws_compression;

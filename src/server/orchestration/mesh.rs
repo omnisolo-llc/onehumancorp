@@ -388,7 +388,9 @@ impl TeammateMesh for CentrifugeNode {
                 "system:health_ping",
                 Box::new(move |msg: Message| {
                     use prost::Message as ProstMessage;
-                    if let Ok(ping) = ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..]) {
+                    if let Ok(ping) =
+                        ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..])
+                    {
                         let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
 
                         let ack = ::server_omnisolo::interop::HealthAck {
@@ -430,6 +432,71 @@ impl TeammateMesh for CentrifugeNode {
         handler: Box<dyn Fn(Message) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.subscribe("system:state_handoff", handler).await
+    }
+}
+
+pub async fn get_mesh_transport(
+    db_store: &crate::db::DbStore,
+) -> Result<Arc<dyn TeammateMesh>, String> {
+    if let Ok(nats_url) = std::env::var("NATS_URL")
+        && let Ok(transport) =
+            omnisolo_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await
+    {
+        return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
+    }
+
+    match db_store {
+        crate::db::DbStore::Postgres => {
+            let redis_url =
+                std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+            let transport = crate::orchestration::hub::RedisMeshTransport::new(&redis_url)
+                .await
+                .map_err(|e| format!("Failed to create RedisMeshTransport: {}", e))?;
+            Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            if let Ok(pg_url) = std::env::var("OMNISOLO_DATABASE_URL")
+                && (pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://"))
+            {
+                let node_id = super::node_identity::mesh_node_id(
+                    std::env::var("OMNISOLO_MESH_NODE_ID").ok().as_deref(),
+                    &crate::config::get_safe_user_dir().join("mesh"),
+                )?;
+                match omnisolo_builtin_agent::mesh::transport::PgTransport::new_with_subscriber_id(
+                    &pg_url, node_id,
+                )
+                .await
+                {
+                    Ok(transport) => {
+                        let t_clone = transport.clone();
+                        tokio::spawn(async move {
+                            t_clone.start_worker().await;
+                        });
+                        return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
+                    }
+                    Err(e) => {
+                        tracing::warn!(error = ?e, "Failed to initialize PgTransport");
+                        // Fallback to memory
+                    }
+                }
+            }
+
+            match omnisolo_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await
+            {
+                Ok(transport) => {
+                    let t_clone = transport.clone();
+                    tokio::spawn(async move {
+                        t_clone.start_worker().await;
+                    });
+                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+                }
+                Err(e) => {
+                    tracing::warn!(error = ?e, "Failed to initialize SqliteTransport");
+                    let transport = crate::orchestration::hub::MemoryMeshTransport::new();
+                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+                }
+            }
+        }
     }
 }
 
@@ -748,71 +815,6 @@ mod tests {
         }
 
         assert_eq!(success_count.load(std::sync::atomic::Ordering::SeqCst), 1);
-    }
-}
-
-pub async fn get_mesh_transport(
-    db_store: &crate::db::DbStore,
-) -> Result<Arc<dyn TeammateMesh>, String> {
-    if let Ok(nats_url) = std::env::var("NATS_URL") {
-        if let Ok(transport) =
-            omnisolo_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await
-        {
-            return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
-        }
-    }
-
-    match db_store {
-        crate::db::DbStore::Postgres => {
-            let redis_url =
-                std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-            let transport = crate::orchestration::hub::RedisMeshTransport::new(&redis_url)
-                .await
-                .map_err(|e| format!("Failed to create RedisMeshTransport: {}", e))?;
-            Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            if let Ok(pg_url) = std::env::var("OMNISOLO_DATABASE_URL") {
-                if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
-                    let node_id = super::node_identity::mesh_node_id(
-                        std::env::var("OMNISOLO_MESH_NODE_ID").ok().as_deref(),
-                        &crate::config::get_safe_user_dir().join("mesh"),
-                    )?;
-                    match omnisolo_builtin_agent::mesh::transport::PgTransport::new_with_subscriber_id(
-                        &pg_url, node_id,
-                    )
-                    .await
-                    {
-                        Ok(transport) => {
-                            let t_clone = transport.clone();
-                            tokio::spawn(async move {
-                                t_clone.start_worker().await;
-                            });
-                            return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
-                        }
-                        Err(e) => {
-                            tracing::warn!(error = ?e, "Failed to initialize PgTransport");
-                            // Fallback to memory
-                        }
-                    }
-                }
-            }
-
-            match omnisolo_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
-                Ok(transport) => {
-                    let t_clone = transport.clone();
-                    tokio::spawn(async move {
-                        t_clone.start_worker().await;
-                    });
-                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
-                }
-                Err(e) => {
-                    tracing::warn!(error = ?e, "Failed to initialize SqliteTransport");
-                    let transport = crate::orchestration::hub::MemoryMeshTransport::new();
-                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
-                }
-            }
-        }
     }
 }
 // dummy validation comment

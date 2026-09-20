@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -31,20 +32,23 @@ function productionBrowserFiles(directory: string): string[] {
 }
 
 describe("browser authentication authority", () => {
-  it("keeps bearer credentials out of browser-managed storage and headers", () => {
-    const violations = ROOTS.flatMap(productionBrowserFiles).flatMap((file) => {
-      const source = readFileSync(file, "utf8");
-      const reasons = [
-        ...(BROWSER_IDENTITY.test(source) ? ["browser-managed identity"] : []),
-        ...(BROWSER_IDENTITY_HEADER.test(source)
-          ? ["browser-generated identity header"]
-          : []),
-      ];
-      return reasons.map(
-        (reason) => `${relative(process.cwd(), file)}: ${reason}`,
-      );
-    });
-
+  it("keeps bearer credentials out of browser-managed storage and headers", async () => {
+    const files = ROOTS.flatMap(productionBrowserFiles);
+    expect(files.length).toBeGreaterThan(0);
+    const violations: string[] = [];
+    // Bound open files while overlapping disk reads on cold CI filesystems.
+    // Every production source file still receives both security assertions.
+    for (let offset = 0; offset < files.length; offset += 8) {
+      const findings = await Promise.all(files.slice(offset, offset + 8).map(async file => {
+        const source = await readFile(file, "utf8");
+        const reasons = [
+          ...(BROWSER_IDENTITY.test(source) ? ["browser-managed identity"] : []),
+          ...(BROWSER_IDENTITY_HEADER.test(source) ? ["browser-generated identity header"] : []),
+        ];
+        return reasons.map(reason => `${relative(process.cwd(), file)}: ${reason}`);
+      }));
+      violations.push(...findings.flat());
+    }
     expect(violations).toEqual([]);
   });
 });

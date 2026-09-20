@@ -201,41 +201,14 @@ kind create cluster --name "${CLUSTER_NAME}" --image kindest/node:v1.29.2 --wait
 log "Waiting for cluster nodes ..."
 kubectl wait --for=condition=Ready node --all --timeout=120s
 
-# ── Locating Images ────────────────────────────────────────────────────────────
-# If running under Bazel, we use the pre-built image loaders.
-# In a manual run, we fallback to docker build (for dev convenience).
-if [[ -n "${TEST_SRCDIR:-}" ]]; then
-  log "Bazel environment detected. Loading images from runfiles..."
-  SERVER_LOADER="${REPO_ROOT}/deploy/load_all_images"
-  GRPC_PROBE="${REPO_ROOT}/deploy/grpc_mtls_probe"
-
-  if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-    SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "load_all_images" -type f -executable | head -1)"
-  fi
-
-  if [[ -z "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-    echo "error: could not find executable load_all_images in Bazel runfiles" >&2
-    exit 1
-  fi
-  if [[ ! -x "${GRPC_PROBE}" ]]; then
-    GRPC_PROBE="$(find "${TEST_SRCDIR}" -name grpc_mtls_probe -type f -executable | head -1)"
-  fi
-  if [[ -z "${GRPC_PROBE}" || ! -x "${GRPC_PROBE}" ]]; then
-    echo "error: could not find executable grpc_mtls_probe in Bazel runfiles" >&2
-    exit 1
-  fi
-
-  log "Executing server loader: ${SERVER_LOADER}"
-  "${SERVER_LOADER}"
-  docker tag omnisolo/server:latest omnisolo/server:e2e
-else
-  require_tool bazelisk
-  log "Manual run detected. Building server image via Bazel..."
-  bazelisk run //deploy:server_load
-  bazelisk build //deploy:grpc_mtls_probe
-  GRPC_PROBE="$(bazelisk cquery --output=files //deploy:grpc_mtls_probe | head -1)"
-  docker tag omnisolo/server:latest omnisolo/server:e2e
-fi
+# ── Native image and probe inputs ───────────────────────────────────────────────
+require_tool cargo
+source "${REPO_ROOT}/deploy/tests/support/native_inputs.sh"
+prepare_native_probe
+SERVER_LOADER="${REPO_ROOT}/deploy/load_all_images"
+[[ -x "${SERVER_LOADER}" ]] || { echo "Native image loader is missing" >&2; exit 1; }
+"${SERVER_LOADER}"
+docker tag omnisolo/server:latest omnisolo/server:e2e
 
 # ── Add Helm repos ─────────────────────────────────────────────────────────────
 log "Adding Helm repos ..."

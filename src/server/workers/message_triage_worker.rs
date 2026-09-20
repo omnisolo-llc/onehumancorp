@@ -212,16 +212,15 @@ Output JSON format:
 
                 match tokio::time::timeout(Duration::from_secs(60), llm_call).await {
                     Ok(Ok(reply)) => {
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply) {
-                            if parsed.is_object()
-                                && parsed.get("priority").is_some()
-                                && parsed.get("context_summary").is_some()
-                                && parsed.get("action_type").is_some()
-                                && parsed.get("action_payload").is_some()
-                            {
-                                extracted = parsed;
-                                break;
-                            }
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply)
+                            && parsed.is_object()
+                            && parsed.get("priority").is_some()
+                            && parsed.get("context_summary").is_some()
+                            && parsed.get("action_type").is_some()
+                            && parsed.get("action_payload").is_some()
+                        {
+                            extracted = parsed;
+                            break;
                         }
                         retry_count += 1;
                         tracing::warn!(
@@ -314,7 +313,7 @@ Output JSON format:
 
             let omni_result_res = router.route_and_synthesize(&msg).await;
 
-            if let Err(_) = omni_result_res {
+            if omni_result_res.is_err() {
                 match &self.db.store {
                     crate::db::DbStore::Postgres => {
                         let _ = sqlx::query(
@@ -362,14 +361,14 @@ Output JSON format:
                 .unwrap_or("Draft Reply");
 
             let mut action_payload_str = omni_result.final_draft;
-            if action_type == "Draft Quote" || action_type == "Draft Booking" {
-                if let Some(payload) = extracted.get("action_payload") {
-                    if payload.is_object() || payload.is_array() {
-                        action_payload_str =
-                            serde_json::to_string(payload).unwrap_or(action_payload_str);
-                    } else if let Some(s) = payload.as_str() {
-                        action_payload_str = s.to_string();
-                    }
+            if (action_type == "Draft Quote" || action_type == "Draft Booking")
+                && let Some(payload) = extracted.get("action_payload")
+            {
+                if payload.is_object() || payload.is_array() {
+                    action_payload_str =
+                        serde_json::to_string(payload).unwrap_or(action_payload_str);
+                } else if let Some(s) = payload.as_str() {
+                    action_payload_str = s.to_string();
                 }
             }
             let mut action_payload = action_payload_str.clone();
@@ -383,19 +382,17 @@ Output JSON format:
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
             let mut past_orders = String::new();
-            if let Some(cid) = customer_id_val {
-                if let Ok(orders) = sqlx::query_as::<_, (f64,)>(
+            if let Some(cid) = customer_id_val
+                && let Ok(orders) = sqlx::query_as::<_, (f64,)>(
                     "SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2",
                 )
                 .bind(&tenant_id)
-                .bind(&cid)
+                .bind(cid)
                 .fetch_all(&self.db.pool)
                 .await
-                {
-                    if !orders.is_empty() {
-                        past_orders = format!("Returning Customer ({} past orders).", orders.len());
-                    }
-                }
+                && !orders.is_empty()
+            {
+                past_orders = format!("Returning Customer ({} past orders).", orders.len());
             }
 
             let mut quote_id_opt: Option<String> = None;
@@ -440,7 +437,7 @@ Output JSON format:
                                 let _ = sqlx::query(
                                     "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW(), NOW())"
                                 )
-                                .bind(&draft_booking_id.to_string())
+                                .bind(draft_booking_id.to_string())
                                 .bind(&tenant_id)
                                 .bind(customer_id_uuid)
                                 .bind(service_id)
@@ -464,13 +461,13 @@ Output JSON format:
                             let _ = sqlx::query(
                                 "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                             )
-                            .bind(&draft_booking_id.to_string())
+                            .bind(draft_booking_id.to_string())
                             .bind(&tenant_id)
                             .bind(customer_id_uuid.to_string())
                             .bind(service_id)
                             .bind(st)
                             .bind(et)
-                            .execute(&*sqlite_pool).await;
+                            .execute(sqlite_pool).await;
 
                             let _ = sqlx::query(
                                 "UPDATE availability_blocks SET is_available = false WHERE tenant_id = ? AND service_id = ? AND start_time = ? AND end_time = ?"
@@ -479,7 +476,7 @@ Output JSON format:
                             .bind(service_id)
                             .bind(st)
                             .bind(et)
-                            .execute(&*sqlite_pool).await;
+                            .execute(sqlite_pool).await;
                         }
                     }
                 }
@@ -489,27 +486,28 @@ Output JSON format:
                     let draft_shift_id = Uuid::new_v4();
                     booking_id_opt = Some(draft_shift_id.to_string());
                 }
-            } else if action_type == "Draft Quote" {
-                if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
-                    let mut modified_quote_data = quote_data.clone();
-                    let draft_quote_id = Uuid::new_v4();
-                    quote_id_opt = Some(draft_quote_id.to_string());
-                    let total_amount_cents = quote_data
-                        .get("total_amount_cents")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
-                    let required_deposit_cents = quote_data
-                        .get("required_deposit_cents")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
-                    let customer_id_uuid = customer_id_val
-                        .and_then(|v| Uuid::parse_str(v).ok())
-                        .unwrap_or_else(Uuid::new_v4);
+            } else if action_type == "Draft Quote"
+                && let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload)
+            {
+                let mut modified_quote_data = quote_data.clone();
+                let draft_quote_id = Uuid::new_v4();
+                quote_id_opt = Some(draft_quote_id.to_string());
+                let total_amount_cents = quote_data
+                    .get("total_amount_cents")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0);
+                let required_deposit_cents = quote_data
+                    .get("required_deposit_cents")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0);
+                let customer_id_uuid = customer_id_val
+                    .and_then(|v| Uuid::parse_str(v).ok())
+                    .unwrap_or_else(Uuid::new_v4);
 
-                    match &self.db.store {
-                        crate::db::DbStore::Postgres => {
-                            if let Ok(mut tx) = self.db.pool.begin().await {
-                                let _ = sqlx::query(
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        if let Ok(mut tx) = self.db.pool.begin().await {
+                            let _ = sqlx::query(
                                     "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
                                 )
                                 .bind(draft_quote_id)
@@ -519,91 +517,19 @@ Output JSON format:
                                 .bind(required_deposit_cents)
                                 .execute(&mut *tx).await;
 
-                                if let Some(items) =
-                                    quote_data.get("line_items").and_then(|v| v.as_array())
-                                {
-                                    let mut scope = String::new();
-                                    for item in items {
-                                        let desc = item
-                                            .get("description")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("");
-                                        if !scope.is_empty() {
-                                            scope.push_str(", ");
-                                        }
-                                        scope.push_str(desc);
-                                        let item_id = Uuid::new_v4();
-                                        let desc = item
-                                            .get("description")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("");
-                                        let price = item
-                                            .get("unit_price_cents")
-                                            .and_then(|v| v.as_i64())
-                                            .unwrap_or(0);
-                                        let qty = item
-                                            .get("quantity")
-                                            .and_then(|v| v.as_i64())
-                                            .unwrap_or(1)
-                                            as i32;
-                                        let is_opt = item
-                                            .get("is_optional")
-                                            .and_then(|v| v.as_bool())
-                                            .unwrap_or(false);
-                                        let _ = sqlx::query(
-                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
-                                        )
-                                        .bind(item_id)
-                                        .bind(draft_quote_id)
-                                        .bind(desc)
-                                        .bind(price)
-                                        .bind(qty)
-                                        .bind(is_opt)
-                                        .bind(tenant_id.clone())
-                                        .execute(&mut *tx).await;
-                                    }
-                                }
-                                let _ = tx.commit().await;
-
-                                modified_quote_data["price"] =
-                                    serde_json::json!((total_amount_cents as f64) / 100.0);
-                                if let Some(items) =
-                                    quote_data.get("line_items").and_then(|v| v.as_array())
-                                {
-                                    let mut scope = String::new();
-                                    for item in items {
-                                        let desc = item
-                                            .get("description")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("");
-                                        if !scope.is_empty() {
-                                            scope.push_str(", ");
-                                        }
-                                        scope.push_str(desc);
-                                    }
-                                    modified_quote_data["scope"] = serde_json::json!(scope);
-                                }
-                                modified_quote_data["client_name"] = serde_json::json!("Client");
-                                action_payload_str = serde_json::to_string(&modified_quote_data)
-                                    .unwrap_or(action_payload_str);
-                                action_payload = action_payload_str.clone();
-                            }
-                        }
-                        crate::db::DbStore::Sqlite(sqlite_pool) => {
-                            let _ = sqlx::query(
-                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                            )
-                            .bind(draft_quote_id.to_string())
-                            .bind(&tenant_id)
-                            .bind(customer_id_uuid.to_string())
-                            .bind(total_amount_cents)
-                            .bind(required_deposit_cents)
-                            .execute(&*sqlite_pool).await;
-
                             if let Some(items) =
                                 quote_data.get("line_items").and_then(|v| v.as_array())
                             {
+                                let mut scope = String::new();
                                 for item in items {
+                                    let desc = item
+                                        .get("description")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("");
+                                    if !scope.is_empty() {
+                                        scope.push_str(", ");
+                                    }
+                                    scope.push_str(desc);
                                     let item_id = Uuid::new_v4();
                                     let desc = item
                                         .get("description")
@@ -621,18 +547,19 @@ Output JSON format:
                                         .and_then(|v| v.as_bool())
                                         .unwrap_or(false);
                                     let _ = sqlx::query(
-                                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)"
-                                    )
-                                    .bind(item_id.to_string())
-                                    .bind(draft_quote_id.to_string())
-                                    .bind(desc)
-                                    .bind(price)
-                                    .bind(qty)
-                                    .bind(is_opt)
-                                    .bind(tenant_id.clone())
-                                    .execute(&*sqlite_pool).await;
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
+                                        )
+                                        .bind(item_id)
+                                        .bind(draft_quote_id)
+                                        .bind(desc)
+                                        .bind(price)
+                                        .bind(qty)
+                                        .bind(is_opt)
+                                        .bind(tenant_id.clone())
+                                        .execute(&mut *tx).await;
                                 }
                             }
+                            let _ = tx.commit().await;
 
                             modified_quote_data["price"] =
                                 serde_json::json!((total_amount_cents as f64) / 100.0);
@@ -658,6 +585,71 @@ Output JSON format:
                             action_payload = action_payload_str.clone();
                         }
                     }
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let _ = sqlx::query(
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(draft_quote_id.to_string())
+                            .bind(&tenant_id)
+                            .bind(customer_id_uuid.to_string())
+                            .bind(total_amount_cents)
+                            .bind(required_deposit_cents)
+                            .execute(sqlite_pool).await;
+
+                        if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array())
+                        {
+                            for item in items {
+                                let item_id = Uuid::new_v4();
+                                let desc = item
+                                    .get("description")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
+                                let price = item
+                                    .get("unit_price_cents")
+                                    .and_then(|v| v.as_i64())
+                                    .unwrap_or(0);
+                                let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1)
+                                    as i32;
+                                let is_opt = item
+                                    .get("is_optional")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false);
+                                let _ = sqlx::query(
+                                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)"
+                                    )
+                                    .bind(item_id.to_string())
+                                    .bind(draft_quote_id.to_string())
+                                    .bind(desc)
+                                    .bind(price)
+                                    .bind(qty)
+                                    .bind(is_opt)
+                                    .bind(tenant_id.clone())
+                                    .execute(sqlite_pool).await;
+                            }
+                        }
+
+                        modified_quote_data["price"] =
+                            serde_json::json!((total_amount_cents as f64) / 100.0);
+                        if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array())
+                        {
+                            let mut scope = String::new();
+                            for item in items {
+                                let desc = item
+                                    .get("description")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
+                                if !scope.is_empty() {
+                                    scope.push_str(", ");
+                                }
+                                scope.push_str(desc);
+                            }
+                            modified_quote_data["scope"] = serde_json::json!(scope);
+                        }
+                        modified_quote_data["client_name"] = serde_json::json!("Client");
+                        action_payload_str = serde_json::to_string(&modified_quote_data)
+                            .unwrap_or(action_payload_str);
+                        action_payload = action_payload_str.clone();
+                    }
                 }
             }
 
@@ -665,7 +657,7 @@ Output JSON format:
                 crate::db::DbStore::Postgres => {
                     if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&action_payload)
-                        .bind(&message_id)
+                        .bind(message_id)
                         .bind(&tenant_id)
                         .execute(&self.db.pool).await {
                         tracing::error!("Failed to update omni_inbox_messages: {}", e);
@@ -673,7 +665,7 @@ Output JSON format:
 
                     if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&action_payload)
-                        .bind(&message_id)
+                        .bind(message_id)
                         .bind(&tenant_id)
                         .execute(&self.db.pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
@@ -682,24 +674,23 @@ Output JSON format:
                     // Implement proper Redis locking to prevent race conditions during thread/triage updates
                     let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
                     let mut _lock_conn = None;
-                    if let Some(client) = crate::get_redis_client() {
-                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                            use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> =
-                                conn.set_nx(&redis_lock_key, "locked").await;
-                            if let Ok(true) = lock_acquired {
-                                let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
-                                _lock_conn = Some(conn);
-                            } else {
-                                let redacted_redis_lock_key =
-                                    ::server_telemetry::redact_interface_pii(
-                                        serde_json::Value::String(redis_lock_key.clone()),
-                                    );
-                                tracing::warn!(
-                                    "Failed to acquire redis lock for triage updates: {}",
-                                    redacted_redis_lock_key.as_str().unwrap_or("")
-                                ); // pii-safe
-                            }
+                    if let Some(client) = crate::get_redis_client()
+                        && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                    {
+                        use redis::AsyncCommands;
+                        let lock_acquired: Result<bool, _> =
+                            conn.set_nx(&redis_lock_key, "locked").await;
+                        if let Ok(true) = lock_acquired {
+                            let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
+                            _lock_conn = Some(conn);
+                        } else {
+                            let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(
+                                serde_json::Value::String(redis_lock_key.clone()),
+                            );
+                            tracing::warn!(
+                                "Failed to acquire redis lock for triage updates: {}",
+                                redacted_redis_lock_key.as_str().unwrap_or("")
+                            ); // pii-safe
                         }
                     }
 
@@ -714,8 +705,8 @@ Output JSON format:
                     .bind(&tenant_id)
                     .bind(customer_id_val)
                     .bind(&event_source)
-                    .bind(&priority)
-                    .bind(&context_summary)
+                    .bind(priority)
+                    .bind(context_summary)
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert triage_items: {}", e);
                     }
@@ -726,7 +717,7 @@ Output JSON format:
                     .bind(&action_id)
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
-                    .bind(&action_type)
+                    .bind(action_type)
                     .bind(&action_payload)
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert triage_proposed_actions: {}", e);
@@ -800,9 +791,9 @@ Output JSON format:
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&action_payload)
-                        .bind(&message_id)
+                        .bind(message_id)
                         .bind(&tenant_id)
-                        .execute(&*sqlite_pool).await {
+                        .execute(sqlite_pool).await {
                         tracing::error!("Failed to update omni_inbox_messages: {}", e);
                     }
 
@@ -810,9 +801,9 @@ Output JSON format:
                         "UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?",
                     )
                     .bind(&action_payload)
-                    .bind(&message_id)
+                    .bind(message_id)
                     .bind(&tenant_id)
-                    .execute(&*sqlite_pool)
+                    .execute(sqlite_pool)
                     .await
                     {
                         tracing::error!("Failed to update inbox_messages: {}", e);
@@ -821,24 +812,23 @@ Output JSON format:
                     // Implement proper Redis locking to prevent race conditions during thread/triage updates
                     let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
                     let mut _lock_conn = None;
-                    if let Some(client) = crate::get_redis_client() {
-                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                            use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> =
-                                conn.set_nx(&redis_lock_key, "locked").await;
-                            if let Ok(true) = lock_acquired {
-                                let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
-                                _lock_conn = Some(conn);
-                            } else {
-                                let redacted_redis_lock_key =
-                                    ::server_telemetry::redact_interface_pii(
-                                        serde_json::Value::String(redis_lock_key.clone()),
-                                    );
-                                tracing::warn!(
-                                    "Failed to acquire redis lock for triage updates: {}",
-                                    redacted_redis_lock_key.as_str().unwrap_or("")
-                                ); // pii-safe
-                            }
+                    if let Some(client) = crate::get_redis_client()
+                        && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                    {
+                        use redis::AsyncCommands;
+                        let lock_acquired: Result<bool, _> =
+                            conn.set_nx(&redis_lock_key, "locked").await;
+                        if let Ok(true) = lock_acquired {
+                            let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
+                            _lock_conn = Some(conn);
+                        } else {
+                            let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(
+                                serde_json::Value::String(redis_lock_key.clone()),
+                            );
+                            tracing::warn!(
+                                "Failed to acquire redis lock for triage updates: {}",
+                                redacted_redis_lock_key.as_str().unwrap_or("")
+                            ); // pii-safe
                         }
                     }
 
@@ -853,9 +843,9 @@ Output JSON format:
                     .bind(&tenant_id)
                     .bind(customer_id_val)
                     .bind(&event_source)
-                    .bind(&priority)
-                    .bind(&context_summary)
-                    .execute(&*sqlite_pool).await {
+                    .bind(priority)
+                    .bind(context_summary)
+                    .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert triage_items (Sqlite): {}", e);
                     }
 
@@ -865,9 +855,9 @@ Output JSON format:
                     .bind(&action_id)
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
-                    .bind(&action_type)
+                    .bind(action_type)
                     .bind(&action_payload)
-                    .execute(&*sqlite_pool).await {
+                    .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert triage_proposed_actions (Sqlite): {}", e);
                     }
 
@@ -900,11 +890,11 @@ Output JSON format:
                         "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
                         "action_payload": action_payload
                     }).to_string())
-                    .execute(&*sqlite_pool).await {
+                    .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
-                            .execute(&*sqlite_pool).await;
+                            .execute(sqlite_pool).await;
                         return Ok(false);
                     }
 
@@ -923,18 +913,18 @@ Output JSON format:
                         "sender_id": sender_id,
                         "customer_id": customer_id_val,
                     }).to_string())
-                    .execute(&*sqlite_pool).await {
+                    .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
-                            .execute(&*sqlite_pool).await;
+                            .execute(sqlite_pool).await;
                         return Ok(false);
                     }
 
-                    let _ = sqlx::query("UPDATE work_intents SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE json_extract(payload, '$.message') = ? AND tenant_id = ?").bind(customer_message).bind(&tenant_id).execute(&*sqlite_pool).await;
+                    let _ = sqlx::query("UPDATE work_intents SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE json_extract(payload, '$.message') = ? AND tenant_id = ?").bind(customer_message).bind(&tenant_id).execute(sqlite_pool).await;
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(&*sqlite_pool).await;
+                        .execute(sqlite_pool).await;
                 }
             }
 

@@ -1,11 +1,13 @@
 "use client";
 
+import { errorMessage } from '@/lib/errors';
+
 import { useState } from "react";
 
 export default function DynamicWorkflowsPage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [workflowState, setWorkflowState] = useState<any>(null);
+  const [workflowState, setWorkflowState] = useState<{ id: string; status: string; script?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const startWorkflow = async () => {
@@ -20,8 +22,8 @@ export default function DynamicWorkflowsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start workflow");
       setWorkflowState(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -37,8 +39,8 @@ export default function DynamicWorkflowsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to confirm workflow");
       setWorkflowState(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -52,8 +54,8 @@ export default function DynamicWorkflowsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch workflow");
       setWorkflowState(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }

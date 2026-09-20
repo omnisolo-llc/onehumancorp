@@ -31,23 +31,23 @@ mod parity_tests {
     }
 
     async fn setup_postgres_db() -> Option<Arc<DB>> {
-        if let Ok(url) = std::env::var("OMNISOLO_DATABASE_URL") {
-            if url.starts_with("postgres") {
-                let pool = PgPoolOptions::new()
-                    .acquire_timeout(std::time::Duration::from_millis(100))
-                    .connect(&url)
-                    .await
-                    .ok()?;
+        if let Ok(url) = std::env::var("OMNISOLO_DATABASE_URL")
+            && url.starts_with("postgres")
+        {
+            let pool = PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_millis(100))
+                .connect(&url)
+                .await
+                .ok()?;
 
-                let db = DB {
-                    pool: pool.clone(),
-                    store: DbStore::Postgres,
-                };
-                // We might not want to run migrations on a real DB here if it's shared,
-                // but for a test DB it's fine.
-                db.run_migrations().await.ok()?;
-                return Some(Arc::new(db));
-            }
+            let db = DB {
+                pool: pool.clone(),
+                store: DbStore::Postgres,
+            };
+            // We might not want to run migrations on a real DB here if it's shared,
+            // but for a test DB it's fine.
+            db.run_migrations().await.ok()?;
+            return Some(Arc::new(db));
         }
         None
     }
@@ -68,9 +68,11 @@ mod parity_tests {
                 org_id,
                 "agent_1",
                 "task_1",
-                "content",
-                "[0.1, 0.2]",
-                "type_a",
+                crate::db::MemoryContent {
+                    content: "content",
+                    embedding: "[0.1, 0.2]",
+                    source_type: "type_a",
+                },
             )
             .await;
         assert!(insert_res_sqlite.is_ok());
@@ -82,9 +84,11 @@ mod parity_tests {
                     org_id,
                     "agent_1",
                     "task_1",
-                    "content",
-                    "[0.1, 0.2]",
-                    "type_a",
+                    crate::db::MemoryContent {
+                        content: "content",
+                        embedding: "[0.1, 0.2]",
+                        source_type: "type_a",
+                    },
                 )
                 .await;
             assert!(insert_res_pg.is_ok());
@@ -423,12 +427,11 @@ mod parity_tests {
             // we can just await the task since NOWAIT guarantees it returns immediately with an error if locked.
             let join_handle = tokio::spawn(async move {
                 let mut tx2 = pool_clone.begin().await.unwrap();
-                let res =
-                    sqlx::query("SELECT status FROM swarm_tasks WHERE id = $1 FOR UPDATE NOWAIT")
-                        .bind(parsed_id)
-                        .fetch_optional(&mut *tx2)
-                        .await;
-                res
+
+                sqlx::query("SELECT status FROM swarm_tasks WHERE id = $1 FOR UPDATE NOWAIT")
+                    .bind(parsed_id)
+                    .fetch_optional(&mut *tx2)
+                    .await
             });
 
             let res = join_handle.await.unwrap();
@@ -887,8 +890,10 @@ mod parity_tests {
             .execute_with_retry("test_sync_lag", || {
                 let attempts_clone = attempts_clone.clone();
                 async move {
-                    let mut a = attempts_clone.lock().unwrap();
-                    *a += 1;
+                    {
+                        let mut a = attempts_clone.lock().unwrap();
+                        *a += 1;
+                    }
 
                     // Simulate a lag (e.g. over slow network/disk) that exceeds the 60s timeout constraint
                     // We run it inside a spawn to prevent deadlocking the current task when time advances
@@ -922,8 +927,10 @@ mod parity_tests {
                 .execute_with_retry("test_sync_lag_pg", || {
                     let attempts_clone = attempts_clone.clone();
                     async move {
-                        let mut a = attempts_clone.lock().unwrap();
-                        *a += 1;
+                        {
+                            let mut a = attempts_clone.lock().unwrap();
+                            *a += 1;
+                        }
 
                         let handle = tokio::spawn(async {
                             tokio::time::advance(std::time::Duration::from_secs(65)).await;

@@ -24,7 +24,7 @@ test.describe('Gift Card Growth Loop', () => {
 
         // 5. Verify the share modal/link
         await expect(page.locator('text=Share Your Gift Card')).toBeVisible({ timeout: 15000 }).catch(() => {});
-    } catch(err) {
+    } catch {
         console.debug("Gift card flow flaked locally");
     }
 

@@ -22,10 +22,10 @@ impl CampaignRepository {
         .bind(&campaign.tenant_id)
         .bind(&campaign.goal)
         .bind(&campaign.status)
-        .bind(&campaign.start_time)
-        .bind(&campaign.end_time)
-        .bind(&campaign.created_at)
-        .bind(&campaign.updated_at)
+        .bind(campaign.start_time)
+        .bind(campaign.end_time)
+        .bind(campaign.created_at)
+        .bind(campaign.updated_at)
         .execute(&self.pool)
         .await?;
 
@@ -76,7 +76,7 @@ impl CampaignRepository {
         .bind(&asset.campaign_id)
         .bind(&asset.r#type)
         .bind(&asset.content_url)
-        .bind(&asset.created_at)
+        .bind(asset.created_at)
         .execute(&self.pool)
         .await?;
 
@@ -132,12 +132,12 @@ impl CampaignRepository {
         )
         .bind(&campaign.id)
         .bind(&campaign.tenant_id)
-        .bind(&campaign.budget)
+        .bind(campaign.budget)
         .bind(campaign.radius_miles)
         .bind(&campaign.zip_code)
         .bind(&campaign.status)
-        .bind(&campaign.created_at)
-        .bind(&campaign.updated_at)
+        .bind(campaign.created_at)
+        .bind(campaign.updated_at)
         .execute(&self.pool)
         .await?;
 

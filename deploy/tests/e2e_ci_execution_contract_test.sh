@@ -305,7 +305,9 @@ for script in "$kind_script" "$compose_script"; do
     "${script} must verify the gRPC server identity."
   require_literal '-alpn h2' "$script" \
     "${script} must verify gRPC HTTP/2 negotiation."
-  require_literal 'grpc_mtls_probe' "$script" \
+  require_literal 'prepare_native_probe' "$script" \
+    "${script} must build or verify its native Cargo gRPC probe."
+  require_literal '"${GRPC_PROBE}" "https://localhost:' "$script" \
     "${script} must exercise a real intercepted gRPC request."
   require_literal 'client-no-spiffe.crt' "$script" \
     "${script} must reject a CA-signed client without a SPIFFE identity."

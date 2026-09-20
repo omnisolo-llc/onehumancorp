@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { useProPlan } from '../components/useProPlan';
@@ -12,7 +12,7 @@ export default function CartRecoveryPage() {
   const [cartValue, setCartValue] = useState('');
   const [generatedDraft, setGeneratedDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const { hasPro, claimTrial, claimError } = useProPlan();
+  const { claimTrial, claimError } = useProPlan();
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [trialStatus, setTrialStatus] = useState('');
   const [draftError, setDraftError] = useState<string | null>(null);

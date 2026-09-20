@@ -267,13 +267,13 @@ pub async fn handle_edge_request_impl(
     let etag = format!("\"{:x}\"", std::hash::Hasher::finish(&hasher));
 
     let mut response = Html(html).into_response();
-    if !tags.is_empty() {
-        if let Ok(cache_tag) = tags.join(", ").parse::<axum::http::HeaderValue>() {
-            response
-                .headers_mut()
-                .insert("Cache-Tag", cache_tag.clone());
-            response.headers_mut().insert("Surrogate-Key", cache_tag);
-        }
+    if !tags.is_empty()
+        && let Ok(cache_tag) = tags.join(", ").parse::<axum::http::HeaderValue>()
+    {
+        response
+            .headers_mut()
+            .insert("Cache-Tag", cache_tag.clone());
+        response.headers_mut().insert("Surrogate-Key", cache_tag);
     }
     if let Ok(etag_val) = etag.parse::<axum::http::HeaderValue>() {
         response
@@ -335,17 +335,16 @@ pub async fn regenerate_product_cache(
         .await
         {
             if let Ok(Some(row)) = seo_res {
-                if let Some(seo_title) = row.seo_title {
-                    if let Some(start) = html.find("<title>") {
-                        if let Some(end) = html[start..].find("</title>") {
-                            let end = start + end + "</title>".len();
-                            let safe_title = seo_title
-                                .replace("&", "&amp;")
-                                .replace("<", "&lt;")
-                                .replace(">", "&gt;");
-                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">\n<meta property=\"og:title\" content=\"{}\">", safe_title, safe_title, safe_title));
-                        }
-                    }
+                if let Some(seo_title) = row.seo_title
+                    && let Some(start) = html.find("<title>")
+                    && let Some(end) = html[start..].find("</title>")
+                {
+                    let end = start + end + "</title>".len();
+                    let safe_title = seo_title
+                        .replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;");
+                    html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">\n<meta property=\"og:title\" content=\"{}\">", safe_title, safe_title, safe_title));
                 }
 
                 if let Some(seo_desc) = row.seo_description {

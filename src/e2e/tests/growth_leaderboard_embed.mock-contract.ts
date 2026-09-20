@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from '../fixtures';
+import '../fixtures';
 
 test.describe('Growth Leaderboard Embed', () => {
   test('User can view and copy the leaderboard embed, and the embed renders correctly', async ({ page }) => {

@@ -2,12 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BackendRequestOptions } from "@/lib/auth/backendTransport";
 
 const { proxyBackendRequest } = vi.hoisted(() => ({
-  proxyBackendRequest: vi.fn(
-    async (
-      _request: Request,
-      _backendPath: string,
-      _options?: BackendRequestOptions,
-    ) => Response.json({ ok: true }),
+  proxyBackendRequest: vi.fn<(request: Request, backendPath: string, options?: BackendRequestOptions) => Promise<Response>>(
+    async () => Response.json({ ok: true }),
   ),
 }));
 

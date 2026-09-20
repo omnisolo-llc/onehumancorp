@@ -70,9 +70,9 @@ fn valid_customer_id(value: &str) -> bool {
     let value = value.trim();
     !value.is_empty()
         && value.len() <= 128
-        && value
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+        && value.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+        })
 }
 
 fn required_deposit_cents(price_cents: i64, metadata: &serde_json::Value) -> Option<i64> {
@@ -213,74 +213,6 @@ async fn create_booking_checkout(
         .and_then(serde_json::Value::as_str)
         .and_then(trusted_stripe_checkout_url)
         .ok_or_else(|| "Stripe returned an invalid checkout URL".to_string())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn reservation_window_rejects_inverted_and_oversized_ranges() {
-        assert!(reservation_window("2026-07-15T10:00:00Z", "2026-07-15T11:00:00Z",).is_some());
-        assert!(reservation_window("2026-07-15T11:00:00Z", "2026-07-15T10:00:00Z",).is_none());
-        assert!(reservation_window("2026-07-15T10:00:00Z", "2026-07-17T10:00:01Z",).is_none());
-    }
-
-    #[test]
-    fn customer_contact_validation_rejects_non_email_ids_and_control_characters() {
-        assert!(valid_customer_name("Jane Doe"));
-        assert!(!valid_customer_name("Jane\nDoe"));
-        assert!(valid_customer_email("jane@example.com"));
-        assert!(!valid_customer_email("jane.example.com"));
-        assert!(!valid_customer_email("jane@localhost"));
-        assert!(valid_customer_id("e2e-customer-bakery"));
-        assert!(!valid_customer_id("../../other-tenant"));
-    }
-
-    #[test]
-    fn checkout_is_required_only_when_product_metadata_requires_a_deposit() {
-        assert_eq!(required_deposit_cents(7_500, &serde_json::json!({})), None);
-        assert_eq!(
-            required_deposit_cents(
-                7_500,
-                &serde_json::json!({"requires_deposit": true, "deposit_amount_cents": 2_500}),
-            ),
-            Some(2_500),
-        );
-        assert_eq!(
-            required_deposit_cents(
-                7_500,
-                &serde_json::json!({"requires_deposit": true, "deposit_amount_cents": 20_000}),
-            ),
-            Some(7_500),
-        );
-    }
-
-    #[test]
-    fn booking_feed_item_contains_an_actionable_approval() {
-        let (context, action) = booking_feed_payloads(
-            "booking-1",
-            "service-1",
-            "2026-08-10T09:00:00Z",
-            "2026-08-10T10:00:00Z",
-        );
-        assert_eq!(context["booking_id"], "booking-1");
-        assert_eq!(action["action_type"], "approve_booking");
-        assert_eq!(action["feature_type"], "booking_approval");
-        assert_eq!(action["booking_id"], "booking-1");
-    }
-
-    #[test]
-    fn checkout_urls_are_restricted_to_stripe() {
-        assert!(
-            trusted_stripe_checkout_url("https://checkout.stripe.com/c/pay/cs_live_123").is_some()
-        );
-        assert!(trusted_stripe_checkout_url("javascript:alert(1)").is_none());
-        assert!(
-            trusted_stripe_checkout_url("https://checkout.stripe.com.attacker.test/pay").is_none()
-        );
-        assert!(trusted_stripe_checkout_url("https://user:pass@checkout.stripe.com/pay").is_none());
-    }
 }
 
 pub fn router<S>(db: Arc<DB>) -> Router<S>
@@ -593,4 +525,72 @@ async fn handle_reserve(
         }),
     )
         .into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reservation_window_rejects_inverted_and_oversized_ranges() {
+        assert!(reservation_window("2026-07-15T10:00:00Z", "2026-07-15T11:00:00Z",).is_some());
+        assert!(reservation_window("2026-07-15T11:00:00Z", "2026-07-15T10:00:00Z",).is_none());
+        assert!(reservation_window("2026-07-15T10:00:00Z", "2026-07-17T10:00:01Z",).is_none());
+    }
+
+    #[test]
+    fn customer_contact_validation_rejects_non_email_ids_and_control_characters() {
+        assert!(valid_customer_name("Jane Doe"));
+        assert!(!valid_customer_name("Jane\nDoe"));
+        assert!(valid_customer_email("jane@example.com"));
+        assert!(!valid_customer_email("jane.example.com"));
+        assert!(!valid_customer_email("jane@localhost"));
+        assert!(valid_customer_id("e2e-customer-bakery"));
+        assert!(!valid_customer_id("../../other-tenant"));
+    }
+
+    #[test]
+    fn checkout_is_required_only_when_product_metadata_requires_a_deposit() {
+        assert_eq!(required_deposit_cents(7_500, &serde_json::json!({})), None);
+        assert_eq!(
+            required_deposit_cents(
+                7_500,
+                &serde_json::json!({"requires_deposit": true, "deposit_amount_cents": 2_500}),
+            ),
+            Some(2_500),
+        );
+        assert_eq!(
+            required_deposit_cents(
+                7_500,
+                &serde_json::json!({"requires_deposit": true, "deposit_amount_cents": 20_000}),
+            ),
+            Some(7_500),
+        );
+    }
+
+    #[test]
+    fn booking_feed_item_contains_an_actionable_approval() {
+        let (context, action) = booking_feed_payloads(
+            "booking-1",
+            "service-1",
+            "2026-08-10T09:00:00Z",
+            "2026-08-10T10:00:00Z",
+        );
+        assert_eq!(context["booking_id"], "booking-1");
+        assert_eq!(action["action_type"], "approve_booking");
+        assert_eq!(action["feature_type"], "booking_approval");
+        assert_eq!(action["booking_id"], "booking-1");
+    }
+
+    #[test]
+    fn checkout_urls_are_restricted_to_stripe() {
+        assert!(
+            trusted_stripe_checkout_url("https://checkout.stripe.com/c/pay/cs_live_123").is_some()
+        );
+        assert!(trusted_stripe_checkout_url("javascript:alert(1)").is_none());
+        assert!(
+            trusted_stripe_checkout_url("https://checkout.stripe.com.attacker.test/pay").is_none()
+        );
+        assert!(trusted_stripe_checkout_url("https://user:pass@checkout.stripe.com/pay").is_none());
+    }
 }

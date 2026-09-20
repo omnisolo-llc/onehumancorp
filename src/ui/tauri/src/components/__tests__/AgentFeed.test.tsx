@@ -3,15 +3,16 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { AgentFeed } from '../AgentFeed';
+import type { AgentFeedCardProps } from '../AgentFeedCard';
 
 // Mock the child component
 vi.mock('../AgentFeedCard', () => {
     return {
-        AgentFeedCard: ({ draft, onApprove, onEdit }: any) => (
+        AgentFeedCard: ({ draft, onApprove, onEdit }: AgentFeedCardProps) => (
             <div data-testid={`feed-card-${draft.draft_id}`}>
                 <div data-testid={`draft-name-${draft.draft_id}`}>{draft.customer_name}</div>
                 <button onClick={() => onApprove(draft.draft_id)}>Approve {draft.draft_id}</button>
-                <button onClick={() => onEdit(draft.draft_id)}>Edit {draft.draft_id}</button>
+                <button onClick={() => onEdit(draft.draft_id, draft.response)}>Edit {draft.draft_id}</button>
             </div>
         )
     };
@@ -52,14 +53,14 @@ describe('AgentFeed', () => {
     });
 
     it('displays loading state initially', () => {
-        (global.fetch as any).mockImplementation(() => new Promise(() => {})); // Never resolves
+        vi.mocked(global.fetch, { partial: true }).mockImplementation(() => new Promise(() => {})); // Never resolves
 
         render(<AgentFeed />);
         expect(document.querySelector('.animate-pulse')).toBeDefined();
     });
 
     it('displays error state if fetch fails', async () => {
-        (global.fetch as any).mockRejectedValue(new Error('Network error'));
+        vi.mocked(global.fetch, { partial: true }).mockRejectedValue(new Error('Network error'));
 
         render(<AgentFeed />);
 
@@ -69,7 +70,7 @@ describe('AgentFeed', () => {
     });
 
     it('displays "No pending actions!" if feed is empty', async () => {
-        (global.fetch as any).mockResolvedValue({
+        vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
             ok: true,
             json: async () => []
         });
@@ -83,7 +84,7 @@ describe('AgentFeed', () => {
     });
 
     it('renders list of drafts', async () => {
-        (global.fetch as any).mockResolvedValue({
+        vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
             ok: true,
             json: async () => mockDrafts
         });
@@ -98,7 +99,7 @@ describe('AgentFeed', () => {
 
     it('removes draft from UI optimistically on successful approve', async () => {
         // Mock initial fetch
-        (global.fetch as any).mockResolvedValueOnce({
+        vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
             ok: true,
             json: async () => mockDrafts
         });
@@ -112,7 +113,7 @@ describe('AgentFeed', () => {
         });
 
         // Mock approve fetch
-        (global.fetch as any).mockResolvedValueOnce({
+        vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
             ok: true
         });
 
@@ -133,7 +134,7 @@ describe('AgentFeed', () => {
 
     it('does not remove draft if approve fails', async () => {
         // Mock initial fetch
-        (global.fetch as any).mockResolvedValueOnce({
+        vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
             ok: true,
             json: async () => mockDrafts
         });
@@ -146,7 +147,7 @@ describe('AgentFeed', () => {
         });
 
         // Mock approve fetch failing
-        (global.fetch as any).mockResolvedValueOnce({
+        vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
             ok: false
         });
 

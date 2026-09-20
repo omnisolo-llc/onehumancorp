@@ -176,14 +176,14 @@ async fn generate_draft_reply(
             }
         };
 
-        if let Ok(mems) = similar_memories {
-            if !mems.is_empty() {
-                enriched_context_summary = format!(
-                    "{} Past memories: {}",
-                    enriched_context_summary,
-                    mems.join("; ")
-                );
-            }
+        if let Ok(mems) = similar_memories
+            && !mems.is_empty()
+        {
+            enriched_context_summary = format!(
+                "{} Past memories: {}",
+                enriched_context_summary,
+                mems.join("; ")
+            );
         }
     }
 
@@ -252,28 +252,28 @@ pub async fn handle_unified_webhook(
     }
     let tenant_id = &payload.tenant_id;
 
-    if let Some(redis_client) = crate::get_redis_client() {
-        if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-            let lock_key = format!(
-                "ohc:lock:unified_inbox:{}:{}",
-                tenant_id, payload.identifier
-            );
-            let locked: redis::RedisResult<Option<String>> = redis::cmd("SET")
-                .arg(&lock_key)
-                .arg("1")
-                .arg("NX")
-                .arg("EX")
-                .arg(30)
-                .query_async(&mut conn)
-                .await;
+    if let Some(redis_client) = crate::get_redis_client()
+        && let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await
+    {
+        let lock_key = format!(
+            "ohc:lock:unified_inbox:{}:{}",
+            tenant_id, payload.identifier
+        );
+        let locked: redis::RedisResult<Option<String>> = redis::cmd("SET")
+            .arg(&lock_key)
+            .arg("1")
+            .arg("NX")
+            .arg("EX")
+            .arg(30)
+            .query_async(&mut conn)
+            .await;
 
-            if locked.is_err() || locked.unwrap().is_none() {
-                tracing::warn!(
-                    "Failed to acquire lock for tenant {} identifier {}",
-                    tenant_id,
-                    payload.identifier
-                );
-            }
+        if locked.is_err() || locked.unwrap().is_none() {
+            tracing::warn!(
+                "Failed to acquire lock for tenant {} identifier {}",
+                tenant_id,
+                payload.identifier
+            );
         }
     }
 
@@ -295,7 +295,7 @@ pub async fn handle_unified_webhook(
             .bind("customer_inquiry")
             .bind(serde_json::json!({"message": payload.message, "identifier": payload.identifier, "customer_id": customer_id}))
             .bind("PENDING")
-            .execute(&state.db.pool).await.map(|_| ()).map_err(|e| e),
+            .execute(&state.db.pool).await.map(|_| ()),
         crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
             .bind(&intent_id)
             .bind(tenant_id)
@@ -303,7 +303,7 @@ pub async fn handle_unified_webhook(
             .bind("customer_inquiry")
             .bind(serde_json::json!({"message": payload.message, "identifier": payload.identifier, "customer_id": customer_id}).to_string())
             .bind("PENDING")
-            .execute(sqlite_pool).await.map(|_| ()).map_err(|e| e),
+            .execute(sqlite_pool).await.map(|_| ()),
     };
     let thread_id = format!("thread-{}", Uuid::new_v4());
     let message_id = format!("msg-{}", Uuid::new_v4());
@@ -321,20 +321,20 @@ pub async fn handle_unified_webhook(
             .bind(&customer_id)
             .fetch_all(&state.db.pool).await;
 
-            if let Ok(rows) = recent_history {
-                if !rows.is_empty() {
-                    let mut history_str = String::from("Recent history: ");
-                    let history_items: Vec<String> = rows
-                        .into_iter()
-                        .map(|row| {
-                            let channel: String = row.get("channel");
-                            let created_at: String = row.try_get("created_at").unwrap_or_default();
-                            format!("Sent {} ({})", channel, created_at)
-                        })
-                        .collect();
-                    history_str.push_str(&history_items.join(", "));
-                    context_summary = history_str;
-                }
+            if let Ok(rows) = recent_history
+                && !rows.is_empty()
+            {
+                let mut history_str = String::from("Recent history: ");
+                let history_items: Vec<String> = rows
+                    .into_iter()
+                    .map(|row| {
+                        let channel: String = row.get("channel");
+                        let created_at: String = row.try_get("created_at").unwrap_or_default();
+                        format!("Sent {} ({})", channel, created_at)
+                    })
+                    .collect();
+                history_str.push_str(&history_items.join(", "));
+                context_summary = history_str;
             }
 
             let _ = sqlx::query("INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, 'open') ON CONFLICT DO NOTHING")
@@ -382,20 +382,20 @@ pub async fn handle_unified_webhook(
             .bind(&customer_id)
             .fetch_all(sqlite_pool).await;
 
-            if let Ok(rows) = recent_history {
-                if !rows.is_empty() {
-                    let mut history_str = String::from("Recent history: ");
-                    let history_items: Vec<String> = rows
-                        .into_iter()
-                        .map(|row| {
-                            let channel: String = row.get("channel");
-                            let created_at: String = row.try_get("created_at").unwrap_or_default();
-                            format!("Sent {} ({})", channel, created_at)
-                        })
-                        .collect();
-                    history_str.push_str(&history_items.join(", "));
-                    context_summary = history_str;
-                }
+            if let Ok(rows) = recent_history
+                && !rows.is_empty()
+            {
+                let mut history_str = String::from("Recent history: ");
+                let history_items: Vec<String> = rows
+                    .into_iter()
+                    .map(|row| {
+                        let channel: String = row.get("channel");
+                        let created_at: String = row.try_get("created_at").unwrap_or_default();
+                        format!("Sent {} ({})", channel, created_at)
+                    })
+                    .collect();
+                history_str.push_str(&history_items.join(", "));
+                context_summary = history_str;
             }
 
             let _ = sqlx::query("INSERT OR IGNORE INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES (?, ?, ?, ?, 'open')")
@@ -520,7 +520,7 @@ async fn fetch_unified_feed_items(
     match &state.db.store {
         crate::db::DbStore::Postgres => {
             let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
-                .bind(&tenant_id)
+                .bind(tenant_id)
                 .fetch_all(&state.db.pool).await;
             threads_res_mapped = res.map(|rows| {
                 rows.into_iter()
@@ -538,7 +538,7 @@ async fn fetch_unified_feed_items(
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
-                .bind(&tenant_id)
+                .bind(tenant_id)
                 .fetch_all(sqlite_pool).await;
             threads_res_mapped = res.map(|rows| {
                 rows.into_iter()

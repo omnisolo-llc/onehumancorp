@@ -444,16 +444,15 @@ impl HybridSyncDaemon {
         )
         .await;
 
-        if success_count > 0 {
-            if let Err(e) = ::server_telemetry::record_sync_escalation(
+        if success_count > 0
+            && let Err(e) = ::server_telemetry::record_sync_escalation(
                 &self.pg_pool,
                 success_count as f32,
                 ::server_telemetry::get_deployment_mode(),
             )
             .await
-            {
-                warn!("Failed to record sync escalation telemetry: {}", e);
-            }
+        {
+            warn!("Failed to record sync escalation telemetry: {}", e);
         }
 
         Ok(())
@@ -491,16 +490,16 @@ impl HybridSyncDaemon {
                 "[bug] Failed to insert dead letter for SQLite agent missions",
             );
         }
-        if let Ok(res) = sqlx::query(&sqlite_update).execute(&self.sqlite_pool).await {
-            if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck agent missions from SQLite",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck agent missions from SQLite",
-                );
-            }
+        if let Ok(res) = sqlx::query(&sqlite_update).execute(&self.sqlite_pool).await
+            && res.rows_affected() > 0
+        {
+            info!(
+                "Pruned {} stuck agent missions from SQLite",
+                res.rows_affected()
+            );
+            ::server_telemetry::record_error_signal(
+                "[cleanup] Pruned stuck agent missions from SQLite",
+            );
         }
 
         // PG
@@ -513,16 +512,16 @@ impl HybridSyncDaemon {
                 "[bug] Failed to insert dead letter for PostgreSQL agent missions",
             );
         }
-        if let Ok(res) = sqlx::query(&pg_update).execute(&self.pg_pool).await {
-            if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck agent missions from PostgreSQL",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck agent missions from PostgreSQL",
-                );
-            }
+        if let Ok(res) = sqlx::query(&pg_update).execute(&self.pg_pool).await
+            && res.rows_affected() > 0
+        {
+            info!(
+                "Pruned {} stuck agent missions from PostgreSQL",
+                res.rows_affected()
+            );
+            ::server_telemetry::record_error_signal(
+                "[cleanup] Pruned stuck agent missions from PostgreSQL",
+            );
         }
 
         Ok(())
@@ -588,16 +587,15 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&sqlite_running_update)
             .execute(&self.sqlite_pool)
             .await
+            && res.rows_affected() > 0
         {
-            if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck RUNNING jobs from SQLite ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck RUNNING jobs from SQLite ohc_job_queue",
-                );
-            }
+            info!(
+                "Pruned {} stuck RUNNING jobs from SQLite ohc_job_queue",
+                res.rows_affected()
+            );
+            ::server_telemetry::record_error_signal(
+                "[cleanup] Pruned stuck RUNNING jobs from SQLite ohc_job_queue",
+            );
         }
 
         if let Err(e) = sqlx::query(&sqlite_queued_insert)
@@ -612,16 +610,15 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&sqlite_queued_update)
             .execute(&self.sqlite_pool)
             .await
+            && res.rows_affected() > 0
         {
-            if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck QUEUED jobs from SQLite ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck QUEUED jobs from SQLite ohc_job_queue",
-                );
-            }
+            info!(
+                "Pruned {} stuck QUEUED jobs from SQLite ohc_job_queue",
+                res.rows_affected()
+            );
+            ::server_telemetry::record_error_signal(
+                "[cleanup] Pruned stuck QUEUED jobs from SQLite ohc_job_queue",
+            );
         }
 
         // PG queue
@@ -634,16 +631,16 @@ impl HybridSyncDaemon {
                 "[bug] Failed to insert dead letter for PostgreSQL RUNNING jobs",
             );
         }
-        if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
-            if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck RUNNING jobs from PostgreSQL ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck RUNNING jobs from PostgreSQL ohc_job_queue",
-                );
-            }
+        if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await
+            && res.rows_affected() > 0
+        {
+            info!(
+                "Pruned {} stuck RUNNING jobs from PostgreSQL ohc_job_queue",
+                res.rows_affected()
+            );
+            ::server_telemetry::record_error_signal(
+                "[cleanup] Pruned stuck RUNNING jobs from PostgreSQL ohc_job_queue",
+            );
         }
 
         if let Err(e) = sqlx::query(&pg_queued_insert).execute(&self.pg_pool).await {
@@ -655,16 +652,16 @@ impl HybridSyncDaemon {
                 "[bug] Failed to insert dead letter for PostgreSQL QUEUED jobs",
             );
         }
-        if let Ok(res) = sqlx::query(&pg_queued_update).execute(&self.pg_pool).await {
-            if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck QUEUED jobs from PostgreSQL ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck QUEUED jobs from PostgreSQL ohc_job_queue",
-                );
-            }
+        if let Ok(res) = sqlx::query(&pg_queued_update).execute(&self.pg_pool).await
+            && res.rows_affected() > 0
+        {
+            info!(
+                "Pruned {} stuck QUEUED jobs from PostgreSQL ohc_job_queue",
+                res.rows_affected()
+            );
+            ::server_telemetry::record_error_signal(
+                "[cleanup] Pruned stuck QUEUED jobs from PostgreSQL ohc_job_queue",
+            );
         }
 
         Ok(())

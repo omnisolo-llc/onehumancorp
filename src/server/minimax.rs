@@ -29,11 +29,11 @@ impl CircuitBreaker {
         let mut failures = self.failures.lock().unwrap();
         if *failures >= self.max_failures {
             let last_failure = self.last_failure.lock().unwrap();
-            if let Some(last) = *last_failure {
-                if last.elapsed() > self.reset_timeout {
-                    *failures = 0; // Reset failures so we can retry properly
-                    return true;
-                }
+            if let Some(last) = *last_failure
+                && last.elapsed() > self.reset_timeout
+            {
+                *failures = 0; // Reset failures so we can retry properly
+                return true;
             }
             return false;
         }
@@ -389,8 +389,7 @@ impl MinimaxClient {
                 let mock_json = r#"{"choices": [{"delta": {"content": "{\"business_name\": \"Generic Business\"}"}}]}"#;
                 let mock_response = format!("data: {}\n\ndata: [DONE]\n\n", mock_json);
                 for line in mock_response.lines() {
-                    if line.starts_with("data: ") {
-                        let json_str = &line[6..];
+                    if let Some(json_str) = line.strip_prefix("data: ") {
                         let _ = tx.send(Ok(json_str.to_string())).await;
                     }
                 }
@@ -430,19 +429,16 @@ impl MinimaxClient {
                                     // Note: lossy conversion might corrupt characters split across chunks.
                                     // Ideally use a stateful UTF-8 decoder.
                                     for line in text.lines() {
-                                        if line.starts_with("data: ") {
-                                            let json_str = &line[6..];
+                                        if let Some(json_str) = line.strip_prefix("data: ") {
                                             if json_str == "[DONE]" {
                                                 break;
                                             }
                                             if let Ok(val) =
                                                 serde_json::from_str::<serde_json::Value>(json_str)
-                                            {
-                                                if let Some(content) =
+                                                && let Some(content) =
                                                     val["choices"][0]["delta"]["content"].as_str()
-                                                {
-                                                    let _ = tx.send(Ok(content.to_string())).await;
-                                                }
+                                            {
+                                                let _ = tx.send(Ok(content.to_string())).await;
                                             }
                                         }
                                     }
@@ -523,14 +519,13 @@ impl MinimaxClient {
                         }
 
                         cb.record_success();
-                        if let Some(vectors) = result["vectors"].as_array() {
-                            if let Some(vector) = vectors.first() {
-                                if let Some(array) = vector.as_array() {
-                                    let f32_vec: Vec<f32> =
-                                        array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
-                                    return Ok(f32_vec);
-                                }
-                            }
+                        if let Some(vectors) = result["vectors"].as_array()
+                            && let Some(vector) = vectors.first()
+                            && let Some(array) = vector.as_array()
+                        {
+                            let f32_vec: Vec<f32> =
+                                array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
+                            return Ok(f32_vec);
                         }
                         return Err("invalid response format".to_string());
                     } else {
@@ -558,6 +553,9 @@ impl MinimaxClient {
     }
 }
 
+#[path = "local_generation.rs"]
+pub mod local_generation;
+
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
@@ -566,13 +564,30 @@ pub struct LocalLLMClient {
     deduplicator: std::sync::Arc<RequestDeduplicator>,
 }
 
+impl Default for LocalLLMClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LocalLLMClient {
+    /// Preserve observed quantities for callers that expose usage. The older
+    /// string-only API remains non-billable compatibility, not a zero-cost meter.
+    pub async fn reason_with_usage(
+        &self,
+        prompt: &str,
+        maximum_output: i32,
+    ) -> Result<local_generation::ObservedGeneration, String> {
+        local_generation::generate(&self.endpoint, &self.model, prompt, maximum_output).await
+    }
+
     pub fn new() -> Self {
         let endpoint = std::env::var("OMNISOLO_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
         let embed_endpoint = std::env::var("OMNISOLO_LOCAL_LLM_EMBED_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
-        let model = std::env::var("OMNISOLO_LOCAL_MODEL_NAME").unwrap_or_else(|_| "llama3".to_string());
+        let model =
+            std::env::var("OMNISOLO_LOCAL_MODEL_NAME").unwrap_or_else(|_| "llama3".to_string());
 
         LocalLLMClient {
             endpoint,

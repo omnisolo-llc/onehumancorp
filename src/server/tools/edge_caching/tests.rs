@@ -1,6 +1,5 @@
 #[cfg(test)]
-mod tests {
-    #[allow(unused_imports)]
+mod provider_contracts {
     use crate::ohc::orchestration::McpInvokeRequest;
     use crate::tools::edge_caching::server::EdgeCachingMcpServer;
 

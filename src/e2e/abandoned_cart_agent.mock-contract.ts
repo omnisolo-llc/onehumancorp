@@ -8,7 +8,7 @@ test.describe('Automated Cart Recovery Agent', () => {
 
     // 2. We trigger the server-side action for cart recovery because waiting 4 hours in an E2E test is impossible
     // In a real environment, this is triggered via PostgreSQL SKIP LOCKED on a schedule.
-    const triggerRes = await request.post('/api/v1/growth/campaign/send-cart', {
+    await request.post('/api/v1/growth/campaign/send-cart', {
         data: {
            customer_name: "Alice",
            cart_value: "$45.00"

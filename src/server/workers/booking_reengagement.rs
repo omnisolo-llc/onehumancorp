@@ -130,7 +130,7 @@ impl BookingReengagementWorker {
                             "#
                         )
                         .bind(&tenant_id)
-                        .bind(&customer_id)
+                        .bind(customer_id)
                         .fetch_one(&pool)
                         .await
                         .unwrap_or(Some(false))
@@ -149,7 +149,7 @@ impl BookingReengagementWorker {
                             "#
                         )
                         .bind(&tenant_id)
-                        .bind(&customer_id)
+                        .bind(customer_id)
                         .fetch_one(sqlite_pool)
                         .await
                         .unwrap_or(Some(false))
@@ -166,7 +166,7 @@ impl BookingReengagementWorker {
                         crate::db::DbStore::Postgres => sqlx::query_scalar::<_, String>(
                             "SELECT name FROM customers WHERE id = $1 AND tenant_id = $2",
                         )
-                        .bind(&customer_id)
+                        .bind(customer_id)
                         .bind(&tenant_id)
                         .fetch_optional(&pool)
                         .await
@@ -175,7 +175,7 @@ impl BookingReengagementWorker {
                         crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_scalar::<_, String>(
                             "SELECT name FROM customers WHERE id = ? AND tenant_id = ?",
                         )
-                        .bind(&customer_id)
+                        .bind(customer_id)
                         .bind(&tenant_id)
                         .fetch_optional(sqlite_pool)
                         .await

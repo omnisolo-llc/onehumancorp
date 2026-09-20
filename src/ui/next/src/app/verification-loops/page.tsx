@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
 
@@ -32,8 +33,8 @@ export default function VerificationLoopsPage() {
 
       const data = await response.json();
       setResult(data.result?.message || 'Verification passed successfully.');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }

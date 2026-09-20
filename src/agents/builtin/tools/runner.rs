@@ -344,10 +344,18 @@ pub mod mock {
     use std::collections::VecDeque;
     use std::sync::{Arc, Mutex};
 
+    pub type RecordedCommand = (String, Vec<String>);
+
     #[derive(Clone)]
     pub struct MockCommandRunner {
-        pub last_command: Arc<Mutex<Option<(String, Vec<String>)>>>,
+        pub last_command: Arc<Mutex<Option<RecordedCommand>>>,
         pub next_responses: Arc<Mutex<VecDeque<io::Result<Output>>>>,
+    }
+
+    impl Default for MockCommandRunner {
+        fn default() -> Self {
+            Self::new()
+        }
     }
 
     impl MockCommandRunner {

@@ -23,14 +23,14 @@ vi.mock('../components/ViralTrialExtensionWidget', () => ({
 describe('PricingPage', () => {
   const mockPush = vi.fn();
 
-  let originalWindowLocation: any;
+  let originalWindowLocation: Location;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as any).mockReturnValue({ push: mockPush });
+    vi.mocked(useRouter, { partial: true }).mockReturnValue({ push: mockPush });
     global.fetch = vi.fn();
 
-    (global.fetch as any).mockImplementation(async (url) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -42,12 +42,15 @@ describe('PricingPage', () => {
 
     // Mock window.location.href
     originalWindowLocation = window.location;
-    delete (window as any).location;
-    window.location = { ...originalWindowLocation, href: '' } as any;
+    Object.defineProperty(window, 'location', {
+      configurable: true, writable: true, value: { ...originalWindowLocation, href: '' },
+    });
   });
 
   afterEach(() => {
-    window.location = originalWindowLocation;
+    Object.defineProperty(window, 'location', {
+      configurable: true, writable: true, value: originalWindowLocation,
+    });
   });
 
   it('renders the pricing page', async () => {
@@ -63,7 +66,7 @@ describe('PricingPage', () => {
 
   it('initiates checkout session when upgrading to Starter', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -107,7 +110,7 @@ describe('PricingPage', () => {
   });
 
   it('handles upgrade errors gracefully', async () => {
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -168,7 +171,7 @@ describe('PricingPage', () => {
 
   it('initiates billing portal session for manage billing', async () => {
     const mockPortalUrl = 'https://billing.stripe.com/p/session/test_123';
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -211,7 +214,7 @@ describe('PricingPage', () => {
   it('renders loading state correctly', async () => {
     // Keep fetch promise pending to test loading state
     let resolveFetch;
-    (global.fetch as any).mockImplementation(() => new Promise((resolve) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(() => new Promise((resolve) => {
         resolveFetch = resolve;
     }));
 
@@ -225,7 +228,7 @@ describe('PricingPage', () => {
   });
 
   it('handles manage billing portal errors gracefully', async () => {
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -264,7 +267,7 @@ describe('PricingPage', () => {
   });
 
   it('renders business plan upgrade states', async () => {
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -278,9 +281,8 @@ describe('PricingPage', () => {
       render(<PricingPage />);
     });
 
-    let manageButton;
     await waitFor(() => {
-       manageButton = screen.getAllByText('Manage Plan')[0];
+       expect(screen.getAllByText('Manage Plan')[0]).toBeVisible();
     });
 
     // Check we get current plan status for Business
@@ -289,7 +291,7 @@ describe('PricingPage', () => {
 
   it('renders business plan handleUpgrade state', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -334,7 +336,7 @@ describe('PricingPage', () => {
 
   it('renders pro plan handleUpgrade state', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -378,7 +380,7 @@ describe('PricingPage', () => {
   });
 
   it('handles plan fetch errors gracefully', async () => {
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string) => {
       if (url === '/api/v1/billing/my-plan') {
          throw new Error('Network plan error');
       }
@@ -399,7 +401,7 @@ describe('PricingPage', () => {
   });
 
   it('handles manage billing portal not ok gracefully', async () => {
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -441,7 +443,7 @@ describe('PricingPage', () => {
   });
 
   it('handles upgrade not ok gracefully', async () => {
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -483,7 +485,7 @@ describe('PricingPage', () => {
   });
 
   it('updates the price when annual billing is toggled', async () => {
-    (global.fetch as any).mockImplementation(async (url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,

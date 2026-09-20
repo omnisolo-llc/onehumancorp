@@ -110,8 +110,25 @@ def assert_dependency_audit_blocks_required_check() -> None:
             assert (result.returncode == 0) == expected, (markdown, audit, result.stdout, result.stderr)
 
 
+def assert_every_required_lane_failure_blocks_acceptance() -> None:
+    import yaml
+    required = yaml.safe_load(WORKFLOW.read_text())["jobs"]["ci-required"]
+    step = required["steps"][0]
+    result_keys = [key for key in step["env"] if key.endswith("_RESULT")]
+    assert {"NATIVE_BUILD_RESULT", "NATIVE_NODE_RESULT", "NATIVE_IMAGES_RESULT", "POSTGRES_SECURITY_RESULT"} <= set(result_keys)
+    for key in result_keys:
+        for outcome in ("failure", "cancelled", "skipped", "unknown"):
+            environment = {name: "success" for name in step["env"]}
+            environment.update(EVENT_NAME="pull_request", MARKDOWN_ONLY="false")
+            environment[key] = outcome
+            result = subprocess.run(["bash", "--noprofile", "--norc", "-c", step["run"]],
+                                    env=environment, capture_output=True, text=True)
+            assert result.returncode != 0, (key, outcome, result.stdout, result.stderr)
+
+
 def main() -> None:
     assert_dependency_audit_blocks_required_check()
+    assert_every_required_lane_failure_blocks_acceptance()
     assert_bash_env_can_preempt_a_step()
     assert_real_yaml_parser_rejects_unquoted_colon_space()
     assert_parser_absence_fails_closed()
@@ -148,17 +165,17 @@ def main() -> None:
         ),
         ("AND NOT rolbypassrls", "OR rolbypassrls", "NOBYPASSRLS assertion"),
         ("current_setting('row_security') = 'on'", "true", "row_security assertion"),
-        ("cargo test -p server_auth multitenancy_isolation:: -- --nocapture", "cargo test -p server_auth", "exact suite command"),
+        ("cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture", "cargo test -p server_auth", "exact suite command"),
         ("POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}", "POSTGRES_SECURITY_RESULT: success", "required result propagation"),
         ('require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"', 'allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"', "non-markdown enforcement"),
         (
-            '        run: "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"',
-            "        run: |\n          # cargo test -p server_auth multitenancy_isolation:: -- --nocapture\n          true",
+            '        run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"',
+            "        run: |\n          # cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture\n          true",
             "commented suite command",
         ),
         (
-            '        run: "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"',
-            "        run: |\n          if false; then\n            cargo test -p server_auth multitenancy_isolation:: -- --nocapture\n          fi",
+            '        run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"',
+            "        run: |\n          if false; then\n            cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture\n          fi",
             "unreachable suite command",
         ),
         (

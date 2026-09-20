@@ -104,6 +104,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
             axum::routing::post(download_invoice_handler),
         )
         .route("/report-cost", axum::routing::post(report_cost_handler))
+        .merge(crate::api::usage_api::router())
         .with_state(hub)
 }
 
@@ -305,7 +306,7 @@ pub async fn create_checkout_session_handler(
     let quantity = validated_checkout_quantity(req.quantity)?;
     let requested_interval = validated_subscription_interval(req.subscription_interval.as_deref())?;
 
-    let mut amount_usd;
+    let mut amount_usd: f64;
     let item_name;
     let mut actual_interval: Option<String> = None;
 
@@ -321,7 +322,7 @@ pub async fn create_checkout_session_handler(
             let interval = requested_interval;
             actual_interval = Some(interval.to_string());
             if interval == "year" {
-                amount_usd = (amount_usd as f64 * 0.8 * 12.0).round();
+                amount_usd = (amount_usd * 0.8 * 12.0).round();
             }
         }
     } else if let Some(product_id) = &req.product_id {
@@ -367,7 +368,7 @@ pub async fn create_checkout_session_handler(
                 actual_interval = Some(interval);
 
                 if discount_percentage > 0 {
-                    amount_usd = amount_usd * (1.0 - (discount_percentage as f64 / 100.0));
+                    amount_usd *= 1.0 - (discount_percentage as f64 / 100.0);
                 }
             } else if is_subscribable {
                 // Fallback to legacy fields on products table
@@ -375,8 +376,7 @@ pub async fn create_checkout_session_handler(
                     validated_subscription_interval(subscription_frequency.as_deref())?.to_string(),
                 );
                 if subscription_discount_percent > 0 {
-                    amount_usd =
-                        amount_usd * (1.0 - (subscription_discount_percent as f64 / 100.0));
+                    amount_usd *= 1.0 - (subscription_discount_percent as f64 / 100.0);
                 }
             } else {
                 actual_interval = Some(requested_interval.to_string());
@@ -619,27 +619,26 @@ pub async fn my_plan_handler(
     let mut soft_limit_reached = false;
     let mut user_message = None;
 
-    if let Some(limit) = ai_limit {
-        if ai_used as i32 >= limit {
-            soft_limit_reached = true;
-            user_message = Some(format!(
-                "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
-                plan_name, limit
-            ));
-        }
+    if let Some(limit) = ai_limit
+        && ai_used as i32 >= limit
+    {
+        soft_limit_reached = true;
+        user_message = Some(format!(
+            "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
+            plan_name, limit
+        ));
     }
 
-    if !soft_limit_reached {
-        if let Some(limit) = storage_limit {
-            if storage_used_bytes >= limit {
-                soft_limit_reached = true;
-                let limit_mb = limit / (1024 * 1024);
-                user_message = Some(format!(
-                    "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
-                    plan_name, limit_mb
-                ));
-            }
-        }
+    if !soft_limit_reached
+        && let Some(limit) = storage_limit
+        && storage_used_bytes >= limit
+    {
+        soft_limit_reached = true;
+        let limit_mb = limit / (1024 * 1024);
+        user_message = Some(format!(
+            "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
+            plan_name, limit_mb
+        ));
     }
 
     let resp = MyPlanResponse {
@@ -927,10 +926,12 @@ pub async fn department_tier_usage_for_tenant(
     }
 
     let mut usage_by_key = HashMap::new();
-    for res in futures::future::join_all(futures).await {
-        if let Ok((key, used)) = res {
-            usage_by_key.insert(key, used);
-        }
+    for (key, used) in futures::future::join_all(futures)
+        .await
+        .into_iter()
+        .flatten()
+    {
+        usage_by_key.insert(key, used);
     }
 
     let resp =
@@ -953,21 +954,28 @@ async fn load_department_records(
         return Ok(Vec::new());
     }
 
-    let mut tx = match tokio::time::timeout(std::time::Duration::from_millis(500), pool.begin()).await {
-        Ok(Ok(tx)) => tx,
-        Ok(Err(e)) => {
-            tracing::warn!("Failed to begin transaction in load_department_records: {}", e);
-            return Ok(Vec::new());
-        }
-        Err(_) => {
-            tracing::warn!("Timed out connecting to DB in load_department_records");
-            return Ok(Vec::new());
-        }
-    };
+    let mut tx =
+        match tokio::time::timeout(std::time::Duration::from_millis(500), pool.begin()).await {
+            Ok(Ok(tx)) => tx,
+            Ok(Err(e)) => {
+                tracing::warn!(
+                    "Failed to begin transaction in load_department_records: {}",
+                    e
+                );
+                return Ok(Vec::new());
+            }
+            Err(_) => {
+                tracing::warn!("Timed out connecting to DB in load_department_records");
+                return Ok(Vec::new());
+            }
+        };
 
     let set_context_res = ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await;
     if let Err(e) = set_context_res {
-        tracing::warn!("Failed to set org context in load_department_records: {}", e);
+        tracing::warn!(
+            "Failed to set org context in load_department_records: {}",
+            e
+        );
         return Ok(Vec::new());
     }
 
@@ -1070,6 +1078,50 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
         ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
         ::server_pricing::rate_limit::PlanTier::Business => "Business",
     }
+}
+
+pub async fn download_invoice_handler(
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
+        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
+        Some(_) => "default".to_string(),
+        None => return Err(axum::http::StatusCode::UNAUTHORIZED),
+    };
+
+    // We fetch a real invoice using the exact customer id or fallback safely
+    // Note: Since the DB doesn't have a `stripe_customer_id` column, we must look up the customer
+    // or use a stable generated value representing the tenant in Stripe.
+    let customer_id = format!("cus_{}", tenant_id);
+
+    if let Some(client) = &hub.tracker().stripe_client {
+        match client.list_invoices(&customer_id).await {
+            Ok(invoices) => {
+                if let Some(latest) = invoices.first()
+                    && let Some(pdf_url) = &latest.invoice_pdf
+                {
+                    return Ok(axum::Json(serde_json::json!({
+                        "success": true,
+                        "url": pdf_url,
+                        "message": "Invoice download is ready for your current billing period."
+                    })));
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch invoices from Stripe: {}", e); // pii-safe
+            }
+        }
+    }
+
+    // Fallback if Stripe config is missing or no invoices found
+    Ok(axum::Json(serde_json::json!({
+        "success": true,
+        "message": "Invoice download is ready for your current billing period."
+    })))
 }
 
 #[cfg(test)]
@@ -1280,48 +1332,4 @@ mod department_tier_usage_tests {
         assert_eq!(operations.actions_used, 7);
         assert_eq!(operations.usage_percent, Some(35.0));
     }
-}
-
-pub async fn download_invoice_handler(
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = match request
-        .extensions()
-        .get::<::server_auth::orchestration::AuthInfo>()
-    {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return Err(axum::http::StatusCode::UNAUTHORIZED),
-    };
-
-    // We fetch a real invoice using the exact customer id or fallback safely
-    // Note: Since the DB doesn't have a `stripe_customer_id` column, we must look up the customer
-    // or use a stable generated value representing the tenant in Stripe.
-    let customer_id = format!("cus_{}", tenant_id);
-
-    if let Some(client) = &hub.tracker().stripe_client {
-        match client.list_invoices(&customer_id).await {
-            Ok(invoices) => {
-                if let Some(latest) = invoices.first() {
-                    if let Some(pdf_url) = &latest.invoice_pdf {
-                        return Ok(axum::Json(serde_json::json!({
-                            "success": true,
-                            "url": pdf_url,
-                            "message": "Invoice download is ready for your current billing period."
-                        })));
-                    }
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to fetch invoices from Stripe: {}", e); // pii-safe
-            }
-        }
-    }
-
-    // Fallback if Stripe config is missing or no invoices found
-    Ok(axum::Json(serde_json::json!({
-        "success": true,
-        "message": "Invoice download is ready for your current billing period."
-    })))
 }

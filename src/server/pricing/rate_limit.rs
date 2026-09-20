@@ -1029,176 +1029,176 @@ mod tests {
 
     #[tokio::test]
     async fn test_tier_cache_hit() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-cache-hit";
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-cache-hit";
 
-                // Clear any existing tier in redis
-                let mut conn = limiter.get_connection().await.unwrap();
-                let redis_key = format!("tenant:{}:tier", tenant_id);
-                let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
-                    .await
-                    .unwrap_or(());
+            // Clear any existing tier in redis
+            let mut conn = limiter.get_connection().await.unwrap();
+            let redis_key = format!("tenant:{}:tier", tenant_id);
+            let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
+                .await
+                .unwrap_or(());
 
-                // Fetch once to populate cache (fallback to Free)
-                let tier1 = limiter.get_tenant_tier(tenant_id).await.unwrap();
-                assert_eq!(tier1, PlanTier::Free);
+            // Fetch once to populate cache (fallback to Free)
+            let tier1 = limiter.get_tenant_tier(tenant_id).await.unwrap();
+            assert_eq!(tier1, PlanTier::Free);
 
-                // Now modify redis directly
-                let _: () = redis::AsyncCommands::set(&mut conn, &redis_key, "Starter")
-                    .await
-                    .unwrap_or(());
+            // Now modify redis directly
+            let _: () = redis::AsyncCommands::set(&mut conn, &redis_key, "Starter")
+                .await
+                .unwrap_or(());
 
-                // Fetch again, should still be Free because of memory cache
-                let tier2 = limiter.get_tenant_tier(tenant_id).await.unwrap();
-                assert_eq!(tier2, PlanTier::Free);
-            }
+            // Fetch again, should still be Free because of memory cache
+            let tier2 = limiter.get_tenant_tier(tenant_id).await.unwrap();
+            assert_eq!(tier2, PlanTier::Free);
         }
     }
 
     #[tokio::test]
     async fn test_tier_cache_expiration() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-cache-exp";
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-cache-exp";
 
-                // Clear any existing tier in redis
-                let mut conn = limiter.get_connection().await.unwrap();
-                let redis_key = format!("tenant:{}:tier", tenant_id);
-                let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
-                    .await
-                    .unwrap_or(());
+            // Clear any existing tier in redis
+            let mut conn = limiter.get_connection().await.unwrap();
+            let redis_key = format!("tenant:{}:tier", tenant_id);
+            let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
+                .await
+                .unwrap_or(());
 
-                // Insert into cache manually with expired time
-                limiter.tier_cache.insert(
-                    tenant_id.to_string(),
-                    (
-                        PlanTier::Business,
-                        std::time::Instant::now() - std::time::Duration::from_secs(400),
-                    ),
-                );
+            // Insert into cache manually with expired time
+            limiter.tier_cache.insert(
+                tenant_id.to_string(),
+                (
+                    PlanTier::Business,
+                    std::time::Instant::now() - std::time::Duration::from_secs(400),
+                ),
+            );
 
-                // Fetch should bypass expired cache, read from redis (which is None -> Free)
-                let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
-                assert_eq!(tier, PlanTier::Free);
-            }
+            // Fetch should bypass expired cache, read from redis (which is None -> Free)
+            let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
+            assert_eq!(tier, PlanTier::Free);
         }
     }
 
     #[tokio::test]
     async fn test_tier_cache_invalidation_on_set() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-cache-inv";
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-cache-inv";
 
-                let _ = limiter.set_tenant_tier(tenant_id, PlanTier::Starter).await;
+            let _ = limiter.set_tenant_tier(tenant_id, PlanTier::Starter).await;
 
-                // Should hit cache
-                let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
-                assert_eq!(tier, PlanTier::Starter);
+            // Should hit cache
+            let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
+            assert_eq!(tier, PlanTier::Starter);
 
-                // Change via set_tenant_tier, which updates cache
-                let _ = limiter.set_tenant_tier(tenant_id, PlanTier::Pro).await;
+            // Change via set_tenant_tier, which updates cache
+            let _ = limiter.set_tenant_tier(tenant_id, PlanTier::Pro).await;
 
-                let new_tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
-                assert_eq!(new_tier, PlanTier::Pro);
-            }
+            let new_tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
+            assert_eq!(new_tier, PlanTier::Pro);
         }
     }
 
     #[tokio::test]
     async fn test_get_tenant_tier_db_fallback_cached() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-cache-db";
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-cache-db";
 
-                let mut conn = limiter.get_connection().await.unwrap();
-                let redis_key = format!("tenant:{}:tier", tenant_id);
-                let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
-                    .await
-                    .unwrap_or(());
+            let mut conn = limiter.get_connection().await.unwrap();
+            let redis_key = format!("tenant:{}:tier", tenant_id);
+            let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
+                .await
+                .unwrap_or(());
 
-                // Assume no db_pool, tier defaults to Free
-                let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
-                assert_eq!(tier, PlanTier::Free);
+            // Assume no db_pool, tier defaults to Free
+            let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
+            assert_eq!(tier, PlanTier::Free);
 
-                // Assert it's cached now
-                assert!(limiter.tier_cache.contains_key(tenant_id));
-            }
+            // Assert it's cached now
+            assert!(limiter.tier_cache.contains_key(tenant_id));
         }
     }
 
     #[tokio::test]
     async fn test_tier_cache_concurrency_safe() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
-                let tenant_id = "test-tenant-cache-conc";
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
+            let tenant_id = "test-tenant-cache-conc";
 
-                let mut handles = vec![];
-                for _ in 0..10 {
-                    let lim = limiter.clone();
-                    handles.push(tokio::spawn(async move {
-                        let _ = lim.get_tenant_tier(tenant_id).await;
-                    }));
-                }
-
-                for h in handles {
-                    let _ = h.await;
-                }
-
-                // Ensure only one cached entry
-                let entry = limiter.tier_cache.get(tenant_id);
-                assert!(entry.is_some());
-                assert_eq!(entry.unwrap().0, PlanTier::Free);
+            let mut handles = vec![];
+            for _ in 0..10 {
+                let lim = limiter.clone();
+                handles.push(tokio::spawn(async move {
+                    let _ = lim.get_tenant_tier(tenant_id).await;
+                }));
             }
+
+            for h in handles {
+                let _ = h.await;
+            }
+
+            // Ensure only one cached entry
+            let entry = limiter.tier_cache.get(tenant_id);
+            assert!(entry.is_some());
+            assert_eq!(entry.unwrap().0, PlanTier::Free);
         }
     }
 
     #[tokio::test]
     async fn test_get_tenant_storage_used_negative() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-storage-negative";
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-storage-negative";
 
-                let mut conn = limiter.get_connection().await.unwrap();
-                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+            let mut conn = limiter.get_connection().await.unwrap();
+            let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
-                // Set negative storage manually
-                let _: () = redis::AsyncCommands::set(&mut conn, &storage_key, -100)
-                    .await
-                    .unwrap_or(());
+            // Set negative storage manually
+            let _: () = redis::AsyncCommands::set(&mut conn, &storage_key, -100)
+                .await
+                .unwrap_or(());
 
-                // Getting storage used should fix the negative value to 0
-                let used = limiter.get_tenant_storage_used(tenant_id).await.unwrap();
-                assert_eq!(used, 0);
-            }
+            // Getting storage used should fix the negative value to 0
+            let used = limiter.get_tenant_storage_used(tenant_id).await.unwrap();
+            assert_eq!(used, 0);
         }
     }
 
     #[tokio::test]
     async fn test_record_token_usage_negative_or_zero() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-tokens-neg";
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-tokens-neg";
 
-                // record 0 tokens
-                let res = limiter.record_token_usage(tenant_id, "gpt-4o", 0).await;
-                assert!(res.is_ok());
+            // record 0 tokens
+            let res = limiter.record_token_usage(tenant_id, "gpt-4o", 0).await;
+            assert!(res.is_ok());
 
-                // record negative tokens
-                let res = limiter.record_token_usage(tenant_id, "gpt-4o", -10).await;
-                assert!(res.is_ok());
+            // record negative tokens
+            let res = limiter.record_token_usage(tenant_id, "gpt-4o", -10).await;
+            assert!(res.is_ok());
 
-                let usage = limiter.get_token_usage(tenant_id).await.unwrap();
-                assert_eq!(usage, 0);
-            }
+            let usage = limiter.get_token_usage(tenant_id).await.unwrap();
+            assert_eq!(usage, 0);
         }
     }
 }

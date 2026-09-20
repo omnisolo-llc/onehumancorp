@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from '../fixtures';
+import '../fixtures';
 
 test.describe('Agent Activity Dashboard', () => {
   test('displays active operations correctly', async ({ page }) => {

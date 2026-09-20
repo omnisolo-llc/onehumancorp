@@ -1,5 +1,7 @@
 'use client';
 
+import { errorMessage } from '@/lib/errors';
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '../../components/AppShell';
@@ -42,8 +44,8 @@ export default function ProposalReviewPage() {
         if (!res.ok) throw new Error('Failed to fetch proposal');
         const json = await res.json();
         setData(json);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(errorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -61,8 +63,8 @@ export default function ProposalReviewPage() {
       if (updated.proposal && updated.proposal.checkout_url) {
         alert('Proposal Approved! Stripe Payment Link generated and invoice created.');
       }
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(errorMessage(err));
     } finally {
       setApproving(false);
     }

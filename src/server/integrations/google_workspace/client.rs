@@ -498,7 +498,7 @@ fn rfc2822_date_now() -> String {
     let day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     let mut m = 0u32;
-    let mut d = remaining as u32;
+    let mut d = remaining;
     while m < 12 && d >= month_days[m as usize] {
         d -= month_days[m as usize];
         m += 1;
@@ -523,12 +523,12 @@ fn rfc2822_date_now() -> String {
 }
 
 fn is_leap(y: u32) -> bool {
-    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+    (y.is_multiple_of(4) && !y.is_multiple_of(100)) || y.is_multiple_of(400)
 }
 
 fn base64_encode(data: &[u8]) -> String {
     const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    let mut result = Vec::with_capacity((data.len() + 2) / 3 * 4);
+    let mut result = Vec::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as u32;
         let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
@@ -570,26 +570,25 @@ mod tests {
                 assert!(read > 0, "client closed connection before sending request");
                 request.extend_from_slice(&buffer[..read]);
 
-                if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
-                    {
-                        header_end = Some(index + 4);
-                        let headers = String::from_utf8_lossy(&request[..index]);
-                        content_length = headers
-                            .lines()
-                            .find_map(|line| {
-                                line.strip_prefix("content-length: ")
-                                    .or_else(|| line.strip_prefix("Content-Length: "))
-                            })
-                            .and_then(|value| value.trim().parse::<usize>().ok())
-                            .unwrap_or(0);
-                    }
+                if header_end.is_none()
+                    && let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                {
+                    header_end = Some(index + 4);
+                    let headers = String::from_utf8_lossy(&request[..index]);
+                    content_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            line.strip_prefix("content-length: ")
+                                .or_else(|| line.strip_prefix("Content-Length: "))
+                        })
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
                 }
 
-                if let Some(body_start) = header_end {
-                    if request.len() >= body_start + content_length {
-                        break;
-                    }
+                if let Some(body_start) = header_end
+                    && request.len() >= body_start + content_length
+                {
+                    break;
                 }
             }
 

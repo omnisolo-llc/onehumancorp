@@ -478,27 +478,22 @@ async fn execute_action(
         if order.id == id && order.organization_id == tenant_id {
             found = true;
             match payload.action.as_str() {
-                "print_label" => {
-                    if order.fulfillment_mode == "Shipping" {
-                        order.status = "Shipped".to_string();
-                    }
+                "print_label" if order.fulfillment_mode == "Shipping" => {
+                    order.status = "Shipped".to_string();
                 }
-                "mark_ready" => {
-                    if order.fulfillment_mode == "LocalDelivery"
-                        || order.fulfillment_mode == "Pickup"
-                    {
-                        order.status = "ReadyForPickup".to_string();
-                    }
+                "mark_ready"
+                    if (order.fulfillment_mode == "LocalDelivery"
+                        || order.fulfillment_mode == "Pickup") =>
+                {
+                    order.status = "ReadyForPickup".to_string();
                 }
-                "request_driver" => {
-                    if order.fulfillment_mode == "LocalDelivery" {
-                        order.status = "DriverRequested".to_string();
-                    }
+                "request_driver" if order.fulfillment_mode == "LocalDelivery" => {
+                    order.status = "DriverRequested".to_string();
                 }
-                "hand_off" => {
-                    if order.status == "ReadyForPickup" || order.status == "DriverRequested" {
-                        order.status = "Delivered".to_string();
-                    }
+                "hand_off"
+                    if (order.status == "ReadyForPickup" || order.status == "DriverRequested") =>
+                {
+                    order.status = "Delivered".to_string();
                 }
                 _ => {}
             }

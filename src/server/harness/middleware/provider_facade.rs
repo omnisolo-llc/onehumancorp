@@ -15,6 +15,8 @@ use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use super::types::ResolvedModelSelection;
+use super::usage_meter::{RequestMeter, UsageCapture, UsageMeterSettings};
+use std::sync::{Arc, Mutex};
 
 const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -29,6 +31,7 @@ struct ProviderFacadeState {
     revoked: watch::Receiver<bool>,
     inference_allowed: bool,
     token: String,
+    meter: Option<Arc<RequestMeter>>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -38,6 +41,7 @@ pub struct ProviderFacadeConfig {
     pub selection: ResolvedModelSelection,
     pub request_timeout: Duration,
     pub inference_allowed: bool,
+    pub metering: Option<UsageMeterSettings>,
 }
 
 impl ProviderFacadeConfig {
@@ -52,6 +56,7 @@ impl ProviderFacadeConfig {
             selection,
             request_timeout: DEFAULT_REQUEST_TIMEOUT,
             inference_allowed: true,
+            metering: None,
         }
     }
 
@@ -184,6 +189,14 @@ impl ProviderFacade {
             .map_err(|error| {
                 ProviderFacadeError::Server(redact(&error.to_string(), &config.upstream_api_key))
             })?;
+        let meter = match &config.metering {
+            Some(settings) if config.inference_allowed => {
+                Some(settings.connect().await.map_err(|error| {
+                    ProviderFacadeError::InvalidConfiguration(error.to_string())
+                })?)
+            }
+            _ => None,
+        };
         let token = Uuid::new_v4().to_string();
         let listener = TcpListener::bind("127.0.0.1:0")
             .await
@@ -208,6 +221,7 @@ impl ProviderFacade {
             revoked,
             inference_allowed: config.inference_allowed,
             token,
+            meter,
         };
         let app = Router::new()
             .route("/v1/models", get(models))
@@ -344,11 +358,85 @@ async fn forward(
     path: &str,
     body: Option<Bytes>,
 ) -> Response {
+    let upstream_api_key = if let Some(meter) = state
+        .meter
+        .as_ref()
+        .filter(|meter| meter.scope.payer == super::usage_ledger::PayerMode::ByokApi)
+    {
+        // This supported BYOK route uses a verified OpenAI API key. Never relay
+        // a consumer login or send customer credentials to an arbitrary base URL.
+        if state.upstream_base_url.scheme() != "https"
+            || state.upstream_base_url.host_str() != Some("api.openai.com")
+        {
+            return error_response(
+                StatusCode::FORBIDDEN,
+                "The BYOK credential is bound to its verified provider origin",
+            );
+        }
+        let vault = match super::connection_vault::ConnectionVault::from_environment(
+            meter.ledger.clone(),
+        ) {
+            Ok(vault) => vault,
+            Err(_) => {
+                return error_response(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Connection vault unavailable",
+                );
+            }
+        };
+        match vault.read_key(&meter.scope.tenant_id, "openai_api").await {
+            Ok(key) => key.to_string(),
+            Err(_) => {
+                return error_response(
+                    StatusCode::FORBIDDEN,
+                    "Tenant API connection is absent or revoked",
+                );
+            }
+        }
+    } else {
+        state.upstream_api_key.clone()
+    };
+    let request_id = Uuid::new_v4().to_string();
+    let meter = if method == reqwest::Method::POST {
+        state.meter.clone()
+    } else {
+        None
+    };
+    if *state.revoked.borrow() {
+        return error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "provider facade route revoked",
+        );
+    }
+    if let Some(meter) = &meter {
+        let Some(payload) = body.as_ref() else {
+            return error_response(StatusCode::BAD_REQUEST, "metered inference requires a body");
+        };
+        if let Err(error) = meter.admit(&request_id, payload).await {
+            let status = if error == super::usage_ledger::LedgerError::Limit {
+                StatusCode::TOO_MANY_REQUESTS
+            } else {
+                StatusCode::SERVICE_UNAVAILABLE
+            };
+            return error_response(status, &error.to_string());
+        }
+        if let Err(error) = meter.dispatched(&request_id).await {
+            let _ = meter
+                .ledger
+                .cancel_before_dispatch(&meter.scope.tenant_id, &request_id)
+                .await;
+            return error_response(StatusCode::SERVICE_UNAVAILABLE, &error.to_string());
+        }
+    }
     let url = upstream_url(&state.upstream_base_url, path);
-    let mut request = state.client.request(method, url).header(
-        reqwest::header::AUTHORIZATION,
-        format!("Bearer {}", state.upstream_api_key),
-    );
+    let mut request = state
+        .client
+        .request(method, url)
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", upstream_api_key),
+        )
+        .header("Idempotency-Key", &request_id);
     if let Some(body) = body {
         request = request
             .header(reqwest::header::CONTENT_TYPE, "application/json")
@@ -369,7 +457,7 @@ async fn forward(
                 } else {
                     StatusCode::BAD_GATEWAY
                 },
-                &redact(&error.to_string(), &state.upstream_api_key),
+                &redact(&error.to_string(), &upstream_api_key),
             );
         }
     };
@@ -387,17 +475,45 @@ async fn forward(
             }
             body = response.bytes() => body.unwrap_or_default(),
         };
-        let body = redact(&String::from_utf8_lossy(&body), &state.upstream_api_key);
+        let body = redact(&String::from_utf8_lossy(&body), &upstream_api_key);
         return response_with_body(status, content_type.as_ref(), body.into_bytes());
     }
-    let secret = state.upstream_api_key.clone();
+    let secret = upstream_api_key;
     let errors_secret = secret.clone();
+    let capture = Arc::new(Mutex::new(UsageCapture::default()));
+    if let Some(id) = response
+        .headers()
+        .get("x-request-id")
+        .and_then(|value| value.to_str().ok())
+    {
+        capture.lock().expect("capture mutex").provider_request_id = Some(id.to_owned());
+    }
+    let collecting = capture.clone();
     let stream = response.bytes_stream().map(move |chunk| {
+        match &chunk {
+            Ok(bytes) => collecting.lock().expect("capture mutex").push(bytes),
+            Err(_) => collecting.lock().expect("capture mutex").invalidate(),
+        }
         chunk.map_err(|error| std::io::Error::other(redact(&error.to_string(), &errors_secret)))
     });
-    let stream = redact_success_stream(stream, secret)
+    let finished_request = request_id.clone();
+    let settlement = futures_util::stream::once(async move {
+        if let Some(meter) = meter {
+            let capture = std::mem::take(&mut *capture.lock().expect("capture mutex"));
+            if let Err(error) = meter.finish(&finished_request, capture).await {
+                tracing::warn!(usage_event = %finished_request, reason = %error, "Provider usage requires reconciliation; reservation retained");
+            }
+        }
+        Ok::<Bytes, std::io::Error>(Bytes::new())
+    });
+    // Dropped/cancelled streams retain their durable in-flight reservation.
+    let stream = redact_success_stream(stream.chain(settlement), secret)
         .take_until(wait_for_revocation(state.revoked.clone()));
     let mut output = Response::new(Body::from_stream(stream));
+    output.headers_mut().insert(
+        "x-omnisolo-usage-id",
+        HeaderValue::from_str(&request_id).expect("UUID header"),
+    );
     *output.status_mut() = status;
     if let Some(content_type) = content_type
         && let Ok(content_type) = HeaderValue::from_bytes(content_type.as_bytes())

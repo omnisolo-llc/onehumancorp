@@ -49,7 +49,7 @@ pub struct DraftAgentRequest {
 
 const GET_PROPOSAL_SQL: &str = "SELECT * FROM proposals WHERE id = $1 AND tenant_id = $2";
 const GET_LINE_ITEMS_SQL: &str = "SELECT pli.* FROM proposal_line_items pli JOIN proposals p ON p.id = pli.proposal_id WHERE pli.proposal_id = $1 AND p.tenant_id = $2";
-const APPROVE_PROPOSAL_SQL: &str = "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING *";
+const APPROVE_PROPOSAL_SQL: &str = "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND status = 'DRAFT' AND total_amount_cents > 0 RETURNING *";
 
 fn authenticated_tenant(claims: &::server_common::Claims) -> Result<&str, StatusCode> {
     claims
@@ -66,7 +66,8 @@ pub struct ProposalResponse {
     pub line_items: Vec<ProposalLineItem>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct LineItemRequest {
     pub description: String,
     pub unit_price_cents: i64,
@@ -98,20 +99,28 @@ impl ResearcherLlmClient for AdapterLlm {
             prompt.push_str(&msg.content);
         }
 
-        let is_test_mode = cfg!(test);
-
-        let response_text = if is_test_mode {
-            r#"[{"description": "AI Proposal Design", "unit_price_cents": 25000, "quantity": 1, "is_optional": false}]"#.to_string()
-        } else {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&prompt)
-                .await?
-        };
-
+        let observed = crate::minimax::LocalLLMClient::new()
+            .reason_with_usage(&prompt, req.max_tokens)
+            .await?;
+        let counts = observed
+            .counts
+            .ok_or("Local provider omitted usage; draft accounting requires reconciliation")?;
+        let input_tokens =
+            i32::try_from(counts.input).map_err(|_| "Local input usage exceeds supported range")?;
+        let output_tokens = i32::try_from(counts.output)
+            .map_err(|_| "Local output usage exceeds supported range")?;
+        let cache_read_input_tokens = i32::try_from(counts.cached_input)
+            .map_err(|_| "Local cache usage exceeds supported range")?;
         Ok(ChatResponse {
-            message: Message::assistant(response_text),
-            usage: Usage::default(),
-            stop_reason: "stop".to_string(),
+            message: Message::assistant(observed.text),
+            usage: Usage {
+                input_tokens,
+                output_tokens,
+                cache_read_input_tokens,
+                cache_creation_input_tokens: 0,
+            },
+            stop_reason: observed.stop_reason,
+            // Ollama does not provide an OpenAI-style response id. Never invent one.
             response_id: None,
         })
     }
@@ -235,20 +244,23 @@ async fn draft_agent(
     let line_items: Vec<LineItemRequest> = match serde_json::from_str(json_str) {
         Ok(items) => items,
         Err(e) => {
-            tracing::error!(
-                "Failed to parse LLM JSON output: {}. Output was: {}",
-                e,
-                json_str
-            );
+            tracing::error!("Failed to parse proposal model output: {}", e);
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
 
-    let total_amount_cents = line_items
-        .iter()
-        .map(|li| li.unit_price_cents * li.quantity as i64)
-        .sum::<i64>();
-    let required_deposit_cents = total_amount_cents / 3;
+    let total_amount_cents = match checked_proposal_total(&line_items) {
+        Ok(total) => total,
+        Err(message) => {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({"error": message})),
+            )
+                .into_response();
+        }
+    };
+    // A model-generated draft cannot invent the owner's deposit policy.
+    let required_deposit_cents = 0;
 
     let proposal_id = Uuid::new_v4().to_string();
     let mut tx = match pool.begin().await {
@@ -355,6 +367,13 @@ async fn approve_proposal(
     Extension(claims): Extension<::server_common::Claims>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return StatusCode::FORBIDDEN.into_response();
+    }
     let tenant_id = match authenticated_tenant(&claims) {
         Ok(tenant_id) => tenant_id.to_string(),
         Err(status) => return status.into_response(),
@@ -367,6 +386,12 @@ async fn approve_proposal(
         }
     };
 
+    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+        .await
+        .is_err()
+    {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
     let proposal = match sqlx::query_as::<_, Proposal>(APPROVE_PROPOSAL_SQL)
         .bind(&id)
         .bind(&tenant_id)
@@ -394,25 +419,62 @@ async fn approve_proposal(
         }
     };
 
+    let priced_items: Vec<LineItemRequest> = line_items
+        .iter()
+        .map(|item| LineItemRequest {
+            description: item.description.clone(),
+            unit_price_cents: item.unit_price_cents,
+            quantity: item.quantity,
+            is_optional: item.is_optional,
+        })
+        .collect();
+    if checked_proposal_total(&priced_items).ok() != Some(proposal.total_amount_cents)
+        || proposal.required_deposit_cents < 0
+        || proposal.required_deposit_cents > proposal.total_amount_cents
+    {
+        return StatusCode::UNPROCESSABLE_ENTITY.into_response();
+    }
     let amount_usd = (proposal.total_amount_cents as f64) / 100.0;
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+    let db_view = crate::db::DB {
+        pool: pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    };
+    let stripe_key = match crate::api::tool_integrations::stripe_key_for_tenant(&db_view,&tenant_id).await {
+        Ok(key) => key,
+        Err(_) => return (StatusCode::SERVICE_UNAVAILABLE,Json(serde_json::json!({"error":"A verified tenant payment connection is required; proposal remains a draft"}))).into_response(),
+    };
     let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-
+    if stripe_client.require_api_key().is_err() {
+        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({"error":"Payment provider is not configured; proposal remains a draft"}))).into_response();
+    }
+    use sha2::{Digest, Sha256};
+    let operation_id = format!(
+        "proposal:{:x}",
+        Sha256::digest(format!("{}:{}", tenant_id, proposal.id))
+    );
     let checkout_url = match stripe_client
-        .create_checkout_session(
-            &format!("Proposal #{}", proposal.id),
-            &proposal.customer_id,
-            amount_usd,
-            None,
-            None,
-            None,
+        .create_checkout_session_idempotent(
+            crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                name: &format!("Proposal #{}", proposal.id),
+                reference: &proposal.id,
+                amount_cents: proposal.total_amount_cents,
+                interval: None,
+                product: Some(&proposal.id),
+                currency: "usd",
+                operation_id: &operation_id,
+            },
         )
         .await
     {
-        Ok(url) => url,
-        Err(e) => {
-            tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
-            "".to_string()
+        Ok(receipt) => receipt.url,
+        Err(_) => {
+            // Unknown external writes must not become a successful invoice or
+            // be retried autonomously as a second payment request.
+            if sqlx::query("UPDATE proposals SET status='PAYMENT_RECONCILIATION_REQUIRED',updated_at=NOW() WHERE id=$1 AND tenant_id=$2")
+                .bind(&id).bind(&tenant_id).execute(&mut *tx).await.is_err() || tx.commit().await.is_err() {
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            return (StatusCode::BAD_GATEWAY, Json(serde_json::json!({"error":"Payment setup requires reconciliation; no payment or invoice success is claimed","operation_id":operation_id}))).into_response();
         }
     };
 
@@ -427,10 +489,10 @@ async fn approve_proposal(
     }
 
     let invoice_id = Uuid::new_v4().to_string();
-    let due_date = chrono::Utc::now().timestamp() + (30 * 24 * 60 * 60);
+    let due_date = chrono::Utc::now() + chrono::Duration::days(30);
 
     let insert_invoice_res = sqlx::query(
-        "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, $4, 'draft', $5, 'USD', $6, $7, NOW(), NOW())"
+        "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link, total_amount_cents, amount_paid_cents, payment_status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'draft', $5, 'USD', $6, $7, $8, 0, 'unpaid', NOW(), NOW())"
     )
     .bind(&invoice_id)
     .bind(&proposal.tenant_id)
@@ -439,6 +501,7 @@ async fn approve_proposal(
     .bind(due_date)
     .bind(amount_usd)
     .bind(&checkout_url)
+    .bind(i32::try_from(proposal.total_amount_cents).expect("checked proposal total"))
     .execute(&mut *tx)
     .await;
 
@@ -447,7 +510,7 @@ async fn approve_proposal(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    for item in &line_items {
+    for item in line_items.iter().filter(|item| !item.is_optional) {
         let item_id = Uuid::new_v4().to_string();
         let amount = (item.unit_price_cents as f64) / 100.0;
         let res = sqlx::query(
@@ -490,8 +553,56 @@ async fn approve_proposal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn intake_preserves_inquiry_without_inventing_a_price() {
+        let input: ClientIntakeRequest = serde_json::from_value(serde_json::json!({
+            "inquiry":"Repair the garden gate", "customer_id":"client-1"
+        }))
+        .unwrap();
+        assert_eq!(validate_intake(&input), Ok((0, "NEEDS_PRICING")));
+        assert_eq!(input.inquiry, "Repair the garden gate");
+    }
+
+    #[test]
+    fn intake_totals_are_checked_and_optional_items_are_not_charged() {
+        let input: ClientIntakeRequest = serde_json::from_value(serde_json::json!({
+            "inquiry":"Repair a gate", "customer_id":"client-1", "required_deposit_cents":1200,
+            "line_items":[
+                {"description":"Labor", "quantity":3,"unit_price_cents":1500,"is_optional":false},
+                {"description":"Painting", "quantity":1,"unit_price_cents":2000,"is_optional":true}
+            ]
+        }))
+        .unwrap();
+        assert_eq!(validate_intake(&input), Ok((4500, "DRAFT")));
+        let mut invalid = input;
+        invalid.required_deposit_cents = 4501;
+        assert!(validate_intake(&invalid).is_err());
+        invalid.required_deposit_cents = 0;
+        invalid.line_items[0].unit_price_cents = i64::MAX;
+        assert!(validate_intake(&invalid).is_err());
+        invalid.line_items[0].unit_price_cents = -1;
+        assert!(validate_intake(&invalid).is_err());
+    }
     use axum::{body::Body, http::Request};
     use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn approval_requires_owner_authority_before_database_or_payment_access() {
+        let response = narrative_app(Some("tenant-a"))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/proposal-1/approve")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert!(APPROVE_PROPOSAL_SQL.contains("status = 'DRAFT'"));
+        assert!(APPROVE_PROPOSAL_SQL.contains("total_amount_cents > 0"));
+    }
 
     struct NarrativeTestLlm;
 
@@ -682,7 +793,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_draft_agent_route_exists() {
-        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+        let pool = match sqlx::PgPool::connect_lazy(
+            "postgres://postgres:postgres@localhost:5432/postgres",
+        ) {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -702,7 +815,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_proposal_route_exists() {
-        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+        let pool = match sqlx::PgPool::connect_lazy(
+            "postgres://postgres:postgres@localhost:5432/postgres",
+        ) {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -719,7 +834,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_approve_proposal_route_exists() {
-        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+        let pool = match sqlx::PgPool::connect_lazy(
+            "postgres://postgres:postgres@localhost:5432/postgres",
+        ) {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -806,10 +923,65 @@ mod social_tests {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ClientIntakeRequest {
     pub inquiry: String,
     pub customer_id: String,
+    #[serde(default)]
+    pub line_items: Vec<LineItemRequest>,
+    #[serde(default)]
+    pub required_deposit_cents: i64,
+}
+
+fn checked_proposal_total(items: &[LineItemRequest]) -> Result<i64, &'static str> {
+    if items.len() > 100 {
+        return Err("At most 100 line items are supported");
+    }
+    items.iter().try_fold(0_i64, |total, item| {
+        if item.description.trim().is_empty()
+            || item.description.len() > 4000
+            || item.quantity <= 0
+            || item.quantity > 1_000_000
+            || item.unit_price_cents < 0
+        {
+            return Err(
+                "Line items require a description, positive bounded quantity and nonnegative price",
+            );
+        }
+        let amount = item
+            .unit_price_cents
+            .checked_mul(i64::from(item.quantity))
+            .ok_or("Line item amount is too large")?;
+        // Optional items are not selected commitments and are excluded from totals.
+        let amount = if item.is_optional { 0 } else { amount };
+        total
+            .checked_add(amount)
+            .filter(|value| *value <= 99_999_999)
+            .ok_or("Proposal total exceeds the supported amount")
+    })
+}
+
+fn validate_intake(payload: &ClientIntakeRequest) -> Result<(i64, &'static str), &'static str> {
+    if payload.inquiry.trim().is_empty()
+        || payload.inquiry.chars().count() > 4000
+        || payload.customer_id.trim().is_empty()
+        || payload.customer_id.len() > 255
+    {
+        return Err("A bounded inquiry and customer identity are required");
+    }
+    let total = checked_proposal_total(&payload.line_items)?;
+    if payload.required_deposit_cents < 0 || payload.required_deposit_cents > total {
+        return Err("Deposit must be between zero and the agreed total");
+    }
+    Ok((
+        total,
+        if payload.line_items.is_empty() {
+            "NEEDS_PRICING"
+        } else {
+            "DRAFT"
+        },
+    ))
 }
 
 pub async fn client_intake(
@@ -817,27 +989,39 @@ pub async fn client_intake(
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<ClientIntakeRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id {
-        Some(organization_id) => organization_id,
-        None => return StatusCode::UNAUTHORIZED.into_response(),
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant) => tenant.to_owned(),
+        Err(status) => return status.into_response(),
     };
-
-    // Simulate Sales Agent creating a proposal with milestones and scope
+    let (total_amount_cents, draft_status) = match validate_intake(&payload) {
+        Ok(validated) => validated,
+        Err(message) => {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({"error": message})),
+            )
+                .into_response();
+        }
+    };
+    if !payload.line_items.is_empty()
+        && !claims
+            .roles
+            .iter()
+            .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return StatusCode::FORBIDDEN.into_response();
+    }
     let id = Uuid::new_v4().to_string();
-    let total_amount_cents = 500000;
-    let required_deposit_cents = 250000;
-    let project_scope = Some("Website Redesign & Branding".to_string());
-    let milestones = Some(serde_json::json!([
-        { "name": "Discovery", "amount_cents": 100000 },
-        { "name": "Design", "amount_cents": 200000 },
-        { "name": "Development & Handoff", "amount_cents": 200000 }
-    ]));
+    let required_deposit_cents = payload.required_deposit_cents;
+    let project_scope = Some(payload.inquiry.trim().to_owned());
+    // No invented stages, deadlines or scope commitments.
+    let milestones = Some(serde_json::json!([]));
 
     let proposal = Proposal {
         id: id.clone(),
         tenant_id: tenant_id.clone(),
         customer_id: payload.customer_id.clone(),
-        status: "DRAFT".to_string(),
+        status: draft_status.to_string(),
         total_amount_cents,
         required_deposit_cents,
         checkout_url: None,
@@ -851,6 +1035,13 @@ pub async fn client_intake(
         Ok(tx) => tx,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
+
+    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+        .await
+        .is_err()
+    {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
     if let Err(e) = sqlx::query(
         r#"
@@ -874,6 +1065,25 @@ pub async fn client_intake(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
+    let mut saved_items = Vec::new();
+    for item in payload.line_items {
+        let item_id = Uuid::new_v4().to_string();
+        if sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional) VALUES ($1,$2,$3,$4,$5,$6)")
+            .bind(&item_id).bind(&id).bind(&item.description).bind(item.unit_price_cents)
+            .bind(item.quantity).bind(item.is_optional).execute(&mut *tx).await.is_err() {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+        saved_items.push(ProposalLineItem {
+            id: item_id,
+            proposal_id: id.clone(),
+            description: item.description,
+            unit_price_cents: item.unit_price_cents,
+            quantity: item.quantity,
+            is_optional: item.is_optional,
+            created_at: None,
+            updated_at: None,
+        });
+    }
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit tx: {}", e);
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -883,7 +1093,7 @@ pub async fn client_intake(
         StatusCode::OK,
         Json(ProposalResponse {
             proposal,
-            line_items: vec![],
+            line_items: saved_items,
         }),
     )
         .into_response()

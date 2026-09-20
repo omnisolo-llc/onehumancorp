@@ -146,6 +146,12 @@ pub struct MemoryMeshTransport {
     latency_histogram: Histogram<u64>,
 }
 
+impl Default for MemoryMeshTransport {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryMeshTransport {
     pub fn new() -> Self {
         let meter = global::meter("orchestration");
@@ -401,7 +407,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         let locked = received.lock().await;
-        assert!(locked.len() >= 1);
+        assert!(!locked.is_empty());
         let found = locked.iter().any(|m| m.msg_id == "msg_redis_1");
         assert!(found);
         drop(locked);

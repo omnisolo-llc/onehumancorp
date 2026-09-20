@@ -40,7 +40,7 @@ test.describe('Offline-First AI Sync Mesh', () => {
               return true;
            });
            return res;
-        } catch (e) {
+        } catch  {
             return false;
         }
     }, { timeout: 15000 }).toBe(true);

@@ -3,6 +3,12 @@ use tracing::Instrument;
 
 pub struct EdgeCachingMcpServer {}
 
+impl Default for EdgeCachingMcpServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EdgeCachingMcpServer {
     pub fn new() -> Self {
         Self {}

@@ -390,75 +390,71 @@ impl Department for SalesAgent {
         }
 
         if event.event_type == "agent:sales:approved" {
-            if let Some(payload) = event.payload.get("original_payload") {
-                if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
-                    if feature_type == "quote_draft" {
-                        let suggested_price = payload
-                            .get("suggested_price")
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        let customer_inquiry = payload
-                            .get("customer_inquiry")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("Unknown");
-                        let deposit_amount = suggested_price * 0.20; // 20% deposit
+            if let Some(payload) = event.payload.get("original_payload")
+                && let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str())
+                && feature_type == "quote_draft"
+            {
+                let suggested_price = payload
+                    .get("suggested_price")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let customer_inquiry = payload
+                    .get("customer_inquiry")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                let deposit_amount = suggested_price * 0.20; // 20% deposit
 
-                        tracing::info!(
-                            "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
-                            customer_inquiry,
-                            suggested_price,
-                            deposit_amount
-                        );
+                tracing::info!(
+                    "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
+                    customer_inquiry,
+                    suggested_price,
+                    deposit_amount
+                );
 
-                        // Simulate creating a Stripe checkout session for the deposit
-                        let stripe_client = crate::integrations::stripe::client::StripeClient::new(
-                            std::env::var("STRIPE_API_KEY")
-                                .unwrap_or_else(|_| "sk_test_123".to_string()),
-                        );
+                // Simulate creating a Stripe checkout session for the deposit
+                let stripe_client = crate::integrations::stripe::client::StripeClient::new(
+                    std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
+                );
 
-                        match stripe_client
-                            .create_checkout_session(
-                                "price_dummy",
-                                "cus_dummy",
-                                deposit_amount,
-                                None,
-                                None,
-                                None,
-                            )
-                            .await
-                        {
-                            Ok(url) => {
-                                tracing::info!("Generated deposit link: {}", url);
-                                // Update proposals table to persist Stripe URL
-                                if let Some(eid) =
-                                    payload.get("estimate_id").and_then(|v| v.as_str())
-                                {
-                                    let db = crate::db::get_pool();
-                                    let _ = sqlx::query("UPDATE estimates SET status = 'sent', updated_at = NOW() WHERE id = $1")
+                match stripe_client
+                    .create_checkout_session(
+                        "price_dummy",
+                        "cus_dummy",
+                        deposit_amount,
+                        None,
+                        None,
+                        None,
+                    )
+                    .await
+                {
+                    Ok(url) => {
+                        tracing::info!("Generated deposit link: {}", url);
+                        // Update proposals table to persist Stripe URL
+                        if let Some(eid) = payload.get("estimate_id").and_then(|v| v.as_str()) {
+                            let db = crate::db::get_pool();
+                            let _ = sqlx::query("UPDATE estimates SET status = 'sent', updated_at = NOW() WHERE id = $1")
                                         .bind(eid)
                                         .execute(&db)
                                         .await;
-                                }
-                            }
-                            Err(e) => {
-                                tracing::error!(
-                                    "Failed to create checkout session for quote deposit: {}",
-                                    e
-                                );
-                            }
                         }
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            "Failed to create checkout session for quote deposit: {}",
+                            e
+                        );
+                    }
+                }
 
-                        if let Some(lid) = payload.get("service_lead_id").and_then(|v| v.as_str()) {
-                            let db = crate::db::get_pool();
-                            let _ = sqlx::query("UPDATE service_leads SET status = 'estimated', updated_at = NOW() WHERE id = $1")
+                if let Some(lid) = payload.get("service_lead_id").and_then(|v| v.as_str()) {
+                    let db = crate::db::get_pool();
+                    let _ = sqlx::query("UPDATE service_leads SET status = 'estimated', updated_at = NOW() WHERE id = $1")
                                 .bind(lid)
                                 .execute(&db)
                                 .await;
-                        }
-
-                        // NOTE: booking_slot is NOT confirmed here. It is kept soft-locked until payment webhook.
-                    }
                 }
+
+                // NOTE: booking_slot is NOT confirmed here. It is kept soft-locked until payment webhook.
             }
             return Ok(());
         }
@@ -559,10 +555,10 @@ impl Department for SalesAgent {
                 "Hi, thanks for reaching out via {}. How can we help you today?",
                 source
             );
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
-                if let Some(m) = parsed.get("drafted_message").and_then(|v| v.as_str()) {
-                    drafted_message = m.to_string();
-                }
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response)
+                && let Some(m) = parsed.get("drafted_message").and_then(|v| v.as_str())
+            {
+                drafted_message = m.to_string();
             }
 
             let action_payload = serde_json::json!({
@@ -625,7 +621,7 @@ impl Department for SalesAgent {
                 let mut context_summary = String::new();
                 for r in context_records {
                     context_summary.push_str(&r);
-                    context_summary.push_str(" ");
+                    context_summary.push(' ');
                 }
 
                 let prompt = format!(

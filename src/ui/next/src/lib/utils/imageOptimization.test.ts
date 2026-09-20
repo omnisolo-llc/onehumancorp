@@ -1,16 +1,16 @@
 import { optimizeImage } from './imageOptimization';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock browser globals
 global.URL.createObjectURL = vi.fn(() => 'blob:test');
 global.URL.revokeObjectURL = vi.fn();
-// @ts-ignore
-global.Worker = undefined; // Force fallback path in tests
 
 describe('imageOptimization', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.stubGlobal('Worker', undefined); // Exercise the unsupported-worker fallback.
     });
+    afterEach(() => vi.unstubAllGlobals());
 
     it('should return original file if not an image', async () => {
         const file = new File(['text content'], 'test.txt', { type: 'text/plain' });

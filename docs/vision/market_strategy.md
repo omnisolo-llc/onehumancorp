@@ -2,32 +2,32 @@
 
 # OmniSolo Product Vision & Market Strategy
 
-## 1. Mission: The Hybrid Agentic OS
-OmniSolo (OmniSolo) is building the world's first **Hybrid Agentic Operating System**. Unlike competitors that force a binary choice between local privacy and cloud scalability, OmniSolo-HA (Hybrid Architecture) provides a seamless bridge between the two.
+## 1. Mission: an AI operations team for client work
 
-### The OmniSolo Mandate
-1. **Absolute Autonomy**: Agents execute based on Market Reality.
-2. **Aesthetic Excellence**: Every interface must be "Premium" (Glassmorphism, 20px blur).
-3. **Continuous Evolution**: Swarm Intelligence shared via OmniSolo-SIP.
+**Strategy version: 2026-09-18.** [Root RESEARCH.md](../../RESEARCH.md) is the canonical business model, customer, scope and validation reference.
+
+OmniSolo helps one person win, deliver and get paid for client work. The initial customer is a solo web/design/marketing service professional. The AI team carries repeatable digital work to verified results; the owner supplies business judgment, quality review and delegated authority. Broad small-business coverage is the long-term ambition, not a requirement to launch every industry at once.
+
+### Operating principles
+1. **Completed business outcomes:** Preserve context from inquiry through delivery and collection; measure net owner time saved, retained paid use and cost.
+2. **Delegated execution:** Routine work runs inside explicit standing authority; new commitments outside it require approval. Provider evidence, recovery and hard budgets are mandatory.
+3. **A clear owner experience:** Show decisions, completed work and exceptions. Reuse the existing design system and runtime instead of making the owner manage an agent graph.
 
 ---
 
-## 2. Competitive Landscape
-A comprehensive audit of the global Agentic OS market reveals a critical structural vulnerability across competitors:
+## 2. Competitive reality and differentiation hypothesis
 
-| Feature Area | Claude Code | OpenClaw | Replit Agent | **OmniSolo (OmniSolo-HA)** |
-| :--- | :--- | :--- | :--- | :--- |
-| **Privacy** | Local Only | Cloud Exfiltration | Cloud Exfiltration | **Hybrid (Local Default)** |
-| **Scalability** | CPU Bound | Infinite | Infinite | **Dynamic Escalation** |
-| **Offline Support** | Yes | No | No | **Yes (SQLite fallback)** |
-| **Swarm Memory** | Ephemeral | Persistent (Cloud) | Persistent (Cloud) | **Persistent (Sync Local ↔ Cloud)** |
+The dated primary-source comparison in [RESEARCH.md](../../RESEARCH.md) covers HoneyBook, Claude for Small Business, Jobber and the owner's current process. Forms, proposals, payments, integrations, AI and approval controls are competitive baselines, not unique selling points.
 
-### OmniSolo's "Unfair Advantage"
-While **Claude Code** is limited to local directories and **Replit Agent** requires a constant cloud connection, OmniSolo leverages its **Hybrid MCP RAG Protocol** to synchronize local SQLite states to cloud PostgreSQL orchestration. This allows for private execution with "Cloud Escalation" when massive parallel computation is required.
+OHC must demonstrate a better complete service workflow: persistent client context, supported digital delivery, reliable cross-tool execution, provider-confirmed outcomes, exception recovery and less owner coordination. That is a hypothesis to test through paid pilots, not a proven moat or a claim that competitors cannot do it.
+
+The former unsourced privacy/superiority matrix is withdrawn. Do not describe competitors as exfiltrating data or claim first-of-its-kind status without specific, verified evidence. Compare actual supported behavior, costs and owner effort instead.
 
 ---
 
 ## 3. The Hybrid RAG Workflow
+
+The following architectural concepts remain implementation context, not independent proof of production support. Verify current code, deployment mode, permissions and tests before claiming offline operation, synchronization, privacy or scalability. Preserve useful standalone behavior; the initial managed commercial offer does not authorize deleting it.
 The backbone of OmniSolo's intelligence is the seamless synchronization of context across the hybrid stack.
 
 ```mermaid
@@ -43,7 +43,7 @@ graph TD
 
 ---
 
-## 4. Strategic Pillars (2026-2027)
+## 4. Existing architectural themes (subordinate to the current workflow strategy)
 
 ### I. Identity-First Autonomy
 Leveraging SPIFFE/SPIRE for zero-trust agent identity. Every agent is a first-class citizen with its own cryptographically verifiable identity, enabling secure delegation across the Teammate Mesh.
@@ -60,7 +60,7 @@ Our orchestration stability rests on three pillars:
 ---
 
 ## 5. Market Positioning
-OmniSolo targets the "Single Human CEO" who needs to orchestrate a vast workforce of AI agents without the overhead of managing infrastructure or sacrificing data sovereignty. We are the "Agentic OS" for the privacy-conscious power user.
+**Your AI operations team for winning, delivering and getting paid for client work.** Start with the selected service professional, one repeatable offer and one complete customer journey. Test a $99/business/month managed subscription with 10 design partners and at least 5 paying customers; price and cohort numbers are hypotheses/targets, not current results. Expand only after the retention, net-time, reliability, safety and serving-cost gates in RESEARCH.md. The customer should not need to orchestrate a vast workforce of agents.
 
 *For more technical details, see the [KAIROS Architecture](../technical/architecture/kairos/master-design-doc.md) and the [API Playbook](../api/playbook.md).*
 

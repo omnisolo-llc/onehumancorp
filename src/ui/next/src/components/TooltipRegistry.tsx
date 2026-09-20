@@ -89,6 +89,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('scroll', handleScroll, true);
     return () => {
+      clearTimeout(scrollTimeoutId);
       window.removeEventListener('scroll', handleScroll, true);
     };
   }, []);

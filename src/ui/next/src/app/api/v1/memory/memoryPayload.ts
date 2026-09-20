@@ -15,7 +15,8 @@ function boundedString(value: unknown, maximum: number, field: string): string {
     throw new Error(`${field} is required`);
   }
   let count = 0;
-  for (const _character of value) {
+  const characters = value[Symbol.iterator]();
+  while (!characters.next().done) {
     count += 1;
     if (count > maximum) throw new Error(`${field} is too long`);
   }
@@ -27,9 +28,9 @@ export function memoryId(value: string): string {
   return value;
 }
 
-export function forgetMemoryRequest(id: string) {
+export function forgetMemoryRequest(id: string): (body: Uint8Array<ArrayBuffer>) => Uint8Array<ArrayBuffer> {
   const safeId = memoryId(id);
-  return (_body: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> =>
+  return () =>
     encoder.encode(JSON.stringify({ action: "forget", id: safeId }));
 }
 

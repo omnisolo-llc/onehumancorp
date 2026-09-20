@@ -12,7 +12,7 @@ pub struct KvMcpServer {
 
 impl KvMcpServer {
     pub fn new(db: Arc<DB>, redis_client: Option<redis::Client>) -> Self {
-        let redis_conn = redis_client.is_some().then(|| tokio::sync::OnceCell::new());
+        let redis_conn = redis_client.is_some().then(tokio::sync::OnceCell::new);
         Self {
             db,
             redis_client,
@@ -25,7 +25,7 @@ impl KvMcpServer {
             if let Some(cell) = &self.redis_conn {
                 cell.get_or_try_init(|| async { client.get_multiplexed_async_connection().await })
                     .await
-                    .map(|c| c.clone())
+                    .cloned()
                     .map_err(|e| {
                         tonic::Status::internal(format!("failed to connect to redis: {}", e))
                     })
@@ -74,14 +74,12 @@ impl KvMcpServer {
         ]
     }
 
-    pub fn get_tenant_id(&self, spiffe_id_str: &str) -> Result<String, tonic::Status> {
+    pub fn get_tenant_id(&self, spiffe_id_str: &str) -> Result<String, crate::rpc_error::RpcError> {
         let parsed = crate::auth::parse_spiffe_id(spiffe_id_str)
             .map_err(|_| tonic::Status::unauthenticated("invalid SPIFFE ID"))?;
         let tenant_id = parsed.0;
         if tenant_id.is_empty() {
-            return Err(tonic::Status::unauthenticated(
-                "empty tenant ID in SPIFFE ID",
-            ));
+            return Err(tonic::Status::unauthenticated("empty tenant ID in SPIFFE ID").into());
         }
         Ok(tenant_id)
     }

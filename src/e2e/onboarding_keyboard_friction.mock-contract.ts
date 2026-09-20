@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { memberPage } from './fixtures';
+import './fixtures';
 
 test.describe('Onboarding Keyboard Friction / Business Type mapping', () => {
 
@@ -43,7 +43,7 @@ test.describe('Onboarding Keyboard Friction / Business Type mapping', () => {
     await expect(page.locator('#step-template')).toBeVisible();
     await page.locator('#template-selection').selectOption('Modern');
 
-    let startRequestPromise = page.waitForRequest(request =>
+    const startRequestPromise = page.waitForRequest(request =>
       request.url().includes('/api/v1/onboarding/start') && request.method() === 'POST'
     );
 

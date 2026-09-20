@@ -1,6 +1,6 @@
 "use client";
 import { Suspense } from "react";
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SyncManager } from '../../lib/sync/SyncManager';
 
@@ -34,7 +34,7 @@ function QuotingContent() {
         } else {
           setError('Failed to fetch quote');
         }
-      } catch (err) {
+      } catch  {
         setError('Error connecting to server');
       } finally {
         setLoading(false);

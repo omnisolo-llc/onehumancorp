@@ -8,15 +8,18 @@ use tonic::{Request, Response, Status};
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::organization::Product>>> =
     OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Order>>> = OnceLock::new();
-static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Booking>>> = OnceLock::new();
+static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Booking>>> =
+    OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_omnisolo::organization::Organization>>> =
     OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::orchestration::Agent>>> =
     OnceLock::new();
-static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_omnisolo::orchestration::MeetingRoom>>>> =
-    OnceLock::new();
-static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> =
-    OnceLock::new();
+static MEETINGS_CACHE: OnceLock<
+    HybridCache<Arc<Vec<::server_omnisolo::orchestration::MeetingRoom>>>,
+> = OnceLock::new();
+type DashboardAgentCosts = (String, f64, i64, f64, f64, i64);
+type DashboardCostSnapshot = (f64, i64, Vec<DashboardAgentCosts>);
+static COST_CACHE: OnceLock<HybridCache<DashboardCostSnapshot>> = OnceLock::new();
 pub static DASHBOARD_SNAPSHOT_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
 pub static ONBOARDING_STATE_CACHE: OnceLock<
     HybridCache<::server_omnisolo::app::GetOnboardingStateResponse>,
@@ -140,26 +143,38 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
-        let hub_clone = self.hub.clone();
-        let cost_data = tokio::task::spawn_blocking(move || {
-            let cost_auditor = hub_clone.get_cost_auditor();
-            let mut snapshot = cost_auditor.get_agent_costs_snapshot();
-            if mobile_optimized {
-                // Clear any agent name strings from the tuple if it's mobile optimized to save payload space
-                for item in snapshot.iter_mut() {
-                    item.0.clear();
-                }
-            }
-            (
-                cost_auditor.get_total_cost(),
-                cost_auditor.get_total_tokens(),
-                snapshot,
-            )
-        })
-        .await
-        .unwrap_or_else(|_| (0.0, 0, vec![]));
-        Ok(cost_data)
+    ) -> Result<DashboardCostSnapshot, String> {
+        if org_id.trim().is_empty() || org_id.trim() != org_id {
+            return Err("Authenticated organization is required for cost visibility".into());
+        }
+        let auditor = self.hub.get_cost_auditor();
+        // Take one tenant-scoped snapshot before summing or anonymizing. Shared
+        // agent names do not grant access to another business's usage.
+        let snapshot = auditor.tenant_agent_snapshot(org_id);
+        let cost = snapshot.iter().map(|(_, usage)| usage.cost_usd).sum();
+        let tokens = snapshot.iter().fold(0_i64, |total, (_, usage)| {
+            total.saturating_add(usage.tokens)
+        });
+        let agents = snapshot
+            .into_iter()
+            .map(|(agent, usage)| {
+                (
+                    if mobile_optimized {
+                        String::new()
+                    } else {
+                        agent
+                    },
+                    usage.cost_usd,
+                    usage.tokens,
+                    // This endpoint has no tenant-and-agent revenue/storage source.
+                    // Preserve the existing wire shape without leaking global data.
+                    0.0,
+                    auditor.calculate_efficiency(usage.cost_usd, usage.tokens),
+                    0,
+                )
+            })
+            .collect();
+        Ok((cost, tokens, agents))
     }
 
     #[tracing::instrument(skip(self))]
@@ -167,8 +182,12 @@ impl MyDashboardService {
         &self,
         org_id: &str,
         mobile_optimized: bool,
-    ) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
-        let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
+    ) -> Result<DashboardCostSnapshot, String> {
+        if org_id.trim().is_empty() || org_id.trim() != org_id {
+            return Err("Authenticated organization is required for cost visibility".into());
+        }
+        // Do not reuse a Redis entry populated by the former global snapshot.
+        let cache_key = format!("hub:cost:tenant-v2:{}:{}", org_id, mobile_optimized);
         let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
@@ -203,7 +222,7 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let p = ::server_omnisolo::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
@@ -238,7 +257,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(org_id).fetch_all(pool).await {
                     for r in rows {
                         let p = ::server_omnisolo::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
@@ -318,7 +337,7 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_omnisolo::app::Order {
@@ -343,7 +362,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(org_id).fetch_all(pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_omnisolo::app::Order {
@@ -415,7 +434,7 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let start_time: DateTime<Utc> =
                             r.try_get("start_time").unwrap_or_else(|_| Utc::now());
@@ -442,7 +461,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(org_id).fetch_all(pool).await {
                     for r in rows {
                         // For sqlite, datetime might come back as string depending on setup, but typically we handle it in sqlite specific way or parse it.
                         // Assuming it matches what orders table handles, which doesn't query dates in sqlite branch for some reason.
@@ -514,19 +533,15 @@ impl MyDashboardService {
     async fn fetch_org_impl(
         &self,
         org_id: &str,
-        mobile_optimized: bool,
+        _mobile_optimized: bool,
     ) -> Result<Option<::server_omnisolo::organization::Organization>, String> {
-        let q = if mobile_optimized {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
-        } else {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
-        };
+        let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
         use sqlx::Row;
         let mut org = None;
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 if let Ok(Some(row)) = sqlx::query(q)
-                    .bind(&org_id)
+                    .bind(org_id)
                     .fetch_optional(&self.db.pool)
                     .await
                 {
@@ -543,7 +558,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
+                if let Ok(Some(row)) = sqlx::query(q).bind(org_id).fetch_optional(pool).await {
                     org = Some(::server_omnisolo::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
@@ -620,10 +635,10 @@ impl DashboardService for MyDashboardService {
         );
         let cache =
             DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
-        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(Response::new(cached));
-            }
+        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await
+            && !is_stale
+        {
+            return Ok(Response::new(cached));
         }
 
         let mobile_optimized = req.mobile_optimized;
@@ -748,7 +763,9 @@ impl DashboardService for MyDashboardService {
                 let role_val = match a.role.to_uppercase().as_str() {
                     "SOFTWARE_ENGINEER" => ::server_omnisolo::common::Role::SoftwareEngineer as i32,
                     "QA_TESTER" => ::server_omnisolo::common::Role::QaTester as i32,
-                    "OPERATIONS_MANAGER" => ::server_omnisolo::common::Role::OperationsManager as i32,
+                    "OPERATIONS_MANAGER" => {
+                        ::server_omnisolo::common::Role::OperationsManager as i32
+                    }
                     _ => ::server_omnisolo::common::Role::Unspecified as i32,
                 };
 
@@ -1089,6 +1106,83 @@ mod tests {
     use tonic::Request;
     use uuid::Uuid;
 
+    async fn isolated_cost_service() -> MyDashboardService {
+        // No ambient database or provider account is used by these regressions.
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(25))
+            .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+            .unwrap();
+        let db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        MyDashboardService {
+            hub: Arc::new(crate::hub::Hub::new(tx, pool)),
+            db,
+            is_multitenant: true,
+        }
+    }
+
+    #[tokio::test]
+    async fn dashboard_cost_is_tenant_scoped_even_with_shared_agent_ids() {
+        use crate::services::billing::auditor::AuditEvent;
+        let service = isolated_cost_service().await;
+        let auditor = service.hub.get_cost_auditor();
+        for (tenant, agent, input) in [
+            ("owner-a", "shared", 100),
+            ("owner-b", "shared", 900),
+            ("owner-b", "private-agent", 50),
+        ] {
+            auditor.record_event(AuditEvent {
+                tenant_id: tenant.into(),
+                agent_id: agent.into(),
+                input_tokens: input,
+                output_tokens: 0,
+                cached_input_tokens: 0,
+                local_embedding_tokens: 0,
+            });
+        }
+        let (cost, tokens, agents) = service
+            .fetch_cost_summary_impl("owner-a", false)
+            .await
+            .unwrap();
+        assert_eq!(tokens, 100);
+        assert_eq!(cost, auditor.get_tenant_cost("owner-a"));
+        assert_eq!(agents.len(), 1);
+        assert_eq!(agents[0].0, "shared");
+        assert_eq!(agents[0].2, 100);
+        let (_, tokens, agents) = service
+            .fetch_cost_summary_impl("owner-a", true)
+            .await
+            .unwrap();
+        assert_eq!(tokens, 100);
+        assert_eq!(agents.len(), 1);
+        assert!(agents[0].0.is_empty());
+        assert_eq!(
+            service
+                .fetch_cost_summary_impl("unseen-tenant", false)
+                .await
+                .unwrap(),
+            (0.0, 0, vec![])
+        );
+    }
+
+    #[tokio::test]
+    async fn dashboard_cost_rejects_blank_tenant_instead_of_global_totals() {
+        let service = isolated_cost_service().await;
+        assert!(service.fetch_cost_summary_impl("", false).await.is_err());
+        assert!(service.fetch_cost_summary_impl("  ", false).await.is_err());
+        assert!(
+            service
+                .fetch_cost_summary_impl(" owner-a ", false)
+                .await
+                .is_err()
+        );
+        assert!(service.fetch_cost_summary("", false).await.is_err());
+        assert!(service.fetch_cost_summary(" owner-a ", true).await.is_err());
+    }
+
     async fn setup_test_dashboard_service() -> MyDashboardService {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -1264,7 +1358,7 @@ mod tests {
         );
         if !res_desktop.meetings.is_empty() {
             assert!(
-                res_desktop.meetings[0].transcript.len() > 0,
+                !res_desktop.meetings[0].transcript.is_empty(),
                 "Desktop should preserve meeting transcripts"
             );
         }

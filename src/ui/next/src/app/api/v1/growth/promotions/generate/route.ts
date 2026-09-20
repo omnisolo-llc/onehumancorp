@@ -1,6 +1,5 @@
-export async function POST(_request: Request): Promise<Response> {
-  return Response.json(
+export const POST: (request: Request) => Promise<Response> = async () =>
+  Response.json(
     { error: "promotion generation is not implemented" },
     { status: 501 },
   );
-}

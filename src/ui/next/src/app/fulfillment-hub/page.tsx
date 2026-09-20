@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { MutationService } from '../../lib/sync/MutationService';
 import { NetworkStatusIndicator } from '../../components/NetworkStatusIndicator';
 

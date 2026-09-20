@@ -1,5 +1,17 @@
 use super::client::StripeClient;
 
+/// Authenticated tenant, amount and replay identity for one terminal operation.
+#[derive(Clone, Copy)]
+pub struct TerminalPaymentRequest<'a> {
+    pub tenant_id: &'a str,
+    pub amount_cents: i64,
+    pub currency: &'a str,
+    pub product_id: Option<&'a str>,
+    pub quantity: Option<i32>,
+    pub order_id: Option<&'a str>,
+    pub idempotency_key: &'a str,
+}
+
 pub struct TerminalSessionManager {
     client: StripeClient,
 }
@@ -23,28 +35,12 @@ impl TerminalSessionManager {
 
     pub async fn create_terminal_payment_intent(
         &self,
-        tenant_id: &str,
-        amount_cents: i64,
-        currency: &str,
-        product_id: Option<&str>,
-        quantity: Option<i32>,
-        order_id: Option<&str>,
-        idempotency_key: &str,
+        request: TerminalPaymentRequest<'_>,
     ) -> Result<(String, String), String> {
-        if tenant_id.is_empty() {
+        if request.tenant_id.is_empty() {
             return Err("Unauthenticated: Missing tenant ID".to_string());
         }
-        self.client
-            .create_terminal_payment_intent(
-                tenant_id,
-                amount_cents,
-                currency,
-                product_id,
-                quantity,
-                order_id,
-                idempotency_key,
-            )
-            .await
+        self.client.create_terminal_payment_intent(request).await
     }
 }
 
@@ -83,14 +79,17 @@ impl StripeClient {
 
     pub async fn create_terminal_payment_intent(
         &self,
-        tenant_id: &str,
-        amount_cents: i64,
-        currency: &str,
-        product_id: Option<&str>,
-        quantity: Option<i32>,
-        order_id: Option<&str>,
-        idempotency_key: &str,
+        request: TerminalPaymentRequest<'_>,
     ) -> Result<(String, String), String> {
+        let TerminalPaymentRequest {
+            tenant_id,
+            amount_cents,
+            currency,
+            product_id,
+            quantity,
+            order_id,
+            idempotency_key,
+        } = request;
         let api_key = self.require_api_key()?;
         if amount_cents <= 0 {
             return Err("amount_cents must be positive".to_string());
@@ -203,15 +202,15 @@ mod tests {
     async fn test_create_terminal_payment_intent_requires_configured_key() {
         let client = StripeClient::new("".to_string());
         let result = client
-            .create_terminal_payment_intent(
-                "test_tenant",
-                1000,
-                "usd",
-                None,
-                None,
-                None,
-                "idempotency_key",
-            )
+            .create_terminal_payment_intent(TerminalPaymentRequest {
+                tenant_id: "test_tenant",
+                amount_cents: 1000,
+                currency: "usd",
+                product_id: None,
+                quantity: None,
+                order_id: None,
+                idempotency_key: "idempotency_key",
+            })
             .await;
         let err = result
             .expect_err("Create intent must not be mocked when Stripe credentials are missing");

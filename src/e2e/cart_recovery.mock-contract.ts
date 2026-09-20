@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test('cart recovery workflow', async ({ page, request, loginAs, adminUser }) => {
+test('cart recovery workflow', async ({ page, loginAs, adminUser }) => {
     // 1. Log in
     await loginAs(page, adminUser);
 

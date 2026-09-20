@@ -4,13 +4,13 @@
   "version": "0.4.47+1",
   "identifier": "com.omnisolo.app",
   "build": {
-    "frontendDist": "./next_out",
-    "devUrl": "http://localhost:3000"
+    "frontendDist": "./bootstrap"
   },
   "bundle": {
     "active": true,
     "targets": "all",
     "category": "Business",
+    "resources": { "native-resources/": "native-runtime/" },
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
@@ -41,14 +41,14 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
   "plugins": {
     "updater": {
       "pubkey": "TAURI_SIGNING_PUBLIC_KEY_PLACEHOLDER",
       "endpoints": [
-        "https://github.com/omnisolo-llc/omnisolo/releases/latest/download/latest.json"
+        "https://github.com/omnisolo-llc/onehumancorp/releases/latest/download/latest.json"
       ]
     }
   }

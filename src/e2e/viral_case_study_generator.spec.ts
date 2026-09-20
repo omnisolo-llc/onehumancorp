@@ -1,8 +1,9 @@
+import * as nativePathModule from 'node:path';
 import { test, expect } from '@playwright/test';
 
 test.describe('Viral Case Study Generator E2E', () => {
     test('renders generator, updates preview, and triggers soft paywall for branding removal', async ({ page }) => {
-        const path = require('path');
+        const path = nativePathModule;
         const filePath = path.resolve('src/ui/tauri/src/ui/viral-case-study-generator.html');
         await page.goto(`file://${filePath}`);
 

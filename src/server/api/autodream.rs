@@ -1,7 +1,4 @@
-#[cfg(not(omnisolo_bazel_package))]
 use crate::autodream::AutoDreamWorker;
-#[cfg(omnisolo_bazel_package)]
-use ::server_lib::autodream::AutoDreamWorker;
 use axum::{
     Json, Router,
     extract::Query,

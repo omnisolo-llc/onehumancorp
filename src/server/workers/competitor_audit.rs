@@ -13,7 +13,11 @@ impl CompetitorAuditWorker {
     }
 
     pub fn start(&self) {
-        if !competitor_audit_enabled(std::env::var("OMNISOLO_ENABLE_COMPETITOR_AUDIT").ok().as_deref()) {
+        if !competitor_audit_enabled(
+            std::env::var("OMNISOLO_ENABLE_COMPETITOR_AUDIT")
+                .ok()
+                .as_deref(),
+        ) {
             tracing::debug!("Competitor audit worker is disabled");
             return;
         }
@@ -145,9 +149,14 @@ mod tests {
             store: crate::db::DbStore::Sqlite(pool),
         });
 
-        let worker = CompetitorAuditWorker::new(db);
-        worker.start();
-        // Since it spawns a task, just make sure it doesn't crash on start
-        assert!(true);
+        let worker = CompetitorAuditWorker::new(db.clone());
+        assert!(Arc::ptr_eq(&worker.db, &db));
+        assert_eq!(worker.db.pool.size(), 0);
+        let crate::db::DbStore::Sqlite(pool) = &worker.db.store else {
+            panic!("Worker initialization changed the configured storage backend");
+        };
+        assert_eq!(pool.size(), 0);
+        // Initialization must not start an ambient opt-in network worker.
+        // The scheduling policy is tested separately by competitor_audit_is_opt_in.
     }
 }

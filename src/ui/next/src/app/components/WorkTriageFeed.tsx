@@ -13,13 +13,7 @@ type TriageItem = {
   created_at: string;
 };
 
-function tenantId() {
-  if (typeof window === "undefined") return "default";
-  return (
-    localStorage.getItem("business_display_name") ||
-    "default"
-  );
-}
+
 
 function badgeTone(priority?: string) {
   const normalized = (priority || "").toLowerCase();

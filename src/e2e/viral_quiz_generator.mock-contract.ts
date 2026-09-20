@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { currentAppSmoke } from './current_app_smoke';
+import './current_app_smoke';
 
 test.describe('Viral Quiz Generator', () => {
   test('should allow owner to create a quiz and user to enter it', async ({ page, context, loginAs, adminUser }) => {

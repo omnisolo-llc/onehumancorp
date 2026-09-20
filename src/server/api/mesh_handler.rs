@@ -115,7 +115,9 @@ pub struct MailboxRequest {
     pub message: MeshMessage,
 }
 
-pub fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
+pub fn check_spiffe_auth(
+    headers: &HeaderMap,
+) -> Result<String, (axum::http::StatusCode, axum::Json<serde_json::Value>)> {
     let spiffe_id = headers
         .get("x-spiffe-id")
         .and_then(|val| val.to_str().ok())
@@ -126,17 +128,15 @@ pub fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::
         return Err((
             axum::http::StatusCode::UNAUTHORIZED,
             axum::response::Json(error_res),
-        )
-            .into_response());
+        ));
     }
 
-    if let Err(_) = ::server_auth::parse_spiffe_id(spiffe_id) {
+    if ::server_auth::parse_spiffe_id(spiffe_id).is_err() {
         let error_res = serde_json::json!({ "error": "unauthorized" });
         return Err((
             axum::http::StatusCode::UNAUTHORIZED,
             axum::response::Json(error_res),
-        )
-            .into_response());
+        ));
     }
 
     Ok(spiffe_id.to_string())
@@ -164,14 +164,10 @@ pub async fn orchestration_broadcast_handler(
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
+        return err_response.into_response();
     }
 
-    publish_response(
-        transport
-            .publish(&payload.topic, payload.message.into())
-            .await,
-    )
+    publish_response(transport.publish(&payload.topic, payload.message).await)
 }
 
 /// Handler for WebSockets to stream orchestration tasks
@@ -190,7 +186,7 @@ pub async fn broadcast_handler(
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
+        return err_response.into_response();
     }
 
     let tenant_id = headers
@@ -203,11 +199,7 @@ pub async fn broadcast_handler(
         format!("{}:{}", tenant_id, payload.topic)
     };
 
-    publish_response(
-        transport
-            .publish(&scoped_topic, payload.message.into())
-            .await,
-    )
+    publish_response(transport.publish(&scoped_topic, payload.message).await)
 }
 
 /// Handler for direct agent-to-agent communication over HTTP
@@ -217,11 +209,11 @@ pub async fn direct_handler(
     axum::Json(payload): axum::Json<DirectRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
+        return err_response.into_response();
     }
 
     let topic = format!("mesh:direct:{}", payload.target_agent_id);
-    publish_response(transport.publish(&topic, payload.message.into()).await)
+    publish_response(transport.publish(&topic, payload.message).await)
 }
 
 /// Mailbox handler for delayed message delivery
@@ -231,11 +223,11 @@ pub async fn mailbox_handler(
     axum::Json(payload): axum::Json<MailboxRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
+        return err_response.into_response();
     }
 
     let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
-    publish_response(transport.publish(&topic, payload.message.into()).await)
+    publish_response(transport.publish(&topic, payload.message).await)
 }
 
 /// Handles the WebSocket connection for mesh communication
@@ -277,12 +269,11 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
     let channel_clone = channel.clone();
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
-            if let WsMessage::Text(text) = msg {
-                if let Ok(buf) = STANDARD.decode(text.as_str()) {
-                    if let Ok(mesh_msg) = MeshMessage::decode(&buf[..]) {
-                        let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
-                    }
-                }
+            if let WsMessage::Text(text) = msg
+                && let Ok(buf) = STANDARD.decode(text.as_str())
+                && let Ok(mesh_msg) = MeshMessage::decode(&buf[..])
+            {
+                let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
             }
         }
     });
@@ -366,17 +357,17 @@ mod tests {
 
         let mut found = false;
         for _ in 0..2 {
-            if let Some(Ok(msg)) = ws_stream.next().await {
-                if let TungsteniteMessage::Text(text) = msg {
-                    let buf = base64::engine::general_purpose::STANDARD
-                        .decode(&text)
-                        .unwrap();
-                    let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
-                    if received_mesh_msg.payload == b"srv_test" {
-                        assert_eq!(received_mesh_msg.action, "test_chan");
-                        found = true;
-                        break;
-                    }
+            if let Some(Ok(msg)) = ws_stream.next().await
+                && let TungsteniteMessage::Text(text) = msg
+            {
+                let buf = base64::engine::general_purpose::STANDARD
+                    .decode(&text)
+                    .unwrap();
+                let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
+                if received_mesh_msg.payload == b"srv_test" {
+                    assert_eq!(received_mesh_msg.action, "test_chan");
+                    found = true;
+                    break;
                 }
             }
         }

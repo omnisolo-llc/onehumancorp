@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import { useState,Suspense } from "react";
 import Head from "next/head";
 import { useSearchParams } from "next/navigation";
 

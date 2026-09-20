@@ -1,7 +1,7 @@
 #!/bin/bash
 # OmniSolo Hybrid Development Mode Switcher
 
-MODE=$1
+MODE=${1:-}
 
 if [ -z "$MODE" ]; then
   echo "Usage: source ./omnisolo-mode.sh [cloud|standalone|headless]"
@@ -30,7 +30,7 @@ case $MODE in
     mkdir -p .omnisolo/memory/auto/ .omnisolo/memory/team/
     export LOG_FORMAT="json"
     export LOG_LEVEL="info"
-    if [ "$OMNISOLO_TELEMETRY_ENABLED" != "true" ]; then
+    if [ "${OMNISOLO_TELEMETRY_ENABLED:-false}" != "true" ]; then
       export OMNISOLO_TELEMETRY_ENABLED=false
     fi
     echo "Configured for Standalone Desktop Mode."
@@ -51,4 +51,4 @@ case $MODE in
     ;;
 esac
 
-echo "Environment variables set. You can now run bazelisk commands."
+echo "Environment variables set. Run cargo check-backend, cargo test-pricing, or npm run desktop:dev."

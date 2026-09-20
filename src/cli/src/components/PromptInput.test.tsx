@@ -7,15 +7,15 @@ import { PromptInput } from './PromptInput.js';
 // Mock ink components
 vi.mock('ink', () => {
   return {
-    Box: ({ children }: any) => <div data-testid="ink-box">{children}</div>,
-    Text: ({ children, color }: any) => <span data-testid="ink-text" data-color={color}>{children}</span>,
+    Box: ({ children }: { children?: import('react').ReactNode }) => <div data-testid="ink-box">{children}</div>,
+    Text: ({ children, color }: { children?: React.ReactNode; color?: string }) => <span data-testid="ink-text" data-color={color}>{children}</span>,
   };
 });
 
 // Mock ink-text-input since it's hard to test directly in jsdom
 vi.mock('ink-text-input', () => {
   return {
-    default: ({ value, onChange, onSubmit }: any) => (
+    default: ({ value, onChange, onSubmit }: { value: string; onChange: (value: string) => void; onSubmit: (value: string) => void }) => (
       <input
         data-testid="ink-text-input"
         value={value}

@@ -2,10 +2,7 @@ use super::engine::VoiceAIEdgeEngine;
 use ::server_integrations_twilio::provider::TwilioProvider;
 use std::sync::Arc;
 
-#[cfg(not(omnisolo_bazel_package))]
 use crate::minimax::{LocalLLMClient, MinimaxClient};
-#[cfg(omnisolo_bazel_package)]
-use ::minimax::{LocalLLMClient, MinimaxClient};
 
 pub struct VoiceContextRouter {
     engine: Arc<VoiceAIEdgeEngine>,

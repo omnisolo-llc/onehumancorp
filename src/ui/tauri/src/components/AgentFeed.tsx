@@ -18,8 +18,8 @@ export const AgentFeed: React.FC = () => {
             const data = await response.json();
             setDrafts(data);
             setError(null);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Feed unavailable');
         } finally {
             setLoading(false);
         }
@@ -35,8 +35,8 @@ export const AgentFeed: React.FC = () => {
                 method: 'POST',
             });
             if (response.ok) {
-                // Remove the draft from the UI optimistically
-                setDrafts(drafts.filter(d => d.draft_id !== id));
+                // Remove only after the backend accepts the action.
+                setDrafts(current => current.filter(d => d.draft_id !== id));
             } else {
                 console.error("Failed to approve draft");
             }
@@ -46,25 +46,15 @@ export const AgentFeed: React.FC = () => {
     };
 
     const handleEdit = async (id: string, newResponse: string) => {
-        try {
-            // Update the draft in the UI optimistically
-            setDrafts(drafts.map(d => d.draft_id === id ? { ...d, response: newResponse } : d));
-
-            const response = await fetch(`/api/v1/inbox/action_required/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ response: newResponse }),
-            });
-
-            if (!response.ok) {
-                console.error("Failed to update draft");
-                // Rollback could be implemented here if needed, but optimistic UI is fine for now
-            }
-        } catch (err) {
-            console.error(err);
-        }
+        if (!newResponse.trim()) throw new Error('A draft response is required');
+        const response = await fetch(`/api/v1/inbox/action_required/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ response: newResponse }),
+        });
+        if (!response.ok) throw new Error('Failed to update draft');
+        // Keep the confirmed draft intact on failure; the editor retains unsaved text.
+        setDrafts(current => current.map(d => d.draft_id === id ? { ...d, response: newResponse } : d));
     };
 
     if (loading) {
@@ -109,8 +99,8 @@ export const AgentFeed: React.FC = () => {
                             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                         </svg>
                     </div>
-                    <span className="font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up</span>
-                    <span className="text-sm text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 text-center">No pending actions required at this time.</span>
+                    <span className="font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</span>
+                    <span className="text-sm text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 text-center">No pending actions right now.</span>
                 </div>
             </div>
         );

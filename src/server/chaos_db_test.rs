@@ -515,9 +515,11 @@ mod chaos_db_tests {
                 tenant_id,
                 "agent1",
                 "task1",
-                content,
-                vector,
-                "text",
+                crate::db::MemoryContent {
+                    content,
+                    embedding: vector,
+                    source_type: "text",
+                },
             )
             .await
             .unwrap();
@@ -527,9 +529,11 @@ mod chaos_db_tests {
                 tenant_id,
                 "agent1",
                 "task1",
-                content,
-                vector,
-                "text",
+                crate::db::MemoryContent {
+                    content,
+                    embedding: vector,
+                    source_type: "text",
+                },
             )
             .await
             .unwrap();

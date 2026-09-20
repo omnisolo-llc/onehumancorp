@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PowerSyncDatabase } from '@powersync/web';
 import { PowerSyncContext } from '@powersync/react';
-import { AppSchema } from './AppSchema';
+import './AppSchema';
 
 class BackendConnector {
   async fetchCredentials() {

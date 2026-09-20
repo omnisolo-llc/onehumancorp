@@ -23,13 +23,29 @@ impl MyAgentManagerService {
         }
     }
 
+    async fn invalidate_snapshot(&self, org_id: &str) {
+        for mobile in [false, true] {
+            self.snapshot_cache
+                .invalidate(&format!(
+                    "agent_dashboard_snapshot_tenant-v2_{org_id}:mobile:{mobile}"
+                ))
+                .await;
+        }
+    }
+
     async fn get_snapshot(
         &self,
         org_id: &str,
         mobile_optimized: bool,
     ) -> Result<DashboardSnapshot, Status> {
+        if org_id.trim().is_empty() || org_id.trim() != org_id {
+            return Err(Status::unauthenticated(
+                "Authenticated organization is required",
+            ));
+        }
+        // A previous cache entry may contain globally aggregated agent usage.
         let cache_key = format!(
-            "agent_dashboard_snapshot_{}:mobile:{}",
+            "agent_dashboard_snapshot_tenant-v2_{}:mobile:{}",
             org_id, mobile_optimized
         );
         if let Some(snapshot) = self.snapshot_cache.get(&cache_key).await {
@@ -55,7 +71,13 @@ impl MyAgentManagerService {
                         .await
                 })
             );
-            (r1, r2, Ok((0.0, 0, vec![])), Ok(vec![]))
+            let usage = self.hub.get_cost_auditor().tenant_agent_snapshot(org_id);
+            let total_cost = usage.iter().map(|(_, row)| row.cost_usd).sum();
+            let total_tokens = usage
+                .iter()
+                .fold(0_i64, |sum, (_, row)| sum.saturating_add(row.tokens));
+            // Mobile may omit per-agent details, but must not invent zero spend.
+            (r1, r2, Ok((total_cost, total_tokens, vec![])), Ok(vec![]))
         } else {
             tokio::join!(
                 tokio::spawn(async move {
@@ -68,11 +90,25 @@ impl MyAgentManagerService {
                 }),
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
-                    (
-                        cost_auditor.get_tenant_cost(&org_id_clone_for_cost),
-                        cost_auditor.get_tenant_tokens(&org_id_clone_for_cost),
-                        cost_auditor.get_agent_costs_snapshot(),
-                    )
+                    let usage = cost_auditor.tenant_agent_snapshot(&org_id_clone_for_cost);
+                    let total_cost = usage.iter().map(|(_, row)| row.cost_usd).sum();
+                    let total_tokens = usage
+                        .iter()
+                        .fold(0_i64, |sum, (_, row)| sum.saturating_add(row.tokens));
+                    let rows = usage
+                        .into_iter()
+                        .map(|(agent, row)| {
+                            (
+                                agent,
+                                row.cost_usd,
+                                row.tokens,
+                                0.0,
+                                cost_auditor.calculate_efficiency(row.cost_usd, row.tokens),
+                                0,
+                            )
+                        })
+                        .collect();
+                    (total_cost, total_tokens, rows)
                 }),
                 tokio::spawn(async move {
                     hub_tasks
@@ -81,10 +117,12 @@ impl MyAgentManagerService {
                 })
             )
         };
-        let agents = agents_res.unwrap();
-        let meetings = meetings_res.unwrap();
-        let (total_cost, total_tokens, agent_costs_data) = cost_res_spawn.unwrap();
-        let task_queue = tasks_res.unwrap();
+        let agents = agents_res.map_err(|_| Status::unavailable("Agent snapshot unavailable"))?;
+        let meetings =
+            meetings_res.map_err(|_| Status::unavailable("Meeting snapshot unavailable"))?;
+        let (total_cost, total_tokens, agent_costs_data) =
+            cost_res_spawn.map_err(|_| Status::unavailable("Usage snapshot unavailable"))?;
+        let task_queue = tasks_res.map_err(|_| Status::unavailable("Task snapshot unavailable"))?;
         let queue_length = task_queue.len() as i32;
         let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
         let mut proto_task_queue_mut: Vec<::server_omnisolo::orchestration::SharedTask> =
@@ -169,12 +207,12 @@ impl MyAgentManagerService {
     }
 }
 
-fn authenticated_org<T>(request: &Request<T>) -> Result<String, Status> {
+fn authenticated_org<T>(request: &Request<T>) -> Result<String, crate::rpc_error::RpcError> {
     let identity = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
         .map_err(Status::unauthenticated)?;
     let (org_id, _) = ::server_auth::parse_spiffe_id(&identity)?;
     if org_id.is_empty() {
-        return Err(Status::unauthenticated("SPIFFE organization is empty"));
+        return Err(Status::unauthenticated("SPIFFE organization is empty").into());
     }
     Ok(org_id)
 }
@@ -206,12 +244,7 @@ impl AgentManagerService for MyAgentManagerService {
         };
 
         self.hub.register_agent(agent).await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id))
-            .await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id))
-            .await;
+        self.invalidate_snapshot(&org_id).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
@@ -235,12 +268,7 @@ impl AgentManagerService for MyAgentManagerService {
             ));
         }
         self.hub.fire_agent(&req.agent_id).await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id))
-            .await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id))
-            .await;
+        self.invalidate_snapshot(&org_id).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
@@ -275,13 +303,8 @@ impl AgentManagerService for MyAgentManagerService {
             .clone()
             .delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .await
-            .map_err(|e| Status::invalid_argument(e))?;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id))
-            .await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id))
-            .await;
+            .map_err(Status::invalid_argument)?;
+        self.invalidate_snapshot(&org_id).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
@@ -515,6 +538,63 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
         MyAgentManagerService::new(hub)
+    }
+
+    #[tokio::test]
+    async fn snapshot_costs_are_scoped_in_full_mobile_and_refreshed_cache_views() {
+        let service = setup_test_agent_manager_service().await;
+        service
+            .hub
+            .register_agent(Agent {
+                id: "shared".into(),
+                organization_id: "owner-a".into(),
+                ..Default::default()
+            })
+            .await;
+        let auditor = service.hub.get_cost_auditor();
+        auditor.record_manual_cost("shared", "owner-a", 125);
+        auditor.record_manual_cost("shared", "owner-b", 900);
+        // Simulate a persisted cache record from before the scoping correction.
+        service
+            .snapshot_cache
+            .set(
+                "agent_dashboard_snapshot_owner-a:mobile:false",
+                DashboardSnapshot {
+                    costs: Some(Summary {
+                        total_cost_usd: 10.25,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                std::time::Duration::from_secs(60),
+            )
+            .await;
+        for mobile in [false, true] {
+            let snapshot = service.get_snapshot("owner-a", mobile).await.unwrap();
+            let cost = snapshot.costs.unwrap();
+            assert_eq!(cost.total_cost_usd, 1.25);
+            if !mobile {
+                assert_eq!(cost.agent_costs.len(), 1);
+                assert_eq!(cost.agent_costs[0].cost_usd, 1.25);
+                assert_eq!(cost.agent_costs[0].name, "shared");
+            }
+        }
+        auditor.record_manual_cost("shared", "owner-a", 75);
+        service.invalidate_snapshot("owner-a").await;
+        for mobile in [false, true] {
+            assert_eq!(
+                service
+                    .get_snapshot("owner-a", mobile)
+                    .await
+                    .unwrap()
+                    .costs
+                    .unwrap()
+                    .total_cost_usd,
+                2.0
+            );
+        }
+        assert!(service.get_snapshot("", false).await.is_err());
+        assert!(service.get_snapshot(" owner-a ", true).await.is_err());
     }
 
     #[tokio::test]

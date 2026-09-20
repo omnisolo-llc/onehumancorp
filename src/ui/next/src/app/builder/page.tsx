@@ -21,7 +21,7 @@ export default function BuilderPage() {
     liveUrl, setLiveUrl
   } = useBuilderStore();
 
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [, setIsLoaded] = useState(false);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);

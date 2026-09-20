@@ -11,13 +11,13 @@ describe("SonaPatternsPage", () => {
   });
 
   it("renders loading initially", () => {
-    (global.fetch as any).mockImplementationOnce(() => new Promise(() => {}));
+    vi.mocked(global.fetch, { partial: true }).mockImplementationOnce(() => new Promise(() => {}));
     render(<SonaPatternsPage />);
     expect(screen.getByText("Loading patterns...")).toBeInTheDocument();
   });
 
   it("renders patterns", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ patterns: [{ id: "1", initial_context: "Test context", outcome_score: 0.9, successful_tools: ["tool1"] }] })
     });
@@ -31,7 +31,7 @@ describe("SonaPatternsPage", () => {
   });
 
   it("handles empty patterns", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ patterns: [] })
     });
@@ -44,7 +44,7 @@ describe("SonaPatternsPage", () => {
   });
 
   it("submits a new pattern", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ patterns: [] })
     });
@@ -55,7 +55,7 @@ describe("SonaPatternsPage", () => {
       expect(screen.getByText("No patterns recorded yet.")).toBeInTheDocument();
     });
 
-    (global.fetch as any)
+    vi.mocked(global.fetch, { partial: true })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({})

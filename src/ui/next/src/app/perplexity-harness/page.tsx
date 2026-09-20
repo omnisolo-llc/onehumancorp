@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from "react";
 
@@ -26,8 +27,8 @@ export default function PerplexityHarness() {
       const data = await result.json();
       if (typeof data.answer !== 'string' || !data.answer.trim()) throw new Error('Search is unavailable.');
       setResponse(data.answer);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Something went wrong."));
     } finally {
       setLoading(false);
     }

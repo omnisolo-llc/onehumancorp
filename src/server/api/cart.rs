@@ -339,8 +339,8 @@ pub async fn add_cart_item_handler(
     .bind(&cart_id)
     .bind(&req_data.product_id)
     .bind(&req_data.variant_id)
-    .bind(&req_data.quantity)
-    .bind(&req_data.unit_price_cents)
+    .bind(req_data.quantity)
+    .bind(req_data.unit_price_cents)
     .execute(&pool)
     .await;
 

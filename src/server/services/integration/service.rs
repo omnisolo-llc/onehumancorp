@@ -68,15 +68,7 @@ impl IntegrationService for MyIntegrationService {
         request: Request<CreatePrRequest>,
     ) -> Result<Response<PullRequest>, Status> {
         let req = request.into_inner();
-        match self.registry.create_pull_request(
-            &req.integration_id,
-            &req.repository,
-            &req.title,
-            &req.body,
-            &req.source_branch,
-            &req.target_branch,
-            &req.created_by,
-        ) {
+        match self.registry.create_pull_request(&req) {
             Ok(pr) => Ok(Response::new(pr)),
             Err(e) => Err(Status::internal(e)),
         }
@@ -118,15 +110,7 @@ impl IntegrationService for MyIntegrationService {
         request: Request<CreateIssueRequest>,
     ) -> Result<Response<Issue>, Status> {
         let req = request.into_inner();
-        match self.registry.create_issue(
-            &req.integration_id,
-            &req.project,
-            &req.title,
-            &req.description,
-            &req.created_by,
-            &req.priority,
-            req.labels,
-        ) {
+        match self.registry.create_issue(&req) {
             Ok(issue) => Ok(Response::new(issue)),
             Err(e) => Err(Status::internal(e)),
         }

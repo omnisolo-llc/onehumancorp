@@ -1,12 +1,14 @@
-const tauriUiDir = require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
+import * as nativePathModule from 'node:path';
+import * as nativeFsModule from 'node:fs';
+const tauriUiDir = nativePathModule.join(process.cwd(), 'src/ui/tauri/src/ui');
 import { test, expect } from '@playwright/test';
 
 test.describe('Tauri Setup UI Cross Device State', () => {
 
     test('Cross device setup wizard resume from backend state', async ({ page, browser }) => {
-    const tauriUiDir = require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
+    const tauriUiDir = nativePathModule.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
@@ -42,7 +44,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     const newContext = await browser.newContext();
     const newPage = await newContext.newPage();
     await newPage.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
@@ -94,7 +96,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
   test('Setup UI requires valid email format', async ({ page }) => {
 
     await page.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
@@ -129,7 +131,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
   test('Setup UI requires at least 8 chars password', async ({ page }) => {
 
     await page.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
@@ -162,7 +164,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
   test('Setup UI allows finishing setup', async ({ page }) => {
 
     await page.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
@@ -218,7 +220,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
   test('Setup UI Persona chips auto-fill the form correctly', async ({ page }) => {
 
     await page.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = nativeFsModule.readFileSync(nativePathModule.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips

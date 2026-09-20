@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,8 +33,8 @@ export default function GrowthReferralWidget() {
       }
       const data = await res.json();
       setReferralLink(data.invite_link);
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Something went wrong'));
     } finally {
       setLoading(false);
     }

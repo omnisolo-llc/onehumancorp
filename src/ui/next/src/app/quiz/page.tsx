@@ -12,7 +12,7 @@ function QuizContent() {
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFinished, setIsFinished] = useState(false);
+  const [isFinished] = useState(false);
   const [copied, setCopied] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 

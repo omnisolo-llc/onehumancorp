@@ -21,7 +21,7 @@ export default function AgentAutomations() {
       if (response.ok) {
         setter(!current);
       }
-    } catch (e) {
+    } catch  {
       setError("Failed to toggle agent. Please try again.");
     } finally {
       setLoading(null);

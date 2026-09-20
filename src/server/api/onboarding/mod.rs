@@ -433,10 +433,12 @@ async fn start_zero_click(
                     .variants
                     .unwrap_or_default()
                     .into_iter()
-                    .map(|v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
-                        name: v.name,
-                        price_modifier: v.price_modifier,
-                    })
+                    .map(
+                        |v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
+                            name: v.name,
+                            price_modifier: v.price_modifier,
+                        },
+                    )
                     .collect(),
             })
             .collect(),

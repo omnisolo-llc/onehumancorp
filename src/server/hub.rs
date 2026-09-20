@@ -50,6 +50,15 @@ pub struct Hub {
 }
 
 impl Hub {
+    pub fn usage_ledger(&self) -> Option<::server_harness::middleware::usage_ledger::UsageLedger> {
+        use ::server_harness::middleware::usage_ledger::UsageLedger;
+        let db = self.task_manager.db.read().ok()?.clone()?;
+        Some(match &db.store {
+            crate::db::DbStore::Postgres => UsageLedger::Postgres(db.pool.clone()),
+            crate::db::DbStore::Sqlite(pool) => UsageLedger::Sqlite(pool.clone()),
+        })
+    }
+
     pub fn set_db(&self, db: std::sync::Arc<crate::db::DB>) {
         *self.task_manager.db.write().unwrap() = Some(db);
     }
@@ -58,19 +67,15 @@ impl Hub {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
 
-        let (telemetry_tx, mut telemetry_rx) =
-            tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
+        let (cost_auditor, telemetry_tx, mut export_rx) =
+            crate::services::billing::auditor::event_pipeline(CostConfig::default());
         let pool_clone = pool.clone();
-        let cost_auditor = Arc::new({
-            let mut a = CostAuditor::new(CostConfig::default());
-            a.set_telemetry_tx(telemetry_tx.clone());
-            a
-        });
-
-        let cost_auditor_clone = cost_auditor.clone();
+        // This sink accepts only accounted events. It never calls record_event
+        // and cannot send back into raw usage ingress.
         tokio::spawn(async move {
-            while let Some(event) = telemetry_rx.recv().await {
-                let cost = cost_auditor_clone.record_event(event.clone());
+            while let Some(accounted) = export_rx.recv().await {
+                let event = accounted.event;
+                let cost = accounted.cost_usd;
 
                 let labels = serde_json::json!({
                     "agent_id": event.agent_id,
@@ -159,25 +164,25 @@ impl Hub {
 
     async fn invalidate_agent_cache(&self) {
         *self.agent_cache.write().await = None;
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            if let Ok(mut conn) = pool.get_async_connection().await {
-                let _: Result<(), _> = redis::cmd("DEL")
-                    .arg("hub:agents")
-                    .query_async(&mut conn)
-                    .await;
-            }
+        if let Some(pool) = crate::redis_pool::get_redis_pool()
+            && let Ok(mut conn) = pool.get_async_connection().await
+        {
+            let _: Result<(), _> = redis::cmd("DEL")
+                .arg("hub:agents")
+                .query_async(&mut conn)
+                .await;
         }
     }
 
     async fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().await = None;
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            if let Ok(mut conn) = pool.get_async_connection().await {
-                let _: Result<(), _> = redis::cmd("DEL")
-                    .arg("hub:meetings")
-                    .query_async(&mut conn)
-                    .await;
-            }
+        if let Some(pool) = crate::redis_pool::get_redis_pool()
+            && let Ok(mut conn) = pool.get_async_connection().await
+        {
+            let _: Result<(), _> = redis::cmd("DEL")
+                .arg("hub:meetings")
+                .query_async(&mut conn)
+                .await;
         }
     }
 
@@ -316,29 +321,29 @@ impl Hub {
             let tracker = self.tracker.clone();
             let hub_clone = self.clone();
             tokio::spawn(async move {
-                if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
-                    if limit_status.soft_limit_reached {
-                        tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
-                        if let Some(user_msg) = limit_status.user_message {
-                            let warning_msg = Message {
-                                id: format!("warning-{}", chrono::Utc::now().timestamp()),
-                                from_agent: "system-scheduler".to_string(),
-                                to_agent: agent_id.clone(),
-                                r#type: "warning".to_string(),
-                                content: user_msg,
-                                occurred_at_unix: chrono::Utc::now().timestamp(),
-                                meeting_id: meeting_id,
-                            };
-                            let mut inbox = hub_clone.inbox.write().await;
-                            let subs = hub_clone.subs.read().await;
-                            let to = warning_msg.to_agent.clone();
-                            inbox
-                                .entry(to.clone())
-                                .or_insert_with(Vec::new)
-                                .push(warning_msg.clone());
-                            if let Some(tx) = subs.get(&to) {
-                                let _ = tx.send(warning_msg);
-                            }
+                if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await
+                    && limit_status.soft_limit_reached
+                {
+                    tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
+                    if let Some(user_msg) = limit_status.user_message {
+                        let warning_msg = Message {
+                            id: format!("warning-{}", chrono::Utc::now().timestamp()),
+                            from_agent: "system-scheduler".to_string(),
+                            to_agent: agent_id.clone(),
+                            r#type: "warning".to_string(),
+                            content: user_msg,
+                            occurred_at_unix: chrono::Utc::now().timestamp(),
+                            meeting_id,
+                        };
+                        let mut inbox = hub_clone.inbox.write().await;
+                        let subs = hub_clone.subs.read().await;
+                        let to = warning_msg.to_agent.clone();
+                        inbox
+                            .entry(to.clone())
+                            .or_insert_with(Vec::new)
+                            .push(warning_msg.clone());
+                        if let Some(tx) = subs.get(&to) {
+                            let _ = tx.send(warning_msg);
                         }
                     }
                 }
@@ -356,64 +361,64 @@ impl Hub {
         messages.push(msg.clone());
 
         // Add to meeting transcript if applicable
-        if !msg.meeting_id.is_empty() {
+        if !msg.meeting_id.is_empty()
+            && let Some(meeting) = meetings.get_mut(&msg.meeting_id)
+        {
+            meeting.transcript.push(msg.clone());
+            drop(meetings);
+            drop(inbox);
+            self.invalidate_meetings_cache().await;
+
+            // Re-acquire meetings lock for summarization check
+            let mut meetings = self.meetings.write().await;
             if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
-                meeting.transcript.push(msg.clone());
-                drop(meetings);
-                drop(inbox);
-                self.invalidate_meetings_cache().await;
+                // Aggressive AI Context Summarization
+                if meeting.transcript.len() > 10 && !self.minimax_api_key.is_empty() {
+                    let api_key = self.minimax_api_key.clone();
+                    let m_id = msg.meeting_id.clone();
+                    let transcript = meeting.transcript.clone();
+                    let hub = self.clone();
 
-                // Re-acquire meetings lock for summarization check
-                let mut meetings = self.meetings.write().await;
-                if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
-                    // Aggressive AI Context Summarization
-                    if meeting.transcript.len() > 10 && !self.minimax_api_key.is_empty() {
-                        let api_key = self.minimax_api_key.clone();
-                        let m_id = msg.meeting_id.clone();
-                        let transcript = meeting.transcript.clone();
-                        let hub = self.clone();
+                    tokio::spawn(async move {
+                        let client = crate::minimax::MinimaxClient::new(api_key);
+                        let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
 
-                        tokio::spawn(async move {
-                            let client = crate::minimax::MinimaxClient::new(api_key);
-                            let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
+                        for m in &transcript {
+                            prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
+                        }
 
-                            for m in &transcript {
-                                prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
-                            }
+                        match client.reason(&prompt).await {
+                            Ok(summary) => {
+                                let mut meetings = hub.meetings.write().await;
+                                if let Some(mtg) = meetings.get_mut(&m_id) {
+                                    let mut new_transcript = vec![Message {
+                                        id: format!("summary-{}", Utc::now().timestamp()),
+                                        from_agent: "SYSTEM_SUMMARIZER".to_string(),
+                                        to_agent: "all".to_string(),
+                                        r#type: "status".to_string(),
+                                        content: format!("[CONTEXT SUMMARIZED]: {}", summary),
+                                        meeting_id: m_id.clone(),
+                                        occurred_at_unix: Utc::now().timestamp(),
+                                    }];
 
-                            match client.reason(&prompt).await {
-                                Ok(summary) => {
-                                    let mut meetings = hub.meetings.write().await;
-                                    if let Some(mtg) = meetings.get_mut(&m_id) {
-                                        let mut new_transcript = vec![Message {
-                                            id: format!("summary-{}", Utc::now().timestamp()),
-                                            from_agent: "SYSTEM_SUMMARIZER".to_string(),
-                                            to_agent: "all".to_string(),
-                                            r#type: "status".to_string(),
-                                            content: format!("[CONTEXT SUMMARIZED]: {}", summary),
-                                            meeting_id: m_id.clone(),
-                                            occurred_at_unix: Utc::now().timestamp(),
-                                        }];
-
-                                        if mtg.transcript.len() > 3 {
-                                            new_transcript.extend(
-                                                mtg.transcript
-                                                    .iter()
-                                                    .cloned()
-                                                    .skip(mtg.transcript.len() - 3),
-                                            );
-                                        } else {
-                                            new_transcript.extend(mtg.transcript.iter().cloned());
-                                        }
-                                        mtg.transcript = new_transcript;
-                                        drop(meetings);
-                                        hub.invalidate_meetings_cache().await;
+                                    if mtg.transcript.len() > 3 {
+                                        new_transcript.extend(
+                                            mtg.transcript
+                                                .iter()
+                                                .skip(mtg.transcript.len() - 3)
+                                                .cloned(),
+                                        );
+                                    } else {
+                                        new_transcript.extend(mtg.transcript.iter().cloned());
                                     }
+                                    mtg.transcript = new_transcript;
+                                    drop(meetings);
+                                    hub.invalidate_meetings_cache().await;
                                 }
-                                Err(e) => tracing::error!("Summarization failed: {}", e),
                             }
-                        });
-                    }
+                            Err(e) => tracing::error!("Summarization failed: {}", e),
+                        }
+                    });
                 }
             }
         }
@@ -430,12 +435,11 @@ impl Hub {
         let all_meetings = self.get_meetings().await;
         let mut filtered = Vec::new();
         for m in all_meetings.iter() {
-            if m.id.starts_with(org_id) || m.id.contains(org_id) {
-                filtered.push(m.clone());
-            } else if m
-                .participants
-                .iter()
-                .any(|p| p.starts_with(org_id) || p.contains(org_id))
+            if m.id.starts_with(org_id)
+                || m.id.contains(org_id)
+                || m.participants
+                    .iter()
+                    .any(|p| p.starts_with(org_id) || p.contains(org_id))
             {
                 filtered.push(m.clone());
             }
@@ -738,13 +742,12 @@ impl Hub {
 
         let mut corrected = false;
         for (_k, v) in temp.iter_mut() {
-            if let Some(s) = v.as_str() {
-                if let Ok(n) = s.parse::<i64>() {
-                    if n.to_string() == s {
-                        *v = serde_json::Value::Number(n.into());
-                        corrected = true;
-                    }
-                }
+            if let Some(s) = v.as_str()
+                && let Ok(n) = s.parse::<i64>()
+                && n.to_string() == s
+            {
+                *v = serde_json::Value::Number(n.into());
+                corrected = true;
             }
         }
 
@@ -1133,7 +1136,7 @@ mod tests {
                 })
             })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
+            .connect_lazy(db_url)
             .unwrap();
         let (tx, _) = mpsc::channel(100);
         let hub = std::sync::Arc::new(Hub::new(tx, pool));

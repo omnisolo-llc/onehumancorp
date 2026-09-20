@@ -21,6 +21,12 @@ pub struct DefaultSyncClient {
     client: reqwest::Client,
 }
 
+impl Default for DefaultSyncClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefaultSyncClient {
     pub fn new() -> Self {
         Self {
@@ -117,8 +123,8 @@ impl CloudSynchronizerImpl {
         }
 
         // Process pending files in hybrid_fs_sync_queue
-        if let Some(pool) = &self.pool {
-            if let Ok(files) = sqlx::query("SELECT id, local_path, cloud_path FROM hybrid_fs_sync_queue WHERE status = 'FILE_SYNC_PENDING' AND tenant_id = current_setting('app.current_tenant', true)")
+        if let Some(pool) = &self.pool
+            && let Ok(files) = sqlx::query("SELECT id, local_path, cloud_path FROM hybrid_fs_sync_queue WHERE status = 'FILE_SYNC_PENDING' AND tenant_id = current_setting('app.current_tenant', true)")
                 .fetch_all(pool)
                 .await
             {
@@ -143,7 +149,6 @@ impl CloudSynchronizerImpl {
                     }
                 }
             }
-        }
 
         let mut futures = Vec::new();
 
@@ -182,7 +187,7 @@ impl CloudSynchronizerImpl {
 
             match resp {
                 Ok((status, json)) => {
-                    if status >= 200 && status < 300 {
+                    if (200..300).contains(&status) {
                         if let Some(cloud_id) = json.get("cloud_id").and_then(|v| v.as_str()) {
                             let repo_res = self
                                 .repo
@@ -247,14 +252,13 @@ impl CloudSynchronizerImpl {
         let results = futures::future::join_all(futures).await;
 
         for (mission_id, resp) in results {
-            if let Ok((status, json)) = resp {
-                if status >= 200 && status < 300 {
-                    if let Some(mission_status) = json.get("status").and_then(|v| v.as_str()) {
-                        self.repo
-                            .update_local_status(organization_id, &mission_id, mission_status)
-                            .await?;
-                    }
-                }
+            if let Ok((status, json)) = resp
+                && (200..300).contains(&status)
+                && let Some(mission_status) = json.get("status").and_then(|v| v.as_str())
+            {
+                self.repo
+                    .update_local_status(organization_id, &mission_id, mission_status)
+                    .await?;
             }
         }
 
@@ -363,9 +367,12 @@ mod tests {
         }
     }
 
+    type MockHttpResponse = Result<(u16, serde_json::Value), String>;
+    type MockHttpResponses = Mutex<HashMap<String, MockHttpResponse>>;
+
     struct MockSyncHttpClient {
-        post_responses: Mutex<HashMap<String, Result<(u16, serde_json::Value), String>>>,
-        get_responses: Mutex<HashMap<String, Result<(u16, serde_json::Value), String>>>,
+        post_responses: MockHttpResponses,
+        get_responses: MockHttpResponses,
     }
 
     impl MockSyncHttpClient {

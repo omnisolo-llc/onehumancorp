@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import '../../components/ui/card';
 
 interface DailyCost {
   date: string;
@@ -75,7 +75,7 @@ export default function CostDashboardPage() {
         } else {
           setActionMessage('Failed to cancel subscription.');
         }
-      } catch (error) {
+      } catch  {
         setActionMessage('Error canceling subscription.');
       } finally {
         setIsActionLoading(false);
@@ -101,7 +101,7 @@ export default function CostDashboardPage() {
       } else {
         setActionMessage('Failed to download invoice.');
       }
-    } catch (error) {
+    } catch  {
       setActionMessage('Error downloading invoice.');
     } finally {
       setIsActionLoading(false);

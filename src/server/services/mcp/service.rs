@@ -121,7 +121,7 @@ impl McpService for MyMcpService {
                 let msg = self
                     .registry
                     .send_chat_message(&req.tool_id, channel, from_agent, content, thread_id)
-                    .map_err(|e| Status::internal(e))?;
+                    .map_err(Status::internal)?;
 
                 let resp_payload = serde_json::to_string(&msg).unwrap();
                 Ok(Response::new(McpInvokeResponse {
@@ -141,16 +141,16 @@ impl McpService for MyMcpService {
 
                 let pr = self
                     .registry
-                    .create_pull_request(
-                        &req.tool_id,
-                        repo,
-                        title,
-                        body,
-                        source,
-                        target,
-                        created_by,
-                    )
-                    .map_err(|e| Status::internal(e))?;
+                    .create_pull_request(&::server_omnisolo::orchestration::CreatePrRequest {
+                        integration_id: req.tool_id.clone(),
+                        repository: repo.to_owned(),
+                        title: title.to_owned(),
+                        body: body.to_owned(),
+                        source_branch: source.to_owned(),
+                        target_branch: target.to_owned(),
+                        created_by: created_by.to_owned(),
+                    })
+                    .map_err(Status::internal)?;
 
                 let resp_payload = serde_json::to_string(&pr).unwrap();
                 Ok(Response::new(McpInvokeResponse {
@@ -178,16 +178,16 @@ impl McpService for MyMcpService {
 
                 let issue = self
                     .registry
-                    .create_issue(
-                        &req.tool_id,
-                        project,
-                        title,
-                        description,
-                        created_by,
-                        priority,
+                    .create_issue(&::server_omnisolo::orchestration::CreateIssueRequest {
+                        integration_id: req.tool_id.clone(),
+                        project: project.to_owned(),
+                        title: title.to_owned(),
+                        description: description.to_owned(),
+                        created_by: created_by.to_owned(),
+                        priority: priority.to_owned(),
                         labels,
-                    )
-                    .map_err(|e| Status::internal(e))?;
+                    })
+                    .map_err(Status::internal)?;
 
                 let resp_payload = serde_json::to_string(&issue).unwrap();
                 Ok(Response::new(McpInvokeResponse {
@@ -319,7 +319,7 @@ impl McpService for MyMcpService {
                     .get("x-spiffe-id")
                     .and_then(|v| v.to_str().ok())
                     .unwrap_or("");
-                ::server_auth::parse_spiffe_id(&spiffe_id_str)
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
                     .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
                     .0
             }
@@ -403,7 +403,7 @@ impl McpService for MyMcpService {
                     .get("x-spiffe-id")
                     .and_then(|v| v.to_str().ok())
                     .unwrap_or("");
-                ::server_auth::parse_spiffe_id(&spiffe_id_str)
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
                     .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
                     .0
             }

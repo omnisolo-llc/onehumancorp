@@ -2,6 +2,25 @@
 
 # OmniSolo: Strategic Roadmap
 
+## Current direction — 2026-09-18
+
+**[Root RESEARCH.md](../../RESEARCH.md) supersedes the historical plan below.** Current scope is the client-to-cash loop for solo web/design/marketing service businesses, not simultaneous implementation of every business department. Historical completion labels, competitive claims and efficiency multipliers below are unverified legacy records, not release evidence or current targets.
+
+| Stage | Outcome | Gate |
+| --- | --- | --- |
+| Days 1–14 from pilot start | Inventory the CUJ; validate demand, price and one service template | Evidence matrix, 15-interview plan/results when collected, sandbox journey and owner authority policy |
+| Days 15–45 | Close one safe customer-to-payment loop with digital delivery | Isolation, authority, budget and recovery checks before external automation; progressively onboard 10 design partners |
+| Days 46–90 | Prove repeated paid value and sustainable serving costs | At least 5 paying at tested $99/month; 8/10 week-4 retained; median 3 net hours saved/week; at least 95% verified step completion over 200 attempts; variable serving cost at most 30%; zero observed critical safety events |
+| After validation | Evaluate one adjacent workflow, integration or segment | Retained-customer evidence and explicit expansion decision |
+
+These are proposed thresholds, not achieved results. See `RESEARCH.md` for definitions, denominators, uncertainty, cost assumptions and stop/pivot criteria. Stable OHC-01–12 target IDs map to strategic packages; GitHub issues track actual work. Preserve useful existing capabilities and standalone compatibility.
+
+---
+
+## Historical roadmap (superseded; retained for context)
+
+Do not dispatch work from the remaining historical sections without current-strategy triage.
+
 ## Vision
 "OmniSolo" is an innovative application that aggregates tools and orchestrates highly specialized AI agents, empowering a single individual to run an entire enterprise. The ultimate goal is to provide everything a customer needs to work on *any* given area. We provide a flexible, extensible framework so that users can continuously import new skills, business areas, and domain knowledge to tackle any market.
 

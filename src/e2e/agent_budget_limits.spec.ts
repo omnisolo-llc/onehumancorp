@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
 
 test.describe('Agent Budget Limits', () => {
-  test('CUJ: Check free tier limits enforcement', async ({ page, request }) => {
+  test('CUJ: Check free tier limits enforcement', async ({ page }) => {
     // Navigate to agents page
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();

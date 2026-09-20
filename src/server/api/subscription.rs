@@ -626,18 +626,18 @@ pub async fn parse_subscription_description(
 
     // Find number of uses
     let parts: Vec<&str> = req.description.split_whitespace().collect();
-    if let Some(first) = parts.first() {
-        if let Ok(num) = first.parse::<i64>() {
-            max_uses = num;
-        }
+    if let Some(first) = parts.first()
+        && let Ok(num) = first.parse::<i64>()
+    {
+        max_uses = num;
     }
 
     // Find price
     for part in parts {
-        if part.starts_with('$') {
-            if let Ok(num) = part[1..].parse::<i64>() {
-                amount = num * 100;
-            }
+        if part.starts_with('$')
+            && let Ok(num) = part[1..].parse::<i64>()
+        {
+            amount = num * 100;
         }
     }
 
@@ -736,7 +736,9 @@ mod tests {
         let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(url) if url.starts_with("postgres") => url,
             _ => {
-                eprintln!("skipping subscription postgres test; OMNISOLO_DATABASE_URL not set to postgres");
+                eprintln!(
+                    "skipping subscription postgres test; OMNISOLO_DATABASE_URL not set to postgres"
+                );
                 return;
             }
         };

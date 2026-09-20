@@ -51,7 +51,9 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
                 return Ok(AuthMode::Disabled);
             }
         }
-        return Err("OMNISOLO_AGENT_AUTH_DISABLED is not allowed in production binaries".to_string());
+        return Err(
+            "OMNISOLO_AGENT_AUTH_DISABLED is not allowed in production binaries".to_string(),
+        );
     }
 
     if let Ok(token) = env::var("OMNISOLO_AGENT_TOKEN")

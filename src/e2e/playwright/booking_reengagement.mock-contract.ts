@@ -31,7 +31,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
           })
         });
         return res.ok;
-      } catch (e) {
+      } catch  {
         return false;
       }
     });
@@ -61,7 +61,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
                   `
                 })
               });
-            } catch (e) {
+            } catch  {
               // ignore
             }
         });
@@ -77,7 +77,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
         await expect(page.locator('text=Approve Re-engagement for Leo Dormant Student')).toBeVisible({ timeout: 5000 });
         found = true;
         break;
-      } catch (e) {
+      } catch  {
         await page.reload();
       }
     }

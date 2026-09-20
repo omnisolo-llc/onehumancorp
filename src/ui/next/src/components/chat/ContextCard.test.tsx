@@ -13,7 +13,7 @@ describe('ContextCard', () => {
   });
 
   it('renders loading state initially', () => {
-    (global.fetch as any).mockImplementationOnce(() =>
+    vi.mocked(global.fetch, { partial: true }).mockImplementationOnce(() =>
       new Promise(() => {}) // Never resolves to keep it in loading state
     );
 
@@ -30,7 +30,7 @@ describe('ContextCard', () => {
       summary: 'A loyal customer.'
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => mockData
     });
@@ -54,7 +54,7 @@ describe('ContextCard', () => {
       summary: 'New customer.'
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => mockData
     });

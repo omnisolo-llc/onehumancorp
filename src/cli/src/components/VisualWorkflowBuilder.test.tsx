@@ -14,7 +14,7 @@ describe('VisualWorkflowBuilder', () => {
   const runWorkflowMock = vi.fn();
 
   beforeEach(() => {
-    (useVisualWorkflow as any).mockReturnValue({
+    vi.mocked(useVisualWorkflow, { partial: true }).mockReturnValue({
       status: 'idle',
       result: null,
       error: null,
@@ -114,7 +114,7 @@ describe('VisualWorkflowBuilder', () => {
   });
 
   it('disables input when status is running', async () => {
-    (useVisualWorkflow as any).mockReturnValue({
+    vi.mocked(useVisualWorkflow, { partial: true }).mockReturnValue({
       status: 'running',
       result: null,
       error: null,
@@ -133,7 +133,7 @@ describe('VisualWorkflowBuilder', () => {
   });
 
   it('displays error state correctly', async () => {
-    (useVisualWorkflow as any).mockReturnValue({
+    vi.mocked(useVisualWorkflow, { partial: true }).mockReturnValue({
       status: 'error',
       result: null,
       error: 'Backend connection failed',
@@ -148,7 +148,7 @@ describe('VisualWorkflowBuilder', () => {
   });
 
   it('displays result state correctly', async () => {
-    (useVisualWorkflow as any).mockReturnValue({
+    vi.mocked(useVisualWorkflow, { partial: true }).mockReturnValue({
       status: 'complete',
       result: 'Success!',
       error: null,
@@ -163,9 +163,21 @@ describe('VisualWorkflowBuilder', () => {
     expect(lastFrame()!).toContain('Success!');
   });
 
-  it('executes workflow when r is pressed', async () => {
+  it('keeps node identities unique after deleting and adding nodes', async () => {
+    const { stdin } = render(<VisualWorkflowBuilder onBack={vi.fn()} />);
+    for (const key of ['a', '1', 'a', '2', 'k', 'd', 'a', '3', 'r']) {
+      await delay(20);
+      stdin.write(key);
+    }
+    await delay(30);
+    const graph = runWorkflowMock.mock.calls.at(-1)?.[0];
+    expect(graph.nodes.map((node: { id: string }) => node.id)).toEqual(['node_2', 'node_3']);
+    expect(graph.edges).toEqual([{ source: 'node_2', target: 'node_3' }]);
+  });
+
+  it('executes workflow using the Rust node wire format when r is pressed', async () => {
     const onBack = vi.fn();
-    const { stdin, lastFrame } = render(<VisualWorkflowBuilder onBack={onBack} />);
+    const { stdin } = render(<VisualWorkflowBuilder onBack={onBack} />);
 
     await delay(10);
     // Add nodes: Input -> Llm -> Output
@@ -180,9 +192,9 @@ describe('VisualWorkflowBuilder', () => {
     expect(runWorkflowMock).toHaveBeenCalledWith(
       {
         nodes: [
-          { id: 'node_1', type: { Input: { name: 'in' } } },
-          { id: 'node_2', type: { Llm: { prompt_template: 'Process: {{in}}' } } },
-          { id: 'node_3', type: { Output: null } }
+          { id: 'node_1', node_type: { type: 'Input', name: 'in' } },
+          { id: 'node_2', node_type: { type: 'Llm', prompt_template: 'Process: {{in}}' } },
+          { id: 'node_3', node_type: { type: 'Output' } }
         ],
         edges: [
           { source: 'node_1', target: 'node_2' },

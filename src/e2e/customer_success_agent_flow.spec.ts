@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import './fixtures';
 import { Client } from 'pg';
 
 test.describe('CustomerSuccessAgent Auto-Reply Flow', () => {

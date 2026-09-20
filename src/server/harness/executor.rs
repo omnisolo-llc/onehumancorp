@@ -115,8 +115,13 @@ mod tests {
     async fn test_dynamic_config_update() {
         let mut task = LocalShellTask::new(None);
 
-        let result1 = task.execute("curl http://example.com").await;
-        assert!(result1.is_ok());
+        // This tests command-policy changes, not availability of a public host.
+        // Execute the real curl binary without issuing any network request.
+        let result1 = task
+            .execute("curl --version")
+            .await
+            .expect("curl should be executable before the policy update");
+        assert!(result1.contains("curl "));
 
         let policy = r#"{
             "disabled_commands": ["curl"]
@@ -124,7 +129,7 @@ mod tests {
 
         task.update_config(policy).await.unwrap();
 
-        let result2 = task.execute("curl http://example.com").await;
+        let result2 = task.execute("curl --version").await;
         assert!(result2.is_err());
 
         let msg = result2.unwrap_err();

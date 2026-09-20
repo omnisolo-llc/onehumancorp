@@ -11,7 +11,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tokio = { workspace = true }
-image = "0.25"
+# Preserve the existing image decoders and WebP output. The default avif feature
+# only adds an unused AVIF encoder (ravif/rav1e); AVIF decoding would require the
+# separate avif-native feature, which was never enabled by this application.
+image = { version = "0.25", default-features = false, features = ["rayon", "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff", "webp"] }
 redis = { version = "0.27.6", features = ["tokio-comp"] }
 chrono = { workspace = true }
 flate2 = "1"

@@ -11,7 +11,7 @@ vi.mock('../lib/localizationStore', () => ({
 
 describe('LocalizationToggle', () => {
   it('renders correctly with default values', () => {
-    (useLocalizationStore as any).mockReturnValue({
+    vi.mocked(useLocalizationStore, { partial: true }).mockReturnValue({
       locale: 'en',
       currency: 'USD',
       setLocale: vi.fn(),
@@ -24,7 +24,7 @@ describe('LocalizationToggle', () => {
   });
 
   it('toggles dropdown when clicked', () => {
-    (useLocalizationStore as any).mockReturnValue({
+    vi.mocked(useLocalizationStore, { partial: true }).mockReturnValue({
       locale: 'en',
       currency: 'USD',
       setLocale: vi.fn(),
@@ -50,7 +50,7 @@ describe('LocalizationToggle', () => {
 
   it('calls setLocale when a language is selected', () => {
     const setLocaleMock = vi.fn();
-    (useLocalizationStore as any).mockReturnValue({
+    vi.mocked(useLocalizationStore, { partial: true }).mockReturnValue({
       locale: 'en',
       currency: 'USD',
       setLocale: setLocaleMock,
@@ -69,7 +69,7 @@ describe('LocalizationToggle', () => {
 
   it('calls setCurrency when a currency is selected', () => {
     const setCurrencyMock = vi.fn();
-    (useLocalizationStore as any).mockReturnValue({
+    vi.mocked(useLocalizationStore, { partial: true }).mockReturnValue({
       locale: 'en',
       currency: 'USD',
       setLocale: vi.fn(),

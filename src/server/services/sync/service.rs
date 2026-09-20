@@ -102,7 +102,9 @@ impl SyncService for MySyncService {
             tenant_id = "system".to_string();
         }
 
-        let items: Vec<serde_json::Value> = serde_json::from_str(&req.payload).unwrap_or_default();
+        let items: Vec<serde_json::Value> = serde_json::from_str(&req.payload).map_err(|_| {
+            Status::invalid_argument("Sync payload must be a JSON array of mutations")
+        })?;
         if items.is_empty() {
             return Ok(Response::new(PowerSyncPushResponse {
                 status: "ok".to_string(),
@@ -457,10 +459,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_sync_latency_called() {
-        // Just verify that the service compiles successfully when calling record_sync_latency metrics.
-        // True validation happens during integration tests where a mock PgPool is observed for insertion events.
-        assert!(true);
+    async fn native_cleanup_malformed_sync_payload_is_not_acknowledged() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(25))
+            .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+            .unwrap();
+        let service = MySyncService::new(pool);
+        for payload in ["not-json", "null", "{}"] {
+            let response = service
+                .power_sync_push(Request::new(PowerSyncPushRequest {
+                    payload: payload.to_owned(),
+                }))
+                .await;
+            assert_eq!(response.unwrap_err().code(), tonic::Code::InvalidArgument);
+        }
     }
 
     #[tokio::test]

@@ -23,7 +23,7 @@ describe('ApiDocsPage', () => {
     global.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ paths: { '/api/v1/help': {}, '/api/v1/tooltips': {} } }),
       ok: true
-    }) as any;
+    });
   });
 
   afterEach(() => {
@@ -52,7 +52,7 @@ describe('ApiDocsPage', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       json: () => Promise.resolve({}),
-    }) as any;
+    });
 
     render(
       <TooltipProvider>
@@ -67,7 +67,7 @@ describe('ApiDocsPage', () => {
   });
 
   it('displays an error message when fetch throws an exception', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error')) as any;
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     render(
       <TooltipProvider>

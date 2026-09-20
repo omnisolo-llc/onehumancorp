@@ -323,7 +323,9 @@ impl ClaudeSubagentSpawner {
             let req = omnisolo_builtin_agent_core::types::ChatRequest {
                 model: config.model.clone(),
                 system: ::server_pricing::compression::reduce_tokens(system_prompt),
-                messages: vec![omnisolo_builtin_agent_core::types::Message::user(current_text)],
+                messages: vec![omnisolo_builtin_agent_core::types::Message::user(
+                    current_text,
+                )],
                 tools: vec![],
                 max_tokens: 2000,
                 temperature: 0.0,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import CartRecoveryPage from './page';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -10,31 +10,31 @@ vi.mock('next/navigation', () => ({
     }),
 }));
 
-// Mock global fetch
-global.fetch = vi.fn(() =>
-    Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ count: 5 }),
-    })
-) as any;
+// A boundary fixture, not a claimed live billing connection.
+const fetchPlan = vi.fn<typeof fetch>(async () => Response.json({ current_plan: 'pro' }));
 
 describe('CartRecoveryPage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.stubGlobal('fetch', fetchPlan);
         localStorage.clear();
         localStorage.setItem('has_pro', 'true');
     });
 
     it('renders the Cart Recovery page correctly', async () => {
-        render(<CartRecoveryPage />);
+        await act(async () => { render(<CartRecoveryPage />); });
         expect(screen.getByText('Recover Abandoned Carts')).toBeInTheDocument();
         expect(screen.getByText('Generate AI Campaign')).toBeInTheDocument();
     });
 
-    it('toggles auto recovery', () => {
-        const { container } = render(<CartRecoveryPage />);
-        const toggleBtn = container.querySelector('#auto-recovery-toggle') as HTMLButtonElement;
-        fireEvent.click(toggleBtn);
-        // Add more specific expectations as needed
+    it('does not pretend automatic recovery works without a dispatcher', async () => {
+        await act(async () => { render(<CartRecoveryPage />); });
+        const toggle = screen.getByRole('button', { name: 'Auto recovery unavailable' });
+        expect(toggle).toBeDisabled();
+        expect(screen.getByText('Automatic recovery is unavailable until a real campaign dispatcher is connected.')).toBeVisible();
+        fireEvent.click(toggle);
+        expect(toggle).toBeDisabled();
+        expect(fetchPlan).toHaveBeenCalledTimes(1);
+        expect(fetchPlan).toHaveBeenCalledWith('/api/v1/billing/my-plan');
     });
 });

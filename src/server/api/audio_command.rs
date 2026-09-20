@@ -333,7 +333,7 @@ pub async fn handle_voice_command(
             match state
                 .orchestrator
                 .execute_action(
-                    dept.clone(),
+                    dept,
                     final_desc,
                     tenant_id,
                     ActionRisk::DraftForReview,
@@ -367,7 +367,7 @@ pub async fn handle_voice_command(
     match state
         .orchestrator
         .execute_action(
-            dept.clone(),
+            dept,
             description,
             tenant_id,
             ActionRisk::DraftForReview,

@@ -1245,16 +1245,15 @@ pub fn get_changelog_data() -> Vec<ChangelogSection> {
             current_screenshot = None;
         } else if !current_version.is_empty() && !line.trim().is_empty() {
             // Check for markdown image format: ![alt text](url)
-            if line.starts_with("![") {
-                if let Some(start_idx) = line.find("](") {
-                    if let Some(end_idx) = line.find(")") {
-                        if current_screenshot.is_none() {
-                            let url = &line[start_idx + 2..end_idx];
-                            current_screenshot = Some(url.to_string());
-                        }
-                        continue; // Skip adding image line to content_lines
-                    }
+            if line.starts_with("![")
+                && let Some(start_idx) = line.find("](")
+                && let Some(end_idx) = line.find(")")
+            {
+                if current_screenshot.is_none() {
+                    let url = &line[start_idx + 2..end_idx];
+                    current_screenshot = Some(url.to_string());
                 }
+                continue; // Skip adding image line to content_lines
             }
             current_lines.push(line.to_string());
         }

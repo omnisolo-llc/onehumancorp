@@ -20,16 +20,17 @@ echo ""
 if [[ ! $REPLY =~ ^[Yy]$ ]]
 then
     echo "Aborted."
-    return 1 2>/dev/null || true
+    return 1 2>/dev/null || exit 1
 fi
 
 echo -e "\n${DIM}[Running Environment Health Checks]${RESET}"
 
 # Check for essential tools
-TOOLS=("bazelisk" "docker" "go" "sqlite3")
+export PATH="${HOME}/.cargo/bin:${PATH}"
+TOOLS=("cargo" "rustc" "node" "npm" "docker" "sqlite3")
 MISSING_TOOLS=0
 for tool in "${TOOLS[@]}"; do
-    if command -v $tool >/dev/null 2>&1; then
+    if command -v "$tool" >/dev/null 2>&1; then
         echo -e "  ${GREEN}✓ $tool installed${RESET}"
     else
         echo -e "  ${PURPLE}✗ $tool not found${RESET}"

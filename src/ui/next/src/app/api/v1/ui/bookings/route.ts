@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { proxyBackendGet } from '../backendProxy';
 
 export async function GET(req: Request) {

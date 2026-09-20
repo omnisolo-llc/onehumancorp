@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { currentAppSmoke } from './current_app_smoke';
+import './current_app_smoke';
 
 test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);

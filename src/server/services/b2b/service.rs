@@ -10,6 +10,12 @@ pub struct MyB2BService {
     trust_agreements: RwLock<Vec<TrustAgreement>>,
 }
 
+impl Default for MyB2BService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MyB2BService {
     pub fn new() -> Self {
         MyB2BService {

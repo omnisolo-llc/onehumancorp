@@ -81,7 +81,7 @@ async fn handle_chat(
     match state
         .orchestrator
         .execute_action(
-            dept.clone(),
+            dept,
             description,
             tenant_id,
             ActionRisk::DraftForReview,

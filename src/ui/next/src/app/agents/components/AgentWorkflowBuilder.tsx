@@ -1,3 +1,4 @@
+import { errorMessage } from '@/lib/errors';
 import React, { useState } from 'react';
 
 export type BlockType = 'Trigger' | 'Action' | 'Condition' | 'Output';
@@ -71,8 +72,8 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
       await onSave(workflowName, payloadString);
       setWorkflowName('');
       setWorkflowBlocks([]);
-    } catch (err: any) {
-      setError(err.message || 'Failed to save workflow.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Failed to save workflow.'));
     } finally {
       setIsSubmitting(false);
     }

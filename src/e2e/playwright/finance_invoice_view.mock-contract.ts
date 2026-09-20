@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures';
-import { currentAppSmoke } from '../current_app_smoke';
+import '../current_app_smoke';
 
 test.describe('Agentic Invoicing Flow - View Invoice', () => {
     test.beforeEach(async ({ page, loginAs, adminUser }) => {

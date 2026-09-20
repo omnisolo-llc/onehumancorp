@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
 
 test.describe('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, browser }) => {
     let serverState = {};
-    const fs = require('fs');
-    const path = require('path');
 
     await page.route('**/setup.html', async route => {
         const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');

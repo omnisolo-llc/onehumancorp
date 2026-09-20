@@ -248,7 +248,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -286,7 +288,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -322,7 +326,7 @@ mod tests {
             while start_time.elapsed() < std::time::Duration::from_millis(3000) {
                 // Intense busy wait
                 dummy = dummy.wrapping_add(1).wrapping_mul(3);
-                if dummy % 10000 == 0 {
+                if dummy.is_multiple_of(10000) {
                     std::hint::spin_loop();
                 }
             }
@@ -346,7 +350,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -384,7 +390,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -756,8 +764,8 @@ mod tests {
         // "Verify that mobile/Thin Client features fail-safe when backend latency spikes >2s or connections drop entirely."
         let result = tokio::time::timeout(std::time::Duration::from_millis(50), async {
             tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-            let pending = Ok::<(), String>(());
-            pending
+
+            Ok::<(), String>(())
         })
         .await;
 
@@ -797,8 +805,8 @@ mod tests {
         // 2. Simulate read operation degradation via pending
         let read_result = tokio::time::timeout(timeout_duration, async {
             tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-            let pending = Ok::<String, String>("".to_string());
-            pending
+
+            Ok::<String, String>("".to_string())
         })
         .await;
 
@@ -823,8 +831,8 @@ mod tests {
         // 3. Simulate write operation queueing locally on failure via pending
         let write_result = tokio::time::timeout(timeout_duration, async {
             tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-            let pending = Ok::<(), String>(());
-            pending
+
+            Ok::<(), String>(())
         })
         .await;
 
@@ -951,7 +959,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -988,7 +998,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }

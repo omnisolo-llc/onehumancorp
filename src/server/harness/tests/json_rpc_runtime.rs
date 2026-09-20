@@ -1,15 +1,11 @@
 use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
+#[path = "../ambient_test.rs"]
+mod ambient_test;
 use std::time::Duration;
 
 use server_harness::middleware::json_rpc::{
     JsonRpcError, JsonRpcErrorObject, JsonRpcId, JsonRpcProcessConfig, JsonRpcProcessRuntime,
 };
-
-fn environment_lock() -> &'static Mutex<()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-}
 
 #[tokio::test]
 async fn runtime_correlates_out_of_order_responses_and_routes_notifications() {
@@ -127,15 +123,11 @@ printf '{"id":%s,"result":{"wire":"headerless"}}\n' "$id"
     runtime.shutdown().await.unwrap();
 }
 
-#[tokio::test]
-async fn ambient_parent_environment_is_not_inherited() {
-    let _guard = environment_lock().lock().unwrap();
-    unsafe {
-        std::env::set_var("UNRELATED_DEPLOYMENT_SECRET", "CANARY-AMBIENT-7KQ9");
-    }
-
-    let mut config = JsonRpcProcessConfig::shell(
-        r#"
+#[test]
+fn ambient_parent_environment_is_not_inherited() {
+    ambient_test::with_ambient_canary("ambient_parent_environment_is_not_inherited", async {
+        let mut config = JsonRpcProcessConfig::shell(
+            r#"
 read line
 id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
 ambient=false
@@ -146,22 +138,21 @@ path=false
 [ -n "${PATH:-}" ] && path=true
 printf '{"jsonrpc":"2.0","id":%s,"result":{"ambient":%s,"explicit":%s,"path":%s}}\n' "$id" "$ambient" "$explicit" "$path"
 "#,
-    );
-    config.environment = HashMap::from([("OPENAI_API_KEY".to_owned(), "explicit-key".to_owned())]);
-    let runtime = JsonRpcProcessRuntime::spawn(config).await.unwrap();
-    let result = runtime
-        .request("environment-check", serde_json::Value::Null)
-        .await
-        .unwrap();
+        );
+        config.environment =
+            HashMap::from([("OPENAI_API_KEY".to_owned(), "explicit-key".to_owned())]);
+        let runtime = JsonRpcProcessRuntime::spawn(config).await.unwrap();
+        let result = runtime
+            .request("environment-check", serde_json::Value::Null)
+            .await
+            .unwrap();
 
-    unsafe {
-        std::env::remove_var("UNRELATED_DEPLOYMENT_SECRET");
-    }
-    assert_eq!(
-        result,
-        serde_json::json!({"ambient": false, "explicit": true, "path": true})
-    );
-    runtime.shutdown().await.unwrap();
+        assert_eq!(
+            result,
+            serde_json::json!({"ambient": false, "explicit": true, "path": true})
+        );
+        runtime.shutdown().await.unwrap();
+    });
 }
 
 #[test]

@@ -1,8 +1,5 @@
 use crate::hub::Hub;
-#[cfg(not(omnisolo_bazel_package))]
 use crate::scheduler::{Schedule, ScheduleType, Task, TaskStatus};
-#[cfg(omnisolo_bazel_package)]
-use ::server_lib::scheduler::{Schedule, ScheduleType, Task, TaskStatus};
 use ::server_omnisolo::orchestration::scheduler_service_server::SchedulerService;
 use ::server_omnisolo::orchestration::*;
 use chrono::{TimeZone, Utc};
@@ -26,7 +23,7 @@ impl SchedulerService for MySchedulerService {
         request: Request<EmptyRequest>,
     ) -> Result<Response<ScheduledTasksResponse>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
-            .map_err(|e| Status::unauthenticated(e))?;
+            .map_err(Status::unauthenticated)?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() {
             "system".to_string()
@@ -35,7 +32,7 @@ impl SchedulerService for MySchedulerService {
         };
 
         let tasks = self.hub.scheduler().list_for_org(&org_id);
-        let proto_tasks = tasks.into_iter().map(|t| convert_to_proto(t)).collect();
+        let proto_tasks = tasks.into_iter().map(convert_to_proto).collect();
         Ok(Response::new(ScheduledTasksResponse { tasks: proto_tasks }))
     }
 
@@ -44,7 +41,7 @@ impl SchedulerService for MySchedulerService {
         request: Request<CreateScheduledTaskRequest>,
     ) -> Result<Response<ProtoTask>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
-            .map_err(|e| Status::unauthenticated(e))?;
+            .map_err(Status::unauthenticated)?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() {
             "system".to_string()
@@ -73,7 +70,7 @@ impl SchedulerService for MySchedulerService {
         self.hub
             .scheduler()
             .create(task.clone())
-            .map_err(|e| Status::internal(e))?;
+            .map_err(Status::internal)?;
 
         Ok(Response::new(convert_to_proto(task)))
     }
@@ -83,7 +80,7 @@ impl SchedulerService for MySchedulerService {
         request: Request<CancelScheduledTaskRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
-            .map_err(|e| Status::unauthenticated(e))?;
+            .map_err(Status::unauthenticated)?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() {
             "system".to_string()
@@ -95,7 +92,7 @@ impl SchedulerService for MySchedulerService {
         self.hub
             .scheduler()
             .cancel(&org_id, &req.id)
-            .map_err(|e| Status::not_found(e))?;
+            .map_err(Status::not_found)?;
 
         Ok(Response::new(EmptyResponse {}))
     }

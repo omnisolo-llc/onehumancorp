@@ -7,6 +7,12 @@ pub struct ChromaDbProvider {
     pub base_url: String,
 }
 
+impl Default for ChromaDbProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChromaDbProvider {
     pub fn new() -> Self {
         let mode = env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());

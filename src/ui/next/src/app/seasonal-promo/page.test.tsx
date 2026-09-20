@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import SeasonalPromoPage from './page';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -14,20 +14,18 @@ vi.mock('../components/PoweredByOmniSolo', () => ({
 
 describe('SeasonalPromoPage', () => {
   beforeEach(() => {
-    Object.defineProperty(window, 'location', {
-      value: { origin: 'http://localhost:3000' },
-      writable: true
-    });
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => Response.json({ current_plan: 'free' })));
+    localStorage.clear();
     vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
-  it('renders the page correctly', () => {
-    render(<SeasonalPromoPage />);
+  it('renders the page correctly', async () => {
+    await act(async () => { render(<SeasonalPromoPage />); });
     expect(screen.getByText('Seasonal Promotion Generator ✨')).toBeInTheDocument();
   });
 
-  it('renders the PoweredByOmniSolo component', () => {
-    render(<SeasonalPromoPage />);
+  it('renders the PoweredByOmniSolo component', async () => {
+    await act(async () => { render(<SeasonalPromoPage />); });
     expect(screen.getByTestId('powered-by-omnisolo')).toBeInTheDocument();
   });
 });

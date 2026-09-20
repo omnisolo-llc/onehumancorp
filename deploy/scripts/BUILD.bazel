@@ -1,6 +1,0 @@
-exports_files([
-    "omnisolo-agent-wizard.sh",
-    "omnisolo-seed-data.sh",
-    "omnisolo-standalone.sh",
-    "prepare-compose-env.sh",
-])

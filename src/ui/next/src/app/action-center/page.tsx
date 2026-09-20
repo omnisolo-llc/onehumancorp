@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
 import { SyncManager } from '../../lib/sync/SyncManager';
 import { getActions } from '../utils/offlineQueue';
@@ -50,7 +50,7 @@ export default function ActionCenterPage() {
       try {
         const actions = await getActions();
         setOfflineActionsCount(actions.length);
-      } catch (err) {}
+      } catch  {}
     };
     updateOfflineCount();
 
@@ -152,7 +152,7 @@ export default function ActionCenterPage() {
     if (parts.length > 1) {
       try {
         return JSON.parse(parts[1]);
-      } catch (e) {
+      } catch  {
         return null;
       }
     }

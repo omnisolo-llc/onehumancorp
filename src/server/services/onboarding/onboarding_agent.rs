@@ -147,15 +147,11 @@ fn repair_truncated_json(input: &str) -> Result<IntakeData, String> {
             } else if !in_string {
                 match c {
                     '{' | '[' => stack.push(c),
-                    '}' => {
-                        if stack.last() == Some(&'{') {
-                            stack.pop();
-                        }
+                    '}' if stack.last() == Some(&'{') => {
+                        stack.pop();
                     }
-                    ']' => {
-                        if stack.last() == Some(&'[') {
-                            stack.pop();
-                        }
+                    ']' if stack.last() == Some(&'[') => {
+                        stack.pop();
                     }
                     _ => {}
                 }
@@ -417,62 +413,55 @@ Your response:",
 
         // Clean up markdown code blocks if present
         let mut clean_json = response.to_string();
-        if let Some(start) = clean_json.find('{') {
-            if let Some(end) = clean_json.rfind('}') {
-                if start <= end {
-                    clean_json = clean_json[start..=end].to_string();
-                }
-            }
+        if let Some(start) = clean_json.find('{')
+            && let Some(end) = clean_json.rfind('}')
+            && start <= end
+        {
+            clean_json = clean_json[start..=end].to_string();
         }
 
-        let data: IntakeData = serde_json::from_str(&clean_json)
-            .or_else(|_| {
-                let mut stack = Vec::new();
-                let mut in_str = false;
-                let mut escaped = false;
-                for c in clean_json.chars() {
-                    if c == '"' && !escaped {
-                        in_str = !in_str;
-                    }
-                    escaped = if c == '\\' && !escaped { true } else { false };
-
-                    if !in_str {
-                        match c {
-                            '{' | '[' => stack.push(c),
-                            '}' => {
-                                if stack.last() == Some(&'{') {
-                                    stack.pop();
-                                }
-                            }
-                            ']' => {
-                                if stack.last() == Some(&'[') {
-                                    stack.pop();
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
+        let data: IntakeData = serde_json::from_str(&clean_json).or_else(|_| {
+            let mut stack = Vec::new();
+            let mut in_str = false;
+            let mut escaped = false;
+            for c in clean_json.chars() {
+                if c == '"' && !escaped {
+                    in_str = !in_str;
                 }
+                escaped = c == '\\' && !escaped;
 
-                let mut repaired = clean_json.clone();
-                if in_str {
-                    repaired.push('"');
-                }
-                while let Some(c) = stack.pop() {
+                if !in_str {
                     match c {
-                        '{' => repaired.push('}'),
-                        '[' => repaired.push(']'),
+                        '{' | '[' => stack.push(c),
+                        '}' if stack.last() == Some(&'{') => {
+                            stack.pop();
+                        }
+                        ']' if stack.last() == Some(&'[') => {
+                            stack.pop();
+                        }
                         _ => {}
                     }
                 }
-                serde_json::from_str(&repaired).map_err(|e| {
-                    format!(
-                        "Failed to parse AI response as JSON: {}. Repaired string was: {}",
-                        e, repaired
-                    )
-                })
+            }
+
+            let mut repaired = clean_json.clone();
+            if in_str {
+                repaired.push('"');
+            }
+            while let Some(c) = stack.pop() {
+                match c {
+                    '{' => repaired.push('}'),
+                    '[' => repaired.push(']'),
+                    _ => {}
+                }
+            }
+            serde_json::from_str(&repaired).map_err(|e| {
+                format!(
+                    "Failed to parse AI response as JSON: {}. Repaired string was: {}",
+                    e, repaired
+                )
             })
-            .map_err(|e| e)?;
+        })?;
 
         Ok(data)
     }
@@ -583,7 +572,12 @@ Your response:",
 
         // Invalidate the Dashboard cache as well
         let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
-        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<::server_omnisolo::app::GetOnboardingStateResponse>::new(self.hub.redis_client()));
+        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE
+            .get_or_init(|| {
+                ::server_utils::cache::HybridCache::<
+                    ::server_omnisolo::app::GetOnboardingStateResponse,
+                >::new(self.hub.redis_client())
+            });
         tracing::debug!(
             "Invalidating dashboard onboarding state cache for key: {}",
             dashboard_cache_key
@@ -771,12 +765,14 @@ Your response:",
                 agent_clone_product
                     .create_product(
                         &org_id_clone1,
-                        &req_first_product_name,
-                        &req_first_product_price,
+                        &IntakeProduct {
+                            name: req_first_product_name,
+                            price: req_first_product_price,
+                            description: None,
+                            variants: None,
+                        },
                         &req_price_type,
                         &business_type_clone,
-                        None,
-                        None,
                         req_deposit_percentage,
                         req_lead_time_days,
                     )
@@ -952,22 +948,23 @@ Your response:",
                 company_name, business_type
             ),
             organization_id: org_id,
-            user_id: user_id,
+            user_id,
         })
     }
 
     async fn create_product(
         &self,
         org_id: &str,
-        name: &str,
-        price_str: &str,
+        product: &IntakeProduct,
         price_type: &str,
         business_type: &str,
-        description: Option<&str>,
-        variants: Option<&Vec<IntakeProductVariant>>,
         deposit_percentage: Option<i32>,
         lead_time_days: Option<i32>,
     ) -> Result<(), String> {
+        let name = product.name.as_str();
+        let price_str = product.price.as_str();
+        let description = product.description.as_deref();
+        let variants = product.variants.as_ref();
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
@@ -980,11 +977,12 @@ Your response:",
         if let Some(m) = meta.as_object_mut() {
             if let Some(dp) = deposit_percentage {
                 m.insert("deposit_percentage".to_string(), json!(dp));
-                let deposit_stripe_link = format!(
-                    "https://checkout.stripe.com/pay/cs_test_{}",
-                    id.replace("-", "")
+                // A deposit rule is not a provider-created checkout session.
+                // Payment setup must use the verified payment workflow later.
+                m.insert(
+                    "deposit_payment_status".to_string(),
+                    json!("not_configured"),
                 );
-                m.insert("deposit_link".to_string(), json!(deposit_stripe_link));
             }
             if let Some(lt) = lead_time_days {
                 m.insert("lead_time_days".to_string(), json!(lt));
@@ -10693,7 +10691,7 @@ mod tests {
         let data = res.unwrap();
 
         assert_eq!(data.business_name, "Maya's Cakes");
-        assert!(data.initial_products.len() >= 1);
+        assert!(!data.initial_products.is_empty());
 
         // Also test creating the variants via start_onboarding directly with the mocked data
         let req = StartOnboardingRequest {
@@ -10720,10 +10718,12 @@ mod tests {
                         .variants
                         .unwrap_or_default()
                         .into_iter()
-                        .map(|v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
-                            name: v.name,
-                            price_modifier: v.price_modifier,
-                        })
+                        .map(
+                            |v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
+                                name: v.name,
+                                price_modifier: v.price_modifier,
+                            },
+                        )
                         .collect(),
                 })
                 .collect(),

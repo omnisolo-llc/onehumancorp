@@ -137,20 +137,18 @@ impl SubscriptionHealthWorker {
                                     }
                                 };
 
-                            if !already_drafted {
-                                if let Some(orch) = &orchestrator {
-                                    let event = DepartmentEvent {
-                                        id: Uuid::new_v4().to_string(),
-                                        tenant_id: tenant_id.clone(),
-                                        event_type: "tenant.subscription.at_risk".to_string(),
-                                        payload: serde_json::json!({
-                                            "subscriber_id": subscriber_id,
-                                            "customer_id": customer_id,
-                                            "health_score": health_score
-                                        }),
-                                    };
-                                    let _ = orch.dispatch_event(event).await;
-                                }
+                            if !already_drafted && let Some(orch) = &orchestrator {
+                                let event = DepartmentEvent {
+                                    id: Uuid::new_v4().to_string(),
+                                    tenant_id: tenant_id.clone(),
+                                    event_type: "tenant.subscription.at_risk".to_string(),
+                                    payload: serde_json::json!({
+                                        "subscriber_id": subscriber_id,
+                                        "customer_id": customer_id,
+                                        "health_score": health_score
+                                    }),
+                                };
+                                let _ = orch.dispatch_event(event).await;
                             }
                         }
                     }
@@ -165,10 +163,10 @@ impl SubscriptionHealthWorker {
                     }
                 }
 
-                if let Some(transaction) = postgres_transaction {
-                    if transaction.commit().await.is_err() {
-                        tracing::warn!("subscription health worker failed to commit");
-                    }
+                if let Some(transaction) = postgres_transaction
+                    && transaction.commit().await.is_err()
+                {
+                    tracing::warn!("subscription health worker failed to commit");
                 }
             }
         });

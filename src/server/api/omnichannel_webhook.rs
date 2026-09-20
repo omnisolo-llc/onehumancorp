@@ -96,7 +96,7 @@ pub async fn resolve_identity(
         } else {
             ""
         };
-        let phone = if !sender_id.contains('@') && sender_id.chars().any(|c| c.is_digit(10)) {
+        let phone = if !sender_id.contains('@') && sender_id.chars().any(|c| c.is_ascii_digit()) {
             sender_id
         } else {
             ""
@@ -194,7 +194,7 @@ pub async fn handle_omnichannel_webhook(
         || channel == "sms"
         || channel == "booking_form"
     {
-        let _ = match &state.db.store {
+        match &state.db.store {
             crate::db::DbStore::Postgres => {
                 let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
                     .bind(&service_lead_id)
@@ -229,7 +229,7 @@ pub async fn handle_omnichannel_webhook(
             .bind("customer_inquiry")
             .bind(serde_json::json!({"message": message, "sender_id": sender_id, "customer_id": customer_id}))
             .bind("PENDING")
-            .execute(&state.db.pool).await.map(|_| ()).map_err(|e| e),
+            .execute(&state.db.pool).await.map(|_| ()),
         crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
             .bind(&intent_id)
             .bind(tenant_id)
@@ -237,7 +237,7 @@ pub async fn handle_omnichannel_webhook(
             .bind("customer_inquiry")
             .bind(serde_json::json!({"message": message, "sender_id": sender_id, "customer_id": customer_id}).to_string())
             .bind("PENDING")
-            .execute(sqlite_pool).await.map(|_| ()).map_err(|e| e),
+            .execute(sqlite_pool).await.map(|_| ()),
     };
 
     let insert_result = match &state.db.store {
@@ -254,8 +254,8 @@ pub async fn handle_omnichannel_webhook(
             .execute(&state.db.pool)
             .await;
 
-            if res.is_ok() {
-                if let Err(e) = sqlx::query(
+            if res.is_ok()
+                && let Err(e) = sqlx::query(
                     "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
                 )
                 .bind(&inbox_id)
@@ -269,7 +269,6 @@ pub async fn handle_omnichannel_webhook(
                 .await {
                     tracing::error!("Failed to insert omni_inbox_messages: {}", e);
                 }
-            }
             res.map(|_| ())
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
@@ -285,8 +284,8 @@ pub async fn handle_omnichannel_webhook(
             .execute(sqlite_pool)
             .await;
 
-            if res.is_ok() {
-                if let Err(e) = sqlx::query(
+            if res.is_ok()
+                && let Err(e) = sqlx::query(
                     "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
                 )
                 .bind(&inbox_id)
@@ -300,7 +299,6 @@ pub async fn handle_omnichannel_webhook(
                 .await {
                     tracing::error!("Failed to insert omni_inbox_messages (SQLite): {}", e);
                 }
-            }
             res.map(|_| ())
         }
     };

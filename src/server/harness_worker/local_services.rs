@@ -422,46 +422,46 @@ async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Err
         {
             return Err("vector memory tenant must match admitted scopes".into());
         }
-        let embedding: Option<Arc<dyn omnisolo_builtin_agent::llm::LlmClient>> = if let Some(embedding) =
-            &config.embedding
-        {
-            let base = embedding
-                .get("base_url")
-                .and_then(Value::as_str)
-                .ok_or("embedding base URL is required")?;
-            let url = reqwest::Url::parse(base).map_err(|_| "invalid embedding base URL")?;
-            if !matches!(url.scheme(), "https" | "http")
-                || !url.username().is_empty()
-                || url.password().is_some()
-                || url.query().is_some()
-                || url.fragment().is_some()
-            {
-                return Err("invalid embedding base URL".into());
-            }
-            let model = embedding
-                .get("model")
-                .and_then(Value::as_str)
-                .filter(|model| !model.trim().is_empty())
-                .ok_or("embedding model is required")?;
-            let key_env = embedding
-                .get("api_key_env")
-                .and_then(Value::as_str)
-                .ok_or("embedding credential variable is required")?;
-            let key = std::env::var(key_env).map_err(|_| "embedding credential is unavailable")?;
-            if key.trim().is_empty() || key.chars().any(char::is_control) {
-                return Err("invalid embedding credential".into());
-            }
-            let mut selected =
-                omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
-                    key, base, None,
-                );
-            selected.embedding_model = model.to_owned();
-            Some(Arc::new(
-                omnisolo_builtin_agent::llm::openai::OpenAIClient::from_config(selected),
-            ))
-        } else {
-            None
-        };
+        let embedding: Option<Arc<dyn omnisolo_builtin_agent::llm::LlmClient>> =
+            if let Some(embedding) = &config.embedding {
+                let base = embedding
+                    .get("base_url")
+                    .and_then(Value::as_str)
+                    .ok_or("embedding base URL is required")?;
+                let url = reqwest::Url::parse(base).map_err(|_| "invalid embedding base URL")?;
+                if !matches!(url.scheme(), "https" | "http")
+                    || !url.username().is_empty()
+                    || url.password().is_some()
+                    || url.query().is_some()
+                    || url.fragment().is_some()
+                {
+                    return Err("invalid embedding base URL".into());
+                }
+                let model = embedding
+                    .get("model")
+                    .and_then(Value::as_str)
+                    .filter(|model| !model.trim().is_empty())
+                    .ok_or("embedding model is required")?;
+                let key_env = embedding
+                    .get("api_key_env")
+                    .and_then(Value::as_str)
+                    .ok_or("embedding credential variable is required")?;
+                let key =
+                    std::env::var(key_env).map_err(|_| "embedding credential is unavailable")?;
+                if key.trim().is_empty() || key.chars().any(char::is_control) {
+                    return Err("invalid embedding credential".into());
+                }
+                let mut selected =
+                    omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
+                        key, base, None,
+                    );
+                selected.embedding_model = model.to_owned();
+                Some(Arc::new(
+                    omnisolo_builtin_agent::llm::openai::OpenAIClient::from_config(selected),
+                ))
+            } else {
+                None
+            };
         let (backend, _identity) = selected_memory_backend(&selected, embedding)
             .await
             .map_err(std::io::Error::other)?;

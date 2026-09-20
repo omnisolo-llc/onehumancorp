@@ -11,7 +11,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
       let body: any = {};
       try {
         body = await response.json();
-      } catch (e) {
+      } catch  {
         // use default mock
       }
       // Add fake pending review for low stock alert

@@ -59,9 +59,10 @@ pub fn get_redis_pool() -> Option<&'static Arc<RedisPool>> {
     if url.trim().is_empty() {
         return None;
     }
-    Some(REDIS_POOL.get_or_init(|| {
-        Arc::new(RedisPool::new(&url).expect("Failed to create Redis pool"))
-    }))
+    Some(
+        REDIS_POOL
+            .get_or_init(|| Arc::new(RedisPool::new(&url).expect("Failed to create Redis pool"))),
+    )
 }
 
 pub fn get_redis_client() -> Option<redis::Client> {

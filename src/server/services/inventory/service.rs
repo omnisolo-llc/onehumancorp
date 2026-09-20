@@ -17,6 +17,12 @@ pub struct StandaloneInventoryLocker {
     memory_fallback: Arc<DashMap<String, (String, Instant)>>,
 }
 
+impl Default for StandaloneInventoryLocker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StandaloneInventoryLocker {
     pub fn new() -> Self {
         Self {
@@ -80,11 +86,11 @@ impl InventoryLocker for StandaloneInventoryLocker {
         let now = Instant::now();
         self.memory_fallback
             .retain(|_, (_, expires_at)| *expires_at > now);
-        if let Some(v) = self.memory_fallback.get(lock_key) {
-            if v.0 == expected_lock_id {
-                self.memory_fallback.remove(lock_key);
-                return true;
-            }
+        if let Some(v) = self.memory_fallback.get(lock_key)
+            && v.0 == expected_lock_id
+        {
+            self.memory_fallback.remove(lock_key);
+            return true;
         }
         false
     }
@@ -332,7 +338,10 @@ impl InventoryService {
 
         let pool = crate::db::get_pool();
         if let Ok(mut tx) = pool.begin().await {
-            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
+            if crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
+                .await
+                .is_ok()
+            {
                 let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE")
                         .bind(product_id)
                         .bind(tenant_id)
@@ -356,16 +365,16 @@ impl InventoryService {
                                 .bind(tenant_id)
                                 .execute(&mut *tx)
                                 .await;
-                        if let Ok(res) = update_res {
-                            if res.rows_affected() == 0 {
-                                let _ = tx.rollback().await;
-                                self.locker.clear(&lock_key).await;
-                                return Ok(ReserveResult {
-                                    success: false,
-                                    lock_id: "".to_string(),
-                                    error_message: format!("Insufficient inventory."),
-                                });
-                            }
+                        if let Ok(res) = update_res
+                            && res.rows_affected() == 0
+                        {
+                            let _ = tx.rollback().await;
+                            self.locker.clear(&lock_key).await;
+                            return Ok(ReserveResult {
+                                success: false,
+                                lock_id: "".to_string(),
+                                error_message: "Insufficient inventory.".to_string(),
+                            });
                         }
                     }
                 } else {
@@ -416,23 +425,23 @@ impl InventoryService {
                     }
                 }
                 let _ = tx.commit().await; // Publish to Redis Pub/Sub for Real-Time Sync
-                if let Some(client) = &self.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let invalidation_topic = "cache_invalidation_events";
-                        let invalidation_payload = serde_json::json!({
-                            "event": "inventory.updated",
-                            "tags": [
-                                format!("tenant-id:{}", tenant_id),
-                                format!("entity:product:{}", product_id)
-                            ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
-                    }
+                if let Some(client) = &self.redis_client
+                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                {
+                    let invalidation_topic = "cache_invalidation_events";
+                    let invalidation_payload = serde_json::json!({
+                        "event": "inventory.updated",
+                        "tags": [
+                            format!("tenant-id:{}", tenant_id),
+                            format!("entity:product:{}", product_id)
+                        ]
+                    })
+                    .to_string();
+                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                        .arg(invalidation_topic)
+                        .arg(invalidation_payload)
+                        .query_async(&mut conn)
+                        .await;
                 }
             } else {
                 self.locker.clear(&lock_key).await;
@@ -469,38 +478,39 @@ impl InventoryService {
 
         let current_lock_id: Option<String> = self.locker.get_lock_id(&lock_key).await;
 
-        if let Some(cid) = current_lock_id {
-            if cid != lock_id && !lock_id.is_empty() {
-                return Ok(ReleaseResult {
-                    success: false,
-                    error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
-                });
-            }
+        if let Some(cid) = current_lock_id
+            && cid != lock_id
+            && !lock_id.is_empty()
+        {
+            return Ok(ReleaseResult {
+                success: false,
+                error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
+            });
         }
 
         let pool = crate::db::get_pool();
-        if let Ok(mut tx) = pool.begin().await {
-            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                let res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count - $1, available_count = available_count + $1 WHERE variant_id = $2 AND tenant_id = $3")
+        if let Ok(mut tx) = pool.begin().await
+            && let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await
+        {
+            let res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count - $1, available_count = available_count + $1 WHERE variant_id = $2 AND tenant_id = $3")
                     .bind(quantity)
                     .bind(product_id)
                     .bind(tenant_id)
                     .execute(&mut *tx)
                     .await;
-                if let Ok(res) = res {
-                    if res.rows_affected() == 0 {
-                        // Fallback to legacy products
-                        let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
+            if let Ok(res) = res
+                && res.rows_affected() == 0
+            {
+                // Fallback to legacy products
+                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
                             .bind(quantity)
                             .bind(product_id)
                             .bind(tenant_id)
                             .execute(&mut *tx)
                             .await;
-                    }
-                }
-
-                let _ = tx.commit().await;
             }
+
+            let _ = tx.commit().await;
         }
 
         self.locker.clear(&lock_key).await;
@@ -785,23 +795,23 @@ impl InventoryService {
         }
 
         tx.commit().await.map_err(|e| e.to_string())?; // Publish to Redis Pub/Sub for Real-Time Sync
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                let invalidation_topic = "cache_invalidation_events";
-                let invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                })
-                .to_string();
-                let _: Result<(), _> = redis::cmd("PUBLISH")
-                    .arg(invalidation_topic)
-                    .arg(invalidation_payload)
-                    .query_async(&mut conn)
-                    .await;
-            }
+        if let Some(client) = &self.redis_client
+            && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+        {
+            let invalidation_topic = "cache_invalidation_events";
+            let invalidation_payload = serde_json::json!({
+                "event": "inventory.updated",
+                "tags": [
+                    format!("tenant-id:{}", tenant_id),
+                    format!("entity:product:{}", product_id)
+                ]
+            })
+            .to_string();
+            let _: Result<(), _> = redis::cmd("PUBLISH")
+                .arg(invalidation_topic)
+                .arg(invalidation_payload)
+                .query_async(&mut conn)
+                .await;
         }
 
         Ok(CommitResult {
@@ -897,8 +907,8 @@ mod tests {
             .execute(&pool)
             .await;
 
-        let redis_url =
-            std::env::var("OMNISOLO_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        let redis_url = std::env::var("OMNISOLO_REDIS_URL")
+            .unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client_opt = redis::Client::open(redis_url).ok();
 
         let service = Arc::new(InventoryService::new(redis_client_opt));

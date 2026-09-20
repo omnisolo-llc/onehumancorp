@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod ambient_test;
+
 pub mod executor;
 pub mod mcp;
 pub mod sandbox;

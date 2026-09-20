@@ -23,7 +23,7 @@ export async function loginForVisualAudit({
       body: JSON.stringify({ username, password, organization_id: organizationId }),
     });
   } catch (error) {
-    throw new Error(`visual audit login request failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`visual audit login request failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 
   let payload = null;

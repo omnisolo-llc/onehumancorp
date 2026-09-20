@@ -56,27 +56,28 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
         }
 
         // Validate query parameters to prevent Tenant Leakage (IDOR)
-        if is_multitenant_mode() {
-            if let Some(query_str) = req.uri().query() {
-                for part in query_str.split('&') {
-                    let mut kv = part.splitn(2, '=');
-                    if let (Some(k), Some(v)) = (kv.next(), kv.next()) {
-                        let decoded_k =
-                            ::urlencoding::decode(k).unwrap_or(std::borrow::Cow::Borrowed(k));
-                        let decoded_v =
-                            ::urlencoding::decode(v).unwrap_or(std::borrow::Cow::Borrowed(v));
-                        if decoded_k == "tenant_id" || decoded_k == "tenant" {
-                            if !decoded_v.trim().is_empty() && decoded_v.trim() != tenant_id {
-                                return (
-                                    StatusCode::FORBIDDEN,
-                                    axum::Json(json!({
-                                        "error": "FORBIDDEN",
-                                        "message": "Tenant mismatch."
-                                    })),
-                                )
-                                    .into_response();
-                            }
-                        }
+        if is_multitenant_mode()
+            && let Some(query_str) = req.uri().query()
+        {
+            for part in query_str.split('&') {
+                let mut kv = part.splitn(2, '=');
+                if let (Some(k), Some(v)) = (kv.next(), kv.next()) {
+                    let decoded_k =
+                        ::urlencoding::decode(k).unwrap_or(std::borrow::Cow::Borrowed(k));
+                    let decoded_v =
+                        ::urlencoding::decode(v).unwrap_or(std::borrow::Cow::Borrowed(v));
+                    if (decoded_k == "tenant_id" || decoded_k == "tenant")
+                        && !decoded_v.trim().is_empty()
+                        && decoded_v.trim() != tenant_id
+                    {
+                        return (
+                            StatusCode::FORBIDDEN,
+                            axum::Json(json!({
+                                "error": "FORBIDDEN",
+                                "message": "Tenant mismatch."
+                            })),
+                        )
+                            .into_response();
                     }
                 }
             }
@@ -84,18 +85,18 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
 
         // Valid context, inject into request if needed, but it's already in Claims.
         // Also ensure immutable context (already done via Claims being immutable).
-        return next.run(req).await;
+        next.run(req).await
     } else {
         // No claims means no tenant context
         // If it's a route that requires it, fail closed.
-        return (
+        (
             StatusCode::UNAUTHORIZED,
             axum::Json(json!({
                 "error": "UNAUTHORIZED",
                 "message": "Missing tenant context."
             })),
         )
-            .into_response();
+            .into_response()
     }
 }
 

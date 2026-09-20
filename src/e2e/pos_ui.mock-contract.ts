@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { pool } from './global-setup';
+import './global-setup';
 
 test.describe('In-Person POS UI', () => {
   test('CUJ: Navigates from dashboard to POS, enters amount, taps, and sees receipt', async ({ browser }) => {

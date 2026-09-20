@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent,render,screen } from '@testing-library/react';
+import { beforeEach,describe,expect,it,vi } from 'vitest';
 import OrderDetailsPage from './page';
 
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'order-1' }) }));

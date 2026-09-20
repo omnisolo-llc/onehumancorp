@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Agency Proposal & Invoice Flow', () => {
   let quoteId: string;
-  let tenantId = 'agency-1';
-  let customerId = 'cust-1';
+  const tenantId = 'agency-1';
+  const customerId = 'cust-1';
 
   test.beforeEach(async ({ request }) => {
     // We create a draft quote to start

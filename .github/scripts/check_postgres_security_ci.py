@@ -21,9 +21,13 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     "set -euo pipefail",
     'echo "dependency-audit: ${DEPENDENCY_AUDIT_RESULT}"',
     'echo "check-changes: ${CHECK_CHANGES_RESULT}"',
-    'echo "bazel-build: ${BAZEL_BUILD_RESULT}"',
-    'echo "bazel-test: ${BAZEL_TEST_RESULT}"',
-    'echo "bazel-test-e2e: ${BAZEL_TEST_E2E_RESULT}"',
+    'echo "native-build: ${NATIVE_BUILD_RESULT}"',
+    'echo "native-test: ${NATIVE_TEST_RESULT}"',
+    'echo "native-e2e: ${NATIVE_E2E_RESULT}"',
+    'echo "native-web: ${NATIVE_WEB_RESULT}"',
+    'echo "native-node: ${NATIVE_NODE_RESULT}"',
+    'echo "native-images: ${NATIVE_IMAGES_RESULT}"',
+    'echo "native-desktop: ${NATIVE_DESKTOP_RESULT}"',
     'echo "kind-e2e: ${KIND_E2E_RESULT}"',
     'echo "docker-e2e: ${DOCKER_E2E_RESULT}"',
     'echo "postgres-security: ${POSTGRES_SECURITY_RESULT}"',
@@ -44,22 +48,30 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     "fi",
     "}",
     'require_success "check-changes" "$CHECK_CHANGES_RESULT"',
-    'if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then',
-    'require_success "bazel-build" "$BAZEL_BUILD_RESULT"',
+    'if [[ "$MARKDOWN_ONLY" != "true" || "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then',
+    'require_success "native-build" "$NATIVE_BUILD_RESULT"',
     "else",
-    'allow_success_or_skipped "bazel-build" "$BAZEL_BUILD_RESULT"',
+    'allow_success_or_skipped "native-build" "$NATIVE_BUILD_RESULT"',
     "fi",
     'if [[ "$MARKDOWN_ONLY" == "true" ]]; then',
     'allow_success_or_skipped "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"',
-    'allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"',
-    'allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
+    'allow_success_or_skipped "native-test" "$NATIVE_TEST_RESULT"',
+    'allow_success_or_skipped "native-e2e" "$NATIVE_E2E_RESULT"',
+    'allow_success_or_skipped "native-web" "$NATIVE_WEB_RESULT"',
+    'allow_success_or_skipped "native-node" "$NATIVE_NODE_RESULT"',
+    'allow_success_or_skipped "native-images" "$NATIVE_IMAGES_RESULT"',
+    'allow_success_or_skipped "native-desktop" "$NATIVE_DESKTOP_RESULT"',
     'allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"',
     'allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"',
     'allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"',
     "else",
     'require_success "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"',
-    'require_success "bazel-test" "$BAZEL_TEST_RESULT"',
-    'require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
+    'require_success "native-test" "$NATIVE_TEST_RESULT"',
+    'require_success "native-e2e" "$NATIVE_E2E_RESULT"',
+    'require_success "native-web" "$NATIVE_WEB_RESULT"',
+    'require_success "native-node" "$NATIVE_NODE_RESULT"',
+    'require_success "native-images" "$NATIVE_IMAGES_RESULT"',
+    'require_success "native-desktop" "$NATIVE_DESKTOP_RESULT"',
     'require_success "kind-e2e" "$KIND_E2E_RESULT"',
     'require_success "docker-e2e" "$DOCKER_E2E_RESULT"',
     'require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"',
@@ -94,7 +106,7 @@ EXPECTED_POSTGRES_JOB_KEYS = (
     "env",
     "steps",
 )
-EXPECTED_REQUIRED_JOB_KEYS = ("name", "needs", "if", "runs-on", "timeout-minutes", "steps")
+EXPECTED_REQUIRED_JOB_KEYS = ("name", "needs", "if", "runs-on", "timeout-minutes", "permissions", "steps")
 EXPECTED_CHANGES_JOB_KEYS = ("name", "runs-on", "timeout-minutes", "outputs", "steps")
 EXPECTED_POSTGRES_ENV = (
     "    env:",
@@ -108,9 +120,13 @@ EXPECTED_REQUIRED_ENV = (
     "          MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}",
     "          DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}",
     "          CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}",
-    "          BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}",
-    "          BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}",
-    "          BAZEL_TEST_E2E_RESULT: ${{ needs.bazel-test-e2e.result }}",
+    "          NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}",
+    "          NATIVE_TEST_RESULT: ${{ needs.native-test.result }}",
+    "          NATIVE_E2E_RESULT: ${{ needs.native-e2e.result }}",
+    "          NATIVE_WEB_RESULT: ${{ needs.native-web.result }}",
+    "          NATIVE_NODE_RESULT: ${{ needs.native-node.result }}",
+    "          NATIVE_IMAGES_RESULT: ${{ needs.native-images.result }}",
+    "          NATIVE_DESKTOP_RESULT: ${{ needs.native-desktop.result }}",
     "          KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}",
     "          DOCKER_E2E_RESULT: ${{ needs.docker-e2e.result }}",
     "          POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}",
@@ -384,6 +400,10 @@ def check_workflow(path: Path) -> None:
     changes = mapping_block(jobs, "check-changes", 2)
     require_exact_keys(security, 4, EXPECTED_POSTGRES_JOB_KEYS, "postgres-security job")
     require_exact_keys(required, 4, EXPECTED_REQUIRED_JOB_KEYS, "ci-required job")
+    if active_config_lines(mapping_block(required, "permissions", 4)) != (
+        "    permissions:", "      contents: read", "      actions: read"
+    ):
+        raise ContractError("ci-required timing inspection requires read-only contents/actions permissions")
     require_exact_keys(changes, 4, EXPECTED_CHANGES_JOB_KEYS, "check-changes job")
     require_non_ignorable_job(security, "postgres-security")
     require_non_ignorable_job(required, "ci-required")
@@ -446,12 +466,15 @@ def check_workflow(path: Path) -> None:
     require_exact_step_keys(suite_step, ("run",), "exact multitenancy suite")
     require_unconditional_step(suite_step, "exact multitenancy suite")
     suite_style, suite_run = suite_step.run()
-    exact_suite = "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"
+    exact_suite = "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"
     quoted_suite = f'"{exact_suite}"'
     if suite_style != "scalar" or suite_run != quoted_suite:
         raise ContractError(f"exact multitenancy suite must be active quoted scalar `run: {quoted_suite}`")
 
     require_active(required, "      - dependency-audit", "ci-required dependency audit")
+    require_active(required, "      - native-node", "ci-required independent Node quality gates")
+    require_active(required, "      - native-images", "ci-required production image build")
+    require_active(required, "      - native-build", "ci-required executable build")
     require_active(required, "      - postgres-security", "ci-required dependency")
     require_active(required, "    if: ${{ always() }}", "ci-required always-run policy")
     require_active(

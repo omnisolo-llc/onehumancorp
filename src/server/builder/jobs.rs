@@ -170,17 +170,16 @@ async fn execute_publish_site_job(
         .into_iter()
         .find(|s| s.id == site_id);
 
-    if let Some(s) = site {
-        if let Some(domain) = s.domain {
-            if !domain.ends_with(".cloud.omnisolo.co") {
-                let config = CdnPublishConfig::from_env()?;
-                let receipt = provision_cdn_and_ssl(&config, tenant_id, site_id, &domain).await?;
-                info!(
-                    "Provisioned CDN route {} and SSL certificate status {} for {}",
-                    receipt.cdn_route_id, receipt.ssl_status, domain
-                );
-            }
-        }
+    if let Some(s) = site
+        && let Some(domain) = s.domain
+        && !domain.ends_with(".cloud.omnisolo.co")
+    {
+        let config = CdnPublishConfig::from_env()?;
+        let receipt = provision_cdn_and_ssl(&config, tenant_id, site_id, &domain).await?;
+        info!(
+            "Provisioned CDN route {} and SSL certificate status {} for {}",
+            receipt.cdn_route_id, receipt.ssl_status, domain
+        );
     }
 
     info!("Site {} published successfully.", site_id);

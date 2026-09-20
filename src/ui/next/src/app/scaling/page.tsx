@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
 import { AppShell } from '../components/AppShell';
@@ -36,8 +37,8 @@ export default function ScalingPage() {
       }
       const data = await res.json();
       setResults(data.outputs || []);
-    } catch (e: any) {
-      setResults([`Error: ${e.message}`]);
+    } catch (e: unknown) {
+      setResults([`Error: ${errorMessage(e)}`]);
     } finally {
       setLoading(false);
     }

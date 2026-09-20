@@ -4,7 +4,8 @@ use std::sync::OnceLock;
 
 use ::server_utils::cache::HybridCache;
 
-pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>>
+{
     Router::new().route("/", get(list_jobs))
 }
 
@@ -30,7 +31,8 @@ async fn list_jobs(
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ohc_job_queue:{}:mobile:{}", tenant_id, mobile_optimized);
-    let cache = OMNISOLO_JOB_QUEUE_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+    let cache =
+        OMNISOLO_JOB_QUEUE_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -43,11 +45,11 @@ async fn list_jobs(
 
         tokio::spawn(async move {
             let res = fetch_jobs(&db_bg, &tenant_id_bg, mobile_optimized).await;
-            if let Ok(jobs) = res {
-                if let Some(c) = OMNISOLO_JOB_QUEUE_CACHE.get() {
-                    c.set(&cache_key_bg, jobs, std::time::Duration::from_secs(10))
-                        .await;
-                }
+            if let Ok(jobs) = res
+                && let Some(c) = OMNISOLO_JOB_QUEUE_CACHE.get()
+            {
+                c.set(&cache_key_bg, jobs, std::time::Duration::from_secs(10))
+                    .await;
             }
         });
         return Ok(Json(cached));

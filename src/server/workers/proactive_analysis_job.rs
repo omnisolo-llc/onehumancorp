@@ -128,7 +128,7 @@ impl ProactiveAnalysisWorker {
                                 _ => {
                                     attempts += 1;
                                     tokio::time::sleep(std::time::Duration::from_secs(
-                                        2u64.pow(attempts as u32),
+                                        2u64.pow(attempts),
                                     ))
                                     .await;
                                 }
@@ -226,20 +226,20 @@ impl ProactiveAnalysisWorker {
 
                                     if let Some(actions) =
                                         parsed.get("actions").and_then(|a| a.as_array())
+                                        && let Some(first_action) = actions.first()
                                     {
-                                        if let Some(first_action) = actions.first() {
-                                            let action_type = first_action
-                                                .get("type")
-                                                .and_then(|t| t.as_str())
-                                                .unwrap_or("Review");
-                                            let action_payload = first_action
-                                                .get("payload")
-                                                .and_then(|p| p.as_str())
-                                                .unwrap_or("");
+                                        let action_type = first_action
+                                            .get("type")
+                                            .and_then(|t| t.as_str())
+                                            .unwrap_or("Review");
+                                        let action_payload = first_action
+                                            .get("payload")
+                                            .and_then(|p| p.as_str())
+                                            .unwrap_or("");
 
-                                            match &db.store {
-                                                crate::db::DbStore::Postgres => {
-                                                    let _ = sqlx::query(
+                                        match &db.store {
+                                            crate::db::DbStore::Postgres => {
+                                                let _ = sqlx::query(
                                                         "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
                                                     )
                                                     .bind(Uuid::new_v4().to_string())
@@ -249,9 +249,9 @@ impl ProactiveAnalysisWorker {
                                                     .bind(action_payload)
                                                     .execute(&db.pool)
                                                     .await;
-                                                }
-                                                crate::db::DbStore::Sqlite(_) => {
-                                                    let _ = sqlx::query(
+                                            }
+                                            crate::db::DbStore::Sqlite(_) => {
+                                                let _ = sqlx::query(
                                                         "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
                                                     )
                                                     .bind(Uuid::new_v4().to_string())
@@ -261,7 +261,6 @@ impl ProactiveAnalysisWorker {
                                                     .bind(action_payload)
                                                     .execute(&db.pool)
                                                     .await;
-                                                }
                                             }
                                         }
                                     }

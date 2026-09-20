@@ -2,7 +2,7 @@
 # Docker Compose smoke test for the OmniSolo single-machine container stack.
 #
 # This test:
-#   1. Loads the Bazel-built server image into Docker
+#   1. Builds the native Cargo server image into Docker
 #   2. Starts the default Compose stack: server + PostgreSQL + Valkey
 #   3. Waits for the server health endpoint
 #   4. Verifies DB-backed UI API endpoints return valid JSON
@@ -85,8 +85,9 @@ fi
 
 COMPOSE_FILE="${REPO_ROOT}/deploy/docker-compose.yml"
 SERVER_LOADER="${REPO_ROOT}/deploy/load_all_images"
-TLS_GENERATOR="${REPO_ROOT}/bazel/rules/playwright/generate_test_tls.sh"
-GRPC_PROBE="${REPO_ROOT}/deploy/grpc_mtls_probe"
+TLS_GENERATOR="${REPO_ROOT}/deploy/tests/support/generate_test_tls.sh"
+source "${REPO_ROOT}/deploy/tests/support/native_inputs.sh"
+prepare_native_probe
 export OMNISOLO_DOCKER_SERVER_PORT="${OMNISOLO_DOCKER_SERVER_PORT:-127.0.0.1:0}"
 export OMNISOLO_DOCKER_GRPC_PORT="${OMNISOLO_DOCKER_GRPC_PORT:-127.0.0.1:0}"
 export OMNISOLO_DOCKER_POSTGRES_PORT="${OMNISOLO_DOCKER_POSTGRES_PORT:-127.0.0.1:0}"
@@ -117,31 +118,9 @@ printf '%s' "${POSTGRES_PASSWORD_VALUE}" > "${OMNISOLO_POSTGRES_PASSWORD_FILE}"
 printf 'postgres://ohc:%s@postgres:5432/ohc?sslmode=disable' \
   "${POSTGRES_PASSWORD_VALUE}" > "${DATABASE_URL_FILE}"
 
-if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-  SERVER_LOADER="$(find "${TEST_SRCDIR:-${REPO_ROOT}}" -name "load_all_images" -type f -executable | head -1)"
-fi
-
-if [[ -z "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-  echo "error: could not find executable load_all_images" >&2
-  exit 1
-fi
-
-if [[ ! -f "${TLS_GENERATOR}" || ! -x "${TLS_GENERATOR}" ]]; then
-  TLS_GENERATOR="$(find "${TEST_SRCDIR:-${REPO_ROOT}}" -path '*/bazel/rules/playwright/generate_test_tls.sh' -type f -executable | head -1)"
-fi
-
-if [[ -z "${TLS_GENERATOR}" || ! -x "${TLS_GENERATOR}" ]]; then
-  echo "error: could not find executable generate_test_tls.sh" >&2
-  exit 1
-fi
-
-if [[ ! -x "${GRPC_PROBE}" ]]; then
-  GRPC_PROBE="$(find "${TEST_SRCDIR:-${REPO_ROOT}}" -name grpc_mtls_probe -type f -executable | head -1)"
-fi
-if [[ -z "${GRPC_PROBE}" || ! -x "${GRPC_PROBE}" ]]; then
-  echo "error: could not find executable grpc_mtls_probe" >&2
-  exit 1
-fi
+for native_input in "${SERVER_LOADER}" "${TLS_GENERATOR}" "${GRPC_PROBE}"; do
+  [[ -x "${native_input}" ]] || { echo "Required native test input is not executable: ${native_input}" >&2; exit 1; }
+done
 
 log "Repo root: ${REPO_ROOT}"
 log "Compose file: ${COMPOSE_FILE}"

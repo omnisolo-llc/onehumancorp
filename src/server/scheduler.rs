@@ -63,11 +63,11 @@ impl Scheduler {
 
     pub fn cancel(&self, org_id: &str, id: &str) -> Result<(), String> {
         let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(id) {
-            if task.organization_id == org_id {
-                task.status = TaskStatus::Cancelled;
-                return Ok(());
-            }
+        if let Some(task) = tasks.get_mut(id)
+            && task.organization_id == org_id
+        {
+            task.status = TaskStatus::Cancelled;
+            return Ok(());
         }
         Err("task not found or does not belong to organization".to_string())
     }
@@ -86,44 +86,42 @@ impl Scheduler {
         let now = Utc::now();
         tasks
             .values()
-            .filter(|t| {
-                t.status == TaskStatus::Pending && t.next_run_at.map_or(false, |at| at < now)
-            })
+            .filter(|t| t.status == TaskStatus::Pending && t.next_run_at.is_some_and(|at| at < now))
             .cloned()
             .collect()
     }
 
     pub fn mark_running(&self, org_id: &str, id: &str) -> Result<Task, String> {
         let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(id) {
-            if task.organization_id == org_id {
-                let now = Utc::now();
-                task.status = TaskStatus::Running;
-                task.last_run_at = Some(now);
-                return Ok(task.clone());
-            }
+        if let Some(task) = tasks.get_mut(id)
+            && task.organization_id == org_id
+        {
+            let now = Utc::now();
+            task.status = TaskStatus::Running;
+            task.last_run_at = Some(now);
+            return Ok(task.clone());
         }
         Err("task not found or does not belong to organization".to_string())
     }
 
     pub fn mark_done(&self, org_id: &str, id: &str, success: bool) -> Result<(), String> {
         let mut tasks = self.tasks.write().unwrap();
-        if let Some(task) = tasks.get_mut(id) {
-            if task.organization_id == org_id {
-                if success {
-                    task.status = TaskStatus::Succeeded;
-                    if let ScheduleType::Interval = task.schedule.r#type {
-                        if let Some(interval) = task.schedule.interval_s {
-                            let next = Utc::now() + Duration::seconds(interval as i64);
-                            task.next_run_at = Some(next);
-                            task.status = TaskStatus::Pending;
-                        }
-                    }
-                } else {
-                    task.status = TaskStatus::Failed;
+        if let Some(task) = tasks.get_mut(id)
+            && task.organization_id == org_id
+        {
+            if success {
+                task.status = TaskStatus::Succeeded;
+                if let ScheduleType::Interval = task.schedule.r#type
+                    && let Some(interval) = task.schedule.interval_s
+                {
+                    let next = Utc::now() + Duration::seconds(interval as i64);
+                    task.next_run_at = Some(next);
+                    task.status = TaskStatus::Pending;
                 }
-                return Ok(());
+            } else {
+                task.status = TaskStatus::Failed;
             }
+            return Ok(());
         }
         Err("task not found or does not belong to organization".to_string())
     }

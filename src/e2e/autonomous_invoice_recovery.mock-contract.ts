@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { randomUUID } from 'crypto';
+import 'crypto';
 
 test.describe('Autonomous Billing & Invoice Recovery Agent E2E', () => {
   test('Agent detects overdue invoice and proposes a reminder', async ({ page, adminUser, request, loginAs }) => {
@@ -14,7 +14,6 @@ test.describe('Autonomous Billing & Invoice Recovery Agent E2E', () => {
     await page.goto('/feed');
     await expect(page.getByRole('heading', { name: 'Agent Feed' })).toBeVisible({ timeout: 15000 });
 
-    const tenantId = adminUser.tenantId;
 
     // Simulate the Finance agent creating the feed item
     const feedItemPayload = {

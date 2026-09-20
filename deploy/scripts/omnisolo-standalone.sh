@@ -1,164 +1,54 @@
-#!/bin/bash
-# OmniSolo Hybrid Local Standalone Runtime
-
-# Premium aesthetics colors
-RESET="\033[0m"
-BOLD="\033[1m"
-DIM="\033[2m"
-BLUE="\033[38;5;39m"
-CYAN="\033[38;5;87m"
-GREEN="\033[38;5;120m"
-PURPLE="\033[38;5;141m"
-
-echo -e "${BOLD}${BLUE}======================================================${RESET}"
-echo -e "${BOLD}${CYAN}      OmniSolo: Local Standalone Desktop Runtime           ${RESET}"
-echo -e "${BOLD}${BLUE}======================================================${RESET}"
-echo ""
-
-# Export optimized variables for the local footprint
-export OMNISOLO_MULTITENANT=false
-export OMNISOLO_HEADLESS=false
-export OMNISOLO_SOURCE_MODE=standalone
-export OMNISOLO_STANDALONE_MODE=true
-# Tuning memory limits for standalone wrapper
-export TOKIO_WORKER_THREADS=2
-export MALLOC_ARENA_MAX=2
-export RAYON_NUM_THREADS=4
-export GOMEMLIMIT=256MiB
-export GOGC=50
-export LOG_FORMAT="json"
-export LOG_LEVEL="info"
-export RUST_LOG="info"
-export OMNISOLO_RUNTIME_DIR=".omnisolo/runtime"
-export OMNISOLO_MEMORY_DIR="${OMNISOLO_RUNTIME_DIR}/memory"
-export OMNISOLO_STATUS_DIR="${OMNISOLO_RUNTIME_DIR}/status"
-
-if [ "$OMNISOLO_TELEMETRY_ENABLED" != "true" ]; then
-  export OMNISOLO_TELEMETRY_ENABLED=false
-  export DISABLE_TELEMETRY=true
-else
-  export OMNISOLO_TELEMETRY_ENABLED=true
-  unset DISABLE_TELEMETRY
-fi
-
-umask 077
-
-if [ "$(stat -c %a "$0")" != "700" ]; then
-  chmod 700 "$0"
-fi
-
-echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
-mkdir -p "${OMNISOLO_MEMORY_DIR}/auto/" "${OMNISOLO_MEMORY_DIR}/team/" "${OMNISOLO_STATUS_DIR}" "${OMNISOLO_RUNTIME_DIR}/tmp/" "${OMNISOLO_RUNTIME_DIR}/.cache/" "${OMNISOLO_RUNTIME_DIR}/downloads/"
-chmod 700 "${OMNISOLO_RUNTIME_DIR}/tmp/" "${OMNISOLO_RUNTIME_DIR}/.cache/" "${OMNISOLO_RUNTIME_DIR}/downloads/"
-chmod 700 "${OMNISOLO_RUNTIME_DIR}" "${OMNISOLO_MEMORY_DIR}" "${OMNISOLO_STATUS_DIR}" "${OMNISOLO_MEMORY_DIR}/auto/" "${OMNISOLO_MEMORY_DIR}/team/"
-find "${OMNISOLO_RUNTIME_DIR}" -type f -exec chmod 600 {} \+
-find "${OMNISOLO_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
-
-if [ -z "$OMNISOLO_SQLITE_KEY" ]; then
-  KEY_FILE="${OMNISOLO_RUNTIME_DIR}/.sqlite_key"
-  if [ ! -f "$KEY_FILE" ]; then
-    (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
-    chmod 600 "$KEY_FILE"
-  fi
-  export OMNISOLO_SQLITE_KEY="$(cat "$KEY_FILE")"
-fi
-
-echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
-
-# Build optimized binaries instead of running through Bazelisk repeatedly
-echo -e "${DIM}  Compiling optimized binaries...${RESET}"
-# Optimize caching
-npx @bazel/bazelisk build -c opt --disk_cache=~/.cache/bazel-disk-cache //src/server:server //src/ui/tauri:app --//src/ui/tauri:build_tauri=true > /dev/null 2>&1
-echo -e "  ${GREEN}✓ Binaries compiled${RESET}"
-
-# Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
-(while true; do
-  find "${OMNISOLO_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
-  # Resource Cleanup: Also clean unbounded tmp, cache, and download directories
-  find "${OMNISOLO_RUNTIME_DIR}/tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "${OMNISOLO_RUNTIME_DIR}/.cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "${OMNISOLO_RUNTIME_DIR}/downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  sleep 3600
-done) &
-PRUNE_PID=$!
-
-# Launch the API Server (local persistence)
-./bazel-bin/src/server/server &
-SERVER_PID=$!
-echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
-
-# Launch the UI Desktop wrapper
-echo -e "${DIM}  Waiting for backend to be ready...${RESET}"
-until curl -s http://localhost:8080/readyz > /dev/null 2>&1; do
-  sleep 1
-  if ! kill -0 $SERVER_PID 2>/dev/null; then
-    echo -e "  ${PURPLE}✗ Server process died unexpectedly during startup.${RESET}"
-    kill -TERM $PRUNE_PID 2>/dev/null || true
-    exit 1
-  fi
+#!/usr/bin/env bash
+# Native local backend plus desktop, with explicit child ownership.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT"
+for tool in cargo npm curl openssl; do
+  command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }
 done
-
-./bazel-bin/src/ui/tauri/app > /dev/null 2>&1 &
-APP_PID=$!
-echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
-
-# Launch the Prometheus agent
-if [ "$OMNISOLO_TELEMETRY_ENABLED" = "true" ]; then
-  if command -v docker >/dev/null 2>&1; then
-    docker rm -f omnisolo-prometheus-agent >/dev/null 2>&1 || true
-    docker run --name omnisolo-prometheus-agent \
-      --memory="32m" --cpus="0.05" \
-      --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
-      --network host \
-      -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
-      prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1 &
-    PROMETHEUS_PID=$!
-    echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained) with PID $PROMETHEUS_PID${RESET}"
-  else
-    echo -e "  ${DIM}⚠ Docker unavailable. Gracefully continuing without telemetry.${RESET}"
-  fi
+export OMNISOLO_MULTITENANT=false OMNISOLO_SOURCE_MODE=standalone
+export OMNISOLO_STANDALONE_MODE=true
+export OMNISOLO_TELEMETRY_ENABLED="${OMNISOLO_TELEMETRY_ENABLED:-false}"
+export OMNISOLO_RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-$ROOT/.omnisolo/runtime}"
+export OMNISOLO_MEMORY_DIR="${OMNISOLO_MEMORY_DIR:-$OMNISOLO_RUNTIME_DIR/memory}"
+export OMNISOLO_STATUS_DIR="${OMNISOLO_STATUS_DIR:-$OMNISOLO_RUNTIME_DIR/status}"
+export PORT="${PORT:-18789}"
+[[ "$PORT" =~ ^[0-9]+$ ]] && (( PORT > 0 && PORT < 65536 )) || { echo "Invalid local PORT" >&2; exit 1; }
+export BACKEND_URL="http://127.0.0.1:$PORT"
+umask 077
+mkdir -p "$OMNISOLO_RUNTIME_DIR" "$OMNISOLO_MEMORY_DIR" "$OMNISOLO_STATUS_DIR"
+if [[ -z "${OMNISOLO_SQLITE_KEY:-}" ]]; then
+  key_file="$OMNISOLO_RUNTIME_DIR/.sqlite_key"
+  if [[ ! -f "$key_file" ]]; then openssl rand -hex 32 > "$key_file"; fi
+  chmod 600 "$key_file"
+  export OMNISOLO_SQLITE_KEY="$(cat "$key_file")"
 fi
-
-# Periodic health checks
-(while true; do
-  sleep 30
-  if ! curl -s http://localhost:8080/readyz > /dev/null 2>&1; then
-    echo -e "  ${PURPLE}✗ Server health check failed. Restarting...${RESET}"
-    kill -TERM $(pgrep -f "src/server/server") 2>/dev/null || true
-    ./bazel-bin/src/server/server &
+# Never delete durable memory, downloads, or audit records based on their age.
+cargo build --locked --release -p omnisolo --bin server
+server_pid=""
+cleanup() {
+  local status=$?
+  trap - EXIT INT TERM
+  if [[ -n "$server_pid" ]]; then
+    kill -TERM "$server_pid" 2>/dev/null || true
+    wait "$server_pid" 2>/dev/null || true
   fi
-done) &
-HEALTH_PID=$!
-
-# Trap INT and EXIT signals to gracefully shutdown all local processes
-function cleanup {
-  sync
-  echo -e "\n${DIM}[Shutting down Standalone Desktop...]${RESET}"
-  # Terminate child processes gracefully
-  kill -TERM $APP_PID $(pgrep -f "src/server/server") $PRUNE_PID $HEALTH_PID 2>/dev/null || true
-
-  # Resource Cleanup: Clean additional temporary artifact directories
-  echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
-  rm -rf "${OMNISOLO_STATUS_DIR}"/* 2>/dev/null || true
-  find "${OMNISOLO_RUNTIME_DIR}/tmp/" -type f -delete > /dev/null 2>&1 || true
-  find "${OMNISOLO_RUNTIME_DIR}/.cache/" -type f -delete > /dev/null 2>&1 || true
-  find "${OMNISOLO_RUNTIME_DIR}/downloads/" -type f -delete > /dev/null 2>&1 || true
-
-  if command -v docker >/dev/null 2>&1; then
-    docker stop omnisolo-prometheus-agent > /dev/null 2>&1 || true
-    docker rm omnisolo-prometheus-agent > /dev/null 2>&1 || true
-  fi
-
-  # Wait for processes to exit
-  wait $APP_PID 2>/dev/null || true
-  wait $(pgrep -f "src/server/server") 2>/dev/null || true
-  wait $PRUNE_PID 2>/dev/null || true
-
-  echo -e "${GREEN}✓ Local standalone processes terminated successfully.${RESET}"
+  exit "$status"
 }
-
-trap cleanup EXIT INT TERM
-
-echo -e "\n${BOLD}${GREEN}Standalone Runtime is active. Press Ctrl+C to terminate.${RESET}"
-# Wait indefinitely for processes
-wait $APP_PID $SERVER_PID 2>/dev/null || true
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+./target/release/server &
+server_pid=$!
+ready=false
+for ((attempt=0; attempt<90; attempt++)); do
+  if ! kill -0 "$server_pid" 2>/dev/null; then
+    wait "$server_pid" || exit $?
+    echo "Backend exited before becoming ready" >&2; exit 1
+  fi
+  if curl --fail --silent --max-time 2 "$BACKEND_URL/readyz" >/dev/null; then ready=true; break; fi
+  sleep 1
+done
+[[ "$ready" == true ]] || { echo "Backend readiness timed out" >&2; exit 1; }
+# Tauri dev owns and stops its Node child. Packaging remains desktop:build.
+npm run desktop:dev

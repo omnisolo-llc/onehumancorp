@@ -11,7 +11,10 @@ pub trait ResearcherLlmClient: Send + Sync {
     async fn chat(
         &self,
         req: ChatRequest,
-    ) -> Result<omnisolo_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<
+        omnisolo_builtin_agent_core::types::ChatResponse,
+        Box<dyn std::error::Error + Send + Sync>,
+    >;
 }
 
 pub struct PlannerAgent {

@@ -90,7 +90,7 @@ test.describe('Birthday Club Growth Loop', () => {
         expect(preCode).toContain('hideBranding=true');
     });
 
-    test('submitting the birthday club form calls the capture endpoint', async ({ page, request }) => {
+    test('submitting the birthday club form calls the capture endpoint', async ({ page }) => {
         await page.goto('/birthday-club');
 
         // Find the iframe

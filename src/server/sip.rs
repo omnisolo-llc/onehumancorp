@@ -186,10 +186,6 @@ impl SipDB {
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
-                    } else if err_str.contains("connection refused")
-                        || err_str.contains("connection reset")
-                    {
-                        return Err(err);
                     } else {
                         return Err(err);
                     }
@@ -286,7 +282,6 @@ impl SipDB {
                 }
                 Ok(Err(err)) => {
                     let retry = is_retryable_sqlx_error(&err);
-                    let err_str = err.to_string().to_lowercase();
 
                     if retry {
                         attempt += 1;
@@ -295,10 +290,6 @@ impl SipDB {
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
-                    } else if err_str.contains("connection refused")
-                        || err_str.contains("connection reset")
-                    {
-                        return Err(err);
                     } else {
                         return Err(err);
                     }
@@ -341,7 +332,6 @@ impl SipDB {
                 Ok(_) => return Ok(()),
                 Err(err) => {
                     let retry = is_retryable_sqlx_error(&err);
-                    let err_str = err.to_string().to_lowercase();
 
                     if retry {
                         attempt += 1;
@@ -350,10 +340,6 @@ impl SipDB {
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
-                    } else if err_str.contains("connection refused")
-                        || err_str.contains("connection reset")
-                    {
-                        return Err(err);
                     } else {
                         return Err(err);
                     }
@@ -412,14 +398,13 @@ impl SipDB {
     ) -> String {
         let mut final_payload = payload.to_string();
         if let Some(content) = grounding_content {
-            if let Ok(mut json_val) = serde_json::from_str::<serde_json::Value>(payload) {
-                if let Some(task_val) = json_val.get("task") {
-                    if let Some(task) = task_val.as_str() {
-                        let new_task = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", task, content);
-                        json_val["task"] = serde_json::Value::String(new_task);
-                        return json_val.to_string();
-                    }
-                }
+            if let Ok(mut json_val) = serde_json::from_str::<serde_json::Value>(payload)
+                && let Some(task_val) = json_val.get("task")
+                && let Some(task) = task_val.as_str()
+            {
+                let new_task = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", task, content);
+                json_val["task"] = serde_json::Value::String(new_task);
+                return json_val.to_string();
             }
             final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", payload, content);
         }
@@ -443,31 +428,29 @@ impl SipDB {
         let final_payload = self.enrich_payload_with_grounding_content(payload, &grounding_content);
         let is_standalone = crate::is_standalone_runtime();
 
-        let res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
-            let _permit = if is_standalone {
-                match get_sqlite_limiter().try_acquire() {
-                    Ok(p) => Some(p),
-                    Err(_) => {
-                        let _ = crate::telemetry::record_sqlite_throttled_request(
-                            &self.pool,
-                            "delegate_mission_with_tx",
-                        )
-                        .await;
-                        Some(get_sqlite_limiter().acquire().await.map_err(|e| {
-                            sqlx::Error::Io(std::io::Error::new(
-                                std::io::ErrorKind::Other,
-                                e.to_string(),
-                            ))
-                        })?)
+        let res =
+            tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
+                let _permit = if is_standalone {
+                    match get_sqlite_limiter().try_acquire() {
+                        Ok(p) => Some(p),
+                        Err(_) => {
+                            let _ = crate::telemetry::record_sqlite_throttled_request(
+                                &self.pool,
+                                "delegate_mission_with_tx",
+                            )
+                            .await;
+                            Some(get_sqlite_limiter().acquire().await.map_err(|e| {
+                                sqlx::Error::Io(std::io::Error::other(e.to_string()))
+                            })?)
+                        }
                     }
-                }
-            } else {
-                None
-            };
-            self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local)
-                .await
-        })
-        .await;
+                } else {
+                    None
+                };
+                self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local)
+                    .await
+            })
+            .await;
 
         match res {
             Ok(Ok(_)) => Ok(()),
@@ -493,35 +476,33 @@ impl SipDB {
         let is_standalone = crate::is_standalone_runtime();
 
         loop {
-            let res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
-                let _permit = if is_standalone {
-                    match get_sqlite_limiter().try_acquire() {
-                        Ok(p) => Some(p),
-                        Err(_) => {
-                            let _ = crate::telemetry::record_sqlite_throttled_request(
-                                &self.pool,
-                                "upsert_mission",
-                            )
-                            .await;
-                            Some(get_sqlite_limiter().acquire().await.map_err(|e| {
-                                sqlx::Error::Io(std::io::Error::new(
-                                    std::io::ErrorKind::Other,
-                                    e.to_string(),
-                                ))
-                            })?)
+            let res =
+                tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), async {
+                    let _permit = if is_standalone {
+                        match get_sqlite_limiter().try_acquire() {
+                            Ok(p) => Some(p),
+                            Err(_) => {
+                                let _ = crate::telemetry::record_sqlite_throttled_request(
+                                    &self.pool,
+                                    "upsert_mission",
+                                )
+                                .await;
+                                Some(get_sqlite_limiter().acquire().await.map_err(|e| {
+                                    sqlx::Error::Io(std::io::Error::other(e.to_string()))
+                                })?)
+                            }
                         }
-                    }
-                } else {
-                    None
-                };
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local)
-                    .await?;
-                tx.commit().await?;
-                Ok::<(), sqlx::Error>(())
-            })
-            .await;
+                    } else {
+                        None
+                    };
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                    self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local)
+                        .await?;
+                    tx.commit().await?;
+                    Ok::<(), sqlx::Error>(())
+                })
+                .await;
 
             match res {
                 Ok(Ok(_)) => return Ok(()),

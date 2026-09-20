@@ -8,19 +8,15 @@ use crate::queue::{Job, TaskQueue};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum ReasoningEffort {
     Low,
+    #[default]
     Medium,
     High,
     #[serde(rename = "xhigh", alias = "x_high")]
     XHigh,
     Ultracode,
-}
-
-impl Default for ReasoningEffort {
-    fn default() -> Self {
-        Self::Medium
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

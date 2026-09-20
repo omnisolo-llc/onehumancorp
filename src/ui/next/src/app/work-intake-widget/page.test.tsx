@@ -46,7 +46,7 @@ describe('WorkIntakeWidgetPage', () => {
 
   it('encodes hostile tenant and title values in copied HTML attributes', () => {
     render(<WorkIntakeWidgetPage />);
-    const hostile = '\"><script>globalThis.pwned=true</script>&line=one two';
+    const hostile = '"><script>globalThis.pwned=true</script>&line=one two';
 
     fireEvent.change(screen.getByDisplayValue('my-business'), { target: { value: hostile } });
     fireEvent.change(screen.getByDisplayValue('Work Request'), { target: { value: hostile } });

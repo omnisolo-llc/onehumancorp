@@ -30,7 +30,7 @@ describe('AIPaywallWidget', () => {
 
   it('navigates to pricing when upgrade is clicked', () => {
     const mockPush = vi.fn();
-    (useRouter as any).mockReturnValue({ push: mockPush });
+    vi.mocked(useRouter, { partial: true }).mockReturnValue({ push: mockPush });
 
     render(<AIPaywallWidget remainingActions={5} />);
     fireEvent.click(screen.getByText('⚠️ 5 AI Actions Left'));

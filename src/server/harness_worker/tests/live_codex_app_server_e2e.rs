@@ -26,10 +26,9 @@ async fn wait_for_health(port: u16) -> Result<(), String> {
                 .get(format!("http://127.0.0.1:{port}/readyz"))
                 .send()
                 .await
+                && response.status().is_success()
             {
-                if response.status().is_success() {
-                    return Ok(());
-                }
+                return Ok(());
             }
             sleep(Duration::from_millis(100)).await;
         }

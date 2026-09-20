@@ -69,7 +69,7 @@ impl TaskQueue for SQLiteTaskQueue {
                 let mut next_retry_at = job.next_retry_at;
                 if depth > bursts_threshold {
                     let delay_seconds = (depth - bursts_threshold) * 5;
-                    next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
+                    next_retry_at += chrono::Duration::seconds(delay_seconds);
                 }
 
                 b.push_bind(job.id.clone())
@@ -107,7 +107,7 @@ impl TaskQueue for SQLiteTaskQueue {
         let bursts_threshold = 10;
         if count_row.0 > bursts_threshold {
             let delay_seconds = (count_row.0 - bursts_threshold) * 5;
-            next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
+            next_retry_at += chrono::Duration::seconds(delay_seconds);
         }
 
         sqlx::query(

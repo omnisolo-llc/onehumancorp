@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import './fixtures';
 import * as path from 'path';
 
 test.describe('Multimodal Quote E2E (Issue #28020)', () => {

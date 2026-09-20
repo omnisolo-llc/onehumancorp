@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ToolItem } from '../components/ToolProgress.js';
 
 export interface OrchestratorState {
@@ -12,7 +12,7 @@ export interface OrchestratorState {
 export const useOrchestrator = (): OrchestratorState => {
   const [status, setStatus] = useState('Idle');
   const [error, setError] = useState<string | null>(null);
-  const [tools, setTools] = useState<ToolItem[]>([]);
+  const [tools] = useState<ToolItem[]>([]);
   const [output, setOutput] = useState<string | null>(null);
 
   const runAgent = async (message: string) => {
@@ -48,8 +48,8 @@ export const useOrchestrator = (): OrchestratorState => {
 
       setOutput(data.result?.output || 'No output received.');
       setStatus('Complete');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during execution.');
+    } catch (err: unknown) {
+      setError(err instanceof Error && err.message ? err.message : 'An error occurred during execution.');
       setStatus('Error');
     }
   };

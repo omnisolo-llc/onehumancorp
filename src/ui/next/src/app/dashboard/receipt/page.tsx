@@ -55,7 +55,7 @@ export default function SnapReceiptPage() {
         setToastMessage("Failed to process receipt.");
         setIsUploading(false);
       }
-    } catch (error) {
+    } catch  {
       setToastMessage("Error connecting to server.");
       setIsUploading(false);
     }

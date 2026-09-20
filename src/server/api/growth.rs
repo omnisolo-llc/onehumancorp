@@ -769,22 +769,22 @@ async fn handle_trial_extension_claim(
     match update_result {
         Ok(result) => {
             if result.rows_affected() > 0 {
-                if let Some(client) = crate::get_redis_client() {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let invalidation_topic = "cache_invalidation_events";
-                        let invalidation_payload = serde_json::json!({
-                            "event": "tenant.updated",
-                            "tags": [
-                                format!("tenant-id:{}", org_id_str)
-                            ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
-                    }
+                if let Some(client) = crate::get_redis_client()
+                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                {
+                    let invalidation_topic = "cache_invalidation_events";
+                    let invalidation_payload = serde_json::json!({
+                        "event": "tenant.updated",
+                        "tags": [
+                            format!("tenant-id:{}", org_id_str)
+                        ]
+                    })
+                    .to_string();
+                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                        .arg(invalidation_topic)
+                        .arg(invalidation_payload)
+                        .query_async(&mut conn)
+                        .await;
                 }
                 Ok(Json(TrialExtensionClaimResponse {
                     success: true,
@@ -1030,7 +1030,8 @@ async fn handle_promoter_generate(
 
     let desc = req.description.unwrap_or_else(|| "".to_string());
 
-    let provider_name = std::env::var("OMNISOLO_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
+    let provider_name =
+        std::env::var("OMNISOLO_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
     let api_key = match provider_name.as_str() {
         "openai" => std::env::var("OPENAI_API_KEY").unwrap_or_default(),
         "minimax" => std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
@@ -1046,7 +1047,8 @@ async fn handle_promoter_generate(
             req.name, desc
         );
 
-        let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
+        let model =
+            std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
 
         let client = reqwest::Client::new();
         let body = serde_json::json!({
@@ -1083,55 +1085,40 @@ async fn handle_promoter_generate(
 
         match req_builder.send().await {
             Ok(res) => {
-                if res.status().is_success() {
-                    if let Ok(json) = res.json::<serde_json::Value>().await {
-                        if let Some(choices) = json.get("choices") {
-                            if let Some(choice) = choices.get(0) {
-                                if let Some(message) = choice.get("message") {
-                                    if let Some(content) =
-                                        message.get("content").and_then(|c| c.as_str())
-                                    {
-                                        // Try to parse the content as JSON array
-                                        match serde_json::from_str::<Vec<PromoterVariant>>(content)
-                                        {
-                                            Ok(parsed_variants) => {
-                                                variants = parsed_variants;
-                                            }
-                                            Err(_) => {
-                                                // Fallback parsing if LLM didn't return pure array
-                                                if let Ok(parsed_obj) =
-                                                    serde_json::from_str::<serde_json::Value>(
-                                                        content,
-                                                    )
-                                                {
-                                                    if let Some(arr) = parsed_obj
-                                                        .get("variants")
-                                                        .and_then(|v| v.as_array())
-                                                    {
-                                                        let parsed: Result<
-                                                            Vec<PromoterVariant>,
-                                                            _,
-                                                        > = serde_json::from_value(
-                                                            serde_json::Value::Array(arr.clone()),
-                                                        );
-                                                        if let Ok(parsed) = parsed {
-                                                            variants = parsed;
-                                                        }
-                                                    } else if let Some(arr) = parsed_obj.as_array()
-                                                    {
-                                                        let parsed: Result<
-                                                            Vec<PromoterVariant>,
-                                                            _,
-                                                        > = serde_json::from_value(
-                                                            serde_json::Value::Array(arr.clone()),
-                                                        );
-                                                        if let Ok(parsed) = parsed {
-                                                            variants = parsed;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                if res.status().is_success()
+                    && let Ok(json) = res.json::<serde_json::Value>().await
+                    && let Some(choices) = json.get("choices")
+                    && let Some(choice) = choices.get(0)
+                    && let Some(message) = choice.get("message")
+                    && let Some(content) = message.get("content").and_then(|c| c.as_str())
+                {
+                    // Try to parse the content as JSON array
+                    match serde_json::from_str::<Vec<PromoterVariant>>(content) {
+                        Ok(parsed_variants) => {
+                            variants = parsed_variants;
+                        }
+                        Err(_) => {
+                            // Fallback parsing if LLM didn't return pure array
+                            if let Ok(parsed_obj) =
+                                serde_json::from_str::<serde_json::Value>(content)
+                            {
+                                if let Some(arr) =
+                                    parsed_obj.get("variants").and_then(|v| v.as_array())
+                                {
+                                    let parsed: Result<Vec<PromoterVariant>, _> =
+                                        serde_json::from_value(serde_json::Value::Array(
+                                            arr.clone(),
+                                        ));
+                                    if let Ok(parsed) = parsed {
+                                        variants = parsed;
+                                    }
+                                } else if let Some(arr) = parsed_obj.as_array() {
+                                    let parsed: Result<Vec<PromoterVariant>, _> =
+                                        serde_json::from_value(serde_json::Value::Array(
+                                            arr.clone(),
+                                        ));
+                                    if let Ok(parsed) = parsed {
+                                        variants = parsed;
                                     }
                                 }
                             }
@@ -1416,17 +1403,15 @@ async fn handle_track_visitor(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    if let Some(event_type) = req.get("event_type").and_then(|v| v.as_str()) {
-        if event_type == "loyalty_program_generated" {
-            if let Some(metadata) = req.get("metadata") {
-                if let Some(tenant) = metadata.get("tenant").and_then(|v| v.as_str()) {
-                    state.hub.log_event(serde_json::json!({
-                        "tenant_id": tenant,
-                        "type": "growth.loyalty_program_generated"
-                    }));
-                }
-            }
-        }
+    if let Some(event_type) = req.get("event_type").and_then(|v| v.as_str())
+        && event_type == "loyalty_program_generated"
+        && let Some(metadata) = req.get("metadata")
+        && let Some(tenant) = metadata.get("tenant").and_then(|v| v.as_str())
+    {
+        state.hub.log_event(serde_json::json!({
+            "tenant_id": tenant,
+            "type": "growth.loyalty_program_generated"
+        }));
     }
     Json(TrackVisitorResponse { tracked: true })
 }
@@ -1600,10 +1585,10 @@ async fn handle_post_purchase_embed(
         .fetch_optional(&state.pool)
         .await;
 
-        if let Ok(Some(plan)) = is_pro_res {
-            if plan.to_lowercase() == "pro" {
-                has_pro = true;
-            }
+        if let Ok(Some(plan)) = is_pro_res
+            && plan.to_lowercase() == "pro"
+        {
+            has_pro = true;
         }
     }
 
@@ -1733,10 +1718,10 @@ async fn handle_customer_referral_embed(
         .fetch_optional(&state.pool)
         .await;
 
-        if let Ok(Some(plan)) = is_pro_res {
-            if plan.to_lowercase() == "pro" {
-                has_pro = true;
-            }
+        if let Ok(Some(plan)) = is_pro_res
+            && plan.to_lowercase() == "pro"
+        {
+            has_pro = true;
         }
     }
 
@@ -2078,19 +2063,17 @@ async fn handle_viral_goal_tracker(
         .fetch_optional(&state.pool)
         .await;
 
-        if let Ok(Some(plan)) = is_pro_res {
-            if plan.to_lowercase() == "pro" {
-                has_pro = true;
-            }
+        if let Ok(Some(plan)) = is_pro_res
+            && plan.to_lowercase() == "pro"
+        {
+            has_pro = true;
         }
     }
 
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(
-            r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ OmniSolo</div>"#
-        )
+        r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ OmniSolo</div>"#.to_string()
     };
 
     // Calculate current progress based on real DB values.
@@ -2259,7 +2242,7 @@ async fn handle_storefront_embed(
         .replace("'", "%27");
 
     let mut has_pro = false;
-    if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
+    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
         let row: Option<String> =
             sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
                 .bind(tenant)
@@ -2515,7 +2498,7 @@ async fn handle_og_card(
     }
 
     let mut has_pro = false;
-    if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
+    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
         let row: Option<String> =
             sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
                 .bind(tenant)
@@ -2870,7 +2853,7 @@ pub async fn handle_get_milestone_card(
     // Fetch business name - handle "DEFAULT" and ID vs tenant_id
     let mut business_name = "My Awesome Store".to_string();
     let mut has_pro = false;
-    if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(&tenant_id).is_ok() {
+    if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(tenant_id).is_ok() {
         let row: Option<(String, Option<String>)> = sqlx::query_as(
             "SELECT name as business_name, plan_tier FROM tenants WHERE id = $1::uuid",
         )
@@ -2897,7 +2880,13 @@ pub async fn handle_get_milestone_card(
     let safe_business_name = escape_xml(&business_name);
 
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OmniSolo", "💰", "#667eea", "#764ba2"),
+        "first_sale" => (
+            "First Sale!",
+            "Unlocked on OmniSolo",
+            "💰",
+            "#667eea",
+            "#764ba2",
+        ),
         "10th_order" => (
             "10th Order!",
             "Business is booming",
@@ -2979,7 +2968,7 @@ pub async fn handle_get_milestone_card(
         };
         let response_svg = format!(
             r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##,
-            escape_xml_local(&title)
+            escape_xml_local(title)
         );
         return axum::response::Response::builder()
             .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
@@ -3096,7 +3085,10 @@ async fn handle_generate_discount_share(
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
     let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://cloud.omnisolo.co/discount/{}?tenant={}", uuid, tenant_id);
+    let share_url = format!(
+        "https://cloud.omnisolo.co/discount/{}?tenant={}",
+        uuid, tenant_id
+    );
 
     // Track generation metrics
     // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,
@@ -3161,7 +3153,7 @@ async fn handle_onboarding_metrics(
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     let cache_key = "onboarding_metrics";
     let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-    if let Some(cached_resp) = cache.get(&cache_key).await {
+    if let Some(cached_resp) = cache.get(cache_key).await {
         return Ok(Json(cached_resp));
     }
 
@@ -3180,7 +3172,7 @@ async fn handle_onboarding_metrics(
                 .collect();
             let resp = OnboardingMetricsResponse { metrics };
             cache
-                .set(&cache_key, resp.clone(), std::time::Duration::from_secs(60))
+                .set(cache_key, resp.clone(), std::time::Duration::from_secs(60))
                 .await;
             Ok(Json(resp))
         }
@@ -3531,12 +3523,12 @@ mod tests {
     pub(crate) async fn setup_db() -> PgPool {
         let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = crate::db::secure_pg_pool_options()
+
+        crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(500))
             .max_connections(1)
             .connect_lazy(&database_url)
-            .expect("Failed to connect to DB");
-        pool
+            .expect("Failed to connect to DB")
     }
 
     #[tokio::test]
@@ -3652,7 +3644,7 @@ mod tests {
 
         assert!(res.is_ok());
         let json = res.unwrap().0;
-        assert_eq!(json.success, true);
+        assert!(json.success);
     }
     #[tokio::test]
     async fn test_handle_one_tap_referral_embed() {
@@ -3991,7 +3983,7 @@ mod tests {
         let res = handle_waitlist(Json(req)).await;
         assert!(res.is_ok());
         let json = res.unwrap().0;
-        assert_eq!(json.success, true);
+        assert!(json.success);
         assert_eq!(json.position, 42);
         assert_eq!(
             json.referral_link,
@@ -5517,8 +5509,7 @@ pub async fn handle_embed_widget(
 
         if let Ok(results) = rows {
             use sqlx::Row;
-            let mut rank = 1;
-            for row in results {
+            for (rank, row) in (1..).zip(results) {
                 let user_id: String = row.get(0);
                 let conversions: i32 = row.get(1);
 
@@ -5556,19 +5547,17 @@ pub async fn handle_embed_widget(
                     </div>
                     "#
                 ));
-                rank += 1;
                 has_data = true;
             }
         }
 
         if !has_data {
-            leaderboard_html = format!(
-                r#"
+            leaderboard_html = r#"
                 <div style="text-align: center; padding: 40px 20px; color: #64748b;">
                   <p style="margin: 0 0 16px 0;">No referrals yet. Be the first!</p>
                 </div>
                 "#
-            );
+            .to_string();
         }
 
         let html = format!(
@@ -6540,10 +6529,10 @@ pub async fn handle_birthday_club_embed(
         .fetch_optional(&state.pool)
         .await;
 
-        if let Ok(Some(plan)) = is_pro_res {
-            if plan.to_lowercase() == "pro" {
-                has_pro = true;
-            }
+        if let Ok(Some(plan)) = is_pro_res
+            && plan.to_lowercase() == "pro"
+        {
+            has_pro = true;
         }
     }
 

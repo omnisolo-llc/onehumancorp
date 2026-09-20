@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage, memberPage } from '../fixtures';
+import '../fixtures';
 
 test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering', () => {
     test('Marketing Agent autonomously generates SEO metadata and caches storefront', async ({ page }) => {

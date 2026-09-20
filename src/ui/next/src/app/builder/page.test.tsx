@@ -1,11 +1,11 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render,screen,fireEvent,waitFor } from '@testing-library/react';
 import BuilderPage from './page';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi,describe,it,expect,beforeEach,afterEach } from 'vitest';
 import { useBuilderStore } from './store';
 
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
-  WithTooltip: ({ children }: any) => <div>{children}</div>
+  WithTooltip: ({ children }: { children?: import('react').ReactNode }) => <div>{children}</div>
 }));
 vi.mock('../../components/help', () => ({
   useWalkthrough: () => ({ startWalkthrough: vi.fn() })
@@ -18,7 +18,7 @@ describe('BuilderPage V2', () => {
          return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }) as any;
+    });
     localStorage.clear();
     useBuilderStore.setState({
       bio: "",
@@ -70,7 +70,7 @@ describe('BuilderPage V2', () => {
     // Step 3
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. I run a mobile dog grooming service/i), { target: { value: 'I bake amazing custom cakes.' } });
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         pages: [{
@@ -103,7 +103,7 @@ describe('BuilderPage V2', () => {
      fireEvent.click(screen.getByText('Next: Choose Vibe'));
      fireEvent.click(screen.getByText('Minimalist'));
      fireEvent.click(screen.getByText('Next: Details'));
-     (global.fetch as any).mockResolvedValueOnce({
+     vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
        ok: true,
        json: async () => ({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'T' } }] }] })
      });
@@ -130,7 +130,7 @@ describe('BuilderPage V2', () => {
     fireEvent.click(screen.getByText('Next: Choose Vibe'));
     fireEvent.click(screen.getByText('Minimalist'));
     fireEvent.click(screen.getByText('Next: Details'));
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Hero Headline' } }] }] })
     });

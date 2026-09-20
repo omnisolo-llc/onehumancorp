@@ -6,6 +6,12 @@ pub struct ResticProvider {
     pub is_supported: bool,
 }
 
+impl Default for ResticProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ResticProvider {
     pub fn new() -> Self {
         let mode = env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());

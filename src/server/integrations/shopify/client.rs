@@ -150,16 +150,16 @@ impl ShopifyClient {
 
         let products: Vec<ShopifyProduct> = edges
             .iter()
-            .filter_map(|edge| {
+            .map(|edge| {
                 let node = &edge["node"];
-                Some(ShopifyProduct {
+                ShopifyProduct {
                     id: node["id"].as_str().map(String::from),
                     title: node["title"].as_str().map(String::from),
                     description: node["description"].as_str().map(String::from),
                     vendor: node["vendor"].as_str().map(String::from),
                     product_type: node["productType"].as_str().map(String::from),
                     extra: node.clone(),
-                })
+                }
             })
             .collect();
 
@@ -190,7 +190,7 @@ impl ShopifyClient {
         let data = self.graphql_request(query, Some(variables)).await?;
 
         let errors = &data["productCreate"]["userErrors"];
-        if errors.is_array() && errors.as_array().unwrap().len() > 0 {
+        if errors.is_array() && !errors.as_array().unwrap().is_empty() {
             let msg = errors[0]["message"].as_str().unwrap_or("unknown error");
             return Err(format!("Product creation error: {}", msg));
         }
@@ -229,9 +229,9 @@ impl ShopifyClient {
 
         let orders: Vec<ShopifyOrder> = edges
             .iter()
-            .filter_map(|edge| {
+            .map(|edge| {
                 let node = &edge["node"];
-                Some(ShopifyOrder {
+                ShopifyOrder {
                     id: node["id"].as_str().map(String::from),
                     order_number: node["orderNumber"].as_u64(),
                     name: node["name"].as_str().map(String::from),
@@ -240,7 +240,7 @@ impl ShopifyClient {
                     fulfillment_status: node["fulfillmentStatus"].as_str().map(String::from),
                     created_at: node["createdAt"].as_str().map(String::from),
                     extra: node.clone(),
-                })
+                }
             })
             .collect();
 
@@ -265,14 +265,14 @@ impl ShopifyClient {
 
         let items: Vec<ShopifyInventoryItem> = edges
             .iter()
-            .filter_map(|edge| {
+            .map(|edge| {
                 let node = &edge["node"];
-                Some(ShopifyInventoryItem {
+                ShopifyInventoryItem {
                     inventory_item_id: node["inventoryItem"]["id"].as_str().map(String::from),
                     location_id: node["location"]["id"].as_str().map(String::from),
                     available: node["available"].as_i64().map(|v| v as i32),
                     extra: node.clone(),
-                })
+                }
             })
             .collect();
 
@@ -303,7 +303,7 @@ impl ShopifyClient {
         let data = self.graphql_request(query, Some(variables)).await?;
 
         let errors = &data["inventoryAdjustment"]["userErrors"];
-        if errors.is_array() && errors.as_array().unwrap().len() > 0 {
+        if errors.is_array() && !errors.as_array().unwrap().is_empty() {
             let msg = errors[0]["message"].as_str().unwrap_or("unknown error");
             return Err(format!("Inventory adjustment error: {}", msg));
         }
@@ -326,15 +326,15 @@ impl ShopifyClient {
 
         let customers: Vec<ShopifyCustomer> = edges
             .iter()
-            .filter_map(|edge| {
+            .map(|edge| {
                 let node = &edge["node"];
-                Some(ShopifyCustomer {
+                ShopifyCustomer {
                     id: node["id"].as_str().map(String::from),
                     email: node["email"].as_str().map(String::from),
                     first_name: node["firstName"].as_str().map(String::from),
                     last_name: node["lastName"].as_str().map(String::from),
                     extra: node.clone(),
-                })
+                }
             })
             .collect();
 
@@ -366,26 +366,25 @@ mod tests {
                 assert!(read > 0, "client closed connection before sending request");
                 request.extend_from_slice(&buffer[..read]);
 
-                if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
-                    {
-                        header_end = Some(index + 4);
-                        let headers = String::from_utf8_lossy(&request[..index]);
-                        content_length = headers
-                            .lines()
-                            .find_map(|line| {
-                                line.strip_prefix("content-length: ")
-                                    .or_else(|| line.strip_prefix("Content-Length: "))
-                            })
-                            .and_then(|value| value.trim().parse::<usize>().ok())
-                            .unwrap_or(0);
-                    }
+                if header_end.is_none()
+                    && let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                {
+                    header_end = Some(index + 4);
+                    let headers = String::from_utf8_lossy(&request[..index]);
+                    content_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            line.strip_prefix("content-length: ")
+                                .or_else(|| line.strip_prefix("Content-Length: "))
+                        })
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
                 }
 
-                if let Some(body_start) = header_end {
-                    if request.len() >= body_start + content_length {
-                        break;
-                    }
+                if let Some(body_start) = header_end
+                    && request.len() >= body_start + content_length
+                {
+                    break;
                 }
             }
 

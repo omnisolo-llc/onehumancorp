@@ -76,10 +76,10 @@ impl FileSystemProvider for BaseFSProvider {
                 let mut builder = tokio::fs::DirBuilder::new();
                 builder.recursive(true);
                 builder.mode(0o700);
-                if let Err(e) = builder.create(parent).await {
-                    if e.kind() != std::io::ErrorKind::AlreadyExists {
-                        return Err(e);
-                    }
+                if let Err(e) = builder.create(parent).await
+                    && e.kind() != std::io::ErrorKind::AlreadyExists
+                {
+                    return Err(e);
                 }
             }
             #[cfg(not(unix))]
@@ -135,13 +135,13 @@ impl FileSystemProvider for BaseFSProvider {
                     let path = entry.path();
                     if path.is_dir() {
                         dirs_to_visit.push(path);
-                    } else if let Ok(name) = entry.file_name().into_string() {
-                        if name.contains(&query) {
-                            if let Ok(rel_path) = path.strip_prefix(&resolved) {
-                                result.push(rel_path.to_string_lossy().to_string());
-                            } else {
-                                result.push(name);
-                            }
+                    } else if let Ok(name) = entry.file_name().into_string()
+                        && name.contains(&query)
+                    {
+                        if let Ok(rel_path) = path.strip_prefix(&resolved) {
+                            result.push(rel_path.to_string_lossy().to_string());
+                        } else {
+                            result.push(name);
                         }
                     }
                 }
@@ -154,7 +154,7 @@ impl FileSystemProvider for BaseFSProvider {
 
 pub struct LocalFSProvider;
 impl LocalFSProvider {
-    pub fn new(workspace_dir: PathBuf) -> BaseFSProvider {
+    pub fn for_workspace(workspace_dir: PathBuf) -> BaseFSProvider {
         BaseFSProvider {
             root_dir: workspace_dir,
         }
@@ -163,7 +163,7 @@ impl LocalFSProvider {
 
 pub struct CloudFSProvider;
 impl CloudFSProvider {
-    pub fn new(tenant_id: String, mount_point: PathBuf) -> BaseFSProvider {
+    pub fn for_tenant(tenant_id: String, mount_point: PathBuf) -> BaseFSProvider {
         BaseFSProvider {
             root_dir: mount_point.join(tenant_id),
         }

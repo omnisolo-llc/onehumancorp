@@ -25,7 +25,7 @@ impl TaskStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_label(s: &str) -> Option<Self> {
         match s {
             "PENDING" => Some(TaskStatus::Pending),
             "IN_PROGRESS" => Some(TaskStatus::InProgress),
@@ -298,7 +298,7 @@ impl StateMachine {
 
                     Ok(())
                 } else {
-                    return Err("Task not found".to_string());
+                    Err("Task not found".to_string())
                 }
             }
             DbStore::Sqlite(pool) => {

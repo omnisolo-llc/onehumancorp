@@ -5,9 +5,12 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
   await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.goto('/login');
-    await page.fill('input[placeholder="Email or Username"]', 'Maya');
-    await page.getByRole('button', { name: 'Log In' }).click();
+    // Every caller authenticates its own seeded actor with loginAs. Returning
+    // to /login redirects that valid session back to the dashboard; do not wait
+    // for the retired passwordless prototype form or switch actor identities.
+    await page.goto('/dashboard');
+    await expect(page, `${label}: the authenticated session must remain valid`)
+      .toHaveURL(/\/dashboard(?:[?#].*)?$/);
 
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
     await expect(page.locator('h2', { hasText: 'Welcome back' }).first()).toBeVisible({ timeout: 5000 });
@@ -116,6 +119,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
     const hasCodeBlock = await page.locator('#embed-code').isVisible();
     const hasEmptyState = await page.locator('.empty-state').isVisible();
+    expect(hasCodeBlock || hasEmptyState, 'leaderboard must show data or an explicit empty state').toBe(true);
 
 
 

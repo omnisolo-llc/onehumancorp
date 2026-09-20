@@ -120,17 +120,20 @@ assert_bazel_header_references_allowed() {
     fail 'protected Bazel credential reference repository did not report success'
 }
 
-assert_optional_local_bazelrc_contract() {
-  local announce_pattern
-  announce_pattern='^[[:space:]]*(common|always|build|test|run)(:[^[:space:]]+)?[[:space:]]+--announce_rc([[:space:]]|$|=[[:space:]]*(true|1|yes)([[:space:]]|$))'
-
+assert_native_build_contract() {
+  local path
+  # Legacy local credential files stay ignored, but the native migration must
+  # not recreate a Bazel entrypoint merely to satisfy a historical test.
   grep -Fxq -- '/.bazelrc.local' "$repo_root/.gitignore" ||
-    fail 'the optional local Bazel rc is not narrowly ignored'
-  grep -Fxq -- 'try-import %workspace%/.bazelrc.local' "$repo_root/.bazelrc" ||
-    fail 'the tracked Bazel rc does not try-import the optional local rc'
-  if grep -Eq -- "$announce_pattern" "$repo_root/.bazelrc"; then
-    fail 'the tracked Bazel rc enables credential-bearing option announcements'
-  fi
+    fail 'the legacy local credential rc is not narrowly ignored'
+  [[ ! -f "$repo_root/.bazelrc" ]] || fail 'the retired Bazel entrypoint was restored'
+  for path in Cargo.toml Cargo.lock rust-toolchain.toml .cargo/config.toml .node-version package-lock.json Makefile; do
+    [[ -f "$repo_root/$path" ]] || fail "missing native build input: $path"
+  done
+  for path in target/probe.o node_modules/probe.js src/ui/next/.next/probe.js .env .omnisolo/.env ':memory:'; do
+    git -C "$repo_root" check-ignore --no-index -q -- "./$path" ||
+      fail "native build/runtime output is not ignored: $path"
+  done
 }
 
 assert_announce_rc_pattern_contract() {
@@ -172,6 +175,6 @@ assert_literal_bazel_header_forbidden 'BES header quoted and spaced' 'config wit
 assert_literal_bazel_header_forbidden 'newline path diagnostic' $'config\nwith-control/build.bazelrc' 'remote_header' 'equals'
 assert_bazel_header_references_allowed
 assert_announce_rc_pattern_contract
-assert_optional_local_bazelrc_contract
+assert_native_build_contract
 
 printf 'repo hygiene test: ok\n'

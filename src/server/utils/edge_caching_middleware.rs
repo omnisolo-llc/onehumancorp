@@ -44,27 +44,28 @@ pub async fn edge_caching_middleware(
     let cdn_cache = get_cdn_cache();
     let cache_key = format!("cdn:{}", uri);
 
-    if is_get && !bypass_cache {
-        if let Some((cached, _is_stale)) = cdn_cache.get_with_swr(&cache_key).await {
-            let body = Body::from(cached.body);
-            let mut response = Response::builder()
-                .status(cached.status)
-                .body(body)
-                .unwrap();
+    if is_get
+        && !bypass_cache
+        && let Some((cached, _is_stale)) = cdn_cache.get_with_swr(&cache_key).await
+    {
+        let body = Body::from(cached.body);
+        let mut response = Response::builder()
+            .status(cached.status)
+            .body(body)
+            .unwrap();
 
-            for (k, v) in cached.headers {
-                if let (Ok(hk), Ok(hv)) = (
-                    axum::http::HeaderName::try_from(k),
-                    axum::http::HeaderValue::try_from(v),
-                ) {
-                    response.headers_mut().insert(hk, hv);
-                }
+        for (k, v) in cached.headers {
+            if let (Ok(hk), Ok(hv)) = (
+                axum::http::HeaderName::try_from(k),
+                axum::http::HeaderValue::try_from(v),
+            ) {
+                response.headers_mut().insert(hk, hv);
             }
-            response
-                .headers_mut()
-                .insert("X-Cache", "HIT".parse().unwrap());
-            return Ok(response.into_response());
         }
+        response
+            .headers_mut()
+            .insert("X-Cache", "HIT".parse().unwrap());
+        return Ok(response.into_response());
     }
 
     let response = next.run(req).await;
@@ -72,13 +73,13 @@ pub async fn edge_caching_middleware(
     let (mut parts, body) = response.into_parts();
 
     // Set Surrogate-Key from Cache-Tag if present
-    if let Some(cache_tag) = parts.headers.get("Cache-Tag") {
-        if let Ok(tag_str) = cache_tag.to_str() {
-            // Fastly uses space-separated keys, replace ", " with " "
-            let surrogate_val = tag_str.replace(", ", " ");
-            if let Ok(val) = surrogate_val.parse() {
-                parts.headers.insert("Surrogate-Key", val);
-            }
+    if let Some(cache_tag) = parts.headers.get("Cache-Tag")
+        && let Ok(tag_str) = cache_tag.to_str()
+    {
+        // Fastly uses space-separated keys, replace ", " with " "
+        let surrogate_val = tag_str.replace(", ", " ");
+        if let Ok(val) = surrogate_val.parse() {
+            parts.headers.insert("Surrogate-Key", val);
         }
     }
 
@@ -97,22 +98,22 @@ pub async fn edge_caching_middleware(
         }
     }
 
-    if !parts.headers.contains_key(header::CACHE_CONTROL) {
-        if let Ok(val) = "public, s-maxage=60, stale-while-revalidate=86400".parse() {
-            parts.headers.insert(header::CACHE_CONTROL, val);
-        }
+    if !parts.headers.contains_key(header::CACHE_CONTROL)
+        && let Ok(val) = "public, s-maxage=60, stale-while-revalidate=86400".parse()
+    {
+        parts.headers.insert(header::CACHE_CONTROL, val);
     }
 
     parts.headers.insert("X-Cache", "MISS".parse().unwrap());
 
     if is_get && parts.status.is_success() {
         let mut tags_vec = Vec::new();
-        if let Some(surrogate) = parts.headers.get("Surrogate-Key") {
-            if let Ok(s) = surrogate.to_str() {
-                for t in s.split(' ') {
-                    if !t.is_empty() {
-                        tags_vec.push(t.to_string());
-                    }
+        if let Some(surrogate) = parts.headers.get("Surrogate-Key")
+            && let Ok(s) = surrogate.to_str()
+        {
+            for t in s.split(' ') {
+                if !t.is_empty() {
+                    tags_vec.push(t.to_string());
                 }
             }
         }
