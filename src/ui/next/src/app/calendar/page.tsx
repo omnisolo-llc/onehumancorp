@@ -2,12 +2,38 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface Appointment {
+  id: string;
+  customer: string;
+  service: string;
+  time: string;
+  date: string;
+  status: string;
+  ai_scheduled: boolean;
+  link: string;
+  isPast: boolean;
+  rawDate: Date;
+  paymentStatus: string;
+  aiSummary: string;
+  travelBufferMinutes?: number;
+}
+
+interface BookingRecord {
+  id: string;
+  start_time: string;
+  customer_name?: string;
+  product_title?: string;
+  status?: string;
+  ai_summary?: string;
+  travel_buffer_minutes?: number;
+}
+
 export default function CalendarPage() {
-  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [morningBriefing, setMorningBriefing] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
     fetch('/api/v1/ui/bookings')
@@ -19,7 +45,7 @@ export default function CalendarPage() {
       })
       .then(data => {
         if (Array.isArray(data)) {
-          const formattedAppointments = data.map((b: any) => {
+          const formattedAppointments = data.map((b: BookingRecord) => {
             const startDate = new Date(b.start_time);
             const isPast = startDate < new Date();
             return {
@@ -35,7 +61,7 @@ export default function CalendarPage() {
               rawDate: startDate,
               paymentStatus: b.status === 'confirmed' ? 'Paid' : 'Deposit Required',
               aiSummary: b.ai_summary || `AI Details for ${b.product_title || 'Service Booking'}`,
-              travelBufferMinutes: (b as any).travel_buffer_minutes || 0
+              travelBufferMinutes: b.travel_buffer_minutes || 0
             };
           });
           setAppointments(formattedAppointments);
@@ -152,10 +178,10 @@ export default function CalendarPage() {
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                      <span className="text-xs font-bold text-blue-800 uppercase tracking-wider block mb-1">AI Summary</span>
                      <p className="text-sm text-blue-900">{selectedAppointment.aiSummary}</p>
-                     {(selectedAppointment as any).travelBufferMinutes > 0 && (
+                     {typeof selectedAppointment.travelBufferMinutes === 'number' && selectedAppointment.travelBufferMinutes > 0 && (
                      <p className="text-sm text-blue-900 mt-2 font-medium flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Travel Buffer: {(selectedAppointment as any).travelBufferMinutes} mins automatically blocked
+                        Travel Buffer: {selectedAppointment.travelBufferMinutes} mins automatically blocked
                      </p>
                      )}
                   </div>
