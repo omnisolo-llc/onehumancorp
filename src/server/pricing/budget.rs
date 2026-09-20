@@ -78,9 +78,7 @@ impl BudgetManager {
         if self
             .current
             .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_sub(amount_cents)
-                    .filter(|next| *next >= 0)
+                current.checked_sub(amount_cents).filter(|next| *next >= 0)
             })
             .is_err()
         {
@@ -306,7 +304,10 @@ mod tests {
         assert_eq!(manager.get_remaining(), 100.0);
 
         // Negative value error
-        assert_eq!(manager.release_spend(-10.0).unwrap_err(), "release amount cannot be negative");
+        assert_eq!(
+            manager.release_spend(-10.0).unwrap_err(),
+            "release amount cannot be negative"
+        );
 
         // Zero release works
         assert!(manager.release_spend(0.0).unwrap());
@@ -331,7 +332,10 @@ mod tests {
         assert_eq!(manager.get_remaining_cents(), 10000);
 
         // Negative value error
-        assert_eq!(manager.release_spend_cents(-1000).unwrap_err(), "release amount cannot be negative");
+        assert_eq!(
+            manager.release_spend_cents(-1000).unwrap_err(),
+            "release amount cannot be negative"
+        );
 
         // Zero release works
         assert!(manager.release_spend_cents(0).unwrap());
