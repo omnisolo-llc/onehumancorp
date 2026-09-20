@@ -10,6 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { validateWebArtifact } from './package-web.mjs';
 import { runNativeCommand } from './native-process.mjs';
+import { discoverBrowserInventory } from './ci-coverage.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'package.json'));
@@ -20,7 +21,7 @@ const valkeyImage = 'valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c
 export function testEnvironment(source = process.env) {
   const keep = ['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'WINDIR', 'TMP', 'TEMP',
     'TMPDIR', 'LANG', 'LC_ALL', 'CI', 'PLAYWRIGHT_BROWSERS_PATH',
-    'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'];
+    'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH', 'GITHUB_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT'];
   return Object.fromEntries(keep.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
 }
 
@@ -83,9 +84,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   const playwright = require.resolve('@playwright/test/cli');
   // Fail on broken imports, invalid fixtures or zero selection BEFORE spending
   // time starting Docker, applying migrations or launching either application.
-  const listed = await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
-    '--list', ...args.filter((arg) => arg !== '--list')], { env });
-  if (!/Total:\s*[1-9]\d* tests?/.test(listed)) throw new Error('Playwright selected zero tests or did not report its test count');
+  const inventory = await discoverBrowserInventory(args, env);
+  console.log(`Total: ${inventory.selectedIds.length} tests in ${inventory.files.length} files`);
   if (args.includes('--list')) return;
   // Respect the native Cargo output directory instead of silently executing
   // stale default-directory binaries after a custom-target build.

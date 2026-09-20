@@ -34,7 +34,7 @@ class NativeCacheTests(unittest.TestCase):
         self.assertIn('python3 scripts/init_dev_test.py', str(self.ci['jobs']['check-changes']['steps']))
 
     def test_all_application_and_security_gates_remain_required(self):
-        expected = {'check-changes', 'dependency-audit', 'native-build', 'native-test',
+        expected = {'check-changes', 'dependency-audit', 'native-build', 'native-test', 'native-lint', 'native-e2e-report',
             'native-node', 'native-web', 'native-desktop', 'native-e2e', 'native-images',
             'postgres-security', 'kind-e2e', 'docker-e2e'}
         gate = self.ci['jobs']['ci-required']
