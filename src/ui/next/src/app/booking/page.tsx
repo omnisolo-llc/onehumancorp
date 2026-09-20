@@ -45,6 +45,8 @@ function BookingForm() {
   const searchParams = useSearchParams();
   const tenant = searchParams?.get("tenant")?.trim() ?? "";
   const serviceId = searchParams?.get("service_id")?.trim() ?? "";
+  const depositAmount = searchParams?.get("deposit")?.trim() ?? "0";
+  const needTravelTime = searchParams?.get("travel")?.trim() === "true";
   const hasBookingContext = SAFE_ID.test(tenant) && SAFE_ID.test(serviceId);
 
   const [description, setDescription] = useState("");
@@ -125,6 +127,8 @@ function BookingForm() {
           product_id: serviceId,
           start_time: slot.start_time,
           end_time: slot.end_time,
+          deposit_amount: depositAmount,
+          need_travel_time: needTravelTime,
         })
       });
 

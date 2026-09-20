@@ -37,7 +37,11 @@ export async function GET(request: Request) {
   const baseUrl = `${protocol}://${host}`;
 
   const isDark = theme === 'dark';
-  const bookingUrl = `${baseUrl}/booking?tenant=${tenant}`;
+
+  const deposit = searchParams.get('deposit') || '0';
+  const travel = searchParams.get('travel') || 'false';
+  const bookingUrl = `${baseUrl}/booking?tenant=${tenant}&service_id=embed&deposit=${encodeURIComponent(deposit)}&travel=${travel}`;
+
 
   const html = `
     <!DOCTYPE html>

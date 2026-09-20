@@ -38,5 +38,12 @@ test.describe('Agentic Service Booking CUJ', () => {
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
     await expect(bookingCard).toBeHidden({ timeout: 5000 });
+
+    // 3. Calendar View
+    await page.goto('/calendar');
+    // Ensure the calendar page shows the booked event with deposit and buffer context
+    // Check that the calendar shows the booking we just made
+    await expect(page.getByText(/Paid|Deposit Required/)).toBeVisible(); // Status based on the backend fixture
+    await expect(page.getByText(/Travel Buffer:/)).toBeVisible();
   });
 });
