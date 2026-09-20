@@ -383,4 +383,55 @@ ALTER TABLE subscription_plans FORCE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions FORCE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules FORCE ROW LEVEL SECURITY;
 
+
+INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
+VALUES (
+  'e2e-shippo-order',
+  'e2e-tenant',
+  'e2e-customer-bakery',
+  55.55,
+  'paid'
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    customer_id = EXCLUDED.customer_id,
+    total_amount = EXCLUDED.total_amount,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+
+INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
+VALUES (
+  'e2e-product-shippo',
+  'e2e-tenant',
+  'Shippable Item',
+  'A physical item that needs shipping',
+  'physical',
+  55.55,
+  5555,
+  'USD',
+  100,
+  '{"seeded_by":"e2e","weight_oz":16,"dimensions":"10x8x6"}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE
+SET metadata = EXCLUDED.metadata, updated_at = CURRENT_TIMESTAMP;
+
+-- In our schema, the address may be on the order or customer. e2e-customer-bakery already exists, but let's make sure it has an address if possible, or add delivery tasks.
+
+
+INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price)
+VALUES (
+  'e2e-shippo-order-item-1',
+  'e2e-tenant',
+  'e2e-shippo-order',
+  'e2e-product-shippo',
+  1,
+  55.55
+)
+ON CONFLICT (id) DO UPDATE
+SET quantity = EXCLUDED.quantity, price = EXCLUDED.price;
+
+
+-- Ensure the customer has a physical address.
+UPDATE customers SET preferences = jsonb_set(preferences, '{address}', '{"street1":"123 Market St", "city":"San Francisco", "state":"CA", "zip":"94105", "country":"US"}') WHERE id = 'e2e-customer-bakery';
 COMMIT;
