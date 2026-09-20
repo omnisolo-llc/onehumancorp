@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Invisible Autonomous Bookkeeping', () => {
-  test('CUJ: Snap a receipt and verify dashboard reflects Money Out', async ({ page, request }) => {
+  test('CUJ: Snap a receipt and verify dashboard reflects Money Out', async ({ page }) => {
     // Navigate to the dashboard
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/dashboard');

@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test('Conversational Growth Loop CUJ', async ({ page, loginAs, adminUser }) => {
   // 1. Setup: Use a dedicated test tenant to avoid interference
-  const testTenant = `growth-test-${Math.floor(Math.random() * 1000000)}`;
+
 
   // Login as admin
   await loginAs(page, adminUser);

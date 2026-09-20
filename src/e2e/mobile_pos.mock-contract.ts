@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Mobile POS - Unified Omnichannel Inventory', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test.beforeEach(async ({ page, request }) => {
+  test.beforeEach(async ({ page }) => {
     // Navigate and login
     await page.goto('/login');
     await page.getByPlaceholder('Email address').fill('admin@ohc.local');
@@ -27,7 +27,7 @@ test.describe('Mobile POS - Unified Omnichannel Inventory', () => {
     await expect(page.getByText('Terminal Locked')).toBeVisible({ timeout: 15000 });
   });
 
-  test('Persona: Boutique Operator completes a mobile tap-to-pay transaction via UI', async ({ page, request }) => {
+  test('Persona: Boutique Operator completes a mobile tap-to-pay transaction via UI', async ({ page }) => {
     // Wait for the token request to occur and assert it was successful
     const tokenPromise = page.waitForRequest(
       (req) => req.url().includes('/api/v1/payments/terminal/token') && req.method() === 'POST'

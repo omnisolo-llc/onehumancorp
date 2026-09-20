@@ -8,7 +8,7 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "default", size = "default", ...props }, ref) => {
-    let variantClasses = ""
+    let variantClasses: string
     switch (variant) {
       case "destructive":
         variantClasses = "bg-red-500 text-white hover:bg-red-600"
@@ -29,7 +29,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         variantClasses = "bg-[#0066FF] text-white hover:bg-[#0066FF]/90"
     }
 
-    let sizeClasses = ""
+    let sizeClasses: string
     switch (size) {
       case "sm":
         sizeClasses = "h-9 px-3"

@@ -6,7 +6,7 @@ interface UseSyncGatewayOptions {
 }
 
 export function useSyncGateway({ topics, enabled = true }: UseSyncGatewayOptions) {
-  const [lastMessage] = useState<any>(null);
+  const [lastMessage] = useState<MessageEvent | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const topicsKey = topics.join(',');
 

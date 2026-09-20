@@ -3,7 +3,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 test.describe('Zero Click Builder Mobile Onboarding', () => {
   test.use({ viewport: { width: 375, height: 812 } }); // Mobile-first constraint
 
-  test('User can generate a store with a single prompt', async ({ page, context }) => {
+  test('User can generate a store with a single prompt', async ({ page }) => {
     // Navigate to the zero-click-builder page
     await page.goto('/zero-click-builder');
 

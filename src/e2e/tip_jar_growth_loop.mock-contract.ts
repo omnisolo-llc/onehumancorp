@@ -7,7 +7,7 @@ test('tip_jar_growth_loop', async ({ page, request, loginAs, adminUser }) => {
 });
 
 test.describe('Tip Jar Growth Loop', () => {
-    test('dashboard links to Tip Jar Generator, which generates a viral link', async ({ page, request }) => {
+    test('dashboard links to Tip Jar Generator, which generates a viral link', async ({ page }) => {
         // Look for the "Tip Jar Generator" link in the Dashboard Growth & Virality section
         await page.goto('/dashboard.html');
         const generatorLink = page.locator('a[href="tip-jar-generator.html"]');

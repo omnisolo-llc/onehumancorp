@@ -175,7 +175,7 @@ export function HelpChat() {
           ...reply,
         },
       ]);
-    } catch (err: any) {
+    } catch (err) {
       clearTimeout(timeoutId);
       const isTimeout = err.name === "AbortError";
       setMessages((prev) => [

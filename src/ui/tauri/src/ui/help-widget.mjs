@@ -75,17 +75,17 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
         }
     });
 
-    document.addEventListener('touchend', (e) => {
+    document.addEventListener('touchend', () => {
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
 
-    document.addEventListener('touchmove', (e) => {
+    document.addEventListener('touchmove', () => {
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
 
-    document.addEventListener('touchcancel', (e) => {
+    document.addEventListener('touchcancel', () => {
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch("/api/v1/videos").then(r => r.json()).then(data => {
                     const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     renderHelpVideos(vl, data);
-                }).catch(e => {
+                }).catch(() => {
                     const errVl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     if (errVl) errVl.innerHTML = "Error loading videos.";
                 });

@@ -11,10 +11,10 @@ import { PricingCard } from './PricingCard';
 
 
 export default function PricingPage() {
-  const router = useRouter();
+  useRouter();
 
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
-  const [planDetails, setPlanDetails] = useState<any>(null);
+  const [planDetails, setPlanDetails] = useState<import('@/lib/business-records').BillingPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAnnual, setIsAnnual] = useState(false);
 

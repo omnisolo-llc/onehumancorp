@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Work-Intake Widget Viral Loop', () => {
-  test('should display the soft paywall modal and handle share bypass', async ({ page, request, loginAs, adminUser }) => {
+  test('should display the soft paywall modal and handle share bypass', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
     await page.goto('/work-intake-widget');
 

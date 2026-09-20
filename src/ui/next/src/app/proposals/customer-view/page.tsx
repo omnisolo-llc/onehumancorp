@@ -1,13 +1,16 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import type { QuotePayload, BusinessLineItem } from '@/lib/business-records';
 
 function CustomerProposalViewContent() {
     const searchParams = useSearchParams();
     const proposalId = searchParams.get('id');
     const [isLoading, setIsLoading] = useState(false);
-    const [quote, setQuote] = useState<any>(null);
+    const [quote, setQuote] = useState<{ quote: QuotePayload; line_items: BusinessLineItem[] } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -18,8 +21,8 @@ function CustomerProposalViewContent() {
                 if (!res.ok) throw new Error('Failed to fetch proposal');
                 const data = await res.json();
                 setQuote(data);
-            } catch (err: any) {
-                setError(err.message);
+            } catch (err) {
+                setError(errorMessage(err, ''));
             }
         }
         fetchQuote();
@@ -38,8 +41,8 @@ function CustomerProposalViewContent() {
                 alert('Proposal Accepted!');
                 window.location.reload();
             }
-        } catch (err: any) {
-            alert(err.message);
+        } catch (err) {
+            alert(errorMessage(err, ''));
         } finally {
             setIsLoading(false);
         }
@@ -54,7 +57,7 @@ function CustomerProposalViewContent() {
             <p style={{ color: '#666' }}>Proposal ID: {proposalId}</p>
 
             <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                {quote.line_items?.map((item: any) => (
+                {quote.line_items?.map((item) => (
                     <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                         <span>{item.description} (x{item.quantity})</span>
                         <span>${(item.unit_price_cents * item.quantity / 100).toFixed(2)}</span>

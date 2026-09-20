@@ -5,7 +5,7 @@ import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralLeaderboardGeneratorPage() {
-  const router = useRouter();
+  useRouter();
   const [tenant, setTenant] = useState('my-store');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [title, setTitle] = useState('Top Referrers');
@@ -31,7 +31,7 @@ export default function ViralLeaderboardGeneratorPage() {
     }
   };
 
-  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-leaderboard/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}`;
+
   const embedCode = `<div id="omnisolo-leaderboard"></div>\n<script src="https://cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}"></script>`;
 
   const handleCopy = () => {
@@ -56,14 +56,14 @@ export default function ViralLeaderboardGeneratorPage() {
              </div>
              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Metric to Display</label>
-                <select value={metric} onChange={(e) => setMetric(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <select value={metric} onChange={(e) => setMetric(e.target.value as Parameters<typeof setMetric>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                   <option value="referrers">Top Referrers</option>
                   <option value="buyers">Top Buyers</option>
                 </select>
              </div>
              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <select value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>

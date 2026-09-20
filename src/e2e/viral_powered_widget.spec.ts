@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Viral Powered By OmniSolo Widget', () => {
-  test('should allow owner to configure the viral widget, view preview and trigger paywall', async ({ page, context }) => {
+  test('should allow owner to configure the viral widget, view preview and trigger paywall', async ({ page }) => {
     // 1. Navigate to dashboard
     await page.goto('/dashboard');
 

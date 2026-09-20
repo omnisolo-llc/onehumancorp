@@ -1,5 +1,32 @@
 # Native development, testing and build caches
 
+## One-command initialization
+
+```sh
+make init                             # Install prerequisites, prompting before sudo/Homebrew changes
+make doctor                           # Check readiness without installing dependencies
+make lint                             # Complete Rust + Node quality gates
+make test                             # Complete workspace, unit, contract and real-stack browser tests
+```
+
+Bootstrap inputs: Git, GNU Make and Python, plus permission to install missing host packages. The Python environment used by release/test tools must be 3.11 or newer with venv support (Ubuntu 24.04+/Debian 12+ include a suitable default). On older Linux distributions, install a suitable Python first. macOS requires Homebrew and Xcode command-line tools; `xcode-select --install` is an interactive Apple installation and is not run silently. Native Windows release builds retain their own MSVC/WebView2 requirements; use WSL2 Ubuntu with Docker integration for the full POSIX test environment.
+
+The initializer reads the repository's Node and Rust pins, installs Rust with rustfmt/Clippy without changing the global default, and uses verified official Node archives when the matching Node version is absent. npm/npx and tool links live in ignored `target/dev-tools/`. All four locked npm trees are installed with development dependencies: repository root, Next, CLI and `.github/test-tools` (OpenCode). Installation stamps include both manifests, Node, OS and architecture. Python packages use an isolated venv; Cargo dependencies are fetched with `--locked`. The initializer installs Chromium and its Linux system libraries, then actually launches and closes the browser during readiness checks.
+
+```sh
+make init INIT_ARGS=--plan             # Print the plan; no network, installations or writes
+make init INIT_ARGS=--yes              # Approve the described host package installations
+make init INIT_ARGS=--no-system        # Never invoke sudo/Homebrew; host libraries must exist
+make init INIT_ARGS=--force            # Reinstall locked npm trees even if stamps match
+source target/dev-tools/env.sh         # Use local tools directly; required for Homebrew keg paths
+```
+
+Make targets already prepend project-local tool links to PATH. The generated shell snippet does not modify your profile; on macOS source it to expose keg-only PostgreSQL/coreutils/OpenSSL paths to direct commands and shell-based deployment tests. No `.env`, provider key, signing credential, user/group membership or Docker permission is created or modified.
+
+**Docker remains an explicit host prerequisite.** Install/start Docker Engine or Docker Desktop, including Compose v2 and Buildx, and select the intended local context before initialization. `make init` does not make a privileged daemon or change your Docker group membership. It fails if the daemon is unavailable or the effective context is remote; `DOCKER_CONTEXT` takes precedence over `DOCKER_HOST`. Tests create isolated local containers, not a production deployment. Android SDK/NDK, Apple device provisioning, signing/notarization and registry credentials remain release-specific prerequisites rather than requirements for the ordinary host build.
+
+A failed or interrupted install is not recorded as successful. Check an existing `target/dev-tools/.initializing` lock before removing it after an interrupted run; never remove active compiler caches or another user's files. Successful initialization proves environment readiness, **not that application tests pass**. Run the quality gates separately.
+
 The [2026-09-19 measured cleanup record](../research/native_build_measurements_2026-09-19.md) records an **8m 33.94s empty-output backend build**, **1.87s unchanged rerun**, and **31.40s fresh Node build**. Dependency downloads/toolchains were already available; this is not completely cold hosted CI. Keep the **10-minute core backend compilation goal** distinct from the **30-minute full required-CI target**. Repository-wide lint and full execution gates remain mandatory.
 
 Use the same `CARGO_TARGET_DIR` with Cargo and `npm run test:e2e`; the browser runner honors custom output directories instead of using old default-directory binaries. Web output remains at `target/native-web` and must pass its source/platform/Node/lockfile checks.

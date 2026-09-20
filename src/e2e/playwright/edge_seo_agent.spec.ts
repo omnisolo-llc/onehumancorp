@@ -43,9 +43,8 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
         // Fetch sites to get the active site ID for the tenant, or assume 'e2e-site' or similar if seeded.
         // Since we are validating edge cache behavior, we can query the storefront preview if the UI has a "View Store" button.
         const viewStoreLink = page.locator('a:has-text("View Store"), a:has-text("Live Preview")').first();
-        let storefrontUrl = '';
         if (await viewStoreLink.isVisible()) {
-            storefrontUrl = await viewStoreLink.getAttribute('href') || '';
+            await expect(viewStoreLink).toHaveAttribute('href', /\S+/);
         }
 
         // If we don't have a direct URL, we will hit the edge directly using the seeded site for e2e-tenant

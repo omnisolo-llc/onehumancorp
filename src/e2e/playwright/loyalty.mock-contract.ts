@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Loyalty Reward Notification', () => {
-  const tenantId = 'e2e-tenant'; // Using the seeded tenant
+   // Using the seeded tenant
 
   test.use({ viewport: { width: 375, height: 812 } });
 
