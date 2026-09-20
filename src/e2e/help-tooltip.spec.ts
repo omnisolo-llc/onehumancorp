@@ -22,4 +22,37 @@ test.describe('Help Tooltips', () => {
     await page.mouse.move(0, 0);
     await expect(tooltip).not.toBeVisible();
   });
+
+  test('should show tooltip when hovering over nested element', async ({ page }) => {
+    await adminPage(page);
+    await page.goto('/dashboard.html');
+
+    // Inject a deeply nested element inside something we know will trigger tooltips,
+    // or just append a test structure to the body.
+    await page.evaluate(() => {
+        const container = document.createElement('div');
+        container.setAttribute('data-tooltip', 'Nested tooltip text');
+        container.id = 'test-nested-tooltip-container';
+
+        const child1 = document.createElement('div');
+        child1.id = 'test-nested-child-1';
+
+        const child2 = document.createElement('span');
+        child2.id = 'test-nested-child-2';
+        child2.textContent = 'Hover me';
+        child2.style.padding = '20px';
+        child2.style.display = 'block';
+
+        child1.appendChild(child2);
+        container.appendChild(child1);
+        document.body.appendChild(container);
+    });
+
+    const target = page.locator('#test-nested-child-2');
+    await target.hover();
+
+    const tooltip = page.locator('.omnisolo-tooltip.visible');
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText('Nested tooltip text');
+  });
 });
