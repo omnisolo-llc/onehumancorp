@@ -630,7 +630,10 @@ impl Department for OperationsAgent {
 
                 if status == "Ready" {
                     if is_physical {
-                        format!("Drafting Shippo shipping label autonomously for physical order {}", order_id)
+                        format!(
+                            "Drafting Shippo shipping label autonomously for physical order {}",
+                            order_id
+                        )
                     } else {
                         format!(
                             "Notify customer that order {} is ready for pickup via SMS/WhatsApp",
