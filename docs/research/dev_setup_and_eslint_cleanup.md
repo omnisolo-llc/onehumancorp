@@ -57,9 +57,23 @@ Wrapper suites invoke some Python tests, so these counts must not be added into 
 
 ## GitHub Actions follow-up — 2026-09-20
 
+**Superseded by the user's action-owned CI correction below.** This paragraph records the earlier setup-job design, not the current dispatch contract.
+
 The CI workflow now tests the real developer initializer on a fresh Ubuntu 24.04 hosted runner, including plan, initialization, doctor, and a repeat run without further system-package changes. The new job is included in `CI Required` and therefore in the release workflow's reusable CI qualification. It is independent of the optimized, cached build/test lanes; no source test, lint rule, platform or release requirement was removed.
 
 Three added regression tests check the bootstrap job's actual commands/permissions, inexpensive preflight coverage, and the real Bash required-results script. The latter rejects failed/cancelled/empty/incorrectly skipped setup results while retaining the established documentation-only exception. The tests were run against the old workflow and failed before the job was implemented. Hosted installation and complete CI success still require results from the pushed revision; a local workflow-contract pass does not establish them.
+
+## Action-owned CI correction — 2026-09-20
+
+At the user's direction, CI no longer invokes `make init` or `make doctor`. The redundant fresh-init/repeat-init job is removed; the local commands and all thirteen bootstrap regressions remain. Native build/test jobs continue using the shared setup action, and the harness-only dependency scope now receives scoped npm download caching instead of a second uncached Node installation.
+
+Cache changes preserve the established compiler boundary: dependency-only Rust caches, no workspace binaries or installed toolchain cache, OS/architecture/runner-image/role isolation, and trusted successful writers. Native TLS/SDK settings are added to the compiler environment fingerprint. npm keys use only the selected scope's lockfiles, including `.github/test-tools/package-lock.json` for harness tests; cache contents are limited to `_cacache`. Next compiler keys now also include runner image. All locked installs and actual builds/tests still execute on cache hits; cold-cache bypass remains wired into every shared-action CI caller.
+
+New regressions were run against the old configuration and failed on the initializer job, missing harness scope, cache metadata and developer-dependency installation. The corrected tests execute the scoped npm install shell with controlled executables, prove install failures propagate, and exercise the final required-results Bash script for all twelve required lanes and all failure/cancellation/skipped/unknown outcomes. The original PostgreSQL role/isolation tests and cross-platform release matrix remain unchanged.
+
+Final local verification passed with 80 covered script/workflow/configuration inputs unchanged: 70 native Node/script tests, all 16 deployment/security contract groups, repository-wide ESLint with zero warnings, both web/CLI TypeScript checks, Actionlint for CI/release, and diff checks. The nine new cache/setup cases include 48 required-lane failure combinations; bootstrap and checkout/workflow suites each retain 13 tests. Wrapper counts overlap and must not be summed as unique tests. Validation initially reused linked dependency directories, which the existing hygiene guard correctly rejected; the links were removed and the action's actual locked npm installation commands were run in the isolated worktree before repeating final validation. No hygiene assertion was weakened.
+
+Local action/schema/contract checks do not prove a remote cache hit, a faster hosted build or a green full CI run. Read the final hosted result for the integrated revision separately.
 
 ## Evidence limitations
 
