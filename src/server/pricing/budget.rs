@@ -55,6 +55,42 @@ impl BudgetManager {
         self.record_spend_cents(amount_cents)
     }
 
+    pub fn release_spend(&self, amount: f64) -> Result<bool, String> {
+        if amount < 0.0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        if !amount.is_finite() || amount * 100.0 >= i64::MAX as f64 {
+            return Err("release amount must be finite and bounded".to_string());
+        }
+        let amount_cents = (amount * 100.0).round() as i64;
+        self.release_spend_cents(amount_cents)
+    }
+
+    pub fn release_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        if amount_cents == 0 {
+            return Ok(true);
+        }
+
+        // Atomic release: reject underflow without changing state.
+        if self
+            .current
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                current
+                    .checked_sub(amount_cents)
+                    .filter(|next| *next >= 0)
+            })
+            .is_err()
+        {
+            return Ok(false);
+        }
+
+        // We do not decrement the monotonically increasing telemetry counters upon release.
+        Ok(true)
+    }
+
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
         if amount_cents < 0 {
             return Err("spend amount cannot be negative".to_string());
@@ -249,6 +285,56 @@ mod tests {
         let manager = BudgetManager::new(100.0);
         assert!(manager.record_spend_cents(0).unwrap());
         assert_eq!(manager.get_remaining_cents(), 10000);
+    }
+
+    #[test]
+    fn test_release_spend() {
+        let manager = BudgetManager::new(100.0);
+        assert!(manager.record_spend(50.0).unwrap());
+        assert_eq!(manager.get_remaining(), 50.0);
+
+        // Successfully release spend
+        assert!(manager.release_spend(20.0).unwrap());
+        assert_eq!(manager.get_remaining(), 70.0);
+
+        // Cannot release more than what was spent
+        assert!(!manager.release_spend(40.0).unwrap());
+        assert_eq!(manager.get_remaining(), 70.0); // state is unchanged
+
+        // Exact release of remaining spend
+        assert!(manager.release_spend(30.0).unwrap());
+        assert_eq!(manager.get_remaining(), 100.0);
+
+        // Negative value error
+        assert_eq!(manager.release_spend(-10.0).unwrap_err(), "release amount cannot be negative");
+
+        // Zero release works
+        assert!(manager.release_spend(0.0).unwrap());
+    }
+
+    #[test]
+    fn test_release_spend_cents() {
+        let manager = BudgetManager::new(100.0);
+        assert!(manager.record_spend_cents(5000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 5000);
+
+        // Successfully release spend cents
+        assert!(manager.release_spend_cents(2000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 7000);
+
+        // Cannot release more than what was spent
+        assert!(!manager.release_spend_cents(4000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 7000); // state is unchanged
+
+        // Exact release of remaining spend
+        assert!(manager.release_spend_cents(3000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 10000);
+
+        // Negative value error
+        assert_eq!(manager.release_spend_cents(-1000).unwrap_err(), "release amount cannot be negative");
+
+        // Zero release works
+        assert!(manager.release_spend_cents(0).unwrap());
     }
 
     #[test]
