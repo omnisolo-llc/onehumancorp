@@ -386,3 +386,26 @@ mod tests {
         assert!(verified_rate_id("wrong", "tenant-a", "order-1", &signed).is_none());
     }
 }
+
+#[cfg(test)]
+mod extended_shipping_tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_weight_edge_cases() {
+        assert_eq!(parse_weight("  10.5  "), Some(10.5));
+        assert_eq!(parse_weight("0.0001"), Some(0.0001));
+        assert_eq!(parse_weight("-10.5"), None);
+        assert_eq!(parse_weight("abc"), None);
+    }
+
+    #[test]
+    fn test_parse_dimensions_edge_cases() {
+        assert_eq!(parse_dimensions(" 10.5 x 8.0 x 6.5 "), Some((10.5, 8.0, 6.5)));
+        assert_eq!(parse_dimensions("10X8X6"), Some((10.0, 8.0, 6.0)));
+        assert_eq!(parse_dimensions("10 x 8 x 6 x 4"), None);
+        assert_eq!(parse_dimensions("10 x 8"), None);
+        assert_eq!(parse_dimensions("-10 x 8 x 6"), None);
+        assert_eq!(parse_dimensions("0 x 8 x 6"), None);
+    }
+}
