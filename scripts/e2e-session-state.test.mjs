@@ -11,6 +11,15 @@ const user = { username: actor.email, organizationId: actor.organizationId, role
 const state = () => ({ cookies: [{ name: 'test-session', value: 'unit-fixture-not-a-real-session', domain: '127.0.0.1', path: '/',
   httpOnly: true, secure: false, sameSite: 'Lax', expires: Date.now() / 1000 + 300 }], origins: [] });
 
+test('shared authenticated smoke flow does not retry the retired passwordless login', async () => {
+  const helper = await readFile(new URL('../src/e2e/current_app_smoke.ts', import.meta.url), 'utf8');
+  assert.equal(helper.includes("page.goto('/login')"), false,
+    'callers already authenticated the requested actor through the real backend');
+  assert.equal(helper.includes('Email or Username'), false);
+  assert.ok(helper.includes("page.goto('/dashboard')"));
+  assert.ok(helper.includes("toHaveURL(/\\/dashboard"), 'a missing session must fail instead of silently skipping login');
+});
+
 test('session reuse is bound to the actual origin, tenant and authenticated role', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'ohc-auth-state-'));
   try {

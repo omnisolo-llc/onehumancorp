@@ -44,6 +44,24 @@ class CheckoutPathTests(unittest.TestCase):
             self.assertNotIn('synthetic-private-content', result.stderr + result.stdout)
 
 class WorkflowStartupTests(unittest.TestCase):
+    def test_native_harness_tests_install_their_locked_external_executable(self):
+        import json
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        steps = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']['native-test']['steps']
+        setup = next((i for i, step in enumerate(steps)
+                      if 'npm ci --prefix .github/test-tools' in step.get('run', '')), None)
+        self.assertIsNotNone(setup, 'real OpenCode lifecycle tests need the pinned binary')
+        tests = next(i for i, step in enumerate(steps) if step.get('run') == 'make test-backend')
+        self.assertLess(setup, tests)
+        self.assertIn('GITHUB_PATH', steps[setup]['run'])
+        self.assertIn('opencode --version', steps[setup]['run'])
+        package = json.loads((root / '.github/test-tools/package.json').read_text())
+        lock = json.loads((root / '.github/test-tools/package-lock.json').read_text())
+        self.assertEqual(package['dependencies']['opencode-ai'], '1.18.15')
+        self.assertEqual(lock['packages']['node_modules/opencode-ai']['version'], '1.18.15')
+        self.assertTrue(lock['packages']['node_modules/opencode-ai']['integrity'].startswith('sha512-'))
+
     def test_desktop_builds_expose_packager_failures_without_skipping_bundles(self):
         import yaml
         root = SCRIPT.parent.parent.parent

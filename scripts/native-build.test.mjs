@@ -6,6 +6,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { packageWeb, distributablePath, webLayout, sourceDigest, validateWebArtifact, recordSuccessfulBuild } from './package-web.mjs';
 
+test('production PostgreSQL migrations are embedded and tracked by Cargo', async () => {
+  const database = await readFile(new URL('../src/server/db.rs', import.meta.url), 'utf8');
+  assert.ok(database.includes('sqlx::migrate!("./src/server/migrations")'),
+    'deployed runtime must not depend on the checkout or process working directory');
+  assert.ok(database.includes('POSTGRES_MIGRATOR.run(&mut *migration_conn).await'));
+  const build = await readFile(new URL('../build.rs', import.meta.url), 'utf8');
+  assert.ok(build.includes('cargo:rerun-if-changed=src/server/migrations'));
+});
+
 test('native web bundle excludes environment files and build caches', () => {
   for (const name of ['.env', '.env.local', '.env.production', '.env.production.local']) {
     assert.equal(distributablePath(path.join('/app', name)), false);

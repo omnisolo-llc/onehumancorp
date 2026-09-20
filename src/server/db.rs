@@ -6,7 +6,6 @@ use sqlx::SqlitePool;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
-use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
 
@@ -62,6 +61,9 @@ macro_rules! validate_tenant_id_sqlx {
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 static GLOBAL_MYSQL_POOL: OnceLock<MySqlPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
+// Release executables must migrate successfully outside the source checkout.
+// Embedding also binds each SQL checksum to the exact compiled revision.
+static POSTGRES_MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./src/server/migrations");
 
 pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 
@@ -1217,9 +1219,7 @@ impl DB {
                     .execute(&mut *migration_conn)
                     .await?;
 
-                let migrator =
-                    sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                let migration_result = migrator.run(&mut *migration_conn).await;
+                let migration_result = POSTGRES_MIGRATOR.run(&mut *migration_conn).await;
 
                 let unlock_result = sqlx::query("SELECT pg_advisory_unlock($1);")
                     .bind(POSTGRES_MIGRATION_LOCK_KEY)
@@ -5147,6 +5147,28 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             count_t2.0, 0,
             "tenant_2 should NOT see tenant_1's task due to RLS"
         );
+    }
+}
+
+#[cfg(test)]
+mod embedded_postgres_migration_tests {
+    #[tokio::test]
+    async fn embedded_migrations_match_every_repository_version_and_checksum() {
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/server/migrations");
+        let disk = sqlx::migrate::Migrator::new(source).await.unwrap();
+        let bundled: Vec<_> = super::POSTGRES_MIGRATOR.iter().collect();
+        let expected: Vec<_> = disk.iter().collect();
+        assert!(
+            !bundled.is_empty(),
+            "empty migrations must never pass packaging"
+        );
+        assert_eq!(bundled.len(), expected.len());
+        for (actual, expected) in bundled.iter().zip(expected.iter()) {
+            assert_eq!(actual.version, expected.version);
+            assert_eq!(actual.description, expected.description);
+            assert_eq!(actual.sql, expected.sql);
+            assert_eq!(actual.checksum, expected.checksum);
+        }
     }
 }
 

@@ -187,6 +187,16 @@ jobs:
           role: backend-test
           node: 'false'
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install pinned native harness test prerequisites
+        run: |
+          npm ci --prefix .github/test-tools --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/.github/test-tools/node_modules/.bin" >> "$GITHUB_PATH"
+          version="$(.github/test-tools/node_modules/.bin/opencode --version)"
+          test "$version" = '1.18.15'
       - name: Lint the complete headless Rust workspace before linking tests
         run: make lint-backend
       - name: Test complete headless Cargo workspace
