@@ -173,7 +173,8 @@ export default function OrderDetailsPage() {
               </dl>
             </section>
             <section className="app-card rounded-2xl border border-gray-200 bg-white/70 p-6 shadow-sm">
-              <h2 className="text-lg font-bold font-outfit text-gray-900">Shipping</h2>
+              <h2 className="text-lg font-bold font-outfit text-gray-900">Fulfillment</h2>
+              <p className="text-xs text-gray-500 mb-4">Powered by Shippo</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="text-sm font-medium">Weight (oz)<input aria-label="Package weight in ounces" type="number" value={weight} onChange={(event) => setWeight(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
                 <label className="text-sm font-medium">Dimensions<input aria-label="Package dimensions" value={dimensions} onChange={(event) => setDimensions(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
