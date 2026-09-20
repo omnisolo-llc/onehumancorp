@@ -622,11 +622,21 @@ impl Department for OperationsAgent {
                     .get("order_id")
                     .and_then(|v| v.as_str())
                     .unwrap_or("unknown");
+                let is_physical = event
+                    .payload
+                    .get("is_physical")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
                 if status == "Ready" {
-                    format!(
-                        "Notify customer that order {} is ready for pickup via SMS/WhatsApp",
-                        order_id
-                    )
+                    if is_physical {
+                        format!("Drafting Shippo shipping label autonomously for physical order {}", order_id)
+                    } else {
+                        format!(
+                            "Notify customer that order {} is ready for pickup via SMS/WhatsApp",
+                            order_id
+                        )
+                    }
                 } else {
                     format!("Order {} status updated to {}", order_id, status)
                 }
