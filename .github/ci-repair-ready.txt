@@ -1,4 +1,0 @@
-Apply only to fix/ci-parallel-repair-20260920.
-Expected patch SHA256: 6db4010a428d9938231df220773f7c0b26b1b0d8a57694476e6ab89fa825003b
-Expected complete Git tree: 0488b0c99a688b8de13a5dcf856e3b995c8e4630
-Remove the one-shot publisher and all transfer files in the repair commit.

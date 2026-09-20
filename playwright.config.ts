@@ -6,7 +6,11 @@ const retries = process.env.PLAYWRIGHT_RETRIES
     ? 2
     : 0;
 
-const reporter = process.env.PLAYWRIGHT_LIST_REPORTER
+const reporter = process.env.OMNISOLO_CI_EVIDENCE
+  ? process.env.OMNISOLO_CI_REPORT_PHASE === 'inventory'
+    ? [['list'], ['./scripts/ci-playwright-reporter.ts']] as const
+    : [['list'], ['./scripts/ci-playwright-reporter.ts'], ['blob']] as const
+  : process.env.PLAYWRIGHT_LIST_REPORTER
   ? [['list'], ['html']] as const
   : 'html';
 
@@ -18,7 +22,7 @@ const actionTimeout = process.env.PLAYWRIGHT_ACTION_TIMEOUT
   ? Number.parseInt(process.env.PLAYWRIGHT_ACTION_TIMEOUT, 10)
   : 0;
 
-const video = process.env.PLAYWRIGHT_VIDEO || 'on';
+const video = process.env.PLAYWRIGHT_VIDEO || 'retain-on-failure';
 const screenshot = process.env.PLAYWRIGHT_SCREENSHOT || 'only-on-failure';
 const storageState = process.env.PLAYWRIGHT_STORAGE_STATE;
 
@@ -41,7 +45,7 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || 'http://127.0.0.1:18789',
     ...(storageState ? { storageState } : {}),
     actionTimeout: Number.isFinite(actionTimeout) ? actionTimeout : 0,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     screenshot: screenshot as 'off' | 'on' | 'only-on-failure',
     video: video as 'on' | 'off' | 'retain-on-failure' | 'on-first-retry',
   },

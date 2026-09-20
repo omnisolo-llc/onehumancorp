@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
@@ -80,6 +80,17 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   env.PLAYWRIGHT_TEST_DIR = './src';
   env.PLAYWRIGHT_LIST_REPORTER = '1';
   if (ciSelection) env.CI = 'true';
+  // Only non-secret workflow identity crosses the otherwise closed environment.
+  // Local --list remains usable without GitHub, Docker or compiled artifacts.
+  if (ciSelection && process.env.GITHUB_ACTIONS === 'true') {
+    const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+    const run = process.env.GITHUB_RUN_ID, attempt = process.env.GITHUB_RUN_ATTEMPT;
+    if (!/^[a-f0-9]{40}$/.test(sha) || !/^\d+$/.test(run || '') || !/^[1-9]\d*$/.test(attempt || '')) {
+      throw new Error('Missing hosted CI source/run identity');
+    }
+    Object.assign(env, { OMNISOLO_CI_EVIDENCE: '1', OMNISOLO_CI_SOURCE_SHA: sha,
+      GITHUB_RUN_ID: run, GITHUB_RUN_ATTEMPT: attempt, OMNISOLO_CI_REPORT_PHASE: 'inventory' });
+  }
   const playwright = require.resolve('@playwright/test/cli');
   // Fail on broken imports, invalid fixtures or zero selection BEFORE spending
   // time starting Docker, applying migrations or launching either application.
@@ -165,8 +176,9 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     const frontend = start(process.execPath, [web], 'web.log', { ...env, PORT: String(webPort), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' });
     await waitHttp(`${webOrigin}/login`, frontend, 120, execution.signal);
     // Execute exactly the complete/sharded selection checked by preflight.
+    if (env.OMNISOLO_CI_EVIDENCE) env.OMNISOLO_CI_REPORT_PHASE = 'results';
     await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts', ...args], {
-      env, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
+      env, signal: execution.signal, timeoutMs: 20 * 60 * 1000,
     });
   } catch (error) {
     // The database contains only this run's synthetic seed. Its bounded error

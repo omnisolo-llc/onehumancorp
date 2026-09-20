@@ -104,6 +104,8 @@ jobs:
           python3 .github/scripts/check_checkout_paths_test.py
           python3 scripts/init_dev_test.py
           python3 .github/scripts/check_native_cache_test.py
+          python3 scripts/ci_rust_test.py
+          node --test scripts/ci-coverage.test.mjs
 
       - name: Check tracked artifacts
         run: |
@@ -176,8 +178,8 @@ jobs:
   native-test:
     name: Native Rust tests
     env:
-      # Keep memory-heavy test compilation separate; preserve the security
-      # lane's independent, deliberately minimal environment contract.
+      # Keep memory-heavy test compilation separate from the parallel lint job;
+      # preserve the security lane's deliberately minimal environment contract.
       CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     needs: [check-changes]
@@ -198,10 +200,182 @@ jobs:
           echo "$GITHUB_WORKSPACE/.github/test-tools/node_modules/.bin" >> "$GITHUB_PATH"
           version="$(.github/test-tools/node_modules/.bin/opencode --version)"
           test "$version" = '1.18.15'
-      - name: Lint the complete headless Rust workspace before linking tests
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.145
+      - name: Build archive and prove complete Cargo test inventory
+        run: python3 scripts/ci_rust.py build
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-rust-test-archive
+          path: |
+            target/ci-rust/tests.tar.zst
+            target/ci-rust/manifest.json
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-rust-test-manifest
+          path: target/ci-rust/manifest.json
+          retention-days: 3
+          if-no-files-found: error
+      - name: Test all Cargo documentation examples
+        run: cargo test --locked --workspace --exclude app --doc
+
+  native-rust-lint:
+    name: Native Rust lint
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install native system libraries
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+      - uses: ./.github/actions/setup-native
+        with:
+          role: backend-lint
+          node: 'false'
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Check formatting and strict headless Clippy independently
         run: make lint-backend
-      - name: Test complete headless Cargo workspace
-        run: make test-backend
+
+  native-node-lint:
+    name: Native Node lint and typechecks
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-native
+        id: native-setup
+        with:
+          rust: 'false'
+          node-scope: all
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Check strict ESLint and web and CLI types independently
+        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
+        run: make lint-node
+
+  native-rust-execute:
+    name: Native Rust execution ${{ matrix.shard }}/4
+    needs: [check-changes, native-test]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-native
+        with:
+          rust: 'false'
+          node-scope: harness
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.145
+      - name: Verify the real harness executable
+        run: |
+          echo "$GITHUB_WORKSPACE/.github/test-tools/node_modules/.bin" >> "$GITHUB_PATH"
+          test "$(.github/test-tools/node_modules/.bin/opencode --version)" = '1.18.15'
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-rust-test-archive
+          path: target/ci-rust
+      - name: Execute the verified archive without compilation
+        run: python3 scripts/ci_rust.py run --index ${{ matrix.shard }} --total 4
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: native-rust-results-${{ matrix.shard }}
+          path: |
+            target/ci-rust/result-*.json
+            target/ci-rust/junit-*.xml
+          retention-days: 7
+          if-no-files-found: error
+
+  native-rust-results:
+    name: Complete Rust execution coverage
+    needs: [check-changes, native-test, native-rust-execute]
+    if: ${{ !cancelled() && needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-rust-test-manifest
+          path: target/ci-rust
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: native-rust-results-*
+          path: target/ci-rust
+          merge-multiple: true
+      - name: Reject missing, duplicate, failed or wrong-source results
+        run: python3 scripts/ci_rust.py verify --total 4
+
+  native-browser-inventory:
+    name: Complete browser discovery
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-native
+        with:
+          rust: 'false'
+          node-scope: root
+          cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Discover every root and nested browser spec before execution
+        run: npm run test:e2e -- --ci --list
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-browser-inventory
+          path: target/ci-browser/inventory-0.json
+          retention-days: 3
+          if-no-files-found: error
+
+  native-browser-results:
+    name: Complete browser execution coverage
+    needs: [check-changes, native-browser-inventory, native-e2e]
+    if: ${{ !cancelled() && needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-browser-inventory
+          path: target/ci-browser
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: native-browser-evidence-*
+          path: target/ci-browser
+          merge-multiple: true
+      - name: Require one first-attempt passing result for every discovered test
+        run: node scripts/ci-coverage.mjs target/ci-browser 16
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: complete-browser-evidence
+          path: target/ci-browser
+          retention-days: 7
 
   native-node:
     name: Native Node quality gates
@@ -219,19 +393,11 @@ jobs:
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
       - name: Install Python workflow-contract dependency
         run: sudo apt-get update && sudo apt-get install -y python3-yaml
-      # Independent checks retain their own failing conclusions. A lint failure
-      # must not hide the entire unit suite, and no failed step is made optional.
+      # Lint/typechecks have an independent required job. Contract failures
+      # must not hide the unit suite, and no failed step is made optional.
       - name: Test preserved deployment and security contracts
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: make test-contracts
-      - name: Lint JavaScript and TypeScript
-        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
-        run: npm run lint:node
-      - name: Typecheck web and CLI
-        if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
-        run: |
-          npm run typecheck:web
-          npm --prefix src/cli run typecheck
       - name: Run all Node, frontend, CLI and desktop UI tests
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: make test-node
@@ -302,13 +468,13 @@ jobs:
         run: cargo test --locked -p app
 
   native-e2e:
-    name: Native real-stack Playwright ${{ matrix.shard }}/4
+    name: Native real-stack Playwright ${{ matrix.shard }}/16
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 16
       matrix:
-        shard: [1, 2, 3, 4]
-    needs: [check-changes, native-build, native-web]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    needs: [check-changes, native-build, native-web, native-browser-inventory]
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -332,15 +498,24 @@ jobs:
           chmod +x target/debug/server target/debug/omnisolo-builtin-agent target/debug/grpc-mtls-probe
           npx --no-install playwright install --with-deps chromium
       - name: Execute complete real-stack suite shard
-        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }}/4
+        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }}/16 --retries=0
       - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: native-playwright-results-${{ matrix.shard }}
           path: |
             playwright-report
+            blob-report
             test-results
           retention-days: 7
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: native-browser-evidence-${{ matrix.shard }}
+          path: target/ci-browser/results-${{ matrix.shard }}.json
+          retention-days: 7
+          if-no-files-found: error
 
   native-images:
     name: Shared native production images
@@ -692,6 +867,12 @@ jobs:
       - dependency-audit
       - native-build
       - native-test
+      - native-browser-results
+      - native-browser-inventory
+      - native-rust-results
+      - native-rust-execute
+      - native-rust-lint
+      - native-node-lint
       - native-e2e
       - native-web
       - native-node
@@ -715,6 +896,12 @@ jobs:
           CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}
           NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
           NATIVE_TEST_RESULT: ${{ needs.native-test.result }}
+          NATIVE_BROWSER_RESULTS_RESULT: ${{ needs.native-browser-results.result }}
+          NATIVE_BROWSER_INVENTORY_RESULT: ${{ needs.native-browser-inventory.result }}
+          NATIVE_RUST_RESULTS_RESULT: ${{ needs.native-rust-results.result }}
+          NATIVE_RUST_EXECUTE_RESULT: ${{ needs.native-rust-execute.result }}
+          NATIVE_RUST_LINT_RESULT: ${{ needs.native-rust-lint.result }}
+          NATIVE_NODE_LINT_RESULT: ${{ needs.native-node-lint.result }}
           NATIVE_E2E_RESULT: ${{ needs.native-e2e.result }}
           NATIVE_WEB_RESULT: ${{ needs.native-web.result }}
           NATIVE_NODE_RESULT: ${{ needs.native-node.result }}
@@ -730,6 +917,12 @@ jobs:
           echo "check-changes: ${CHECK_CHANGES_RESULT}"
           echo "native-build: ${NATIVE_BUILD_RESULT}"
           echo "native-test: ${NATIVE_TEST_RESULT}"
+          echo "native-browser-results: ${NATIVE_BROWSER_RESULTS_RESULT}"
+          echo "native-browser-inventory: ${NATIVE_BROWSER_INVENTORY_RESULT}"
+          echo "native-rust-results: ${NATIVE_RUST_RESULTS_RESULT}"
+          echo "native-rust-execute: ${NATIVE_RUST_EXECUTE_RESULT}"
+          echo "native-rust-lint: ${NATIVE_RUST_LINT_RESULT}"
+          echo "native-node-lint: ${NATIVE_NODE_LINT_RESULT}"
           echo "native-e2e: ${NATIVE_E2E_RESULT}"
           echo "native-web: ${NATIVE_WEB_RESULT}"
           echo "native-node: ${NATIVE_NODE_RESULT}"
@@ -768,6 +961,12 @@ jobs:
           if [[ "$MARKDOWN_ONLY" == "true" ]]; then
             allow_success_or_skipped "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
             allow_success_or_skipped "native-test" "$NATIVE_TEST_RESULT"
+            allow_success_or_skipped "native-browser-results" "$NATIVE_BROWSER_RESULTS_RESULT"
+            allow_success_or_skipped "native-browser-inventory" "$NATIVE_BROWSER_INVENTORY_RESULT"
+            allow_success_or_skipped "native-rust-results" "$NATIVE_RUST_RESULTS_RESULT"
+            allow_success_or_skipped "native-rust-execute" "$NATIVE_RUST_EXECUTE_RESULT"
+            allow_success_or_skipped "native-rust-lint" "$NATIVE_RUST_LINT_RESULT"
+            allow_success_or_skipped "native-node-lint" "$NATIVE_NODE_LINT_RESULT"
             allow_success_or_skipped "native-e2e" "$NATIVE_E2E_RESULT"
             allow_success_or_skipped "native-web" "$NATIVE_WEB_RESULT"
             allow_success_or_skipped "native-node" "$NATIVE_NODE_RESULT"
@@ -779,6 +978,12 @@ jobs:
           else
             require_success "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
             require_success "native-test" "$NATIVE_TEST_RESULT"
+            require_success "native-browser-results" "$NATIVE_BROWSER_RESULTS_RESULT"
+            require_success "native-browser-inventory" "$NATIVE_BROWSER_INVENTORY_RESULT"
+            require_success "native-rust-results" "$NATIVE_RUST_RESULTS_RESULT"
+            require_success "native-rust-execute" "$NATIVE_RUST_EXECUTE_RESULT"
+            require_success "native-rust-lint" "$NATIVE_RUST_LINT_RESULT"
+            require_success "native-node-lint" "$NATIVE_NODE_LINT_RESULT"
             require_success "native-e2e" "$NATIVE_E2E_RESULT"
             require_success "native-web" "$NATIVE_WEB_RESULT"
             require_success "native-node" "$NATIVE_NODE_RESULT"

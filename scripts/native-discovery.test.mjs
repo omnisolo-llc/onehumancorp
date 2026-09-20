@@ -119,7 +119,12 @@ test('CI shards use complete native browser spec discovery, not a smoke allowlis
   assert.match(runner, /PLAYWRIGHT_TEST_DIR:\s*['"]\.\/src['"]/);
   assert.match(config, /testMatch:\s*['"]\*\*\/\*\.spec\.ts['"]/);
   assert.doesNotMatch(runner, /const maintained\s*=|ciSelection\s*\?\s*\[/);
-  assert.match(ci, /shard:\s*\[1, 2, 3, 4\]/);
+  const browserJob = ci.split('  native-e2e:')[1]?.split('  native-images:')[0];
+  assert.ok(browserJob);
+  assert.match(browserJob, /shard:\s*\[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16\]/);
+  assert.match(browserJob, /max-parallel: 16/);
+  assert.match(browserJob, /--retries=0/);
+  assert.match(ci, /node scripts\/ci-coverage.mjs target\/ci-browser 16/);
   assert.match(ci, /test:e2e -- --ci --shard=/);
   assert.match(runner, /pass-with-no-tests/);
 });

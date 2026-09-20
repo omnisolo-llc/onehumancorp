@@ -44,6 +44,25 @@ class CheckoutPathTests(unittest.TestCase):
             self.assertNotIn('synthetic-private-content', result.stderr + result.stdout)
 
 class WorkflowStartupTests(unittest.TestCase):
+    def test_lint_has_independent_required_jobs_not_serial_test_steps(self):
+        import yaml
+        root = SCRIPT.parent.parent.parent
+        jobs = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']
+        for lane, command in (('native-rust-lint', 'make lint-backend'),
+                              ('native-node-lint', 'make lint-node')):
+            with self.subTest(lane=lane):
+                self.assertIn(lane, jobs, 'lint must run concurrently with tests')
+                self.assertEqual(jobs[lane]['needs'], ['check-changes'])
+                self.assertIn(lane, jobs['ci-required']['needs'])
+                self.assertTrue(any(s.get('run') == command for s in jobs[lane]['steps']))
+                self.assertFalse(jobs[lane].get('continue-on-error', False))
+        for lane in ('native-test', 'native-node'):
+            self.assertEqual(jobs[lane]['needs'], ['check-changes'])
+            commands = '\n'.join(s.get('run', '') for s in jobs[lane]['steps'])
+            self.assertNotIn('make lint', commands)
+            self.assertNotIn('npm run lint:node', commands)
+            self.assertNotIn('npm run typecheck:web', commands)
+
     def test_ci_uses_setup_actions_not_the_local_initializer(self):
         import yaml
         root = SCRIPT.parent.parent.parent
@@ -60,7 +79,7 @@ class WorkflowStartupTests(unittest.TestCase):
         root = SCRIPT.parent.parent.parent
         jobs = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']
         self.assertEqual(set(jobs['ci-required']['needs']), {'check-changes', 'dependency-audit',
-            'native-build', 'native-test', 'native-e2e', 'native-web', 'native-node',
+            'native-build', 'native-test', 'native-rust-lint', 'native-node-lint', 'native-rust-execute', 'native-rust-results', 'native-browser-inventory', 'native-browser-results', 'native-e2e', 'native-web', 'native-node',
             'native-images', 'native-desktop', 'kind-e2e', 'docker-e2e', 'postgres-security'})
 
     def test_bootstrap_contracts_execute_before_expensive_builds(self):
@@ -81,7 +100,7 @@ class WorkflowStartupTests(unittest.TestCase):
                       and step.get('with', {}).get('node-scope') == 'harness'), None)
         self.assertIsNotNone(setup, 'real OpenCode lifecycle tests need the cached harness setup action')
         verify = next(i for i, step in enumerate(steps) if 'opencode --version' in step.get('run', ''))
-        tests = next(i for i, step in enumerate(steps) if step.get('run') == 'make test-backend')
+        tests = next(i for i, step in enumerate(steps) if step.get('run') == 'python3 scripts/ci_rust.py build')
         self.assertLess(setup, verify)
         self.assertLess(verify, tests)
         self.assertIn('GITHUB_PATH', steps[verify]['run'])
@@ -107,7 +126,7 @@ class WorkflowStartupTests(unittest.TestCase):
         import yaml
         root = SCRIPT.parent.parent.parent
         job = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']['native-node']
-        commands = ('make test-contracts', 'npm run lint:node', 'npm run typecheck:web', 'make test-node')
+        commands = ('make test-contracts', 'make test-node')
         for command in commands:
             step = next((s for s in job['steps'] if command in s.get('run', '')), None)
             self.assertIsNotNone(step, command)

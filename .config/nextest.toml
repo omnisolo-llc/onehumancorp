@@ -1,0 +1,13 @@
+# CI builds once and executes the same complete Cargo selection on isolated hosts.
+nextest-version = "0.9.145"
+
+[profile.ci]
+retries = 0
+fail-fast = false
+test-threads = 1
+
+[profile.ci.junit]
+path = "junit.xml"
+report-skipped = "none"
+store-success-output = false
+store-failure-output = true

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Agent Marketplace E2E', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/agent-marketplace');
-    await expect(page.locator('h1')).toHaveText('Agent Marketplace');
+    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText('Agent Marketplace');
   });
 
   test('Page load and initial agents visible', async ({ page }) => {
@@ -33,7 +33,8 @@ test.describe('Agent Marketplace E2E', () => {
 
     // Search for an agent that doesn't exist
     await searchInput.fill('NonexistentAgent123');
-    await expect(page.locator('text=No agents found matching "NonexistentAgent123"')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No agents found', exact: true })).toBeVisible();
+    await expect(page.getByText('We couldn\'t find any agents matching "NonexistentAgent123"')).toBeVisible();
   });
 
   test('Clear search restores original list', async ({ page }) => {
