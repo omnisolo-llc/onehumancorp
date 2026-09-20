@@ -26,6 +26,7 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.order.updated".to_string(),
+            "tenant.order.ready_for_fulfillment".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "tenant.booking.request_received".to_string(),
             "tenant.booking.confirmed".to_string(),
@@ -610,6 +611,17 @@ impl Department for OperationsAgent {
                 } else {
                     "Process Order & Update Inventory".to_string()
                 }
+            }
+            "tenant.order.ready_for_fulfillment" => {
+                let order_id = event
+                    .payload
+                    .get("order_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                format!(
+                    "Draft shipping label for ready order {}",
+                    order_id
+                )
             }
             "tenant.order.updated" => {
                 let status = event
