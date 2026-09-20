@@ -3,6 +3,41 @@ use axum::{Json, extract::State, http::HeaderMap, response::IntoResponse};
 use std::sync::Arc;
 use tracing::info;
 
+#[derive(thiserror::Error, Debug)]
+pub enum TerminalDomainError {
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+    #[error("Stripe integration error: {0}")]
+    StripeError(String),
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+    #[error("Idempotency conflict")]
+    IdempotencyConflict,
+}
+
+impl axum::response::IntoResponse for TerminalDomainError {
+    fn into_response(self) -> axum::response::Response {
+        let status = match self {
+            TerminalDomainError::DatabaseError(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            TerminalDomainError::StripeError(_) => axum::http::StatusCode::BAD_GATEWAY,
+            TerminalDomainError::InvalidState(_) => axum::http::StatusCode::BAD_REQUEST,
+            TerminalDomainError::IdempotencyConflict => axum::http::StatusCode::CONFLICT,
+        };
+
+        let body = Json(serde_json::json!({
+            "error": self.to_string(),
+            "code": match self {
+                TerminalDomainError::DatabaseError(_) => "DATABASE_ERROR",
+                TerminalDomainError::StripeError(_) => "STRIPE_ERROR",
+                TerminalDomainError::InvalidState(_) => "INVALID_STATE",
+                TerminalDomainError::IdempotencyConflict => "IDEMPOTENCY_CONFLICT",
+            }
+        }));
+
+        (status, body).into_response()
+    }
+}
+
 #[derive(serde::Serialize)]
 pub struct TerminalTokenResponse {
     pub token: String,
@@ -1436,10 +1471,18 @@ pub async fn get_terminal_connection_token_handler(
     _headers: axum::http::HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-) -> axum::response::Response {
-    let tenant_id = match extract_tenant_id_or_error(auth_info, &_headers) {
-        Ok(id) => id,
-        Err(response) => return response.into_response(),
+) -> Result<impl axum::response::IntoResponse, TerminalDomainError> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Err(TerminalDomainError::InvalidState("Unauthenticated: Missing tenant ID".to_string()));
+            } else {
+                auth.org_id.clone()
+            }
+        }
+        None => {
+            return Err(TerminalDomainError::InvalidState("Unauthenticated".to_string()));
+        }
     };
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
@@ -1456,22 +1499,10 @@ pub async fn get_terminal_connection_token_handler(
             .create_terminal_connection_token(&tenant_id)
             .await
         {
-            Ok(token) => (
-                axum::http::StatusCode::OK,
-                Json(serde_json::json!({ "secret": token })),
-            )
-                .into_response(),
-            Err(e) => (
-                axum::http::StatusCode::OK,
-                Json(serde_json::json!({ "error": e })),
-            )
-                .into_response(),
+            Ok(token) => Ok(Json(serde_json::json!({ "secret": token }))),
+            Err(e) => Err(TerminalDomainError::StripeError(format!("Failed to create token: {}", e))),
         },
-        Err(e) => (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => Err(TerminalDomainError::StripeError(e.to_string())),
     }
 }
 

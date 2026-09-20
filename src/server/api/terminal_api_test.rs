@@ -22,14 +22,14 @@ async fn test_get_terminal_connection_token_unauthenticated() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
 
     let json_body: serde_json::Value = serde_json::from_str(&body_str).unwrap();
-    assert_eq!(json_body["success"], false);
-    assert!(json_body["error_message"].as_str().unwrap().contains("Unauthenticated"));
+    assert_eq!(json_body["code"], "INVALID_STATE");
+    assert!(json_body["error"].as_str().unwrap().contains("Unauthenticated"));
 }
 
 #[tokio::test]
