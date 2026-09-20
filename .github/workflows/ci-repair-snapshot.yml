@@ -1,0 +1,34 @@
+name: CI repair source snapshot
+
+on:
+  push:
+    branches: [fix/ci-head-parallel-evaluation]
+    paths: [.github/workflows/ci-repair-snapshot.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Archive tracked source without checkout credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ci-repair-source"
+          git archive --format=tar HEAD > "$RUNNER_TEMP/ci-repair-source/source.tar"
+          git rev-parse HEAD > "$RUNNER_TEMP/ci-repair-source/source-sha.txt"
+          git rev-parse HEAD^{tree} > "$RUNNER_TEMP/ci-repair-source/source-tree.txt"
+          cd "$RUNNER_TEMP/ci-repair-source"
+          sha256sum source.tar > SHA256SUMS
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-source-${{ github.sha }}
+          path: ${{ runner.temp }}/ci-repair-source
+          if-no-files-found: error
+          retention-days: 1
