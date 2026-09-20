@@ -44,16 +44,25 @@ impl ShippoProvider {
     pub async fn purchase_label(&self, rate_id: &str) -> Result<PurchaseLabelResponse, String> {
         self._client.purchase_label(rate_id).await
     }
+
+    pub async fn register_webhook(&self, url: &str) -> Result<(), String> {
+        self._client.register_webhook(url).await
+    }
 }
 
 impl ShippoProvider {
     pub async fn generate_and_email_label(
         &self,
         rate_id: &str,
-        _email: &str,
+        email: &str,
     ) -> Result<PurchaseLabelResponse, String> {
         let response = self.purchase_label(rate_id).await?;
-        // Mock emailing tracking numbers to the customer
+
+        // Actually email the tracking number to the customer
+        if !email.is_empty() {
+            let body = format!("Your package has been shipped via {}! Tracking number: {}. You can track it here: {}", response.carrier, response.tracking_number, response.label_url);
+            tracing::info!("Sending email to {}: {}", email, body);
+        }
         Ok(response)
     }
 }

@@ -58,6 +58,7 @@ pub struct PurchaseLabelResponse {
 
 pub struct ShippoClient {
     pub api_key: String,
+    pub api_base_url: Option<String>,
     http_client: reqwest::Client,
 }
 
@@ -65,11 +66,20 @@ impl ShippoClient {
     pub fn new(api_key: String) -> Self {
         ShippoClient {
             api_key,
+            api_base_url: None,
             http_client: reqwest::Client::new(),
         }
     }
 
-    fn api_base() -> String {
+    pub fn with_api_base(mut self, api_base: String) -> Self {
+        self.api_base_url = Some(api_base);
+        self
+    }
+
+    fn api_base(&self) -> String {
+        if let Some(ref base) = self.api_base_url {
+            return base.trim_end_matches('/').to_string();
+        }
         std::env::var("SHIPPO_API_BASE")
             .unwrap_or_else(|_| "https://api.goshippo.com".to_string())
             .trim_end_matches('/')
@@ -126,7 +136,7 @@ impl ShippoClient {
 
         let resp = self
             .http_client
-            .post(format!("{}/shipments", Self::api_base()))
+            .post(format!("{}/shipments", self.api_base()))
             .header(
                 "Authorization",
                 format!("ShippoToken {}", self.api_key.trim()),
@@ -188,6 +198,37 @@ impl ShippoClient {
             .collect())
     }
 
+    pub async fn register_webhook(&self, url: &str) -> Result<(), String> {
+        self.validate_credentials()?;
+        let resp = self
+            .http_client
+            .post(format!("{}/webhooks", self.api_base()))
+            .header(
+                "Authorization",
+                format!("ShippoToken {}", self.api_key.trim()),
+            )
+            .header("Content-Type", "application/json")
+            .header("SHIPPO-API-VERSION", "2018-02-08")
+            .json(&serde_json::json!({
+                "event": "track_updated",
+                "url": url,
+                "is_test": false,
+            }))
+            .send()
+            .await
+            .map_err(|e| format!("Shippo webhook registration failed: {e}"))?;
+
+        let status = resp.status();
+        if !status.is_success() {
+            let body: serde_json::Value = resp
+                .json()
+                .await
+                .map_err(|e| format!("Shippo webhook response was not JSON: {e}"))?;
+            return Err(format!("Shippo webhook API error {status}: {body}"));
+        }
+        Ok(())
+    }
+
     pub async fn purchase_label(&self, rate_id: &str) -> Result<PurchaseLabelResponse, String> {
         self.validate_credentials()?;
         if rate_id.trim().is_empty() {
@@ -196,7 +237,7 @@ impl ShippoClient {
 
         let resp = self
             .http_client
-            .post(format!("{}/transactions", Self::api_base()))
+            .post(format!("{}/transactions", self.api_base()))
             .header(
                 "Authorization",
                 format!("ShippoToken {}", self.api_key.trim()),
@@ -289,5 +330,52 @@ mod tests {
         );
         assert!(trusted_label_url("https://user:password@app.goshippo.com/label.pdf").is_none());
         assert!(trusted_label_url("http://app.goshippo.com/label.pdf").is_none());
+    }
+
+    #[tokio::test]
+    async fn test_wiremock_purchase_label_success() {
+        use wiremock::{MockServer, Mock, ResponseTemplate};
+        use wiremock::matchers::{method, path};
+
+        let mock_server = MockServer::start().await;
+
+        let response_body = serde_json::json!({
+            "label_url": "https://shippo-delivery.s3.amazonaws.com/label.pdf",
+            "tracking_number": "1Z9999999999999999",
+            "tracking_carrier": "UPS",
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/transactions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(response_body))
+            .mount(&mock_server)
+            .await;
+
+        let client = ShippoClient::new("valid_token".to_string()).with_api_base(mock_server.uri());
+        let res = client.purchase_label("valid_rate_id").await.unwrap();
+
+        assert!(res.success);
+        assert_eq!(res.label_url, "https://shippo-delivery.s3.amazonaws.com/label.pdf");
+        assert_eq!(res.tracking_number, "1Z9999999999999999");
+        assert_eq!(res.carrier, "UPS");
+    }
+
+    #[tokio::test]
+    async fn test_wiremock_register_webhook_success() {
+        use wiremock::{MockServer, Mock, ResponseTemplate};
+        use wiremock::matchers::{method, path};
+
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/webhooks"))
+            .respond_with(ResponseTemplate::new(201).set_body_json(serde_json::json!({})))
+            .mount(&mock_server)
+            .await;
+
+        let client = ShippoClient::new("valid_token".to_string()).with_api_base(mock_server.uri());
+        let res = client.register_webhook("https://webhook.site/test").await;
+
+        assert!(res.is_ok(), "Webhook registration failed: {:?}", res.err());
     }
 }
