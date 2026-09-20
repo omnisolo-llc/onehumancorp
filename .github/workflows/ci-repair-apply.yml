@@ -72,7 +72,7 @@ jobs:
           python3 .github/scripts/check_parallel_ci_test.py
           node --test scripts/ci-coverage.test.mjs scripts/ci-reporter.test.mjs scripts/ci-parallel.test.mjs
           node scripts/native-contracts.mjs 2>&1 | tee "$RUNNER_TEMP/repair-evidence/contracts.log"
-      - name: Store candidate Git objects for required PR validation
+      - name: Store complete verified index tree for required PR validation
         if: ${{ always() && steps.apply.outcome == 'success' && steps.format.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -85,24 +85,30 @@ jobs:
           repo = 'repos/omnisolo-llc/onehumancorp'
           def api(path, data):
               return json.loads(subprocess.check_output(['gh', 'api', '--method', 'POST', repo + path, '--input', '-'], input=json.dumps(data).encode()))
-          names = subprocess.check_output(['git', 'diff', '--cached', '--name-only', '-z']).decode().strip('\0').split('\0')
+          names = set(filter(None, subprocess.check_output(['git', 'diff', '--cached', '--name-only', '-z']).decode().split('\0')))
           entries = []
-          for name in names:
-              index = subprocess.check_output(['git', 'ls-files', '--stage', '--', name], text=True).strip()
-              if not index:
-                  entries.append({'path': name, 'mode': '100644', 'type': 'blob', 'sha': None})
-                  continue
-              mode, expected, _ = index.split(None, 2)
-              data = subprocess.check_output(['git', 'show', ':' + name])
-              blob = api('/git/blobs', {'encoding': 'base64', 'content': base64.b64encode(data).decode()})
-              if blob['sha'] != expected:
-                  raise SystemExit('Git blob identity mismatch: ' + name)
-              entries.append({'path': name, 'mode': mode, 'type': 'blob', 'sha': blob['sha']})
-          base = subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip()
-          tree = api('/git/trees', {'base_tree': base, 'tree': entries})
-          if tree['sha'] != subprocess.check_output(['git', 'write-tree'], text=True).strip():
-              raise SystemExit('Git tree identity mismatch')
-          result = {'tree_sha': tree['sha'], 'parent_sha': os.environ['GITHUB_SHA'], 'contract_result': os.environ['CONTRACT_RESULT'], 'full_ci_passed': False, 'changed_paths': names}
+          uploaded = set()
+          raw = subprocess.check_output(['git', 'ls-files', '--stage', '-z']).decode()
+          for record in filter(None, raw.split('\0')):
+              metadata, name = record.split('\t', 1)
+              mode, expected, stage = metadata.split()
+              if stage != '0':
+                  raise SystemExit('Unmerged index path: ' + name)
+              kind = 'commit' if mode == '160000' else 'blob'
+              if name in names and kind == 'blob' and expected not in uploaded:
+                  data = subprocess.check_output(['git', 'cat-file', 'blob', expected])
+                  blob = api('/git/blobs', {'encoding': 'base64', 'content': base64.b64encode(data).decode()})
+                  if blob['sha'] != expected:
+                      raise SystemExit('Git blob identity mismatch: ' + name)
+                  uploaded.add(expected)
+              entries.append({'path': name, 'mode': mode, 'type': kind, 'sha': expected})
+          if not entries:
+              raise SystemExit('Refusing to publish an empty index')
+          expected_tree = subprocess.check_output(['git', 'write-tree'], text=True).strip()
+          tree = api('/git/trees', {'tree': entries})
+          if tree['sha'] != expected_tree:
+              raise SystemExit('Git tree identity mismatch: ' + tree['sha'] + ' != ' + expected_tree)
+          result = {'tree_sha': tree['sha'], 'parent_sha': os.environ['GITHUB_SHA'], 'contract_result': os.environ['CONTRACT_RESULT'], 'full_ci_passed': False, 'changed_paths': sorted(names), 'index_entries': len(entries)}
           out = pathlib.Path(os.environ['RUNNER_TEMP'], 'repair-evidence')
           (out / 'candidate-tree.json').write_text(json.dumps(result, indent=2))
           print(json.dumps(result, indent=2))
