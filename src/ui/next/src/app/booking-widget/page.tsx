@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 
 export default function BookingWidgetBuilder() {
-  const router = useRouter();
+
   const [tenant, setTenant] = useState("my-store");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [removeBranding, setRemoveBranding] = useState(false);
@@ -17,7 +17,7 @@ export default function BookingWidgetBuilder() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [previewStatus, setPreviewStatus] = useState("");
+
 
   const embedUrl = `https://cloud.omnisolo.co/booking?tenant=${tenant}&service_id=${generatedServiceId}`;
   const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
@@ -219,6 +219,7 @@ export default function BookingWidgetBuilder() {
                             frameBorder="0"
                             style={{ borderRadius: '16px', border: 'none' }}
                             title="Booking Widget Preview"
+                            sandbox="allow-scripts allow-same-origin"
                         />
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-gray-500">
