@@ -1,10 +1,34 @@
 /// <reference types="node" />
 import { getPowerSyncDB } from '../../lib/powersync/db';
 
+/** Payload fields consumed by the existing queue adapters. Unknown extension
+ * fields remain opaque JSON and cannot be read without narrowing. */
+export interface MutationPayload {
+  [key: string]: unknown;
+  id?: string;
+  amount_cents?: number;
+  order_id?: string;
+  item_id?: string;
+  entity_id?: string;
+  data?: unknown;
+  approved?: boolean;
+  modified_content?: string;
+  event_source?: string;
+  action?: string;
+}
+
 export interface OfflineAction {
   id: string; // The action request ID or a UUID
   type: string; // E.g., 'approve_agent_feed'
-  payload: any;
+  payload?: MutationPayload;
+  url?: string;
+  notes?: string;
+  quoteId?: string;
+  amount?: number;
+  currency?: string;
+  product_id?: string;
+  quantity?: number;
+  device_signature?: string;
   timestamp: number;
 }
 
@@ -71,8 +95,8 @@ export async function getActions(): Promise<OfflineAction[]> {
   if (typeof window === "undefined") return [];
   try {
     const db = await getPowerSyncDB();
-    const result = await db.getAll('SELECT * FROM local_pending_actions ORDER BY timestamp ASC');
-    return result.map((row: any) => ({
+    const result = await db.getAll<{ id: string; type: string; payload: string; timestamp: number }>('SELECT * FROM local_pending_actions ORDER BY timestamp ASC');
+    return result.map((row) => ({
       id: row.id,
       type: row.type,
       payload: JSON.parse(row.payload),

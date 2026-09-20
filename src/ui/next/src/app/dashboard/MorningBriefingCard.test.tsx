@@ -21,18 +21,12 @@ describe('MorningBriefingCard', () => {
   it('renders loading state initially and then fetches data successfully', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ briefing: 'Test briefing' })
-        });
+        return Promise.resolve(Response.json({ briefing: 'Test briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
+        return Promise.resolve(Response.json([
             { id: '1', source: 'Decision Assistant', context: 'Test triage item', action_type: 'Test Action' }
-          ])
-        });
+          ], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -59,7 +53,7 @@ describe('MorningBriefingCard', () => {
         return Promise.resolve({ ok: false });
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -74,10 +68,10 @@ describe('MorningBriefingCard', () => {
   it('handles empty briefing gracefully', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -95,7 +89,7 @@ describe('MorningBriefingCard', () => {
         return Promise.reject(new Error('network error'));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -115,13 +109,13 @@ describe('MorningBriefingCard', () => {
 
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage/action')) {
         return Promise.resolve({ ok: true });
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTriageItems) });
+        return Promise.resolve(Response.json(mockTriageItems, { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -170,13 +164,13 @@ describe('MorningBriefingCard', () => {
 
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage/action')) {
         return Promise.resolve({ ok: false }); // Failure
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTriageItems) });
+        return Promise.resolve(Response.json(mockTriageItems, { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -205,13 +199,13 @@ describe('MorningBriefingCard', () => {
   it('handles insight chat correctly', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ reply: 'Test chat reply' }) });
+        return Promise.resolve(Response.json({ reply: 'Test chat reply' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -247,13 +241,13 @@ describe('MorningBriefingCard', () => {
   it('handles insight chat failures gracefully', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
         return Promise.resolve({ ok: false }); // Non-ok response
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -280,13 +274,13 @@ describe('MorningBriefingCard', () => {
   it('handles insight chat exception gracefully', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
         return Promise.reject(new Error('Network error'));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -313,10 +307,10 @@ describe('MorningBriefingCard', () => {
   it('does not send empty chat message', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -347,10 +341,10 @@ describe('MorningBriefingCard', () => {
   it('handles resTriage ok branch', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: [{ id: '1', source: 'Decision Assistant', context: 'Test triage item', action_type: 'Test Action' }] }) });
+        return Promise.resolve(Response.json({ items: [{ id: '1', source: 'Decision Assistant', context: 'Test triage item', action_type: 'Test Action' }] }, { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -365,10 +359,10 @@ describe('MorningBriefingCard', () => {
   it('handles empty action_type branch', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: '1', source: 'Decision Assistant', context: 'Test triage item', action_type: '' }]) });
+        return Promise.resolve(Response.json([{ id: '1', source: 'Decision Assistant', context: 'Test triage item', action_type: '' }], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -383,13 +377,13 @@ describe('MorningBriefingCard', () => {
   it('handles chat fallback reply correctly', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -417,13 +411,13 @@ describe('MorningBriefingCard', () => {
     const chatPromise = new Promise<Partial<Response>>((resolve) => { resolveChatPromise = resolve; });
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
         return chatPromise;
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        return Promise.resolve(Response.json([], { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -452,7 +446,7 @@ describe('MorningBriefingCard', () => {
     });
 
     // Resolve the hanging promise to finish test
-    resolveChatPromise({ ok: true, json: () => Promise.resolve({ reply: 'Test chat reply' }) });
+    resolveChatPromise(Response.json({ reply: 'Test chat reply' }, { status: 200 }));
 
     await waitFor(() => {
       expect(screen.queryByText("Thinking...")).not.toBeInTheDocument();
@@ -462,10 +456,10 @@ describe('MorningBriefingCard', () => {
   it('handles resTriage root items object fallback branch', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: undefined }) }); // Fallback
+        return Promise.resolve(Response.json({ items: undefined }, { status: 200 })); // Fallback
       }
       return Promise.reject(new Error('not found'));
     });
@@ -480,7 +474,7 @@ describe('MorningBriefingCard', () => {
   it('handles resTriage failure branch', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
+        return Promise.resolve(Response.json({ briefing: 'Briefing' }, { status: 200 }));
       }
       if (url.includes('/api/v1/ui/triage')) {
         return Promise.resolve({ ok: false });

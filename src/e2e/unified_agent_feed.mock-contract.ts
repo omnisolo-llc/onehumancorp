@@ -4,7 +4,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   // Use a strictly 375px wide viewport as specified by the issue
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test.beforeEach(async ({ page, request }) => {
+  test.beforeEach(async ({ request }) => {
     // Let's set up the database
     // Wait for the backend proxy? The setup endpoint in the mock test works.
     await request.post("/api/v1/e2e/setup", {
@@ -28,7 +28,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     });
   });
 
-  const performLogin = async (page: any) => {
+  const performLogin = async (page: import("@playwright/test").Page) => {
     await page.goto("/login");
     // Next.js login page:
     await page.getByPlaceholder("Email or Username").first().fill("e2e-user");

@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures';
 test.describe('Autonomous Supply Replenishment - The Quartermaster Agent', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('generates an action via background task and approves it in the UI', async ({ page, request }) => {
+  test('generates an action via background task and approves it in the UI', async ({ page }) => {
 
     // 2. Navigate to the dashboard where UnifiedAgentFeed is rendered
     await page.goto('/dashboard');

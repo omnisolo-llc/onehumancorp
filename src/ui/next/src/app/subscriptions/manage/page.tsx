@@ -1,5 +1,7 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import { useState,Suspense } from "react";
 import Head from "next/head";
 import { useSearchParams } from "next/navigation";
@@ -35,9 +37,9 @@ function SubscriptionsPortalContent() {
       } else {
         throw new Error("Invalid response from server");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "An error occurred");
+      setError(errorMessage(err, '') || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -65,9 +67,9 @@ function SubscriptionsPortalContent() {
       } else {
         throw new Error(data.message || "Failed to update subscription");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "An error occurred");
+      setError(errorMessage(err, '') || "An error occurred");
     } finally {
       setLoading(false);
     }

@@ -4,10 +4,11 @@ import React, { Suspense, useState, useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import StripeTerminalClient from '../terminal/StripeTerminalClient';
 import { useSearchParams } from 'next/navigation';
+import type { CartItem, SaleProduct } from '@/lib/business-records';
 
 function POSTerminalMobileContent() {
   const [catalog, setCatalog] = useState<{id: string, name: string, price: number, image?: string}[]>([]);
-  const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [isOffline, setIsOffline] = useState(false);
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
   const searchParams = useSearchParams();
@@ -53,7 +54,7 @@ function POSTerminalMobileContent() {
     };
   }, []);
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: SaleProduct) => {
     const existing = cart.find(i => i.product.id === product.id);
     if (existing) {
       setCart(cart.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i));

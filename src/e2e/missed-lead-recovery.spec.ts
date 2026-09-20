@@ -23,7 +23,7 @@ test.describe('Missed Lead Recovery Work Triage UI', () => {
         `);
     });
 
-    test('owner can review and take over missed lead recovery items', async ({ page }) => {
+    test('owner can review and take over missed lead recovery items', async () => {
         // Go to Triage dashboard
         await adminPage.goto('/ui/triage.html');
 

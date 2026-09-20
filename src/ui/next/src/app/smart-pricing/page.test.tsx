@@ -19,10 +19,7 @@ describe('SmartPricingPage', () => {
     localStorage.clear();
 
     // Mock global fetch to return a resolved promise so `.catch` works safely
-    global.fetch = vi.fn(() => Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({})
-    })) as any;
+    global.fetch = vi.fn(() => Promise.resolve(Response.json({}, { status: 200 })));
   });
 
   afterEach(() => {

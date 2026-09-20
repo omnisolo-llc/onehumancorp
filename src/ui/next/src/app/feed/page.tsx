@@ -1,5 +1,7 @@
 'use client';
 
+
+import { errorMessage } from '@/lib/errors';
 import { useCallback,useEffect,useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
@@ -7,16 +9,7 @@ import { useAuthenticatedPolling } from '../../hooks/useAuthenticatedPolling';
 
 import { AmbassadorReplyCard } from '../dashboard/AmbassadorReplyCard';
 
-interface FeedItem {
-  id: string;
-  tenant_id: string;
-  event_source: string;
-  context_payload?: any;
-  proposed_action?: any;
-  lifecycle_state: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { AgentFeedItem as FeedItem, ActionPayload } from '@/lib/agent-feed-types';
 
 export default function FeedPage() {
   const router = useRouter();
@@ -35,9 +28,9 @@ export default function FeedPage() {
       }
       const data = await res.json();
       // Only show pending items on this feed view
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err: any) {
-      setError(err.message);
+      setItems((data.items || []).filter((i: FeedItem) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      setError(errorMessage(err, ''));
     } finally {
       setLoading(false);
     }
@@ -52,8 +45,8 @@ export default function FeedPage() {
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
-            const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
-            const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
+
+
     const textToEdit = isAmbassador ?
         (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
         (item.context_payload?.summary
@@ -71,8 +64,8 @@ export default function FeedPage() {
     if (!item) return;
 
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
-            const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
-            const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
+
+
 
     const updatedProposed = {
         ...item.proposed_action,
@@ -101,7 +94,7 @@ export default function FeedPage() {
     setEditingId(null);
   };
 
-  const handleAction = async (id: string, state: string, updatedProposed?: any, updatedContext?: any) => {
+  const handleAction = async (id: string, state: string, updatedProposed?: ActionPayload, updatedContext?: ActionPayload) => {
     const item = items.find(i => i.id === id);
     if (state === 'APPROVED') {
       if (item?.proposed_action?.action_type === 'Draft Quote') {
@@ -118,7 +111,7 @@ export default function FeedPage() {
     try {
       setProcessingId(id);
 
-      const bodyPayload: any = { state };
+      const bodyPayload: { state: string; proposed_action?: ActionPayload; context_payload?: ActionPayload } = { state };
       const proposed = updatedProposed || item?.proposed_action;
       const context = updatedContext || item?.context_payload;
 
@@ -136,8 +129,8 @@ export default function FeedPage() {
       if (state === 'APPROVED' || state === 'DISMISSED') {
           setItems((prev) => prev.filter((item) => item.id !== id));
       }
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(errorMessage(err, ''));
     } finally {
       setProcessingId(null);
     }
@@ -178,6 +171,7 @@ export default function FeedPage() {
           {items.map((item) => {
             const isProcessing = processingId === item.id;
             const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+
             const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
             const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-vi.mock("next/link", () => ({ default: (props: any) => React.createElement("a", { href: props.href }, props.children) }));
+vi.mock("next/link", () => ({ default: (props: import('react').AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement("a", { href: props.href }, props.children) }));
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HelpCenterPage from './page';
 import { TooltipProvider } from '../../components/TooltipRegistry';
@@ -11,20 +11,14 @@ describe('HelpCenterPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url === '/api/v1/tooltips') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ "test-id": "Tooltip text" })
-        });
+        return Promise.resolve(Response.json({ "test-id": "Tooltip text" }, { status: 200 }));
       }
       if (url === '/api/v1/help') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
+        return Promise.resolve(Response.json([
             { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1", category: "General" },
             { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store", category: "General" },
             { title: "API Documentation", desc: "Advanced.", link: "/api-docs", category: "Advanced" }
-          ])
-        });
+          ], { status: 200 }));
       }
       if (typeof url === 'string' && url.includes('/api/v1/help/search')) {
         const urlObj = new URL('http://localhost' + url);
@@ -37,24 +31,15 @@ describe('HelpCenterPage', () => {
           a.title.toLowerCase().includes(q) ||
           a.desc.toLowerCase().includes(q)
         );
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(results)
-        });
+        return Promise.resolve(Response.json(results, { status: 200 }));
       }
       if (url === '/api/v1/videos') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
+        return Promise.resolve(Response.json([
             { id: 1, title: "How to set up your first store easily", duration: "1:20" },
             { id: 2, title: "Linking your own website name", duration: "0:45" }
-          ])
-        });
+          ], { status: 200 }));
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([])
-      });
+      return Promise.resolve(Response.json([], { status: 200 }));
     });
   });
 

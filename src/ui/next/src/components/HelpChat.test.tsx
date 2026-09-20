@@ -9,10 +9,7 @@ describe('HelpChat Component', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ reply: 'Hello from AI' }),
-      })
+      Promise.resolve(Response.json({ reply: 'Hello from AI' }, { status: 200 }))
     ) as unknown as typeof fetch;
   });
 
@@ -202,13 +199,10 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
 
   it('filters unsafe URLs and returns only text', async () => {
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({
+      Promise.resolve(Response.json({
           reply: 'Here is a link',
           link: { url: 'javascript:alert(1)', title: 'Click me' }
-        }),
-      })
+        }, { status: 200 }))
     ) as unknown as typeof fetch;
 
     render(<HelpChat />);
@@ -234,10 +228,7 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
 
   it('handles invalid chat responses by throwing an error that is caught', async () => {
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(null),
-      })
+      Promise.resolve(Response.json(null, { status: 200 }))
     ) as unknown as typeof fetch;
 
     render(<HelpChat />);
@@ -254,10 +245,7 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
     });
 
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ reply: '   ' }),
-      })
+      Promise.resolve(Response.json({ reply: '   ' }, { status: 200 }))
     ) as unknown as typeof fetch;
 
     await act(async () => {
@@ -301,13 +289,10 @@ describe('HelpChat safe link handling', () => {
 
   it('renders a safe link when provided by the agent', async () => {
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({
+      Promise.resolve(Response.json({
           reply: 'Here is a link',
           link: { url: 'https://example.com/safe', title: 'Safe Link' }
-        }),
-      })
+        }, { status: 200 }))
     ) as unknown as typeof fetch;
 
     render(<HelpChat />);

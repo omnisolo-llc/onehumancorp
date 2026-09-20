@@ -9,7 +9,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const feedContainer = page.locator('div.glassmorphism').filter({ hasText: 'Approval' }).first();
+    page.locator('div.glassmorphism').filter({ hasText: 'Approval' }).first();
 
     // 1. Verify width constraint
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
@@ -120,7 +120,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Check if feed loads
-    const feedContainer = page.locator('div.glassmorphism').filter({ hasText: 'All caught up! Your business is running smoothly.' }).first();
+    page.locator('div.glassmorphism').filter({ hasText: 'All caught up! Your business is running smoothly.' }).first();
   });
 
 
@@ -130,7 +130,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const approveBtn = page.getByTestId('feed-approve-btn').first();
+    page.getByTestId('feed-approve-btn').first();
     const editBtn = page.getByTestId('edit-proposal').first();
 
     if (await editBtn.isVisible({ timeout: 10000 }).catch(() => false)) {

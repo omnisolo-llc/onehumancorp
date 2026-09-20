@@ -1,4 +1,5 @@
 "use client";
+import type { BuilderBlock, BlockProperties, GeneratedBlock } from '@/lib/builder-types';
 
 import { useState, useEffect } from "react";
 import { SmartBlock, DraggableBlock, ActionSheet } from "../builder/components";
@@ -8,7 +9,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 
 export default function StorefrontBuilderPage() {
   const [bio, setBio] = useState("");
-  const [blocks, setBlocks] = useState<any[]>([]);
+  const [blocks, setBlocks] = useState<BuilderBlock[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live" | "chat">("idle");
   const [liveUrl, setLiveUrl] = useState("");
 
@@ -16,7 +17,7 @@ export default function StorefrontBuilderPage() {
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
-  const [editingBlockContent, setEditingBlockContent] = useState<any>(null);
+  const [editingBlockContent, setEditingBlockContent] = useState<BlockProperties | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
@@ -25,7 +26,7 @@ export default function StorefrontBuilderPage() {
     { targetId: "bio-input-target", title: "Storefront Bio", content: "Tell your customers about your store." }
   ];
   const [chatMessage, setChatMessage] = useState("");
-  const { startWalkthrough } = useWalkthrough();
+  useWalkthrough();
 
   useEffect(() => {
     if (selectedBlockIndex !== null) {
@@ -61,6 +62,8 @@ export default function StorefrontBuilderPage() {
   useEffect(() => {
     // Only save to server if there's actual state to save that deviates from idle
     if (status !== 'idle' || bio !== '' || blocks.length > 0) {
+      let saveMessageTimer: ReturnType<typeof setTimeout> | undefined;
+      let disposed = false;
       const payload = {
         builderState: { bio, blocks, status }
       };
@@ -72,10 +75,9 @@ export default function StorefrontBuilderPage() {
           body: JSON.stringify(payload)
         })
         .then(res => {
-            if (res.ok) {
+            if (res.ok && !disposed) {
                 setSaveMessage("Draft Saved!");
-                const msgTimer = setTimeout(() => setSaveMessage(""), 3000);
-                (window as any)._ohcSaveMsgTimer = msgTimer;
+                saveMessageTimer = setTimeout(() => setSaveMessage(""), 3000);
             }
         })
         .catch(err => console.error('Failed to sync builder state', err));
@@ -83,7 +85,8 @@ export default function StorefrontBuilderPage() {
 
       return () => {
         clearTimeout(timer);
-        if ((window as any)._ohcSaveMsgTimer) clearTimeout((window as any)._ohcSaveMsgTimer);
+        disposed = true;
+        if (saveMessageTimer) clearTimeout(saveMessageTimer);
       };
     }
   }, [bio, blocks, status]);
@@ -153,7 +156,7 @@ export default function StorefrontBuilderPage() {
       });
 
       const data = await response.json();
-      const blocks = data.pages[0].blocks.map((b: any) => ({
+      const blocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === 'HeroBlock' ? 'Hero' :
               b.block_type === 'ProductGridBlock' ? 'Catalog' :
               b.block_type === 'ServiceBookingBlock' ? 'Booking' :
@@ -197,7 +200,7 @@ export default function StorefrontBuilderPage() {
         body: JSON.stringify({ description: `${bio}. Update request: ${chatMessage}. Note: Maintain a 375px optimized card-based mobile UI.` })
       });
       const data = await response.json();
-      const newBlocks = data.pages[0].blocks.map((b: any) => ({
+      const newBlocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === "HeroBlock" ? "Hero" :
               b.block_type === "ProductGridBlock" ? "Catalog" :
               b.block_type === "ServiceBookingBlock" ? "Booking" :
@@ -496,7 +499,7 @@ export default function StorefrontBuilderPage() {
                   return (
                     <div key={key} className="space-y-4">
                       <h3 className="font-semibold text-gray-700 dark:text-gray-200 capitalize">Items</h3>
-                      {editingBlockContent[key].map((item: any, idx: number) => (
+                      {editingBlockContent[key].map((item, idx) => (
                         <div key={idx} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg space-y-2 relative">
                            <button
                              className="absolute top-2 right-2 text-[#FF3B30] text-xs font-bold"
@@ -547,14 +550,14 @@ export default function StorefrontBuilderPage() {
                       <textarea
                         className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-black dark:text-white"
                         rows={3}
-                        value={editingBlockContent[key] || ''}
+                        value={String(editingBlockContent[key] ?? '')}
                         onChange={(e) => setEditingBlockContent({ ...editingBlockContent, [key]: e.target.value })}
                       />
                     ) : (
                       <input
                         type="text"
                         className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-black dark:text-white"
-                        value={editingBlockContent[key] || ''}
+                        value={String(editingBlockContent[key] ?? '')}
                         onChange={(e) => setEditingBlockContent({ ...editingBlockContent, [key]: e.target.value })}
                       />
                     )}

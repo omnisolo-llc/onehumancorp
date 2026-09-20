@@ -1,5 +1,7 @@
 'use client';
 
+
+import { errorMessage as describeError } from '@/lib/errors';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiCheckCircle as CheckCircle2, FiLoader as Loader2, FiCreditCard as CreditCard, FiX as X } from 'react-icons/fi';
@@ -62,10 +64,10 @@ export function TapToPayOverlay({ isOpen, onClose, amount, currency, orderId, on
         onSuccess(piData.id);
       }, 1500);
 
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setStatus('error');
-      setErrorMessage(err.message || 'An unexpected error occurred.');
+      setErrorMessage(describeError(err, '') || 'An unexpected error occurred.');
     }
   };
 

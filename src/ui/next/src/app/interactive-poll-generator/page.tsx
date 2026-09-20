@@ -22,21 +22,15 @@ export default function InteractivePollGeneratorPage() {
     const checkState = () => {
       const tid = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'my-store') : 'my-store';
       setTenant(tid);
-      if (typeof window !== 'undefined') {
-      }
+
     };
 
     checkState();
 
-    // Expose for testing
-    if (typeof window !== 'undefined') {
-      (window as any).__forceCheckProState = checkState;
-    }
 
     window.addEventListener('storage', checkState);
     return () => {
       window.removeEventListener('storage', checkState);
-      if (typeof window !== 'undefined') delete (window as any).__forceCheckProState;
     };
   }, []);
 

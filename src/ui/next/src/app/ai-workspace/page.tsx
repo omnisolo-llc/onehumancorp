@@ -338,7 +338,7 @@ export default function AIWorkspacePage() {
       setCalendarSyncStatus('synced');
       setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       
-      const newSyncedEvents: any[] = [];
+      const newSyncedEvents: typeof events = [];
       if (google) {
         newSyncedEvents.push({
           id: 'esync_g1',
@@ -421,7 +421,7 @@ export default function AIWorkspacePage() {
     );
   }, [notes, searchQuery]);
 
-  const filteredEvents = useMemo(() => {
+  useMemo(() => {
     if (!searchQuery.trim()) return events;
     const q = searchQuery.toLowerCase();
     return events.filter((e) =>
@@ -937,7 +937,7 @@ export default function AIWorkspacePage() {
                     />
                     <select
                       value={newTaskPriority}
-                      onChange={(e) => setNewTaskPriority(e.target.value as any)}
+                      onChange={(e) => setNewTaskPriority(e.target.value as Parameters<typeof setNewTaskPriority>[0])}
                       className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="Low">Low Priority</option>

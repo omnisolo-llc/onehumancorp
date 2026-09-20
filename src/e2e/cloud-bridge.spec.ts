@@ -39,7 +39,7 @@ test.describe('Cloud Bridge Referral Loop', () => {
 
     const emailInput = page.locator('#cloud-bridge-email');
     const generateBtn = page.locator('#generate-cloud-bridge-btn');
-    const statusDiv = page.locator('#cloud-bridge-status');
+    page.locator('#cloud-bridge-status');
 
     await emailInput.fill('collab2@example.com');
     await generateBtn.click();
