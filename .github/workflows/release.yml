@@ -405,6 +405,10 @@ jobs:
         distribution: temurin
         java-version: '17'
     - uses: android-actions/setup-android@v3
+      with:
+        # The upstream default still requests the retired 'tools' package.
+        packages: platform-tools
+        log-accepted-android-sdk-licenses: false
     - name: Install pinned Android NDK and Rust targets
       run: |-
         sdkmanager "ndk;27.2.12479018" "platforms;android-35" "build-tools;35.0.0"

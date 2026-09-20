@@ -139,6 +139,9 @@ debian-binary
 /srcs/
 /scratch/
 *.db
+# A misconfigured SQLite test can create this file; it is not a source asset
+# and its colon makes the repository impossible to check out on Windows.
+:memory:
 
 dummy.*
 dummy_*

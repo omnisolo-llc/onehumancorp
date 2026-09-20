@@ -7,6 +7,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Node build/discovery tests are owned by test:scripts (part of make test).
 // Keep this runner focused on checks Cargo and Node test discovery cannot find.
 const checks = [
+  ['python3', '.github/scripts/check_checkout_paths_test.py'],
+  ['bash', '.github/scripts/check_repo_hygiene_test.sh'],
+  ['bash', '.github/scripts/check_repo_hygiene.sh'],
   ['bash', 'deploy/tests/deploy_artifacts_test.sh'],
   ['bash', 'deploy/tests/e2e_ci_execution_contract_test.sh', 'deploy/tests/kind_e2e_test.sh', 'deploy/tests/docker_compose_e2e_test.sh', 'deploy/helm/omnisolo/templates/backend-deployment.yaml', 'deploy/helm/omnisolo/values.yaml', 'deploy/docker/server-init/bootstrap-admin.sh', 'deploy/docker-compose.yml'],
   ['bash', 'deploy/tests/operational_api_contract_test.sh', 'deploy/scripts/omnisolo-agent-wizard.sh', 'deploy/scripts/omnisolo-seed-data.sh'],

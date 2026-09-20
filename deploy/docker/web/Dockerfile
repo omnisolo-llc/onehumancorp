@@ -7,6 +7,9 @@ COPY package.json package-lock.json ./
 COPY src/ui/next/package.json src/ui/next/package-lock.json ./src/ui/next/
 RUN npm ci --no-audit --no-fund && npm --prefix src/ui/next ci --no-audit --no-fund
 COPY src/ui/next ./src/ui/next
+# Next's strict typecheck includes the shared browser-test helper. Keep the
+# build context complete instead of disabling checks or dropping test inputs.
+COPY src/e2e/db_utils.ts ./src/e2e/
 COPY .node-version ./
 COPY scripts/build-web.mjs scripts/package-web.mjs scripts/native-web-entry.cjs ./scripts/
 ENV NEXT_TELEMETRY_DISABLED=1
