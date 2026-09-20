@@ -505,7 +505,7 @@ export default function POSTerminal() {
                     <button
                       key={num}
                       onClick={() => handleKeypadPress(num)}
-                      className="bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
+                      className="translucent-glass-light bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
                     >
                       {num}
                     </button>
@@ -513,13 +513,13 @@ export default function POSTerminal() {
                   <button className="h-16 min-h-[44px]"></button>
                   <button
                     onClick={() => handleKeypadPress('0')}
-                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
+                    className="translucent-glass-light bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
                   >
                     0
                   </button>
                   <button
                     onClick={() => handleKeypadPress('backspace')}
-                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 flex items-center justify-center transition-colors min-h-[44px]"
+                    className="translucent-glass-light bg-white/70 backdrop-blur-[30px] border border-white/50 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 flex items-center justify-center transition-colors min-h-[44px]"
                   >
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>
                   </button>
@@ -528,7 +528,7 @@ export default function POSTerminal() {
                 <button
                   onClick={() => setShowPaymentSheet(true)}
                   disabled={parseInt(chargeAmount || '0') === 0}
-                  className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
+                  className="glass-control w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
                   Charge ${(parseInt(chargeAmount || '0') / 100).toFixed(2)}
                 </button>
@@ -540,9 +540,9 @@ export default function POSTerminal() {
              <div className="fixed bottom-0 left-0 right-0 p-4 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
                <button
                  onClick={() => setIsCartOpen(true)}
-                 className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
+                 className="glass-control w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
                >
-                 <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</span>
+                 <span className="translucent-glass-light bg-white/20 px-3 py-1 rounded-full text-sm">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</span>
                  <span>Charge ${(cartTotal / 100).toFixed(2)}</span>
                </button>
              </div>
@@ -552,10 +552,10 @@ export default function POSTerminal() {
            {(isCartOpen || showPaymentSheet) && !checkoutComplete && (
              <div className="fixed inset-0 z-50 flex flex-col justify-end">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => { setIsCartOpen(false); setShowPaymentSheet(false); }}></div>
-               <div className="relative bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[210%] border-t border-[rgba(255,255,255,0.4)] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+               <div className="translucent-glass-light rounded-t-3xl p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border-t border-[rgba(255,255,255,0.4)] animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
                  <div className="flex justify-between items-center mb-6">
                    <h2 className="text-xl font-bold font-outfit text-gray-900">{isCartOpen ? 'Current Order' : 'Payment Method'}</h2>
-                   <button onClick={() => { setIsCartOpen(false); setShowPaymentSheet(false); }} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+                   <button onClick={() => { setIsCartOpen(false); setShowPaymentSheet(false); }} className="glass-control bg-gray-100 text-gray-500 rounded-full p-2 hover:bg-gray-200 active:scale-95 transition-colors">
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                    </button>
                  </div>
@@ -606,7 +606,7 @@ export default function POSTerminal() {
            {/* Post-Sale Screen */}
            {checkoutComplete && (
              <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%]">
-               <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 w-full max-w-sm text-center animate-in zoom-in-95">
+               <div className="translucent-glass-light bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 w-full max-w-sm text-center animate-in zoom-in-95">
                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                  </div>
@@ -621,17 +621,17 @@ export default function POSTerminal() {
                        placeholder="Customer email"
                        value={customerEmail}
                        onChange={(e) => setCustomerEmail(e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none mb-4"
+                       className="glass-control w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none mb-4"
                      />
                      <button
                        disabled
-                       className="w-full bg-[#0066FF] text-white font-bold py-3 px-4 rounded-xl active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
+                       className="glass-control w-full bg-[#0066FF] text-white font-bold py-3 px-4 rounded-xl active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
                      >
                        Receipt service unavailable
                      </button>
                      <button
                        onClick={() => { setCheckoutComplete(false); setCart([]); }}
-                       className="w-full mt-3 text-gray-500 font-bold py-3 px-4 rounded-xl hover:bg-gray-50 active:scale-[0.98] min-h-[44px]"
+                       className="glass-control w-full mt-3 text-gray-500 font-bold py-3 px-4 rounded-xl hover:bg-gray-50 active:scale-[0.98] min-h-[44px]"
                      >
                        No Receipt
                      </button>

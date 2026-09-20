@@ -1184,16 +1184,14 @@ pub async fn create_payment_intent_handler(
         tracing::warn!("Failed to record api call cost: {}", e);
     }
 
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let db = crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }; let stripe_key = crate::api::tool_integrations::stripe_key_for_tenant(&db, &tenant_id).await.unwrap_or_else(|_| std::env::var("STRIPE_API_KEY").unwrap_or_default());
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     let session_manager =
         crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
 
-    match crate::integrations::stripe::client::StripeClient::new(
-        std::env::var("STRIPE_API_KEY").unwrap_or_default(),
-    )
-    .require_api_key()
+    let check_client = crate::integrations::stripe::client::StripeClient::new(stripe_key.clone());
+    match check_client.require_api_key()
     {
         Ok(_) => match session_manager
             .create_terminal_payment_intent(
@@ -1442,15 +1440,13 @@ pub async fn get_terminal_connection_token_handler(
         Err(response) => return response.into_response(),
     };
 
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let db = crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }; let stripe_key = crate::api::tool_integrations::stripe_key_for_tenant(&db, &tenant_id).await.unwrap_or_else(|_| std::env::var("STRIPE_API_KEY").unwrap_or_default());
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     let session_manager =
         crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
 
-    match crate::integrations::stripe::client::StripeClient::new(
-        std::env::var("STRIPE_API_KEY").unwrap_or_default(),
-    )
-    .require_api_key()
+    let check_client = crate::integrations::stripe::client::StripeClient::new(stripe_key.clone());
+    match check_client.require_api_key()
     {
         Ok(_) => match session_manager
             .create_terminal_connection_token(&tenant_id)
@@ -1512,7 +1508,7 @@ pub async fn capture_payment_intent_handler(
 
     info!(tenant_id = %tenant_id, payment_intent_id = %req_data.payment_intent_id, "Capturing Stripe Terminal Payment Intent");
 
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let db = crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }; let stripe_key = crate::api::tool_integrations::stripe_key_for_tenant(&db, &tenant_id).await.unwrap_or_else(|_| std::env::var("STRIPE_API_KEY").unwrap_or_default());
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
 
     match client.require_api_key() {

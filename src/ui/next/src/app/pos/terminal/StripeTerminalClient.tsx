@@ -332,7 +332,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {pendingReconciliation.length > 0 && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[20px] saturate-[150%] p-4">
-               <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[200%] border border-[rgba(255,255,255,0.4)] rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+               <div className="translucent-glass-light bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[200%] border border-[rgba(255,255,255,0.4)] rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
                  <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
                  <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
                  <ul className="space-y-2 mb-6">
@@ -344,13 +344,13 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    ))}
                  </ul>
                  <div className="flex flex-col gap-3">
-                   <button onClick={() => setPendingReconciliation([])} className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
+                   <button onClick={() => setPendingReconciliation([])} className="glass-control w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
                      Option A: Refund in-store customer
                    </button>
-                   <button onClick={() => setPendingReconciliation([])} className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
+                   <button onClick={() => setPendingReconciliation([])} className="glass-control w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
                      Option B: Cancel & refund online order
                    </button>
-                   <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
+                   <button onClick={() => setPendingReconciliation([])} className="glass-control w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
                      Decide Later
                    </button>
                  </div>
@@ -360,14 +360,14 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {selectedMethod === 'tap' && !connectedReader && (
             <div className="mb-4">
-              <button onClick={discoverReaders} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
+              <button onClick={discoverReaders} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`glass-control w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
                 Discover Readers
               </button>
               <ul className="mt-4 space-y-2">
                 {discoveredReaders.map(reader => (
-                  <li key={reader.id} className="flex justify-between items-center p-4 border border-[rgba(255,255,255,0.4)] rounded-2xl bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
+                  <li key={reader.id} className="translucent-glass-light flex justify-between items-center p-4 border border-[rgba(255,255,255,0.4)] rounded-2xl bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
                     <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
-                    <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
+                    <button onClick={() => connectReader(reader)} className="glass-control bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                       Connect
                     </button>
                   </li>
@@ -403,7 +403,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                 } finally {
                   setReserving(false);
                 }
-              }} id="tap-to-pay-btn" disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+              }} id="tap-to-pay-btn" disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`glass-control w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                 {reserving ? 'Processing...' : `Confirm & Tap ${(amount / 100).toFixed(2)}`}
               </button>
             </div>
@@ -428,7 +428,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                  } finally {
                    setReserving(false);
                  }
-               }} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+               }} disabled={reserving} className={`glass-control w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                  {reserving ? 'Processing...' : `Record Offline Cash Sale ${(amount / 100).toFixed(2)}`}
                </button>
             </div>
@@ -458,7 +458,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                  } finally {
                    setReserving(false);
                  }
-               }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-[#0066FF] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}>
+               }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`glass-control w-full bg-[#0066FF] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}>
                  Send Link for ${(amount / 100).toFixed(2)}
                </button>
             </div>
