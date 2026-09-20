@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LivePreviewCard } from "./components/LivePreviewCard";
 
 export default function BookingWidgetBuilder() {
   const router = useRouter();
@@ -25,48 +26,46 @@ export default function BookingWidgetBuilder() {
 
   const getThemeStyles = () => {
     if (theme === 'dark') {
-        return {
-            backgroundColor: '#111827',
-            color: '#f9fafb',
-            borderColor: '#374151'
-        };
+      return {
+        background: '#1c1c1e',
+        color: '#ffffff',
+      };
     }
     return {
-        backgroundColor: '#ffffff',
-        color: '#111827',
-        borderColor: '#e5e7eb'
+      background: '#ffffff',
+      color: '#111827',
     };
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-inter text-gray-900 pb-20">
-      {/* Top Nav */}
-      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-[30px] saturate-[210%] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </Link>
-            <h1 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
-                Booking Widget
-                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">New Growth Loop</span>
-            </h1>
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 font-outfit">Booking Widget Generator</h1>
+            <p className="text-xs text-gray-500">Embed your booking widget directly onto your site</p>
+          </div>
         </div>
-      </nav>
+      </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row gap-8">
+      <main className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-8 gap-8">
 
         {/* Configuration Panel */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
-                <h2 className="text-lg font-bold font-outfit mb-6">Widget Settings</h2>
+            <div className="app-card p-6 shadow-sm">
+                <h2 className="text-lg font-semibold font-outfit mb-6 text-gray-900">Widget Settings</h2>
 
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                    <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900 rounded-md' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
@@ -138,32 +137,17 @@ export default function BookingWidgetBuilder() {
             <h2 className="text-xl font-semibold font-outfit self-start mb-4" style={{ color: '#1D1D1F' }}>Live Preview</h2>
             <div className="w-full p-8 h-full flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
 
-                <div className="relative z-10 w-[320px] h-[400px]" style={{ ...getThemeStyles(), borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-                    {/* Mock Widget Content for Preview */}
-                    <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-t-[16px] relative flex items-center justify-center">
-                        <span className="text-4xl text-white">📅</span>
-                        <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
-                            Book Now
-                        </div>
-                    </div>
-                    <div className="p-5 flex flex-col h-[208px]">
-                        <h4 className="font-bold text-lg font-outfit mb-1" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>{serviceName}</h4>
-                        <p className="text-sm mb-4 line-clamp-2" style={{ color: theme === 'dark' ? '#d1d5db' : '#4b5563' }}>Schedule your appointment with us easily. Tell us what you need and we will get right back to you.</p>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setPreviewStatus('Preview redirected to booking flow.');
-                                router.push('/booking');
-                            }}
-                            className="w-full mt-auto py-2.5 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Request a Service
-                        </button>
-                        {previewStatus && <p className="mt-2 text-xs font-semibold text-[#0071E3]" role="status">{previewStatus}</p>}
-                    </div>
-                </div>
+                <LivePreviewCard
+                  theme={theme}
+                  serviceName={serviceName}
+                  onBook={() => {
+                    setPreviewStatus('Preview redirected to booking flow.');
+                    router.push('/booking');
+                  }}
+                  previewStatus={previewStatus}
+                  removeBranding={removeBranding}
+                  tenant={tenant}
+                />
                 {!removeBranding && (
                     <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
                         <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
