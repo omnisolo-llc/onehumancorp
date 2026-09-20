@@ -1,5 +1,5 @@
-export const POST: (request: Request) => Promise<Response> = async () =>
-  Response.json(
-    { error: "Anthropic guardrail evaluation is not implemented" },
-    { status: 501 },
-  );
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+
+export function POST(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/agents/guardrails/anthropic");
+}

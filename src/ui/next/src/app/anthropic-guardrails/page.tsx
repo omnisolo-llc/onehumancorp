@@ -49,14 +49,16 @@ export default function AnthropicGuardrailsPage() {
     <div className="p-8 max-w-4xl mx-auto font-sans">
       <h1 className="text-3xl font-bold mb-4">Anthropic 3-Stage Tool Gating</h1>
       <p className="text-gray-600 mb-8">
-        SOTA Harness Patterns: Guardrails & Safety. Test the Anthropic Mechanic with 3 distinct stages:
-        Trust establishment, Session permissions, and High-risk user confirmation.
+        Preview the existing three-stage policy evaluator: project trust, session permissions,
+        and high-risk confirmation. This read-only preview never executes a tool, changes a
+        live policy, or grants approval. An explicitly empty allowed-tools list previews an
+        unrestricted session; missing policy input is rejected.
       </p>
 
       <div className="space-y-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] p-6 rounded-[16px] shadow-sm border border-white/40">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tool to Execute
+            Tool to Evaluate
           </label>
           <input
             type="text"
