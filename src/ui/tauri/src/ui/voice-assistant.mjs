@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let mediaRecorder = null;
     let audioChunks = [];
     let stoppedEarly = false;
-    const voiceIcon = document.getElementById("voice-mic-icon");
+    document.getElementById("voice-mic-icon");
 
     async function startVoiceRecording(e) {
         if (e && e.cancelable) e.preventDefault();

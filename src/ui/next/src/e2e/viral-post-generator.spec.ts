@@ -50,7 +50,7 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         await page.click('button:has-text("Generate Post")');
 
         // Check the generated post section
-        const generatedSection = page.locator('div', { hasText: 'Generated Post' }).nth(1); // The heading might be caught
+        page.locator('div', { hasText: 'Generated Post' }).nth(1); // The heading might be caught
 
         // Let's explicitly look for text that was generated
         // wait for result to be visible

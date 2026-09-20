@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Viral Gift Cards Loop', () => {
-  test('should generate a gift card with a referral loop link', async ({ page, request }) => {
+  test('should generate a gift card with a referral loop link', async ({ page }) => {
     // Navigate to the Gift Cards page
     await page.goto('/gift-cards');
 

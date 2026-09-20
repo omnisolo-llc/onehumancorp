@@ -28,10 +28,10 @@ export default function POSTerminal() {
   const [locked, setLocked] = useState(true);
   const [clockedIn, setClockedIn] = useState(false);
   const [activeStaff, setActiveStaff] = useState<TerminalStaff | null>(null);
-  const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<import("@/lib/business-records").SaleProduct[]>([]);
   useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
+  const [selectedProduct] = useState<import("@/lib/business-records").SaleProduct | null>(null);
+  const [cart, setCart] = useState<import("@/lib/business-records").CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutComplete, setCheckoutComplete] = useState(false);
   const [customerEmail, setCustomerEmail] = useState('');
@@ -209,7 +209,7 @@ export default function POSTerminal() {
     await SyncManager.getInstance().enqueue(event);
   };
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: import("@/lib/business-records").SaleProduct) => {
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
@@ -219,8 +219,8 @@ export default function POSTerminal() {
     });
   };
 
-  const cartTotal = cart.reduce((sum: number, item: any) => sum + (item.product.price_cents * item.quantity), 0);
-  const cartItemCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (item.product.price_cents * item.quantity), 0);
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleKeypadPress = (val: string) => {
     setChargeAmount(prev => {
@@ -241,10 +241,7 @@ export default function POSTerminal() {
     setChargeAmount('0');
   };
 
-  const handleSelectProduct = (product: any) => {
-    setSelectedProduct(product);
-    setOrderStatus('');
-  };
+
 
   const handleOptimisticReserve = (productId: string) => {
     setInventory(prev => prev.map(p => {

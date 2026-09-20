@@ -39,7 +39,7 @@ export default function GroupBuyWidgetPage() {
     }
   };
 
-  const embedUrl = `/api/v1/growth/group-buy-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&originalPrice=${encodeURIComponent(originalPrice)}&groupPrice=${encodeURIComponent(groupPrice)}&requiredBuyers=${encodeURIComponent(requiredBuyers)}&timeLimit=${encodeURIComponent(timeLimit)}&theme=${theme}&branding=${!hideBranding}`;
+
   const absoluteEmbedUrl = `https://cloud.omnisolo.co/api/v1/growth/group-buy-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&originalPrice=${encodeURIComponent(originalPrice)}&groupPrice=${encodeURIComponent(groupPrice)}&requiredBuyers=${encodeURIComponent(requiredBuyers)}&timeLimit=${encodeURIComponent(timeLimit)}&theme=${theme}&branding=${!hideBranding}`;
 
   const embedCode = `<iframe src="${absoluteEmbedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;

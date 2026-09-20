@@ -16,9 +16,7 @@ vi.mock('next/navigation', () => ({
 // Mock fetch to prevent valid Undici errors regarding absolute URLs or missing globals
 global.fetch = vi.fn((url: string) => {
   if (url === '/api/v1/walkthrough/dashboard') {
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve([
+    return Promise.resolve(Response.json([
         {
           targetId: "sales-card-target",
           title: "Business Analytics",
@@ -31,14 +29,10 @@ global.fetch = vi.fn((url: string) => {
           content: "Use this area to see the live state of your orders, messages, and inventory.",
           position: "bottom"
         }
-      ])
-    });
+      ], { status: 200 }));
   }
-  return Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({})
-  });
-}) as any;
+  return Promise.resolve(Response.json({}, { status: 200 }));
+});
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -58,9 +52,7 @@ vi.mock('next/navigation', () => ({
 test('renders dashboard with actionable feed', async () => {
   global.fetch = vi.fn((url: string) => {
     if (url === '/api/v1/walkthrough/dashboard') {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([
+      return Promise.resolve(Response.json([
           {
             targetId: "dashboard-title",
             title: "Welcome",
@@ -73,14 +65,10 @@ test('renders dashboard with actionable feed', async () => {
             content: "Here you can see the time and effort your agents have saved you.",
             position: "bottom"
           }
-        ])
-      });
+        ], { status: 200 }));
     }
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({})
-    });
-  }) as any;
+    return Promise.resolve(Response.json({}, { status: 200 }));
+  });
   const { act } = await import('@testing-library/react');
   await act(async () => {
     render(<TooltipProvider><Dashboard /></TooltipProvider>);
@@ -106,11 +94,8 @@ test('does not request dashboard APIs that have no server contract', async () =>
   const requestedUrls: string[] = [];
   global.fetch = vi.fn((url: string) => {
     requestedUrls.push(url);
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({}),
-    });
-  }) as any;
+    return Promise.resolve(Response.json({}, { status: 200 }));
+  });
 
   const { act } = await import('@testing-library/react');
   await act(async () => {

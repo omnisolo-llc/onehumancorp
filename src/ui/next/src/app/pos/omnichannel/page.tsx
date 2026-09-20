@@ -1,12 +1,14 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import React, { useState, useEffect } from "react";
 import StripeTerminalClient from "../terminal/StripeTerminalClient";
 
 export default function OmnichannelCartPage() {
   const [tenant, setTenant] = useState<string>("test_tenant");
   const [cartId, setCartId] = useState<string | null>(null);
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<{ product_id: string; quantity: number; unit_price_cents: number }[]>([]);
   const [cartTotal, setCartTotal] = useState<number>(0);
   const [status, setStatus] = useState<string>("");
   const [productId, setProductId] = useState<string>("prod_terminal_123");
@@ -38,8 +40,8 @@ export default function OmnichannelCartPage() {
       } else {
         setStatus("Failed to create cart: " + data.error);
       }
-    } catch (e: any) {
-      setStatus("Error: " + e.message);
+    } catch (e) {
+      setStatus("Error: " + errorMessage(e, ''));
     }
     setIsProcessing(false);
   };
@@ -66,8 +68,8 @@ export default function OmnichannelCartPage() {
       } else {
         setStatus("Failed to add item: " + data.error);
       }
-    } catch (e: any) {
-      setStatus("Error: " + e.message);
+    } catch (e) {
+      setStatus("Error: " + errorMessage(e, ''));
     }
     setIsProcessing(false);
   };

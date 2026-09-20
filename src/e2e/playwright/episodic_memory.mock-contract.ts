@@ -38,11 +38,11 @@ test.describe('Episodic Memory / Unified Inbox E2E', () => {
     expect(uiRes.ok()).toBeTruthy();
 
     const feed = await uiRes.json();
-    const threads = feed.map((f: any) => f.thread);
+    const threads = feed.map((f: { thread: unknown }) => f.thread);
     expect(threads.length).toBeGreaterThan(0);
 
     // We verify the system is stable and can serve the memory endpoint
-    const memRes = await request.get(`/api/v1/assistant/memory/customer/${customer_id}`, {
+    await request.get(`/api/v1/assistant/memory/customer/${customer_id}`, {
       headers: {
         'x-tenant-id': tenant_id
       }

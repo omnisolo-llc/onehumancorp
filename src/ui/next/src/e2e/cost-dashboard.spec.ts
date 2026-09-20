@@ -53,7 +53,7 @@ test.describe('Cost Dashboard Loop', () => {
     // Budget health alert might be conditionally hidden depending on data,
     // so we evaluate the locator's existence in DOM.
     // We just verify it does not break the layout.
-    const alert = page.locator('#budget-health-alert');
+    page.locator('#budget-health-alert');
     // Ensure the page hasn't crashed
     await expect(page.locator('h2', { hasText: 'Total Costs' }).first()).toBeVisible();
   });

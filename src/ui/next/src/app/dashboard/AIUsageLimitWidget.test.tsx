@@ -23,9 +23,9 @@ describe('AIUsageLimitWidget', () => {
     // Mock fetch for the API call
     global.fetch = vi.fn((url: string) => Promise.resolve(
       url.includes('department-tier-usage')
-        ? { ok: true, json: () => Promise.resolve({ departments: [{ actions_used: 85, action_limit: 100 }] }) }
-        : { ok: true, json: () => Promise.resolve({ referral_link: 'https://cloud.omnisolo.co/onboarding?ref=verified' }) },
-    )) as any;
+        ? Response.json({ departments: [{ actions_used: 85, action_limit: 100 }] }, { status: 200 })
+        : Response.json({ referral_link: 'https://cloud.omnisolo.co/onboarding?ref=verified' }, { status: 200 }),
+    ));
   });
 
   afterEach(() => {
@@ -101,7 +101,7 @@ describe('AIUsageLimitWidget', () => {
   });
 
   it('handles fetch failure gracefully', async () => {
-    global.fetch = vi.fn(() => Promise.reject(new Error("API Down"))) as any;
+    global.fetch = vi.fn(() => Promise.reject(new Error("API Down")));
 
     render(<AIUsageLimitWidget />);
 

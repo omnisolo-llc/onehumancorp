@@ -1,3 +1,5 @@
+
+import { errorMessage } from '@/lib/errors';
 self.onmessage = async (e: MessageEvent<{ file: File, maxDimension: number, quality: number }>) => {
     try {
         const { file, maxDimension, quality } = e.data;
@@ -32,7 +34,7 @@ self.onmessage = async (e: MessageEvent<{ file: File, maxDimension: number, qual
         });
 
         self.postMessage({ success: true, blob });
-    } catch (error: any) {
-        self.postMessage({ success: false, error: error.message });
+    } catch (error) {
+        self.postMessage({ success: false, error: errorMessage(error, '') });
     }
 };

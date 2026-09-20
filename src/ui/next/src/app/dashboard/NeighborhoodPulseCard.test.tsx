@@ -22,10 +22,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('renders nothing when there are no neighbors', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ neighbors: [] })
-    });
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(Response.json({ neighbors: [] }, { status: 200 }));
 
     const { container } = render(<NeighborhoodPulseCard tenant="test-tenant" />);
 
@@ -48,10 +45,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('renders correctly with neighbors and asserts visual styles', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ neighbors: ['neighbor_one', 'neighbor_two'] })
-    });
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(Response.json({ neighbors: ['neighbor_one', 'neighbor_two'] }, { status: 200 }));
 
     const { container } = render(<NeighborhoodPulseCard tenant="test-tenant" />);
 
@@ -71,16 +65,10 @@ describe('NeighborhoodPulseCard', () => {
   it('handles successful invitation', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
-        });
+        return Promise.resolve(Response.json({ neighbors: ['neighbor_one'] }, { status: 200 }));
       }
       if (url.includes('/api/v1/mesh/v2/collective')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: true })
-        });
+        return Promise.resolve(Response.json({ success: true }, { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -107,16 +95,10 @@ describe('NeighborhoodPulseCard', () => {
   it('handles failed invitation (success: false)', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
-        });
+        return Promise.resolve(Response.json({ neighbors: ['neighbor_one'] }, { status: 200 }));
       }
       if (url.includes('/api/v1/mesh/v2/collective')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: false })
-        });
+        return Promise.resolve(Response.json({ success: false }, { status: 200 }));
       }
       return Promise.reject(new Error('not found'));
     });
@@ -139,10 +121,7 @@ describe('NeighborhoodPulseCard', () => {
   it('handles invitation network exception', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
-        });
+        return Promise.resolve(Response.json({ neighbors: ['neighbor_one'] }, { status: 200 }));
       }
       if (url.includes('/api/v1/mesh/v2/collective')) {
         return Promise.reject(new Error('Network down'));
@@ -169,10 +148,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('handles missing neighbors data', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ not_neighbors: [] })
-    });
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue(Response.json({ not_neighbors: [] }, { status: 200 }));
 
     const { container } = render(<NeighborhoodPulseCard tenant="test-tenant" />);
 

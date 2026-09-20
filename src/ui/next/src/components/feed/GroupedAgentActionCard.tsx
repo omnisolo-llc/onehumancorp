@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { AgentActionCard } from "./AgentActionCard";
+import { AgentActionCard, type AgentActionCardProps } from "./AgentActionCard";
+
+type GroupedAgentActionCardProps = Omit<AgentActionCardProps, 'approval'> & {
+  groupKey: string;
+  title: string;
+  items: AgentActionCardProps['approval'][];
+};
 
 export const GroupedAgentActionCard = ({
   groupKey,
@@ -15,11 +21,11 @@ export const GroupedAgentActionCard = ({
   setEditQuotePrice,
   setEditQuoteScope,
   handleDecision,
-}: any) => {
+}: GroupedAgentActionCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleApproveAll = () => {
-    items.forEach((item: any) => {
+    items.forEach((item) => {
       handleDecision(item.id, true, undefined, item.event_source);
     });
   };
@@ -69,7 +75,7 @@ export const GroupedAgentActionCard = ({
 
       {isExpanded && (
         <div className="flex flex-col gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" data-testid={`expanded-items-${groupKey}`}>
-          {items.map((approval: any) => (
+          {items.map((approval) => (
             <AgentActionCard
               key={approval.id}
               approval={approval}

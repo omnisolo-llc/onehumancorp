@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Agent Feed', () => {
   const tenantId = 'agent-feed-test-tenant';
 
-  test('should receive event, show in feed, and resolve card', async ({ page, request }) => {
+  test('should receive event, show in feed, and resolve card', async ({ page }) => {
     // 1. User logs in
     await page.goto('/');
 

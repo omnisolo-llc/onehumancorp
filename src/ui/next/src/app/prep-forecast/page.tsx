@@ -1,5 +1,7 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import { useEffect, useState } from "react";
 import "../components/AppShell";
 
@@ -31,7 +33,7 @@ export default function PrepForecast() {
         if (!res.ok) throw new Error("Failed to load prep forecast from the database");
         const data = await res.json();
         setPredictions(Array.isArray(data?.predictions) ? data.predictions : []);
-      } catch (e: any) {
+      } catch (e) {
         setError(e?.message || "Failed to load prep forecast");
       } finally {
         setLoading(false);
@@ -61,8 +63,8 @@ export default function PrepForecast() {
 
       // Filter out the approved prediction
       setPredictions(predictions.filter(p => p.id !== prediction.id));
-    } catch (e: any) {
-      alert(e.message || "Failed to approve plan");
+    } catch (e) {
+      alert(errorMessage(e, '') || "Failed to approve plan");
     }
   };
 

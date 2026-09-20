@@ -18,12 +18,9 @@ describe('UnlockProFeaturesWidget', () => {
       },
       writable: true
     });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    global.fetch = vi.fn().mockResolvedValue(Response.json({
         total_invites: 1
-      }),
-    } as any);
+      }, { status: 200 }));
   });
 
   afterEach(() => {
@@ -54,12 +51,9 @@ describe('UnlockProFeaturesWidget', () => {
   });
 
   it('shows a reached target without claiming Pro entitlement', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    global.fetch = vi.fn().mockResolvedValue(Response.json({
         total_invites: 3
-      }),
-    } as any);
+      }, { status: 200 }));
     render(<UnlockProFeaturesWidget />);
 
     expect(await screen.findByText(/Invite target reached/i)).toBeDefined();

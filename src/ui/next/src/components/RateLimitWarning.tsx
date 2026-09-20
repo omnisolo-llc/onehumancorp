@@ -14,10 +14,9 @@ interface RateLimitWarningContextType {
 const RateLimitWarningContext = createContext<RateLimitWarningContextType | undefined>(undefined);
 
 // Set up the global fetch interceptor immediately so it runs before any React rendering
-let interceptorInstalled = false;
 let globalShowWarning: ((msg: string) => void) | null = null;
 
-if (typeof window !== 'undefined' && !interceptorInstalled) {
+if (typeof window !== 'undefined') {
   const originalFetch = window.fetch;
 
   window.fetch = async (...args) => {
@@ -30,7 +29,6 @@ if (typeof window !== 'undefined' && !interceptorInstalled) {
 
     return response;
   };
-  interceptorInstalled = true;
 }
 
 export function RateLimitWarningProvider({ children }: { children: ReactNode }) {

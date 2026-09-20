@@ -15,7 +15,7 @@ test.describe('Newsletter Draft Approval', () => {
     // Wait for the real-time API SSE event to be processed and added to proposals naturally
     await expect(page.locator('text=Draft weekly newsletter')).toBeVisible({ timeout: 15000 });
 
-    const reviewAndSendButton = page.locator('button[aria-label="Approve & Send"]');
+    page.locator('button[aria-label="Approve & Send"]');
 
     // There might be multiple "Approve & Send" buttons if other drafts are present. We look for the one in the same context.
     const newsletterContainer = page.locator('div.flex-col', { hasText: 'Weekly Newsletter Draft Ready!' }).first();

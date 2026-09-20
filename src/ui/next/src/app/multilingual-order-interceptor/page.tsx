@@ -1,11 +1,19 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import React, { useState } from 'react';
 import Head from 'next/head';
 
+interface InterceptedOrder {
+  language: string;
+  intent: string;
+  items: { item: string; quantity: number }[];
+}
+
 export default function MultilingualOrderInterceptor() {
     const [rawInput, setRawInput] = useState("");
-    const [interceptedOrder, setInterceptedOrder] = useState<any>(null);
+    const [interceptedOrder, setInterceptedOrder] = useState<InterceptedOrder | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -21,8 +29,8 @@ export default function MultilingualOrderInterceptor() {
             if (!res.ok) throw new Error('Failed to process order');
             const data = await res.json();
             setInterceptedOrder(data);
-        } catch (err: any) {
-            setError(err.message || 'An error occurred');
+        } catch (err) {
+            setError(errorMessage(err, '') || 'An error occurred');
         } finally {
             setIsProcessing(false);
         }
@@ -44,8 +52,8 @@ export default function MultilingualOrderInterceptor() {
             setInterceptedOrder(null);
             setRawInput("");
             alert("Order confirmed and added to list!");
-        } catch (err: any) {
-            setError(err.message || 'Failed to add to list');
+        } catch (err) {
+            setError(errorMessage(err, '') || 'Failed to add to list');
         }
     };
 
@@ -115,7 +123,7 @@ export default function MultilingualOrderInterceptor() {
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-4">{interceptedOrder.intent}</h3>
                                 <div className="space-y-3">
-                                    {interceptedOrder.items.map((item: any, idx: number) => (
+                                    {interceptedOrder.items.map((item, idx) => (
                                         <div key={idx} className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm">
                                             <span className="font-semibold text-gray-800 text-lg">{item.item}</span>
                                             <span className="bg-gray-100 text-gray-800 font-bold px-4 py-2 rounded-lg text-lg">x{item.quantity}</span>

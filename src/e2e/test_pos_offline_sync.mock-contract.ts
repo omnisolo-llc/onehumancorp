@@ -36,7 +36,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Assert the transaction was written to IndexedDB
     const queuedTxs = await memberPage.evaluate(() => {
-      return new Promise<any[]>((resolve, reject) => {
+      return new Promise<{ type: string; amount_cents?: number }[]>((resolve, reject) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
@@ -56,7 +56,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // There should be two items in the queue (the tap_to_pay action and the CRDT mutation)
     expect(queuedTxs.length).toBeGreaterThan(0);
-    const tapToPayTx = queuedTxs.find((tx: any) => tx.type === 'tap_to_pay');
+    const tapToPayTx = queuedTxs.find((tx) => tx.type === 'tap_to_pay');
     expect(tapToPayTx).toBeDefined();
     expect(tapToPayTx.amount_cents).toBe(5000);
 
@@ -95,7 +95,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
-      return new Promise<any[]>((resolve, reject) => {
+      return new Promise<{ type: string; amount_cents?: number }[]>((resolve, reject) => {
         const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
@@ -427,7 +427,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // The lock is now held by the POS for this item.
     // Try to add the same item to an online cart via the backend API.
     // First, create a cart
-    const createCartRes = await request.post('/api/v1/cart', {
+    await request.post('/api/v1/cart', {
       headers: {
         'Content-Type': 'application/json',
       },

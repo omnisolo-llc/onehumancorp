@@ -12,7 +12,7 @@ class BackendConnector {
     const body = await res.json();
     return normalizePowerSyncCredentials(body);
   }
-  async uploadData(database: any) {
+  async uploadData() {
     // Offline mutations handle local changes queue directly
   }
 }

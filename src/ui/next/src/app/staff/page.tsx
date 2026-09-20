@@ -1,11 +1,12 @@
 "use client";
+import type { StaffShift, StaffTask } from '@/lib/business-records';
 
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '@/app/components/AppShell';
 
 export default function StaffPage() {
-  const [shifts, setShifts] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const [shifts, setShifts] = useState<StaffShift[]>([]);
+  const [tasks, setTasks] = useState<StaffTask[]>([]);
 
   useEffect(() => {
     // In a real implementation, we would fetch the staff member's shifts and tasks
@@ -28,7 +29,7 @@ export default function StaffPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-800 mb-3">Upcoming Shifts</h2>
             <div className="space-y-3">
-              {shifts.map((shift: any) => (
+              {shifts.map((shift) => (
                 <div key={shift.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-medium text-gray-900">{shift.role}</span>
@@ -49,7 +50,7 @@ export default function StaffPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-800 mb-3">My Tasks</h2>
             <div className="space-y-3">
-              {tasks.map((task: any) => (
+              {tasks.map((task) => (
                 <div key={task.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                   <span className="text-gray-800">{task.description}</span>
                   <input type="checkbox" className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />

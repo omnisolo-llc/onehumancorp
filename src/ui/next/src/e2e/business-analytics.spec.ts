@@ -37,7 +37,7 @@ test.describe('Business Analytics Flow', () => {
     await expect(page).toHaveURL(/.*\/pricing/);
   });
 
-  test('Share to unlock gives a 7 day trial and hides the paywall', async ({ page, context }) => {
+  test('Share to unlock gives a 7 day trial and hides the paywall', async ({ page }) => {
     await page.goto('/business-analytics');
     await page.getByRole('button', { name: 'Unlock Predictions' }).click();
 
