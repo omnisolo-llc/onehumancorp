@@ -27,6 +27,8 @@ impl Department for OperationsAgent {
             "tenant.order.created".to_string(),
             "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "tenant.order.fulfillment_ready".to_string(),
+            "tenant.order.shipping_quote_requested".to_string(),
             "tenant.booking.request_received".to_string(),
             "tenant.booking.confirmed".to_string(),
             "LowStockAlert".to_string(),
@@ -464,7 +466,7 @@ impl Department for OperationsAgent {
         }
 
         let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = config {
+        let mut risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
                 ActionRisk::AutoExecute
             } else {
@@ -475,6 +477,15 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
+            "tenant.order.fulfillment_ready" => {
+                let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                risk = ActionRisk::DraftForReview;
+                format!("Draft Shippo multi-carrier shipping label for order {}", order_id)
+            }
+            "tenant.order.shipping_quote_requested" => {
+                let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                format!("Compare rates and provide shipping quote via Shippo for order {}", order_id)
+            }
             "tenant.booking.request_received" => {
                 let start_time = event
                     .payload
