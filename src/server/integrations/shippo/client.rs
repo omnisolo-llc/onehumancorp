@@ -290,4 +290,33 @@ mod tests {
         assert!(trusted_label_url("https://user:password@app.goshippo.com/label.pdf").is_none());
         assert!(trusted_label_url("http://app.goshippo.com/label.pdf").is_none());
     }
+
+    #[test]
+    fn validate_credentials_rejects_empty_and_mock_tokens() {
+        let empty_client = ShippoClient::new("   ".to_string());
+        assert!(empty_client.validate_credentials().is_err());
+
+        let dummy_client = ShippoClient::new("dummy_123".to_string());
+        assert!(dummy_client.validate_credentials().is_err());
+
+        let mock_client = ShippoClient::new("mock_token".to_string());
+        assert!(mock_client.validate_credentials().is_err());
+
+        let fake_client = ShippoClient::new("fake_key".to_string());
+        assert!(fake_client.validate_credentials().is_err());
+
+        let valid_client = ShippoClient::new("shippo_live_123".to_string());
+        assert!(valid_client.validate_credentials().is_ok());
+    }
+
+    #[test]
+    fn parcel_dimensions_rejects_invalid_formats() {
+        assert!(parcel_dimensions("10x8").is_err());
+        assert!(parcel_dimensions("10x8x").is_err());
+        assert!(parcel_dimensions("x8x6").is_err());
+        assert!(parcel_dimensions("10x8x-6").is_err());
+        assert!(parcel_dimensions("10x8x0").is_err());
+        assert!(parcel_dimensions("10x8x1000000000").is_err()); // MAX_PARCEL_VALUE
+        assert!(parcel_dimensions("a x b x c").is_err());
+    }
 }

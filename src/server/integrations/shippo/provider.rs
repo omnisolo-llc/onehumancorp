@@ -75,4 +75,18 @@ mod tests {
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "shippo");
     }
+
+    #[tokio::test]
+    async fn test_generate_and_email_label_fails_without_credentials() {
+        let provider = ShippoProvider::new("dummy_token".to_string());
+        let err = provider.generate_and_email_label("rate_123", "test@example.com").await.unwrap_err();
+        assert!(err.contains("Shippo API token is required"));
+    }
+
+    #[tokio::test]
+    async fn test_fetch_rates_fails_with_invalid_dimensions() {
+        let provider = ShippoProvider::new("live_token_123".to_string());
+        let err = provider.fetch_rates(10.0, "invalid").await.unwrap_err();
+        assert!(err.contains("parcel dimensions must contain three positive numbers"));
+    }
 }
