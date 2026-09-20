@@ -11,7 +11,7 @@ const test = base.extend({
 });
 
 test.describe('Dashboard Agent Feed Viral Loop', () => {
-  test('should display agent success modal and allow trial extension via sharing', async ({ page, context }) => {
+  test('should display agent success modal and allow trial extension via sharing', async ({ page }) => {
 
     // Intercept window.open before navigation
     await page.addInitScript(() => {
