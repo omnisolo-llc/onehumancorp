@@ -10,6 +10,8 @@ export default function BookingWidgetBuilder() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [removeBranding, setRemoveBranding] = useState(false);
   const [serviceName, setServiceName] = useState("Service Consultation");
+  const [depositAmount, setDepositAmount] = useState("50");
+  const [requiresTravelTime, setRequiresTravelTime] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [previewStatus, setPreviewStatus] = useState("");
@@ -101,6 +103,31 @@ export default function BookingWidgetBuilder() {
                         className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. Service Consultation"
                     />
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deposit Amount ($)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        placeholder="e.g. 50"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">Required upfront payment to secure the booking.</p>
+                </div>
+
+                <div className="mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={requiresTravelTime}
+                            onChange={(e) => setRequiresTravelTime(e.target.checked)}
+                            className="w-4 h-4 text-[#0071E3] border-gray-300 rounded focus:ring-[#0066FF]"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Need Travel Time? (AI Automated Buffer)</span>
+                    </label>
                 </div>
 
                 <div className="mb-6">
