@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Apply checksum-verified source repair and remove transport files
+      - name: Apply checksum-verified repair and Python environment regression
         shell: bash
         run: |
           set -euo pipefail
@@ -31,6 +31,72 @@ jobs:
               raise SystemExit('Repair patch checksum mismatch')
           subprocess.run(['git', 'apply', '--check', '--index', '-'], input=patch, check=True)
           subprocess.run(['git', 'apply', '--index', '-'], input=patch, check=True)
+          action = pathlib.Path('.github/actions/setup-ci-python/action.yml')
+          action.parent.mkdir(parents=True, exist_ok=True)
+          action.write_text('''name: CI Python contracts
+          description: Use one pinned interpreter and an isolated, pinned YAML dependency
+          runs:
+            using: composite
+            steps:
+              - uses: actions/setup-python@v6
+                with:
+                  python-version: '3.12'
+              - name: Install isolated workflow-contract dependencies
+                shell: bash
+                run: |
+                  set -euo pipefail
+                  python -m venv "$RUNNER_TEMP/ohc-ci-python"
+                  "$RUNNER_TEMP/ohc-ci-python/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
+                  "$RUNNER_TEMP/ohc-ci-python/bin/python" -c 'import sys; import yaml; print(sys.executable, yaml.__version__)'
+                  echo "$RUNNER_TEMP/ohc-ci-python/bin" >> "$GITHUB_PATH"
+          ''')
+          ci = pathlib.Path('.github/workflows/ci.yml')
+          text = ci.read_text()
+          replacements = [
+              ('      - name: Install PyYAML\n        run: |\n          sudo apt-get update && sudo apt-get install -y python3-yaml', '      - uses: ./.github/actions/setup-ci-python'),
+              ('      - name: Install Python workflow-contract dependency\n        run: sudo apt-get update && sudo apt-get install -y python3-yaml', '      - uses: ./.github/actions/setup-ci-python'),
+          ]
+          for old, new in replacements:
+              if text.count(old) != 1:
+                  raise SystemExit('Python setup source no longer matches reviewed input')
+              text = text.replace(old, new)
+          ci.write_text(text)
+          test = pathlib.Path('.github/scripts/check_parallel_ci_test.py')
+          method = '''    def test_python_contract_jobs_use_the_selected_interpreter(self):
+                  action = yaml.safe_load((ROOT / '.github/actions/setup-ci-python/action.yml').read_text())
+                  steps = action['runs']['steps']
+                  self.assertEqual(steps[0]['uses'], 'actions/setup-python@v6')
+                  self.assertEqual(steps[0]['with']['python-version'], '3.12')
+                  install = steps[1]['run']
+                  self.assertIn('python -m venv "$RUNNER_TEMP/ohc-ci-python"', install)
+                  self.assertIn('"$RUNNER_TEMP/ohc-ci-python/bin/python" -m pip install', install)
+                  self.assertIn('PyYAML==6.0.3', install)
+                  self.assertIn('echo "$RUNNER_TEMP/ohc-ci-python/bin" >> "$GITHUB_PATH"', install)
+                  self.assertIn('import yaml', install)
+                  self.assertNotIn('sudo', install)
+                  for name in ('check-changes', 'native-node'):
+                      with self.subTest(job=name):
+                          steps = self.jobs[name]['steps']
+                          setup = next(i for i, step in enumerate(steps) if step.get('uses') == './.github/actions/setup-ci-python')
+                          checks = next(i for i, step in enumerate(steps) if 'release_contract_test.py' in step.get('run', '') or 'make test-contracts' in step.get('run', ''))
+                          self.assertLess(setup, checks)
+                          self.assertNotIn('python3-yaml', str(steps))
+          
+          '''
+          needle = '    def test_rust_lint_does_not_serialize_tests(self):'
+          text = test.read_text()
+          if text.count(needle) != 1:
+              raise SystemExit('Python regression insertion is ambiguous')
+          test.write_text(text.replace(needle, method + needle))
+          checksums = {
+              str(action): '3d1bd0965afed3d3a70fda63ea69c8bfd0c030332cd7089434be8244100898f8',
+              str(test): 'fa5a0570121a60385e35195c8394ab4535d133db4d65a17bf305994dadeeb873',
+              str(ci): 'caa7ddb1d93e4c4978b17276a79c34b366cc5bccf9179fa1836c709c57953a73',
+          }
+          for name, expected in checksums.items():
+              if hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() != expected:
+                  raise SystemExit('Supplemental source checksum mismatch: ' + name)
+          subprocess.run(['git', 'add', '--', *checksums], check=True)
           subprocess.run(['git', 'rm', '--', *temporary], check=True)
           changed = subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True)
           pathlib.Path(os.environ['RUNNER_TEMP'], 'repair-allowed-paths').write_text(changed)
@@ -39,8 +105,7 @@ jobs:
         with:
           role: repair-format
           node-scope: all
-      - name: Install workflow test prerequisite
-        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      - uses: ./.github/actions/setup-ci-python
       - name: Format only the repair and run executable regression checks
         shell: bash
         run: |
