@@ -181,7 +181,7 @@ export default function OrderDetailsPage() {
               <button onClick={fetchRates} disabled={shippingPending} className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-white">Get Shipping Rates</button>
               {shippingError && <p className="mt-3 text-sm text-red-600" role="alert">{shippingError}</p>}
               {rates.length > 0 && <div className="mt-4 space-y-2">{rates.map((rate) => (
-                <label key={rate.id} className="flex items-center justify-between rounded-lg border p-3">
+                <label key={rate.id} className="flex items-center justify-between rounded-lg border p-3 bg-white/50 backdrop-blur-sm border-gray-200/50 hover:bg-gray-50/50 cursor-pointer transition-colors shadow-sm">
                   <span><input type="radio" name="shipping-rate" value={rate.id} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /> <span>{rate.carrier} {rate.service}</span>{typeof rate.days === "number" ? ` · ${rate.days} days` : ""}</span>
                   <span>${rate.amount.toFixed(2)}</span>
                 </label>

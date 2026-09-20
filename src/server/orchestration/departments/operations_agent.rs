@@ -41,6 +41,48 @@ impl Department for OperationsAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.order.ready_for_fulfillment" || event.event_type == "tenant.quote.requires_shipping_quote" {
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
+            let weight = event.payload.get("weight").and_then(|v| v.as_f64()).unwrap_or(16.0);
+            let dimensions = event.payload.get("dimensions").and_then(|v| v.as_str()).unwrap_or("10x8x6");
+            let address_to = event.payload.get("address_to").and_then(|v| v.as_object()).map(|o| serde_json::to_string(o).unwrap_or("".to_string())).unwrap_or("".to_string());
+            tracing::info!("Operations Agent: Drafting shipping label for order {}", order_id);
+            let mut action_type = "Draft Shipping Label";
+            let mut action_desc = format!("Drafting label for order {} ({} oz, {})", order_id, weight, dimensions);
+            if let Ok(token) = std::env::var("SHIPPO_API_TOKEN") {
+                if !token.is_empty() {
+                    let provider = crate::integrations::shippo::provider::ShippoProvider::new(token);
+                    if let Ok(rates) = provider.fetch_rates(weight, dimensions).await {
+                        if let Some(cheapest) = rates.iter().min_by(|a, b| a.amount.partial_cmp(&b.amount).unwrap()) {
+                            match provider.purchase_label(&cheapest.id).await {
+                                Ok(res) => {
+                                    action_desc = format!("Purchased label from {} ({}). Tracking: {}. Label URL: {}", cheapest.carrier, cheapest.amount, res.tracking_number, res.label_url);
+                                    action_type = "Record Shipping Label";
+                                    crate::api::fulfillment::persist_shippo_tracking_update(&crate::db::get_pool(), &event.tenant_id, &crate::api::fulfillment::ShippoTrackingUpdate { tracking_number: res.tracking_number.clone(), tracking_status: "PRE_TRANSIT".to_string() }).await.ok();
+                                }
+                                Err(e) => {
+                                    action_desc = format!("Failed to purchase label from {} ({}): {}", cheapest.carrier, cheapest.amount, e);
+                                    action_type = "Shipping Label Error";
+                                }
+                            }
+                        }
+                    } else {
+                        action_desc = format!("Failed to fetch real rates for order {}", order_id);
+                    }
+                }
+            }
+            let proposed_action = serde_json::json!({
+                "action_type": action_type,
+                "order_id": order_id,
+                "weight": weight,
+                "dimensions": dimensions,
+                "address_to": address_to,
+                "description": action_desc
+            });
+            let _ = self.orchestrator.execute_action(DepartmentType::Operations, "Draft Shipping Label".to_string(), event.tenant_id.clone(), ActionRisk::DraftForReview, proposed_action).await;
+            return Ok(());
+        }
+
         if event.event_type == "tenant.booking.reschedule_requested" {
             let message = event
                 .payload
