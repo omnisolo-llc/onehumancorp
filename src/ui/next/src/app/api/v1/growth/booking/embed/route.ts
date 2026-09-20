@@ -31,13 +31,15 @@ export async function GET(request: Request) {
   // Use escapeHtml to prevent XSS
   const rawService = searchParams.get('service') || 'Service Consultation';
   const service = escapeHtml(rawService);
+  const deposit = searchParams.get('deposit') || '0';
+  const travel = searchParams.get('travel') === 'true' ? 'true' : 'false';
 
   const host = safeHost(request.headers.get('host'));
   const protocol = safeProtocol(request.headers.get('x-forwarded-proto'));
   const baseUrl = `${protocol}://${host}`;
 
   const isDark = theme === 'dark';
-  const bookingUrl = `${baseUrl}/booking?tenant=${tenant}`;
+  const bookingUrl = `${baseUrl}/booking?tenant=${tenant}&deposit=${encodeURIComponent(deposit)}&travel=${travel}`;
 
   const html = `
     <!DOCTYPE html>

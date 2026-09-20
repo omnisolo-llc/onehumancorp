@@ -78,7 +78,8 @@ function BookingForm() {
           body: JSON.stringify({
             tenant_id: tenant,
             product_id: serviceId,
-            date: selectedDate
+            date: selectedDate,
+            travel_time: searchParams.get("travel") === "true",
           })
         });
         if (!res.ok) throw new Error("Availability request failed");
@@ -125,6 +126,8 @@ function BookingForm() {
           product_id: serviceId,
           start_time: slot.start_time,
           end_time: slot.end_time,
+          deposit_amount: searchParams.get("deposit") || "0",
+          travel_time: searchParams.get("travel") === "true",
         })
       });
 

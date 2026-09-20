@@ -10,7 +10,8 @@ export async function POST(request: Request) {
     resolveBackendPath(body) {
       const payload = JSON.parse(decoder.decode(body));
       if (!SAFE_ID.test(payload?.product_id)) throw new Error("invalid product id");
-      return `/api/v1/booking/available_slots/${payload.product_id}`;
+      const travel = payload?.travel_time === true ? "true" : "false";
+      return `/api/v1/booking/available_slots/${payload.product_id}?travel_time=${travel}`;
     },
   });
   if (!response.ok) return response;

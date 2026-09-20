@@ -14,6 +14,8 @@ export async function POST(request: Request) {
         service_id: payload.product_id,
         start_time: payload.start_time,
         end_time: payload.end_time,
+        deposit_amount: payload.deposit_amount,
+        travel_time: payload.travel_time,
       }));
     },
   });

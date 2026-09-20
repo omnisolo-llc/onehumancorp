@@ -7,6 +7,7 @@ const mockUseSearchParams = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => mockUseSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
 }));
 
 global.fetch = vi.fn();

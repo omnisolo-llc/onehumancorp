@@ -20,7 +20,7 @@ describe("POST /api/v1/booking/engine/availability", () => {
     const options = proxyBackendRequest.mock.calls[0]?.[2];
     const body = new TextEncoder().encode(await request.text());
 
-    expect(options.resolveBackendPath(body)).toBe("/api/v1/booking/available_slots/service-real");
+    expect(options.resolveBackendPath(body)).toBe("/api/v1/booking/available_slots/service-real?travel_time=false");
     expect(options.suppressRequestBody).toBe(true);
     expect(await response.json()).toEqual({ available_slots: [] });
   });

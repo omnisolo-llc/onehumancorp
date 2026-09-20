@@ -10,11 +10,13 @@ export default function BookingWidgetBuilder() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [removeBranding, setRemoveBranding] = useState(false);
   const [serviceName, setServiceName] = useState("Service Consultation");
+  const [depositAmount, setDepositAmount] = useState("50");
+  const [needTravelTime, setNeedTravelTime] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [previewStatus, setPreviewStatus] = useState("");
 
-  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/booking/embed?tenant=${tenant}&theme=${theme}&service=${encodeURIComponent(serviceName)}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/booking/embed?tenant=${tenant}&theme=${theme}&service=${encodeURIComponent(serviceName)}&deposit=${encodeURIComponent(depositAmount)}&travel=${needTravelTime}`;
   const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleCopy = () => {
@@ -101,6 +103,29 @@ export default function BookingWidgetBuilder() {
                         className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. Service Consultation"
                     />
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deposit Amount ($ or %)</label>
+                    <input
+                        type="text"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        placeholder="e.g. 50 or 50%"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={needTravelTime}
+                            onChange={(e) => setNeedTravelTime(e.target.checked)}
+                            className="w-4 h-4 text-[#0071E3] border-gray-300 rounded focus:ring-[#0066FF]"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Need Travel Time? (Dynamic Route Buffer)</span>
+                    </label>
                 </div>
 
                 <div className="mb-6">
