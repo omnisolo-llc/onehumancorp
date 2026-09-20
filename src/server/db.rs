@@ -299,13 +299,18 @@ impl DB {
         &self,
         tenant_id: &str,
         service_id: &str,
+        require_travel: bool,
     ) -> Result<Vec<AvailableSlot>, sqlx::Error> {
         validate_tenant_id_sqlx!(tenant_id);
 
         if let Some(pool) = GLOBAL_MYSQL_POOL.get() {
-            let rows = sqlx::query(
+            let query_str = if require_travel {
+                "SELECT availability_blocks.id, start_time, end_time FROM availability_blocks LEFT JOIN travel_buffers tb ON availability_blocks.id = tb.slot_id WHERE availability_blocks.tenant_id = ? AND availability_blocks.service_id = ? AND availability_blocks.is_available = true AND (tb.travel_time_mins IS NULL OR tb.travel_time_mins < 30) ORDER BY start_time ASC"
+            } else {
                 "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = ? AND service_id = ? AND is_available = true ORDER BY start_time ASC"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .bind(tenant_id)
             .bind(service_id)
             .fetch_all(pool)

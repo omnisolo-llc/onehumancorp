@@ -10,11 +10,13 @@ export default function BookingWidgetBuilder() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [removeBranding, setRemoveBranding] = useState(false);
   const [serviceName, setServiceName] = useState("Service Consultation");
+  const [depositAmount, setDepositAmount] = useState("50");
+  const [requireTravel, setRequireTravel] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [previewStatus, setPreviewStatus] = useState("");
 
-  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/booking/embed?tenant=${tenant}&theme=${theme}&service=${encodeURIComponent(serviceName)}`;
+    const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/booking/embed?tenant=${tenant}&theme=${theme}&service=${encodeURIComponent(serviceName)}&deposit=${depositAmount}&travel=${requireTravel}`;
   const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleCopy = () => {
@@ -103,6 +105,29 @@ export default function BookingWidgetBuilder() {
                     />
                 </div>
 
+                                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deposit Required ($)</label>
+                    <input
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        placeholder="e.g. 50"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={requireTravel}
+                            onChange={(e) => setRequireTravel(e.target.checked)}
+                            className="w-4 h-4 text-[#0071E3] border-gray-300 rounded focus:ring-[#0066FF]"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Need Travel Time? (Dynamic Buffer)</span>
+                    </label>
+                </div>
+
                 <div className="mb-6">
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -146,8 +171,20 @@ export default function BookingWidgetBuilder() {
                             Book Now
                         </div>
                     </div>
-                    <div className="p-5 flex flex-col h-[208px]">
-                        <h4 className="font-bold text-lg font-outfit mb-1" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>{serviceName}</h4>
+                                        <div className="p-5 flex flex-col h-[208px]">
+                        <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-bold text-lg font-outfit" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>{serviceName}</h4>
+                            {Number(depositAmount) > 0 && (
+                                <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
+                                    ${depositAmount} Deposit
+                                </span>
+                            )}
+                        </div>
+                        {requireTravel && (
+                            <p className="text-xs mb-2" style={{ color: theme === 'dark' ? '#9ca3af' : '#6b7280' }}>
+                                🚗 Includes dynamic travel buffer
+                            </p>
+                        )}
                         <p className="text-sm mb-4 line-clamp-2" style={{ color: theme === 'dark' ? '#d1d5db' : '#4b5563' }}>Schedule your appointment with us easily. Tell us what you need and we will get right back to you.</p>
 
                         <button
@@ -159,7 +196,7 @@ export default function BookingWidgetBuilder() {
                             className="w-full mt-auto py-2.5 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Request a Service
+                            {Number(depositAmount) > 0 ? `Pay $${depositAmount} & Book` : 'Request a Service'}
                         </button>
                         {previewStatus && <p className="mt-2 text-xs font-semibold text-[#0071E3]" role="status">{previewStatus}</p>}
                     </div>

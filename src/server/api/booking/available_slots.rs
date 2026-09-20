@@ -34,6 +34,7 @@ async fn handle_get_available_slots(
     State(db): State<Arc<DB>>,
     claims: Option<Extension<::server_common::Claims>>,
     Path(service_id): Path<String>,
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> impl IntoResponse {
     let tenant_id = match claims
         .as_ref()
@@ -56,7 +57,8 @@ async fn handle_get_available_slots(
             .into_response();
     }
 
-    let slots = match db.query_available_slots(&tenant_id, &service_id).await {
+    let require_travel = params.get("travel").map(|s| s == "true").unwrap_or(false);
+    let slots = match db.query_available_slots(&tenant_id, &service_id, require_travel).await {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Failed to query available slots: {:?}", e);
