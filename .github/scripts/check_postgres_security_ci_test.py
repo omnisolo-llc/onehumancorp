@@ -115,7 +115,7 @@ def assert_every_required_lane_failure_blocks_acceptance() -> None:
     required = yaml.safe_load(WORKFLOW.read_text())["jobs"]["ci-required"]
     step = required["steps"][0]
     result_keys = [key for key in step["env"] if key.endswith("_RESULT")]
-    assert {"NATIVE_BUILD_RESULT", "NATIVE_NODE_RESULT", "NATIVE_INIT_RESULT", "NATIVE_IMAGES_RESULT", "POSTGRES_SECURITY_RESULT"} <= set(result_keys)
+    assert {"NATIVE_BUILD_RESULT", "NATIVE_NODE_RESULT", "NATIVE_IMAGES_RESULT", "POSTGRES_SECURITY_RESULT"} <= set(result_keys)
     for key in result_keys:
         for outcome in ("failure", "cancelled", "skipped", "unknown"):
             environment = {name: "success" for name in step["env"]}
@@ -137,14 +137,14 @@ def main() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
         (
-            "      - native-init\n",
+            "      - native-node\n",
             "",
-            "missing required developer bootstrap dependency",
+            "missing required Node quality dependency",
         ),
         (
-            "          NATIVE_INIT_RESULT: ${{ needs.native-init.result }}",
-            "          NATIVE_INIT_RESULT: success",
-            "fabricated developer bootstrap success",
+            "          NATIVE_NODE_RESULT: ${{ needs.native-node.result }}",
+            "          NATIVE_NODE_RESULT: success",
+            "fabricated Node quality success",
         ),
         (
             "  check-changes:\n    name: Check what files changed\n    runs-on: ubuntu-latest",
