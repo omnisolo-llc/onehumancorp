@@ -7,42 +7,55 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   tools:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
         with:
-          persist-credentials: false
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .node-version
-          package-manager-cache: false
-      - name: Install immutable validation dependencies
+          name: ci-repair-tools-4f3a46b7971e1e981f9da0758d71ef6cf47b96ca
+          run-id: 35536034216
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/ci-repair-tools
+      - name: Verify and split without reinstalling dependencies
+        working-directory: ${{ runner.temp }}/ci-repair-tools
         shell: bash
         run: |
           set -euo pipefail
-          npm ci --include=dev --no-audit --no-fund
-          npm --prefix src/ui/next ci --include=dev --no-audit --no-fund
-          npm --prefix src/cli ci --include=dev --no-audit --no-fund
-          git diff --exit-code
-      - name: Package pinned tools without credentials or application outputs
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/ci-repair-tools"
-          cp "$(command -v node)" "$RUNNER_TEMP/ci-repair-tools/node"
-          tar --exclude='*.ttf' --exclude='*.otf' --exclude='*.woff' --exclude='*.woff2' -czf "$RUNNER_TEMP/ci-repair-tools/node-dependencies.tar.gz" node_modules src/ui/next/node_modules src/cli/node_modules
-          git rev-parse HEAD > "$RUNNER_TEMP/ci-repair-tools/source-sha.txt"
-          sha256sum package-lock.json src/ui/next/package-lock.json src/cli/package-lock.json .node-version > "$RUNNER_TEMP/ci-repair-tools/input-locks.sha256"
-          cd "$RUNNER_TEMP/ci-repair-tools"
-          sha256sum node node-dependencies.tar.gz > artifacts.sha256
+          sha256sum --check artifacts.sha256
+          split --bytes=200M --numeric-suffixes=1 node-dependencies.tar.gz dependencies.part-
+          sha256sum dependencies.part-* > parts.sha256
       - uses: actions/upload-artifact@v6
         with:
-          name: ci-repair-tools-${{ github.sha }}
-          path: ${{ runner.temp }}/ci-repair-tools
+          name: ci-repair-tools-metadata
+          path: |
+            ${{ runner.temp }}/ci-repair-tools/node
+            ${{ runner.temp }}/ci-repair-tools/*.sha256
+            ${{ runner.temp }}/ci-repair-tools/source-sha.txt
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-tools-part-1
+          path: ${{ runner.temp }}/ci-repair-tools/dependencies.part-01
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-tools-part-2
+          path: ${{ runner.temp }}/ci-repair-tools/dependencies.part-02
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-tools-part-3
+          path: ${{ runner.temp }}/ci-repair-tools/dependencies.part-03
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
