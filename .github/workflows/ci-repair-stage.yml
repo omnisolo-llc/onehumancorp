@@ -1,0 +1,71 @@
+name: CI repair patch staging
+
+# Temporary transport for the isolated repair checkout. Removed before merge.
+on:
+  push:
+    branches: [fix/ci-parallel-head-20260920]
+    paths: [.github/ci-repair-patch.json]
+permissions:
+  contents: write
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - name: Validate patch, format Rust, and stage blobs without updating refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, pathlib, subprocess, zlib
+          p = json.loads(pathlib.Path('.github/ci-repair-patch.json').read_text())
+          base = p['base']
+          if base != '7ad08cb589ab234a35206b9a80e1f8c64e45e43a':
+              raise SystemExit('Unexpected source baseline')
+          subprocess.run(['git', 'merge-base', '--is-ancestor', base, 'HEAD'], check=True)
+          patch = zlib.decompress(base64.b64decode(p['patch']))
+          if hashlib.sha256(patch).hexdigest() != p['sha256']:
+              raise SystemExit('Patch digest mismatch')
+          subprocess.run(['git', 'apply', '--check', '--index', '-'], input=patch, check=True)
+          subprocess.run(['git', 'apply', '--index', '-'], input=patch, check=True)
+          subprocess.run(['cargo', 'fmt', '--all'], check=True)
+          subprocess.run(['git', 'add', '-u'], check=True)
+          subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
+          paths = subprocess.check_output(['git', 'diff', '--cached', '--name-only', '-z']).decode().split('\0')
+          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'ci-repair-stage'
+          out.mkdir()
+          entries = []
+          for name in filter(None, paths):
+              path = pathlib.Path(name)
+              if not path.exists():
+                  entries.append({'path': name, 'mode': '100644', 'type': 'blob', 'sha': None})
+                  continue
+              content = path.read_bytes()
+              request = json.dumps({'content': base64.b64encode(content).decode(), 'encoding': 'base64'}).encode()
+              result = json.loads(subprocess.check_output(['gh', 'api', '--method', 'POST', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/git/blobs', '--input', '-'], input=request))
+              expected = subprocess.check_output(['git', 'hash-object', name], text=True).strip()
+              if result['sha'] != expected:
+                  raise SystemExit('Staged blob digest mismatch: ' + name)
+              mode = subprocess.check_output(['git', 'ls-files', '-s', '--', name], text=True).split()[0]
+              entries.append({'path': name, 'mode': mode, 'type': 'blob', 'sha': expected})
+          (out / 'tree-elements.json').write_text(json.dumps(entries, indent=2) + '\n')
+          (out / 'formatted.patch').write_bytes(subprocess.check_output(['git', 'diff', '--cached', '--binary']))
+          (out / 'source.json').write_text(json.dumps({'source': os.environ['GITHUB_SHA'], 'base': base, 'patch': p['sha256']}) + '\n')
+          print('Staged', len(entries), 'exact blobs; no commit, branch, PR, release, or deployment was changed.')
+          PY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-staged
+          path: ${{ runner.temp }}/ci-repair-stage
+          retention-days: 1
+          if-no-files-found: error
