@@ -240,7 +240,7 @@ jobs:
     needs: [check-changes]
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-native
@@ -310,7 +310,7 @@ jobs:
     needs: [check-changes, native-build, native-web]
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-native
