@@ -37,6 +37,7 @@ impl Department for OperationsAgent {
             "tenant.omnichannel.message.received".to_string(),
             "agent:operations:approved".to_string(),
             "tenant.pricing.updated".to_string(),
+            "tenant.quote.shipping_rates_requested".to_string(),
         ]
     }
 
@@ -595,6 +596,13 @@ impl Department for OperationsAgent {
                 }
             }
 
+            "tenant.quote.shipping_rates_requested" => {
+                let quote_id = event.payload.get("quote_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                format!(
+                    "OperationsAgent retrieved real-time Shippo shipping rates for quote {} during interactive proposal generation.", quote_id
+                )
+            }
+
             "tenant.order.created" => {
                 let notes = event
                     .payload
@@ -626,6 +634,10 @@ impl Department for OperationsAgent {
                     format!(
                         "Notify customer that order {} is ready for pickup via SMS/WhatsApp",
                         order_id
+                    )
+                } else if status == "ready for fulfillment" {
+                    format!(
+                        "OperationsAgent drafted multi-carrier shipping labels for order {} autonomously via Shippo integration for owner review.", order_id
                     )
                 } else {
                     format!("Order {} status updated to {}", order_id, status)
