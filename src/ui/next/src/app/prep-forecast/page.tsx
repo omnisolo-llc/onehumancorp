@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AppShell } from "../components/AppShell";
+import "../components/AppShell";
 
 type InventoryPrediction = {
   id: string;

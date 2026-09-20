@@ -89,14 +89,14 @@ impl ConfigSyncServer {
                     .parse()
                     .unwrap_or(1024 * 1024);
 
-                if let serde_json::Value::Object(ref mut map) = payload {
-                    if let Some(pwd) = map.get("local_proxy_password").and_then(|v| v.as_str()) {
-                        let encrypted = crate::crypto::encrypt_deterministic(pwd);
-                        map.insert(
-                            "local_proxy_password".to_string(),
-                            serde_json::Value::String(encrypted),
-                        );
-                    }
+                if let serde_json::Value::Object(ref mut map) = payload
+                    && let Some(pwd) = map.get("local_proxy_password").and_then(|v| v.as_str())
+                {
+                    let encrypted = crate::crypto::encrypt_deterministic(pwd);
+                    map.insert(
+                        "local_proxy_password".to_string(),
+                        serde_json::Value::String(encrypted),
+                    );
                 }
 
                 let config_str = serde_json::to_string(&payload).unwrap_or_else(|_| "".to_string());

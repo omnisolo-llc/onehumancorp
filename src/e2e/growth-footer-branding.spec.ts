@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { adminPage } from './fixtures';
+import './fixtures';
 
 test.describe('Growth: Footer Branding Loop Generator', () => {
   test('creates a footer branding snippet and shows soft paywall for removing branding', async ({ page }) => {

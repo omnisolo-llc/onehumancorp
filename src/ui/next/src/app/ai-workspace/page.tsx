@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React,{ useState,useEffect,useMemo } from 'react';
 import { AppShell } from '../components/AppShell';
 
 // Unique IDs for accessibility and testing

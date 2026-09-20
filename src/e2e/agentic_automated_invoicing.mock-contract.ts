@@ -1,10 +1,10 @@
 import { test, expect, adminPage } from './fixtures';
 
-import { v4 as uuidv4 } from 'uuid';
+import 'uuid';
 
 test.describe('Agentic Automated Invoicing & Cash Flow Management', () => {
-  test('Finance agent automatically drafts invoice on project milestone completion', async ({ adminUser, loginAs, page, request }) => {
-    let adminPageInstance = await adminPage(page);
+  test('Finance agent automatically drafts invoice on project milestone completion', async ({ page }) => {
+    await adminPage(page);
 
     // Hit the simulation API route from the browser to carry auth cookies
     await page.evaluate(async () => {

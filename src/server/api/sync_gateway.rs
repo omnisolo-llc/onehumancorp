@@ -71,10 +71,9 @@ pub async fn power_sync_pull_handler(
     Json(_payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!(
-            "spiffe://omnisolo.io/org/{}/agent/{}",
-            tenant_id, agent_id
-        ),
+        Ok((tenant_id, agent_id)) => {
+            format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id)
+        }
         Err(e) => return e,
     };
     let mut tonic_request =
@@ -116,10 +115,9 @@ pub async fn power_sync_push_handler(
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!(
-            "spiffe://omnisolo.io/org/{}/agent/{}",
-            tenant_id, agent_id
-        ),
+        Ok((tenant_id, agent_id)) => {
+            format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id)
+        }
         Err(e) => return e,
     };
     let payload_str = serde_json::to_string(&payload.get("payload").unwrap_or(&payload))
@@ -181,10 +179,7 @@ pub async fn sync_mcp_deltas_handler(
         Ok(t) => t,
         Err(e) => return e,
     };
-    let spiffe_id_str = format!(
-        "spiffe://omnisolo.io/org/{}/agent/{}",
-        tenant_id, agent_id
-    );
+    let spiffe_id_str = format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id);
 
     if tenant_id.is_empty() {
         return (
@@ -286,18 +281,17 @@ async fn ensure_redis_subscription() {
 
         while let Some(msg) = pubsub_stream.next().await {
             let channel_name = msg.get_channel_name().to_string();
-            if channel_name.starts_with("inventory:")
+            if (channel_name.starts_with("inventory:")
                 || channel_name.starts_with("orders:")
-                || channel_name.starts_with("tenant_events:")
+                || channel_name.starts_with("tenant_events:"))
+                && let Ok(payload) = msg.get_payload::<String>()
             {
-                if let Ok(payload) = msg.get_payload::<String>() {
-                    let wrapped_msg = serde_json::json!({
-                        "channel": channel_name,
-                        "payload": payload
-                    })
-                    .to_string();
-                    let _ = tx.send(wrapped_msg);
-                }
+                let wrapped_msg = serde_json::json!({
+                    "channel": channel_name,
+                    "payload": payload
+                })
+                .to_string();
+                let _ = tx.send(wrapped_msg);
             }
         }
     });
@@ -345,18 +339,14 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String, topics: Vec<St
             msg_res = rx.recv() => {
                 match msg_res {
                     Ok(msg_str) => {
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&msg_str) {
-                            if let Some(channel) = parsed.get("channel").and_then(|c| c.as_str()) {
-                                if target_channels.contains(&channel.to_string()) {
-                                    if let Some(payload) = parsed.get("payload").and_then(|p| p.as_str()) {
-                                        if let Err(e) = sender.send(encode_json(payload.to_string(), gzip)).await {
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&msg_str)
+                            && let Some(channel) = parsed.get("channel").and_then(|c| c.as_str())
+                                && target_channels.contains(&channel.to_string())
+                                    && let Some(payload) = parsed.get("payload").and_then(|p| p.as_str())
+                                        && let Err(e) = sender.send(encode_json(payload.to_string(), gzip)).await {
                                             tracing::error!("Failed to send sync message to client: {}", e);
                                             break;
                                         }
-                                    }
-                                }
-                            }
-                        }
                     }
                     Err(broadcast::error::RecvError::Lagged(_)) => {
                         // Client lagged, ignore and continue
@@ -372,12 +362,11 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String, topics: Vec<St
                         if let WsMessage::Close(_) = msg {
                             break;
                         }
-                        if let WsMessage::Ping(data) = msg {
-                            if let Err(e) = sender.send(WsMessage::Pong(data)).await {
+                        if let WsMessage::Ping(data) = msg
+                            && let Err(e) = sender.send(WsMessage::Pong(data)).await {
                                 tracing::error!("Failed to send pong: {}", e);
                                 break;
                             }
-                        }
                     }
                     Some(Err(e)) => {
                         tracing::error!("Error receiving from client ws: {}", e);

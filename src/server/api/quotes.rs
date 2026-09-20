@@ -318,16 +318,15 @@ async fn create_quote(
                 from_state: "CA",
             })
             .await
+            && tax_rate.amount_to_collect > 0.0
         {
-            if tax_rate.amount_to_collect > 0.0 {
-                line_items.push(QuoteLineItemRequest {
-                    description: "Automated Sales Tax (TaxJar)".to_string(),
-                    unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
-                    quantity: 1,
-                    is_optional: false,
-                    service_item_id: None,
-                });
-            }
+            line_items.push(QuoteLineItemRequest {
+                description: "Automated Sales Tax (TaxJar)".to_string(),
+                unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
+                quantity: 1,
+                is_optional: false,
+                service_item_id: None,
+            });
         }
     }
 
@@ -422,9 +421,7 @@ async fn draft_quote_agent(
     }
 
     let quote_id = Uuid::new_v4();
-    let insert_quote = format!(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, 'DRAFTING', 0, 0)"
-    );
+    let insert_quote = "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, 'DRAFTING', 0, 0)".to_string();
 
     let cust_id: Option<String> = if payload.customer_id.is_empty() {
         None
@@ -692,6 +689,185 @@ async fn get_quote(
     } else {
         (StatusCode::OK, Json(QuoteResponse { quote, line_items })).into_response()
     }
+}
+
+async fn accept_quote(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let authority = match TenantAuthority::from_claims(&claims) {
+        Ok(authority) => authority,
+        Err(status) => return status.into_response(),
+    };
+    let quote_id = match Uuid::parse_str(&id) {
+        Ok(uid) => uid,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(error) => {
+            tracing::error!("Failed to begin quote acceptance transaction: {}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    let accept_query = format!(
+        "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
+    );
+    let accepted_quote = match sqlx::query_as::<_, Quote>(&accept_query)
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_optional(&mut *tx)
+        .await
+    {
+        Ok(Some(accepted_quote)) => accepted_quote,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(error) => {
+            tracing::error!("Failed to accept quote: {}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let invoice_id = Uuid::new_v4();
+    let total_amount = (accepted_quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+    let mut payment_link = String::new();
+    match stripe_client
+        .create_checkout_session(
+            &format!("Invoice for Quote #{}", accepted_quote.id),
+            &accepted_quote.customer_id,
+            total_amount,
+            None,
+            None,
+            None,
+        )
+        .await
+    {
+        Ok(url) => payment_link = url,
+        Err(error) => {
+            tracing::error!(
+                "Failed to create Stripe checkout session for invoice: {}",
+                error
+            );
+        }
+    }
+
+    let invoice_res = sqlx::query(
+        "INSERT INTO invoices (id, tenant_id, customer_id, quote_id, total_amount, currency, status, stripe_invoice_id) VALUES ($1, $2, $3, $4, $5, 'USD', 'Draft', $6)"
+    )
+    .bind(invoice_id.to_string())
+    .bind(authority.tenant_id())
+    .bind(&accepted_quote.customer_id)
+    .bind(&accepted_quote.id)
+    .bind(total_amount)
+    .bind(&payment_link)
+    .execute(&mut *tx)
+    .await;
+
+    match invoice_res {
+        Ok(result) if result.rows_affected() == 1 => {}
+        Ok(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(error) => {
+            tracing::error!("Failed to create invoice: {}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+
+    let line_items_query = format!(
+        "SELECT {QUOTE_LINE_ITEM_COLUMNS} FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2",
+    );
+    let line_items = match sqlx::query_as::<_, QuoteLineItem>(&line_items_query)
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_all(&mut *tx)
+        .await
+    {
+        Ok(line_items) => line_items,
+        Err(error) => {
+            tracing::error!("Failed to load accepted quote line items: {}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    for item in line_items {
+        let li_id = Uuid::new_v4();
+        let price = (item.unit_price_cents as f64) / 100.0;
+        let amount = price * (item.quantity as f64);
+        let insert_result = sqlx::query(
+            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        )
+        .bind(li_id.to_string())
+        .bind(authority.tenant_id())
+        .bind(invoice_id.to_string())
+        .bind(&item.description)
+        .bind(item.quantity)
+        .bind(price)
+        .bind(amount)
+        .execute(&mut *tx)
+        .await;
+        match insert_result {
+            Ok(result) if result.rows_affected() == 1 => {}
+            Ok(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(error) => {
+                tracing::error!("Failed to create invoice line item: {}", error);
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        }
+    }
+
+    if let Err(error) = tx.commit().await {
+        tracing::error!("Failed to commit quote acceptance: {}", error);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "invoice_id": invoice_id.to_string(),
+            "stripe_payment_link": payment_link
+        })),
+    )
+        .into_response()
+}
+
+async fn approve_quote(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let authority = match TenantAuthority::from_claims(&claims) {
+        Ok(authority) => authority,
+        Err(status) => return status.into_response(),
+    };
+    let quote_id = match Uuid::parse_str(&id) {
+        Ok(uid) => uid,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let approve_query = format!(
+        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
+    );
+    let quote = match sqlx::query_as::<_, Quote>(&approve_query)
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_optional(&pool)
+        .await
+    {
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to approve quote: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    if !authority.owns_quote(&quote) {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
 }
 
 #[cfg(test)]
@@ -1481,185 +1657,6 @@ mod tests {
             .await
             .expect("drop quote integration schema");
     }
-}
-
-async fn accept_quote(
-    State(pool): State<PgPool>,
-    Extension(claims): Extension<::server_common::Claims>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
-    let authority = match TenantAuthority::from_claims(&claims) {
-        Ok(authority) => authority,
-        Err(status) => return status.into_response(),
-    };
-    let quote_id = match Uuid::parse_str(&id) {
-        Ok(uid) => uid,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let mut tx = match pool.begin().await {
-        Ok(tx) => tx,
-        Err(error) => {
-            tracing::error!("Failed to begin quote acceptance transaction: {}", error);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-    let accept_query = format!(
-        "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
-    );
-    let accepted_quote = match sqlx::query_as::<_, Quote>(&accept_query)
-        .bind(quote_id.to_string())
-        .bind(authority.tenant_id())
-        .fetch_optional(&mut *tx)
-        .await
-    {
-        Ok(Some(accepted_quote)) => accepted_quote,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(error) => {
-            tracing::error!("Failed to accept quote: {}", error);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    let invoice_id = Uuid::new_v4();
-    let total_amount = (accepted_quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
-    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    let mut payment_link = String::new();
-    match stripe_client
-        .create_checkout_session(
-            &format!("Invoice for Quote #{}", accepted_quote.id),
-            &accepted_quote.customer_id,
-            total_amount,
-            None,
-            None,
-            None,
-        )
-        .await
-    {
-        Ok(url) => payment_link = url,
-        Err(error) => {
-            tracing::error!(
-                "Failed to create Stripe checkout session for invoice: {}",
-                error
-            );
-        }
-    }
-
-    let invoice_res = sqlx::query(
-        "INSERT INTO invoices (id, tenant_id, customer_id, quote_id, total_amount, currency, status, stripe_invoice_id) VALUES ($1, $2, $3, $4, $5, 'USD', 'Draft', $6)"
-    )
-    .bind(invoice_id.to_string())
-    .bind(authority.tenant_id())
-    .bind(&accepted_quote.customer_id)
-    .bind(&accepted_quote.id)
-    .bind(total_amount)
-    .bind(&payment_link)
-    .execute(&mut *tx)
-    .await;
-
-    match invoice_res {
-        Ok(result) if result.rows_affected() == 1 => {}
-        Ok(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        Err(error) => {
-            tracing::error!("Failed to create invoice: {}", error);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    }
-
-    let line_items_query = format!(
-        "SELECT {QUOTE_LINE_ITEM_COLUMNS} FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2",
-    );
-    let line_items = match sqlx::query_as::<_, QuoteLineItem>(&line_items_query)
-        .bind(quote_id.to_string())
-        .bind(authority.tenant_id())
-        .fetch_all(&mut *tx)
-        .await
-    {
-        Ok(line_items) => line_items,
-        Err(error) => {
-            tracing::error!("Failed to load accepted quote line items: {}", error);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    for item in line_items {
-        let li_id = Uuid::new_v4();
-        let price = (item.unit_price_cents as f64) / 100.0;
-        let amount = price * (item.quantity as f64);
-        let insert_result = sqlx::query(
-            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-        )
-        .bind(li_id.to_string())
-        .bind(authority.tenant_id())
-        .bind(invoice_id.to_string())
-        .bind(&item.description)
-        .bind(item.quantity)
-        .bind(price)
-        .bind(amount)
-        .execute(&mut *tx)
-        .await;
-        match insert_result {
-            Ok(result) if result.rows_affected() == 1 => {}
-            Ok(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            Err(error) => {
-                tracing::error!("Failed to create invoice line item: {}", error);
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
-        }
-    }
-
-    if let Err(error) = tx.commit().await {
-        tracing::error!("Failed to commit quote acceptance: {}", error);
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    (
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "success": true,
-            "invoice_id": invoice_id.to_string(),
-            "stripe_payment_link": payment_link
-        })),
-    )
-        .into_response()
-}
-
-async fn approve_quote(
-    State(pool): State<PgPool>,
-    Extension(claims): Extension<::server_common::Claims>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
-    let authority = match TenantAuthority::from_claims(&claims) {
-        Ok(authority) => authority,
-        Err(status) => return status.into_response(),
-    };
-    let quote_id = match Uuid::parse_str(&id) {
-        Ok(uid) => uid,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let approve_query = format!(
-        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
-    );
-    let quote = match sqlx::query_as::<_, Quote>(&approve_query)
-        .bind(quote_id.to_string())
-        .bind(authority.tenant_id())
-        .fetch_optional(&pool)
-        .await
-    {
-        Ok(Some(q)) => q,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("Failed to approve quote: {}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-    if !authority.owns_quote(&quote) {
-        return StatusCode::NOT_FOUND.into_response();
-    }
-
-    (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
 }
 
 // Temporary marker to slice off old approve_quote

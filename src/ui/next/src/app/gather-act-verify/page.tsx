@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import { useState } from "react";
 
@@ -29,8 +30,8 @@ export default function GatherActVerifyPage() {
 
       const data = await res.json();
       setResponse(JSON.stringify(data, null, 2));
-    } catch (err: any) {
-      setError(err.message || "Failed to process task");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Failed to process task"));
     } finally {
       setIsLoading(false);
     }

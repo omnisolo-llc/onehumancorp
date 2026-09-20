@@ -1,4 +1,3 @@
-#[cfg(not(omnisolo_bazel))]
 pub mod ohc {
     pub mod interop {
         tonic::include_proto!("ohc.interop");
@@ -43,54 +42,6 @@ pub mod ohc {
     }
     pub mod harness_middleware {
         tonic::include_proto!("omnisolo.harness.middleware.v1");
-    }
-}
-
-#[cfg(omnisolo_bazel)]
-pub mod ohc {
-    pub mod interop {
-        pub use interop_proto::ohc::interop::*;
-    }
-    pub mod mcp_proxy {
-        pub use mcp_proxy_proto::ohc::mcp_proxy::*;
-    }
-    pub mod orchestration {
-        pub use hub_proto::ohc::orchestration::*;
-    }
-    pub mod billing {
-        pub use billing_proto::ohc::billing::*;
-    }
-    pub mod agent {
-        pub use agent_proto::ohc::agent::*;
-        pub mod service {
-            pub use agent_service_proto::ohc::agent::service::*;
-        }
-    }
-    pub mod organization {
-        pub use organization_proto::ohc::organization::*;
-    }
-    pub mod common {
-        pub use common_proto::ohc::common::*;
-    }
-    pub mod api {
-        pub mod v1 {
-            pub use app_proto::ohc::api::v1::*;
-        }
-    }
-    pub mod campaign {
-        pub use campaign_proto::ohc::campaign::*;
-    }
-    pub mod collective {
-        pub use collective_proto::ohc::collective::*;
-    }
-    pub mod invoice {
-        pub use invoice_proto::ohc::invoice::*;
-    }
-    pub mod inventory {
-        pub use inventory_proto::ohc::inventory::*;
-    }
-    pub mod harness_middleware {
-        pub use harness_middleware_proto::omnisolo::harness::middleware::v1::*;
     }
 }
 

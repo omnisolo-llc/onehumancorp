@@ -269,7 +269,7 @@ export function HelpWidget() {
       const data = await response.json();
       const reply = normalizeChatReply(data);
       setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
-    } catch (err) {
+    } catch  {
       setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
     }
   };

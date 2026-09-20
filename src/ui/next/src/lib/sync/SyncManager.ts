@@ -115,7 +115,7 @@ export class SyncManager {
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
-    let queue = await this.getQueue();
+    const queue = await this.getQueue();
     if (queue.length === 0) return;
 
     this.syncInProgress = true;
@@ -318,7 +318,7 @@ export class SyncManager {
             body: JSON.stringify({ intents: mappedIntents })
           });
           if (!resIntents.ok) {
-            try { this.checkRateLimit(resIntents); } catch(e) {}
+            try { this.checkRateLimit(resIntents); } catch {}
             console.error(`Operation Intents Sync failed with status ${resIntents.status}`);
             if (resIntents.status >= 500) allOkFinal = false;
           }
@@ -397,7 +397,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch {}
             console.error(`Triage Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -420,7 +420,7 @@ export class SyncManager {
             body: JSON.stringify({ approved: action.payload.approved })
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch {}
             console.error(`Advisory Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -444,7 +444,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch {}
             console.error(`Generate Invoice Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -467,7 +467,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch {}
             console.error(`Field Ops Status Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
@@ -489,7 +489,7 @@ export class SyncManager {
             body: JSON.stringify({ action: action.payload.action })
           });
           if (!res.ok) {
-            try { this.checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch {}
             console.error(`Fulfillment Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }

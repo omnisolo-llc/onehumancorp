@@ -111,7 +111,9 @@ pub fn all_tools(
     agent_llm: Option<std::sync::Arc<dyn omnisolo_builtin_agent_llm::LlmClient>>,
     llm: Option<std::sync::Arc<dyn omnisolo_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<
-        Arc<tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+        Arc<
+            tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>,
+        >,
     >,
 
     task_store: SharedTaskStore,

@@ -13,7 +13,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 describe('App', () => {
   it('renders the header and main sections', async () => {
-    (useOrchestrator as any).mockReturnValue({
+    vi.mocked(useOrchestrator, { partial: true }).mockReturnValue({
       status: 'idle',
       tools: [],
       error: null,
@@ -35,7 +35,7 @@ describe('App', () => {
         callCount++;
     });
 
-    (useOrchestrator as any).mockImplementation(() => {
+    vi.mocked(useOrchestrator, { partial: true }).mockImplementation(() => {
         return {
             status: 'idle',
             tools: [],
@@ -62,7 +62,7 @@ describe('App', () => {
   });
 
   it('renders error state when error is present', async () => {
-    (useOrchestrator as any).mockReturnValue({
+    vi.mocked(useOrchestrator, { partial: true }).mockReturnValue({
       status: 'error',
       tools: [],
       error: 'Test error message',
@@ -79,7 +79,7 @@ describe('App', () => {
   });
 
   it('handles selecting Browse Agent Marketplace', async () => {
-    (useOrchestrator as any).mockReturnValue({
+    vi.mocked(useOrchestrator, { partial: true }).mockReturnValue({
       status: 'idle',
       tools: [],
       error: null,
@@ -105,7 +105,7 @@ describe('App', () => {
   });
 
   it('handles selecting Visual Workflow Builder', async () => {
-    (useOrchestrator as any).mockReturnValue({
+    vi.mocked(useOrchestrator, { partial: true }).mockReturnValue({
       status: 'idle',
       tools: [],
       error: null,
@@ -136,7 +136,7 @@ describe('App', () => {
         callCount++;
     });
 
-    (useOrchestrator as any).mockImplementation(() => {
+    vi.mocked(useOrchestrator, { partial: true }).mockImplementation(() => {
         return {
             status: 'idle',
             tools: [],

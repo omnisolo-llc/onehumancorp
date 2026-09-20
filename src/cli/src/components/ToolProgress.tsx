@@ -17,21 +17,12 @@ export const ToolProgress: React.FC<ToolProgressProps> = ({ tools }) => {
         <Text bold color="magenta">Tools Executed:</Text>
       </Box>
       {tools.map((tool, index) => {
-        let icon = '[ ]';
-        let color = 'gray';
-        let isDim = false;
-
-        if (tool.status === 'success') {
-          icon = '[✓]';
-          color = 'green';
-        } else if (tool.status === 'error') {
-          icon = '[x]';
-          color = 'red';
-        } else {
-          icon = '[~]';
-          color = 'yellow';
-          isDim = true;
-        }
+        const indicators = {
+          success: { icon: '[✓]', color: 'green', isDim: false },
+          error: { icon: '[x]', color: 'red', isDim: false },
+          pending: { icon: '[~]', color: 'yellow', isDim: true },
+        } as const;
+        const { icon, color, isDim } = indicators[tool.status];
 
         return (
           <Box key={index} paddingLeft={2}>

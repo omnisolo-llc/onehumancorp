@@ -1,5 +1,7 @@
 'use client';
 
+import { errorMessage } from '@/lib/errors';
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '../../components/AppShell';
@@ -48,8 +50,8 @@ export default function QuoteReviewPage() {
         if (!res.ok) throw new Error('Failed to fetch quote');
         const data = await res.json();
         setQuote(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(errorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -67,8 +69,8 @@ export default function QuoteReviewPage() {
       if (updated.stripe_payment_link) {
         alert('Quote Sent!');
       }
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(errorMessage(err));
     } finally {
       setSending(false);
     }
@@ -98,8 +100,8 @@ export default function QuoteReviewPage() {
       });
       if (!res.ok) throw new Error('Failed to save changes');
       setIsEditing(false);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(errorMessage(err));
     } finally {
       setSending(false);
     }

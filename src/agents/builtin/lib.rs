@@ -177,8 +177,9 @@ async fn run_direct_workflow_if_requested(task: &str) -> Option<Result<String, S
 
     use omnisolo_builtin_agent_tools::ToolExecutor;
     use omnisolo_builtin_agent_tools::pydantic::PydanticAdapter;
-    let runner =
-        std::sync::Arc::new(omnisolo_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
+    let runner = std::sync::Arc::new(
+        omnisolo_builtin_agent_tools::runner::SandboxedCommandRunner::new(None),
+    );
     let executor = omnisolo_builtin_agent_tools::workflow::WorkflowExecutor { runner };
     let adapter = PydanticAdapter::new(executor);
     Some(
@@ -304,7 +305,10 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         model: get_env("OMNISOLO_LLM_MODEL", ""),
         llm_endpoint: get_env(
             "OMNISOLO_LLM_BASE_URL",
-            &get_env("OMNISOLO_LLM_ENDPOINT", &get_env("OMNISOLO_LOCAL_LLM_ENDPOINT", "")),
+            &get_env(
+                "OMNISOLO_LLM_ENDPOINT",
+                &get_env("OMNISOLO_LOCAL_LLM_ENDPOINT", ""),
+            ),
         ),
         system_prompt: get_env("OMNISOLO_SYSTEM_PROMPT", ""),
         max_tokens: get_env_int("OMNISOLO_MAX_TOKENS", 2048),

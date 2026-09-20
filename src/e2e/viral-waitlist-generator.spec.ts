@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { E2E_ADMIN_USER, loginAs } from './fixtures';
+import './fixtures';
 
 test.describe('Viral Waitlist Generator', () => {
     test('navigates to dashboard, opens widget, configures and checks paywall', async ({ page, adminUser, loginAs }) => {

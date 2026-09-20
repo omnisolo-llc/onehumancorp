@@ -16,7 +16,7 @@ describe('MilestoneAlertsPage', () => {
   const mockPush = vi.fn();
 
   beforeEach(() => {
-    (navigation.useRouter as any).mockReturnValue({ push: mockPush });
+    vi.mocked(navigation.useRouter, { partial: true }).mockReturnValue({ push: mockPush });
     vi.clearAllMocks();
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

@@ -19,7 +19,6 @@ export async function GET(request: Request) {
     const theme = searchParams.get('theme') || 'light';
     const rawBranding = searchParams.get('branding') !== 'false';
 
-    const escapedTenant = escapeHtml(tenant);
     const encodedTenant = encodeURIComponent(tenant);
     const isDark = theme === 'dark';
 

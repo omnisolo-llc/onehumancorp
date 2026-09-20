@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('Swarm Metrics and Memory State verify', async ({ page }) => {
   // Wait for things

@@ -49,7 +49,7 @@ test.describe('Wizard Cross Device E2E', () => {
       try {
         const state = JSON.parse(stateStr);
         return state.business_name;
-      } catch (e) {
+      } catch  {
         return '';
       }
     }, {

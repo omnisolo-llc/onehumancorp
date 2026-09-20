@@ -59,7 +59,7 @@ test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
         const item = page.locator(`[data-testid="quote-item-${quoteId}"]`);
         await item.waitFor({ state: 'visible', timeout: 5000 });
         await item.click();
-    } catch (e) {
+    } catch  {
         await page.goto(`/api/v1/ui/quote.html?id=${quoteId}`);
     }
 

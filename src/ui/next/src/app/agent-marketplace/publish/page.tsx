@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -39,8 +40,8 @@ export default function PublishAgentPage() {
       }
 
       router.push('/agent-marketplace');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while publishing the agent');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'An error occurred while publishing the agent'));
     } finally {
       setLoading(false);
     }

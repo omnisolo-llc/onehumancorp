@@ -15,14 +15,14 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('renders nothing when loading', () => {
-    (global.fetch as any).mockImplementation(() => new Promise(() => {})); // Never resolves
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(() => new Promise(() => {})); // Never resolves
 
     const { container } = render(<NeighborhoodPulseCard tenant="test-tenant" />);
     expect(container.firstChild).toBeNull();
   });
 
   it('renders nothing when there are no neighbors', async () => {
-    (global.fetch as any).mockResolvedValue({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ neighbors: [] })
     });
@@ -35,7 +35,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('handles fetch exception and renders nothing', async () => {
-    (global.fetch as any).mockRejectedValue(new Error('Network error'));
+    vi.mocked(global.fetch, { partial: true }).mockRejectedValue(new Error('Network error'));
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -48,7 +48,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('renders correctly with neighbors and asserts visual styles', async () => {
-    (global.fetch as any).mockResolvedValue({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ neighbors: ['neighbor_one', 'neighbor_two'] })
     });
@@ -69,7 +69,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('handles successful invitation', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
         return Promise.resolve({
           ok: true,
@@ -105,7 +105,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('handles failed invitation (success: false)', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
         return Promise.resolve({
           ok: true,
@@ -137,7 +137,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('handles invitation network exception', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url.includes('action=getNearby')) {
         return Promise.resolve({
           ok: true,
@@ -169,7 +169,7 @@ describe('NeighborhoodPulseCard', () => {
   });
 
   it('handles missing neighbors data', async () => {
-    (global.fetch as any).mockResolvedValue({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ not_neighbors: [] })
     });

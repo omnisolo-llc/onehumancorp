@@ -21,7 +21,7 @@ import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
-import { ReviewFeedCard } from './ReviewFeedCard';
+import './ReviewFeedCard';
 
 import { PromoterCard } from "./PromoterCard";
 import { GrowBusinessCard } from "./GrowBusinessCard";

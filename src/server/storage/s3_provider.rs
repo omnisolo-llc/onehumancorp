@@ -40,12 +40,12 @@ impl Provider for S3Provider {
     }
 
     async fn get_blob_url(&self, key: &str) -> io::Result<String> {
-        if let Ok(cdn) = std::env::var("OMNISOLO_CDN_URL") {
-            if !cdn.is_empty() {
-                let cdn = cdn.trim_end_matches('/');
-                let key = key.trim_start_matches('/');
-                return Ok(format!("{}/{}", cdn, key));
-            }
+        if let Ok(cdn) = std::env::var("OMNISOLO_CDN_URL")
+            && !cdn.is_empty()
+        {
+            let cdn = cdn.trim_end_matches('/');
+            let key = key.trim_start_matches('/');
+            return Ok(format!("{}/{}", cdn, key));
         }
         // STUB: Return a fake presigned URL
         Ok(format!(
@@ -109,12 +109,10 @@ impl Provider for S3Provider {
             .tracker
             .track_storage_usage(t_id, reported_size as i64, agent_id)
             .await
+            && status.soft_limit_reached
+            && let Some(msg) = status.user_message
         {
-            if status.soft_limit_reached {
-                if let Some(msg) = status.user_message {
-                    tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
-                }
-            }
+            tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
         }
 
         let _ = ::server_telemetry::record_storage_rw_cost(

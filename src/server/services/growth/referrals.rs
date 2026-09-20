@@ -12,6 +12,12 @@ pub struct ReferralTracker {
     conversions: RwLock<HashMap<String, i32>>,
 }
 
+impl Default for ReferralTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ReferralTracker {
     pub fn new() -> Self {
         ReferralTracker {
@@ -137,7 +143,7 @@ pub fn calculate_tier_discount(tier: &str) -> f64 {
         "Platinum" => 0.20,
         "Gold" => 0.10,
         "Silver" => 0.05,
-        "Bronze" | _ => 0.00,
+        _ => 0.00,
     }
 }
 

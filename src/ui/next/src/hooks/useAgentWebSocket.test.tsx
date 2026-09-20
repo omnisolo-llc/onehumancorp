@@ -4,15 +4,26 @@ import { Blob } from 'node:buffer';
 import { gzipSync } from 'node:zlib';
 import { DecompressionStream } from 'node:stream/web';
 import { useAgentWebSocket } from './useAgentWebSocket';
-let socket: any;
-const constructor = vi.fn();
+const constructor = vi.fn<(...args: ConstructorParameters<typeof WebSocket>) => void>();
+class SocketDouble {
+  static current: SocketDouble;
+  binaryType: BinaryType = 'blob';
+  onmessage: (event: { data: unknown }) => void = () => {};
+  onclose: () => void = () => {};
+  close() {}
+  constructor(...args: ConstructorParameters<typeof WebSocket>) {
+    constructor(...args);
+    SocketDouble.current = this;
+  }
+}
+// Access the newest instance after a reconnect, not a stale captured socket.
+const socket = {
+  get binaryType() { return SocketDouble.current.binaryType; },
+  onmessage(event: { data: unknown }) { SocketDouble.current.onmessage(event); },
+  onclose() { SocketDouble.current.onclose(); },
+};
 function installSocket() {
-  vi.stubGlobal('WebSocket', class {
-    onmessage: any;
-    onclose: any;
-    close() {}
-    constructor(...args: any[]) { constructor(...args); socket = this; }
-  });
+  vi.stubGlobal('WebSocket', SocketDouble);
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); constructor.mockClear(); });
 test('negotiates gzip and delivers compressed and text frames in wire order', async () => {

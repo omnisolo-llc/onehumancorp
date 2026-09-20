@@ -109,18 +109,18 @@ impl GrowthService for MyGrowthService {
         .map_err(|e| Status::internal(format!("failed to update reputation: {}", e)))?;
 
         let mut generated_referral_link = String::new();
-        if req.rating >= 4 {
-            if let Ok(link) = referral_api::generate_referral_link(&req.customer_id) {
-                generated_referral_link = link.clone();
-                let ref_id = Uuid::new_v4().to_string();
-                let _ = sqlx::query("INSERT INTO referral_codes (id, tenant_id, customer_id, referral_code) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+        if req.rating >= 4
+            && let Ok(link) = referral_api::generate_referral_link(&req.customer_id)
+        {
+            generated_referral_link = link.clone();
+            let ref_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO referral_codes (id, tenant_id, customer_id, referral_code) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
                     .bind(&ref_id)
                     .bind(&tenant_id)
                     .bind(&req.customer_id)
                     .bind(&link)
                     .execute(&mut *tx)
                     .await;
-            }
         }
 
         tx.commit()
@@ -359,8 +359,8 @@ impl GrowthService for MyGrowthService {
         }
 
         let referral_code = if req.referral_code.is_empty() {
-            let generated_link = referral_api::generate_referral_link(&req.user_id)
-                .map_err(|e| Status::internal(e))?;
+            let generated_link =
+                referral_api::generate_referral_link(&req.user_id).map_err(Status::internal)?;
 
             generated_link
                 .split("&utm_source=")
@@ -645,11 +645,7 @@ impl GrowthService for MyGrowthService {
         };
 
         self.referral_score_cache
-            .set(
-                &cache_key,
-                response.clone(),
-                std::time::Duration::from_secs(60),
-            )
+            .set(&cache_key, response, std::time::Duration::from_secs(60))
             .await;
 
         Ok(Response::new(response))

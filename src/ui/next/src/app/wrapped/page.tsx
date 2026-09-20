@@ -24,7 +24,7 @@ export default function Wrapped() {
           orders: data.pending_orders,
           topProduct: typeof data.top_product === 'string' ? data.top_product : ''
         });
-      } catch (err) {
+      } catch  {
         setError(true);
       } finally {
         setLoading(false);

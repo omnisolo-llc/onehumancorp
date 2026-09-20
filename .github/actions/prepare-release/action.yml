@@ -1,0 +1,17 @@
+name: Prepare one release identity
+description: Stamp shipped product manifests and lockfile metadata without updating dependencies
+inputs:
+  identity:
+    description: Validated metadata from the release-metadata job
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Stamp all native and Node product versions
+      shell: bash
+      env:
+        RELEASE_IDENTITY: ${{ inputs.identity }}
+      run: python scripts/release_contract.py prepare

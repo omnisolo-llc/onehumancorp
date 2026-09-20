@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PendingTransaction {
@@ -10,6 +9,12 @@ pub struct PendingTransaction {
 
 pub struct LocalDatabase {
     // Basic SQLite integration for offline storage
+}
+
+impl Default for LocalDatabase {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LocalDatabase {

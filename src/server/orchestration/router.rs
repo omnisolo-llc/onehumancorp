@@ -23,6 +23,12 @@ pub struct SemanticRouter {
     route_counter: Counter<u64>,
 }
 
+impl Default for SemanticRouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SemanticRouter {
     pub fn new() -> Self {
         let meter = global::meter("ohc.orchestration.router");
@@ -247,6 +253,12 @@ pub struct OmniContextRouter {
     // LLM backed router for Omni-Context Sub-Agent Routing
 }
 
+impl Default for OmniContextRouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OmniContextRouter {
     pub fn new() -> Self {
         Self {}
@@ -315,24 +327,24 @@ Return strict JSON:
                         .replace("```", "")
                         .trim()
                         .to_string();
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&cleaned) {
-                        if json.get("final_draft").is_some() {
-                            result.final_draft = json.get("final_draft").unwrap().as_str().unwrap_or("Thanks for reaching out! We will review this and get back to you soon.").to_string();
-                            result.operations_context = json
-                                .get("operations_context")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string());
-                            result.sales_context = json
-                                .get("sales_context")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string());
-                            result.customer_context = json
-                                .get("customer_context")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string());
-                            success = true;
-                            break;
-                        }
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&cleaned)
+                        && json.get("final_draft").is_some()
+                    {
+                        result.final_draft = json.get("final_draft").unwrap().as_str().unwrap_or("Thanks for reaching out! We will review this and get back to you soon.").to_string();
+                        result.operations_context = json
+                            .get("operations_context")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        result.sales_context = json
+                            .get("sales_context")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        result.customer_context = json
+                            .get("customer_context")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        success = true;
+                        break;
                     }
                     retry_count += 1;
                 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import GrowthReferralWidget from '../components/GrowthReferralWidget';
 

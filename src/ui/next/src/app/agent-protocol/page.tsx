@@ -1,14 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { errorMessage } from '@/lib/errors';
+
+import { useState,useEffect } from 'react';
+
+type ProtocolTask = { task_id: string; input?: string };
+type ProtocolStep = { step_id: string; status: string; input?: string; output?: string };
+type ProtocolCheckpoint = { checkpoint_id: string; created_at: string };
 
 export default function AgentProtocolPage() {
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<ProtocolTask[]>([]);
   const [taskInput, setTaskInput] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [stepInput, setStepInput] = useState('');
-  const [steps, setSteps] = useState<any[]>([]);
-  const [checkpoints, setCheckpoints] = useState<any[]>([]);
+  const [steps, setSteps] = useState<ProtocolStep[]>([]);
+  const [checkpoints, setCheckpoints] = useState<ProtocolCheckpoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,8 +24,8 @@ export default function AgentProtocolPage() {
       if (!res.ok) throw new Error('Failed to fetch tasks');
       const data = await res.json();
       setTasks(data.tasks || []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     }
   };
 
@@ -35,8 +41,8 @@ export default function AgentProtocolPage() {
       if (!res.ok) throw new Error('Failed to create task');
       await fetchTasks();
       setTaskInput('');
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -48,8 +54,8 @@ export default function AgentProtocolPage() {
       if (!res.ok) throw new Error('Failed to fetch steps');
       const data = await res.json();
       setSteps(data.steps || []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     }
   };
 
@@ -60,7 +66,7 @@ export default function AgentProtocolPage() {
       if (!res.ok) throw new Error('Failed to fetch checkpoints');
       const data = await res.json();
       setCheckpoints(data.checkpoints || []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
       setCheckpoints([]);
     }
@@ -80,8 +86,8 @@ export default function AgentProtocolPage() {
       if (!res.ok) throw new Error('Failed to restore checkpoint');
       await fetchSteps(taskId);
       await fetchCheckpoints(taskId);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -102,8 +108,8 @@ export default function AgentProtocolPage() {
       if (!res.ok) throw new Error('Failed to execute step');
       await fetchSteps(selectedTaskId);
       setStepInput('');
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -217,7 +223,7 @@ export default function AgentProtocolPage() {
               <div className="mt-8">
                 <h3 className="text-lg font-bold mb-4">State Checkpoints</h3>
                 <ul className="space-y-4">
-                  {checkpoints.map((cp, idx) => (
+                  {checkpoints.map((cp) => (
                     <li key={cp.checkpoint_id} className="p-4 border rounded-xl border-gray-200 shadow-sm bg-white/80 backdrop-blur-[30px] saturate-[210%]">
                       <div className="flex justify-between items-center mb-2">
                         <div>

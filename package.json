@@ -1,6 +1,32 @@
 {
   "name": "mono",
   "version": "0.4.47",
+  "private": true,
+  "engines": {
+    "node": ">=22.22.1 <23"
+  },
+  "scripts": {
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "test:desktop-ui": "vitest run --config vitest.config.ts src/ui/tauri/src",
+    "lint:node": "eslint . --max-warnings 0",
+    "check:rust": "cargo check --locked --workspace --exclude app --all-targets",
+    "test:rust": "make test-rust",
+    "test:pricing": "cargo test --locked -p server_pricing",
+    "test:billing": "cargo test --locked -p server_services_billing",
+    "test:web": "npm --prefix src/ui/next test --",
+    "typecheck:web": "npm --prefix src/ui/next run typecheck",
+    "test:build": "node --test scripts/native-build.test.mjs scripts/node-runtime.test.mjs",
+    "test:contracts": "node scripts/native-contracts.mjs",
+    "test:e2e": "node scripts/run-playwright.mjs",
+    "build:server": "cargo build --locked --release -p omnisolo --bin server",
+    "build:worker": "cargo build --locked --release -p omnisolo_harness_worker --bin omnisolo-harness-worker",
+    "build:web": "node scripts/build-web.mjs",
+    "dev:web": "npm --prefix src/ui/next run dev",
+    "desktop:dev": "node scripts/run-tauri.mjs dev",
+    "desktop:build": "node scripts/run-tauri.mjs build",
+    "mobile:android": "node scripts/run-tauri.mjs android build",
+    "mobile:ios": "node scripts/run-tauri.mjs ios build"
+  },
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
     "@bufbuild/protoc-gen-es": "^2.11.0",
@@ -29,16 +55,15 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@bazel/bazelisk": "^1.28.1",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.0",
+    "@tauri-apps/cli": "2.11.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/dompurify": "^3.0.5",
-    "@types/ink": "^2.0.3",
-    "@types/ink-spinner": "^3.0.5",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
@@ -47,6 +72,8 @@
     "autoprefixer": "^10.5.0",
     "c8": "^11.0.0",
     "date-fns": "^4.4.0",
+    "eslint": "10.11.0",
+    "globals": "17.12.0",
     "ink-spinner": "^5.0.0",
     "ink-testing-library": "^4.0.0",
     "ink-text-input": "^6.0.0",
@@ -60,6 +87,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
+    "typescript-eslint": "8.70.0",
     "vitest": "^4.1.10",
     "zustand": "^5.0.13"
   },

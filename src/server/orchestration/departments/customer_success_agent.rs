@@ -713,54 +713,53 @@ impl Department for CustomerSuccessAgent {
 
             // Check for subscription modification intents
             let msg_lower = message.to_lowercase();
-            if msg_lower.contains("skip")
+            if (msg_lower.contains("skip")
                 || msg_lower.contains("pause")
-                || msg_lower.contains("cancel")
+                || msg_lower.contains("cancel"))
+                && (msg_lower.contains("subscription") || msg_lower.contains("delivery"))
             {
-                if msg_lower.contains("subscription") || msg_lower.contains("delivery") {
-                    let action = if msg_lower.contains("skip") {
-                        "skip"
-                    } else if msg_lower.contains("pause") {
-                        "pause"
-                    } else {
-                        "cancel"
-                    };
-                    tracing::info!(
-                        "Ambassador parsed subscription intent: {} from message: {}",
-                        action,
-                        message
-                    );
-                    let customer_id = event
-                        .payload
-                        .get("customer_id")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
+                let action = if msg_lower.contains("skip") {
+                    "skip"
+                } else if msg_lower.contains("pause") {
+                    "pause"
+                } else {
+                    "cancel"
+                };
+                tracing::info!(
+                    "Ambassador parsed subscription intent: {} from message: {}",
+                    action,
+                    message
+                );
+                let customer_id = event
+                    .payload
+                    .get("customer_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
 
-                    let proposed_action = serde_json::json!({
-                        "action_type": "Execute Subscription Update",
-                        "customer_id": customer_id,
-                        "action": action
-                    });
+                let proposed_action = serde_json::json!({
+                    "action_type": "Execute Subscription Update",
+                    "customer_id": customer_id,
+                    "action": action
+                });
 
-                    let risk_level = if action == "cancel" {
-                        ActionRisk::DraftForReview
-                    } else {
-                        ActionRisk::AutoExecute
-                    };
+                let risk_level = if action == "cancel" {
+                    ActionRisk::DraftForReview
+                } else {
+                    ActionRisk::AutoExecute
+                };
 
-                    self.orchestrator
-                        .execute_action(
-                            DepartmentType::CustomerSuccess,
-                            "Execute Subscription Update".to_string(),
-                            event.tenant_id.clone(),
-                            risk_level,
-                            proposed_action,
-                        )
-                        .await
-                        .map_err(|e| e.to_string())?;
+                self.orchestrator
+                    .execute_action(
+                        DepartmentType::CustomerSuccess,
+                        "Execute Subscription Update".to_string(),
+                        event.tenant_id.clone(),
+                        risk_level,
+                        proposed_action,
+                    )
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-                    return Ok(());
-                }
+                return Ok(());
             }
             let source = event
                 .payload
@@ -818,17 +817,15 @@ impl Department for CustomerSuccessAgent {
                 if let Ok(profile_summary) = mem_service
                     .get_profile_summary(&event.tenant_id, &customer_id)
                     .await
+                    && !profile_summary.summary.is_empty()
+                    && profile_summary.summary != "No summary available."
+                    && profile_summary.summary != "Customer not found."
                 {
-                    if !profile_summary.summary.is_empty()
-                        && profile_summary.summary != "No summary available."
-                        && profile_summary.summary != "Customer not found."
-                    {
-                        profile_summary_text = format!(
-                            "Unified Customer Memory: {} | Preferences: {}",
-                            profile_summary.summary,
-                            profile_summary.preferences.join(", ")
-                        );
-                    }
+                    profile_summary_text = format!(
+                        "Unified Customer Memory: {} | Preferences: {}",
+                        profile_summary.summary,
+                        profile_summary.preferences.join(", ")
+                    );
                 }
 
                 // Fetch past orders context
@@ -839,10 +836,10 @@ impl Department for CustomerSuccessAgent {
                 .bind(&customer_id)
                 .fetch_all(&pool)
                 .await;
-                if let Ok(orders) = orders {
-                    if !orders.is_empty() {
-                        past_orders = format!("Returning Customer ({} past orders).", orders.len());
-                    }
+                if let Ok(orders) = orders
+                    && !orders.is_empty()
+                {
+                    past_orders = format!("Returning Customer ({} past orders).", orders.len());
                 }
 
                 // Query Unified Customer Memory Graph
@@ -850,18 +847,16 @@ impl Department for CustomerSuccessAgent {
                 if let Ok(profile_summary) = memory_service
                     .get_profile_summary(&event.tenant_id, &customer_id)
                     .await
+                    && (profile_summary.total_interactions > 0
+                        || !profile_summary.segments.is_empty())
                 {
-                    if profile_summary.total_interactions > 0
-                        || !profile_summary.segments.is_empty()
-                    {
-                        memory_graph_summary = format!(
-                            "Customer Profile: Interactions: {}. Segments: {}. Preferences: {}. Summary: {}",
-                            profile_summary.total_interactions,
-                            profile_summary.segments.join(", "),
-                            profile_summary.preferences.join(", "),
-                            profile_summary.summary
-                        );
-                    }
+                    memory_graph_summary = format!(
+                        "Customer Profile: Interactions: {}. Segments: {}. Preferences: {}. Summary: {}",
+                        profile_summary.total_interactions,
+                        profile_summary.segments.join(", "),
+                        profile_summary.preferences.join(", "),
+                        profile_summary.summary
+                    );
                 }
             }
 
@@ -896,16 +891,16 @@ impl Department for CustomerSuccessAgent {
             };
 
             if !past_orders.is_empty() {
-                context_summary.push_str("\n");
+                context_summary.push('\n');
                 context_summary.push_str(&past_orders);
             }
             if !profile_summary_text.is_empty() {
-                context_summary.push_str("\n");
+                context_summary.push('\n');
                 context_summary.push_str(&profile_summary_text);
             }
 
             if !memory_graph_summary.is_empty() {
-                context_summary.push_str("\n");
+                context_summary.push('\n');
                 context_summary.push_str(&memory_graph_summary);
             }
 

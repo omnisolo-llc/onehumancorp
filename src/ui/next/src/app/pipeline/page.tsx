@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from '@/lib/errors';
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
@@ -47,8 +48,8 @@ export default function PipelinePage() {
       if (!res.ok) throw new Error("Failed to load pipeline opportunities");
       const data = await res.json();
       setOpportunities(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load opportunities");
+    } catch (e: unknown) {
+      setError(errorMessage(e, "Failed to load opportunities"));
     } finally {
       setLoading(false);
     }

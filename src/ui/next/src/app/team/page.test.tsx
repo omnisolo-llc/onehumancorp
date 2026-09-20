@@ -19,7 +19,7 @@ global.fetch = vi.fn();
 describe('TeamPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (global.fetch as any).mockResolvedValue({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
       ok: true,
       json: async () => ({ pending_approvals: [] }),
     });

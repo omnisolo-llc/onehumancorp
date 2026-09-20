@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::fs;
-use std::sync::{Mutex, OnceLock};
+#[path = "../ambient_test.rs"]
+mod ambient_test;
 use std::time::Duration;
 
 use serde_json::json;
@@ -37,11 +38,6 @@ fn correlation() -> PiEventCorrelation {
         attempt_id: "attempt-1".to_owned(),
         native_session_id: "pi-session-1".to_owned(),
     }
-}
-
-fn environment_lock() -> &'static Mutex<()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
 }
 
 #[test]
@@ -98,15 +94,11 @@ fn commands_match_pi_0731_rpc_shapes_without_jsonrpc_fields() {
     }
 }
 
-#[tokio::test]
-async fn ambient_parent_environment_is_not_inherited() {
-    let _guard = environment_lock().lock().unwrap();
-    unsafe {
-        std::env::set_var("UNRELATED_DEPLOYMENT_SECRET", "CANARY-AMBIENT-7KQ9");
-    }
-
-    let mut config = PiRpcProcessConfig::shell(
-        r#"
+#[test]
+fn ambient_parent_environment_is_not_inherited() {
+    ambient_test::with_ambient_canary("ambient_parent_environment_is_not_inherited", async {
+        let mut config = PiRpcProcessConfig::shell(
+            r#"
 read line
 ambient=false
 [ -n "${UNRELATED_DEPLOYMENT_SECRET:-}" ] && ambient=true
@@ -116,24 +108,22 @@ path=false
 [ -n "${PATH:-}" ] && path=true
 printf '{"type":"response","id":"environment-check","command":"get_state","success":true,"data":{"ambient":%s,"explicit":%s,"path":%s}}\n' "$ambient" "$explicit" "$path"
 "#,
-    );
-    config
-        .environment
-        .insert("OPENAI_API_KEY".to_owned(), "explicit-key".to_owned());
-    let runtime = PiRpcRuntime::spawn(config).await.unwrap();
-    let response = runtime
-        .request(PiRpcCommand::get_state("environment-check"))
-        .await
-        .unwrap();
+        );
+        config
+            .environment
+            .insert("OPENAI_API_KEY".to_owned(), "explicit-key".to_owned());
+        let runtime = PiRpcRuntime::spawn(config).await.unwrap();
+        let response = runtime
+            .request(PiRpcCommand::get_state("environment-check"))
+            .await
+            .unwrap();
 
-    unsafe {
-        std::env::remove_var("UNRELATED_DEPLOYMENT_SECRET");
-    }
-    assert_eq!(
-        response.data.unwrap(),
-        json!({"ambient": false, "explicit": true, "path": true})
-    );
-    runtime.shutdown().await.unwrap();
+        assert_eq!(
+            response.data.unwrap(),
+            json!({"ambient": false, "explicit": true, "path": true})
+        );
+        runtime.shutdown().await.unwrap();
+    });
 }
 
 #[test]

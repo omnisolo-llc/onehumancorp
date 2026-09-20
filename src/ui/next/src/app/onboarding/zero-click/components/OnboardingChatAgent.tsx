@@ -31,7 +31,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
       try {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      } catch (e) {
+      } catch  {
         // Ignore scroll errors in tests
       }
     }

@@ -214,7 +214,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // 2. Simulate Cross-Device Resume (Closing Page, Reopening, Checking State via Backend invoke mock)
     const savedStateStr = await page.evaluate(() => {
-        try { return sessionStorage.getItem('mockState'); } catch(e) { return null; }
+        try { return sessionStorage.getItem('mockState'); } catch { return null; }
     });
 
     const newContext = await browser.newContext();
@@ -240,7 +240,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     await newPage.evaluate((stateStr) => {
         if (stateStr) {
-            try { sessionStorage.setItem('mockState', stateStr); } catch(e) {}
+            try { sessionStorage.setItem('mockState', stateStr); } catch {}
         }
     }, savedStateStr);
 

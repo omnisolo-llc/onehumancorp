@@ -1,30 +1,33 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
 
+type TerminalStaff = { id: string; name: string; role: string; tenant_id: string };
+
+function confirmedStaff(value: unknown): TerminalStaff | null {
+  if (!value || typeof value !== 'object') return null;
+  const result = value as Record<string, unknown>;
+  if (result.success !== true || !result.staff || typeof result.staff !== 'object') return null;
+  const staff = result.staff as Record<string, unknown>;
+  if (typeof staff.id !== 'string' || !staff.id.trim() || typeof staff.tenant_id !== 'string' || !staff.tenant_id.trim()
+      || typeof staff.name !== 'string' || typeof staff.role !== 'string' || !staff.role.trim()) return null;
+  return { id: staff.id, name: staff.name, role: staff.role, tenant_id: staff.tenant_id };
+}
+
 const t = (text: string) => text;
 
 export default function POSTerminal() {
-  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState([]);
-
-  useEffect(() => {
-    fetch("/api/v1/walkthrough/pos")
-      .then(res => res.json())
-      .then(data => {
-        setWalkthroughSteps(data || []);
-      })
-      .catch(e => console.error(e));
-  }, []);
+  const [authenticationError, setAuthenticationError] = useState('');
+  const [authenticating, setAuthenticating] = useState(false);
+  const authenticationPending = useRef(false);
   const [pin, setPin] = useState('');
   const [locked, setLocked] = useState(true);
   const [clockedIn, setClockedIn] = useState(false);
-  const [activeStaff, setActiveStaff] = useState<any>(null);
+  const [activeStaff, setActiveStaff] = useState<TerminalStaff | null>(null);
   const [inventory, setInventory] = useState<any[]>([]);
   const [isSyncingInitial, setIsSyncingInitial] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -103,27 +106,29 @@ export default function POSTerminal() {
   }, []);
 
   const handlePinEntry = async (digit: string) => {
+    if (authenticationPending.current) return;
+    setAuthenticationError('');
     if (pin.length < 4) {
       const newPin = pin + digit;
       setPin(newPin);
       if (newPin.length === 4) {
-        if (isOffline) {
-           const staff = { id: 'staff_1', name: 'Offline Manager', role: 'Manager' };
-           setActiveStaff(staff);
-           setLocked(false);
+        if (isOffline || !navigator.onLine) {
+           setAuthenticationError('Connect to the server to verify your staff identity. Offline access has not been authorized.');
            setPin('');
            return;
         }
 
+        authenticationPending.current = true;
+        setAuthenticating(true);
         try {
           const res = await fetch('/api/v1/pos/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pin: newPin })
           });
-          const data = await res.json();
-          if (data.success) {
-            setActiveStaff(data.staff);
+          const staff = res.ok ? confirmedStaff(await res.json()) : null;
+          if (staff) {
+            setActiveStaff(staff);
             setLocked(false);
             setPin('');
 
@@ -145,15 +150,17 @@ export default function POSTerminal() {
             }
 
           } else {
-            alert(t('Invalid PIN'));
+            setAuthenticationError('Your staff identity could not be verified. The terminal remains locked.');
             setPin('');
           }
-        } catch (e) {
-           console.error("Auth failed, falling back to offline", e);
-           const staff = { id: 'staff_1', name: 'Offline Manager (Fallback)', role: 'Manager' };
-           setActiveStaff(staff);
-           setLocked(false);
+        } catch {
+           setAuthenticationError('The authentication service is unavailable. The terminal remains locked.');
+           setActiveStaff(null);
+           setLocked(true);
            setPin('');
+        } finally {
+           authenticationPending.current = false;
+           setAuthenticating(false);
         }
       }
     }
@@ -309,6 +316,7 @@ export default function POSTerminal() {
              </div>
              <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
              <p className="text-gray-500 text-sm mt-2">{t('Enter PIN to access terminal')}</p>
+             {authenticationError && <p role="alert" className="mt-3 text-sm text-red-700">{authenticationError}</p>}
              {isOffline && <p className="text-[#FF9500] font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
            </div>
 
@@ -325,6 +333,7 @@ export default function POSTerminal() {
                <div key={num} className="flex justify-center">
                  <button
                    onClick={() => handlePinEntry(num.toString())}
+                   disabled={authenticating}
                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-50 text-3xl font-light text-gray-800 hover:bg-gray-100 hover:shadow-inner active:bg-gray-200 transition-all flex items-center justify-center min-h-[44px] min-w-[44px]"
                  >
                    {num}
@@ -334,6 +343,7 @@ export default function POSTerminal() {
              <div className="col-start-2">
                <button
                  onClick={() => handlePinEntry('0')}
+                 disabled={authenticating}
                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
                >
                  0
@@ -364,7 +374,7 @@ export default function POSTerminal() {
         <div className="pt-12 pb-6 px-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
-            <p className="text-[#0071E3] font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
+            <p className="text-[#0071E3] font-medium text-sm mt-1">{t(activeStaff?.role ?? '')}</p>
             {isOffline ? (
               <div className="inline-flex items-center gap-1.5 mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>

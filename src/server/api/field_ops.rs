@@ -348,7 +348,7 @@ pub async fn optimize_route(
 
     while !pending.is_empty() {
         let mut nearest_index = 0;
-        let mut min_distance = std::f64::INFINITY;
+        let mut min_distance = f64::INFINITY;
 
         for (i, appt) in pending.iter().enumerate() {
             let appt_lat = appt.location_lat.unwrap_or(0.0);
@@ -403,7 +403,7 @@ pub async fn optimize_route(
         .bind(&route_id)
         .bind(&tenant_id)
         .bind(&staff_profile_id)
-        .bind(&route_date)
+        .bind(route_date)
         .execute(&state.pool)
         .await;
 

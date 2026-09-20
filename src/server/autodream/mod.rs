@@ -161,9 +161,11 @@ impl AutoDreamWorker {
                 "system",
                 "system_agent",
                 &id,
-                &summary,
-                &embedding,
-                "SESSION_SUMMARY",
+                crate::db::MemoryContent {
+                    content: &summary,
+                    embedding: &embedding,
+                    source_type: "SESSION_SUMMARY",
+                },
             )
             .await?;
         }
@@ -177,7 +179,9 @@ impl AutoDreamWorker {
                 omnisolo_builtin_agent::memory_store::VectorRepository::new(db.pool.clone())
             }
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone())
+                omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(
+                    sqlite_pool.clone(),
+                )
             }
         };
 
@@ -245,9 +249,11 @@ impl AutoDreamWorker {
                 &org_id,
                 "system_agent",
                 &id,
-                &summary,
-                &embedding,
-                &source_type,
+                crate::db::MemoryContent {
+                    content: &summary,
+                    embedding: &embedding,
+                    source_type: &source_type,
+                },
             )
             .await?;
             db.mark_task_auto_dreamed(&org_id, &id, &table).await?;
@@ -312,7 +318,7 @@ impl AutoDreamWorker {
                 results.push(::server_omnisolo::orchestration::TruthSearchResult {
                     id: row.get("id"),
                     content: row.get("content"),
-                    score: score as f64,
+                    score,
                 });
             }
         }
@@ -330,12 +336,11 @@ impl AutoDreamWorker {
             use sqlx::Row;
             let session_id: String = row.get("session_id");
             let mut context_data: String = row.get("context_data");
-            if context_data.starts_with("gz_b64:") {
-                if let Ok(decompressed) =
+            if context_data.starts_with("gz_b64:")
+                && let Ok(decompressed) =
                     crate::pricing::compression::decompress_lossless(&context_data)
-                {
-                    context_data = decompressed;
-                }
+            {
+                context_data = decompressed;
             }
 
             if let Ok(compressed) = crate::pricing::compression::compress_lossless(&context_data) {
@@ -366,12 +371,11 @@ impl AutoDreamWorker {
             let session_id: String = row.get("session_id");
             let _agent_id: String = row.get("agent_id");
             let mut context_data: String = row.get("context_data");
-            if context_data.starts_with("gz_b64:") {
-                if let Ok(decompressed) =
+            if context_data.starts_with("gz_b64:")
+                && let Ok(decompressed) =
                     crate::pricing::compression::decompress_lossless(&context_data)
-                {
-                    context_data = decompressed;
-                }
+            {
+                context_data = decompressed;
             }
 
             let embedding_res = if let Some(cached) = cache.get(&context_data) {
@@ -404,9 +408,11 @@ impl AutoDreamWorker {
                         "system",
                         "system_agent",
                         &session_id,
-                        &context_data,
-                        &emb_str,
-                        "SESSION_DATA",
+                        crate::db::MemoryContent {
+                            content: &context_data,
+                            embedding: &emb_str,
+                            source_type: "SESSION_DATA",
+                        },
                     )
                     .await?;
 
@@ -428,8 +434,8 @@ impl AutoDreamWorker {
         counter: &Counter<u64>,
         cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let memory_dir =
-            std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".omnisolo/runtime/memory".to_string());
+        let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR")
+            .unwrap_or_else(|_| ".omnisolo/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
 
         if !path.exists() {
@@ -442,7 +448,7 @@ impl AutoDreamWorker {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&path).await?;
 
                 let embedding_res = if let Some(cached) = cache.get(&content) {
@@ -475,9 +481,11 @@ impl AutoDreamWorker {
                             "system",
                             "fs-agent",
                             "fs-task",
-                            &content,
-                            &emb_str,
-                            "FS_MEMORY",
+                            crate::db::MemoryContent {
+                                content: &content,
+                                embedding: &emb_str,
+                                source_type: "FS_MEMORY",
+                            },
                         )
                         .await?;
 
@@ -512,7 +520,7 @@ impl AutoDreamWorker {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&path).await?;
 
                 let embedding_res = if let Some(cached) = cache.get(&content) {

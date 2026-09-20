@@ -3,14 +3,32 @@ set -euo pipefail
 
 migration_dir="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
-duplicate_versions="$(find "${migration_dir}" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
-  | sed -E 's/^([0-9]+)_.*/\1/' \
-  | sort \
-  | uniq -d)"
-if [[ -n "${duplicate_versions}" ]]; then
-  echo "SQLx migration versions must be unique; duplicates: ${duplicate_versions}" >&2
-  exit 1
-fi
+# SQLx parses an i64 version, so 1 and 001 are the same identity. Do not use
+# string sorting or GNU-only find -printf (developers also run this on macOS).
+python3 - "${migration_dir}" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+migrations = Path(sys.argv[1])
+if not migrations.is_dir():
+    raise SystemExit("SQLx migration directory is missing")
+versions = {}
+for migration in sorted(migrations.glob("*.sql")):
+    match = re.fullmatch(r"([0-9]+)_(.+?)(?:\.(up|down))?\.sql", migration.name)
+    if not match or int(match[1]) > 9223372036854775807:
+        raise SystemExit(f"Invalid SQLx migration identity: {migration.name}")
+    version, description, direction = int(match[1]), match[2], match[3] or "simple"
+    entries = versions.setdefault(version, {})
+    if direction in entries or (entries and (direction == "simple" or "simple" in entries)):
+        raise SystemExit(f"SQLx migration versions must be unique; duplicate numeric version {version}: "
+                         f"{', '.join(name for _, name in entries.values())}, {migration.name}")
+    if entries and any(previous != description for previous, _ in entries.values()):
+        raise SystemExit(f"SQLx migration {version} has mismatched up/down descriptions")
+    entries[direction] = (description, migration.name)
+if not versions:
+    raise SystemExit("SQLx migration directory contains no migrations")
+PY
 
 if matches="$(grep -RIn --include='*.sql' '^-- +goose Down' "${migration_dir}" || true)" && \
    [[ -n "${matches}" ]]; then

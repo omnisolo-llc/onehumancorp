@@ -421,26 +421,25 @@ mod tests {
                 assert!(read > 0, "client closed connection before sending request");
                 request.extend_from_slice(&buffer[..read]);
 
-                if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
-                    {
-                        header_end = Some(index + 4);
-                        let headers = String::from_utf8_lossy(&request[..index]);
-                        content_length = headers
-                            .lines()
-                            .find_map(|line| {
-                                line.strip_prefix("content-length: ")
-                                    .or_else(|| line.strip_prefix("Content-Length: "))
-                            })
-                            .and_then(|value| value.trim().parse::<usize>().ok())
-                            .unwrap_or(0);
-                    }
+                if header_end.is_none()
+                    && let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                {
+                    header_end = Some(index + 4);
+                    let headers = String::from_utf8_lossy(&request[..index]);
+                    content_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            line.strip_prefix("content-length: ")
+                                .or_else(|| line.strip_prefix("Content-Length: "))
+                        })
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
                 }
 
-                if let Some(body_start) = header_end {
-                    if request.len() >= body_start + content_length {
-                        break;
-                    }
+                if let Some(body_start) = header_end
+                    && request.len() >= body_start + content_length
+                {
+                    break;
                 }
             }
 
@@ -475,30 +474,29 @@ mod tests {
                 assert!(read > 0);
                 request.extend_from_slice(&buffer[..read]);
 
-                if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
-                    {
-                        header_end = Some(index + 4);
-                        let headers = String::from_utf8_lossy(&request[..index]);
-                        content_length = headers
-                            .lines()
-                            .find_map(|line| {
-                                line.strip_prefix("content-length: ")
-                                    .or_else(|| line.strip_prefix("Content-Length: "))
-                            })
-                            .and_then(|value| value.trim().parse::<usize>().ok())
-                            .unwrap_or(0);
-                    }
+                if header_end.is_none()
+                    && let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                {
+                    header_end = Some(index + 4);
+                    let headers = String::from_utf8_lossy(&request[..index]);
+                    content_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            line.strip_prefix("content-length: ")
+                                .or_else(|| line.strip_prefix("Content-Length: "))
+                        })
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
                 }
 
-                if let Some(body_start) = header_end {
-                    if request.len() >= body_start + content_length {
-                        break;
-                    }
+                if let Some(body_start) = header_end
+                    && request.len() >= body_start + content_length
+                {
+                    break;
                 }
             }
 
-            let body_str = format!(r#"{{"error":{{"message":"test error","code":"test"}}}}"#);
+            let body_str = r#"{"error":{"message":"test error","code":"test"}}"#.to_string();
             let response = format!(
                 "HTTP/1.1 {} {}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
                 status,

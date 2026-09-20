@@ -1,9 +1,7 @@
 /** @jsxImportSource react */
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render,screen,fireEvent } from '@testing-library/react';
+import { describe,it,expect,vi,beforeEach } from 'vitest';
 import DigitalBusinessCardGeneratorPage from './page';
-import * as navigation from 'next/navigation';
-import React from 'react';
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn() })),

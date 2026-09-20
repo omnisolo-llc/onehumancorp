@@ -1,9 +1,12 @@
 {
   "name": "next",
   "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=22.22.1 <23" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "typecheck": "tsc --noEmit",
     "start": "next start",
     "test": "vitest run",
     "test:auth-policy": "vitest run src/lib/auth/url.test.ts src/lib/auth/publicRoutes.test.ts",
@@ -12,7 +15,6 @@
     "test:tailwind-config": "node scripts/assert-tailwind-pipeline.mjs"
   },
   "dependencies": {
-    "@bazel/bazelisk": "^1.28.1",
     "@journeyapps/wa-sqlite": "^1.7.0",
     "@powersync/react": "^1.10.0",
     "@powersync/web": "^1.38.3",
@@ -41,7 +43,6 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

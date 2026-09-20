@@ -64,41 +64,38 @@ mod tests {
         }
 
         // Test regression: Empty org_id should NOT bypass RLS
-        match pool.begin().await {
-            Ok(mut tx) => {
-                // Call the actual vulnerable function to test application logic
-                ::server_common::auth_utils::set_org_context(&mut *tx, "")
-                    .await
-                    .expect("Failed to call set_org_context");
+        if let Ok(mut tx) = pool.begin().await {
+            // Call the actual vulnerable function to test application logic
+            ::server_common::auth_utils::set_org_context(&mut *tx, "")
+                .await
+                .expect("Failed to call set_org_context");
 
-                let result = sqlx::query("SELECT COUNT(*) FROM customers")
-                    .fetch_one(&mut *tx)
-                    .await;
-                assert_eq!(
-                    result.unwrap().get::<i64, _>(0),
-                    0,
-                    "Should return 0 rows for empty tenant context"
-                );
+            let result = sqlx::query("SELECT COUNT(*) FROM customers")
+                .fetch_one(&mut *tx)
+                .await;
+            assert_eq!(
+                result.unwrap().get::<i64, _>(0),
+                0,
+                "Should return 0 rows for empty tenant context"
+            );
 
-                let result = sqlx::query("SELECT COUNT(*) FROM products")
-                    .fetch_one(&mut *tx)
-                    .await;
-                assert_eq!(
-                    result.unwrap().get::<i64, _>(0),
-                    0,
-                    "Should return 0 rows for empty tenant context"
-                );
+            let result = sqlx::query("SELECT COUNT(*) FROM products")
+                .fetch_one(&mut *tx)
+                .await;
+            assert_eq!(
+                result.unwrap().get::<i64, _>(0),
+                0,
+                "Should return 0 rows for empty tenant context"
+            );
 
-                let result = sqlx::query("SELECT COUNT(*) FROM orders")
-                    .fetch_one(&mut *tx)
-                    .await;
-                assert_eq!(
-                    result.unwrap().get::<i64, _>(0),
-                    0,
-                    "Should return 0 rows for empty tenant context"
-                );
-            }
-            Err(_) => {}
+            let result = sqlx::query("SELECT COUNT(*) FROM orders")
+                .fetch_one(&mut *tx)
+                .await;
+            assert_eq!(
+                result.unwrap().get::<i64, _>(0),
+                0,
+                "Should return 0 rows for empty tenant context"
+            );
         }
 
         // To test RLS, we explicitly begin a transaction and set the local variable to tenant_1.

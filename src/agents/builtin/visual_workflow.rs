@@ -395,12 +395,14 @@ impl WorkflowExecutor {
 
                         let result_str = match result {
                             Ok(res) => res,
-                            Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                                omnisolo_builtin_agent_core::types::format_llm_recoverable_error(
-                                    &tool_name, &msg,
-                                )
-                            }
-                            Err(omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                            Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(
+                                msg,
+                            )) => omnisolo_builtin_agent_core::types::format_llm_recoverable_error(
+                                &tool_name, &msg,
+                            ),
+                            Err(omnisolo_builtin_agent_core::types::ToolError::UserFixable(
+                                msg,
+                            )) => {
                                 return Err(format!("USER_FIXABLE: {}", msg));
                             }
                             Err(omnisolo_builtin_agent_core::types::ToolError::Fatal(msg)) => {

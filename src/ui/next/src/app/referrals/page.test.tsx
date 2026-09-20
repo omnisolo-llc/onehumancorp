@@ -1,6 +1,5 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render,screen,waitFor,act } from '@testing-library/react';
+import { describe,it,expect,vi,beforeEach } from 'vitest';
 import ReferralsPage from './page';
 
 vi.mock('../components/PoweredByOmniSolo', () => ({
@@ -29,7 +28,7 @@ describe('ReferralsPage', () => {
 
   it('renders loading state initially', async () => {
     // Return an unresolved promise to keep it in loading state
-    (global.fetch as any).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(global.fetch, { partial: true }).mockImplementation(() => new Promise(() => {}));
 
     await act(async () => {
       render(<ReferralsPage />);
@@ -42,7 +41,7 @@ describe('ReferralsPage', () => {
   });
 
   it('renders how it works section', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
     });
@@ -56,7 +55,7 @@ describe('ReferralsPage', () => {
   });
 
   it('fetches and displays dynamic referral link', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
     });
@@ -80,8 +79,8 @@ describe('ReferralsPage', () => {
 
   it('falls back to tenant link on api error', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    (global.fetch as any).mockRejectedValueOnce(new Error('API failed'));
-    (window.localStorage.getItem as any).mockReturnValue('my-tenant-store');
+    vi.mocked(global.fetch, { partial: true }).mockRejectedValueOnce(new Error('API failed'));
+    vi.mocked(window.localStorage.getItem, { partial: true }).mockReturnValue('my-tenant-store');
 
     await act(async () => {
       render(<ReferralsPage />);
@@ -98,7 +97,7 @@ describe('ReferralsPage', () => {
   });
 
   it('renders Powered by OmniSolo footer', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
     });

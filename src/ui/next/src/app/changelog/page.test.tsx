@@ -17,7 +17,7 @@ describe('ChangelogPage', () => {
       ]
     }]),
     ok: true
-  }) as any;
+  });
 
   it('renders the release notes page correctly', async () => {
     await act(async () => {

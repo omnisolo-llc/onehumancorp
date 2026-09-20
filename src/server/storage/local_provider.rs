@@ -69,9 +69,7 @@ impl Provider for LocalProvider {
                     if path.is_dir() {
                         walk_dir(&path, base_path, prefix, blobs)?;
                     } else {
-                        let rel_path = path
-                            .strip_prefix(base_path)
-                            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                        let rel_path = path.strip_prefix(base_path).map_err(io::Error::other)?;
                         let key = rel_path.to_string_lossy().to_string();
                         if key.starts_with(prefix) {
                             let metadata = entry.metadata()?;
@@ -111,12 +109,12 @@ impl Provider for LocalProvider {
     }
 
     async fn get_blob_url(&self, key: &str) -> io::Result<String> {
-        if let Ok(cdn) = std::env::var("OMNISOLO_CDN_URL") {
-            if !cdn.is_empty() {
-                let cdn = cdn.trim_end_matches('/');
-                let key = key.trim_start_matches('/');
-                return Ok(format!("{}/{}", cdn, key));
-            }
+        if let Ok(cdn) = std::env::var("OMNISOLO_CDN_URL")
+            && !cdn.is_empty()
+        {
+            let cdn = cdn.trim_end_matches('/');
+            let key = key.trim_start_matches('/');
+            return Ok(format!("{}/{}", cdn, key));
         }
 
         let path = self.get_local_path(key)?;
@@ -191,12 +189,10 @@ impl Provider for LocalProvider {
             .tracker
             .track_storage_usage(t_id, reported_size as i64, agent_id)
             .await
+            && status.soft_limit_reached
+            && let Some(msg) = status.user_message
         {
-            if status.soft_limit_reached {
-                if let Some(msg) = status.user_message {
-                    tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
-                }
-            }
+            tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
         }
 
         #[cfg(unix)]

@@ -25,7 +25,7 @@ describe('TapToPayOverlay Component', () => {
     const onSuccess = vi.fn();
 
     // Mock the 3 fetch calls
-    (global.fetch as any)
+    vi.mocked(global.fetch, { partial: true })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ secret: 'test_token' }) }) // connection-token
       .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'pi_test123' }) })     // payment-intent
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'succeeded' }) }); // capture
@@ -56,7 +56,7 @@ describe('TapToPayOverlay Component', () => {
 
   it('handles API errors gracefully', async () => {
     // Mock the connection-token call to fail
-    (global.fetch as any).mockResolvedValueOnce({ ok: false });
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({ ok: false });
 
     render(<TapToPayOverlay isOpen={true} onClose={() => {}} amount={500} currency="usd" onSuccess={() => {}} />);
 

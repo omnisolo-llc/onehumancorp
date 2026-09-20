@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState,useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import {
-  AuthenticationSettingsPanel,
-  type AdminOidcProvider,
-  type RegistrationMode,
+AuthenticationSettingsPanel,
+type AdminOidcProvider,
+type RegistrationMode,
 } from "./AuthenticationSettingsPanel";
 
 export default function SettingsPage() {
@@ -71,7 +71,7 @@ export default function SettingsPage() {
       } else {
         setTwilioStatus("error");
       }
-    } catch (e) {
+    } catch  {
       setTwilioStatus("error");
     }
   };

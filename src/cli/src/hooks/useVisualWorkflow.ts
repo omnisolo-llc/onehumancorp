@@ -1,8 +1,20 @@
 import { useState } from 'react';
 
+// Wire format matches the Rust internally tagged NodeType enum.
+export type NodeType =
+  | { type: 'Input'; name: string }
+  | { type: 'Llm'; prompt_template: string }
+  | { type: 'Output' }
+  | { type: 'Tool'; tool_name: string; args_template: string }
+  | { type: 'Condition'; condition_expression: string; true_target: string; false_target: string }
+  | { type: 'SubAgent'; agent_name: string; task_template: string }
+  | { type: 'HumanInLoop'; prompt_template: string }
+  | { type: 'Merge' | 'ParallelJoin'; state_keys: string[]; output_key: string }
+  | { type: 'ParallelFork'; targets: string[] };
+
 export interface Node {
   id: string;
-  node_type: any;
+  node_type: NodeType;
 }
 
 export interface Edge {
@@ -53,8 +65,8 @@ export const useVisualWorkflow = () => {
 
       setResult(data.result?.output || 'No output received.');
       setStatus('complete');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during execution.');
+    } catch (err: unknown) {
+      setError(err instanceof Error && err.message ? err.message : 'An error occurred during execution.');
       setStatus('error');
     }
   };

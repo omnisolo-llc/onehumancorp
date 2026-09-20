@@ -760,7 +760,7 @@ let clawChannels: ClawChannelRecord[] = [];
 let clawGuides: { platform: string; steps: string[]; troubleshooting: string[] }[] = [];
 let clawConfirmations: ClawConfirmationRecord[] = [];
 let approvals: ApprovalRecord[] = [];
-let billing: BillingRecord = {
+const billing: BillingRecord = {
   plan: 'Growth',
   aiActionsUsed: 145,
   aiActionsLimit: 500,
@@ -1164,15 +1164,7 @@ function artifactForFormat(outputFormat: string): AssistantArtifact {
   };
 }
 
-function appPreviewArtifact(): AssistantArtifact {
-  return {
-    id: id('artifact'),
-    type: 'document',
-    filename: 'app-preview.html',
-    mimeType: 'text/html',
-    preview: 'Built-in browser preview for the generated local app.',
-  };
-}
+
 
 function chartArtifact(): AssistantArtifact {
   return {

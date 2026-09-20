@@ -174,16 +174,15 @@ impl AutoDreamPipeline {
                                 &task.tenant_id,
                                 task.agent_id.as_deref().unwrap_or("system"),
                                 &task.id,
-                                &chunk,
-                                &emb_str,
-                                "TASK_SUMMARY",
+                                crate::db::MemoryContent {
+                                    content: &chunk,
+                                    embedding: &emb_str,
+                                    source_type: "TASK_SUMMARY",
+                                },
                             )
                             .await
                             .map_err(|e| {
-                                Box::new(std::io::Error::new(
-                                    std::io::ErrorKind::Other,
-                                    e.to_string(),
-                                ))
+                                Box::new(std::io::Error::other(e.to_string()))
                                     as Box<dyn std::error::Error + Send + Sync>
                             })?;
 

@@ -16,7 +16,7 @@ test('renders Ralph Loop page', () => {
 
 test('can type task and execute successfully', async () => {
   const mockResult = { status: 'success', features_completed: 3 };
-  (global.fetch as any).mockResolvedValueOnce({
+  vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
     ok: true,
     json: async () => ({ result: mockResult }),
   });
@@ -41,7 +41,7 @@ test('can type task and execute successfully', async () => {
 });
 
 test('handles errors correctly', async () => {
-  (global.fetch as any).mockResolvedValueOnce({
+  vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
     ok: false,
     json: async () => ({ error: 'Backend failed to process' }),
   });

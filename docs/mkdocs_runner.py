@@ -1,4 +1,4 @@
-"""Run MkDocs through Bazel's Python toolchain."""
+"""Run the locked documentation toolchain without a build-system wrapper."""
 
 import os
 import sys
@@ -8,7 +8,7 @@ from mkdocs.__main__ import cli
 
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "build"
-    workspace_dir = os.environ.get("BUILD_WORKSPACE_DIRECTORY", os.getcwd())
+    workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(workspace_dir)
 
     if mode == "build":

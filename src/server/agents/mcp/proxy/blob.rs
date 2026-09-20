@@ -19,6 +19,12 @@ pub struct LocalBlobProvider {
     base_dir: String,
 }
 
+impl Default for LocalBlobProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LocalBlobProvider {
     pub fn new() -> Self {
         Self {
@@ -77,6 +83,12 @@ pub struct S3BlobProvider {
     client: reqwest::Client,
 }
 
+impl Default for S3BlobProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl S3BlobProvider {
     pub fn new() -> Self {
         let endpoint =
@@ -102,12 +114,12 @@ impl BlobProvider for S3BlobProvider {
                 .get(&url)
                 .send()
                 .await
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
             if resp.status().is_success() {
                 let text = resp
                     .text()
                     .await
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                    .map_err(|e| std::io::Error::other(e.to_string()))?;
                 Ok(text)
             } else {
                 Err(std::io::Error::new(
@@ -132,14 +144,14 @@ impl BlobProvider for S3BlobProvider {
                 .body(content)
                 .send()
                 .await
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
             if resp.status().is_success() {
                 Ok(())
             } else {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("S3 write failed: {}", resp.status()),
-                ))
+                Err(std::io::Error::other(format!(
+                    "S3 write failed: {}",
+                    resp.status()
+                )))
             }
         })
     }

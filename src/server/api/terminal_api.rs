@@ -717,14 +717,14 @@ pub async fn sync_offline_transactions_handler(
                 // Evaluate conflicts for pending reconciliation synchronously
                 for tx in &req_data.transactions {
                     if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload)
+                        && let Some(items) = payload_val.as_array()
                     {
-                        if let Some(items) = payload_val.as_array() {
-                            for item in items {
-                                if let (Some(product_id), Some(quantity)) = (
-                                    item.get("product_id").and_then(|v| v.as_str()),
-                                    item.get("quantity").and_then(|v| v.as_i64()),
-                                ) {
-                                    let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
+                        for item in items {
+                            if let (Some(product_id), Some(quantity)) = (
+                                item.get("product_id").and_then(|v| v.as_str()),
+                                item.get("quantity").and_then(|v| v.as_i64()),
+                            ) {
+                                let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
                                         "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE"
                                     )
                                     .bind(product_id)
@@ -732,46 +732,43 @@ pub async fn sync_offline_transactions_handler(
                                     .fetch_one(&mut *db_tx)
                                     .await;
 
-                                    if let Ok((stock,)) = current_stock_res {
-                                        let qty_i32 = quantity as i32;
-                                        if stock < qty_i32 {
-                                            let tx_id = tx.id.clone().unwrap_or_default();
-                                            pending_reconciliation_items.push(serde_json::json!({
-                                                "transaction_id": tx_id,
-                                                "product_id": product_id,
-                                                "shortage": qty_i32 - stock,
-                                                "timestamp": chrono::Utc::now().to_rfc3339()
-                                            }));
-                                        }
+                                if let Ok((stock,)) = current_stock_res {
+                                    let qty_i32 = quantity as i32;
+                                    if stock < qty_i32 {
+                                        let tx_id = tx.id.clone().unwrap_or_default();
+                                        pending_reconciliation_items.push(serde_json::json!({
+                                            "transaction_id": tx_id,
+                                            "product_id": product_id,
+                                            "shortage": qty_i32 - stock,
+                                            "timestamp": chrono::Utc::now().to_rfc3339()
+                                        }));
+                                    }
 
-                                        let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                    let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                                             .bind(qty_i32)
                                             .bind(product_id)
                                             .bind(&tenant_id)
                                             .execute(&mut *db_tx)
                                             .await;
 
-                                        if let Some(client) = crate::get_redis_client() {
-                                            if let Ok(mut conn) =
-                                                client.get_multiplexed_async_connection().await
-                                            {
-                                                let invalidation_topic =
-                                                    "cache_invalidation_events";
-                                                let invalidation_payload = serde_json::json!({
-                                                    "event": "inventory.updated",
-                                                    "tags": [
-                                                        format!("tenant-id:{}", tenant_id),
-                                                        format!("entity:product:{}", product_id)
-                                                    ]
-                                                })
-                                                .to_string();
-                                                let _: Result<(), _> = redis::cmd("PUBLISH")
-                                                    .arg(invalidation_topic)
-                                                    .arg(invalidation_payload)
-                                                    .query_async(&mut conn)
-                                                    .await;
-                                            }
-                                        }
+                                    if let Some(client) = crate::get_redis_client()
+                                        && let Ok(mut conn) =
+                                            client.get_multiplexed_async_connection().await
+                                    {
+                                        let invalidation_topic = "cache_invalidation_events";
+                                        let invalidation_payload = serde_json::json!({
+                                            "event": "inventory.updated",
+                                            "tags": [
+                                                format!("tenant-id:{}", tenant_id),
+                                                format!("entity:product:{}", product_id)
+                                            ]
+                                        })
+                                        .to_string();
+                                        let _: Result<(), _> = redis::cmd("PUBLISH")
+                                            .arg(invalidation_topic)
+                                            .arg(invalidation_payload)
+                                            .query_async(&mut conn)
+                                            .await;
                                     }
                                 }
                             }
@@ -784,7 +781,7 @@ pub async fn sync_offline_transactions_handler(
                         "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) ",
                     );
 
-                    job_query_builder.push_values(rows.into_iter(), |mut b, row| {
+                    job_query_builder.push_values(rows, |mut b, row| {
                         use sqlx::Row;
                         let job_id = uuid::Uuid::new_v4().to_string();
                         let tx_id: String = row.get("id");
@@ -880,8 +877,9 @@ pub async fn sync_offline_transactions_handler(
         {
             let pool = crate::db::get_pool();
             if let Ok(mut db_tx) = pool.begin().await {
-                if let Ok(_) =
-                    crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await
+                if crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id)
+                    .await
+                    .is_ok()
                 {
                     let order_id = uuid::Uuid::new_v4().to_string();
                     let total_amount = (tx.amount_cents as f64) / 100.0;
@@ -892,15 +890,15 @@ pub async fn sync_offline_transactions_handler(
                         .bind(total_amount)
                         .execute(&mut *db_tx).await;
                     if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload)
+                        && let Some(items) = payload_val.as_array()
                     {
-                        if let Some(items) = payload_val.as_array() {
-                            for item in items {
-                                if let (Some(product_id), Some(quantity)) = (
-                                    item.get("product_id").and_then(|v| v.as_str()),
-                                    item.get("quantity").and_then(|v| v.as_i64()),
-                                ) {
-                                    let item_id = uuid::Uuid::new_v4().to_string();
-                                    let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                        for item in items {
+                            if let (Some(product_id), Some(quantity)) = (
+                                item.get("product_id").and_then(|v| v.as_str()),
+                                item.get("quantity").and_then(|v| v.as_i64()),
+                            ) {
+                                let item_id = uuid::Uuid::new_v4().to_string();
+                                let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
                                         .bind(&item_id)
                                         .bind(&tenant_id)
                                         .bind(&order_id)
@@ -908,7 +906,6 @@ pub async fn sync_offline_transactions_handler(
                                         .bind(quantity as i32)
                                         .bind(total_amount)
                                         .execute(&mut *db_tx).await;
-                                }
                             }
                         }
                     }
@@ -940,23 +937,19 @@ pub async fn sync_offline_transactions_handler(
     }
 
     let mut pending_reconciliation = None;
-    if let Some(session_id) = &req_data.session_id {
-        if let Ok(row) = sqlx::query("SELECT pending_reconciliation FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2")
+    if let Some(session_id) = &req_data.session_id
+        && let Ok(row) = sqlx::query("SELECT pending_reconciliation FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2")
             .bind(session_id)
             .bind(&tenant_id)
             .fetch_optional(&pool)
             .await
-        {
-            if let Some(r) = row {
+            && let Some(r) = row {
                 let pr: Option<serde_json::Value> = sqlx::Row::try_get(&r, "pending_reconciliation").unwrap_or(None);
-                if let Some(pr_val) = pr {
-                    if let Some(arr) = pr_val.as_array() {
+                if let Some(pr_val) = pr
+                    && let Some(arr) = pr_val.as_array() {
                         pending_reconciliation = Some(arr.clone());
                     }
-                }
             }
-        }
-    }
 
     let res = SyncOfflineTransactionsResponse {
         success: failed_ids.is_empty(),
@@ -1019,8 +1012,9 @@ pub async fn commit_inventory_handler(
             if result.success {
                 let pool = crate::db::get_pool();
                 if let Ok(mut tx) = pool.begin().await {
-                    if let Ok(_) =
-                        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+                    if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                        .await
+                        .is_ok()
                     {
                         let order_id = uuid::Uuid::new_v4().to_string();
                         let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
@@ -1203,13 +1197,15 @@ pub async fn create_payment_intent_handler(
     {
         Ok(_) => match session_manager
             .create_terminal_payment_intent(
-                &tenant_id,
-                final_amount_cents,
-                &req_data.currency,
-                req_data.product_id.as_deref(),
-                req_data.quantity,
-                req_data.order_id.as_deref(),
-                &idempotency_key,
+                crate::integrations::stripe::terminal::TerminalPaymentRequest {
+                    tenant_id: &tenant_id,
+                    amount_cents: final_amount_cents,
+                    currency: &req_data.currency,
+                    product_id: req_data.product_id.as_deref(),
+                    quantity: req_data.quantity,
+                    order_id: req_data.order_id.as_deref(),
+                    idempotency_key: &idempotency_key,
+                },
             )
             .await
         {
@@ -1408,15 +1404,15 @@ mod tests {
 fn extract_tenant_id_or_error(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     headers: &axum::http::HeaderMap,
-) -> Result<String, axum::response::Response> {
+) -> Result<String, (axum::http::StatusCode, Json<serde_json::Value>)> {
     let spiffe_id_str = headers
         .get("x-spiffe-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    if !spiffe_id_str.is_empty() {
-        if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
-            return Ok(id);
-        }
+    if !spiffe_id_str.is_empty()
+        && let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str)
+    {
+        return Ok(id);
     }
     match auth_info {
         Some(auth) => {
@@ -1424,8 +1420,7 @@ fn extract_tenant_id_or_error(
                 Err((
                     axum::http::StatusCode::OK,
                     Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" })),
-                )
-                    .into_response())
+                ))
             } else {
                 Ok(auth.org_id.clone())
             }
@@ -1433,8 +1428,7 @@ fn extract_tenant_id_or_error(
         None => Err((
             axum::http::StatusCode::OK,
             Json(serde_json::json!({ "error": "Unauthenticated" })),
-        )
-            .into_response()),
+        )),
     }
 }
 
@@ -1445,7 +1439,7 @@ pub async fn get_terminal_connection_token_handler(
 ) -> axum::response::Response {
     let tenant_id = match extract_tenant_id_or_error(auth_info, &_headers) {
         Ok(id) => id,
-        Err(response) => return response,
+        Err(response) => return response.into_response(),
     };
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
@@ -1546,22 +1540,22 @@ pub async fn capture_payment_intent_handler(
                             Ok(_) => {
                                 // Inventory commit successful, log an order if possible
                                 let pool = crate::db::get_pool();
-                                if let Ok(mut tx) = pool.begin().await {
-                                    if let Ok(_) = crate::common::auth_utils::set_org_context(
+                                if let Ok(mut tx) = pool.begin().await
+                                    && let Ok(_) = crate::common::auth_utils::set_org_context(
                                         &mut *tx, &tenant_id,
                                     )
                                     .await
-                                    {
-                                        let order_id = uuid::Uuid::new_v4().to_string();
-                                        let total_amount =
-                                            (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
-                                        let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
+                                {
+                                    let order_id = uuid::Uuid::new_v4().to_string();
+                                    let total_amount =
+                                        (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
+                                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
                                             .bind(&order_id)
                                             .bind(&tenant_id)
                                             .bind(None::<String>)
                                             .bind(total_amount)
                                             .execute(&mut *tx).await;
-                                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                                    let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
                                             .bind(uuid::Uuid::new_v4().to_string())
                                             .bind(&tenant_id)
                                             .bind(&order_id)
@@ -1569,8 +1563,7 @@ pub async fn capture_payment_intent_handler(
                                             .bind(quantity)
                                             .bind(total_amount)
                                             .execute(&mut *tx).await;
-                                        let _ = tx.commit().await;
-                                    }
+                                    let _ = tx.commit().await;
                                 }
 
                                 // Notify Sales & Revenue Assistant via KAIROS/Orchestrator

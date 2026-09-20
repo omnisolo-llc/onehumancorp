@@ -5,7 +5,8 @@ const MAX_ONBOARDING_IMAGE_URL_CHARS = 2_048;
 
 function hasAtMostChars(value: string, maximum: number): boolean {
   let count = 0;
-  for (const _character of value) {
+  const characters = value[Symbol.iterator]();
+  while (!characters.next().done) {
     count += 1;
     if (count > maximum) return false;
   }

@@ -1,4 +1,4 @@
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
  try {
@@ -40,8 +40,8 @@ export async function GET(request: Request) {
     'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300'
    }
   });
- } catch (e: any) {
-  console.error(`${e.message}`);
+ } catch {
+  console.error('storefront.og_card.generation_failed');
   return new Response(`Failed to generate the image`, {
    status: 500,
   });

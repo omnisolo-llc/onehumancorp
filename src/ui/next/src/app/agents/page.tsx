@@ -1,22 +1,19 @@
 'use client';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React,{ useCallback,useEffect,useMemo,useState } from 'react';
 import Link from 'next/link';
 import { AgentMetrics } from './components/AgentMetrics';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
-import { InteractiveWalkthrough, WalkthroughTarget } from '../../components/Walkthrough';
+import { InteractiveWalkthrough,WalkthroughTarget } from '../../components/Walkthrough';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { useProPlan } from '../components/useProPlan';
 import { useAuthenticatedPolling } from '../../hooks/useAuthenticatedPolling';
 import {
-  automations,
-  connectors,
-  expertTeams,
-  experts,
-  exploreTemplates,
-  memories,
-  remoteAssistants,
-  skillMarket,
-  type ExpertCatalogItem,
+connectors,
+expertTeams,
+experts,
+exploreTemplates,remoteAssistants,
+skillMarket,
+type ExpertCatalogItem
 } from './catalog';
 type Panel =
   | 'browse'
@@ -214,7 +211,7 @@ export default function AgentsPage() {
         ...current.filter((workflow) => workflow.id !== workflowId),
       ]);
       setPanel('results');
-    } catch (err) {
+    } catch  {
       setRunError('Expert service is unavailable.');
     } finally {
       setRunning(false);
@@ -1276,7 +1273,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
            console.warn("Visual workflow API failed, falling back to legacy workflow endpoint");
         }
       }
-    } catch (e) {
+    } catch  {
       // Not JSON or other error, fallback to legacy
     }
 

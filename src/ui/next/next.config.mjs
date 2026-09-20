@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 const BASE_DEV_ORIGINS = ['127.0.0.1', 'localhost']
 
 function isPrivateLanHostname(hostname) {
@@ -38,9 +40,12 @@ export function allowedDevOrigins(environment = process.env) {
 const nextConfig = {
   allowedDevOrigins: allowedDevOrigins(),
   devIndicators: false,
-  outputFileTracingRoot: new URL('../../../', import.meta.url).pathname,
+  // Keep authenticated server routes. A static export would silently remove
+  // the Node backend-for-frontend used by web and desktop clients.
+  output: 'standalone',
+  outputFileTracingRoot: fileURLToPath(new URL('../../../', import.meta.url)),
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 }
 

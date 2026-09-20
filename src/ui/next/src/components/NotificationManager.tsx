@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import { useEffect,useState } from 'react';
 
 interface AppNotification {
   id: string;
@@ -19,7 +19,7 @@ export function NotificationManager() {
       if (typeof payloadData === 'string') {
         try {
           payloadData = JSON.parse(payloadData);
-        } catch (e) {
+        } catch  {
           // ignore
         }
       }

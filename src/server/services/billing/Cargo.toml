@@ -1,0 +1,17 @@
+[package]
+name = "server_services_billing"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "mod.rs"
+
+[dependencies]
+server_auth = { path = "../../auth" }
+server_omnisolo = { path = "../../omnisolo" }
+server_pricing = { path = "../../pricing" }
+server_integrations_stripe = { path = "../../integrations/stripe" }
+opentelemetry = { version = "0.32", features = ["metrics"] }
+tokio = { workspace = true }
+tonic = { workspace = true }
+tracing = "0.1"

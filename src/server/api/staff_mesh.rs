@@ -220,7 +220,7 @@ pub async fn set_staff_pin_handler(
 
     let pin_hash = bcrypt::hash(&payload.pin, 10).unwrap_or_else(|_| {
         tracing::error!("Failed to hash staff PIN with bcrypt, falling back to reject");
-        return String::new();
+        String::new()
     });
     if pin_hash.is_empty() {
         return (
@@ -603,8 +603,8 @@ pub async fn create_task_handler(
             .bind(&tenant_id)
             .bind(&payload.staff_id)
             .bind(&payload.title)
-            .bind(&payload.description.clone().unwrap_or_default())
-            .bind(&payload.priority.clone().unwrap_or_else(|| "normal".to_string()))
+            .bind(payload.description.clone().unwrap_or_default())
+            .bind(payload.priority.clone().unwrap_or_else(|| "normal".to_string()))
             .execute(pool)
             .await;
             if res.is_err() {
@@ -626,7 +626,9 @@ pub async fn create_task_handler(
                         .into_response();
                 }
             };
-            if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .is_err()
             {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -641,8 +643,8 @@ pub async fn create_task_handler(
             .bind(&tenant_id)
             .bind(&payload.staff_id)
             .bind(&payload.title)
-            .bind(&payload.description.clone().unwrap_or_default())
-            .bind(&payload.priority.clone().unwrap_or_else(|| "normal".to_string()))
+            .bind(payload.description.clone().unwrap_or_default())
+            .bind(payload.priority.clone().unwrap_or_else(|| "normal".to_string()))
             .execute(&mut *tx)
             .await;
             if res.is_err() || tx.commit().await.is_err() {
@@ -710,7 +712,9 @@ pub async fn get_tasks_handler(
                         .into_response();
                 }
             };
-            if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .is_err()
             {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -806,7 +810,9 @@ pub async fn update_task_handler(
                         .into_response();
                 }
             };
-            if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .is_err()
             {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -898,7 +904,9 @@ pub async fn delete_task_handler(
                         .into_response();
                 }
             };
-            if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .is_err()
             {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -974,7 +982,9 @@ pub async fn get_summaries_handler(
                         .into_response();
                 }
             };
-            if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .is_err()
             {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -1129,7 +1139,7 @@ pub async fn simulate_event_handler(
     )
     .bind(&task_id)
     .bind(&tenant_id)
-    .bind(&staff_id)
+    .bind(staff_id)
     .bind("Simulated Event: Low Inventory")
     .bind("pending")
     .bind("high")
@@ -1177,7 +1187,7 @@ pub async fn generate_summary_handler(
     )
     .bind(&summary_id)
     .bind(&tenant_id)
-    .bind(&summary_text)
+    .bind(summary_text)
     .execute(&pool)
     .await;
 

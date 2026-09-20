@@ -68,21 +68,22 @@ impl Orchestrator {
 
         let swe_agent_id = "swe-1".to_string();
 
-        let mut pipelines = self
-            .pipelines
-            .write()
-            .expect("RwLock write lock should not be poisoned");
-        pipelines.insert(
-            event.branch.clone(),
-            Pipeline {
-                id: format!("pipeline-{}", event.branch),
-                branch: event.branch.clone(),
-                state: PipelineState::Implementing,
-                agent_id: swe_agent_id.clone(),
-                created_at: Utc::now(),
-            },
-        );
-        drop(pipelines);
+        {
+            let mut pipelines = self
+                .pipelines
+                .write()
+                .expect("RwLock write lock should not be poisoned");
+            pipelines.insert(
+                event.branch.clone(),
+                Pipeline {
+                    id: format!("pipeline-{}", event.branch),
+                    branch: event.branch.clone(),
+                    state: PipelineState::Implementing,
+                    agent_id: swe_agent_id.clone(),
+                    created_at: Utc::now(),
+                },
+            );
+        } // Release the synchronous guard before publishing asynchronously.
 
         let task_msg = Message {
             id: format!("msg-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),

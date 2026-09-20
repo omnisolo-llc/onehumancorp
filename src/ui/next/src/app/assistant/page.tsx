@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../components/AppShell';
@@ -196,9 +197,9 @@ export default function AssistantPage() {
           workModes: data.capabilities?.workModes?.length ? data.capabilities.workModes : fallbackCapabilities.workModes,
           modelProviders: data.capabilities?.modelProviders?.length ? data.capabilities.modelProviders : fallbackCapabilities.modelProviders,
         });
-      } catch (loadError: any) {
+      } catch (loadError: unknown) {
         if (!mounted) return;
-        setError(loadError.message || 'Assistant tasks unavailable');
+        setError(errorMessage(loadError, 'Assistant tasks unavailable'));
       }
     }
 
@@ -235,8 +236,8 @@ export default function AssistantPage() {
         if (mounted) {
           setResourceData((current) => ({ ...current, [section]: data }));
         }
-      } catch (loadError: any) {
-        if (mounted) setResourceError(loadError.message || `${config.title} unavailable`);
+      } catch (loadError: unknown) {
+        if (mounted) setResourceError(errorMessage(loadError, `${config.title} unavailable`));
       } finally {
         if (mounted) setResourceLoading('');
       }
@@ -307,8 +308,8 @@ export default function AssistantPage() {
       setActiveTaskId(data.task.id);
       setResultTab('Artifacts');
       setSection('results');
-    } catch (startError: any) {
-      setError(startError.message || 'Task could not be started');
+    } catch (startError: unknown) {
+      setError(errorMessage(startError, 'Task could not be started'));
     } finally {
       setStarting(false);
     }

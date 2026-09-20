@@ -2,11 +2,14 @@
 name = "server"
 path = "src/server/main.rs"
 
+[[bin]]
+name = "grpc-mtls-probe"
+path = "deploy/tests/grpc_mtls_probe.rs"
+
 [package]
 name = "omnisolo"
 version = "0.4.47"
 edition = "2024"
-build = "src/server/build.rs"
 
 [lib]
 name = "server_lib"
@@ -22,7 +25,6 @@ base64 = "0.22"
 hmac = "0.12"
 sha1 = "0.10"
 sha2 = "0.10"
-image = "0.25"
 bcrypt = "0.16.0"
 rand = "0.8"
 hex = "0.4"
@@ -38,7 +40,6 @@ urlencoding = "2"
 url = "2"
 async-recursion = "1"
 tracing-opentelemetry = "0.33"
-tonic-build = "0.12"
 tokio-tungstenite = "0.29.0"
 dashmap = "5"
 async-nats = "0.47.0"
@@ -46,16 +47,14 @@ tempfile = "3.27.0"
 tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
 
-[build-dependencies]
-tonic-build = "0.12"
-
 [workspace]
+resolver = "3"
+default-members = [".", "src/server/harness_worker"]
 members = [ "src/server/integrations/twilio", "src/server/integrations/mcp_config_sync", "src/server/integrations/shippo", "src/server/integrations/shipday", "src/server/oidc", "src/server/config", "src/ui/tauri", "src/server/telemetry", "src/server/integrations/buffer", "src/server/auth", "src/server/integrations/cal_com", "src/server/integrations/nats", "src/server/integrations/resend", "src/server/harness", "src/server/harness_worker", "src/server/integrations/stripe", "src/server/integrations/task_scheduler", "src/server/integrations/shipengine", "src/server/omnisolo", "src/server/integrations/zoom", "src/server/integrations/acuity", "src/server/integrations/google_calendar", "src/server/integrations/messagebird", "src/server/utils", "src/server/integrations/easypost", "src/server/integrations/restic", "src/server/integrations/sendgrid", "src/server/integrations/teams", "src/server/integrations/convertkit", "src/server/pricing", "src/server/integrations/nylas", "src/server/integrations/calendly", "src/server/integrations/pubsub", "src/server/integrations/meta", "src/server/integrations/jitsi", "src/server/integrations/alipay", "src/server/integrations/mercadopago", "src/server/integrations/core", "src/server/common", "src/server/integrations/daily", "src/server/integrations/razorpay", "src/server/integrations/mailchimp", "src/server/integrations/ayrshare", "src/server/integrations/chromadb", "src/server/integrations/doordash", "src/agents/builtin/core", "src/agents/builtin/llm", "src/agents/builtin/tools", "src/agents/builtin", "src/server/integrations/listmonk", "src/server/integrations/manychat", "src/server/integrations/hubspot", "src/server/integrations/jira", "src/server/integrations/quickbooks", "src/server/integrations/xero", "src/server/integrations/shopify",]
 
 [dev-dependencies]
 temp-env = "0.3.6"
 futures-util = "0.3.32"
-tauri-cli = "2"
 
 [dependencies.tokio]
 workspace = true
@@ -113,6 +112,12 @@ default-features = false
 version = "0.30.1"
 features = ["bundled-sqlcipher"]
 
+# Windows release archives must not depend on an unbundled OpenSSL DLL or
+# a runner-specific OPENSSL_DIR. Keep Unix builds on their existing system TLS.
+[target.'cfg(windows)'.dependencies.libsqlite3-sys]
+version = "0.30.1"
+features = ["bundled-sqlcipher-vendored-openssl"]
+
 [dependencies.sqlx]
 version = "0.8"
 features = [ "postgres", "sqlite", "mysql", "runtime-tokio-native-tls", "chrono", "uuid", "macros",]
@@ -147,12 +152,6 @@ features = [ "grpc-tonic",]
 [dependencies.axum]
 version = "0.8.1"
 features = [ "ws", "multipart",]
-
-[dependencies.protoc-gen-prost]
-workspace = true
-
-[dependencies.protoc-gen-tonic]
-workspace = true
 
 [dependencies.prost-types]
 workspace = true
@@ -192,6 +191,9 @@ path = "src/server/utils"
 
 [dependencies.server_integrations_pubsub]
 path = "src/server/integrations/pubsub"
+
+[dependencies.server_services_billing]
+path = "src/server/services/billing"
 
 [dependencies.server_integrations_stripe]
 path = "src/server/integrations/stripe"
@@ -312,8 +314,6 @@ tonic = "0.12"
 prost = "0.13"
 serde_json = "1"
 serde_yaml = "0.9"
-protoc-gen-prost = "0.4.0"
-protoc-gen-tonic = "0.4.0"
 prost-types = "0.13"
 futures = "0.3"
 
@@ -334,5 +334,26 @@ version = "0.12"
 features = [ "json", "rustls-tls", "stream", "multipart",]
 default-features = false
 
-[lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(omnisolo_bazel)', 'cfg(omnisolo_bazel_package)', 'cfg(omnisolo_bazel_tauri_context)'] }
+# Backend development does not need to compile desktop tooling. Cold builds
+# still compile dependencies; subsequent edits reuse package fingerprints.
+[profile.dev]
+# Keep source-line backtraces without serializing module/type debug graphs.
+debug = "line-tables-only"
+incremental = true
+# Pin this for both profiles: disabling incremental must not silently change
+# large crates from 256 to 16 codegen units on CI/shared developer hosts.
+codegen-units = 256
+
+# Share compatible dependency artifacts with dev; no persistent test object graph.
+[profile.test]
+debug = "line-tables-only"
+incremental = false
+codegen-units = 256
+# Budget/correctness checks must not be traded away for compiler performance.
+debug-assertions = true
+overflow-checks = true
+
+[profile.release]
+lto = "thin"
+codegen-units = 16
+strip = "debuginfo"

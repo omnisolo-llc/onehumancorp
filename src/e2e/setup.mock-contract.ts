@@ -8,7 +8,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -100,7 +100,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -123,7 +123,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
             try {
                 return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-            } catch(e) {
+            } catch {
                 return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
             }
         })();
@@ -168,7 +168,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -206,7 +206,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -252,7 +252,7 @@ test.describe('OmniSolo Setup Wizard Form Configuration', () => {
           const content = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();
@@ -319,7 +319,7 @@ test.describe('OmniSolo Setup Wizard Dark Mode', () => {
         const htmlContent = (() => {
     try {
         return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-    } catch(e) {
+    } catch {
         return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
     }
 })();

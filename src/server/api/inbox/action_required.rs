@@ -26,7 +26,9 @@ pub fn router(db: Arc<DB>, auth_store: Arc<::server_auth::Store>) -> Router {
         .with_state(Arc::new(AppState { db }))
 }
 
-fn claim_tenant_id(claims: &::server_common::Claims) -> Result<Uuid, axum::response::Response> {
+fn claim_tenant_id(
+    claims: &::server_common::Claims,
+) -> Result<Uuid, Box<axum::response::Response>> {
     claims
         .organization_id
         .as_deref()
@@ -34,11 +36,13 @@ fn claim_tenant_id(claims: &::server_common::Claims) -> Result<Uuid, axum::respo
         .filter(|tenant_id| !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system"))
         .and_then(|tenant_id| Uuid::parse_str(tenant_id).ok())
         .ok_or_else(|| {
-            (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "Unauthorized"})),
+            Box::new(
+                (
+                    axum::http::StatusCode::UNAUTHORIZED,
+                    Json(json!({"error": "Unauthorized"})),
+                )
+                    .into_response(),
             )
-                .into_response()
         })
 }
 
@@ -59,7 +63,7 @@ async fn list_pending_drafts(
     }
     let tenant_id = match claim_tenant_id(&claims) {
         Ok(tenant_id) => tenant_id,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
 
     let repo = ActionRequiredQueueRepo::new(state.db.clone());
@@ -86,7 +90,7 @@ async fn approve_draft(
     }
     let tenant_id = match claim_tenant_id(&claims) {
         Ok(tenant_id) => tenant_id,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
 
     let draft_id = match Uuid::parse_str(&draft_id_str) {
@@ -140,7 +144,7 @@ async fn edit_draft(
     }
     let tenant_id = match claim_tenant_id(&claims) {
         Ok(tenant_id) => tenant_id,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
 
     let draft_id = match Uuid::parse_str(&draft_id_str) {

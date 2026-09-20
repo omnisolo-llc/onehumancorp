@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function KDSPage() {

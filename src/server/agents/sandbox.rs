@@ -127,15 +127,17 @@ impl LocalEnvironment {
 
                         let utime_sec = rusage_end.ru_utime.tv_sec - rusage_start.ru_utime.tv_sec;
                         #[cfg(target_os = "linux")]
-                        let utime_usec = rusage_end.ru_utime.tv_usec - rusage_start.ru_utime.tv_usec;
-                        #[cfg(target_os = "linux")]
-                        let stime_usec = rusage_end.ru_stime.tv_usec - rusage_start.ru_stime.tv_usec;
-                        #[cfg(not(target_os = "linux"))]
                         let utime_usec =
-                            rusage_end.ru_utime.tv_usec as i64 - rusage_start.ru_utime.tv_usec as i64;
-                        #[cfg(not(target_os = "linux"))]
+                            rusage_end.ru_utime.tv_usec - rusage_start.ru_utime.tv_usec;
+                        #[cfg(target_os = "linux")]
                         let stime_usec =
-                            rusage_end.ru_stime.tv_usec as i64 - rusage_start.ru_stime.tv_usec as i64;
+                            rusage_end.ru_stime.tv_usec - rusage_start.ru_stime.tv_usec;
+                        #[cfg(not(target_os = "linux"))]
+                        let utime_usec = rusage_end.ru_utime.tv_usec as i64
+                            - rusage_start.ru_utime.tv_usec as i64;
+                        #[cfg(not(target_os = "linux"))]
+                        let stime_usec = rusage_end.ru_stime.tv_usec as i64
+                            - rusage_start.ru_stime.tv_usec as i64;
                         let stime_sec = rusage_end.ru_stime.tv_sec - rusage_start.ru_stime.tv_sec;
                         let cpu_usage = (utime_sec as f64 + utime_usec as f64 / 1_000_000.0)
                             + (stime_sec as f64 + stime_usec as f64 / 1_000_000.0);

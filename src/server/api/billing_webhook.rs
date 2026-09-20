@@ -131,10 +131,10 @@ pub fn inventory_locks_for_payment_success(object: &Value) -> Vec<String> {
         return Vec::new();
     };
     let mut locks = Vec::new();
-    if let Some(lock_id) = metadata.get("inventory_lock_id").and_then(|v| v.as_str()) {
-        if !lock_id.trim().is_empty() {
-            locks.push(lock_id.to_string());
-        }
+    if let Some(lock_id) = metadata.get("inventory_lock_id").and_then(|v| v.as_str())
+        && !lock_id.trim().is_empty()
+    {
+        locks.push(lock_id.to_string());
     }
     if let Some(lock_ids) = metadata
         .get("inventory_lock_ids")
@@ -320,25 +320,25 @@ pub async fn webhook_security_middleware(
     let mut valid_signature = false;
     let mut timestamp_valid = false;
 
-    if let Some(sig) = sig_header {
-        if let Ok(sig_str) = sig.to_str() {
-            valid_signature = true; // In a real implementation this would perform HMAC verification
+    if let Some(sig) = sig_header
+        && let Ok(sig_str) = sig.to_str()
+    {
+        valid_signature = true; // In a real implementation this would perform HMAC verification
 
-            // Example Stripe signature format: t=1614838634,v1=...
-            let ts_part = sig_str.split(',').find(|p| p.starts_with("t="));
-            if let Some(ts) = ts_part {
-                if let Ok(timestamp) = ts[2..].parse::<i64>() {
-                    let now = chrono::Utc::now().timestamp();
-                    // Within 5 minutes (300 seconds)
-                    if (now - timestamp).abs() <= 300 {
-                        timestamp_valid = true;
-                    }
+        // Example Stripe signature format: t=1614838634,v1=...
+        let ts_part = sig_str.split(',').find(|p| p.starts_with("t="));
+        if let Some(ts) = ts_part {
+            if let Ok(timestamp) = ts[2..].parse::<i64>() {
+                let now = chrono::Utc::now().timestamp();
+                // Within 5 minutes (300 seconds)
+                if (now - timestamp).abs() <= 300 {
+                    timestamp_valid = true;
                 }
-            } else {
-                // If no timestamp is provided in the header, we'll reject or accept based on requirements.
-                // Since "Verify that the timestamp in the signature header is within 5 minutes" is requested,
-                // we require it for valid signatures.
             }
+        } else {
+            // If no timestamp is provided in the header, we'll reject or accept based on requirements.
+            // Since "Verify that the timestamp in the signature header is within 5 minutes" is requested,
+            // we require it for valid signatures.
         }
     }
 
@@ -771,37 +771,34 @@ pub async fn stripe_webhook_handler(
 
             if let Some(tenant_id) = tenant_id_opt {
                 // If this is a product subscription
-                if let (Some(product_id), Some(customer_id)) = (product_id_opt, customer_id_opt) {
-                    if payload.r#type == "checkout.session.completed"
-                        && obj.get("mode").and_then(|m| m.as_str()) == Some("subscription")
-                    {
-                        let mut transaction = match webhook_state.db.pool.begin().await {
-                            Ok(transaction) => transaction,
-                            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-                        };
-                        if ::server_common::auth_utils::set_org_context(
-                            &mut *transaction,
-                            tenant_id,
-                        )
+                if let (Some(product_id), Some(customer_id)) = (product_id_opt, customer_id_opt)
+                    && payload.r#type == "checkout.session.completed"
+                    && obj.get("mode").and_then(|m| m.as_str()) == Some("subscription")
+                {
+                    let mut transaction = match webhook_state.db.pool.begin().await {
+                        Ok(transaction) => transaction,
+                        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+                    };
+                    if ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id)
                         .await
                         .is_err()
-                        {
-                            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                        }
-                        // Check if a plan exists for this product
-                        let plan_id_res = sqlx::query_scalar::<_, String>("SELECT id FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
+                    {
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    }
+                    // Check if a plan exists for this product
+                    let plan_id_res = sqlx::query_scalar::<_, String>("SELECT id FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
                             .bind(product_id)
                             .bind(tenant_id)
                             .fetch_optional(&mut *transaction)
                             .await;
-                        let mut plan_id_res = match plan_id_res {
-                            Ok(plan_id) => plan_id,
-                            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-                        };
+                    let mut plan_id_res = match plan_id_res {
+                        Ok(plan_id) => plan_id,
+                        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+                    };
 
-                        if plan_id_res.is_none() {
-                            let new_plan_id = uuid::Uuid::new_v4().to_string();
-                            if sqlx::query("INSERT INTO subscription_plans (id, tenant_id, product_id, interval) VALUES ($1, $2, $3, $4)")
+                    if plan_id_res.is_none() {
+                        let new_plan_id = uuid::Uuid::new_v4().to_string();
+                        if sqlx::query("INSERT INTO subscription_plans (id, tenant_id, product_id, interval) VALUES ($1, $2, $3, $4)")
                                 .bind(&new_plan_id)
                                 .bind(tenant_id)
                                 .bind(product_id)
@@ -812,17 +809,17 @@ pub async fn stripe_webhook_handler(
                             {
                                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                             }
-                            plan_id_res = Some(new_plan_id);
-                        }
+                        plan_id_res = Some(new_plan_id);
+                    }
 
-                        if let Some(plan_id) = plan_id_res {
-                            let subscription_id = uuid::Uuid::new_v4().to_string();
-                            let stripe_subscription_id = obj
-                                .get("subscription")
-                                .and_then(|s| s.as_str())
-                                .unwrap_or("");
+                    if let Some(plan_id) = plan_id_res {
+                        let subscription_id = uuid::Uuid::new_v4().to_string();
+                        let stripe_subscription_id = obj
+                            .get("subscription")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("");
 
-                            if sqlx::query(
+                        if sqlx::query(
                                 "INSERT INTO subscriptions (id, tenant_id, customer_id, plan_id, status, current_period_end)
                                  VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP + INTERVAL '1 month')"
                             )
@@ -837,7 +834,7 @@ pub async fn stripe_webhook_handler(
                                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                             }
 
-                            if sqlx::query(
+                        if sqlx::query(
                                 "INSERT INTO subscribers (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status)
                                  VALUES ($1, $2, $3, $4, $5, 'ACTIVE')"
                             )
@@ -853,14 +850,14 @@ pub async fn stripe_webhook_handler(
                                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                             }
 
-                            // Create an order for the Manager agent
-                            let order_id = uuid::Uuid::new_v4().to_string();
-                            let amount_total = obj
-                                .get("amount_total")
-                                .and_then(|a| a.as_i64())
-                                .unwrap_or(0);
-                            let total_amount = amount_total as f64 / 100.0;
-                            if sqlx::query(
+                        // Create an order for the Manager agent
+                        let order_id = uuid::Uuid::new_v4().to_string();
+                        let amount_total = obj
+                            .get("amount_total")
+                            .and_then(|a| a.as_i64())
+                            .unwrap_or(0);
+                        let total_amount = amount_total as f64 / 100.0;
+                        if sqlx::query(
                                 "INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'paid')"
                             )
                             .bind(&order_id)
@@ -873,29 +870,27 @@ pub async fn stripe_webhook_handler(
                             {
                                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                             }
-                            if transaction.commit().await.is_err() {
-                                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                            }
-
-                            // Let the manager agent know
-                            let orch = webhook_state.orchestrator.clone();
-                            let payload_val = serde_json::json!({
-                                "order_id": order_id,
-                                "customer_id": customer_id,
-                                "subscription_id": subscription_id
-                            });
-                            let tenant_id_val = tenant_id.to_string();
-                            tokio::spawn(async move {
-                                let evt =
-                                    crate::orchestration::departments::types::DepartmentEvent {
-                                        id: uuid::Uuid::new_v4().to_string(),
-                                        tenant_id: tenant_id_val,
-                                        event_type: "tenant.order.created".to_string(),
-                                        payload: payload_val,
-                                    };
-                                let _ = orch.dispatch_event(evt).await;
-                            });
+                        if transaction.commit().await.is_err() {
+                            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                         }
+
+                        // Let the manager agent know
+                        let orch = webhook_state.orchestrator.clone();
+                        let payload_val = serde_json::json!({
+                            "order_id": order_id,
+                            "customer_id": customer_id,
+                            "subscription_id": subscription_id
+                        });
+                        let tenant_id_val = tenant_id.to_string();
+                        tokio::spawn(async move {
+                            let evt = crate::orchestration::departments::types::DepartmentEvent {
+                                id: uuid::Uuid::new_v4().to_string(),
+                                tenant_id: tenant_id_val,
+                                event_type: "tenant.order.created".to_string(),
+                                payload: payload_val,
+                            };
+                            let _ = orch.dispatch_event(evt).await;
+                        });
                     }
                 }
 
@@ -953,22 +948,22 @@ pub async fn stripe_webhook_handler(
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
-                if let Some(client) = crate::get_redis_client() {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let invalidation_topic = "cache_invalidation_events";
-                        let invalidation_payload = serde_json::json!({
-                            "event": "tenant.updated",
-                            "tags": [
-                                format!("tenant-id:{}", tenant_id)
-                            ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
-                    }
+                if let Some(client) = crate::get_redis_client()
+                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                {
+                    let invalidation_topic = "cache_invalidation_events";
+                    let invalidation_payload = serde_json::json!({
+                        "event": "tenant.updated",
+                        "tags": [
+                            format!("tenant-id:{}", tenant_id)
+                        ]
+                    })
+                    .to_string();
+                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                        .arg(invalidation_topic)
+                        .arg(invalidation_payload)
+                        .query_async(&mut conn)
+                        .await;
                 }
 
                 StatusCode::OK.into_response()
@@ -1018,22 +1013,22 @@ pub async fn stripe_webhook_handler(
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
-                if let Some(client) = crate::get_redis_client() {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let invalidation_topic = "cache_invalidation_events";
-                        let invalidation_payload = serde_json::json!({
-                            "event": "tenant.updated",
-                            "tags": [
-                                format!("tenant-id:{}", tenant_id)
-                            ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
-                    }
+                if let Some(client) = crate::get_redis_client()
+                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
+                {
+                    let invalidation_topic = "cache_invalidation_events";
+                    let invalidation_payload = serde_json::json!({
+                        "event": "tenant.updated",
+                        "tags": [
+                            format!("tenant-id:{}", tenant_id)
+                        ]
+                    })
+                    .to_string();
+                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                        .arg(invalidation_topic)
+                        .arg(invalidation_payload)
+                        .query_async(&mut conn)
+                        .await;
                 }
 
                 StatusCode::OK.into_response()
@@ -1058,11 +1053,10 @@ pub async fn stripe_webhook_handler(
                         .bind(&stripe_invoice_id)
                         .fetch_optional(&webhook_state.db.pool)
                         .await
+                            && let Some(id) = internal_invoice
                         {
-                            if let Some(id) = internal_invoice {
-                                let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&id).execute(&webhook_state.db.pool).await;
-                                let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || $1 || '%'").bind(&id).execute(&webhook_state.db.pool).await;
-                            }
+                            let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&id).execute(&webhook_state.db.pool).await;
+                            let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || $1 || '%'").bind(&id).execute(&webhook_state.db.pool).await;
                         }
                     }
                     crate::db::DbStore::Sqlite(_) => {
@@ -1073,11 +1067,10 @@ pub async fn stripe_webhook_handler(
                         .bind(&stripe_invoice_id)
                         .fetch_optional(&webhook_state.db.pool)
                         .await
+                            && let Some(id) = internal_invoice
                         {
-                            if let Some(id) = internal_invoice {
-                                let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(&id).execute(&webhook_state.db.pool).await;
-                                let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || ? || '%'").bind(&id).execute(&webhook_state.db.pool).await;
-                            }
+                            let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(&id).execute(&webhook_state.db.pool).await;
+                            let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || ? || '%'").bind(&id).execute(&webhook_state.db.pool).await;
                         }
                     }
                 }
@@ -1101,7 +1094,9 @@ pub async fn stripe_webhook_handler(
                     ); // pii-safe
                 }
                 Ok(None) => {
-                    tracing::warn!("Stripe invoice.payment_failed did not match an OmniSolo subscriber");
+                    tracing::warn!(
+                        "Stripe invoice.payment_failed did not match an OmniSolo subscriber"
+                    );
                 }
                 Err(err) => {
                     ::server_telemetry::record_error_signal(

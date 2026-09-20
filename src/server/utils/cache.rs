@@ -105,15 +105,15 @@ where
     }
 
     fn get_local(&self) -> &DashMap<String, CacheValue<T>> {
-        self.inner.local.get_or_init(|| DashMap::new())
+        self.inner.local.get_or_init(DashMap::new)
     }
 
     fn get_local_tags(&self) -> &DashMap<String, DashSet<String>> {
-        self.inner.local_tags.get_or_init(|| DashMap::new())
+        self.inner.local_tags.get_or_init(DashMap::new)
     }
 
     fn get_flight_group(&self) -> &DashMap<String, tokio::sync::watch::Sender<Option<T>>> {
-        self.inner.flight_group.get_or_init(|| DashMap::new())
+        self.inner.flight_group.get_or_init(DashMap::new)
     }
 
     pub async fn get(&self, key: &str) -> Option<T> {
@@ -134,10 +134,10 @@ where
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
     {
         let res = self.get_with_swr(key).await;
-        if let Some((v, is_stale)) = &res {
-            if !*is_stale {
-                return Some(v.clone());
-            }
+        if let Some((v, is_stale)) = &res
+            && !*is_stale
+        {
+            return Some(v.clone());
         }
 
         let flight_group = self.get_flight_group();
@@ -195,13 +195,10 @@ where
             return Some(val);
         }
 
-        match tokio::time::timeout(Duration::from_secs(5), rx.changed()).await {
-            Ok(Ok(())) => {
-                if let Some(val) = rx.borrow().clone() {
-                    return Some(val);
-                }
-            }
-            _ => {}
+        if let Ok(Ok(())) = tokio::time::timeout(Duration::from_secs(5), rx.changed()).await
+            && let Some(val) = rx.borrow().clone()
+        {
+            return Some(val);
         }
 
         // Fallback: check cache in case leader updated cache or completed
@@ -227,7 +224,8 @@ where
         F: FnOnce() -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
     {
-        self.get_or_fetch_with_tags_swr(key, Vec::new(), ttl, fetch).await
+        self.get_or_fetch_with_tags_swr(key, Vec::new(), ttl, fetch)
+            .await
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
@@ -285,7 +283,7 @@ where
                 ttl_secs: ttl.as_secs(),
             };
             if let Ok(data) = serde_json::to_string(&item) {
-                let _: Result<(), _> = conn.set_ex(key, data, ttl.as_secs() as u64).await;
+                let _: Result<(), _> = conn.set_ex(key, data, ttl.as_secs()).await;
             }
             for tag in tags {
                 let tag_key = format!("tag:{}", tag);
@@ -365,7 +363,7 @@ where
             for tag in tags {
                 tags_map
                     .entry(tag.to_string())
-                    .or_insert_with(DashSet::new)
+                    .or_default()
                     .insert(key.to_string());
             }
         }
@@ -526,14 +524,10 @@ mod tests_singleflight {
 
         let handle = tokio::spawn(async move {
             cache_clone
-                .get_or_fetch_with_swr(
-                    "cancel_key",
-                    Duration::from_secs(60),
-                    || async {
-                        tokio::time::sleep(Duration::from_secs(10)).await;
-                        Some("val".to_string())
-                    },
-                )
+                .get_or_fetch_with_swr("cancel_key", Duration::from_secs(60), || async {
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    Some("val".to_string())
+                })
                 .await
         });
 
@@ -543,11 +537,9 @@ mod tests_singleflight {
 
         // Second caller should not hang forever
         let res = cache
-            .get_or_fetch_with_swr(
-                "cancel_key",
-                Duration::from_secs(60),
-                || async { Some("recovered".to_string()) },
-            )
+            .get_or_fetch_with_swr("cancel_key", Duration::from_secs(60), || async {
+                Some("recovered".to_string())
+            })
             .await;
         assert_eq!(res, Some("recovered".to_string()));
     }

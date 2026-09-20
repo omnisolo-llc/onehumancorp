@@ -1,6 +1,5 @@
-import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render,screen,fireEvent } from '@testing-library/react';
+import { describe,it,expect,vi,beforeEach,afterEach } from 'vitest';
 
 // We must use dynamic imports to mock fetch BEFORE the module evaluates.
 describe('RateLimitWarning', () => {

@@ -3742,6 +3742,18 @@ impl HarnessWorkerGrpcService {
                 ));
             }
         }
+        let usage_task = request
+            .task_id
+            .map(|task| task.to_string())
+            .unwrap_or_else(|| format!("session:{}", request.session_id));
+        config.metering = super::usage_meter::UsageMeterSettings::from_environment(
+            &request.tenant_id,
+            &usage_task,
+            &attempt_id.to_string(),
+            &selection.provider_route,
+            &selection.model_id,
+        )
+        .map_err(Status::failed_precondition)?;
         config.selection = selection.clone();
         let facade = super::provider_facade::ProviderFacade::start_with_config(config)
             .await

@@ -1,4 +1,5 @@
 'use client';
+import { errorMessage } from '@/lib/errors';
 import React, { useState } from 'react';
 
 export default function ActorModelPage() {
@@ -26,8 +27,8 @@ export default function ActorModelPage() {
 
       const data = await response.json();
       setResult(data.result);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
