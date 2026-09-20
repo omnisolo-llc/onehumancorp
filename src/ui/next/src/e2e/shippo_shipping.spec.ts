@@ -1,6 +1,4 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs";
-import path from "path";
 
 test.describe("Shippo Shipping Integration", () => {
   const authFile = "src/e2e/.auth/user.json";
