@@ -15,6 +15,10 @@ pub struct CreateServiceRequest {
     pub title: String,
     pub description: Option<String>,
     pub price_cents: Option<i64>,
+    pub requires_deposit: Option<bool>,
+    pub deposit_amount_cents: Option<i64>,
+    pub requires_travel_buffer: Option<bool>,
+    pub travel_buffer_minutes: Option<i32>,
 }
 
 #[derive(Serialize)]
@@ -77,6 +81,13 @@ async fn handle_create_service(
     let price = payload.price_cents.unwrap_or(0);
     let desc = payload.description.unwrap_or_else(|| "".to_string());
 
+    let metadata = serde_json::json!({
+        "requires_deposit": payload.requires_deposit.unwrap_or(false),
+        "deposit_amount_cents": payload.deposit_amount_cents.unwrap_or(0),
+        "requires_travel_buffer": payload.requires_travel_buffer.unwrap_or(false),
+        "travel_buffer_minutes": payload.travel_buffer_minutes.unwrap_or(30),
+    });
+
     match &db.store {
         crate::db::DbStore::Postgres => {
             let pool = db.pool.clone();
@@ -113,8 +124,8 @@ async fn handle_create_service(
 
             let res = sqlx::query(
                 r#"
-                INSERT INTO services (id, tenant_id, title, description, price_cents, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+                INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, 'booking', $6, NOW(), NOW())
                 "#,
             )
             .bind(&service_id)
@@ -122,6 +133,7 @@ async fn handle_create_service(
             .bind(&payload.title)
             .bind(&desc)
             .bind(price)
+            .bind(&metadata)
             .execute(&mut *tx)
             .await;
 
@@ -158,8 +170,8 @@ async fn handle_create_service(
 
             let res = sqlx::query(
                 r#"
-                INSERT INTO services (id, tenant_id, title, description, price_cents, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'booking', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 "#,
             )
             .bind(&service_id)
@@ -167,6 +179,7 @@ async fn handle_create_service(
             .bind(&payload.title)
             .bind(&desc)
             .bind(price)
+            .bind(&metadata)
             .execute(pool)
             .await;
 
@@ -226,7 +239,7 @@ mod tests {
             .execute(&pool)
             .await;
 
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS services (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, price_cents BIGINT, created_at TEXT, updated_at TEXT)")
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, price_cents BIGINT, type TEXT, metadata JSON, created_at TEXT, updated_at TEXT)")
             .execute(&pool)
             .await;
 

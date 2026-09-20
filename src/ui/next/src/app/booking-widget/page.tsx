@@ -10,11 +10,16 @@ export default function BookingWidgetBuilder() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [removeBranding, setRemoveBranding] = useState(false);
   const [serviceName, setServiceName] = useState("Service Consultation");
+  const [basePrice, setBasePrice] = useState("0.00");
+  const [depositAmount, setDepositAmount] = useState("0.00");
+  const [requireTravelBuffer, setRequireTravelBuffer] = useState(false);
+  const [generatedServiceId, setGeneratedServiceId] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [previewStatus, setPreviewStatus] = useState("");
 
-  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/booking/embed?tenant=${tenant}&theme=${theme}&service=${encodeURIComponent(serviceName)}`;
+  const embedUrl = `https://cloud.omnisolo.co/booking?tenant=${tenant}&service_id=${generatedServiceId}`;
   const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleCopy = () => {
@@ -104,6 +109,42 @@ export default function BookingWidgetBuilder() {
                 </div>
 
                 <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Base Price ($)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={basePrice}
+                        onChange={(e) => setBasePrice(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deposit Amount ($)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={requireTravelBuffer}
+                            onChange={(e) => setRequireTravelBuffer(e.target.checked)}
+                            className="w-4 h-4 text-[#0071E3] border-gray-300 rounded focus:ring-[#0066FF]"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Require Travel Time Buffer?</span>
+                    </label>
+                </div>
+
+                <div className="mb-6">
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
                             type="checkbox"
@@ -116,10 +157,41 @@ export default function BookingWidgetBuilder() {
                 </div>
 
                 <button
-                    onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-[#0071E3] text-white font-medium min-h-[44px] min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm"
+                    onClick={async () => {
+                        setIsGenerating(true);
+                        try {
+                            const res = await fetch("/api/v1/booking/services", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "x-tenant": tenant
+                                },
+                                body: JSON.stringify({
+                                    title: serviceName,
+                                    price_cents: Math.round(parseFloat(basePrice || "0") * 100),
+                                    requires_deposit: parseFloat(depositAmount || "0") > 0,
+                                    deposit_amount_cents: Math.round(parseFloat(depositAmount || "0") * 100),
+                                    requires_travel_buffer: requireTravelBuffer,
+                                    travel_buffer_minutes: 30
+                                })
+                            });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.service_id) {
+                                    setGeneratedServiceId(data.service_id);
+                                    setShowModal(true);
+                                }
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        } finally {
+                            setIsGenerating(false);
+                        }
+                    }}
+                    disabled={isGenerating}
+                    className="w-full py-3 bg-[#0071E3] text-white font-medium min-h-[44px] min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                 >
-                    Get Widget
+                    {isGenerating ? "Generating..." : "Get Widget"}
                 </button>
             </div>
 
@@ -139,30 +211,21 @@ export default function BookingWidgetBuilder() {
             <div className="w-full p-8 h-full flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
 
                 <div className="relative z-10 w-[320px] h-[400px]" style={{ ...getThemeStyles(), borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-                    {/* Mock Widget Content for Preview */}
-                    <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-t-[16px] relative flex items-center justify-center">
-                        <span className="text-4xl text-white">📅</span>
-                        <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
-                            Book Now
+                    {generatedServiceId ? (
+                        <iframe
+                            src={`/booking?tenant=${tenant}&service_id=${generatedServiceId}&theme=${theme}`}
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            style={{ borderRadius: '16px', border: 'none' }}
+                            title="Booking Widget Preview"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-gray-500">
+                            <span className="text-4xl mb-4 opacity-50">📅</span>
+                            <p className="text-sm">Configure your service and click "Get Widget" to see the live functional preview.</p>
                         </div>
-                    </div>
-                    <div className="p-5 flex flex-col h-[208px]">
-                        <h4 className="font-bold text-lg font-outfit mb-1" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>{serviceName}</h4>
-                        <p className="text-sm mb-4 line-clamp-2" style={{ color: theme === 'dark' ? '#d1d5db' : '#4b5563' }}>Schedule your appointment with us easily. Tell us what you need and we will get right back to you.</p>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setPreviewStatus('Preview redirected to booking flow.');
-                                router.push('/booking');
-                            }}
-                            className="w-full mt-auto py-2.5 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Request a Service
-                        </button>
-                        {previewStatus && <p className="mt-2 text-xs font-semibold text-[#0071E3]" role="status">{previewStatus}</p>}
-                    </div>
+                    )}
                 </div>
                 {!removeBranding && (
                     <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
