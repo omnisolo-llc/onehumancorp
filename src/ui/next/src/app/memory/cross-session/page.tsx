@@ -1,4 +1,6 @@
 "use client";
+
+import { errorMessage } from '@/lib/errors';
 import React, { useState } from 'react';
 import { FaSearch, FaBrain, FaRegFileAlt } from 'react-icons/fa';
 
@@ -40,9 +42,9 @@ export default function CrossSessionRecall() {
       } else {
         setResults([]);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "An error occurred during search.");
+      setError(errorMessage(err, '') || "An error occurred during search.");
     } finally {
       setLoading(false);
     }

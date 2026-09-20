@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Zero Click Builder Viral Growth Loop', () => {
-  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page, request, loginAs, adminUser }) => {
+  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page, loginAs, adminUser }) => {
     // Navigate to the new growth feature
     await loginAs(page, adminUser);
 

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { e2eConfig, setupTenantAndUser } from '../playwright.config';
 
 test.describe('Agentic Proposal & Invoice Generator for Service Agencies', () => {
-  let context: any;
+  let context: import("@playwright/test").BrowserContext;
 
   test.beforeEach(async ({ browser }) => {
     context = await setupTenantAndUser(browser);

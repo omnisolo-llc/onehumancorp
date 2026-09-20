@@ -50,7 +50,7 @@ export default function MissionTrackPage() {
             <button
               key={tab}
               aria-pressed={activeTab === tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab as Parameters<typeof setActiveTab>[0])}
               className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-semibold capitalize whitespace-nowrap transition-all ${
                 activeTab === tab
                   ? 'bg-gray-900 text-white shadow-md'

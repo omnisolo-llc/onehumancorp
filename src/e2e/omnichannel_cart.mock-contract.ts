@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Omnichannel Cart & Tap-to-Pay Integration', () => {
-  const tenantId = 'omni_test_tenant';
+
 
   test.beforeEach(async ({ page }) => {
     // Wait for the server to be ready and clear state

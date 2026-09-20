@@ -44,7 +44,7 @@ test.describe('WhatsApp Cloud API Flow CUJ', () => {
       expect(response.ok()).toBeTruthy();
 
       await page.reload();
-      const updatedBtn = whatsappCard.getByRole('button');
+      whatsappCard.getByRole('button');
     } else {
       expect(btnText).toContain('Manage');
     }

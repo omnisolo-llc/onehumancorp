@@ -18,10 +18,7 @@ describe('ViralGiveGetWidgetPage', () => {
     });
 
     // Mock fetch for generating referral link
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ referral_link: 'https://cloud.omnisolo.co/give-get/join?ref=test-ref-123' }),
-    });
+    global.fetch = vi.fn().mockResolvedValue(Response.json({ referral_link: 'https://cloud.omnisolo.co/give-get/join?ref=test-ref-123' }, { status: 200 }));
 
     const localStorageMock = {
       getItem: vi.fn((key) => {

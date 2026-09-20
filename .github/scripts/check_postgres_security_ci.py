@@ -26,6 +26,7 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     'echo "native-e2e: ${NATIVE_E2E_RESULT}"',
     'echo "native-web: ${NATIVE_WEB_RESULT}"',
     'echo "native-node: ${NATIVE_NODE_RESULT}"',
+    'echo "native-init: ${NATIVE_INIT_RESULT}"',
     'echo "native-images: ${NATIVE_IMAGES_RESULT}"',
     'echo "native-desktop: ${NATIVE_DESKTOP_RESULT}"',
     'echo "kind-e2e: ${KIND_E2E_RESULT}"',
@@ -59,6 +60,7 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     'allow_success_or_skipped "native-e2e" "$NATIVE_E2E_RESULT"',
     'allow_success_or_skipped "native-web" "$NATIVE_WEB_RESULT"',
     'allow_success_or_skipped "native-node" "$NATIVE_NODE_RESULT"',
+    'allow_success_or_skipped "native-init" "$NATIVE_INIT_RESULT"',
     'allow_success_or_skipped "native-images" "$NATIVE_IMAGES_RESULT"',
     'allow_success_or_skipped "native-desktop" "$NATIVE_DESKTOP_RESULT"',
     'allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"',
@@ -70,6 +72,7 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     'require_success "native-e2e" "$NATIVE_E2E_RESULT"',
     'require_success "native-web" "$NATIVE_WEB_RESULT"',
     'require_success "native-node" "$NATIVE_NODE_RESULT"',
+    'require_success "native-init" "$NATIVE_INIT_RESULT"',
     'require_success "native-images" "$NATIVE_IMAGES_RESULT"',
     'require_success "native-desktop" "$NATIVE_DESKTOP_RESULT"',
     'require_success "kind-e2e" "$KIND_E2E_RESULT"',
@@ -125,6 +128,7 @@ EXPECTED_REQUIRED_ENV = (
     "          NATIVE_E2E_RESULT: ${{ needs.native-e2e.result }}",
     "          NATIVE_WEB_RESULT: ${{ needs.native-web.result }}",
     "          NATIVE_NODE_RESULT: ${{ needs.native-node.result }}",
+    "          NATIVE_INIT_RESULT: ${{ needs.native-init.result }}",
     "          NATIVE_IMAGES_RESULT: ${{ needs.native-images.result }}",
     "          NATIVE_DESKTOP_RESULT: ${{ needs.native-desktop.result }}",
     "          KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}",
@@ -473,6 +477,7 @@ def check_workflow(path: Path) -> None:
 
     require_active(required, "      - dependency-audit", "ci-required dependency audit")
     require_active(required, "      - native-node", "ci-required independent Node quality gates")
+    require_active(required, "      - native-init", "ci-required developer environment bootstrap")
     require_active(required, "      - native-images", "ci-required production image build")
     require_active(required, "      - native-build", "ci-required executable build")
     require_active(required, "      - postgres-security", "ci-required dependency")

@@ -19,11 +19,8 @@ describe('ChaosReportPage', () => {
     });
 
     global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ latencyHistograms: [10, 20], errorRate: [0.1, 0.2] }),
-      })
-    ) as any;
+      Promise.resolve(Response.json({ latencyHistograms: [10, 20], errorRate: [0.1, 0.2] }, { status: 200 }))
+    );
 
     await act(async () => {
       render(<ChaosReportPage />);

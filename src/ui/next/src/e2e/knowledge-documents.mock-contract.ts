@@ -32,6 +32,6 @@ test.describe('Knowledge & Documents Sync UX', () => {
     // Cleanup test file
     try {
         nativeFsModule.unlinkSync(tempFile);
-    } catch {}
+    } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
   });
 });

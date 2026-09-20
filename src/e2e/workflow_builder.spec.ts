@@ -21,7 +21,7 @@ test.describe('Visual Workflow Builder', () => {
     await expect(page.locator('.node').first()).toBeVisible();
 
     // Listen for the request to verify payload structure
-    let capturedPayload: any = null;
+    let capturedPayload: { graph: { nodes: unknown[]; edges: unknown[] }; inputs: { input_var: string } } | null = null;
     page.on('request', request => {
       if (request.url().includes('/api/v1/workflow/run')) {
         capturedPayload = request.postDataJSON();

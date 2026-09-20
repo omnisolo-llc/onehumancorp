@@ -6,7 +6,7 @@ import { useWalkthrough } from "../../components/help";
 import { WalkthroughTarget } from "../../components/Walkthrough";
 
 export default function VisualWorkflowPage() {
-  const { startWalkthrough } = useWalkthrough();
+  useWalkthrough();
   const [nodes, setNodes] = useState<{ id: string; type: string; data: { prompt_template?: string; name?: string } }[]>([]);
   const [edges, setEdges] = useState<{ id: string; source: string; target: string; condition?: string }[]>([]);
   const [result, setResult] = useState<string | null>(null);

@@ -6,7 +6,7 @@ export default function RalphLoopPage() {
   const [task, setTask] = useState('');
   const [progressFile, setProgressFile] = useState('.ralph_progress.json');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleExecute = async () => {
@@ -87,7 +87,7 @@ export default function RalphLoopPage() {
         </div>
       )}
 
-      {result && (
+      {Boolean(result) && (
         <div className="mt-8 p-6 bg-white border rounded-lg shadow-sm" data-testid="success-message">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Loop Status</h2>
           <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono bg-gray-50 p-4 rounded">

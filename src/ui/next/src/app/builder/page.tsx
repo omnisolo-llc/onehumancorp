@@ -8,18 +8,7 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { useBuilderStore } from "./store";
 
 export default function BuilderPage() {
-  const {
-    bio, setBio,
-    businessName, setBusinessName,
-    businessCategory, setBusinessCategory,
-    vibe, setVibe,
-    wizardStep, setWizardStep,
-    blocks, setBlocks,
-    drafts, setDrafts,
-    status, setStatus,
-    businessGoal, setBusinessGoal,
-    liveUrl, setLiveUrl
-  } = useBuilderStore();
+  const { bio, setBio, businessName, setBusinessName, businessCategory, setBusinessCategory, vibe, setVibe, wizardStep, setWizardStep, blocks, setBlocks, drafts, setDrafts, status, setStatus, setBusinessGoal, liveUrl, setLiveUrl } = useBuilderStore();
 
   const [, setIsLoaded] = useState(false);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
@@ -29,8 +18,8 @@ export default function BuilderPage() {
   const [startY, setStartY] = useState(0);
   const [saveMessage, setSaveMessage] = useState("");
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
-  const { startWalkthrough } = useWalkthrough();
+  const [walkthroughSteps, setWalkthroughSteps] = useState<React.ComponentProps<typeof InteractiveWalkthrough>["steps"]>([]);
+  useWalkthrough();
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
 
@@ -111,7 +100,7 @@ export default function BuilderPage() {
       });
 
       const data = await response.json();
-      const newBlocks = data.pages[0].blocks.map((b: any) => ({
+      const newBlocks = data.pages[0].blocks.map((b: import("@/lib/builder-types").GeneratedBlock) => ({
         type: b.block_type === 'HeroBlock' ? 'Hero' :
               b.block_type === 'ProductGridBlock' ? 'Catalog' :
               b.block_type === 'ServiceBookingBlock' ? 'Booking' :
@@ -257,7 +246,7 @@ export default function BuilderPage() {
                   <button
                     key={option.id}
                     onClick={() => {
-                      setBusinessGoal(option.id as any);
+                      setBusinessGoal(option.id as Parameters<typeof setBusinessGoal>[0]);
                       setStatus("idle");
                     }}
                     className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] group hover:bg-white/80 dark:hover:bg-black/50"
@@ -671,7 +660,7 @@ export default function BuilderPage() {
               }}
               onDragOver={(e) => {
                 if (draggedIndex === null) return;
-                let currentY = 0;
+                let currentY: number;
                 if ('touches' in e) {
                   currentY = e.touches[0].clientY;
                 } else if ('clientY' in e) {

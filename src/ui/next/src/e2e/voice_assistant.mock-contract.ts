@@ -8,10 +8,10 @@ test.describe('Voice Assistant Mobile Command Center', () => {
 
     // Mock the MediaRecorder API to avoid relying on actual microphone in CI
     await page.addInitScript(() => {
-      window.MediaRecorder = class MockMediaRecorder {
+      class MockMediaRecorder {
         state = 'inactive';
-        ondataavailable = null;
-        onstop = null;
+        ondataavailable: ((event: BlobEvent) => void) | null = null;
+        onstop: ((event: Event) => void) | null = null;
 
         constructor() {}
 
@@ -20,7 +20,7 @@ test.describe('Voice Assistant Mobile Command Center', () => {
           // Simulate some data
           setTimeout(() => {
             if (this.ondataavailable) {
-              this.ondataavailable({ data: new Blob(['mock audio'], { type: 'audio/webm' }) } as any);
+              this.ondataavailable(new BlobEvent('dataavailable', { data: new Blob(['mock audio'], { type: 'audio/webm' }) }));
             }
           }, 100);
         }
@@ -31,11 +31,12 @@ test.describe('Voice Assistant Mobile Command Center', () => {
             this.onstop(new Event('stop'));
           }
         }
-      } as any;
+      }
+      Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: MockMediaRecorder });
 
-      (navigator as any).mediaDevices = {
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
         getUserMedia: () => Promise.resolve(new MediaStream()),
-      };
+      } });
     });
 
     // 2. Go to dashboard

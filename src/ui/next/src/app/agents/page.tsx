@@ -1108,7 +1108,7 @@ function AutomationsPanel() {
   );
 }
 function MemoryPanel() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<{ id: string; source_type: string; owner_override: boolean; content: string; reference_count: number; reliability_score: number }[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMemories = async () => {
@@ -1150,7 +1150,7 @@ function MemoryPanel() {
         <p className="text-xs text-zinc-555 dark:text-zinc-400">No consolidated memories found.</p>
       ) : (
         <div className="space-y-3">
-          {items.map((memory: any) => (
+          {items.map((memory) => (
             <div key={memory.id} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-4 text-xs flex flex-col gap-2">
               <div className="flex justify-between items-start">
                 <div className="font-bold text-zinc-900 dark:text-white">{memory.source_type}</div>

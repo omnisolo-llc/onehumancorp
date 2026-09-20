@@ -10,10 +10,7 @@ vi.mock('next/navigation', () => ({
 
 describe('MenuGeneratorPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ url: '/test-menu' }),
-    });
+    global.fetch = vi.fn().mockResolvedValue(Response.json({ url: '/test-menu' }, { status: 200 }));
     localStorage.clear();
   });
 

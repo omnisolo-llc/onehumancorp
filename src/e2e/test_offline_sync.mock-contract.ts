@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
 
-  test('1. Toggles "Sold Out" offline and queues mutation', async ({ page, request, memberPage, context }) => {
+  test('1. Toggles "Sold Out" offline and queues mutation', async ({ request, memberPage, context }) => {
     await memberPage.setViewportSize({ width: 375, height: 667 });
 
     // Login logic via api for token
@@ -10,7 +10,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
         data: { email: 'admin@ohc.local', password: 'admin' }
     });
     expect(loginRes.ok()).toBeTruthy();
-    const { token, user } = await loginRes.json();
+    const { token } = await loginRes.json();
 
     // Create a product
     const productTitle = 'Falafel Test ' + Date.now();
@@ -58,7 +58,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
     await memberPage.evaluate(() => window.dispatchEvent(new Event('online')));
   });
 
-  test('2. Optimistic inventory deduction on offline tap-to-pay', async ({ page, request, memberPage, context }) => {
+  test('2. Optimistic inventory deduction on offline tap-to-pay', async ({ request, memberPage, context }) => {
     await memberPage.setViewportSize({ width: 375, height: 667 });
 
     const loginRes = await request.post('/api/v1/auth/login', {
@@ -109,7 +109,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
     await context.setOffline(false);
   });
 
-  test('3. Generates Sync Conflict Task for concurrent online purchase', async ({ page, request, memberPage }) => {
+  test('3. Generates Sync Conflict Task for concurrent online purchase', async ({ request }) => {
       // Create product
       const loginRes = await request.post('/api/v1/auth/login', {
           data: { email: 'admin@ohc.local', password: 'admin' }
@@ -149,7 +149,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
       expect(res2.error_message).toContain('checked out');
   });
 
-  test('4. Queue is cleared upon going online', async ({ page, request, memberPage, context }) => {
+  test('4. Queue is cleared upon going online', async ({ request, memberPage, context }) => {
     await memberPage.setViewportSize({ width: 375, height: 667 });
 
     const loginRes = await request.post('/api/v1/auth/login', {
@@ -193,7 +193,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
     await expect(memberPage.locator('text=Items Pending Sync')).toBeHidden({ timeout: 15000 });
   });
 
-  test('5. Translation agent triggers via CRDT sync queue backend handler', async ({ request, memberPage }) => {
+  test('5. Translation agent triggers via CRDT sync queue backend handler', async ({ request }) => {
       // Just test that the backend handler for sync deltas is reachable
       const loginRes = await request.post('/api/v1/auth/login', {
           data: { email: 'admin@ohc.local', password: 'admin' }

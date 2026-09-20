@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures";
 test.describe("Unified Agent Feed Grouping", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test.beforeEach(async ({ page, request }) => {
+  test.beforeEach(async ({ request }) => {
     await request.post("/api/v1/e2e/setup", {
       data: {
         query: `
@@ -20,7 +20,7 @@ test.describe("Unified Agent Feed Grouping", () => {
     });
   });
 
-  const performLogin = async (page: any) => {
+  const performLogin = async (page: import("@playwright/test").Page) => {
     await page.goto("/login");
     await page.getByPlaceholder("Email or Username").first().fill("e2e-user");
     await page.locator('input[type="password"]').first().fill("password123");

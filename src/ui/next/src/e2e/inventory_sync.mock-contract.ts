@@ -2,7 +2,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Dynamic Centralized Inventory & POS Sync', () => {
   const tenantId = 'test-inventory-tenant';
-  let productId: string = '';
+
 
   test.beforeEach(async ({ request }) => {
     const timestamp = Date.now();

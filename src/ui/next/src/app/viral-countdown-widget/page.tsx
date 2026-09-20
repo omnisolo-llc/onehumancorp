@@ -5,7 +5,7 @@ import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralCountdownWidgetPage() {
-  const router = useRouter();
+  useRouter();
   const [tenant, setTenant] = useState('my-business');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [eventName, setEventName] = useState('Product Launch');
@@ -67,7 +67,7 @@ export default function ViralCountdownWidgetPage() {
              </div>
              <div>
                 <label htmlFor="themeSelect" className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                <select id="themeSelect" value={theme} onChange={(e) => setTheme(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-black">
+                <select id="themeSelect" value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-black">
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>

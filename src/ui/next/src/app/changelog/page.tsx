@@ -31,7 +31,7 @@ function parseLinks(text: string): React.ReactNode {
   }
 
   if (lastIndex < text.length) {
-    parts.push(<span key={key++}>{text.substring(lastIndex)}</span>);
+    parts.push(<span key={key}>{text.substring(lastIndex)}</span>);
   }
 
   return parts.length > 0 ? <>{parts}</> : text;

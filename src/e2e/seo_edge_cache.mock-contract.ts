@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Universal Edge-Cached Storefront & Agentic SEO Pre-rendering', () => {
 
-  test('Maya adds a cake, verifies SEO from edge, and handles stockout invalidation', async ({ page, request }) => {
+  test('Maya adds a cake, verifies SEO from edge, and handles stockout invalidation', async ({ request }) => {
     // Simulating Maya adding a cake via API
     const tenantId = '33333333-3333-3333-3333-333333333333';
     const baseUrl = process.env.BASE_URL || 'http://localhost:18789';
@@ -22,7 +22,7 @@ test.describe('Universal Edge-Cached Storefront & Agentic SEO Pre-rendering', ()
     expect(invalidateRes.status()).toBe(200);
   });
 
-  test('Storefront Cache resolves successfully', async ({ page, request }) => {
+  test('Storefront Cache resolves successfully', async ({ request }) => {
     const customDomain = 'custom.mayascakes.test';
     const baseUrl = process.env.BASE_URL || 'http://localhost:18789';
 
@@ -35,7 +35,7 @@ test.describe('Universal Edge-Cached Storefront & Agentic SEO Pre-rendering', ()
     expect(headers['x-cache']).toBeDefined();
   });
 
-  test('Agentic SEO Pre-rendering pushes pre-rendered product cache to Edge Cache on creation', async ({ page, request }) => {
+  test('Agentic SEO Pre-rendering pushes pre-rendered product cache to Edge Cache on creation', async ({ request }) => {
     const tenantId = '55555555-5555-5555-5555-555555555555';
     const productId = '66666666-6666-6666-6666-666666666666';
     const baseUrl = process.env.BASE_URL || 'http://localhost:18789';

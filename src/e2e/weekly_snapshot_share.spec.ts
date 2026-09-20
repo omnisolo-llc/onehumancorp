@@ -26,9 +26,9 @@ test.describe('Weekly Snapshot Share Growth Loop', () => {
 
     // Mock window.open to intercept the Share on X intent
     await page.evaluate(() => {
-        (window as any).lastOpenedUrl = null;
-        window.open = function(url: string | URL | undefined, target?: string, features?: string) {
-            (window as any).lastOpenedUrl = url;
+        (window as Window & { lastOpenedUrl?: string | URL | null }).lastOpenedUrl = null;
+        window.open = function(url: string | URL | undefined) {
+            (window as Window & { lastOpenedUrl?: string | URL | null }).lastOpenedUrl = url;
             return window;
         };
     });
@@ -42,7 +42,7 @@ test.describe('Weekly Snapshot Share Growth Loop', () => {
     await shareBtn.click();
 
     // Verify window.open was called with twitter intent and correct text
-    const lastOpenedUrl = await page.evaluate(() => (window as any).lastOpenedUrl);
+    const lastOpenedUrl = await page.evaluate(() => (window as Window & { lastOpenedUrl?: string | URL | null }).lastOpenedUrl);
     expect(lastOpenedUrl).toContain('twitter.com/intent/tweet');
     expect(lastOpenedUrl).toContain('124%20hours');
     expect(lastOpenedUrl).toContain('%24124%2C500');

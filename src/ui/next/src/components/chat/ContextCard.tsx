@@ -6,7 +6,7 @@ interface CustomerProfileSummary {
   segments: string[];
   preferences: string[];
   summary: string;
-  context_graph?: any;
+  context_graph?: unknown;
 }
 
 interface ContextCardProps {
@@ -68,7 +68,7 @@ export const ContextCard: React.FC<ContextCardProps> = ({ tenantId, customerId }
         <div className="text-xs text-gray-500 truncate">
           {profile.total_interactions} past orders &bull; Last order: {profile.last_interaction ? new Date(profile.last_interaction).toLocaleDateString() : 'N/A'}
         </div>
-        {profile.context_graph && (
+        {Boolean(profile.context_graph) && (
           <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 p-2 bg-white/50 dark:bg-black/30 rounded-lg">
             <span className="font-semibold text-gray-800 dark:text-gray-200 block mb-1">Agentic Context:</span>
             {JSON.stringify(profile.context_graph)}

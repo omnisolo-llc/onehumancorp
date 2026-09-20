@@ -56,7 +56,7 @@ test.describe('Viral Newsletter Generator', () => {
     await page.evaluate(() => { localStorage.setItem('has_pro', 'false'); window.dispatchEvent(new Event('storage')); });
 
     // Try to toggle "Remove branding"
-    const toggleInput = page.locator('#brandingToggle');
+    page.locator('#brandingToggle');
     // We click the slider wrapper, or check the input
     // The label "Remove branding PRO" is what we can click on
     await page.getByText('Remove branding PRO').click();

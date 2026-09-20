@@ -28,32 +28,27 @@ The harness provides a **Block-based Visual Workflow** engine (`visual_workflow.
 - **Parallel Fan-out/Fan-in**: Use `ParallelFork` to run multiple execution branches concurrently, and `ParallelJoin` to merge the state values.
 - **Client API endpoint**: Workflows can be submitted and run dynamically through the `/api/v1/workflow/run` endpoint using the Visual Workflow Client API (`visual_workflow_client.rs`).
 
-## Getting Started (Day 1 Onboarding)
+## Developer setup
 
-To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
-
-From the root of the repository, you must explicitly run the onboarding CLI:
+From a checkout, run as your normal user:
 
 ```bash
-./deploy/scripts/omnisolo_hybrid_cli.sh
+make init
+make doctor
 ```
 
-**What this does:**
-- 🚀 Guides you through the **Developer Setup**
-- ⚙️ Configures your **Environment Variables**
-- 🩺 Runs deep system **Diagnostics**
-- 🔄 Allows seamless switching between `cloud`, `standalone`, and `headless` modes
+`make init` installs the pinned Rust/Node toolchains, native Tauri libraries, locked npm trees (including the test harness), isolated Python tooling and Playwright Chromium. Repeat runs reuse matching successful dependency installs. It asks before elevated system-package installation and does not change global toolchain defaults, shell profiles, account permissions or application secrets.
 
-This premium onboarding flow eliminates friction and ensures maximum developer velocity for Day One setup.
+Start with Git, GNU Make and Python (3.11+ with venv support for the installed test environment), plus a local Docker installation with Compose and Buildx. On macOS, install Homebrew and Apple command-line tools first. Windows developers can use WSL2 for the full POSIX-based build/test environment; native Windows release prerequisites remain in the release guide. Missing prerequisites fail explicitly rather than reporting a partial setup as ready.
+
+See [native development setup](docs/development/native-build.md) for noninteractive, preview and no-sudo modes. Application/deployment configuration through `deploy/scripts/omnisolo_hybrid_cli.sh` is separate from developer dependency setup.
 
 ### Native build system
 
 The build uses **Cargo for Rust, npm for the Next.js application, and the Tauri CLI for desktop/mobile packaging**. Bazel is no longer a build or test dependency. Install the Rust toolchain in `rust-toolchain.toml` and Node version in `.node-version`, then follow [Native development and caching](docs/development/native-build.md).
 
 ```bash
-npm ci
-npm --prefix src/ui/next ci
-npm --prefix src/cli ci
+make init
 make lint
 make test
 ```

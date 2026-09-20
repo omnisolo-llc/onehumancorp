@@ -1,4 +1,4 @@
-import { Metadata, ResolvingMetadata } from 'next';
+import { Metadata } from 'next';
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -24,8 +24,7 @@ function normalizeShareTarget(rawUrl: string) {
 }
 
 export async function generateMetadata(
-  { searchParams }: Props,
-  _parent: ResolvingMetadata
+  { searchParams }: Props
 ): Promise<Metadata> {
   const resolvedSearchParams = await searchParams;
   const title = typeof resolvedSearchParams.title === 'string' ? resolvedSearchParams.title : 'OmniSolo';

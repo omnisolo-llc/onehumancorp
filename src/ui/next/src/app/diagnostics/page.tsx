@@ -4,10 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
+interface HealthReport {
+  status?: string;
+  mode?: string;
+  mesh_active?: boolean;
+  hybrid_mode_ready?: boolean;
+  db_ping?: number;
+  sync_backlog?: number;
+  sync_error_count?: number;
+}
+
 export default function DiagnosticsPage() {
   const [loading, setLoading] = useState(true);
-  const [healthData, setHealthData] = useState<any>(null);
-  const [metricsData, setMetricsData] = useState<any>(null);
+  const [healthData, setHealthData] = useState<HealthReport | null>(null);
+  const [metricsData, setMetricsData] = useState<{ total_revenue?: number; total_sales?: number } | null>(null);
 
   useEffect(() => {
     async function loadData() {

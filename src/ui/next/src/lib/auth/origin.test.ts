@@ -27,8 +27,8 @@ describe("unsafe request origin policy", () => {
     [{ origin: "https://user@app.example.com", "sec-fetch-site": "same-origin" }, "credentials"],
     [{ origin: `${canonical}, https://evil.example`, "sec-fetch-site": "same-origin" }, "combined origin"],
     [{ origin: canonical, "sec-fetch-site": "none" }, "non same-origin metadata"],
-  ] as const)("rejects %#", (values, _label) => {
-    expect(isTrustedMutationOrigin(headers(values), canonical)).toBe(false);
+  ] as const)("rejects %#", (values, reason) => {
+    expect(isTrustedMutationOrigin(headers(values), canonical), reason).toBe(false);
   });
 
   it("ignores forged host and forwarding headers", () => {

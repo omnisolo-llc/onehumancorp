@@ -15,7 +15,7 @@ test('viral milestones: verify dynamic loading and card generation', async ({ pa
   await expect(milestoneList.first()).toBeVisible();
 
   // Verify that an image is loaded for the selected milestone (first unlocked should be auto-selected)
-  const milestoneImage = page.locator('img[alt*="Milestone"]');
+  page.locator('img[alt*="Milestone"]');
   // In our DEFAULT case, first_sale is not reached yet in DB, but let's see what is returned.
   // If no milestone is reached, auto-selection won't happen.
 

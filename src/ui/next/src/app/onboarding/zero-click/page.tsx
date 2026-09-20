@@ -8,12 +8,11 @@ import { OnboardingChatAgent } from './components/OnboardingChatAgent';
 
 export default function ZeroClickBuilderPage() {
   const router = useRouter();
-  const [generatedStore, setGeneratedStore] = useState<any>(null);
+  const [generatedStore, setGeneratedStore] = useState<import("@/lib/builder-types").OnboardingResult | null>(null);
   const { hasPro } = useProPlan();
 
   useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-    }
+
   }, []);
 
   const handleShare = () => {
@@ -22,7 +21,7 @@ export default function ZeroClickBuilderPage() {
     window.open(shareUrl, '_blank');
   };
 
-  const handleChatComplete = (data: any) => {
+  const handleChatComplete = (data: import("@/lib/builder-types").OnboardingResult) => {
     setGeneratedStore(data);
   };
 

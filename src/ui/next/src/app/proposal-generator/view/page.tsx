@@ -7,7 +7,7 @@ import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
 
 function ProposalViewContent() {
   const searchParams = useSearchParams();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<{ tenant: string; clientName: string; projectScope: string; amount: string; timeline: string } | null>(null);
 
   useEffect(() => {
     const encodedData = searchParams.get('data');

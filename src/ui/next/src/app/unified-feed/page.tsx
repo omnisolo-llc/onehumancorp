@@ -1,13 +1,15 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import React, { useState, useEffect } from "react";
 
 interface FeedItemRaw {
   id: string;
   tenant_id: string;
   event_source: string;
-  context_payload?: any;
-  proposed_action?: any;
+  context_payload?: import('@/lib/agent-feed-types').ActionPayload;
+  proposed_action?: import('@/lib/agent-feed-types').ActionPayload;
   lifecycle_state: string;
   created_at: string;
   updated_at: string;
@@ -16,7 +18,7 @@ interface FeedItemRaw {
 interface WorkItem {
   id: string;
   source: string;
-  payload: any;
+  payload: import('@/lib/agent-feed-types').ActionPayload;
   status: string;
 }
 
@@ -147,8 +149,8 @@ export default function UnifiedFeed() {
       });
 
       setFeedItems(mappedItems);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err, ''));
     } finally {
       setLoading(false);
     }
@@ -165,7 +167,7 @@ export default function UnifiedFeed() {
   ) => {
     setProcessingId(itemId);
     try {
-      const payload: any = { state: action };
+      const payload: { state: string; edited_payload?: string } = { state: action };
       if (editedPayload) {
         payload.edited_payload = editedPayload;
       }

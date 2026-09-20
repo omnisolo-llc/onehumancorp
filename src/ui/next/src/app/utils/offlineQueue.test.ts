@@ -1,28 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { enqueueAction, getActions, removeAction } from './offlineQueue';
-import { getPowerSyncDB } from '../../lib/powersync/db';
 
-vi.mock('../../lib/powersync/db', () => {
-  const db = {
-    execute: vi.fn(),
-    getAll: vi.fn()
-  };
-  return {
-    getPowerSyncDB: vi.fn(() => db)
-  };
-});
+const dbMock = vi.hoisted(() => ({ execute: vi.fn(), getAll: vi.fn() }));
+vi.mock('../../lib/powersync/db', () => ({ getPowerSyncDB: vi.fn(() => dbMock) }));
+afterEach(() => vi.unstubAllGlobals());
 
 describe('offlineQueue with PowerSync (SQLite)', () => {
-  let dbMock: any;
 
   beforeEach(async () => {
     // Reset mocks before each test
-    dbMock = await getPowerSyncDB();
     dbMock.execute.mockReset();
     dbMock.getAll.mockReset();
 
     // mock window object for offlineQueue window checks
-    global.window = {} as any;
+    vi.stubGlobal('window', {});
   });
 
   it('enqueueAction inserts an action into local_pending_actions table', async () => {

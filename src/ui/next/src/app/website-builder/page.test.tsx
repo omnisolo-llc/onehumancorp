@@ -10,14 +10,14 @@ vi.mock('next/navigation', () => ({
 
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
-  WithTooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>
+  WithTooltip: ({ children }: import('react').PropsWithChildren) => <div data-testid="tooltip">{children}</div>
 }));
 vi.mock('../../components/help', () => ({
   useWalkthrough: () => ({ startWalkthrough: vi.fn() })
 }));
 vi.mock('../builder/components', () => ({
-  SmartBlock: ({ type, props }: any) => <div data-testid={`smartblock-${type}`}>{JSON.stringify(props)}</div>,
-  DraggableBlock: ({ children, onDragStart, onDragOver, onDragEnter, onDragEnd, onMoveUp, onMoveDown, onClick, isSelected }: any) => (
+  SmartBlock: ({ type, props }: import('react').ComponentProps<typeof import('../builder/components').SmartBlock>) => <div data-testid={`smartblock-${type}`}>{JSON.stringify(props)}</div>,
+  DraggableBlock: ({ children, onDragStart, onDragOver, onDragEnter, onDragEnd, onMoveUp, onMoveDown, onClick, isSelected }: import('react').ComponentProps<typeof import('../builder/components').DraggableBlock>) => (
     <div
       data-testid="draggable-block"
       onClick={onClick}
@@ -39,10 +39,7 @@ import { useWebsiteBuilderStore } from './store';
 
 describe('WebsiteBuilderPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({})
-    }));
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve(Response.json({}, { status: 200 })));
     localStorage.clear();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     // Reset zustand store state
@@ -82,27 +79,17 @@ describe('WebsiteBuilderPage', () => {
 
   it('can follow the standard wizard flow', async () => {
     vi.useRealTimers();
-    const originalFetch = global.fetch;
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/v1/onboarding/start') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ organization_id: 'test-org-id' })
-        });
+        return Promise.resolve(Response.json({ organization_id: 'test-org-id' }, { status: 200 }));
       }
       if (url === '/api/v1/onboarding/state') {
-          return Promise.resolve({
-              ok: true,
-              json: () => Promise.resolve({})
-          })
+          return Promise.resolve(Response.json({}, { status: 200 }))
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({})
-      });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
-    const user = userEvent.setup({ delay: null });
+    userEvent.setup({ delay: null });
     await act(async () => { render(<WebsiteBuilderPage />); });
 
     // Step 0
@@ -154,9 +141,10 @@ describe('WebsiteBuilderPage', () => {
         expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
 
-    const startCall = (global.fetch as any).mock.calls.find(
+    const startCall = (vi.mocked(global.fetch)).mock.calls.find(
       ([url]: [string]) => url === '/api/v1/onboarding/start',
     );
+    if (typeof startCall?.[1]?.body !== 'string') throw new Error('Expected JSON onboarding body');
     const startRequest = JSON.parse(startCall[1].body);
     expect(startCall[1].headers).toEqual({ 'Content-Type': 'application/json' });
     expect(startRequest).toEqual(expect.objectContaining({
@@ -176,28 +164,18 @@ describe('WebsiteBuilderPage', () => {
   it('can follow the instant-build flow', async () => {
     vi.useRealTimers();
     // Mock the specific API call for instant build
-    const originalFetch = global.fetch;
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/v1/onboarding/intake') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
+        return Promise.resolve(Response.json({
             business_name: 'Mock Bakery',
             business_type: 'Online Store',
             initial_products: [{ name: 'Cake', price: '20.00' }]
-          })
-        });
+          }, { status: 200 }));
       }
       if (url === '/api/v1/onboarding/state') {
-          return Promise.resolve({
-              ok: true,
-              json: () => Promise.resolve({})
-          })
+          return Promise.resolve(Response.json({}, { status: 200 }))
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({})
-      });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     render(<WebsiteBuilderPage />);
@@ -290,14 +268,11 @@ describe('WebsiteBuilderPage', () => {
   it('handles launch from draft mode', async () => {
     useWebsiteBuilderStore.setState({ status: 'draft', blocks: [{ type: 'Hero', props: {} }] });
 
-    (global.fetch as any).mockImplementation((url: string) => {
+    (vi.mocked(global.fetch)).mockImplementation((url: string) => {
       if (url.includes('publish_draft')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ domain: 'testdomain' })
-        });
+        return Promise.resolve(Response.json({ domain: 'testdomain' }, { status: 200 }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     render(<WebsiteBuilderPage />);
@@ -315,20 +290,17 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles load from server state', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
+    (vi.mocked(global.fetch)).mockImplementation((url: string) => {
       if (url.includes('onboarding/state') && url.includes('/api/v1/')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
+        return Promise.resolve(Response.json({
             builderState: {
               bio: 'Test bio',
               blocks: [{ type: 'Testimonials', props: {} }],
               status: 'draft'
             }
-          })
-        });
+          }, { status: 200 }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return Promise.resolve(Response.json({}, { status: 200 }));
     });
 
     render(<WebsiteBuilderPage />);

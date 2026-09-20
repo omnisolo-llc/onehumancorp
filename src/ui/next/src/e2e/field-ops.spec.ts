@@ -2,13 +2,7 @@ import { test, expect } from "../../../../e2e/fixtures";
 import { e2eDbQuery } from "../../../../e2e/db_utils";
 
 test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
-  test("Carlos can tap 'Heading to Job', 'Start Work', and 'Job Done' to update status without crashing", async ({
-    page,
-    context,
-    loginAs,
-    adminUser,
-    seedData,
-  }) => {
+  test("Carlos can tap 'Heading to Job', 'Start Work', and 'Job Done' to update status without crashing", async ({ page, loginAs, adminUser, seedData }) => {
     const tenantId = seedData.tenant.id;
     const customerId = seedData.customer.id;
     const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

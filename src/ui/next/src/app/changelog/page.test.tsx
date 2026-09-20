@@ -2,12 +2,12 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import ChangelogPage from './page';
 
 describe('ChangelogPage', () => {
-  global.fetch = vi.fn().mockResolvedValue({
-    json: () => Promise.resolve([{
+  beforeEach(() => {
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve(Response.json([{
       version: "Version 1.0 (Latest)",
       contentLines: [
         "### 🌟 New Features",
@@ -15,8 +15,7 @@ describe('ChangelogPage', () => {
         "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
         "Faster loading times for product images."
       ]
-    }]),
-    ok: true
+    }], { status: 200 })));
   });
 
   it('renders the release notes page correctly', async () => {
@@ -53,9 +52,11 @@ describe('ChangelogPage', () => {
   });
 
   it('covers the line 36 paragraph fallback', async () => {
-    // Re-render to ensure we evaluate the branch where a line neither starts with ### nor -
+    // Re-render to ensure a fresh response is decoded for another mount.
     await act(async () => {
       render(<ChangelogPage />);
     });
+    expect(await screen.findByText('Faster loading times for product images.')).toHaveProperty('tagName', 'SPAN');
+    expect(screen.getByText('Faster loading times for product images.').closest('p')).not.toBeNull();
   });
 });

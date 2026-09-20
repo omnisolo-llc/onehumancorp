@@ -21,10 +21,7 @@ describe('VideoTutorialList', () => {
   it('renders videos correctly', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url === '/api/v1/tooltips') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({})
-        });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       return Promise.resolve({
         json: () => Promise.resolve([
@@ -57,11 +54,7 @@ describe('VideoTutorialList', () => {
   });
 
   it('treats a non-array service error payload as an empty list', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 502,
-      json: () => Promise.resolve({ error: 'backend unavailable' }),
-    });
+    global.fetch = vi.fn().mockResolvedValue(Response.json({ error: 'backend unavailable' }, { status: 502 }));
 
     render(<VideoTutorialList />);
 
@@ -145,10 +138,7 @@ describe('VideoTutorialList', () => {
   it('opens and closes the video modal', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url === '/api/v1/tooltips') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({})
-        });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
       return Promise.resolve({
         json: () => Promise.resolve([

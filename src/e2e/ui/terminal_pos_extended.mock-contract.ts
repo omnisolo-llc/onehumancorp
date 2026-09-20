@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Terminal POS Extended - Inventory and Layout Sync', () => {
-  const TENANT_ID = 'terminal-test-tenant';
+
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/pos.html');

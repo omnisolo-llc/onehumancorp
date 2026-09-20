@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Wizard Cross Device E2E', () => {
 
-  test.beforeEach(async ({ page, context }) => {
+  test.beforeEach(async ({ context }) => {
     const fs = nativeFsModule;
     const path = nativePathModule;
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');

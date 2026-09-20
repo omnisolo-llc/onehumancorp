@@ -11,7 +11,7 @@ test.describe('Fulfillment Hub - Offline Sync', () => {
             password: 'admin'
         }
     });
-    const { token } = await response.json();
+    await response.json();
 
     const tenantId = `tenant-fulfillment-${Date.now()}`;
 

@@ -24,13 +24,10 @@ describe('HelpArticlePage', () => {
 
   it('renders article content on successful fetch', async () => {
     vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started-1' });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    global.fetch = vi.fn().mockResolvedValue(Response.json({
         title: 'Getting Started',
         contentHtml: '<p>Welcome to OmniSolo OneHumanCorp!</p>'
-      })
-    });
+      }, { status: 200 }));
 
     render(<HelpArticlePage />);
 

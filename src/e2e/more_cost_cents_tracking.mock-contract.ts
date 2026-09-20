@@ -2,8 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('More Cost Cents Tracking', () => {
   test('should record cost metrics and reflect on dashboard', async ({ page, loginAs }) => {
-    const testUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, testUser as any);
+    const testUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    await loginAs(page, testUser);
 
     // Simulate an agent action that incurs cost
     await page.request.post('/api/v1/billing/report-cost', {

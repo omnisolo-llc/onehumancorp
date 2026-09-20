@@ -43,8 +43,8 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, starterUser as any);
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    await loginAs(page, starterUser);
     await page.goto('/pricing');
 
     const starterCard = page.locator('.omnisolo-growth-card').filter({ has: page.locator('h3', { hasText: /^Starter$/ }) }).first();
@@ -72,8 +72,8 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, loginAs }) => {
-    const proUser = { email: "pro@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, proUser as any);
+    const proUser = { email: "pro@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant-unlimited" };
+    await loginAs(page, proUser);
     await page.goto('/pricing');
 
     const proCard = page.locator('.omnisolo-growth-card').filter({ has: page.locator('h3', { hasText: /^Pro$/ }) }).first();
@@ -101,8 +101,8 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, loginAs }) => {
-    const businessUser = { email: "business@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, businessUser as any);
+    const businessUser = { email: "business@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    await loginAs(page, businessUser);
     await page.goto('/pricing');
 
     const businessCard = page.locator('.omnisolo-growth-card').filter({ has: page.locator('h3', { hasText: /^Business$/ }) }).first();
@@ -129,8 +129,8 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Pricing Page displays Manage Plan for active paid tier', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, starterUser as any);
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    await loginAs(page, starterUser);
 
     await page.goto('/pricing');
 
@@ -141,8 +141,8 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Soft Limit Approaching triggers on projected cost threshold with real data', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, starterUser as any);
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    await loginAs(page, starterUser);
 
     // Let's create realistic data for cost threshold alert via actual API interactions
     // by calling the endpoint that generates the cost payload. This mimics normal usage.

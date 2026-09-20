@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('AI Incident Resolution & Escalation Assistant Flow', () => {
   const MOCK_TENANT_ID = 'test_tenant_incident';
 
-  test.beforeEach(async ({ page, request }) => {
+  test.beforeEach(async ({ request }) => {
     // Clear feed before starting the test to ensure a clean state
     try {
       await request.post('/api/v1/auth/mock-login', {
@@ -12,7 +12,7 @@ test.describe('AI Incident Resolution & Escalation Assistant Flow', () => {
           role: 'owner',
         }
       });
-    } catch {}
+    } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
   });
 
   test('Owner can log an incident and approve the AI resolution plan', async ({ page }) => {

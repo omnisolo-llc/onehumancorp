@@ -29,7 +29,7 @@ export default function InventoryDashboard() {
       if (!res.ok) throw new Error("Failed to load inventory from the database");
       const data = await res.json();
       setProducts(Array.isArray(data?.inventory) ? data.inventory : []);
-    } catch (e: any) {
+    } catch (e) {
       setError(e?.message || "Failed to load inventory");
     } finally {
       setLoading(false);
@@ -68,7 +68,7 @@ export default function InventoryDashboard() {
       if (!res.ok) {
         throw new Error("Failed to update stock");
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       // Revert optimism? Simple refresh for now.
       loadInventory();

@@ -241,7 +241,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     await newPage.evaluate((stateStr) => {
         if (stateStr) {
-            try { sessionStorage.setItem('mockState', stateStr); } catch {}
+            try { sessionStorage.setItem('mockState', stateStr); } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
         }
     }, savedStateStr);
 
@@ -355,7 +355,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     const option = page.locator('.context-card').first();
     const optionBox = await option.boundingBox();
-    const catInput = page.getByPlaceholder("e.g. Graphic Design");
+    page.getByPlaceholder("e.g. Graphic Design");
 
     if (optionBox) {
         expect(optionBox.height).toBeGreaterThanOrEqual(44);
@@ -400,7 +400,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
-          invoke: async (cmd, args) => {
+          invoke: async (cmd) => {
             if (cmd === 'start_onboarding') {
               return { success: true, message: 'OK', organization_id: 'test-org' };
             }
@@ -492,7 +492,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
-          invoke: async (cmd, args) => {
+          invoke: async (cmd) => {
             if (cmd === 'generate_cloud_invite') {
               return "https://cloud.omnisolo.co/invite/mock-test";
             }

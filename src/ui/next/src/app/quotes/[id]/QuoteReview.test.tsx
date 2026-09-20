@@ -14,30 +14,24 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('QuoteReviewPage', () => {
-  const mockRouter = { back: vi.fn(), push: vi.fn() };
+  const mockRouter = { back: vi.fn(), push: vi.fn(), forward: vi.fn(), refresh: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), bfcacheId: 'quote-test' };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useParams as any).mockReturnValue({ id: testQuoteId });
-    (useRouter as any).mockReturnValue(mockRouter);
+    (vi.mocked(useParams)).mockReturnValue({ id: testQuoteId });
+    (vi.mocked(useRouter)).mockReturnValue(mockRouter);
     global.fetch = vi.fn((url) => {
       if (url === '/api/v1/tooltips') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({}),
-        });
+        return Promise.resolve(Response.json({}, { status: 200 }));
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-    }) as any;
+      return Promise.resolve(Response.json({}, { status: 200 }));
+    });
     // Mock window.alert
     global.alert = vi.fn();
   });
 
   it('renders malformed quote IDs as not found without requesting the API', async () => {
-    (useParams as any).mockReturnValue({ id: 'visual-audit-id' });
+    (vi.mocked(useParams)).mockReturnValue({ id: 'visual-audit-id' });
 
     render(
       <TooltipProvider>
@@ -50,16 +44,13 @@ describe('QuoteReviewPage', () => {
   });
 
   it('renders quote details and allows approval', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
+    (vi.mocked(global.fetch)).mockResolvedValueOnce(Response.json({
         id: testQuoteId,
         status: 'DRAFT',
         total_amount_cents: 10000,
         required_deposit_cents: 3333,
         line_items: [{ id: 'li1', description: 'Item 1', unit_price_cents: 10000, quantity: 1 }]
-      }),
-    });
+      }));
 
     render(
       <TooltipProvider>
@@ -72,10 +63,7 @@ describe('QuoteReviewPage', () => {
 
     const approveBtn = screen.getByText('Approve & Send Quote');
 
-    (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ status: 'ACCEPTED', stripe_payment_link: 'http://stripe.com' })
-    });
+    (vi.mocked(global.fetch)).mockResolvedValueOnce(Response.json({ status: 'ACCEPTED', stripe_payment_link: 'http://stripe.com' }));
 
     fireEvent.click(approveBtn);
     await waitFor(() => expect(screen.getByText('ACCEPTED')).toBeInTheDocument());

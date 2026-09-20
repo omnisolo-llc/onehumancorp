@@ -19,6 +19,8 @@ export default function SettingsPage() {
   const [isVerified, setIsVerified] = useState(false);
   const [smsStatus, setSmsStatus] = useState("");
   const [preferences, setPreferences] = useState({
+    email_notifications: false,
+    push_notifications: false,
     urgent_booking: false,
     failed_payment: false,
     new_order: false,
@@ -39,7 +41,7 @@ export default function SettingsPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [agentName, setAgentName] = useState("Agent One");
-  const [seoReports, setSeoReports] = useState<any[]>([]);
+  const [seoReports, setSeoReports] = useState<{ plain_language_summary: string }[]>([]);
   const [hitRate, setHitRate] = useState<string>("");
   const [enableLazyToolLoading, setEnableLazyToolLoading] = useState(false);
   const [productTelemetryEnabled, setProductTelemetryEnabled] = useState(false);
@@ -47,7 +49,7 @@ export default function SettingsPage() {
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
   const [twilioPhoneNumber, setTwilioPhoneNumber] = useState("");
   const [twilioStatus, setTwilioStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [usageLogs, setUsageLogs] = useState<any[]>([]);
+  const [usageLogs, setUsageLogs] = useState<{ username: string; feature: string; tokens_used: number; computed_cost: number }[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [registrationMode, setRegistrationMode] = useState<RegistrationMode>("closed");
   const [registrationStatus, setRegistrationStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -211,7 +213,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeliverySettingChange = async (key: string, value: any) => {
+  const handleDeliverySettingChange = async (key: string, value: string | number | boolean) => {
     const newSettings = { ...deliverySettings, [key]: value };
     setDeliverySettings(newSettings);
     try {
@@ -440,7 +442,7 @@ export default function SettingsPage() {
                       aria-label={label}
                       type="checkbox"
                       disabled={!isVerified}
-                      checked={(preferences as any)[key]}
+                      checked={preferences[key as keyof typeof preferences]}
                       onChange={(e) => handlePreferenceChange(key, e.target.checked)}
                       className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
                     />
@@ -451,7 +453,7 @@ export default function SettingsPage() {
                   <input
                     aria-label="Enable Email Notifications"
                     type="checkbox"
-                    checked={(preferences as any)["email_notifications"] || false}
+                    checked={preferences.email_notifications || false}
                     onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
@@ -461,7 +463,7 @@ export default function SettingsPage() {
                   <input
                     aria-label="Enable Push Notifications"
                     type="checkbox"
-                    checked={(preferences as any)["push_notifications"] || false}
+                    checked={preferences.push_notifications || false}
                     onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />

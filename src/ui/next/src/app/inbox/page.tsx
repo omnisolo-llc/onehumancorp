@@ -1,5 +1,7 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import { Fragment, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
@@ -106,7 +108,7 @@ function formatStatus(status?: string) {
 }
 
 function CustomerContextCard({ customerId }: { customerId: string }) {
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<{ total_interactions: number; segments: string[]; preferences: string[]; summary: string } | null>(null);
 
   useEffect(() => {
     async function fetchSummary() {
@@ -170,7 +172,7 @@ function InboxWorkspace({
     return messages.find((m) => m.id === selectedId) || messages[0];
   }, [messages, selectedId]);
 
-  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<{ id: string; payload?: { inbox_message_id?: string; drafted_response?: string; draft_reply?: string } | string }[]>([]);
 
   useEffect(() => {
     async function fetchApprovals() {
@@ -189,7 +191,7 @@ function InboxWorkspace({
 
   const activeApproval = useMemo(() => {
     if (!selected) return null;
-    return pendingApprovals.find((a: any) => {
+    return pendingApprovals.find((a) => {
       try {
         const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
         return payload && payload.inbox_message_id === selected.id;
@@ -220,8 +222,8 @@ function InboxWorkspace({
         setActionStatus("Quote drafted successfully!");
         router.push(`/quotes/${data.id}`);
       }
-    } catch (err: any) {
-      setActionStatus(`Error drafting quote: ${err.message}`);
+    } catch (err) {
+      setActionStatus(`Error drafting quote: ${errorMessage(err, '')}`);
     } finally {
       setTimeout(() => setActionStatus(""), 3000);
     }
@@ -278,7 +280,7 @@ function InboxWorkspace({
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
-      const approval = pendingApprovals.find((a: any) => {
+      const approval = pendingApprovals.find((a) => {
         try {
           const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
           return payload && payload.inbox_message_id === inboxMessageId;
@@ -471,7 +473,7 @@ function InboxWorkspace({
                       if (activeApproval && activeApproval.payload) {
                         try {
                           parsedPayload = typeof activeApproval.payload === 'string' ? JSON.parse(activeApproval.payload) : activeApproval.payload;
-                        } catch {}
+                        } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
                         if (parsedPayload && parsedPayload.action_type === "Draft Quote") {
                            let amount = 0;
                            if (parsedPayload.total_amount_cents !== undefined && parsedPayload.total_amount_cents !== null) {
@@ -558,7 +560,7 @@ function ApiInboxFallback() {
         if (!res.ok) throw new Error("Failed to load inbox messages");
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
-      } catch (err: any) {
+      } catch (err) {
         setError(err?.message || "Failed to load inbox messages");
       } finally {
         setLoading(false);

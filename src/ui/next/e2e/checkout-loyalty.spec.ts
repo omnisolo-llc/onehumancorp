@@ -17,7 +17,7 @@ test.describe('Checkout Loyalty UI', () => {
     await expect(page.locator('text=You have 50 points available')).toBeVisible();
 
     // The toggle should change background/appearance when clicked
-    const toggleContainer = loyaltyToggle.locator('..');
+    loyaltyToggle.locator('..');
 
     // We assume there's a parent or wrapper we can click
     const toggleButton = page.locator('text=Neighborhood Collective Points').locator('xpath=../..');

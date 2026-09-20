@@ -16,7 +16,7 @@ test.describe('Long-Term Episodic Memory & Context Rehydration Engine', () => {
 
         // 3. Verify memory section or some indication of agent recall
         // E.g., looking for "Assistant Memory" card
-        const memoryCard = page.locator('text="Assistant Memory"');
+        page.locator('text="Assistant Memory"');
 
         // As long as the UI isn't throwing errors and memory context can be injected,
         // we can do a softer assert until the mobile UI component is fully built by frontend team.

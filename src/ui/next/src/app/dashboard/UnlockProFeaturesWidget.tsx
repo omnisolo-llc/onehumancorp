@@ -10,9 +10,8 @@ export function UnlockProFeaturesWidget() {
   const targetInvites = 3;
 
   useEffect(() => {
-    let currentTenant = "default";
     if (typeof localStorage !== "undefined") {
-      currentTenant = localStorage.getItem("business_display_name") || "default";
+      const currentTenant = localStorage.getItem("business_display_name") || "default";
       setTenantId(currentTenant);
     }
 

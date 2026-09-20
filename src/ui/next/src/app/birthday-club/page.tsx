@@ -19,8 +19,7 @@ export default function BirthdayClubBuilder() {
   useEffect(() => {
     const tid = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'my-store') : 'my-store';
     setTenant(tid);
-    if (typeof window !== 'undefined') {
-    }
+
   }, []);
 
   const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/birthday-club/embed?tenant=${tenant}&discount=${encodeURIComponent(discountAmount)}&hideBranding=${removeBranding}`;

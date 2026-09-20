@@ -146,7 +146,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForTimeout(500); // Give it time to render the next step
 
     // Jump straight to the name step to test validation
-    await page.evaluate(() => { (window as any).goToStep('step-name', false) });
+    await page.evaluate(() => { (window as Window & { goToStep: (step: string, forward: boolean) => void }).goToStep('step-name', false) });
 
     const nextButton = page.locator('#step-name .next-step-btn');
     await nextButton.click();
@@ -173,7 +173,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForTimeout(500); // Give it time to render the next step
 
     // Jump straight to the name step to test validation
-    await page.evaluate(() => { (window as any).goToStep('step-name', false) });
+    await page.evaluate(() => { (window as Window & { goToStep: (step: string, forward: boolean) => void }).goToStep('step-name', false) });
 
     const nameInput = page.locator('#business-name');
     await nameInput.fill("ABC");
@@ -208,9 +208,9 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     // mock the tauri backend
     await page.addInitScript(() => {
-        (window as any).__TAURI__ = {
+        (window as Window & { __TAURI__?: unknown }).__TAURI__ = {
             core: {
-                invoke: async (cmd: string, args: any) => {
+                invoke: async (cmd: string, args: { input: string }) => {
                     if (cmd === 'start_onboarding') {
                         return { success: true };
                     }
@@ -339,7 +339,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await page.waitForTimeout(500);
   });
-  test("Onboarding Flow respects mobile viewport constraints (375px) with valid touch targets using real stack", async ({ page, baseURL }) => {
+  test("Onboarding Flow respects mobile viewport constraints (375px) with valid touch targets using real stack", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Go to the real local server root route which should present setup if unconfigured

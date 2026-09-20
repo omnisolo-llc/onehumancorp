@@ -71,7 +71,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
     const page = await adminPage(context);
 
     // We fetch the inbox messages to see the replied quote
-    const res = await page.request.get('/api/v1/omnichannel/webhook');
+    await page.request.get('/api/v1/omnichannel/webhook');
     // Note: since we don't have a direct quote list API that is easily queryable by customer without ID in this test,
     // we can just test the DB seed / create endpoint.
 

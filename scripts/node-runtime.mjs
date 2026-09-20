@@ -10,15 +10,9 @@ import { execFile } from 'node:child_process';
 import path from 'node:path';
 
 const execute = promisify(execFile);
-export const NODE_VERSION = '22.22.1';
-const DIGESTS = {
-  'darwin-arm64': '679ad4966339e4ef4900f57996714864e4211b898825bb840c3086c419fbcef2',
-  'darwin-x64': '07b13722d558790fca20bb1ecf61bde24b7a4863111f7be77fc57251a407359a',
-  'linux-arm64': '1d1690e9aba47e887a275abc6d8f7317e571a0700deaef493f768377e99155f5',
-  'linux-x64': '07c8aafa60644fb81adefa1ee7da860eb1920851ffdc9a37020ab0be47fbc10e',
-  'win-arm64': 'd0722fcdefa1c08e4af31809e91ad4f23282f6c535c261607e8aa372d0ce61dd',
-  'win-x64': '877cb93829e14fffbbc7903e7d8037336c9a79f3ea43c5d0b8c2379b79da56de',
-};
+import nodeDistributions from './node-distributions.json' with { type: 'json' };
+export const NODE_VERSION = nodeDistributions.version;
+const DIGESTS = nodeDistributions.digests;
 const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 
 export function nodeDistribution(version, platform, architecture) {

@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import TeamChatPage from './page';
 
 const mockFetch = vi.fn();
+const router = { bfcacheId: 'unit-test', back: vi.fn(), forward: vi.fn(), refresh: vi.fn(), push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -28,7 +29,7 @@ test('shows a latency state while an AI action is being drafted', async () => {
     }),
   );
 
-  render(<AppRouterContext.Provider value={{} as any}><TeamChatPage /></AppRouterContext.Provider>);
+  render(<AppRouterContext.Provider value={router}><TeamChatPage /></AppRouterContext.Provider>);
 
   fireEvent.change(screen.getByTestId('team-chat-input'), {
     target: { value: 'Quote the sink repair' },
@@ -62,7 +63,7 @@ test('renders an actionable error card when AI action execution fails', async ()
     }),
   );
 
-  render(<AppRouterContext.Provider value={{} as any}><TeamChatPage /></AppRouterContext.Provider>);
+  render(<AppRouterContext.Provider value={router}><TeamChatPage /></AppRouterContext.Provider>);
 
   fireEvent.change(screen.getByTestId('team-chat-input'), {
     target: { value: 'Run the agent action' },

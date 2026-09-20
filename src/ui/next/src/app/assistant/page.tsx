@@ -1,5 +1,8 @@
 'use client';
 import { errorMessage } from '@/lib/errors';
+import { isRecord, recordOrEmpty } from '@/lib/records';
+import type { Step } from '@/components/Walkthrough';
+type ResourceData = Record<string, unknown> & { settings?: { observationMasking?: boolean } };
 
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../components/AppShell';
@@ -43,7 +46,7 @@ type AssistantMessage = {
   id: string;
   role: string;
   content: string;
-  tool_metadata_json?: any;
+  tool_metadata_json?: { proposed_action?: Record<string, unknown> };
 };
 
 type AssistantTask = {
@@ -163,12 +166,12 @@ export default function AssistantPage() {
   const [error, setError] = useState('');
   const [actionNotice, setActionNotice] = useState('');
   const [agentName, setAgentName] = useState('Agent');
-  const [resourceData, setResourceData] = useState<Record<string, any>>({});
+  const [resourceData, setResourceData] = useState<Partial<Record<Section, ResourceData>>>({});
   const [resourceLoading, setResourceLoading] = useState('');
   const [resourceError, setResourceError] = useState('');
 
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
 
   useEffect(() => {
     fetch("/api/v1/walkthrough/assistant")
@@ -349,13 +352,13 @@ export default function AssistantPage() {
     setResourceData((current) => ({ ...current, [targetSection]: data }));
   }
 
-  async function runResourceAction(targetSection: Section, body: Record<string, any>) {
+  async function runResourceAction(targetSection: Section, body: Record<string, unknown>) {
     const config = resourceConfig[targetSection];
     if (!config) return;
     setResourceError('');
     setActionNotice('');
     const response = await fetch(config.endpoint, {
-      method: body.method || 'PATCH',
+      method: typeof body.method === 'string' ? body.method : 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body.payload || body),
     });
@@ -682,10 +685,10 @@ function ResourcePage({
 }: {
   section: Section;
   config: { title: string; endpoint: string; rootKeys: string[] };
-  data: any;
+  data: ResourceData;
   loading: boolean;
   error: string;
-  onAction: (section: Section, body: Record<string, any>) => void;
+  onAction: (section: Section, body: Record<string, unknown>) => void;
 }) {
   const [folder, setFolder] = useState('/workspace/assistant');
   const [agentNameInput, setAgentNameInput] = useState('');
@@ -809,7 +812,7 @@ function ResourcePage({
             ) : (
               <div className={styles.featureGridTwo}>
                 {block.items.map((item, index) => (
-                  <div key={item.id || item.name || item.title || `${block.title}-${index}`} className={styles.featureCard}>
+                  <div key={String(item.id || item.name || item.title || `${block.title}-${index}`)} className={styles.featureCard}>
                     <div className={styles.cardTitle}>{recordTitle(item)}</div>
                     <dl className={styles.recordFields}>
                       {recordEntries(item).map(([key, value]) => (
@@ -837,8 +840,8 @@ function ResourceActions({
   onAction,
 }: {
   section: Section;
-  item: any;
-  onAction: (section: Section, body: Record<string, any>) => void;
+  item: Record<string, unknown>;
+  onAction: (section: Section, body: Record<string, unknown>) => void;
 }) {
   if (section === 'automations' && item.id) {
     return (
@@ -904,48 +907,36 @@ function ResourceActions({
   return null;
 }
 
-function resourceBlocks(data: any, rootKeys: string[]) {
+function resourceBlocks(data: ResourceData, rootKeys: string[]): { title: string; items: Record<string, unknown>[] }[] {
   if (!data) return [];
-  if (rootKeys.length === 0) {
-    return [{ title: 'Details', items: [data] }];
-  }
+  if (rootKeys.length === 0) return [{ title: 'Details', items: [data] }];
   return rootKeys.map((key) => {
-    let value = data[key];
-
-
-
-    // If the component is not seeing 'summary', it means `data` doesn't have it.
-
-    if (value === undefined && data.total !== undefined && key === 'summary') {
-      value = data;
-    }
-
-    let items = [];
+    const value = data[key] === undefined && data.total !== undefined && key === 'summary' ? data : data[key];
+    let items: Record<string, unknown>[] = [];
     if (Array.isArray(value)) {
-       items = value.map(v => typeof v === 'object' && v !== null ? { ...v, id: v.id || v.name || key } : v);
-    } else if (value && typeof value === 'object') {
-       // if it's an object, flatten it safely to include its fields explicitly
-       const flatItem = { id: key, name: key };
-       for (const [k, v] of Object.entries(value)) {
-          flatItem[k] = typeof v === 'number' || typeof v === 'boolean' ? String(v) : v;
-       }
-       items = [flatItem];
+      items = value.map((entry: unknown, index) => {
+        const record = recordOrEmpty(entry);
+        return isRecord(entry) ? { ...record, id: record.id || record.name || `${key}-${index}` }
+          : { id: `${key}-${index}`, value: String(entry) };
+      });
+    } else if (isRecord(value)) {
+      const flatItem: Record<string, unknown> = { id: key, name: key };
+      for (const [field, entry] of Object.entries(value)) {
+        flatItem[field] = typeof entry === 'number' || typeof entry === 'boolean' ? String(entry) : entry;
+      }
+      items = [flatItem];
     } else if (value !== undefined) {
-       items = [{ id: key, name: key, value: String(value) }];
+      items = [{ id: key, name: key, value: String(value) }];
     }
-
-    return {
-      title: labelFor(key),
-      items,
-    };
+    return { title: labelFor(key), items };
   });
 }
 
-function recordTitle(item: any) {
+function recordTitle(item: Record<string, unknown>) {
   return String(item?.name || item?.title || item?.filename || item?.provider || item?.id || 'Record');
 }
 
-function recordEntries(item: any) {
+function recordEntries(item: Record<string, unknown>) {
   if (!item) return [];
   return Object.entries(item)
     .filter(([key, value]) => !['id', 'name', 'title'].includes(key) && value !== undefined && value !== null && (typeof value !== 'object' || Array.isArray(value)))

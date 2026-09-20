@@ -1,9 +1,10 @@
 import React from 'react';
+import type { AgentFeedItem } from '@/lib/agent-feed-types';
 
 type InstagramDMCardProps = {
   onApprove?: () => void;
   onDismiss?: () => void;
-  approval: any;
+  approval: Pick<AgentFeedItem, 'proposed_action' | 'context_payload'>;
 };
 
 export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onApprove, onDismiss }) => {

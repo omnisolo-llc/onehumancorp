@@ -6,9 +6,7 @@ test.describe('Setup Wizard 375px Flow', () => {
     test.use({ viewport: { width: 375, height: 812 } });
 
     test('should render properly and allow selection', async ({ browser }) => {
-        const workspaceRoot = process.env.TEST_WORKSPACE
-            ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
-            : process.cwd();
+
 
         const tauriUiDir = path.join('/app', 'src/ui/tauri/src/ui');
 

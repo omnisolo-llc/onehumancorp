@@ -8,7 +8,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
     // Mock network request to return the dashboard data including AI alert
     await page.route('**/api/v1/dashboard', async (route) => {
       const response = await route.fetch();
-      let body: any = {};
+      let body: Record<string, unknown> = {};
       try {
         body = await response.json();
       } catch  {

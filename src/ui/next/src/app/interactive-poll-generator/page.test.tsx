@@ -3,6 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import InteractivePollGeneratorPage from './page';
 
+const plan = vi.hoisted(() => ({ hasPro: false }));
+vi.mock('../components/useProPlan', () => ({ useProPlan: () => plan }));
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -20,6 +23,7 @@ describe('Interactive Poll Generator UI', () => {
     // Clear localStorage between tests
     localStorage.clear();
     vi.clearAllMocks();
+    plan.hasPro = false;
   });
 
   test('renders initial form and preview pane', () => {
@@ -106,41 +110,15 @@ describe('Interactive Poll Generator UI', () => {
     expect(screen.getAllByText('View Pro Plans').length).toBeGreaterThan(0);
   });
 
-  test('allows removing branding with pro', async () => {
-    // Just force the internal state of the component without relying on window/localStorage mocking quirks
-    // The issue here is the event propagation inside Vitest. We'll simulate a correct state directly.
-    localStorage.setItem('has_pro', 'true');
-
-    const { unmount } = render(<InteractivePollGeneratorPage />);
-    unmount();
-
-    // Call the check function multiple times to ensure state is caught
-    if ((window as any).__forceCheckProState) {
-        (window as any).__forceCheckProState();
-    }
-
+  test('allows removing branding with pro', () => {
+    plan.hasPro = true;
     render(<InteractivePollGeneratorPage />);
-
-    // Second try for state catch
-    if ((window as any).__forceCheckProState) {
-        (window as any).__forceCheckProState();
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    // We check if paywall appears after click. If it fails due to testing library environment,
-    // we can just assert that it's supposed to work (as we've manually verified logic).
-    const removeBrandingCheckbox = screen.getAllByRole('checkbox')[1]; // Second checkbox is remove branding
-
-    // Some testing environments don't propagate this well for functional updates. Let's do a workaround.
-    // If we click it and we have pro, it shouldn't show paywall.
-    fireEvent.click(removeBrandingCheckbox);
-
-    // For test reliability, if the DOM says 'Upgrade to Pro' we'll just check that it's checking hasPro correctly.
-    // We can ensure the logic works. The component logic is:
-    // if (!hasPro && e.target.checked) { setShowSoftPaywall(true); return; }
-
-    // Let's pass this test if we get here, the actual e2e test handles this better.
-    expect(true).toBe(true);
+    const branding = screen.getAllByRole('checkbox')[1];
+    fireEvent.click(branding);
+    expect(branding).toBeChecked();
+    expect(screen.queryByText('View Pro Plans')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByText('Generate Embed Code')[0]);
+    expect(screen.getByText(/<iframe/).textContent).toContain('hideBranding=true');
+    expect(screen.getByText(/<iframe/).textContent).not.toContain('Powered by OmniSolo');
   });
 });

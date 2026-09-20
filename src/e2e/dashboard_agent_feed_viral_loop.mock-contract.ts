@@ -11,7 +11,7 @@ const test = base.extend({
 });
 
 test.describe('Dashboard Agent Feed Viral Loop', () => {
-  test('should display agent success modal and allow trial extension via sharing', async ({ page, context }) => {
+  test('should display agent success modal and allow trial extension via sharing', async ({ page }) => {
 
     // Intercept window.open before navigation
     await page.addInitScript(() => {
@@ -78,7 +78,7 @@ test.describe('Dashboard Agent Feed Viral Loop', () => {
         document.getElementById('triage-e2e-viral-loop-action').style.opacity = '1';
         // the main dashboard div might be hidden by default
         document.body.style.display = 'block';
-        const els = document.querySelectorAll('*');
+        document.querySelectorAll('*');
         // els.forEach(el => el.style.visibility = 'visible');
 
     });

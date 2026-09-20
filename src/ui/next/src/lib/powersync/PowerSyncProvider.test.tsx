@@ -12,7 +12,7 @@ vi.mock('./db', () => ({
   getPowerSyncDB: vi.fn(),
 }));
 
-const getPowerSyncDBMock = vi.mocked(getPowerSyncDB);
+const getPowerSyncDBMock = vi.mocked(getPowerSyncDB, { partial: true });
 
 function databaseMock(overrides: Record<string, unknown> = {}) {
   return {
@@ -74,7 +74,7 @@ test('keeps local content when the background connection rejects', async () => {
       rejectConnection = reject;
     })),
   });
-  getPowerSyncDBMock.mockResolvedValue(database as any);
+  getPowerSyncDBMock.mockResolvedValue(database);
   const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -100,10 +100,10 @@ test('keeps local content when the background connection rejects', async () => {
 });
 
 test('does not initialize or dispose a shared database that resolves after unmount', async () => {
-  let resolveDatabase!: (database: any) => void;
+  let resolveDatabase!: (database: ReturnType<typeof databaseMock>) => void;
   const database = databaseMock();
   getPowerSyncDBMock.mockReturnValue(new Promise((resolve) => {
-    resolveDatabase = resolve;
+    resolveDatabase = value => resolve(value);
   }));
 
   const { unmount } = render(
@@ -141,7 +141,7 @@ test('keeps the cached database usable after a connection failure and remount', 
       closed = true;
     }),
   });
-  getPowerSyncDBMock.mockResolvedValue(database as any);
+  getPowerSyncDBMock.mockResolvedValue(database);
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 
   const firstRender = render(
@@ -174,7 +174,7 @@ test('suppresses a pending background connection rejection after unmount', async
       rejectConnection = reject;
     })),
   });
-  getPowerSyncDBMock.mockResolvedValue(database as any);
+  getPowerSyncDBMock.mockResolvedValue(database);
   const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -210,7 +210,7 @@ test('does not dispose the cached database between successful provider mounts', 
       closed = true;
     }),
   });
-  getPowerSyncDBMock.mockResolvedValue(database as any);
+  getPowerSyncDBMock.mockResolvedValue(database);
 
   const firstRender = render(
     <PowerSyncProvider fallback={<div>Stable loading state</div>}>

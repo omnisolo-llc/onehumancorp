@@ -29,7 +29,7 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
-          invoke: async (cmd, args) => {
+          invoke: async (cmd) => {
             if (cmd === 'start_onboarding') {
               return { success: true, message: 'OK', organization_id: 'test-org' };
             }
@@ -77,11 +77,11 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
     await expect(page.locator('#triage-section h2')).toHaveText('Command Center');
 
     // 8. Verify initial welcome card from OnboardingAgent
-    const welcomeCard = page.locator('[data-testid="onboarding-welcome-card"]');
+    page.locator('[data-testid="onboarding-welcome-card"]');
     await page.waitForTimeout(500);
 
     // 9. Interaction Audit: Verify "Review Storefront" button works
-    const reviewBtn = page.locator('[data-testid="onboarding-welcome-card"] #reputation-engine-link');
+    page.locator('[data-testid="onboarding-welcome-card"] #reputation-engine-link');
     await page.waitForTimeout(500);
     // const box = await reviewBtn.boundingBox(); expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
 

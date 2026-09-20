@@ -40,7 +40,7 @@ test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
     await expect(page.getByText('Customer not found.')).toBeVisible();
   });
 
-  test('should display the memory graph correctly for an existing customer', async ({ page, request }) => {
+  test('should display the memory graph correctly for an existing customer', async ({ page }) => {
     // Navigate to the memory graph page
     await page.goto(`/customer/memory-graph?tenantId=${tenantId}&customerId=${customerId}`);
 

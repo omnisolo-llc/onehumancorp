@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Success Milestone Widget', () => {
-  test('displays milestone and handles share', async ({ page, loginAs, adminUser }) => {
+  test('displays milestone and handles share', async ({ page }) => {
     // Navigate to the Next.js dashboard
     await page.goto('/dashboard');
 

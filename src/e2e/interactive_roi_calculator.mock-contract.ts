@@ -57,7 +57,7 @@ test.describe('Interactive ROI Calculator Generator', () => {
     expect(embedCode).toContain('branding=false');
   });
 
-  test('embed widget should correctly calculate ROI and display branding viral loop', async ({ page, context }) => {
+  test('embed widget should correctly calculate ROI and display branding viral loop', async ({ page }) => {
     // We navigate to the embed directly to simulate being within an iframe
     await page.goto('/ui/roi-embed.html?tenant=e2e-tenant&service=Test%20Service&inv=1000&mult=4&branding=true');
 

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { BuilderBlock } from '@/lib/builder-types';
 
-interface WebsiteBuilderState {
+export interface WebsiteBuilderState {
   wizardStep: number | string;
   businessName: string;
   businessType: string;
@@ -28,10 +29,10 @@ interface WebsiteBuilderState {
   setDomainChoice: (domain: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
-  blocks: any[];
+  blocks: BuilderBlock[];
   status: "idle" | "generating" | "draft" | "live";
   liveUrl: string;
-  setBlocks: (blocks: any[]) => void;
+  setBlocks: (blocks: BuilderBlock[]) => void;
   moveBlock: (fromIndex: number, toIndex: number) => void;
   setStatus: (status: "idle" | "generating" | "draft" | "live") => void;
   setLiveUrl: (url: string) => void;
@@ -99,12 +100,10 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       version: 2,
       migrate: (persistedState) => {
         const legacy = (persistedState ?? {}) as Record<string, unknown>;
-        const {
-          userName: _userName,
-          userEmail: _userEmail,
-          userPassword: _userPassword,
-          ...safeState
-        } = legacy;
+        const safeState = { ...legacy };
+        delete safeState.userName;
+        delete safeState.userEmail;
+        delete safeState.userPassword;
         return safeState as unknown as WebsiteBuilderState;
       },
     }

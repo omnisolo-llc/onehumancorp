@@ -57,10 +57,11 @@ describe('VoiceAssistant', () => {
     });
 
     originalFetch = global.fetch;
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ transcription: 'test command' }),
-    } as Response);
+    // A real fetch returns a fresh, single-use response body for every request.
+    // The tooltip provider and voice endpoint must not consume the same body.
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve(
+      Response.json({ transcription: 'test command' }, { status: 200 }),
+    ));
   });
 
   afterEach(() => {
@@ -356,8 +357,8 @@ describe('VoiceAssistant', () => {
       .mockResolvedValueOnce(second.stream);
     vi.mocked(global.fetch).mockImplementation((input) => Promise.resolve(
       input === '/api/v1/voice/command'
-        ? { ok: false, json: () => Promise.resolve({}) } as Response
-        : { ok: true, json: () => Promise.resolve({}) } as Response,
+        ? Response.json({}, { status: 500 }) as Response
+        : Response.json({}, { status: 200 }) as Response,
     ));
     renderVoiceAssistant();
     const button = screen.getByRole('button');

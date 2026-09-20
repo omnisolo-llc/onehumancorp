@@ -1,5 +1,7 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import React, { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ErrorState } from "@/components/layout/ErrorState";
@@ -29,8 +31,8 @@ export default function LedgerPage() {
         }
         const data = await response.json();
         setEntries(data.entries || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(errorMessage(err, ''));
       } finally {
         setLoading(false);
       }

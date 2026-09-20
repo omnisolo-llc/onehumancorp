@@ -79,7 +79,7 @@ describe('ReferralMilestonesWidget', () => {
 
   it('renders nothing when data fetch fails', async () => {
     // suppress the console.error output to prevent test noise / crash
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     mockFetch.mockRejectedValueOnce(new Error('Test mock Network error'));
 
     const { container } = render(<ReferralMilestonesWidget tenantId="test-tenant" />);

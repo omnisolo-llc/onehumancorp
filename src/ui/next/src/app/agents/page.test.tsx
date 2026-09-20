@@ -27,7 +27,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   eventSources.length = 0;
   global.fetch = mockFetch;
-  (globalThis as any).WebSocket = MockWebSocket;
+  vi.stubGlobal('WebSocket', MockWebSocket);
   mockFetch.mockImplementation((url: string) => {
     if (url.includes('/api/v1/agents/workflows')) {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });

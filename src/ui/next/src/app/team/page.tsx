@@ -12,7 +12,8 @@ export type ApprovalRequest = {
   description: string;
   status: string;
   action_risk: string;
-  payload?: any;
+  created_at?: string;
+  payload?: import('@/lib/agent-feed-types').ActionPayload;
 };
 
 const DEPARTMENTS = [
@@ -49,11 +50,11 @@ export default function TeamPage() {
     fetchApprovals();
   }, []);
 
-  const handleApprove = async (id: string, editedPayload?: any) => {
+  const handleApprove = async (id: string, editedPayload?: import('@/lib/agent-feed-types').ActionPayload) => {
     try {
       setApprovals(prev => prev.filter(a => a.id !== id));
 
-      const payload: any = { approved: true };
+      const payload: { approved: boolean; edited_payload?: import('@/lib/agent-feed-types').ActionPayload } = { approved: true };
       if (editedPayload) {
         payload.edited_payload = editedPayload;
       }

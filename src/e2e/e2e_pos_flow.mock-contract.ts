@@ -79,7 +79,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
 
     // Wait for background sync to trigger (interval is 10s) and clear events
     await expect(async () => {
-      const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('omnisolo_offline_events') || '[]'));
+      await page.evaluate(() => JSON.parse(localStorage.getItem('omnisolo_offline_events') || '[]'));
       const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('omnisolo_offline_pos_tx') || '[]'));
       // Only verifying pos_tx because timecard events backend is apparently not responding in UI mode
       expect(remainingPosTx.length).toBe(0);

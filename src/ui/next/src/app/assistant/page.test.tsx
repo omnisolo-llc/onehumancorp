@@ -122,7 +122,7 @@ beforeEach(() => {
     }
 
     return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }) as any;
+  });
 });
 
 function renderAssistantPage() {
@@ -194,9 +194,10 @@ test('submits a real task creation request and selects the returned task', async
   await waitFor(() => {
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/assistant/tasks', expect.objectContaining({ method: 'POST' }));
   });
-  const taskCall = (global.fetch as any).mock.calls.find(
-    ([url, init]: any[]) => url === '/api/v1/assistant/tasks' && init?.method === 'POST',
+  const taskCall = (vi.mocked(global.fetch)).mock.calls.find(
+    ([url, init]) => url === '/api/v1/assistant/tasks' && init?.method === 'POST',
   );
+  if (typeof taskCall?.[1]?.body !== 'string') throw new Error('Expected a JSON task request');
   expect(JSON.parse(taskCall[1].body)).toMatchObject({
     prompt: 'Build a Q3 planning deck',
     workspace: 'Launch Room',
@@ -279,7 +280,7 @@ test('shows resource error instead of connector demo records', async () => {
       return new Response(JSON.stringify({ error: 'Assistant backend unavailable' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }) as any;
+  });
 
   renderAssistantPage();
   fireEvent.click(await screen.findByRole('button', { name: 'Connectors' }));
@@ -304,7 +305,7 @@ test('renders empty Assistant state without seeded demo records', async () => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }) as any;
+  });
 
   renderAssistantPage();
 
@@ -335,7 +336,7 @@ test('shows resource error instead of connector demo records', async () => {
       return new Response(JSON.stringify({ error: 'Assistant backend unavailable' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }) as any;
+  });
 
   renderAssistantPage();
   fireEvent.click(await screen.findByRole('button', { name: 'Connectors' }));

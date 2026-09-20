@@ -16,10 +16,7 @@ import { beforeEach, afterEach } from "vitest";
 describe('CalendarPage', () => {
 
 beforeEach(() => {
-  global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve([])
-  }));
+  global.fetch = vi.fn().mockImplementation(() => Promise.resolve(Response.json([], { status: 200 })));
 });
 afterEach(() => {
   vi.clearAllMocks();

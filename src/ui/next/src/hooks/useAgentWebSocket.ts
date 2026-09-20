@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface UseAgentWebSocketOptions {
   url: string;
-  onMessage: (data: any) => void;
+  onMessage: (data: unknown) => void;
   reconnectInterval?: number;
 }
 

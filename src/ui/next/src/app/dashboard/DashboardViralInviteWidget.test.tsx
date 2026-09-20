@@ -70,7 +70,7 @@ describe('DashboardViralInviteWidget', () => {
     const xButton = screen.getByRole('button', { name: 'Share on X' });
     expect(xButton).toBeDefined();
 
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as any);
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     fireEvent.click(xButton);
     expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank');
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import type { ProposedSlot, QuotePayload } from '@/lib/business-records';
 
 interface LineItem {
   description: string;
@@ -11,15 +12,15 @@ interface LineItem {
 interface QuoteReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApprove: (updatedPayload: any) => void;
-  initialPayload: any;
+  onApprove: (updatedPayload: QuotePayload) => void;
+  initialPayload: QuotePayload;
 }
 
 export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }: QuoteReviewModalProps) {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [requireDeposit, setRequireDeposit] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [proposedSlots, setProposedSlots] = useState<any[]>([]);
+  const [proposedSlots, setProposedSlots] = useState<ProposedSlot[]>([]);
 
   useEffect(() => {
     if (initialPayload) {
@@ -40,7 +41,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
 
   if (!isOpen) return null;
 
-  const handleUpdateItem = (index: number, field: keyof LineItem, value: any) => {
+  const handleUpdateItem = <K extends keyof LineItem,>(index: number, field: K, value: LineItem[K]) => {
     const newItems = [...lineItems];
     newItems[index] = { ...newItems[index], [field]: value };
     setLineItems(newItems);

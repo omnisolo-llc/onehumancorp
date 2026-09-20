@@ -14,7 +14,7 @@ test.describe('Staff AI Task & Summaries', () => {
     await pool.end();
   });
 
-  test('CUJ: Staff views auto-generated tasks and manager views summary', async ({ page, request, browser }) => {
+  test('CUJ: Staff views auto-generated tasks and manager views summary', async ({ page, browser }) => {
     // 1. Setup Data
     const tenantId = 'e2e-tenant';
     const staffId = 'staff_john_123';
@@ -27,12 +27,6 @@ test.describe('Staff AI Task & Summaries', () => {
     `, [staffId, tenantId, 'John Connor', '+1234567890', 'Barista']);
 
     // 2. Trigger webhook simulating an order with volume spike
-    const orderPayload = {
-      tenant_id: tenantId,
-      volume_spike: true,
-      product_name: 'Falafels',
-      notes: ''
-    };
 
     // We can directly insert the DepartmentEvent via the mesh, but for E2E we can insert a task to simulate agent's work
     const taskId = 'task_e2e_123';

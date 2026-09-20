@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const border = isDark ? '#333333' : '#e5e7eb';
     const rowBg = isDark ? '#27272a' : '#f9fafb';
 
-    let leaderboardData: any[] = [];
+    let leaderboardData: { name: string; score: number; referrals?: number; emoji?: string }[];
     try {
         const res = await proxyBackendRequest(request, '/api/v1/growth/referrals/leaderboard', {
             forwardQuery: false,
@@ -147,7 +147,7 @@ export async function GET(request: Request) {
                     <div class="rank">${escapeHtml(row.emoji || '⭐')}</div>
                     <div class="info">
                         <div class="name">${escapeHtml(row.name)}</div>
-                        <div class="score">${escapeHtml(row.score)}</div>
+                        <div class="score">${escapeHtml(String(row.score))}</div>
                     </div>
                 </div>
             `).join('') : ''}

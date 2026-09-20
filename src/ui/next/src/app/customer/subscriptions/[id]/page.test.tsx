@@ -18,14 +18,9 @@ describe('CustomerSubscriptionPortal', () => {
     // Mock global fetch for testing
     global.fetch = vi.fn((url: string | URL | Request) => {
       if (url.toString().includes('/action')) {
-         return Promise.resolve({
-           ok: true,
-           json: () => Promise.resolve({ success: true }),
-         });
+         return Promise.resolve(Response.json({ success: true }, { status: 200 }));
       }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({
+      return Promise.resolve(Response.json({
           id: 'sub_123',
           productName: 'Artisan Coffee Blend',
           frequency: 'Monthly',
@@ -33,9 +28,8 @@ describe('CustomerSubscriptionPortal', () => {
           nextDeliveryDate: '2023-11-15',
           price: 24.00,
           discountedPrice: 21.60,
-        }),
-      });
-    }) as any;
+        }, { status: 200 }));
+    });
   });
 
   afterEach(() => {
@@ -88,15 +82,10 @@ describe('CustomerSubscriptionPortal', () => {
     const skipButton = screen.getByText('Skip Next Delivery');
 
     // Make the mock return the skipped date for the second fetch
-    (global.fetch as any).mockImplementationOnce((url: string | URL | Request) => {
-        return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true })
-        });
-    }).mockImplementationOnce((url: string | URL | Request) => {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
+    (vi.mocked(global.fetch)).mockImplementationOnce(() => {
+        return Promise.resolve(Response.json({ success: true }, { status: 200 }));
+    }).mockImplementationOnce(() => {
+        return Promise.resolve(Response.json({
             id: 'sub_123',
             productName: 'Artisan Coffee Blend',
             frequency: 'Monthly',
@@ -104,8 +93,7 @@ describe('CustomerSubscriptionPortal', () => {
             nextDeliveryDate: '2023-12-15',
             price: 24.00,
             discountedPrice: 21.60,
-          }),
-        });
+          }, { status: 200 }));
     });
 
     fireEvent.click(skipButton);

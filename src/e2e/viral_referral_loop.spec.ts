@@ -6,7 +6,7 @@ test.describe('Viral Referral Loop', () => {
 
     test('should display "Give $50, Get $50" on the referral dashboard', async ({ page }) => {
         // Authenticate
-        const user = await loginAs(page, 'test@example.com', 'password123');
+        await loginAs(page, 'test@example.com', 'password123');
 
         // Navigate to dashboard
         await page.goto('/dashboard.html');

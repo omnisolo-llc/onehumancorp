@@ -1,5 +1,7 @@
 "use client";
 
+
+import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
@@ -10,16 +12,7 @@ import { GroupedAgentActionCard } from "../../components/feed/GroupedAgentAction
 
 
 
-type AgentFeedItem = {
-  id: string;
-  tenant_id: string;
-  event_source: string;
-  context_payload: any;
-  proposed_action: any;
-  lifecycle_state: string;
-  created_at: string;
-  updated_at: string;
-};
+import type { AgentFeedItem, AgentFeedData, ActivityItem } from '@/lib/agent-feed-types';
 
 
 
@@ -29,14 +22,14 @@ type AgentFeedItem = {
 
 
 
-export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
+export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData }) {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">(
     "proposals",
   );
-  const [activities, setActivities] = useState<any[]>(initialData?.activity || []);
+  const [activities, setActivities] = useState<ActivityItem[]>(initialData?.activity || []);
 
   const groupedProposals = useMemo(() => {
     const groups: Record<string, { groupKey: string; title: string; items: AgentFeedItem[] }> = {};
@@ -75,7 +68,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   };
 
   useEffect(() => {
-    const handleVoiceCommandProcessed = (event: CustomEvent) => {
+    const handleVoiceCommandProcessed = () => {
       // Wait a moment for backend DB write consistency, then reload the feed completely.
       setTimeout(() => {
         window.location.reload();
@@ -102,7 +95,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           if (a.payload && a.payload.id) ids.add(a.payload.id);
         });
         setQueuedActionIds(ids);
-      } catch  {}
+      } catch {
+        setError('The offline action queue could not be read.');
+      }
     };
     updateOfflineCount();
 
@@ -183,7 +178,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             ) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.priority_tasks.map((pt: any) => ({
+                ...unifiedData.priority_tasks.map((pt) => ({
                   id: pt.id,
                   tenant_id: pt.tenant_id || "default",
                   event_source: "task",
@@ -208,7 +203,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.triage.slice(0, 3).map((ti: any) => {
+                ...unifiedData.triage.slice(0, 3).map((ti) => {
                   let featureType = "triage";
 
                   if (ti.source?.toLowerCase() === "instagram dm" || ti.source?.toLowerCase() === "instagram") {
@@ -262,7 +257,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             if (unifiedData.orders && Array.isArray(unifiedData.orders)) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.orders.map((or: any) => ({
+                ...unifiedData.orders.map((or) => ({
                   id: or.id,
                   tenant_id: or.tenant_id || "default",
                   event_source: "order",
@@ -290,7 +285,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             if (unifiedData.pendingReviews && Array.isArray(unifiedData.pendingReviews)) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.pendingReviews.map((pr: any) => ({
+                ...unifiedData.pendingReviews.map((pr) => ({
                   id: pr.response?.id || crypto.randomUUID(),
                   tenant_id: tenantId(),
                   event_source: "review",
@@ -321,7 +316,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             if (unifiedData.invoices && Array.isArray(unifiedData.invoices)) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.invoices.map((inv: any) => ({
+                ...unifiedData.invoices.map((inv) => ({
                   id: inv.id,
                   tenant_id: inv.tenant_id || "default",
                   event_source: "invoice",
@@ -355,7 +350,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
             setItems(
               combinedItems.filter(
-                (i: any) =>
+                (i) =>
                   i.lifecycle_state !== "APPROVED" &&
                   i.lifecycle_state !== "DISMISSED" &&
                   i.lifecycle_state !== "PAUSED",
@@ -365,12 +360,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             // Map items for activity feed as well
             const mappedActivities = combinedItems
               .filter(
-                (i: any) =>
+                (i) =>
                   i.lifecycle_state === "APPROVED" ||
                   i.lifecycle_state === "DISMISSED" ||
                   i.lifecycle_state === "PAUSED",
               )
-              .map((a: any) => ({
+              .map((a) => ({
                 id: a.id,
                 tenant_id: a.tenant_id,
                 event_type: a.lifecycle_state,
@@ -390,12 +385,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           }
         }
 
-        if (mounted) {
 
-        }
-      } catch (err: any) {
+      } catch (err) {
         if (mounted && !refresh) {
-          setError(err.message || "Failed to load feed");
+          setError(errorMessage(err, '') || "Failed to load feed");
         }
         console.error("Failed to load activity", err);
       } finally {
@@ -417,12 +410,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     };
   }, [initialData]);
 
-  const badgeTone = (priority?: string) => {
-    const p = (priority || "").toLowerCase();
-    if (p === "high" || p === "urgent") return "bad";
-    if (p === "low") return "neutral";
-    return "warning";
-  };
+
 
   const submitDecision = async (
     id: string,
@@ -501,8 +489,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       await submitDecision(id, approved, modified_content, event_source);
       // Remove item only after successful submission
       setItems((prev) => prev.filter((app) => app.id !== id));
-    } catch (err: any) {
-      setError(err.message || "Action failed");
+    } catch (err) {
+      setError(errorMessage(err, '') || "Action failed");
       throw err;
     }
   };
@@ -686,7 +674,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     })()}
                   </h3>
                   <span className="text-xs text-gray-500 font-sans">
-                    {new Date(activity.created_at).toLocaleString()}
+                    {activity.created_at ? new Date(activity.created_at).toLocaleString() : "Time not recorded"}
                   </span>
                 </div>
               ))}

@@ -4,10 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { PoweredByOmniSolo } from '../../../components/PoweredByOmniSolo';
 
+interface CustomerSubscription {
+  id: string;
+  productName: string;
+  frequency: string;
+  status: string;
+  nextDeliveryDate: string;
+  price: number;
+  discountedPrice: number;
+}
+
 export default function CustomerSubscriptionPortal() {
   const params = useParams();
   const subscriptionId = params?.id as string;
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<CustomerSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionStatus, setActionStatus] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);

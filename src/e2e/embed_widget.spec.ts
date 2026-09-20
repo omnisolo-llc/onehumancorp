@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Growth Loop: Interactive Embed Widget Builder', () => {
-  test('Should render the embed builder, reflect inputs, and serve the backend embed endpoint', async ({ page, request, baseURL }) => {
+  test('Should render the embed builder, reflect inputs, and serve the backend embed endpoint', async ({ page, request }) => {
     // Navigate to the dashboard first to ensure discoverability
     // Resolve dynamically for bazel environment compatibility
     await page.goto('/dashboard.html');

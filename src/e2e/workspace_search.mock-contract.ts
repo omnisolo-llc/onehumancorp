@@ -42,7 +42,7 @@ test.describe("Workspace Search Validation", () => {
     await searchInput.press('Enter');
 
     // Verify search results UI
-    const searchResultsContainer = page.locator('.search-results, [data-testid="search-results"]');
+    page.locator('.search-results, [data-testid="search-results"]');
     // If there is no specific container, we can verify the text directly.
     await expect(page.locator('text=John Doe').first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=john@example.com').first()).toBeVisible();

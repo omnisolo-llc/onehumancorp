@@ -7,11 +7,11 @@ test.describe('Subscription Churn Prediction E2E', () => {
   test('should display subscription churn prediction in the feed and allow approval', async ({ page, request }) => {
     test.setTimeout(180000);
 
-    const testTenantId = uuidv4();
-    const testCustomerId = uuidv4();
+    uuidv4();
+    uuidv4();
 
     // 1. Create User/Tenant to ensure clean state
-    const signupResp = await request.post('/api/v1/auth/signup', {
+    await request.post('/api/v1/auth/signup', {
       data: {
         email: `test_churn_${Date.now()}@example.com`,
         password: 'password123',

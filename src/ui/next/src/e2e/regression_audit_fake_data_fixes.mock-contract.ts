@@ -44,7 +44,7 @@ test.describe('Regression Audit: Verify Fake Data Removed and Features Rewired',
 
 });
 
-  test('verify affiliate track API fails gracefully when backend is down instead of returning fake data', async ({ page, request }) => {
+  test('verify affiliate track API fails gracefully when backend is down instead of returning fake data', async ({ request }) => {
     // Attempting a direct API hit that previously faked the backend
     const response = await request.post('/api/v1/growth/affiliate/track', {
         data: { link: 'test' }
@@ -56,7 +56,7 @@ test.describe('Regression Audit: Verify Fake Data Removed and Features Rewired',
     expect(body.error).toBe('Failed to track affiliate link');
   });
 
-  test('verify whatsapp cloud api fails gracefully when backend is down instead of returning fake data', async ({ page, request }) => {
+  test('verify whatsapp cloud api fails gracefully when backend is down instead of returning fake data', async ({ request }) => {
     const response = await request.post('/api/v1/integrations/whatsapp_cloud_api/connect', {
         data: { token: 'test' }
     });

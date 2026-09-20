@@ -44,8 +44,8 @@ describe('useOnboardingStore', () => {
   });
 
   it('should update startResult', () => {
-    useOnboardingStore.getState().setStartResult({ result: 'test' });
-    expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
+    useOnboardingStore.getState().setStartResult({ message: 'test' });
+    expect(useOnboardingStore.getState().startResult).toEqual({ message: 'test' });
   });
 
   it('should update new state keys correctly', () => {

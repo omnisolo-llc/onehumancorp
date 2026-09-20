@@ -7,7 +7,7 @@ vi.mock("../../components/help", () => ({
   useWalkthrough: () => ({ startWalkthrough: vi.fn() }),
 }));
 vi.mock("../../components/Walkthrough", () => ({
-  WalkthroughTarget: ({ children, id }: any) => <div id={id}>{children}</div>,
+  WalkthroughTarget: ({ children, id }: import('react').PropsWithChildren<{ id: string }>) => <div id={id}>{children}</div>,
 }));
 
 global.fetch = vi.fn();

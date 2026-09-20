@@ -114,7 +114,7 @@ export default function CampaignOrchestrationPage() {
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
         setSupply(supplyData && typeof supplyData === "object" ? supplyData : {});
-      } catch (err: any) {
+      } catch (err) {
         setError(err?.message || "Campaign context could not be loaded.");
       } finally {
         setLoading(false);
@@ -213,7 +213,7 @@ export default function CampaignOrchestrationPage() {
       const data = await response.json();
       setDraft(data.message || data.draft || "Campaign request completed.");
       setActionStatus(`${workflow.title} is ready for review.`);
-    } catch (err: any) {
+    } catch (err) {
       setActionStatus(err?.message || "Campaign request failed.");
     } finally {
       setSubmitting(false);

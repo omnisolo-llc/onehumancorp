@@ -11,13 +11,12 @@ test.describe('Checkout Flow with Subscribe & Save', () => {
     // The backend should return the checkout URL.
     // Intercept window.location.assign so we don't actually navigate to Stripe in the E2E test.
     await page.addInitScript(() => {
-      let interceptedUrl = '';
       Object.defineProperty(window, 'location', {
         configurable: true,
         enumerable: true,
         get: () => {
           return {
-            assign: (url) => { interceptedUrl = url; window['_interceptedCheckoutUrl'] = url; },
+            assign: (url) => { window['_interceptedCheckoutUrl'] = url; },
             href: window.location.href,
             search: window.location.search,
             pathname: window.location.pathname,

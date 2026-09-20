@@ -40,7 +40,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
-    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // // expect(storedTenantId).not.toBeNull();
   });
 
@@ -74,7 +74,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
-    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
   });
 
@@ -108,7 +108,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
-    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
   });
 
@@ -141,13 +141,13 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
-    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
   });
 
-  test('User can save a draft and restore it across sessions', async ({ page, context }) => {
+  test('User can save a draft and restore it across sessions', async ({ page }) => {
 
-    let savedWizardState: Record<string, unknown> | undefined;
+
 
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');

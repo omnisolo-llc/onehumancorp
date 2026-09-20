@@ -39,7 +39,7 @@ function FieldOpsJobsPageContent() {
   const [voiceQuoteJobId, setVoiceQuoteJobId] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [draftingQuote, setDraftingQuote] = useState(false);
-  const [draftQuoteResult, setDraftQuoteResult] = useState<any | null>(null);
+  const [draftQuoteResult, setDraftQuoteResult] = useState<{ quote: import('@/lib/business-records').QuotePayload; line_items?: import('@/lib/business-records').BusinessLineItem[] } | null>(null);
 
 
   useEffect(() => {
@@ -582,7 +582,7 @@ function FieldOpsJobsPageContent() {
                        ${((draftQuoteResult.quote.total_amount_cents || 0) / 100).toFixed(2)}
                      </p>
                      <div className="space-y-2">
-                       {draftQuoteResult.line_items?.map((item: any, i: number) => (
+                       {draftQuoteResult.line_items?.map((item, i) => (
                          <div key={i} className="flex justify-between text-sm">
                            <span className="text-gray-700 dark:text-gray-300">{item.description} (x{item.quantity})</span>
                            <span className="text-gray-900 dark:text-white font-medium">${((item.unit_price_cents || 0) / 100).toFixed(2)}</span>

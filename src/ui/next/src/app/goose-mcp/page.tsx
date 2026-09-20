@@ -1,8 +1,10 @@
 'use client';
+
+import { errorMessage } from '@/lib/errors';
 import React, { useState, useEffect } from 'react';
 
 export default function GooseMcpPage() {
-  const [extensions, setExtensions] = useState<any[]>([]);
+  const [extensions, setExtensions] = useState<{ id: string; name: string; description?: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [execResult, setExecResult] = useState<string | null>(null);
@@ -20,8 +22,8 @@ export default function GooseMcpPage() {
       } else {
         setError('Failed to fetch extensions');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err, ''));
     } finally {
       setLoading(false);
     }
@@ -49,8 +51,8 @@ export default function GooseMcpPage() {
       } else {
         setExecResult(JSON.stringify(data.result, null, 2));
       }
-    } catch (err: any) {
-      setExecResult('Error: ' + err.message);
+    } catch (err) {
+      setExecResult('Error: ' + errorMessage(err, ''));
     }
   };
 

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 
 export default function SonaPatternsPage() {
-  const [patterns, setPatterns] = useState<any[]>([]);
+  const [patterns, setPatterns] = useState<{ id: string; initial_context: string; outcome_score: number; successful_tools: string[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newTaskContext, setNewTaskContext] = useState('');

@@ -102,7 +102,7 @@ function KairosContent() {
           const data = await memoryRes.value.json();
           setMemoryStats(data && typeof data === "object" ? data : {});
         }
-      } catch (e: any) {
+      } catch (e) {
         setError(e?.message || "Failed to load Kairos data");
       } finally {
         setLoading(false);

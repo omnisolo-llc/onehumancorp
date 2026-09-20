@@ -176,7 +176,7 @@ export default function Wrapped() {
         className="flex-1 min-h-0 relative w-full flex transition-transform duration-500 ease-in-out"
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
       >
-        {slides.map((slide, i) => (
+        {slides.map((slide) => (
           <div
             key={slide.id}
             className="w-full h-full flex-shrink-0 relative overflow-hidden"

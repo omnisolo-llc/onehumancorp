@@ -5,7 +5,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
 
     test('should allow owner to tap-to-pay and see low stock alert', async ({ page, request }) => {
         const tenantId = 'pos_test_tenant_' + Date.now();
-        const customerPhone = '+15555551234';
+
 
         // 1. Seed the database with a user, tenant, and product
         await request.post('/api/v1/builder/seeder/exec', {

@@ -25,7 +25,7 @@ export default function SpinToWinGeneratorPage() {
 
   const handleGenerate = () => {
     const prizes = discounts.split(',').map(d => d.trim()).filter(d => d);
-    const prizeListStr = encodeURIComponent(JSON.stringify(prizes));
+    encodeURIComponent(JSON.stringify(prizes));
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
     const iframeSrc = `${origin}/api/v1/growth/spin-to-win/embed?campaign=${encodeURIComponent(campaignName)}&reward=${encodeURIComponent(reward)}&tenant=${encodeURIComponent(tenant)}`;
 

@@ -12,6 +12,7 @@ describe('GroupedAgentActionCard', () => {
       tenant_id: 't1',
       agent_id: 'agent_1',
       status: 'pending',
+      lifecycle_state: 'PENDING_APPROVAL',
       created_at: new Date().toISOString(),
       proposed_action: null,
       context_payload: null
@@ -22,6 +23,7 @@ describe('GroupedAgentActionCard', () => {
       tenant_id: 't1',
       agent_id: 'agent_1',
       status: 'pending',
+      lifecycle_state: 'PENDING_APPROVAL',
       created_at: new Date().toISOString(),
       proposed_action: null,
       context_payload: null
@@ -34,12 +36,15 @@ describe('GroupedAgentActionCard', () => {
       title="Tasks"
       items={mockItems}
       handleDecision={vi.fn()}
-      loadingAction={null}
       queuedActionIds={new Set()}
       setEditingId={vi.fn()}
       editingId={null}
       setEditContent={vi.fn()}
       editContent=""
+      editQuotePrice=""
+      editQuoteScope=""
+      setEditQuotePrice={vi.fn()}
+      setEditQuoteScope={vi.fn()}
     />);
     expect(screen.getByText('2 new Tasks')).toBeInTheDocument();
     expect(screen.getByText('2 items')).toBeInTheDocument();
@@ -55,12 +60,15 @@ describe('GroupedAgentActionCard', () => {
       title="Tasks"
       items={mockItems}
       handleDecision={handleDecision}
-      loadingAction={null}
       queuedActionIds={new Set()}
       setEditingId={vi.fn()}
       editingId={null}
       setEditContent={vi.fn()}
       editContent=""
+      editQuotePrice=""
+      editQuoteScope=""
+      setEditQuotePrice={vi.fn()}
+      setEditQuoteScope={vi.fn()}
     />);
 
     fireEvent.click(screen.getByText('Approve All'));
@@ -76,12 +84,15 @@ describe('GroupedAgentActionCard', () => {
       title="Tasks"
       items={mockItems}
       handleDecision={vi.fn()}
-      loadingAction={null}
       queuedActionIds={new Set()}
       setEditingId={vi.fn()}
       editingId={null}
       setEditContent={vi.fn()}
       editContent=""
+      editQuotePrice=""
+      editQuoteScope=""
+      setEditQuotePrice={vi.fn()}
+      setEditQuoteScope={vi.fn()}
     />);
 
     // Initially not expanded

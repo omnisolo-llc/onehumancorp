@@ -32,8 +32,8 @@ test.describe('DeerFlow Sub-agent Orchestration UI', () => {
     await expect(page.getByRole('button', { name: 'Orchestrating Sub-agents...' })).toBeDisabled();
 
     // Wait for the result or error text. We don't mock it, we accept whatever the real server responds with!
-    const resultBox = page.locator('.whitespace-pre-wrap');
-    const errorBox = page.locator('.bg-red-50');
+    page.locator('.whitespace-pre-wrap');
+    page.locator('.bg-red-50');
 
     // Wait for either result or error to be visible
     await expect(page.locator('.whitespace-pre-wrap, .bg-red-50')).toBeVisible({ timeout: 30000 });

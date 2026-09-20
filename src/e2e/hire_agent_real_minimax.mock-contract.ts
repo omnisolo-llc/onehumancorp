@@ -79,7 +79,7 @@ test.describe('real MiniMax hire-agent flow', () => {
     const agentsResponse = await request.get(`${apiBase}/api/v1/agents`);
     expect(agentsResponse.ok()).toBeTruthy();
     const agents = await agentsResponse.json();
-    const hiredAgent = agents.find((agent: any) => agent.id === hired.agent_id);
+    const hiredAgent = agents.find((agent: { id: string }) => agent.id === hired.agent_id);
     expect(hiredAgent).toMatchObject({
       name: agentName,
       role: 'Business growth operator',

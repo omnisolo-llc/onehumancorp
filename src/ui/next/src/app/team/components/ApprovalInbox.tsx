@@ -8,7 +8,7 @@ type Props = {
   departmentName: string;
   approvals: ApprovalRequest[];
   onBack: () => void;
-  onApprove: (id: string, editedPayload?: any) => void;
+  onApprove: (id: string, editedPayload?: import('@/lib/agent-feed-types').ActionPayload) => void;
   onReject: (id: string) => void;
 };
 
