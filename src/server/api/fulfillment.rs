@@ -106,7 +106,24 @@ pub async fn persist_shippo_tracking_update(
     .map_err(|err| err.to_string())?;
 
     tx.commit().await.map_err(|err| err.to_string())?;
-    Ok(result.rows_affected())
+
+    let rows = result.rows_affected();
+    if rows == 0 {
+        tracing::debug!(
+            "Shippo tracking webhook idempotent skip: {} for tenant {}",
+            update.tracking_number,
+            tenant_id
+        );
+    } else {
+        tracing::info!(
+            "Shippo tracking webhook applied: {} to status {} for tenant {}",
+            update.tracking_number,
+            update.tracking_status,
+            tenant_id
+        );
+    }
+
+    Ok(rows)
 }
 
 fn apply_shippo_tracking_update_to_queue(

@@ -124,19 +124,31 @@ impl ShippoClient {
             "async": false,
         });
 
-        let resp = self
-            .http_client
-            .post(format!("{}/shipments", Self::api_base()))
-            .header(
-                "Authorization",
-                format!("ShippoToken {}", self.api_key.trim()),
-            )
-            .header("Content-Type", "application/json")
-            .header("SHIPPO-API-VERSION", "2018-02-08")
-            .json(&payload)
-            .send()
-            .await
-            .map_err(|e| format!("Shippo shipment request failed: {e}"))?;
+        let mut attempts = 0;
+        let mut resp;
+        loop {
+            resp = self
+                .http_client
+                .post(format!("{}/shipments", Self::api_base()))
+                .header(
+                    "Authorization",
+                    format!("ShippoToken {}", self.api_key.trim()),
+                )
+                .header("Content-Type", "application/json")
+                .header("SHIPPO-API-VERSION", "2018-02-08")
+                .timeout(std::time::Duration::from_secs(10))
+                .json(&payload)
+                .send()
+                .await
+                .map_err(|e| format!("Shippo shipment request failed: {e}"))?;
+
+            if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS && attempts < 3 {
+                attempts += 1;
+                tokio::time::sleep(std::time::Duration::from_millis(500 * (1 << attempts))).await;
+                continue;
+            }
+            break;
+        }
 
         let status = resp.status();
         let body: serde_json::Value = resp
@@ -194,23 +206,35 @@ impl ShippoClient {
             return Err("Shippo rate id is required".to_string());
         }
 
-        let resp = self
-            .http_client
-            .post(format!("{}/transactions", Self::api_base()))
-            .header(
-                "Authorization",
-                format!("ShippoToken {}", self.api_key.trim()),
-            )
-            .header("Content-Type", "application/json")
-            .header("SHIPPO-API-VERSION", "2018-02-08")
-            .json(&json!({
-                "rate": rate_id,
-                "async": false,
-                "label_file_type": "PDF",
-            }))
-            .send()
-            .await
-            .map_err(|e| format!("Shippo label request failed: {e}"))?;
+        let mut attempts = 0;
+        let mut resp;
+        loop {
+            resp = self
+                .http_client
+                .post(format!("{}/transactions", Self::api_base()))
+                .header(
+                    "Authorization",
+                    format!("ShippoToken {}", self.api_key.trim()),
+                )
+                .header("Content-Type", "application/json")
+                .header("SHIPPO-API-VERSION", "2018-02-08")
+                .timeout(std::time::Duration::from_secs(15))
+                .json(&json!({
+                    "rate": rate_id,
+                    "async": false,
+                    "label_file_type": "PDF",
+                }))
+                .send()
+                .await
+                .map_err(|e| format!("Shippo label request failed: {e}"))?;
+
+            if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS && attempts < 3 {
+                attempts += 1;
+                tokio::time::sleep(std::time::Duration::from_millis(500 * (1 << attempts))).await;
+                continue;
+            }
+            break;
+        }
 
         let status = resp.status();
         let body: serde_json::Value = resp
@@ -289,5 +313,26 @@ mod tests {
         );
         assert!(trusted_label_url("https://user:password@app.goshippo.com/label.pdf").is_none());
         assert!(trusted_label_url("http://app.goshippo.com/label.pdf").is_none());
+    }
+
+    #[tokio::test]
+    async fn fetch_rates_fails_if_weight_is_negative() {
+        let client = ShippoClient::new("real_token".to_string());
+        let err = client.fetch_rates(-5.0, "10x8x4").await.unwrap_err();
+        assert!(err.contains("shipment weight must be positive"));
+    }
+
+    #[tokio::test]
+    async fn fetch_rates_fails_if_weight_is_zero() {
+        let client = ShippoClient::new("real_token".to_string());
+        let err = client.fetch_rates(0.0, "10x8x4").await.unwrap_err();
+        assert!(err.contains("shipment weight must be positive"));
+    }
+
+    #[tokio::test]
+    async fn purchase_label_fails_if_rate_id_is_empty() {
+        let client = ShippoClient::new("real_token".to_string());
+        let err = client.purchase_label("   ").await.unwrap_err();
+        assert!(err.contains("Shippo rate id is required"));
     }
 }
