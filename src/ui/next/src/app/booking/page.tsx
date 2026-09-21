@@ -182,7 +182,7 @@ function BookingForm() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Booking Request Confirmed.</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Booking request confirmed.</h2>
           <p className="text-gray-600 mb-8">{checkoutUnavailable ? "Deposit checkout is unavailable because no real checkout session was returned." : "Your booking was confirmed."}</p>
         </div>
       </div>

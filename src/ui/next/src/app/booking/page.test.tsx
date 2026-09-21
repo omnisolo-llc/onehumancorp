@@ -77,7 +77,7 @@ describe('BookingPage', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Booking Request Confirmed.')).toBeInTheDocument();
+      expect(screen.getByText('Booking request confirmed.')).toBeInTheDocument();
     });
 
     const reserveCall = vi.mocked(global.fetch).mock.calls.at(-1);
@@ -111,7 +111,7 @@ describe('BookingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Confirm Booking/i }));
 
     expect(await screen.findByText('The booking request could not be confirmed. Please try again.')).toBeDefined();
-    expect(screen.queryByText('Booking Request Confirmed.')).toBeNull();
+    expect(screen.queryByText('Booking request confirmed.')).toBeNull();
   });
 
   it('rejects malformed availability slots', async () => {
@@ -138,7 +138,7 @@ describe('BookingPage', () => {
     fireEvent.change(screen.getByPlaceholderText(/What do you need help with\?/i), { target: { value: 'Test description' } });
     fireEvent.click(screen.getByRole('button', { name: /Confirm Booking/i }));
 
-    expect(await screen.findByText('Booking Request Confirmed.')).toBeDefined();
+    expect(await screen.findByText('Booking request confirmed.')).toBeDefined();
     expect(screen.getByText(/Deposit checkout is unavailable/)).toBeDefined();
     expect(screen.queryByTestId('pay-deposit-btn')).toBeNull();
     expect(document.body.innerHTML).not.toContain('cs_test_dummy');
