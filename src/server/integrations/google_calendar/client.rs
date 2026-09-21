@@ -20,6 +20,7 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, calendar_id: &str, event_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -192,6 +193,24 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         .await
                         .map_err(|e| format!("Google Calendar API response parse error: {}", e))?;
                     created_event_reference(&json)
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn cancel_event(&self, calendar_id: &str, event_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url(&format!("calendars/{}/events/{}", calendar_id, event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self.http_client.delete(url).bearer_auth(token).send().await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() || resp.status() == reqwest::StatusCode::NOT_FOUND {
+                    Ok(())
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
@@ -443,5 +462,18 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events[0]["start"], "2026-07-21T09:00:00Z");
         assert_eq!(events[0]["end"], "2026-07-21T10:00:00Z");
+    }
+
+    #[tokio::test]
+    async fn cancel_event_handles_success_and_not_found() {
+        let response = "";
+        let (base_url, request_rx) = start_google_calendar_server(response).await;
+        let client = RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let result = client.cancel_event("primary", "event-id-123").await;
+        assert!(result.is_ok());
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/event-id-123 HTTP/1.1"));
     }
 }

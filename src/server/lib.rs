@@ -8583,6 +8583,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }))
         .route("/api/v1/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .nest("/api/v1/integrations", crate::api::tool_integrations::router(db.clone()))
+        .route("/api/v1/integrations/google_calendar/webhook", axum::routing::post(api::calendar_webhook::google_calendar_webhook_handler).with_state(api::calendar_webhook::CalendarWebhookState { db: db.clone() }))
         .route("/api/v1/walkup", axum::routing::post(api::walkup::handle_walkup)
             .with_state(api::walkup::AppState { db: db.clone() })
             .route_layer(axum::middleware::from_fn_with_state(

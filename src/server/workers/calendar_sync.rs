@@ -94,9 +94,18 @@ async fn push_bookings_to_calendar(
         .await
         .map_err(|e| e.to_string())?;
 
-    // Find unsynced confirmed bookings
-    let rows = sqlx::query(
-        "SELECT id, start_time, end_time FROM bookings WHERE status = 'confirmed' AND tenant_id = $1"
+    // Process unsynced confirmed bookings (no external_event_id yet)
+    let confirmed_rows = sqlx::query(
+        "SELECT id, start_time, end_time FROM bookings WHERE status = 'confirmed' AND external_event_id IS NULL AND tenant_id = $1"
+    )
+    .bind(tenant_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    // Process cancelled bookings that have an external_event_id
+    let cancelled_rows = sqlx::query(
+        "SELECT id, external_event_id FROM bookings WHERE status = 'cancelled' AND external_event_id IS NOT NULL AND tenant_id = $1"
     )
     .bind(tenant_id)
     .fetch_all(&mut *tx)
@@ -105,7 +114,7 @@ async fn push_bookings_to_calendar(
 
     tx.commit().await.map_err(|e| e.to_string())?;
 
-    for row in rows {
+    for row in confirmed_rows {
         let booking_id: String = row.get("id");
         let start_time: DateTime<Utc> = row.get("start_time");
         let end_time: Option<DateTime<Utc>> = row.try_get("end_time").ok().flatten();
@@ -114,12 +123,59 @@ async fn push_bookings_to_calendar(
 
         let summary = format!("OmniSolo Booking: {}", booking_id);
 
-        // This is a naive sync. Real implementation would check sync_metadata to avoid creating duplicates.
-        if let Err(e) = provider_client
+        match provider_client
             .create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339())
             .await
         {
-            tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+            Ok(event_id) => {
+                let mut tx2 = pool.begin().await.map_err(|e| e.to_string())?;
+                auth_utils::set_org_context(&mut *tx2, tenant_id)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if let Err(e) = sqlx::query("UPDATE bookings SET external_event_id = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(&event_id)
+                    .bind(&booking_id)
+                    .bind(tenant_id)
+                    .execute(&mut *tx2)
+                    .await
+                {
+                    tracing::error!("Failed to save external_event_id for booking {}: {}", booking_id, e);
+                } else {
+                    let _ = tx2.commit().await;
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+            }
+        }
+    }
+
+    for row in cancelled_rows {
+        let booking_id: String = row.get("id");
+        let external_event_id: String = row.get("external_event_id");
+
+        match provider_client.cancel_event("primary", &external_event_id).await {
+            Ok(_) => {
+                let mut tx2 = pool.begin().await.map_err(|e| e.to_string())?;
+                auth_utils::set_org_context(&mut *tx2, tenant_id)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if let Err(e) = sqlx::query("UPDATE bookings SET external_event_id = NULL WHERE id = $1 AND tenant_id = $2")
+                    .bind(&booking_id)
+                    .bind(tenant_id)
+                    .execute(&mut *tx2)
+                    .await
+                {
+                    tracing::error!("Failed to clear external_event_id for cancelled booking {}: {}", booking_id, e);
+                } else {
+                    let _ = tx2.commit().await;
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to cancel event for booking {}: {}", booking_id, e);
+            }
         }
     }
 

@@ -18,6 +18,7 @@ pub mod billing_api_test;
 pub mod billing_webhook;
 #[cfg(test)]
 pub mod billing_webhook_test;
+pub mod calendar_webhook;
 pub mod chaos;
 pub mod dynamic_workflows;
 pub mod growth;

@@ -59,4 +59,8 @@ impl GoogleCalendarProvider {
             .create_event(summary, start_time, end_time)
             .await
     }
+
+    pub async fn cancel_event(&self, calendar_id: &str, event_id: &str) -> Result<(), String> {
+        self.client.cancel_event(calendar_id, event_id).await
+    }
 }

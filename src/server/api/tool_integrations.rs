@@ -489,7 +489,162 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route("/{id}/connect", post(connect_integration_handler))
         .route("/{id}/verify", post(refresh_integration_handler))
         .route("/{id}", axum::routing::delete(revoke_integration_handler))
+        .route("/google_calendar/oauth/connect", post(connect_google_calendar_oauth_handler))
+        .route("/google_calendar/oauth/callback", get(google_calendar_oauth_callback_handler))
         .with_state(state)
+}
+
+pub async fn connect_google_calendar_oauth_handler(
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+) -> Json<serde_json::Value> {
+    if !user
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return Json(serde_json::json!({
+            "status": "error",
+            "message": "Owner approval is required"
+        }));
+    }
+
+    let client_id = match std::env::var("GOOGLE_CALENDAR_CLIENT_ID") {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            return Json(serde_json::json!({
+                "status": "error",
+                "message": "Google Calendar OAuth is not configured"
+            }));
+        }
+    };
+    let redirect_uri = match std::env::var("GOOGLE_CALENDAR_REDIRECT_URI") {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            return Json(serde_json::json!({
+                "status": "error",
+                "message": "Google Calendar OAuth is not configured"
+            }));
+        }
+    };
+
+    let scope = "https://www.googleapis.com/auth/calendar.events";
+    let state = user.organization_id.unwrap_or_default();
+
+    // Secure OAuth CSRF: We generate a UUID state token instead of using tenant_id directly.
+    let oauth_state = uuid::Uuid::new_v4().to_string();
+
+    // Cache the secure state with the tenant_id in redis (approx 10 minutes)
+    let redis_client = crate::db::redis_pool::get_client().expect("Redis required");
+    let mut conn = redis_client
+        .get_multiplexed_async_connection()
+        .await
+        .expect("Redis connection");
+
+    let _: () = redis::cmd("SETEX")
+        .arg(format!("oauth:google_calendar:{}", oauth_state))
+        .arg(600)
+        .arg(&state)
+        .query_async(&mut conn)
+        .await
+        .expect("Redis SETEX");
+
+    let redirect_url = format!(
+        "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&scope={}&response_type=code&access_type=offline&prompt=consent&state={}",
+        urlencoding::encode(&client_id),
+        urlencoding::encode(&redirect_uri),
+        urlencoding::encode(scope),
+        urlencoding::encode(&oauth_state)
+    );
+
+    Json(serde_json::json!({
+        "status": "success",
+        "redirect_url": redirect_url
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct GoogleCalendarOAuthCallbackQuery {
+    pub code: String,
+    pub state: String,
+}
+
+pub async fn google_calendar_oauth_callback_handler(
+    State(state): State<ToolIntegrationsApiState>,
+    axum::extract::Query(query): axum::extract::Query<GoogleCalendarOAuthCallbackQuery>,
+) -> impl IntoResponse {
+    let client_id = std::env::var("GOOGLE_CALENDAR_CLIENT_ID").unwrap_or_default();
+    let client_secret = std::env::var("GOOGLE_CALENDAR_CLIENT_SECRET").unwrap_or_default();
+    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI").unwrap_or_default();
+
+    // Verify the state token and retrieve the tenant_id
+    let redis_client = crate::db::redis_pool::get_client().expect("Redis required");
+    let mut conn = redis_client
+        .get_multiplexed_async_connection()
+        .await
+        .expect("Redis connection");
+
+    let state_key = format!("oauth:google_calendar:{}", query.state);
+    let tenant_id: Option<String> = redis::cmd("GET")
+        .arg(&state_key)
+        .query_async(&mut conn)
+        .await
+        .expect("Redis GET");
+
+    let tenant_id = match tenant_id {
+        Some(id) => {
+            let _: () = redis::cmd("DEL").arg(&state_key).query_async(&mut conn).await.unwrap_or(());
+            id
+        },
+        None => return axum::response::Html("Invalid or expired OAuth state. Please try again."),
+    };
+
+    let payload = [
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
+        ("code", query.code.as_str()),
+        ("redirect_uri", redirect_uri.as_str()),
+        ("grant_type", "authorization_code"),
+    ];
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post("https://oauth2.googleapis.com/token")
+        .form(&payload)
+        .send()
+        .await;
+
+    match res {
+        Ok(resp) if resp.status().is_success() => {
+            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                if let Some(access_token) = json["access_token"].as_str() {
+                    let refresh_token = json["refresh_token"].as_str().unwrap_or("");
+                    let sync_metadata = serde_json::json!({
+                        "refresh_token": refresh_token,
+                        "connected_at": chrono::Utc::now().to_rfc3339()
+                    });
+
+                    let mut tx = state.db.pool.begin().await.unwrap();
+                    let _ = sqlx::query(
+                        "INSERT INTO calendar_integrations (id, tenant_id, provider, access_token, sync_metadata)
+                         VALUES ($1, $2, 'google_calendar', $3, $4)
+                         ON CONFLICT (id) DO UPDATE SET access_token = EXCLUDED.access_token, sync_metadata = EXCLUDED.sync_metadata",
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(tenant_id)
+                    .bind(access_token)
+                    .bind(sync_metadata)
+                    .execute(&mut *tx)
+                    .await;
+                    let _ = tx.commit().await;
+
+                    return axum::response::Html("Google Calendar connected successfully! You can close this window.");
+                }
+            }
+        }
+        _ => {}
+    }
+
+    axum::response::Html("Failed to connect Google Calendar. Please try again.")
 }
 
 #[cfg(test)]
