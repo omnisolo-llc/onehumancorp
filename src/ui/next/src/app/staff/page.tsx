@@ -22,7 +22,7 @@ export default function StaffPage() {
     <AppShell title="My Shifts & Tasks">
       <div className="max-w-[375px] mx-auto min-h-screen bg-gray-50 pb-20">
         <header className="px-4 py-6 bg-white border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">My Shifts & Tasks</h1>
+          <h2 className="text-2xl font-bold text-gray-900">My Shifts & Tasks</h2>
         </header>
 
         <main className="p-4 space-y-6">

@@ -54,7 +54,7 @@ export default function ViralProductWidgetPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500 font-inter">
 
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold font-outfit text-gray-900 tracking-tight">Viral Product Widget Builder</h1>
+                    <h2 className="text-3xl font-bold font-outfit text-gray-900 tracking-tight">Viral Product Widget Builder</h2>
                     <p className="mt-2 text-gray-600 max-w-2xl">Create an embeddable product card for your blog, partner sites, or Link-in-Bio to drive seamless checkouts and viral referrals.</p>
                 </div>
 

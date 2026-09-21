@@ -33,7 +33,7 @@ export default function FinancePage() {
         <AppShell title="Finance">
             <main className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto space-y-6 md:space-y-12 pb-24">
                 <header className="mb-4">
-                    <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h1>
+                    <h2 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h2>
                     <p className="text-gray-500 mt-2 text-sm">Manage your cash flow, invoices, and deposits.</p>
                 </header>
                 {error && <p className="text-sm text-red-600" role="status">{error}</p>}

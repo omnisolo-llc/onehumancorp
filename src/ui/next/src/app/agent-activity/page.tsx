@@ -70,7 +70,7 @@ export default function AgentActivityPage() {
     <AppShell title="Agent Activity">
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Agent Activity</h1>
+          <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Agent Activity</h2>
           <p className="text-[#86868B] dark:text-[#A1A1A6] text-lg mt-2 font-inter">Live view of automated assistant tasks running across the organization.</p>
         </header>
 
