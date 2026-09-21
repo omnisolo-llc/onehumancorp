@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import InboxPage from './page';
 
@@ -21,17 +21,25 @@ vi.mock('../components/AppShell', () => ({
 
 beforeEach(() => {
   queryState.data = [];
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ([]),
+  });
 });
 
-test('renders a stable empty state when PowerSync has no inbox messages', () => {
-  const { container } = render(<InboxPage />);
+test('renders a stable empty state when PowerSync has no inbox messages', async () => {
+  let container;
+  await act(async () => {
+    const renderResult = render(<InboxPage />);
+    container = renderResult.container;
+  });
 
   expect(screen.getByText('No inbox messages found for this tenant.')).toBeInTheDocument();
   expect(screen.getByText('Select a database-backed message to inspect it.')).toBeInTheDocument();
   expect(container.textContent).not.toContain('\\n');
 });
 
-test('renders message markup as text while preserving safe HTTPS media', () => {
+test('renders message markup as text while preserving safe HTTPS media', async () => {
   queryState.data = [{
     id: 'message-1',
     content: '<script>window.compromised = true</script>\n![Receipt](https://cdn.example.test/receipt.png)',
@@ -39,7 +47,11 @@ test('renders message markup as text while preserving safe HTTPS media', () => {
     status: 'resolved',
   }];
 
-  const { container } = render(<InboxPage />);
+  let container;
+  await act(async () => {
+    const renderResult = render(<InboxPage />);
+    container = renderResult.container;
+  });
 
   expect(screen.getByText('<script>window.compromised = true</script>')).toBeInTheDocument();
   expect(container.querySelector('script')).toBeNull();
