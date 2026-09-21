@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
+import type { Page } from '@playwright/test';
 
 async function loginThroughUI(
-  page: Parameters<typeof test>[0] extends never ? never : any,
+  page: Page,
   user: { email: string; password: string; organizationId: string },
 ) {
   await page.goto('/login');
