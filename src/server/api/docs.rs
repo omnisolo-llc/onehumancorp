@@ -401,6 +401,14 @@ pub async fn get_tooltips(
             "checkout-pay-tooltip".to_string(),
             "Click to process your payment.".to_string(),
         );
+        tooltips.insert(
+            "help-nav-tooltip".to_string(),
+            "Open the Help Center to find guides, videos, and contact support.".to_string(),
+        );
+        tooltips.insert(
+            "changelog-nav-tooltip".to_string(),
+            "See what's new in the latest OmniSolo updates.".to_string(),
+        );
     }
 
     Ok(Json(tooltips))
