@@ -104,8 +104,18 @@ function privateHeaders(contentType?: string): Headers {
   return headers;
 }
 
-function error(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
+function error(status: number, message: string, outcomeUnknown = false): Response {
+  const payload = outcomeUnknown
+    ? {
+        error: message,
+        code: "BACKEND_OUTCOME_UNKNOWN",
+        outcome: "unknown",
+        reconciliation_required: true,
+        retry_safe: false,
+        recovery: "The request may have been applied. Check its recorded outcome before retrying.",
+      }
+    : { error: message };
+  return new Response(JSON.stringify(payload), {
     status,
     headers: privateHeaders("application/json; charset=utf-8"),
   });
@@ -292,6 +302,11 @@ export async function proxyAuthenticatedRequest(
     ? Math.max(1, Math.min(300_000, (session!.exp - dependencies.now()) * 1000))
     : dependencies.timeoutMs);
   let streaming = false;
+  let dispatched = false;
+  // A transport failure cannot prove that an admitted write had no effect.
+  // Classify the actual backend method, including trusted route overrides.
+  const failure = (status: number, message: string): Response =>
+    error(status, message, dispatched && backendMethod !== "GET" && backendMethod !== "HEAD");
   try {
     let encodedRequest: Uint8Array<ArrayBuffer>;
     try {
@@ -332,6 +347,10 @@ export async function proxyAuthenticatedRequest(
       backendMethod !== "GET" &&
       backendMethod !== "HEAD" &&
       options.suppressRequestBody !== true;
+    // Path/body preparation may await work. Recheck cancellation immediately
+    // before dispatch rather than relying on the upstream fetch to notice it.
+    if (timeout.signal.aborted) throw new WorkAbortedError("work aborted");
+    dispatched = true;
     const backend = await dependencies.fetchImpl(target, {
       method: backendMethod,
       headers,
@@ -342,11 +361,11 @@ export async function proxyAuthenticatedRequest(
     });
     if (backend.status >= 300 && backend.status < 400) {
       void backend.body?.cancel().catch(() => undefined);
-      return error(502, "backend unavailable");
+      return failure(502, "backend unavailable");
     }
     if (!declaredLengthWithinLimit(backend.headers, dependencies.responseLimitBytes)) {
       void backend.body?.cancel().catch(() => undefined);
-      return error(502, "backend response too large");
+      return failure(502, "backend response too large");
     }
     if (options.streamResponse && backend.ok && backend.body &&
         backend.headers.get("content-type")?.split(";", 1)[0].trim() === "text/event-stream") {
@@ -399,11 +418,11 @@ export async function proxyAuthenticatedRequest(
       headers: responseHeaders(backend.headers),
     });
   } catch (cause) {
-    if (cause instanceof BodyLimitError) return error(502, "backend response too large");
+    if (cause instanceof BodyLimitError) return failure(502, "backend response too large");
     if (cause instanceof WorkAbortedError || timeout.didTimeout() || timeout.signal.aborted) {
-      return error(504, "backend timeout");
+      return failure(504, "backend timeout");
     }
-    return error(502, "backend unavailable");
+    return failure(502, "backend unavailable");
   } finally {
     if (!streaming) timeout.cleanup();
   }
