@@ -24,11 +24,11 @@ test('strict Rust lint is an independent required job, not a predecessor of test
 test('browser evaluation uses isolated one-worker shards within the 60-runner quota', async () => {
   const jobs = workflow();
   const e2e = jobs['native-e2e'];
-  assert.deepEqual(e2e.strategy.matrix.shard, Array.from({ length: 32 }, (_, i) => i + 1));
-  assert.equal(e2e.strategy['max-parallel'], 32);
+  assert.deepEqual(e2e.strategy.matrix.shard, Array.from({ length: 8 }, (_, i) => i + 1));
+  assert.equal(e2e.strategy['max-parallel'], 8);
   assert.equal(e2e.strategy['fail-fast'], false);
-  assert.ok(e2e.steps.some(step => /--shard=\$\{\{ matrix\.shard \}\}\/32 --workers=1 --retries=0/.test(step.run ?? '')));
-  assert.ok(Object.keys(jobs).length + 31 <= 60, 'per-run maximum exceeds available concurrency');
+  assert.ok(e2e.steps.some(step => /--shard=\$\{\{ matrix\.shard \}\}\/8 --workers=1 --retries=0/.test(step.run ?? '')));
+  assert.ok(Object.keys(jobs).length + 7 <= 24, 'per-PR maximum should leave substantial runner headroom');
   const config = await readFile('playwright.config.ts', 'utf8');
   assert.match(config, /workers: process\.env\.CI \? 1/);
 });
