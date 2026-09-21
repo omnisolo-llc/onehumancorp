@@ -1,6 +1,7 @@
 'use client';
 
 import React,{ useState,useEffect,useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
 
 // Unique IDs for accessibility and testing
@@ -75,6 +76,7 @@ type Goal = {
 
 export default function AIWorkspacePage() {
   // Navigation & View State
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'calendar' | 'notes' | 'automation' | 'assistant'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
@@ -117,7 +119,6 @@ export default function AIWorkspacePage() {
   const [newEventTime, setNewEventTime] = useState('09:00 AM');
   const [selectedDay, setSelectedDay] = useState<string>('2026-07-20');
   const [calendarSyncStatus, setCalendarSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
-  const [isGoogleSynced, setIsGoogleSynced] = useState(false);
   const [isOutlookSynced, setIsOutlookSynced] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
@@ -308,18 +309,6 @@ export default function AIWorkspacePage() {
   };
 
   // Calendar Synchronization Handlers
-  const handleToggleGoogleSync = () => {
-    if (isGoogleSynced) {
-      setIsGoogleSynced(false);
-      setEvents((prev) => prev.filter(e => e.id !== 'esync_g1'));
-      showToast('Google Calendar sync disconnected.', 'info');
-    } else {
-      setIsGoogleSynced(true);
-      showToast('Google Calendar successfully synced!', 'success');
-      runCalendarSync(true, isOutlookSynced);
-    }
-  };
-
   const handleToggleOutlookSync = () => {
     if (isOutlookSynced) {
       setIsOutlookSynced(false);
@@ -328,26 +317,17 @@ export default function AIWorkspacePage() {
     } else {
       setIsOutlookSynced(true);
       showToast('Outlook Calendar successfully synced!', 'success');
-      runCalendarSync(isGoogleSynced, true);
+      runCalendarSync(true); // Treat outlook as only for this component toggle
     }
   };
 
-  const runCalendarSync = (google: boolean, outlook: boolean) => {
+  const runCalendarSync = (outlook: boolean) => {
     setCalendarSyncStatus('syncing');
     setTimeout(() => {
       setCalendarSyncStatus('synced');
       setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       
       const newSyncedEvents: typeof events = [];
-      if (google) {
-        newSyncedEvents.push({
-          id: 'esync_g1',
-          title: 'SYNCED: Google Dev Standup',
-          date: '2026-07-20',
-          time: '09:00 AM',
-          desc: 'Imported from connected Google Calendar.',
-        });
-      }
       if (outlook) {
         newSyncedEvents.push({
           id: 'esync_o1',
@@ -367,11 +347,11 @@ export default function AIWorkspacePage() {
   };
 
   const handleManualSync = () => {
-    if (!isGoogleSynced && !isOutlookSynced) {
+    if (!isOutlookSynced) {
       showToast('Connect at least one calendar service to sync.', 'warning');
       return;
     }
-    runCalendarSync(isGoogleSynced, isOutlookSynced);
+    runCalendarSync(isOutlookSynced);
   };
 
   // Add reminder
@@ -1173,18 +1153,14 @@ export default function AIWorkspacePage() {
                     <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 text-xs">
                       <div>
                         <p className="font-bold text-slate-950 dark:text-slate-50">Google Calendar</p>
-                        <p className="text-[10px] text-slate-400">{isGoogleSynced ? 'Connected & Synced' : 'Disconnected'}</p>
+                        <p className="text-[10px] text-slate-400">Manage connection</p>
                       </div>
                       <button
                         type="button"
-                        onClick={handleToggleGoogleSync}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                          isGoogleSynced
-                            ? 'bg-rose-100 dark:bg-rose-950/45 text-rose-700 dark:text-rose-300 hover:bg-rose-200'
-                            : 'bg-blue-100 dark:bg-blue-950/45 text-blue-700 dark:text-blue-300 hover:bg-blue-200'
-                        }`}
+                        onClick={() => router.push('/integrations')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-blue-100 dark:bg-blue-950/45 text-blue-700 dark:text-blue-300 hover:bg-blue-200`}
                       >
-                        {isGoogleSynced ? 'Disconnect' : 'Connect'}
+                        Connect
                       </button>
                     </div>
 

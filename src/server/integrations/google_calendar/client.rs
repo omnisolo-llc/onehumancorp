@@ -429,7 +429,7 @@ mod tests {
                 }
             }
         }"#;
-        let (base_url, _) = start_google_calendar_server(response).await;
+        let (base_url, _rx) = start_google_calendar_server(response).await;
         let client =
             RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
 
