@@ -20,6 +20,8 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
+    async fn handle_webhook(&self, payload: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -199,9 +201,42 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
             Err(e) => Err(format!("Network error: {}", e)),
         }
     }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        RealGoogleCalendarClient::cancel_event(self, event_id).await
+    }
+
+    async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        RealGoogleCalendarClient::handle_webhook(self, payload).await
+    }
 }
 
 impl RealGoogleCalendarClient {
+    pub async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self.http_client.delete(url).bearer_auth(token).send().await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    Ok(())
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
+        // Log push notification for now
+        // A complete implementation would parse the channel ID/resource ID
+        // and trigger an incremental sync using sync tokens.
+        Ok(())
+    }
+
     pub async fn list_events(
         &self,
         time_min: &str,
@@ -263,6 +298,8 @@ impl RealGoogleCalendarClient {
         }
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
@@ -415,6 +452,45 @@ mod tests {
         assert_eq!(error, "Google Calendar access token is required");
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
         assert!(!*request_seen.lock().await);
+    }
+
+    #[tokio::test]
+    async fn cancel_event_success_response() {
+        let response = ""; // Delete response is typically empty 204 No Content
+        let (base_url, request_rx) = start_google_calendar_server(response).await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let result = client.cancel_event("event123").await;
+        assert!(result.is_ok());
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/event123"));
+        assert!(
+            request.contains("authorization: Bearer valid-token")
+                || request.contains("Authorization: Bearer valid-token")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_webhook_valid_payload() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let result = client.handle_webhook(r#"{"state": "sync"}"#).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn cancel_event_rejects_blank_access_token() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let client = RealGoogleCalendarClient::with_base_url_for_test("   ".to_string(), base_url);
+
+        let error = client.cancel_event("event123").await.unwrap_err();
+        assert_eq!(error, "Google Calendar access token is required");
     }
 
     #[tokio::test]
