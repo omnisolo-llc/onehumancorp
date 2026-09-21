@@ -99,6 +99,35 @@ impl BudgetManager {
         Ok(true)
     }
 
+    pub fn release_spend(&self, amount: f64) -> Result<bool, String> {
+        if amount < 0.0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        if !amount.is_finite() || amount * 100.0 >= i64::MAX as f64 {
+            return Err("release amount must be finite and bounded".to_string());
+        }
+        let amount_cents = (amount * 100.0).round() as i64;
+        self.release_spend_cents(amount_cents)
+    }
+
+    pub fn release_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        if amount_cents == 0 {
+            return Ok(true);
+        }
+
+        let _ = self.current.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+            Some(if current < amount_cents {
+                0
+            } else {
+                current - amount_cents
+            })
+        });
+        Ok(true)
+    }
+
     pub fn get_remaining(&self) -> f64 {
         let current = self.current.load(Ordering::SeqCst);
         (self.total_limit_cents - current) as f64 / 100.0
@@ -373,5 +402,37 @@ mod tests {
 
         let manager = BudgetManager::new(100.0);
         assert!(!manager.is_spend_rate_too_high(one_day, std::time::Duration::from_secs(0)));
+    }
+
+    #[test]
+    fn test_release_spend_cents() {
+        let manager = BudgetManager::new(100.0);
+        assert!(manager.record_spend_cents(5000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 5000);
+
+        assert!(manager.release_spend_cents(2000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 7000);
+
+        assert!(manager.release_spend_cents(0).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 7000);
+
+        let err = manager.release_spend_cents(-1000).unwrap_err();
+        assert_eq!(err, "release amount cannot be negative");
+
+        assert!(manager.release_spend_cents(10000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 10000);
+    }
+
+    #[test]
+    fn test_release_spend() {
+        let manager = BudgetManager::new(100.0);
+        assert!(manager.record_spend(50.0).unwrap());
+        assert_eq!(manager.get_remaining(), 50.0);
+
+        assert!(manager.release_spend(20.0).unwrap());
+        assert_eq!(manager.get_remaining(), 70.0);
+
+        assert!(manager.release_spend(100.0).unwrap());
+        assert_eq!(manager.get_remaining(), 100.0);
     }
 }
