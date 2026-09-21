@@ -611,6 +611,14 @@ impl Department for OperationsAgent {
                     "Process Order & Update Inventory".to_string()
                 }
             }
+            "tenant.order.ready_for_fulfillment" => {
+                let order_id = event
+                    .payload
+                    .get("order_id")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("unknown order");
+                format!("Draft shipping label for ready order {}", order_id)
+            }
             "tenant.order.updated" => {
                 let status = event
                     .payload
