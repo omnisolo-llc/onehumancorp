@@ -166,7 +166,7 @@ export default function BookingWidgetBuilder() {
                 </div>
                 {!removeBranding && (
                     <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                        <a aria-label="Powered by OmniSolo" href={`/onboarding?ref=${encodeURIComponent(tenant)}&source=booking_widget_preview`} style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                             ⚡ Powered by OmniSolo
                         </a>
                     </div>
