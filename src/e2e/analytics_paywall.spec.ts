@@ -2,40 +2,24 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Analytics Widget Soft Paywall', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to dashboard
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
   });
 
   test('should display the analytics widget with basic metrics', async ({ page }) => {
-    const dashboard = page.locator('#dashboard-screen');
-    await expect(dashboard).toBeVisible();
-
-    await expect(dashboard.getByRole('heading', { name: 'Business Analytics' })).toBeVisible();
-    await expect(dashboard.getByText('Total Sales')).toBeVisible();
-    await expect(dashboard.getByText('Low Stock')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Business Analytics' })).toBeVisible();
+    await expect(page.getByText('Total Sales')).toBeVisible();
+    await expect(page.getByText('Low Stock')).toBeVisible();
   });
 
-  test('should display locked advanced AI insights with upgrade CTA', async ({ page }) => {
-    const dashboard = page.locator('#dashboard-screen');
-    await expect(dashboard).toBeVisible();
+  test('should display the locked advanced AI analytics upgrade CTA', async ({ page }) => {
+    const paywall = page.getByTestId('ai-feature-paywall');
+    await expect(paywall).toBeVisible();
+    await expect(paywall.getByRole('heading', { name: 'Advanced AI Analytics' })).toBeVisible();
+    await expect(paywall.getByText(/products are driving revenue/i)).toBeVisible();
 
-    await expect(dashboard.getByText('Advanced AI Insights')).toBeVisible();
-    await expect(dashboard.getByText('Unlock predictive analytics')).toBeVisible();
-
-    const upgradeBtn = dashboard.getByRole('button', { name: 'Upgrade to Pro' });
-    await expect(upgradeBtn).toBeVisible();
-
-    // Set up dialog handler
-    page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('Upgrade to Pro to access Advanced AI Insights?');
-      await dialog.accept();
-    });
-
-    await upgradeBtn.click();
-
-    // Verify it navigates to pricing-screen
-    const pricingScreen = page.locator('#pricing-screen');
-    await expect(pricingScreen).toBeVisible();
+    const upgradeLink = paywall.getByRole('link', { name: /Upgrade to Pro/ });
+    await expect(upgradeLink).toBeVisible();
+    await expect(upgradeLink).toHaveAttribute('href', '/pricing');
   });
 });

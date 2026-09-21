@@ -10,6 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { validateWebArtifact } from './package-web.mjs';
 import { runNativeCommand } from './native-process.mjs';
+import { discoverBrowserInventory } from './ci-coverage.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'package.json'));
@@ -20,57 +21,8 @@ const valkeyImage = 'valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c
 export function testEnvironment(source = process.env) {
   const keep = ['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'WINDIR', 'TMP', 'TEMP',
     'TMPDIR', 'LANG', 'LC_ALL', 'CI', 'PLAYWRIGHT_BROWSERS_PATH',
-    'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'];
+    'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH', 'GITHUB_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT'];
   return Object.fromEntries(keep.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
-}
-
-// The application stack remains credential-isolated. Only validated, non-secret
-// provenance is added to the browser runner's environment for its CI reporter.
-export function browserCiEnvironment(source = process.env) {
-  if (source.GITHUB_ACTIONS !== 'true') return {};
-  const identity = { sha: source.GITHUB_SHA, runId: source.GITHUB_RUN_ID,
-    attempt: Number(source.GITHUB_RUN_ATTEMPT) };
-  if (!/^[a-f0-9]{40}$/.test(identity.sha)
-      || typeof identity.runId !== 'string' || !/^[1-9]\d*$/.test(identity.runId)
-      || !Number.isSafeInteger(identity.attempt) || identity.attempt < 1) {
-    throw new Error('Hosted browser evidence requires a complete source/run/attempt identity');
-  }
-  return { OMNISOLO_CI_IDENTITY: JSON.stringify(identity) };
-}
-
-function selectedShard(args) {
-  const selections = [];
-  for (let index = 0; index < args.length; index++) {
-    if (args[index] === '--shard') selections.push(args[++index]);
-    else if (args[index].startsWith('--shard=')) selections.push(args[index].slice(8));
-  }
-  if (!selections.length) return [1, 1];
-  if (selections.length !== 1 || !/^[1-9]\d*\/[1-9]\d*$/.test(selections[0])) {
-    throw new Error('Invalid or repeated discovery shard');
-  }
-  const [index, total] = selections[0].split('/').map(Number);
-  if (!Number.isSafeInteger(index) || !Number.isSafeInteger(total) || index > total) {
-    throw new Error('Invalid discovery shard range');
-  }
-  return [index, total];
-}
-
-export function discoveryFilename(args) {
-  const [index, total] = selectedShard(args);
-  return total === 1 ? 'selection-all.json' : `selection-${index}-of-${total}.json`;
-}
-
-export function validateCiDiscovery(report, identity, args) {
-  const [index, total] = selectedShard(args);
-  if (!report || report.schemaVersion !== 1 || report.mode !== 'discovery'
-      || ['sha', 'runId', 'attempt'].some(key => report[key] !== identity[key])
-      || report.shardIndex !== index || report.shardTotal !== total
-      || !Array.isArray(report.selectedIds) || report.selectedIds.length === 0
-      || report.selectedIds.some(id => typeof id !== 'string' || !id)
-      || new Set(report.selectedIds).size !== report.selectedIds.length) {
-    throw new Error('Missing, stale, empty, or inconsistent Playwright discovery');
-  }
-  return report.selectedIds.length;
 }
 
 export function nativeBinaryPaths(repository = root, environment = process.env, platform = process.platform) {
@@ -126,25 +78,14 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   const args = inputArgs.filter((arg) => arg !== '--ci');
   if (args.some((arg) => arg === '--pass-with-no-tests')) throw new Error('Zero-test success is not allowed');
   const env = testEnvironment();
-  const browserEvidence = browserCiEnvironment();
   env.PLAYWRIGHT_TEST_DIR = './src';
   env.PLAYWRIGHT_LIST_REPORTER = '1';
   if (ciSelection) env.CI = 'true';
   const playwright = require.resolve('@playwright/test/cli');
-  const inventory = path.join(root, 'test-results/ci-coverage', discoveryFilename(args));
-  if (browserEvidence.OMNISOLO_CI_IDENTITY) await rm(inventory, { force: true });
   // Fail on broken imports, invalid fixtures or zero selection BEFORE spending
   // time starting Docker, applying migrations or launching either application.
-  const listed = await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
-    '--list', ...args.filter((arg) => arg !== '--list')], {
-    env: { ...env, ...browserEvidence, OMNISOLO_CI_DISCOVERY: '1' },
-  });
-  if (browserEvidence.OMNISOLO_CI_IDENTITY) {
-    validateCiDiscovery(JSON.parse(await readFile(inventory, 'utf8')),
-      JSON.parse(browserEvidence.OMNISOLO_CI_IDENTITY), args);
-  } else if (!/Total:\s*[1-9]\d* tests?/.test(listed)) {
-    throw new Error('Playwright selected zero tests or did not report its test count');
-  }
+  const inventory = await discoverBrowserInventory(args, env);
+  console.log(`Total: ${inventory.selectedIds.length} tests in ${inventory.files.length} files`);
   if (args.includes('--list')) return;
   // Respect the native Cargo output directory instead of silently executing
   // stale default-directory binaries after a custom-target build.
@@ -225,7 +166,7 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     await waitHttp(`${webOrigin}/login`, frontend, 120, execution.signal);
     // Execute exactly the complete/sharded selection checked by preflight.
     await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts', ...args], {
-      env: { ...env, ...browserEvidence }, signal: execution.signal, timeoutMs: 22 * 60 * 1000,
+      env, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
     });
   } catch (error) {
     // The database contains only this run's synthetic seed. Its bounded error

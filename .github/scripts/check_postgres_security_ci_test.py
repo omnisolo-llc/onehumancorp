@@ -115,7 +115,16 @@ def assert_every_required_lane_failure_blocks_acceptance() -> None:
     required = yaml.safe_load(WORKFLOW.read_text())["jobs"]["ci-required"]
     step = required["steps"][0]
     result_keys = [key for key in step["env"] if key.endswith("_RESULT")]
-    assert {"NATIVE_BUILD_RESULT", "NATIVE_NODE_RESULT", "NATIVE_IMAGES_RESULT", "POSTGRES_SECURITY_RESULT"} <= set(result_keys)
+    assert {
+        "NATIVE_BUILD_RESULT",
+        "NATIVE_TEST_RESULT",
+        "NATIVE_LINT_RESULT",
+        "NATIVE_E2E_RESULT",
+        "NATIVE_E2E_REPORT_RESULT",
+        "NATIVE_NODE_RESULT",
+        "NATIVE_IMAGES_RESULT",
+        "POSTGRES_SECURITY_RESULT",
+    } <= set(result_keys)
     for key in result_keys:
         for outcome in ("failure", "cancelled", "skipped", "unknown"):
             environment = {name: "success" for name in step["env"]}

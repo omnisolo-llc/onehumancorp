@@ -321,7 +321,7 @@ function InboxWorkspace({
         { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
         { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
       ]}
-      actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
+      actions={[{ label: "Agent Activity", href: "/agent-activity" }]}
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">

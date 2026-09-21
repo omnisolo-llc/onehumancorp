@@ -5,7 +5,7 @@ test.describe('Exit-Intent Pop-up Builder', () => {
   test('should update preview dynamically, copy embed code, and trigger paywall', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     // 1. Navigate to the builder page
-    await page.goto('/exit-intent-builder');
+    await page.goto('http://localhost:3000/exit-intent-builder');
 
     // 2. Assert page loaded correctly
     await expect(page.getByRole('heading', { name: 'Exit-Intent Pop-up Builder' })).toBeVisible({ timeout: 15000 });

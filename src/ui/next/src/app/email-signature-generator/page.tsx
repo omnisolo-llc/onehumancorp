@@ -218,7 +218,7 @@ export default function EmailSignatureGeneratorPage() {
                                     <tr>
                                         <td colSpan={2} style={{ paddingTop: '16px' }}>
                                             <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px', fontSize: '11px', color: '#9ca3af' }}>
-                                                Create your own free signature with <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#0066FF', textDecoration: 'none', fontWeight: 600 }}>OmniSolo</a>.
+                                                Create your own free signature with <a href={`/onboarding?ref=${encodeURIComponent(tenant)}&source=email_signature_preview`} style={{ color: '#0066FF', textDecoration: 'none', fontWeight: 600 }}>OmniSolo</a>.
                                             </div>
                                         </td>
                                     </tr>

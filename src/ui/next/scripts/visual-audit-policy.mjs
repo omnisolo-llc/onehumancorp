@@ -90,7 +90,7 @@ const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/v1/walkthrough/pos',
   '/api/v1/walkthrough/store-setup',
   '/api/v1/help/visual-audit-article',
-  '/agent-audit-dashboard',
+  '/agent-activity',
   '/favicon.ico',
 ]);
 

@@ -3,18 +3,26 @@
 import { useState,useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
+import { safeBioHref } from '@/lib/bioLinks';
+
+interface BioLink { id: string; title: string; url: string }
 
 export default function LinkInBioGeneratorPage() {
   const router = useRouter();
   const [storeName, setStoreName] = useState('My Store');
   const [bio, setBio] = useState('Welcome to my storefront!');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
+  const [links, setLinks] = useState<BioLink[]>([{ id: 'initial-link', title: 'Shop Now', url: '' }]);
   const [tenant, setTenant] = useState('my-store');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [copyError, setCopyError] = useState('');
+  const [isCopying, setIsCopying] = useState(false);
+
+  useEffect(() => { setSaveSuccess(false); }, [storeName, bio, theme, links, removeBranding]);
 
   useEffect(() => {
     const tid = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'my-store') : 'my-store';
@@ -23,14 +31,22 @@ export default function LinkInBioGeneratorPage() {
     // Load existing config if available
     const loadConfig = async () => {
       try {
-        const res = await fetch(`/api/v1/growth/link-in-bio/${tid}`);
+        const res = await fetch(`/api/v1/growth/link-in-bio/${encodeURIComponent(tid)}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.store_name) {
              setStoreName(data.store_name);
              setBio(data.bio || '');
              setTheme(data.theme || 'light');
-             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
+             if (Array.isArray(data.links)) {
+               const ids = new Set<string>();
+               setLinks(data.links.map((link: Partial<BioLink>) => {
+                 const id = typeof link.id === 'string' && link.id.trim() && !ids.has(link.id)
+                   ? link.id : crypto.randomUUID();
+                 ids.add(id);
+                 return { id, title: typeof link.title === 'string' ? link.title : '', url: typeof link.url === 'string' ? link.url : '' };
+               }));
+             }
              setRemoveBranding(data.remove_branding || false);
           }
         }
@@ -42,7 +58,7 @@ export default function LinkInBioGeneratorPage() {
   }, []);
 
   const handleAddLink = () => {
-    setLinks([...links, { title: 'New Link', url: 'https://' }]);
+    setLinks([...links, { id: crypto.randomUUID(), title: 'New Link', url: '' }]);
   };
 
   const handleLinkChange = (index: number, field: 'title' | 'url', value: string) => {
@@ -57,8 +73,14 @@ export default function LinkInBioGeneratorPage() {
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
     setSaveSuccess(false);
+    setSaveError('');
+    const invalidLink = links.findIndex(link => !link.title.trim() || !safeBioHref(link.url));
+    if (invalidLink !== -1) {
+      setSaveError(`Link ${invalidLink + 1} needs a title and a valid HTTP(S) URL or site-relative path before publishing.`);
+      return;
+    }
+    setIsSaving(true);
     try {
       const res = await fetch('/api/v1/growth/link-in-bio', {
         method: 'POST',
@@ -67,27 +89,36 @@ export default function LinkInBioGeneratorPage() {
           store_name: storeName,
           bio,
           theme,
-          links,
+          links: links.map(link => ({ ...link, title: link.title.trim(), url: safeBioHref(link.url)! })),
           remove_branding: removeBranding
         })
       });
-      if (res.ok) {
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
-      }
-    } catch (e) {
-      console.error(e);
+      if (!res.ok) throw new Error('Publish failed');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch {
+      setSaveError('Unable to publish your page. Your edits are preserved; please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const linkUrl = `https://cloud.omnisolo.co/bio/${tenant}`;
+  const linkUrl = `https://cloud.omnisolo.co/bio/${encodeURIComponent(tenant)}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(linkUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    setCopied(false);
+    setCopyError('');
+    setIsCopying(true);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(linkUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError('Unable to copy the link. Check clipboard permissions and try again.');
+    } finally {
+      setIsCopying(false);
+    }
   };
 
   return (
@@ -110,7 +141,7 @@ export default function LinkInBioGeneratorPage() {
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Builder Controls */}
-          <div className="flex-1 space-y-6">
+          <fieldset disabled={isSaving} aria-label="Link-in-bio configuration" className="flex-1 min-w-0 space-y-6">
             <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
               <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Profile Info</h2>
 
@@ -147,7 +178,7 @@ export default function LinkInBioGeneratorPage() {
 
               <div className="space-y-4">
                 {links.map((link, index) => (
-                  <div key={index} className="flex flex-col gap-2 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl border border-gray-100 dark:border-white/5">
+                  <div key={link.id} className="flex flex-col gap-2 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl border border-gray-100 dark:border-white/5">
                     <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Link {index + 1}</span>
                         {links.length > 1 && (
@@ -166,7 +197,7 @@ export default function LinkInBioGeneratorPage() {
                         type="text"
                         value={link.url}
                         onChange={(e) => handleLinkChange(index, 'url', e.target.value)}
-                        placeholder="URL (e.g. https://...)"
+                        placeholder="URL (e.g. https://... or /booking)"
                         aria-label={`Link ${index + 1} URL`}
                         className="w-full px-3 py-2 bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-white/10 rounded-lg text-sm outline-none text-gray-900 dark:text-white"
                     />
@@ -217,17 +248,20 @@ export default function LinkInBioGeneratorPage() {
             >
                 {isSaving ? 'Saving...' : saveSuccess ? 'Saved! ✅' : 'Save & Publish'}
             </button>
-          </div>
+            {saveError && <p role="alert" className="text-sm text-red-600">{saveError}</p>}
+          </fieldset>
 
           {/* Live Preview */}
           <div className="w-full lg:w-[400px] flex-shrink-0">
              <div className="sticky top-8">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white">Live Preview</h2>
-                    <button onClick={handleCopy} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors">
-                        {copied ? 'Copied URL!' : 'Copy Link'}
+                    <button onClick={handleCopy} disabled={isCopying} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors">
+                        {isCopying ? 'Copying...' : copied ? 'Copied URL!' : 'Copy Link'}
                     </button>
                 </div>
+
+                {copyError && <p role="alert" className="mb-3 text-sm text-red-600">{copyError}</p>}
 
                 {/* Mobile Device Mockup */}
                 <div className="relative w-[340px] h-[680px] mx-auto border-[12px] border-black rounded-[40px] shadow-2xl overflow-hidden bg-white">
@@ -241,16 +275,20 @@ export default function LinkInBioGeneratorPage() {
                         <p className={`text-center text-sm mb-8 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{bio}</p>
 
                         <div className="w-full space-y-4">
-                            {links.map((link, i) => (
-                                <a
-                                    key={i}
-                                    href="#"
-                                    onClick={(e) => e.preventDefault()}
-                                    className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-black shadow-md hover:shadow-lg'}`}
-                                >
-                                    {link.title || 'Link Title'}
+                            {links.map(link => {
+                              const href = safeBioHref(link.url);
+                              const className = `block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform ${theme === 'dark' ? 'bg-[#222222] text-white' : 'bg-white text-black shadow-md'}`;
+                              return href ? (
+                                <a key={link.id} href={href} target="_blank" rel="noopener noreferrer" className={`${className} hover:scale-[1.02]`}>
+                                  {link.title || 'Link Title'}
                                 </a>
-                            ))}
+                              ) : (
+                                <div key={link.id} className={className}>
+                                  <span>{link.title || 'Link Title'}</span>
+                                  <p className="mt-1 text-xs font-normal">Add a valid destination to enable this link.</p>
+                                </div>
+                              );
+                            })}
                         </div>
 
                         {!removeBranding && (

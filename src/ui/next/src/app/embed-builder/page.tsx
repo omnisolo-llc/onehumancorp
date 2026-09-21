@@ -75,7 +75,7 @@ export default function EmbedBuilderPage() {
                     <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold w-fit shadow-sm border border-blue-100">
                         <span>🚀 Growth Loop</span>
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 drop-shadow-sm">Interactive Embed Builder</h1>
+                    <h2 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 drop-shadow-sm">Interactive Embed Builder</h2>
                     <p className="text-gray-600 text-base md:text-lg">Generate a custom widget to embed on your external website. Capture leads, bookings, or quotes directly into OmniSolo.</p>
                 </div>
 

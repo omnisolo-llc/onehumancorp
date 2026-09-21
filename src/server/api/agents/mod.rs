@@ -2,6 +2,7 @@ pub mod approvals;
 pub mod chat;
 pub mod client_intake;
 pub mod code_native;
+pub mod guardrails;
 pub mod hire;
 pub mod mission;
 pub mod order_interceptor;

@@ -2,6 +2,7 @@
 
 import { useState,useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { safeBioHref } from '@/lib/bioLinks';
 
 interface Link {
   title: string;
@@ -73,24 +74,27 @@ export default function PublicBioPage() {
         <p className={`text-center mb-10 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{bio}</p>
 
         <div className="w-full space-y-4 flex-1">
-          {links && links.map((link, i) => (
-            <a
-              key={i}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-lg transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-gray-900 shadow-md hover:shadow-lg'}`}
-            >
-              {link.title}
-            </a>
-          ))}
+          {links && links.map((link, i) => {
+            const href = safeBioHref(link.url);
+            const className = `block w-full py-4 px-6 rounded-2xl text-center font-bold text-lg ${theme === 'dark' ? 'bg-[#222222] text-white' : 'bg-white text-gray-900 shadow-md'}`;
+            return href ? (
+              <a key={i} href={href} target="_blank" rel="noopener noreferrer" className={`${className} transition-transform hover:scale-[1.02]`}>
+                {link.title}
+              </a>
+            ) : (
+              <div key={i} className={className}>
+                <span>{link.title}</span>
+                <p className="mt-1 text-xs font-normal">Link unavailable.</p>
+              </div>
+            );
+          })}
         </div>
 
         {/* Viral Loop / Soft Paywall */}
         {!config.remove_branding && (
           <div className="mt-12 pt-8">
             <a
-              href={`https://cloud.omnisolo.co/join?ref=${tenant}`}
+              href={`/onboarding?ref=${encodeURIComponent(tenant)}&source=bio_footer`}
               className={`text-sm font-semibold flex items-center justify-center gap-1 hover:underline ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
             >
               ⚡ Powered by OmniSolo

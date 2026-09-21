@@ -44,7 +44,7 @@ export default function ManagerDashboard() {
     <AppShell title="Manager Dashboard">
       <div className="max-w-[1440px] mx-auto min-h-screen p-6">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manager View</h1>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Manager View</h2>
           <p className="text-gray-500 mt-2">Manage daily operations, shifts, and handle escalations.</p>
         </header>
 

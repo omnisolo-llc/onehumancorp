@@ -114,6 +114,7 @@ export default function ReferralFabBuilder() {
                 </div>
                 <button
                   role="switch"
+                  aria-label="Remove Powered by OmniSolo branding"
                   aria-checked={removeBranding}
                   onClick={handleBrandingToggle}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${removeBranding ? 'bg-indigo-600' : 'bg-gray-200'}`}

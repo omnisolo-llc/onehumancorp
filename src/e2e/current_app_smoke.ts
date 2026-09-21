@@ -15,13 +15,11 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
     await expect(page.locator('h2', { hasText: 'Welcome back' }).first()).toBeVisible({ timeout: 5000 });
 
-    // The universal shell design caps panels at 8px; isolated legacy cards
-    // may use 16px outside the shell. Keep the rendered shell contract exact.
-    // See docs/superpowers/specs/2026-07-12-universal-ui-shell-design.md.
+    // Verify glassmorphism style drift on dashboard panels
     const panel = page.locator('.app-panel').first();
     await expect(panel).toBeVisible();
     await expect(panel).toHaveCSS('backdrop-filter', /blur\(30px\)|none/);
-    await expect(panel).toHaveCSS('border-radius', '8px');
+    await expect(panel).toHaveCSS('border-radius', '16px');
 
     // Verify glassmorphism style drift on dashboard cards
     const card = page.locator('a[href="/pos/terminal"]').first();

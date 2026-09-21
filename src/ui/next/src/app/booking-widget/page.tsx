@@ -43,7 +43,7 @@ export default function BookingWidgetBuilder() {
       {/* Top Nav */}
       <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-[30px] saturate-[210%] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+            <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </Link>
             <h1 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -81,8 +81,9 @@ export default function BookingWidgetBuilder() {
                 </div>
 
                 <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tenant ID</label>
+                    <label htmlFor="booking-widget-tenant" className="block text-sm font-medium text-gray-700 mb-2">Tenant ID</label>
                     <input
+                        id="booking-widget-tenant"
                         type="text"
                         value={tenant}
                         onChange={(e) => setTenant(e.target.value)}
@@ -93,8 +94,9 @@ export default function BookingWidgetBuilder() {
                 </div>
 
                 <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Service Name</label>
+                    <label htmlFor="booking-widget-service" className="block text-sm font-medium text-gray-700 mb-2">Service Name</label>
                     <input
+                        id="booking-widget-service"
                         type="text"
                         value={serviceName}
                         onChange={(e) => setServiceName(e.target.value)}
@@ -166,7 +168,7 @@ export default function BookingWidgetBuilder() {
                 </div>
                 {!removeBranding && (
                     <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                        <a aria-label="Powered by OmniSolo" href={`/onboarding?ref=${encodeURIComponent(tenant)}&source=booking_widget_preview`} style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                             ⚡ Powered by OmniSolo
                         </a>
                     </div>

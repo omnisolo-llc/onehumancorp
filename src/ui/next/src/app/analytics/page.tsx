@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
     <AppShell title="Business Analytics">
       <div className="mx-auto max-w-5xl space-y-8 font-inter">
         <header className="mb-8 p-6 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-3xl border border-indigo-100/40 shadow-sm">
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900">Business Analytics</h1>
+          <h2 className="text-3xl font-extrabold font-outfit text-gray-900">Business Analytics</h2>
           <p className="mt-2 text-sm text-gray-500">Recorded store metrics from the OmniSolo OneHumanCorp dashboard service.</p>
         </header>
 

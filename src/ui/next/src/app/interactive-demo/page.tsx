@@ -133,6 +133,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
+                        aria-label="Remove Powered by OmniSolo badge"
                         className="sr-only peer"
                         checked={removeBranding}
                         onChange={handleToggleBranding}
@@ -182,7 +183,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
 
                   {!removeBranding && (
                     <div className="mt-4 text-center">
-                      <a href="#" className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">⚡ Powered by OmniSolo</a>
+                      <a href={`/onboarding?ref=${encodeURIComponent(tenant)}&source=interactive_demo_preview`} className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">⚡ Powered by OmniSolo</a>
                     </div>
                   )}
                 </div>

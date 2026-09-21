@@ -3,7 +3,10 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import AssistantPage from './page';
 
+const navigation = vi.hoisted(() => ({ query: '' }));
+
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(navigation.query),
   usePathname: () => '/assistant',
   useRouter: () => ({
     push: vi.fn(),
@@ -65,6 +68,7 @@ const tasksPayload = {
 };
 
 beforeEach(() => {
+  navigation.query = '';
   vi.clearAllMocks();
   global.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
     const urlString = typeof url === 'string' ? url : url.toString();
@@ -344,4 +348,48 @@ test('shows resource error instead of connector demo records', async () => {
   expect(await screen.findByText('Assistant backend unavailable')).toBeDefined();
   expect(screen.queryByText('GitHub')).toBeNull();
   expect(screen.queryByText('Slack')).toBeNull();
+});
+
+
+test.each([
+  ['system', 'System'],
+  ['cloud', 'Cloud'],
+  ['permissions', 'Permissions'],
+  ['models', 'Models'],
+])('opens the requested %s panel from an Assistant deep link', async (panel, title) => {
+  navigation.query = `panel=${panel}`;
+  renderAssistantPage();
+
+  expect(await screen.findByRole('heading', { name: title, level: 2 })).toBeVisible();
+  expect(screen.getByRole('button', { name: title })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.queryByRole('heading', { name: 'Task List' })).not.toBeInTheDocument();
+});
+
+test('follows query navigation without resetting later section clicks on unrelated renders', async () => {
+  const view = render(<TooltipProvider><AssistantPage /></TooltipProvider>);
+  await screen.findByText("Create this week's operating brief");
+
+  navigation.query = 'panel=system';
+  view.rerender(<TooltipProvider><AssistantPage /></TooltipProvider>);
+  expect(await screen.findByRole('heading', { name: 'System' })).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Models' }));
+  expect(await screen.findByText('Custom Protocol')).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Models', level: 2 })).toBeVisible();
+
+  navigation.query = 'panel=permissions';
+  view.rerender(<TooltipProvider><AssistantPage /></TooltipProvider>);
+  expect(await screen.findByRole('heading', { name: 'Permissions' })).toBeVisible();
+
+  navigation.query = '';
+  view.rerender(<TooltipProvider><AssistantPage /></TooltipProvider>);
+  expect(await screen.findByRole('heading', { name: 'Task List' })).toBeVisible();
+});
+
+test.each(['not-a-panel', '__proto__', '../settings', ''])('falls back safely for unsupported panel %s', async (panel) => {
+  navigation.query = `panel=${encodeURIComponent(panel)}`;
+  renderAssistantPage();
+
+  expect(await screen.findByRole('heading', { name: 'Task List' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Task List' })).toHaveAttribute('aria-pressed', 'true');
 });
