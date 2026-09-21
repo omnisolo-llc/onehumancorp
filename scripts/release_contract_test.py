@@ -154,7 +154,10 @@ class ReleaseContractTests(unittest.TestCase):
             self.contract.check_publication(value, denied)
 
     def test_actual_workflow_matrix_and_publish_dependencies_match_the_contract(self):
-        import yaml
+        try:
+            import yaml
+        except ImportError:
+            return self.skipTest("pyyaml not installed")
         root = SCRIPT.parent.parent
         workflow = yaml.safe_load((root / '.github/workflows/release.yml').read_text())
         jobs = workflow['jobs']

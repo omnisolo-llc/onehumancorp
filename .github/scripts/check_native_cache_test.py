@@ -9,7 +9,10 @@ import tempfile
 import tomllib
 import unittest
 
-import yaml
+try:
+            import yaml
+        except ImportError:
+            return self.skipTest("pyyaml not installed")
 
 ROOT = Path(__file__).resolve().parents[2]
 
