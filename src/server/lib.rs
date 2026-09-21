@@ -3913,21 +3913,25 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
-        let tracker = std::sync::Arc::new(::server_pricing::token_tracking::TokenTracking::new(
-            &opentelemetry::global::meter("ohc_server"),
-        ));
-        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
-        std::sync::Arc::new(
-            ::server_pricing::rate_limit::RedisRateLimiter::new(client)
-                .with_token_tracking(tracker)
-                .with_telemetry(store),
-        )
+    let raw_redis_client = if let Ok(client) = redis::Client::open(redis_url.clone()) {
+        client
     } else {
         panic!(
             "Failed to initialize Redis client for RateLimiter at {}",
             redis_url
         );
+    };
+
+    let rate_limiter = {
+        let tracker = std::sync::Arc::new(::server_pricing::token_tracking::TokenTracking::new(
+            &opentelemetry::global::meter("ohc_server"),
+        ));
+        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
+        std::sync::Arc::new(
+            ::server_pricing::rate_limit::RedisRateLimiter::new(raw_redis_client.clone())
+                .with_token_tracking(tracker)
+                .with_telemetry(store),
+        )
     };
 
     let webhook_state = crate::api::billing_webhook::WebhookState {
@@ -3990,6 +3994,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             api::billing_webhook::webhook_security_middleware,
         ))
         .with_state(webhook_state);
+
+    let google_calendar_webhook_state = api::integrations_google_calendar_webhook::GoogleCalendarWebhookState {
+        db: (*db).clone(),
+        redis_client: raw_redis_client.clone(),
+    };
+    let google_calendar_webhook_router = axum::Router::new()
+        .route(
+            "/api/v1/integrations/google-calendar/webhook",
+            axum::routing::post(api::integrations_google_calendar_webhook::google_calendar_webhook_handler),
+        )
+        .with_state(google_calendar_webhook_state);
 
     let meta_webhook_state = api::meta_webhook::MetaWebhookState {
         hub: hub.clone(),
@@ -9542,6 +9557,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ::server_auth::strict_bearer_auth_middleware,
         )))
         .merge(webhook_router)
+        .merge(google_calendar_webhook_router)
         .merge(protect_internal_ingress(
             relay_webhook_router,
             http_auth_store.clone(),

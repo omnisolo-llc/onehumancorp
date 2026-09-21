@@ -16,6 +16,7 @@ pub mod billing_api;
 #[cfg(test)]
 pub mod billing_api_test;
 pub mod billing_webhook;
+pub mod integrations_google_calendar_webhook;
 #[cfg(test)]
 pub mod billing_webhook_test;
 pub mod chaos;

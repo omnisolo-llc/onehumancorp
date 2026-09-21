@@ -13,7 +13,7 @@ pub async fn run_calendar_sync_worker(redis_client: redis::Client) {
     }
 }
 
-async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> {
+pub async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> {
     let pool = crate::db::get_pool();
 
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
