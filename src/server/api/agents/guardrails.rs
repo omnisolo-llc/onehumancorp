@@ -37,7 +37,7 @@ fn valid_tool_name(value: &str) -> bool {
         && value.chars().count() <= MAX_TOOL_NAME_CHARS
         && value
             .chars()
-            .all(|character| character.is_ascii_alphanumeric() || "_-.:/".contains(character))
+            .all(|character| character.is_ascii_alphanumeric() || "_-.:".contains(character))
 }
 
 fn valid_tool_list(values: &[String]) -> bool {
