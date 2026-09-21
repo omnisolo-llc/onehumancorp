@@ -50,7 +50,10 @@ fn evaluate(payload: AnthropicGuardrailRequest) -> Result<&'static str, (StatusC
         || !valid_tool_list(&payload.session_allowed_tools)
         || !valid_tool_list(&payload.high_risk_tools)
     {
-        return Err((StatusCode::BAD_REQUEST, "invalid guardrail evaluation request".into()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "invalid guardrail evaluation request".into(),
+        ));
     }
 
     let gater = AnthropicToolGater::new(
