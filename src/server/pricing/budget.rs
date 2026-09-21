@@ -133,9 +133,11 @@ impl BudgetManager {
             return Err("settle amount cannot be negative".to_string());
         }
 
-        let mut state = self.state.lock().unwrap();
-        state.allocated = std::cmp::max(0, state.allocated - amount_cents);
-        state.current = state.current.saturating_add(amount_cents);
+        {
+            let mut state = self.state.lock().unwrap();
+            state.allocated = std::cmp::max(0, state.allocated - amount_cents);
+            state.current = state.current.saturating_add(amount_cents);
+        }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
             && amount_cents > 0
