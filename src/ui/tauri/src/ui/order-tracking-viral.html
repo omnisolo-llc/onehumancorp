@@ -261,10 +261,10 @@
       btn.disabled = true;
 
       try {
-        const res = await fetch('/api/v1/shipping/rates', {
+        const res = await fetch('/api/v1/shippo/rates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: document.getElementById('tracking-number').value || 'unknown', weight: String(weight), dimensions: dims })
+          body: JSON.stringify({ weight: parseFloat(weight), dimensions: dims })
         });
 
         if (res.ok) {
@@ -316,10 +316,10 @@
       const orderId = document.getElementById('tracking-number').value || 'unknown';
 
       try {
-        const res = await fetch('/api/v1/shipping/label', {
+        const res = await fetch('/api/v1/shippo/label', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rateId: selectedRateId, orderId: orderId })
+          body: JSON.stringify({ rate_id: selectedRateId, order_id: orderId })
         });
 
         if (res.ok) {
