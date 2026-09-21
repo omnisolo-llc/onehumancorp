@@ -350,8 +350,8 @@ async fn test_ohc_job_queue_fail_max_retries_dead_letter() {
 
 #[tokio::test]
 async fn test_chaos_redis_lock_race_condition() {
-    let redis_url =
-        std::env::var("OMNISOLO_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    let redis_url = std::env::var("OMNISOLO_REDIS_URL")
+        .unwrap_or_else(|_| "redis://localhost:6379".to_string());
     if redis::Client::open(redis_url.clone())
         .and_then(|c| c.get_connection())
         .is_err()
@@ -407,8 +407,8 @@ async fn test_chaos_redis_lock_race_condition() {
 
 #[tokio::test]
 async fn test_chaos_redis_mailbox_corruption() {
-    let redis_url =
-        std::env::var("OMNISOLO_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    let redis_url = std::env::var("OMNISOLO_REDIS_URL")
+        .unwrap_or_else(|_| "redis://localhost:6379".to_string());
     let client = match redis::Client::open(redis_url.clone()) {
         Ok(c) => c,
         Err(_) => return,

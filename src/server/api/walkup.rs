@@ -1,6 +1,6 @@
 use axum::{
-    extract::{Extension, State, Json},
     Router,
+    extract::{Extension, Json, State},
     http::StatusCode,
     response::IntoResponse,
     routing::post,
@@ -47,7 +47,10 @@ pub async fn handle_walkup(
     let Some(tenant_id) = signed_tenant_id(&claims) else {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(WalkupResponse { success: false, structured_order: None }),
+            Json(WalkupResponse {
+                success: false,
+                structured_order: None,
+            }),
         )
             .into_response();
     };
@@ -55,24 +58,32 @@ pub async fn handle_walkup(
 
     let target_language: String = {
         let language = match &state.db.store {
-            crate::db::DbStore::Postgres => sqlx::query(
-                "SELECT language_preference FROM tenants WHERE id = $1",
-            )
-            .bind(tenant_id)
-            .fetch_optional(&state.db.pool)
-            .await
-            .ok()
-            .flatten()
-            .and_then(|row| row.try_get::<Option<String>, _>("language_preference").ok().flatten()),
-            crate::db::DbStore::Sqlite(pool) => sqlx::query(
-                "SELECT language_preference FROM tenants WHERE id = ?",
-            )
-            .bind(tenant_id)
-            .fetch_optional(pool)
-            .await
-            .ok()
-            .flatten()
-            .and_then(|row| row.try_get::<Option<String>, _>("language_preference").ok().flatten()),
+            crate::db::DbStore::Postgres => {
+                sqlx::query("SELECT language_preference FROM tenants WHERE id = $1")
+                    .bind(tenant_id)
+                    .fetch_optional(&state.db.pool)
+                    .await
+                    .ok()
+                    .flatten()
+                    .and_then(|row| {
+                        row.try_get::<Option<String>, _>("language_preference")
+                            .ok()
+                            .flatten()
+                    })
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("SELECT language_preference FROM tenants WHERE id = ?")
+                    .bind(tenant_id)
+                    .fetch_optional(pool)
+                    .await
+                    .ok()
+                    .flatten()
+                    .and_then(|row| {
+                        row.try_get::<Option<String>, _>("language_preference")
+                            .ok()
+                            .flatten()
+                    })
+            }
         };
         language.unwrap_or_else(|| "en".to_string())
     };
@@ -186,7 +197,10 @@ mod tests {
 
     #[test]
     fn walkup_tenant_comes_only_from_verified_non_system_claims() {
-        assert_eq!(signed_tenant_id(&claims(Some(" tenant-7 "))), Some("tenant-7"));
+        assert_eq!(
+            signed_tenant_id(&claims(Some(" tenant-7 "))),
+            Some("tenant-7")
+        );
         assert_eq!(signed_tenant_id(&claims(None)), None);
         assert_eq!(signed_tenant_id(&claims(Some("system"))), None);
         assert_eq!(signed_tenant_id(&claims(Some("  "))), None);

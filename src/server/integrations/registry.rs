@@ -10,12 +10,15 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
-    messages:
-        RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::ChatMessage>>>,
-    instances:
-        RwLock<std::collections::HashMap<String, ::server_omnisolo::orchestration::IntegrationInstance>>,
-    pull_requests:
-        RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::PullRequest>>>,
+    messages: RwLock<
+        std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::ChatMessage>>,
+    >,
+    instances: RwLock<
+        std::collections::HashMap<String, ::server_omnisolo::orchestration::IntegrationInstance>,
+    >,
+    pull_requests: RwLock<
+        std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::PullRequest>>,
+    >,
     issues: RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<

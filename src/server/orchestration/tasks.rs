@@ -1007,7 +1007,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1044,7 +1046,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1163,7 +1167,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1200,7 +1206,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1325,7 +1333,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1362,7 +1372,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1488,7 +1500,9 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1525,7 +1539,9 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<
+                    dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync,
+                >,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }

@@ -152,7 +152,8 @@ impl WizardService for MyWizardService {
                 health_checks.push(DiagnosticCheckProto {
                     check: "OMNISOLO_DATABASE_URL".to_string(),
                     status: "missing".to_string(),
-                    message: "SQLite OMNISOLO_DATABASE_URL is required in standalone mode".to_string(),
+                    message: "SQLite OMNISOLO_DATABASE_URL is required in standalone mode"
+                        .to_string(),
                 });
             } else if !db_url.starts_with("sqlite://") {
                 is_all_healthy = false;
@@ -180,8 +181,8 @@ impl WizardService for MyWizardService {
         let mode = if is_standalone { "standalone" } else { "cloud" };
 
         // Hybrid mode mission sync health probe check
-        let db_url =
-            std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.is_empty() {
             health_checks.push(DiagnosticCheckProto {
                 check: "LOCAL_TO_CLOUD_SYNC".to_string(),

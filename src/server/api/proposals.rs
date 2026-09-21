@@ -682,7 +682,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_draft_agent_route_exists() {
-        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+        let pool = match sqlx::PgPool::connect_lazy(
+            "postgres://postgres:postgres@localhost:5432/postgres",
+        ) {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -702,7 +704,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_proposal_route_exists() {
-        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+        let pool = match sqlx::PgPool::connect_lazy(
+            "postgres://postgres:postgres@localhost:5432/postgres",
+        ) {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -719,7 +723,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_approve_proposal_route_exists() {
-        let pool = match sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres") {
+        let pool = match sqlx::PgPool::connect_lazy(
+            "postgres://postgres:postgres@localhost:5432/postgres",
+        ) {
             Ok(p) => p,
             Err(_) => return,
         };

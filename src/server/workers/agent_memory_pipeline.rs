@@ -429,8 +429,8 @@ impl AgentMemoryPipeline {
     }
 
     pub async fn process_fs_memories(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let memory_dir =
-            std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".agent-task/memory".to_string());
+        let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR")
+            .unwrap_or_else(|_| ".agent-task/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
 
         if !path.exists() {

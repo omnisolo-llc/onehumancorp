@@ -13,7 +13,8 @@ pub struct FactoryConfig {
 impl Default for FactoryConfig {
     fn default() -> Self {
         Self {
-            is_multitenant: env::var("OMNISOLO_MULTITENANT").unwrap_or_else(|_| "false".to_string())
+            is_multitenant: env::var("OMNISOLO_MULTITENANT")
+                .unwrap_or_else(|_| "false".to_string())
                 == "true",
             is_standalone: crate::is_standalone_runtime(),
             mount_point: env::var("OMNISOLO_CLOUD_FS_MOUNT")

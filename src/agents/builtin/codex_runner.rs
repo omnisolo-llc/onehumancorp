@@ -626,7 +626,9 @@ impl AppServer {
                 Ok(summaries) => {
                     // Gate 2: Pre-merge
                     if let Err(e) =
-                        omnisolo_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries)
+                        omnisolo_builtin_agent_core::expert_team::QualityGates::pre_merge(
+                            &summaries,
+                        )
                     {
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
@@ -655,11 +657,13 @@ impl AppServer {
                         "Process Supervisor".to_string(),
                         "Quality Auditor".to_string(),
                     ];
-                    if let Err(e) = omnisolo_builtin_agent_core::expert_team::QualityGates::pre_deliver(
-                        &final_output,
-                        &trace,
-                        &expected_roles,
-                    ) {
+                    if let Err(e) =
+                        omnisolo_builtin_agent_core::expert_team::QualityGates::pre_deliver(
+                            &final_output,
+                            &trace,
+                            &expected_roles,
+                        )
+                    {
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
                             id: req.id.clone(),

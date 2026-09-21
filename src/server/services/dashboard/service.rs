@@ -8,13 +8,15 @@ use tonic::{Request, Response, Status};
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::organization::Product>>> =
     OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Order>>> = OnceLock::new();
-static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Booking>>> = OnceLock::new();
+static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::app::Booking>>> =
+    OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_omnisolo::organization::Organization>>> =
     OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_omnisolo::orchestration::Agent>>> =
     OnceLock::new();
-static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_omnisolo::orchestration::MeetingRoom>>>> =
-    OnceLock::new();
+static MEETINGS_CACHE: OnceLock<
+    HybridCache<Arc<Vec<::server_omnisolo::orchestration::MeetingRoom>>>,
+> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> =
     OnceLock::new();
 pub static DASHBOARD_SNAPSHOT_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
@@ -748,7 +750,9 @@ impl DashboardService for MyDashboardService {
                 let role_val = match a.role.to_uppercase().as_str() {
                     "SOFTWARE_ENGINEER" => ::server_omnisolo::common::Role::SoftwareEngineer as i32,
                     "QA_TESTER" => ::server_omnisolo::common::Role::QaTester as i32,
-                    "OPERATIONS_MANAGER" => ::server_omnisolo::common::Role::OperationsManager as i32,
+                    "OPERATIONS_MANAGER" => {
+                        ::server_omnisolo::common::Role::OperationsManager as i32
+                    }
                     _ => ::server_omnisolo::common::Role::Unspecified as i32,
                 };
 

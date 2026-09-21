@@ -1101,7 +1101,9 @@ pub async fn stripe_webhook_handler(
                     ); // pii-safe
                 }
                 Ok(None) => {
-                    tracing::warn!("Stripe invoice.payment_failed did not match an OmniSolo subscriber");
+                    tracing::warn!(
+                        "Stripe invoice.payment_failed did not match an OmniSolo subscriber"
+                    );
                 }
                 Err(err) => {
                     ::server_telemetry::record_error_signal(

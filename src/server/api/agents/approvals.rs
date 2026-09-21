@@ -835,7 +835,9 @@ async fn simulate_autonomous_booking_quote(
     let proposed_slot_id = uuid::Uuid::new_v4().to_string();
 
     // Acquire Redis Redlock for the slot
-    if let Ok(redis_url) = std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
+    if let Ok(redis_url) =
+        std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL"))
+    {
         if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url)
         {
             let _ = redis_lock

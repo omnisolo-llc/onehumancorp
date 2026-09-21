@@ -305,8 +305,8 @@ async fn proxy_agent_rpc_handler(
             .into_response();
     }
 
-    let raw_origin =
-        std::env::var("OMNISOLO_AGENT_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let raw_origin = std::env::var("OMNISOLO_AGENT_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let Ok(url) = agent_rpc_url(&raw_origin) else {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
@@ -1695,8 +1695,10 @@ impl HubService for MyHubService {
     async fn route_semantic(
         &self,
         request: tonic::Request<::server_omnisolo::orchestration::SemanticRoutingRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::SemanticRoutingResponse>, tonic::Status>
-    {
+    ) -> Result<
+        tonic::Response<::server_omnisolo::orchestration::SemanticRoutingResponse>,
+        tonic::Status,
+    > {
         let req = request.into_inner();
         let internal_req = crate::orchestration::router::SemanticRoutingRequest {
             tenant_id: req.tenant_id,
@@ -1863,7 +1865,8 @@ impl HubService for MyHubService {
     async fn get_my_plan(
         &self,
         request: tonic::Request<::server_omnisolo::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::MyPlanResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::MyPlanResponse>, tonic::Status>
+    {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -1917,8 +1920,10 @@ impl HubService for MyHubService {
     async fn get_cost_dashboard(
         &self,
         request: tonic::Request<::server_omnisolo::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::CostDashboardResponse>, tonic::Status>
-    {
+    ) -> Result<
+        tonic::Response<::server_omnisolo::orchestration::CostDashboardResponse>,
+        tonic::Status,
+    > {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -1929,7 +1934,9 @@ impl HubService for MyHubService {
             &auth_info.org_id
         };
         static COST_DASHBOARD_CACHE: std::sync::OnceLock<
-            server_utils::cache::HybridCache<::server_omnisolo::orchestration::CostDashboardResponse>,
+            server_utils::cache::HybridCache<
+                ::server_omnisolo::orchestration::CostDashboardResponse,
+            >,
         > = std::sync::OnceLock::new();
         let cache = COST_DASHBOARD_CACHE
             .get_or_init(|| server_utils::cache::HybridCache::new(self.hub.redis_client()));
@@ -2263,8 +2270,10 @@ impl HubService for MyHubService {
     async fn download_invoice(
         &self,
         _request: tonic::Request<::server_omnisolo::orchestration::DownloadInvoiceRequest>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::DownloadInvoiceResponse>, tonic::Status>
-    {
+    ) -> Result<
+        tonic::Response<::server_omnisolo::orchestration::DownloadInvoiceResponse>,
+        tonic::Status,
+    > {
         Ok(tonic::Response::new(
             ::server_omnisolo::orchestration::DownloadInvoiceResponse {
                 pdf_url: "https://invoice.stripe.com/...".to_string(),
@@ -2325,7 +2334,8 @@ impl HubService for MyHubService {
     async fn handle_config_wizard(
         &self,
         _request: tonic::Request<::server_omnisolo::orchestration::AgentConfig>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status>
+    {
         tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -2336,7 +2346,8 @@ impl HubService for MyHubService {
     async fn handle_prompt_tuning(
         &self,
         _request: tonic::Request<::server_omnisolo::orchestration::PromptTuningConfig>,
-    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status>
+    {
         tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -2792,32 +2803,35 @@ impl HubService for MyHubService {
             )
             .map_err(|e| Status::internal(e))?;
 
-        Ok(Response::new(::server_omnisolo::orchestration::SharedTask {
-            id: task.id,
-            organization_id: task.organization_id,
-            parent_plan_id: task.parent_plan_id,
-            dependencies: task.dependencies,
-            title: task.title,
-            description: task.description.unwrap_or_default(),
-            status: task.status,
-            assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-            priority: task.priority,
-            payload: task.payload,
-            locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
-            created_at_unix: task.created_at.timestamp(),
-            updated_at_unix: task.updated_at.timestamp(),
-            action_risk: match task.action_risk {
-                Some(crate::tasks::ActionRisk::Low) => 1,
-                Some(crate::tasks::ActionRisk::High) => 2,
-                _ => 0,
+        Ok(Response::new(
+            ::server_omnisolo::orchestration::SharedTask {
+                id: task.id,
+                organization_id: task.organization_id,
+                parent_plan_id: task.parent_plan_id,
+                dependencies: task.dependencies,
+                title: task.title,
+                description: task.description.unwrap_or_default(),
+                status: task.status,
+                assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+                priority: task.priority,
+                payload: task.payload,
+                locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
+                created_at_unix: task.created_at.timestamp(),
+                updated_at_unix: task.updated_at.timestamp(),
+                action_risk: match task.action_risk {
+                    Some(crate::tasks::ActionRisk::Low) => 1,
+                    Some(crate::tasks::ActionRisk::High) => 2,
+                    _ => 0,
+                },
+                approval_status: task.approval_status.unwrap_or_default(),
+                proposed_content: task.proposed_content.unwrap_or_default(),
             },
-            approval_status: task.approval_status.unwrap_or_default(),
-            proposed_content: task.proposed_content.unwrap_or_default(),
-        }))
+        ))
     }
 
-    type PollTasksStream =
-        Pin<Box<dyn Stream<Item = Result<::server_omnisolo::orchestration::SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<
+        Box<dyn Stream<Item = Result<::server_omnisolo::orchestration::SharedTask, Status>> + Send>,
+    >;
 
     async fn poll_tasks(
         &self,
@@ -3319,7 +3333,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .as_ref()
         .is_none_or(|database| database.backend() != crate::persistence::DatabaseBackend::MySql);
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
-    if std::env::var("OMNISOLO_AGENT_TOKEN").is_err() && std::env::var("OMNISOLO_AGENT_SPIFFE_ID").is_err() {
+    if std::env::var("OMNISOLO_AGENT_TOKEN").is_err()
+        && std::env::var("OMNISOLO_AGENT_SPIFFE_ID").is_err()
+    {
         unsafe {
             std::env::set_var("OMNISOLO_AGENT_TOKEN", "e2e-dummy-token");
             std::env::set_var(
@@ -3610,8 +3626,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     const MESH_TRANSPORT_STARTUP_ATTEMPTS: u32 = 30;
     let mut attempt = 1;
     let mesh_transport = loop {
-        match omnisolo_builtin_agent::mesh::transport::create_transport(redis_url.as_deref(), is_cloud)
-            .await
+        match omnisolo_builtin_agent::mesh::transport::create_transport(
+            redis_url.as_deref(),
+            is_cloud,
+        )
+        .await
         {
             Ok(transport) => break transport,
             Err(error) if is_cloud && attempt < MESH_TRANSPORT_STARTUP_ATTEMPTS => {
@@ -8272,7 +8291,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .await
             {
                 tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = omnisolo_job_queue_clone.complete(&job.id, &job.tenant_id).await;
+                let _ = omnisolo_job_queue_clone
+                    .complete(&job.id, &job.tenant_id)
+                    .await;
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }

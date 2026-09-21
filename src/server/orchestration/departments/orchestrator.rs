@@ -256,7 +256,8 @@ impl DepartmentOrchestrator {
                                 Err(_) => {
                                     last_err = format!(
                                         "AI timeout: Event handling exceeded {} seconds",
-                                        omnisolo_builtin_agent::agent::agent_task_timeout().as_secs()
+                                        omnisolo_builtin_agent::agent::agent_task_timeout()
+                                            .as_secs()
                                     );
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }

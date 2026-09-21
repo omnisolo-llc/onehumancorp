@@ -135,8 +135,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {
-        let db_url =
-            std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
@@ -202,8 +202,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_cloud_retry() {
-        let db_url =
-            std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
@@ -252,8 +252,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_sync_probe() {
-        let db_url =
-            std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }

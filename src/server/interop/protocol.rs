@@ -193,7 +193,9 @@ impl InteropProtocol {
             }
             use prost::Message as ProstMessage;
             if let Ok(decoded) =
-                ::server_omnisolo::harness_middleware::SessionOperationEnvelope::decode(&msg.payload[..])
+                ::server_omnisolo::harness_middleware::SessionOperationEnvelope::decode(
+                    &msg.payload[..],
+                )
             {
                 handler(decoded);
             }
@@ -277,32 +279,34 @@ impl InteropProtocol {
         .into_iter()
         .collect();
 
-        Ok(::server_omnisolo::harness_middleware::SessionOperationEnvelope {
-            protocol_version: 1,
-            tenant_id: capsule.manifest.tenant_id.clone(),
-            session_id: capsule.manifest.session_id.to_string(),
-            operation_id: capsule.manifest.handoff_id.to_string(),
-            operation_generation,
-            fencing_token: fencing_token.to_owned(),
-            kind: kind.to_owned(),
-            task_id: task_id.unwrap_or_default(),
-            correlation_id: capsule
-                .head_event_id
-                .unwrap_or(capsule.manifest.session_id)
-                .to_string(),
-            idempotency_key,
-            payload_schema: HARNESS_SESSION_OPERATION_SCHEMA.to_owned(),
-            payload_version: capsule.manifest.schema_version,
-            payload,
-            extensions,
-            worker_id: String::new(),
-            pool_id: String::new(),
-            harness_id: capsule.manifest.target_harness_id.clone(),
-            capability_version: 1,
-            binding_id: String::new(),
-            binding_generation: 0,
-            workspace_mutation_scope_id: String::new(),
-        })
+        Ok(
+            ::server_omnisolo::harness_middleware::SessionOperationEnvelope {
+                protocol_version: 1,
+                tenant_id: capsule.manifest.tenant_id.clone(),
+                session_id: capsule.manifest.session_id.to_string(),
+                operation_id: capsule.manifest.handoff_id.to_string(),
+                operation_generation,
+                fencing_token: fencing_token.to_owned(),
+                kind: kind.to_owned(),
+                task_id: task_id.unwrap_or_default(),
+                correlation_id: capsule
+                    .head_event_id
+                    .unwrap_or(capsule.manifest.session_id)
+                    .to_string(),
+                idempotency_key,
+                payload_schema: HARNESS_SESSION_OPERATION_SCHEMA.to_owned(),
+                payload_version: capsule.manifest.schema_version,
+                payload,
+                extensions,
+                worker_id: String::new(),
+                pool_id: String::new(),
+                harness_id: capsule.manifest.target_harness_id.clone(),
+                capability_version: 1,
+                binding_id: String::new(),
+                binding_generation: 0,
+                workspace_mutation_scope_id: String::new(),
+            },
+        )
     }
 
     async fn publish_capsule_operation(
@@ -407,7 +411,9 @@ impl InteropProtocol {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_omnisolo::interop::StateHandoff::decode(&msg.payload[..]) {
+                if let Ok(decoded) =
+                    ::server_omnisolo::interop::StateHandoff::decode(&msg.payload[..])
+                {
                     handler(decoded);
                 }
             }
@@ -426,7 +432,9 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..]) {
+                if let Ok(decoded) =
+                    ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..])
+                {
                     let ack = ::server_omnisolo::interop::HealthAck {
                         source_node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -611,7 +619,9 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_omnisolo::interop::JobDispatch::decode(&msg.payload[..]) {
+                if let Ok(decoded) =
+                    ::server_omnisolo::interop::JobDispatch::decode(&msg.payload[..])
+                {
                     // In a real implementation, we would process the job here or send it to a worker pool
                     // Here, we just acknowledge receipt
                     let ack = ::server_omnisolo::interop::JobAck {
@@ -720,7 +730,10 @@ impl InteropProtocol {
     }
 
     /// Synchronizes a QueueJob across modes idempotently
-    pub async fn sync_queue_job(&self, job: ::server_omnisolo::interop::QueueJob) -> Result<(), String> {
+    pub async fn sync_queue_job(
+        &self,
+        job: ::server_omnisolo::interop::QueueJob,
+    ) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
         // Idempotency check: ensure we don't duplicate syncing the EXACT same state transition
@@ -795,7 +808,8 @@ impl InteropProtocol {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:queue_job_sync:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_omnisolo::interop::QueueJob::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_omnisolo::interop::QueueJob::decode(&msg.payload[..])
+                {
                     handler(decoded);
                 }
             }
@@ -1615,9 +1629,11 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_update: ::server_omnisolo::interop::JobStatusUpdate| {
-            rx.store(true, Ordering::SeqCst);
-        });
+        let handler = Box::new(
+            move |_update: ::server_omnisolo::interop::JobStatusUpdate| {
+                rx.store(true, Ordering::SeqCst);
+            },
+        );
 
         let _cancel = protocol_server
             .listen_for_job_status("job_status_123", handler)

@@ -128,7 +128,8 @@ pub async fn handle_oauth_callback(Query(query): Query<OAuthCallbackQuery>) -> i
     "OAuth callback received. You can close this window.".into_response()
 }
 
-pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>>
+{
     Router::new().route("/callback", get(handle_oauth_callback))
 }
 

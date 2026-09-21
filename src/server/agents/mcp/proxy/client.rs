@@ -75,7 +75,9 @@ impl LocalProxyClient {
             while let Ok(Some(msg)) = in_stream.message().await {
                 if let Some(payload) = msg.payload {
                     match payload {
-                        ::server_omnisolo::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req) => {
+                        ::server_omnisolo::mcp_proxy::server_to_proxy::Payload::InvokeRequest(
+                            req,
+                        ) => {
                             info!("Received invoke request for tool: {}", req.tool_id);
 
                             let (success, result, error_details) = match req.tool_id.as_str() {

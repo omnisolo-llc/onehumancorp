@@ -71,7 +71,10 @@ pub struct ExistingBlobBackend {
     kind: LocalServiceKind,
 }
 impl ExistingBlobBackend {
-    pub fn new(selected: Arc<dyn crate::memory_store::OmniSoloMemory>, kind: LocalServiceKind) -> Self {
+    pub fn new(
+        selected: Arc<dyn crate::memory_store::OmniSoloMemory>,
+        kind: LocalServiceKind,
+    ) -> Self {
         Self { selected, kind }
     }
 }

@@ -163,7 +163,8 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
         return Err("invalid authority URL".to_string());
     }
     let url = reqwest::Url::parse(url_str).map_err(|e| e.to_string())?;
-    let allow_local_http = std::env::var("OMNISOLO_OIDC_ALLOW_HTTP").is_ok_and(|value| value == "true");
+    let allow_local_http =
+        std::env::var("OMNISOLO_OIDC_ALLOW_HTTP").is_ok_and(|value| value == "true");
     if url.scheme() != "https" && !(url.scheme() == "http" && allow_local_http) {
         return Err("invalid scheme".to_string());
     }

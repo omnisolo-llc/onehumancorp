@@ -419,7 +419,8 @@ impl DB {
                 .database_url
                 .clone()
                 .unwrap_or_else(|| {
-                    let default_path = crate::config::get_safe_user_dir().join("omnisolo-standalone.db");
+                    let default_path =
+                        crate::config::get_safe_user_dir().join("omnisolo-standalone.db");
                     format!("sqlite://{}", default_path.to_string_lossy())
                 })
         });
@@ -606,7 +607,11 @@ impl DB {
             // sqlite-vec is optional at runtime. The memory repository probes for
             // vec_distance_cosine and falls back to in-process cosine sorting when
             // the extension is unavailable, which keeps desktop/CI startup robust.
-            if std::env::var("OMNISOLO_SQLITE_VEC_EXTENSION").ok().as_deref() == Some("enabled") {
+            if std::env::var("OMNISOLO_SQLITE_VEC_EXTENSION")
+                .ok()
+                .as_deref()
+                == Some("enabled")
+            {
                 conn_opts = conn_opts.extension("sqlite_vec");
             }
 
@@ -4939,8 +4944,8 @@ mod e2e_tenant_isolation_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -5042,8 +5047,8 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -5130,8 +5135,8 @@ mod e2e_search_workspace_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .expect("Database URL or operation failed in test");
 
         // Set up Postgres Pool
         let pg_pool = sqlx::postgres::PgPoolOptions::new()

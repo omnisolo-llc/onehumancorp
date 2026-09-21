@@ -1423,13 +1423,14 @@ impl PromoterWorker {
                                 let out_payload =
                                     serde_json::to_vec(&resolved_payload).unwrap_or_default();
 
-                                let out_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
-                                    agent_id: "promoter".to_string(),
-                                    action: "StorefrontGenerated".to_string(),
-                                    status: "completed".to_string(),
-                                    payload: out_payload,
-                                    msg_id: Uuid::new_v4().to_string(),
-                                };
+                                let out_event =
+                                    ::server_omnisolo::orchestration::TeammateMeshEvent {
+                                        agent_id: "promoter".to_string(),
+                                        action: "StorefrontGenerated".to_string(),
+                                        status: "completed".to_string(),
+                                        payload: out_payload,
+                                        msg_id: Uuid::new_v4().to_string(),
+                                    };
                                 let _ = hub
                                     .publish_teammate_event(
                                         format!("onboarding_{}", session_id),

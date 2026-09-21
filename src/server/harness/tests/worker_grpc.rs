@@ -1207,7 +1207,8 @@ done
 #[allow(dead_code)]
 fn service_is_tonic_server_compatible<T: HarnessWorkerService>(
     service: T,
-) -> server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer<T> {
+) -> server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer<T>
+{
     server_omnisolo::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer::new(
         service,
     )

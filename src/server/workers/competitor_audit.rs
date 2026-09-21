@@ -13,7 +13,11 @@ impl CompetitorAuditWorker {
     }
 
     pub fn start(&self) {
-        if !competitor_audit_enabled(std::env::var("OMNISOLO_ENABLE_COMPETITOR_AUDIT").ok().as_deref()) {
+        if !competitor_audit_enabled(
+            std::env::var("OMNISOLO_ENABLE_COMPETITOR_AUDIT")
+                .ok()
+                .as_deref(),
+        ) {
             tracing::debug!("Competitor audit worker is disabled");
             return;
         }

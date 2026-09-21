@@ -70,9 +70,9 @@ fn valid_customer_id(value: &str) -> bool {
     let value = value.trim();
     !value.is_empty()
         && value.len() <= 128
-        && value
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+        && value.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+        })
 }
 
 fn required_deposit_cents(price_cents: i64, metadata: &serde_json::Value) -> Option<i64> {

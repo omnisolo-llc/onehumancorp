@@ -1030,7 +1030,8 @@ async fn handle_promoter_generate(
 
     let desc = req.description.unwrap_or_else(|| "".to_string());
 
-    let provider_name = std::env::var("OMNISOLO_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
+    let provider_name =
+        std::env::var("OMNISOLO_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
     let api_key = match provider_name.as_str() {
         "openai" => std::env::var("OPENAI_API_KEY").unwrap_or_default(),
         "minimax" => std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
@@ -1046,7 +1047,8 @@ async fn handle_promoter_generate(
             req.name, desc
         );
 
-        let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
+        let model =
+            std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
 
         let client = reqwest::Client::new();
         let body = serde_json::json!({
@@ -2897,7 +2899,13 @@ pub async fn handle_get_milestone_card(
     let safe_business_name = escape_xml(&business_name);
 
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OmniSolo", "💰", "#667eea", "#764ba2"),
+        "first_sale" => (
+            "First Sale!",
+            "Unlocked on OmniSolo",
+            "💰",
+            "#667eea",
+            "#764ba2",
+        ),
         "10th_order" => (
             "10th Order!",
             "Business is booming",
@@ -3096,7 +3104,10 @@ async fn handle_generate_discount_share(
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
     let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://cloud.omnisolo.co/discount/{}?tenant={}", uuid, tenant_id);
+    let share_url = format!(
+        "https://cloud.omnisolo.co/discount/{}?tenant={}",
+        uuid, tenant_id
+    );
 
     // Track generation metrics
     // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,

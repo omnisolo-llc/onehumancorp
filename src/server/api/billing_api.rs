@@ -953,21 +953,28 @@ async fn load_department_records(
         return Ok(Vec::new());
     }
 
-    let mut tx = match tokio::time::timeout(std::time::Duration::from_millis(500), pool.begin()).await {
-        Ok(Ok(tx)) => tx,
-        Ok(Err(e)) => {
-            tracing::warn!("Failed to begin transaction in load_department_records: {}", e);
-            return Ok(Vec::new());
-        }
-        Err(_) => {
-            tracing::warn!("Timed out connecting to DB in load_department_records");
-            return Ok(Vec::new());
-        }
-    };
+    let mut tx =
+        match tokio::time::timeout(std::time::Duration::from_millis(500), pool.begin()).await {
+            Ok(Ok(tx)) => tx,
+            Ok(Err(e)) => {
+                tracing::warn!(
+                    "Failed to begin transaction in load_department_records: {}",
+                    e
+                );
+                return Ok(Vec::new());
+            }
+            Err(_) => {
+                tracing::warn!("Timed out connecting to DB in load_department_records");
+                return Ok(Vec::new());
+            }
+        };
 
     let set_context_res = ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await;
     if let Err(e) = set_context_res {
-        tracing::warn!("Failed to set org context in load_department_records: {}", e);
+        tracing::warn!(
+            "Failed to set org context in load_department_records: {}",
+            e
+        );
         return Ok(Vec::new());
     }
 

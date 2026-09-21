@@ -175,7 +175,8 @@ use super::db;
 use super::jobs;
 
 fn default_builder_tenant_id() -> Uuid {
-    let raw = std::env::var("OMNISOLO_DEFAULT_TENANT_ID").unwrap_or_else(|_| "e2e-tenant".to_string());
+    let raw =
+        std::env::var("OMNISOLO_DEFAULT_TENANT_ID").unwrap_or_else(|_| "e2e-tenant".to_string());
     Uuid::parse_str(&raw).unwrap_or_else(|_| {
         // Keep string tenant defaults stable across requests so generate/publish
         // flows can read the same records under Bazel and local dev.
@@ -371,7 +372,8 @@ async fn geo_score(
 ) -> Result<Json<GeoScoreResponse>, axum::http::StatusCode> {
     use omnisolo_builtin_agent::tools::ToolExecutor;
 
-    let executor = omnisolo_builtin_agent::tools::generative_visibility::GenerativeVisibilityExecutor;
+    let executor =
+        omnisolo_builtin_agent::tools::generative_visibility::GenerativeVisibilityExecutor;
 
     let args = serde_json::json!({
         "content": payload.content,

@@ -177,7 +177,9 @@ impl AutoDreamWorker {
                 omnisolo_builtin_agent::memory_store::VectorRepository::new(db.pool.clone())
             }
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone())
+                omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(
+                    sqlite_pool.clone(),
+                )
             }
         };
 
@@ -428,8 +430,8 @@ impl AutoDreamWorker {
         counter: &Counter<u64>,
         cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let memory_dir =
-            std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".omnisolo/runtime/memory".to_string());
+        let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR")
+            .unwrap_or_else(|_| ".omnisolo/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
 
         if !path.exists() {

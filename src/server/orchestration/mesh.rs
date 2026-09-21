@@ -388,7 +388,9 @@ impl TeammateMesh for CentrifugeNode {
                 "system:health_ping",
                 Box::new(move |msg: Message| {
                     use prost::Message as ProstMessage;
-                    if let Ok(ping) = ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..]) {
+                    if let Ok(ping) =
+                        ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..])
+                    {
                         let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
 
                         let ack = ::server_omnisolo::interop::HealthAck {
@@ -798,7 +800,8 @@ pub async fn get_mesh_transport(
                 }
             }
 
-            match omnisolo_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
+            match omnisolo_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await
+            {
                 Ok(transport) => {
                     let t_clone = transport.clone();
                     tokio::spawn(async move {

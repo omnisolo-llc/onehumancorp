@@ -36,8 +36,11 @@ mod ml_resilience_tests {
         let mut tracker = omnisolo_builtin_agent::budget::BudgetTracker::default();
         let budget = 1000;
         let global_turn_tokens = 800; // < 900 (90%)
-        let decision =
-            omnisolo_builtin_agent::budget::check_token_budget(&mut tracker, budget, global_turn_tokens);
+        let decision = omnisolo_builtin_agent::budget::check_token_budget(
+            &mut tracker,
+            budget,
+            global_turn_tokens,
+        );
         // It should continue since we haven't reached 1000 or diminishing returns
         assert_eq!(
             decision.action,

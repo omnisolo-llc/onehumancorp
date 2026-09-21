@@ -227,7 +227,8 @@ where
         F: FnOnce() -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
     {
-        self.get_or_fetch_with_tags_swr(key, Vec::new(), ttl, fetch).await
+        self.get_or_fetch_with_tags_swr(key, Vec::new(), ttl, fetch)
+            .await
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
@@ -526,14 +527,10 @@ mod tests_singleflight {
 
         let handle = tokio::spawn(async move {
             cache_clone
-                .get_or_fetch_with_swr(
-                    "cancel_key",
-                    Duration::from_secs(60),
-                    || async {
-                        tokio::time::sleep(Duration::from_secs(10)).await;
-                        Some("val".to_string())
-                    },
-                )
+                .get_or_fetch_with_swr("cancel_key", Duration::from_secs(60), || async {
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    Some("val".to_string())
+                })
                 .await
         });
 
@@ -543,11 +540,9 @@ mod tests_singleflight {
 
         // Second caller should not hang forever
         let res = cache
-            .get_or_fetch_with_swr(
-                "cancel_key",
-                Duration::from_secs(60),
-                || async { Some("recovered".to_string()) },
-            )
+            .get_or_fetch_with_swr("cancel_key", Duration::from_secs(60), || async {
+                Some("recovered".to_string())
+            })
             .await;
         assert_eq!(res, Some("recovered".to_string()));
     }

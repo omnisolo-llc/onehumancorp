@@ -414,10 +414,12 @@ impl AgentServiceImpl {
             "minimax" => {
                 std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
             }
-            "openai" | "openai-compatible" | "openai_compatible" => {
-                Self::first_non_empty_env(&["OPENAI_MODEL", "OMNISOLO_OPENAI_MODEL", "OMNISOLO_LLM_MODEL"])
-                    .unwrap_or_else(|| "gpt-4.1-mini".to_string())
-            }
+            "openai" | "openai-compatible" | "openai_compatible" => Self::first_non_empty_env(&[
+                "OPENAI_MODEL",
+                "OMNISOLO_OPENAI_MODEL",
+                "OMNISOLO_LLM_MODEL",
+            ])
+            .unwrap_or_else(|| "gpt-4.1-mini".to_string()),
             _ => String::new(),
         }
     }
@@ -617,7 +619,8 @@ impl AgentServiceImpl {
                 sqlite_memory
             } else if let Some(anthropic_store) = self.anthropic_memory.clone() {
                 Some(anthropic_store as std::sync::Arc<dyn crate::memory_store::LongTermMemory>)
-            } else if std::env::var("OMNISOLO_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
+            } else if std::env::var("OMNISOLO_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true"
+            {
                 let base_dir = std::env::var("OMNISOLO_JSON_MEMORY_STORE_DIR")
                     .unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
                 Some(Arc::new(crate::json_store::NamespaceJsonStore::new(
@@ -1730,7 +1733,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
+        let base_dir =
+            std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
@@ -1752,7 +1756,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md_truncation() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
+        let base_dir =
+            std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();

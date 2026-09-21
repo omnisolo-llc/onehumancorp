@@ -20,7 +20,10 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         database_url: String::new(),
     };
 
-    let mut mode = env_vars.get("OMNISOLO_SOURCE_MODE").cloned().unwrap_or_default();
+    let mut mode = env_vars
+        .get("OMNISOLO_SOURCE_MODE")
+        .cloned()
+        .unwrap_or_default();
 
     if mode.is_empty() {
         if env_vars.contains_key("KUBERNETES_SERVICE_HOST") {
@@ -198,7 +201,10 @@ mod tests {
     #[test]
     fn test_verify_environment_thin_client() {
         let mut env = HashMap::new();
-        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "thin_client".to_string());
+        env.insert(
+            "OMNISOLO_SOURCE_MODE".to_string(),
+            "thin_client".to_string(),
+        );
         env.insert(
             "OMNISOLO_API_ENDPOINT".to_string(),
             "https://cloud.omnisolo.co".to_string(),
@@ -213,7 +219,10 @@ mod tests {
     #[test]
     fn test_verify_environment_thin_client_missing_endpoint() {
         let mut env = HashMap::new();
-        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "thin_client".to_string());
+        env.insert(
+            "OMNISOLO_SOURCE_MODE".to_string(),
+            "thin_client".to_string(),
+        );
 
         let res = verify_environment(&env);
         assert!(res.is_err());

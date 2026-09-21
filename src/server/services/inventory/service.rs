@@ -897,8 +897,8 @@ mod tests {
             .execute(&pool)
             .await;
 
-        let redis_url =
-            std::env::var("OMNISOLO_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        let redis_url = std::env::var("OMNISOLO_REDIS_URL")
+            .unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client_opt = redis::Client::open(redis_url).ok();
 
         let service = Arc::new(InventoryService::new(redis_client_opt));

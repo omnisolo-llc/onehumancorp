@@ -583,7 +583,12 @@ Your response:",
 
         // Invalidate the Dashboard cache as well
         let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
-        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<::server_omnisolo::app::GetOnboardingStateResponse>::new(self.hub.redis_client()));
+        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE
+            .get_or_init(|| {
+                ::server_utils::cache::HybridCache::<
+                    ::server_omnisolo::app::GetOnboardingStateResponse,
+                >::new(self.hub.redis_client())
+            });
         tracing::debug!(
             "Invalidating dashboard onboarding state cache for key: {}",
             dashboard_cache_key
@@ -10720,10 +10725,12 @@ mod tests {
                         .variants
                         .unwrap_or_default()
                         .into_iter()
-                        .map(|v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
-                            name: v.name,
-                            price_modifier: v.price_modifier,
-                        })
+                        .map(
+                            |v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
+                                name: v.name,
+                                price_modifier: v.price_modifier,
+                            },
+                        )
                         .collect(),
                 })
                 .collect(),

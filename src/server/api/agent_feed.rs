@@ -546,7 +546,8 @@ async fn update_feed_item_state(
                              "event_source": item.event_source
                         });
                         let pool_arc = std::sync::Arc::new(pool.clone());
-                        let job_queue = crate::orchestration::queue::OmniSoloJobQueue::new(pool_arc);
+                        let job_queue =
+                            crate::orchestration::queue::OmniSoloJobQueue::new(pool_arc);
                         let _ = job_queue
                             .enqueue(&tenant_id, "agent_feed_action", &job_payload)
                             .await;

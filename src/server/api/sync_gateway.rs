@@ -71,10 +71,9 @@ pub async fn power_sync_pull_handler(
     Json(_payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!(
-            "spiffe://omnisolo.io/org/{}/agent/{}",
-            tenant_id, agent_id
-        ),
+        Ok((tenant_id, agent_id)) => {
+            format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id)
+        }
         Err(e) => return e,
     };
     let mut tonic_request =
@@ -116,10 +115,9 @@ pub async fn power_sync_push_handler(
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!(
-            "spiffe://omnisolo.io/org/{}/agent/{}",
-            tenant_id, agent_id
-        ),
+        Ok((tenant_id, agent_id)) => {
+            format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id)
+        }
         Err(e) => return e,
     };
     let payload_str = serde_json::to_string(&payload.get("payload").unwrap_or(&payload))
@@ -181,10 +179,7 @@ pub async fn sync_mcp_deltas_handler(
         Ok(t) => t,
         Err(e) => return e,
     };
-    let spiffe_id_str = format!(
-        "spiffe://omnisolo.io/org/{}/agent/{}",
-        tenant_id, agent_id
-    );
+    let spiffe_id_str = format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id);
 
     if tenant_id.is_empty() {
         return (

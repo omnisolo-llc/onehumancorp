@@ -66,7 +66,11 @@ pub async fn handle_booking_approval(
     Ok(())
 }
 
-pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn handle_autonomous_quote_action(
+    tenant_id: &str,
+    payload: &Value,
+    pool: &PgPool,
+) -> Result<(), sqlx::Error> {
     tracing::info!("Handling autonomous quote action for tenant: {}", tenant_id); // pii-safe
 
     let proposed_slot_id = payload

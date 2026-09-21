@@ -422,7 +422,8 @@ async fn generate_api_key(
     let key_id = uuid::Uuid::new_v4().to_string();
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db =
+        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -480,7 +481,8 @@ async fn generate_api_key(
 
 async fn list_api_keys(Extension(claims): Extension<::server_common::Claims>) -> Response {
     let mut api_keys = Vec::new();
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db =
+        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -552,7 +554,8 @@ async fn revoke_api_key(
     Extension(claims): Extension<::server_common::Claims>,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Response {
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db =
+        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -638,7 +641,8 @@ async fn list_member_usage_analytics(
     }
 
     let mut analytics = Vec::new();
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db =
+        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
     if has_db {

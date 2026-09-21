@@ -736,7 +736,9 @@ mod tests {
         let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(url) if url.starts_with("postgres") => url,
             _ => {
-                eprintln!("skipping subscription postgres test; OMNISOLO_DATABASE_URL not set to postgres");
+                eprintln!(
+                    "skipping subscription postgres test; OMNISOLO_DATABASE_URL not set to postgres"
+                );
                 return;
             }
         };
