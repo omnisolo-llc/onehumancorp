@@ -12,7 +12,9 @@ struct ShippoFetchRatesArgs {
     dimensions: String,
 }
 
-struct ShippoFetchRatesExecutor { tenant: super::tenant::TenantContext, }
+struct ShippoFetchRatesExecutor {
+    tenant: super::tenant::TenantContext,
+}
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<ShippoFetchRatesArgs> for ShippoFetchRatesExecutor {
@@ -22,16 +24,13 @@ impl PydanticToolExecutor<ShippoFetchRatesArgs> for ShippoFetchRatesExecutor {
         body.insert("weight".to_string(), args.weight);
         body.insert("dimensions".to_string(), args.dimensions);
 
-
-        let url = std::env::var("OMNISOLO_BACKEND_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let url = std::env::var("OMNISOLO_BACKEND_URL")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string());
         let endpoint = format!("{url}/api/v1/shipping/rates");
         let mut req = reqwest::Client::new().post(&endpoint);
         let tenant_id = self.tenant.as_str();
         req = req.header("x-omnisolo-tenant", tenant_id);
-        let res = req
-            .json(&body)
-            .send()
-            .await;
+        let res = req.json(&body).send().await;
 
         match res {
             Ok(response) => {
@@ -41,12 +40,14 @@ impl PydanticToolExecutor<ShippoFetchRatesArgs> for ShippoFetchRatesExecutor {
                     Ok(result_json)
                 } else {
                     let text = response.text().await.unwrap_or_default();
-                    Err(ToolError::LlmRecoverable(format!("Failed with status {}: {}", status.as_u16(), text)))
+                    Err(ToolError::LlmRecoverable(format!(
+                        "Failed with status {}: {}",
+                        status.as_u16(),
+                        text
+                    )))
                 }
-            },
-            Err(e) => {
-                Err(ToolError::LlmRecoverable(e.to_string()))
             }
+            Err(e) => Err(ToolError::LlmRecoverable(e.to_string())),
         }
     }
 }
@@ -84,7 +85,9 @@ struct ShippoPurchaseLabelArgs {
     rate_id: String,
 }
 
-struct ShippoPurchaseLabelExecutor { tenant: super::tenant::TenantContext, }
+struct ShippoPurchaseLabelExecutor {
+    tenant: super::tenant::TenantContext,
+}
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<ShippoPurchaseLabelArgs> for ShippoPurchaseLabelExecutor {
@@ -93,16 +96,13 @@ impl PydanticToolExecutor<ShippoPurchaseLabelArgs> for ShippoPurchaseLabelExecut
         body.insert("orderId".to_string(), args.order_id);
         body.insert("rateId".to_string(), args.rate_id);
 
-
-        let url = std::env::var("OMNISOLO_BACKEND_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let url = std::env::var("OMNISOLO_BACKEND_URL")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string());
         let endpoint = format!("{url}/api/v1/shipping/label");
         let mut req = reqwest::Client::new().post(&endpoint);
         let tenant_id = self.tenant.as_str();
         req = req.header("x-omnisolo-tenant", tenant_id);
-        let res = req
-            .json(&body)
-            .send()
-            .await;
+        let res = req.json(&body).send().await;
 
         match res {
             Ok(response) => {
@@ -112,12 +112,14 @@ impl PydanticToolExecutor<ShippoPurchaseLabelArgs> for ShippoPurchaseLabelExecut
                     Ok(result_json)
                 } else {
                     let text = response.text().await.unwrap_or_default();
-                    Err(ToolError::LlmRecoverable(format!("Failed with status {}: {}", status.as_u16(), text)))
+                    Err(ToolError::LlmRecoverable(format!(
+                        "Failed with status {}: {}",
+                        status.as_u16(),
+                        text
+                    )))
                 }
-            },
-            Err(e) => {
-                Err(ToolError::LlmRecoverable(e.to_string()))
             }
+            Err(e) => Err(ToolError::LlmRecoverable(e.to_string())),
         }
     }
 }
@@ -125,7 +127,8 @@ impl PydanticToolExecutor<ShippoPurchaseLabelArgs> for ShippoPurchaseLabelExecut
 pub fn shippo_purchase_label_tool(tenant: super::tenant::TenantContext) -> Tool {
     Tool {
         name: "shippo_purchase_label".to_string(),
-        description: "Purchases a shipping label from Shippo given an order ID and rate ID.".to_string(),
+        description: "Purchases a shipping label from Shippo given an order ID and rate ID."
+            .to_string(),
         is_read_only: false,
         parameters: json!({
             "type": "object",
