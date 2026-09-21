@@ -14,6 +14,7 @@ pub struct CalendarEvent {
 #[async_trait]
 pub trait GoogleCalendarClientWrapper: Send + Sync {
     async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
     async fn create_event(
         &self,
         summary: &str,
@@ -118,6 +119,28 @@ fn created_event_reference(json: &Value) -> Result<String, String> {
 
 #[async_trait]
 impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        if event_id.trim().is_empty() {
+            return Err("Event ID cannot be empty".to_string());
+        }
+
+        let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self.http_client.delete(url).bearer_auth(token).send().await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() || resp.status() == 404 || resp.status() == 410 {
+                    Ok(())
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
     async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
         let url = self.calendar_api_url("freeBusy");
         let token = self.validated_access_token()?;
@@ -443,5 +466,53 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events[0]["start"], "2026-07-21T09:00:00Z");
         assert_eq!(events[0]["end"], "2026-07-21T10:00:00Z");
+    }
+
+    #[tokio::test]
+    async fn cancel_event_sends_delete_request_and_returns_ok() {
+        let (base_url, request_rx) = start_google_calendar_server("").await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let result = client.cancel_event("calendar-event-123").await;
+
+        assert!(result.is_ok());
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with(
+            "DELETE /calendar/v3/calendars/primary/events/calendar-event-123 HTTP/1.1"
+        ));
+        assert!(
+            request.contains("authorization: Bearer valid-token")
+                || request.contains("Authorization: Bearer valid-token")
+        );
+    }
+
+    #[tokio::test]
+    async fn cancel_event_rejects_empty_event_id() {
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), "http://localhost".to_string());
+
+        let result = client.cancel_event("   ").await;
+        assert_eq!(result.unwrap_err(), "Event ID cannot be empty");
+    }
+
+    #[tokio::test]
+    async fn cancel_event_returns_error_on_api_failure() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            use tokio::io::AsyncWriteExt;
+            let response = "HTTP/1.1 500 Internal Server Error\r\ncontent-length: 0\r\n\r\n";
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let result = client.cancel_event("calendar-event-123").await;
+
+        assert_eq!(result.unwrap_err(), "Google Calendar API error: 500 Internal Server Error");
     }
 }

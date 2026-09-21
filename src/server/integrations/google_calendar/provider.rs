@@ -49,6 +49,18 @@ impl GoogleCalendarProvider {
         self.client.get_free_busy(time_min, time_max).await
     }
 
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        // Placeholder for future Google `watch` implementation.
+        // We preserve the incoming metadata (payload) but explicitly return an unsupported error
+        // so we don't falsely claim a webhook was registered or handled.
+        tracing::debug!("Received Google Calendar webhook payload: {}", payload);
+        Err("Webhook handling is not yet implemented for Google Calendar".to_string())
+    }
+
+    pub async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        self.client.cancel_event(event_id).await
+    }
+
     pub async fn create_event(
         &self,
         summary: &str,

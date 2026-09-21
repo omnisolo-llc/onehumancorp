@@ -183,6 +183,7 @@ impl Default for IntegrationsRegistry {
     fn default() -> Self {
         Self::new()
     }
+
 }
 
 impl IntegrationsRegistry {
@@ -902,6 +903,20 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn cancel_event(
+        &self,
+        integration_id: &str,
+        event_id: &str,
+    ) -> Result<(), String> {
+        if integration_id == "google_calendar" {
+            let clients = self.google_calendar_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.cancel_event(event_id).await;
+            }
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn generate_meeting_for_booking(
         &self,
         integration_id: &str,
@@ -1159,6 +1174,13 @@ impl IntegrationsRegistry {
     }
 
     pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        if integration_id == "google_calendar" {
+            let clients = self.google_calendar_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.handle_webhook(payload).await;
+            }
+        }
+
         let client = {
             if integration_id == "mercadopago" {
                 let clients = self.mercadopago_clients.read().unwrap();
@@ -1545,6 +1567,21 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_google_calendar_cancel_event_dispatch() {
+        let registry = IntegrationsRegistry::new();
+        let res = registry.cancel_event("unknown_integration", "event-123").await;
+        assert_eq!(res.unwrap_err(), "integration not found or not supported");
+    }
+
+    #[tokio::test]
+    async fn test_google_calendar_webhook_dispatch() {
+        let registry = IntegrationsRegistry::new();
+        let res = registry.handle_webhook("unknown_integration", "{}").await;
+        assert_eq!(res.unwrap_err(), "integration not found or not supported");
+    }
+
     #[tokio::test]
     async fn test_twilio_integration() {
         let registry = IntegrationsRegistry::new();
