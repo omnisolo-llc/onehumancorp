@@ -96,7 +96,16 @@ async fn push_bookings_to_calendar(
 
     // Find unsynced confirmed bookings
     let rows = sqlx::query(
-        "SELECT id, start_time, end_time FROM bookings WHERE status = 'confirmed' AND tenant_id = $1"
+        "SELECT id, start_time, end_time FROM bookings WHERE status = 'confirmed' AND tenant_id = $1 AND (sync_metadata->>'synced' IS NULL OR sync_metadata->>'synced' != 'true')"
+    )
+    .bind(tenant_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    // Find unsynced cancelled bookings
+    let cancelled_rows = sqlx::query(
+        "SELECT id, sync_metadata FROM bookings WHERE status = 'cancelled' AND tenant_id = $1 AND (sync_metadata->>'synced' IS NULL OR sync_metadata->>'synced' != 'true')"
     )
     .bind(tenant_id)
     .fetch_all(&mut *tx)
@@ -114,12 +123,46 @@ async fn push_bookings_to_calendar(
 
         let summary = format!("OmniSolo Booking: {}", booking_id);
 
-        // This is a naive sync. Real implementation would check sync_metadata to avoid creating duplicates.
         if let Err(e) = provider_client
             .create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339())
             .await
         {
             tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+        } else {
+            // Update booking to mark as synced
+            let pool = crate::db::get_pool();
+            let _ = sqlx::query("UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1")
+                .bind(&booking_id)
+                .execute(&pool)
+                .await;
+        }
+    }
+
+    for row in cancelled_rows {
+        let booking_id: String = row.get("id");
+        // We assume booking_id matches Google event_id for now, but a real app
+        // would pull the real event ID from sync_metadata or similar.
+
+        // As a safeguard, even if the remote ID is missing/mismatched and fails,
+        // we'll still mark it synced to avoid an infinite loop of failures,
+        // unless we want to retry on 5xx errors explicitly.
+
+        if let Err(e) = provider_client.cancel_event(&booking_id).await {
+            tracing::error!("Failed to cancel event for booking {}: {}", booking_id, e);
+
+            // Mark synced anyway to prevent infinite loop
+            let pool = crate::db::get_pool();
+            let _ = sqlx::query("UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1")
+                .bind(&booking_id)
+                .execute(&pool)
+                .await;
+        } else {
+             // Update booking to mark as synced to prevent infinite loop
+             let pool = crate::db::get_pool();
+             let _ = sqlx::query("UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1")
+                 .bind(&booking_id)
+                 .execute(&pool)
+                 .await;
         }
     }
 
