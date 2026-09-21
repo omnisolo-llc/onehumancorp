@@ -96,7 +96,15 @@ async fn push_bookings_to_calendar(
 
     // Find unsynced confirmed bookings
     let rows = sqlx::query(
-        "SELECT id, start_time, end_time FROM bookings WHERE status = 'confirmed' AND tenant_id = $1"
+        "SELECT id, start_time, end_time, sync_event_id FROM bookings WHERE status = 'confirmed' AND tenant_id = $1"
+    )
+    .bind(tenant_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let cancelled_rows = sqlx::query(
+        "SELECT id, sync_event_id FROM bookings WHERE status = 'cancelled' AND tenant_id = $1 AND sync_event_id IS NOT NULL"
     )
     .bind(tenant_id)
     .fetch_all(&mut *tx)
@@ -105,21 +113,54 @@ async fn push_bookings_to_calendar(
 
     tx.commit().await.map_err(|e| e.to_string())?;
 
+    let pool2 = crate::db::get_pool();
     for row in rows {
         let booking_id: String = row.get("id");
+        let sync_event_id: Option<String> = row.try_get("sync_event_id").ok().flatten();
         let start_time: DateTime<Utc> = row.get("start_time");
         let end_time: Option<DateTime<Utc>> = row.try_get("end_time").ok().flatten();
 
-        let et = end_time.unwrap_or_else(|| start_time + chrono::Duration::hours(1));
+        if sync_event_id.is_none() {
+            let et = end_time.unwrap_or_else(|| start_time + chrono::Duration::hours(1));
 
-        let summary = format!("OmniSolo Booking: {}", booking_id);
+            let summary = format!("OmniSolo Booking: {}", booking_id);
 
-        // This is a naive sync. Real implementation would check sync_metadata to avoid creating duplicates.
-        if let Err(e) = provider_client
-            .create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339())
-            .await
-        {
-            tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+            // This is a naive sync. Real implementation would check sync_metadata to avoid creating duplicates.
+            match provider_client
+                .create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339())
+                .await
+            {
+                Ok(event_id) => {
+                    let mut tx2 = pool2.begin().await.map_err(|e| e.to_string())?;
+                    let _ = sqlx::query("UPDATE bookings SET sync_event_id = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(&event_id)
+                        .bind(&booking_id)
+                        .bind(tenant_id)
+                        .execute(&mut *tx2)
+                        .await;
+                    let _ = tx2.commit().await;
+                }
+                Err(e) => {
+                    tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+                }
+            }
+        }
+    }
+
+    for row in cancelled_rows {
+        let booking_id: String = row.get("id");
+        let sync_event_id: String = row.get("sync_event_id");
+
+        if let Err(e) = provider_client.cancel_event(&sync_event_id).await {
+            tracing::error!("Failed to cancel event for booking {}: {}", booking_id, e);
+        } else {
+            let mut tx2 = pool2.begin().await.map_err(|e| e.to_string())?;
+            let _ = sqlx::query("UPDATE bookings SET sync_event_id = NULL WHERE id = $1 AND tenant_id = $2")
+                .bind(&booking_id)
+                .bind(tenant_id)
+                .execute(&mut *tx2)
+                .await;
+            let _ = tx2.commit().await;
         }
     }
 

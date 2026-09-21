@@ -20,6 +20,7 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -192,6 +193,32 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         .await
                         .map_err(|e| format!("Google Calendar API response parse error: {}", e))?;
                     created_event_reference(&json)
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .delete(url)
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    Ok(())
+                } else if resp.status() == 410 {
+                    // Already deleted
+                    Ok(())
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }

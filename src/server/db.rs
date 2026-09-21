@@ -1259,6 +1259,7 @@ impl DB {
                         is_subscribable BOOLEAN DEFAULT FALSE,
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
+                        sync_event_id TEXT,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
