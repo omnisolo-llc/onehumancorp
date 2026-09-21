@@ -99,6 +99,48 @@ impl BudgetManager {
         Ok(true)
     }
 
+    pub fn release_spend(&self, amount: f64) -> Result<bool, String> {
+        if amount < 0.0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        if !amount.is_finite() || amount * 100.0 >= i64::MAX as f64 {
+            return Err("release amount must be finite and bounded".to_string());
+        }
+        let amount_cents = (amount * 100.0).round() as i64;
+        self.release_spend_cents(amount_cents)
+    }
+
+    pub fn release_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        if amount_cents == 0 {
+            return Ok(true);
+        }
+
+        if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+            tracing::info!(
+                "💰 Miser telemetry: Releasing budget spend for tenant {}",
+                tid
+            ); // pii-safe
+        }
+
+        // Atomic release: prevent underflow below 0
+        if self
+            .current
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                current
+                    .checked_sub(amount_cents)
+                    .map(|next| next.max(0))
+            })
+            .is_err()
+        {
+            return Ok(false); // Should practically never happen with max(0)
+        }
+
+        Ok(true)
+    }
+
     pub fn get_remaining(&self) -> f64 {
         let current = self.current.load(Ordering::SeqCst);
         (self.total_limit_cents - current) as f64 / 100.0
@@ -248,6 +290,44 @@ mod tests {
     fn test_record_spend_cents_zero() {
         let manager = BudgetManager::new(100.0);
         assert!(manager.record_spend_cents(0).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 10000);
+    }
+
+    #[test]
+    fn test_release_spend_cents() {
+        let manager = BudgetManager::new(100.0);
+
+        // Spend 50
+        assert!(manager.record_spend_cents(5000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 5000);
+
+        // Release 20
+        assert!(manager.release_spend_cents(2000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 7000);
+
+        // Check float method
+        assert!(manager.release_spend(10.0).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 8000);
+    }
+
+    #[test]
+    fn test_release_spend_cents_underflow() {
+        let manager = BudgetManager::new(100.0);
+
+        // Spend 50
+        assert!(manager.record_spend_cents(5000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 5000);
+
+        // Release 100 (more than spent)
+        assert!(manager.release_spend_cents(10000).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 10000); // Should be capped at 0 spend, so remaining is full limit
+
+        // Spend all
+        assert!(manager.record_spend(100.0).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 0);
+
+        // Refund all
+        assert!(manager.release_spend(100.0).unwrap());
         assert_eq!(manager.get_remaining_cents(), 10000);
     }
 
