@@ -1,9 +1,19 @@
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use std::sync::Mutex;
+
+struct BudgetState {
+    settled_micros: i64,
+    reservations: HashMap<u64, i64>,
+}
 
 pub struct BudgetManager {
     pub total_limit: f64,
     pub total_limit_cents: i64,
-    current: AtomicI64,
+    current: AtomicI64, // for backward compatibility with check functions, tracks total (settled + reserved) in cents
+    total_limit_micros: i64,
+    state: Mutex<BudgetState>,
+    next_reservation_id: AtomicU64,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
@@ -19,10 +29,25 @@ impl BudgetManager {
         } else {
             (limit * 100.0).round() as i64
         };
+
+        let total_limit_micros = if limit == f64::MAX {
+            i64::MAX
+        } else if !limit.is_finite() || limit < 0.0 || limit * 10_000.0 >= i64::MAX as f64 {
+            0
+        } else {
+            (limit * 10_000.0).round() as i64
+        };
+
         BudgetManager {
             total_limit: limit,
             current: AtomicI64::new(0),
             total_limit_cents,
+            total_limit_micros,
+            state: Mutex::new(BudgetState {
+                settled_micros: 0,
+                reservations: HashMap::new(),
+            }),
+            next_reservation_id: AtomicU64::new(1),
             telemetry_store: None,
             tenant_id: None,
             alert_threshold_percent: 80.0,
@@ -56,47 +81,94 @@ impl BudgetManager {
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
-        if amount_cents < 0 {
-            return Err("spend amount cannot be negative".to_string());
+        let amount_micros = if amount_cents == i64::MAX {
+            i64::MAX
+        } else {
+            amount_cents.saturating_mul(100)
+        };
+        match self.reserve_micros(amount_micros)? {
+            Some(res_id) => {
+                self.settle_micros(res_id)?;
+                Ok(true)
+            }
+            None => Ok(false),
         }
-        if amount_cents == 0 {
-            return Ok(self.get_remaining_cents() >= 0);
+    }
+
+    pub fn reserve_micros(&self, amount_micros: i64) -> Result<Option<u64>, String> {
+        if amount_micros < 0 {
+            return Err("reserve amount cannot be negative".to_string());
         }
 
-        if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            tracing::info!(
-                "💰 Miser telemetry: Recording budget spend for tenant {}",
-                tid
-            ); // pii-safe
+        let mut state = self.state.lock().map_err(|_| "Failed to acquire lock")?;
+
+        if amount_micros == 0 {
+            // Still allocate an ID for 0 reservation to be correct logically
+            let res_id = self.next_reservation_id.fetch_add(1, Ordering::SeqCst);
+            state.reservations.insert(res_id, 0);
+            return Ok(Some(res_id));
         }
 
-        // Atomic admission: reject overspend/overflow without changing state.
-        if self
-            .current
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_add(amount_cents)
-                    .filter(|next| *next <= self.total_limit_cents)
-            })
-            .is_err()
+        let in_flight_micros: i64 = state.reservations.values().try_fold(0i64, |acc, &val| acc.checked_add(val)).unwrap_or(i64::MAX);
+        let total_requested = state.settled_micros.checked_add(in_flight_micros).and_then(|t| t.checked_add(amount_micros));
+
+        if let Some(total) = total_requested
+            && total <= self.total_limit_micros
         {
-            return Ok(false);
+            let res_id = self.next_reservation_id.fetch_add(1, Ordering::SeqCst);
+            state.reservations.insert(res_id, amount_micros);
+            // Update the atomic current tracking for backward compatibility (in cents)
+            self.update_current_cents(&state);
+            return Ok(Some(res_id));
         }
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0
-        {
-            store.llm_cost_counter.add(
-                amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-            store.mission_cost_cents.add(
-                amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-        }
+        Ok(None)
+    }
 
-        Ok(true)
+    pub fn settle_micros(&self, reservation_id: u64) -> Result<(), String> {
+        let mut state = self.state.lock().map_err(|_| "Failed to acquire lock")?;
+        if let Some(amount) = state.reservations.remove(&reservation_id) {
+            state.settled_micros = state.settled_micros.saturating_add(amount);
+            self.update_current_cents(&state);
+
+            let amount_cents = amount / 100;
+            if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+                && amount_cents > 0
+            {
+                tracing::info!(
+                    "💰 Miser telemetry: Recording budget spend for tenant {}",
+                    tid
+                );
+                store.llm_cost_counter.add(
+                    amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+                store.mission_cost_cents.add(
+                    amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+            }
+            Ok(())
+        } else {
+            Err("Reservation not found".to_string())
+        }
+    }
+
+    pub fn release_micros(&self, reservation_id: u64) -> Result<(), String> {
+        let mut state = self.state.lock().map_err(|_| "Failed to acquire lock")?;
+        if state.reservations.remove(&reservation_id).is_some() {
+            self.update_current_cents(&state);
+            Ok(())
+        } else {
+            Err("Reservation not found".to_string())
+        }
+    }
+
+    fn update_current_cents(&self, state: &BudgetState) {
+        let in_flight_micros: i64 = state.reservations.values().fold(0, |acc, &val| acc.saturating_add(val));
+        let total_micros = state.settled_micros.saturating_add(in_flight_micros);
+        let total_cents = if total_micros == i64::MAX { i64::MAX } else { total_micros / 100 };
+        self.current.store(total_cents, Ordering::SeqCst);
     }
 
     pub fn get_remaining(&self) -> f64 {
@@ -227,6 +299,65 @@ mod tests {
     }
 
     #[test]
+    fn test_budget_manager_reserve_settle_release() {
+        let manager = BudgetManager::new(100.0);
+
+        // Reserve $10 (1000 cents -> 100,000 micros)
+        let res_id1 = manager.reserve_micros(100_000).unwrap().unwrap();
+        assert_eq!(manager.get_remaining_cents(), 9000); // 1000 cents used
+
+        // Reserve another $10
+        let res_id2 = manager.reserve_micros(100_000).unwrap().unwrap();
+        assert_eq!(manager.get_remaining_cents(), 8000);
+
+        // Release the second reservation
+        manager.release_micros(res_id2).unwrap();
+        assert_eq!(manager.get_remaining_cents(), 9000);
+
+        // Settle the first reservation
+        manager.settle_micros(res_id1).unwrap();
+        assert_eq!(manager.get_remaining_cents(), 9000); // Still 9000 cents remaining
+
+        // Cannot settle or release an unknown reservation
+        assert!(manager.settle_micros(res_id1).is_err());
+        assert!(manager.release_micros(res_id2).is_err());
+    }
+
+    #[test]
+    fn test_concurrent_reserve_settle_release() {
+        let manager = std::sync::Arc::new(BudgetManager::new(10.0));
+        let mut workers = vec![];
+
+        // 20 workers reserving $1 (10,000 micros). 10 should succeed.
+        for i in 0..20 {
+            let manager = manager.clone();
+            workers.push(std::thread::spawn(move || {
+                let res = manager.reserve_micros(10_000);
+                if let Ok(Some(id)) = res {
+                    if i % 2 == 0 {
+                        manager.settle_micros(id).unwrap();
+                        true
+                    } else {
+                        manager.release_micros(id).unwrap();
+                        false
+                    }
+                } else {
+                    false
+                }
+            }));
+        }
+
+        for worker in workers {
+            let _ = worker.join().unwrap();
+        }
+
+        // Because of the interleaving and releases, exactly the sum of settled ones will be recorded
+        let final_cents = manager.get_remaining_cents();
+        assert!(final_cents >= 0);
+        assert!(final_cents <= 1000);
+    }
+
+    #[test]
     fn test_budget_manager_with_telemetry() {
         let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
 
@@ -329,7 +460,7 @@ mod tests {
     fn test_record_spend_cents_negative() {
         let manager = BudgetManager::new(100.0);
         let err = manager.record_spend_cents(-1000).unwrap_err();
-        assert_eq!(err, "spend amount cannot be negative");
+        assert_eq!(err, "reserve amount cannot be negative");
     }
 
     #[test]
