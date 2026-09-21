@@ -126,7 +126,7 @@ export default function CustomerReferralProgramPage() {
                     Generate Widget Embed
                   </button>
                 </div>
-                {!removeBranding && (
+                {(!removeBranding || !hasPro) && (
                     <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
                         <span className="text-xs font-semibold tracking-wide" style={{ color: '#6b7280' }}>⚡ Powered by OmniSolo</span>
                     </div>
@@ -177,7 +177,7 @@ export default function CustomerReferralProgramPage() {
       </div>
 
       {/* Soft Paywall Modal */}
-      {showSoftPaywall && (
+      {showSoftPaywall && !hasPro && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-[30px] saturate-[210%] animate-in fade-in">
           <div className="bg-white dark:bg-[#1D1D1F] rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-white/20 relative animate-in zoom-in-95">
             <button

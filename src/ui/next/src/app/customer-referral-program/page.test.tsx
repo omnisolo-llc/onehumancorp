@@ -28,15 +28,15 @@ describe('CustomerReferralProgramPage', () => {
     render(<CustomerReferralProgramPage />);
   });
 
-  it('renders the configurator', () => {
-    render(<CustomerReferralProgramPage />);
+  it('renders the configurator', async () => {
+    await act(async () => { render(<CustomerReferralProgramPage />); });
     expect(screen.getByText('Customer Referral Program')).toBeDefined();
     expect(screen.getByText('They Give ($ Discount)')).toBeDefined();
     expect(screen.getByText('They Get ($ Reward)')).toBeDefined();
   });
 
   it('updates give and get amounts', async () => {
-    render(<CustomerReferralProgramPage />);
+    await act(async () => { render(<CustomerReferralProgramPage />); });
 
     const inputs = screen.getAllByRole('spinbutton');
     const giveInput = inputs[0];
@@ -49,7 +49,7 @@ describe('CustomerReferralProgramPage', () => {
   });
 
   it('shows the embed modal when clicking generate', async () => {
-    render(<CustomerReferralProgramPage />);
+    await act(async () => { render(<CustomerReferralProgramPage />); });
 
     const generateBtn = screen.getByText('Generate Widget Embed');
 
@@ -76,7 +76,7 @@ describe('CustomerReferralProgramPage', () => {
 
 
   it('navigates back', async () => {
-    render(<CustomerReferralProgramPage />);
+    await act(async () => { render(<CustomerReferralProgramPage />); });
     const backBtn = screen.getByText('Back to Dashboard');
     await act(async () => {
         fireEvent.click(backBtn);
@@ -84,14 +84,14 @@ describe('CustomerReferralProgramPage', () => {
     // Check navigation
   });
 
-  it('renders Powered by OmniSolo branding in preview by default', () => {
-    render(<CustomerReferralProgramPage />);
+  it('renders Powered by OmniSolo branding in preview by default', async () => {
+    await act(async () => { render(<CustomerReferralProgramPage />); });
     const brandingElements = screen.getAllByText(/Powered by OmniSolo/i);
     expect(brandingElements.length).toBeGreaterThan(0);
   });
 
   it('shows soft paywall when attempting to remove branding without pro', async () => {
-    render(<CustomerReferralProgramPage />);
+    await act(async () => { render(<CustomerReferralProgramPage />); });
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo"/i });
 
@@ -106,7 +106,7 @@ describe('CustomerReferralProgramPage', () => {
   it('removes branding when pro is true and toggle is clicked', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
-    render(<CustomerReferralProgramPage />);
+    await act(async () => { render(<CustomerReferralProgramPage />); });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo"/i });
