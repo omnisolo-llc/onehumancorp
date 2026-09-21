@@ -104,39 +104,33 @@ async fn create_checkout_session(
         }
     };
 
-    // 2. Either create booking directly or generate a Stripe Checkout Session
+    // 2. Either create booking directly or return explicit unavailable state
+    if requires_deposit && deposit_cents > 0 {
+        // The public booking route does not currently support live Stripe checkout session creation.
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(serde_json::json!({"error": "deposit required but payment session creation is currently unavailable"})),
+        )
+            .into_response();
+    }
+
     let booking_id = uuid::Uuid::new_v4().to_string();
-    let mut stripe_url = None;
     let st = chrono::DateTime::parse_from_rfc3339(&payload.start_time).unwrap();
     let et = chrono::DateTime::parse_from_rfc3339(&payload.end_time).unwrap();
 
     let res = match &state.db.store {
         DbStore::Sqlite(pool) => {
-            if requires_deposit && deposit_cents > 0 {
-                stripe_url = Some(format!("https://checkout.stripe.com/pay/cs_test_{}", booking_id));
-                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')")
-                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339())
-                    .execute(pool).await
-            } else {
-                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, 'scheduled')")
-                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339())
-                    .execute(pool).await
-            }
+            sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, 'scheduled')")
+                .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339())
+                .execute(pool).await
         }
         DbStore::Postgres(pool) => {
             let mut tx = pool.begin().await.unwrap();
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
-            let result = if requires_deposit && deposit_cents > 0 {
-                stripe_url = Some(format!("https://checkout.stripe.com/pay/cs_test_{}", booking_id));
-                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')")
-                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(st).bind(et)
-                    .execute(&mut *tx).await
-            } else {
-                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')")
-                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(st).bind(et)
-                    .execute(&mut *tx).await
-            };
+            let result = sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')")
+                .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(st).bind(et)
+                .execute(&mut *tx).await;
 
             let _ = tx.commit().await;
             result
@@ -149,7 +143,7 @@ async fn create_checkout_session(
 
     (StatusCode::OK, Json(serde_json::json!({
         "booking_id": booking_id,
-        "stripe_url": stripe_url,
-        "status": if stripe_url.is_some() { "pending_payment" } else { "confirmed" }
+        "stripe_url": null,
+        "status": "confirmed"
     }))).into_response()
 }
