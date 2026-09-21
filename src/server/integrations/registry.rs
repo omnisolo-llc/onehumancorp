@@ -1421,7 +1421,6 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-
     pub async fn cancel_event(
         &self,
         integration_id: &str,

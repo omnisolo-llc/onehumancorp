@@ -1,11 +1,9 @@
 use axum::{
-    extract::{Extension, Path, Query},
+    extract::Query,
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::{post, get},
-    Json, Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct WebhookQuery {
@@ -50,12 +48,16 @@ pub async fn google_calendar_webhook_handler(
 
     // Google Calendar notifications are hints.
     // Enqueue a reconciliation job to fetch the changes using `events.list` and `syncToken`.
-    tracing::info!("Enqueueing reconciliation job for tenant {} and channel {}", tenant_id, channel_id);
+    tracing::info!(
+        "Enqueueing reconciliation job for tenant {} and channel {}",
+        tenant_id,
+        channel_id
+    );
     let pool = crate::db::get_pool();
 
     let enqueue_res = sqlx::query(
         "INSERT INTO agent_jobs (tenant_id, job_type, payload, status)
-         VALUES ($1, 'google_calendar_reconciliation', $2, 'pending')"
+         VALUES ($1, 'google_calendar_reconciliation', $2, 'pending')",
     )
     .bind(&tenant_id)
     .bind(serde_json::json!({
@@ -68,7 +70,11 @@ pub async fn google_calendar_webhook_handler(
 
     if let Err(e) = enqueue_res {
         tracing::error!("Failed to enqueue reconciliation job: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to process webhook").into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to process webhook",
+        )
+            .into_response();
     }
 
     (StatusCode::OK, "Webhook received").into_response()

@@ -1,5 +1,4 @@
 use crate::integrations::google_calendar::provider::GoogleCalendarProvider;
-use ::server_common::auth_utils;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use std::time::Duration;
@@ -121,7 +120,10 @@ async fn push_bookings_to_calendar(
         let et = end_time.unwrap_or_else(|| start_time + chrono::Duration::hours(1));
         let summary = format!("OmniSolo Booking: {}", booking_id);
 
-        match provider_client.create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339()).await {
+        match provider_client
+            .create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339())
+            .await
+        {
             Ok(event_id) => {
                 sqlx::query(
                     "INSERT INTO google_calendar_sync_mappings (booking_id, tenant_id, provider, calendar_id, external_event_id, sync_state, last_synced_at, version)
@@ -219,7 +221,7 @@ async fn cancel_bookings_in_calendar(
                 }
             }
         } else {
-             sqlx::query("UPDATE google_calendar_sync_mappings SET sync_state = 'deleted', last_synced_at = CURRENT_TIMESTAMP WHERE booking_id = $1 AND provider = 'google_calendar'")
+            sqlx::query("UPDATE google_calendar_sync_mappings SET sync_state = 'deleted', last_synced_at = CURRENT_TIMESTAMP WHERE booking_id = $1 AND provider = 'google_calendar'")
                  .bind(&booking_id)
                  .execute(&mut *tx)
                  .await

@@ -205,12 +205,7 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
         let token = self.validated_access_token()?;
 
-        let res = self
-            .http_client
-            .delete(url)
-            .bearer_auth(token)
-            .send()
-            .await;
+        let res = self.http_client.delete(url).bearer_auth(token).send().await;
 
         match res {
             Ok(resp) if resp.status().is_success() => Ok(()),
@@ -281,7 +276,6 @@ impl RealGoogleCalendarClient {
             Err(e) => Err(format!("Network error: {}", e)),
         }
     }
-
 }
 
 #[cfg(test)]
@@ -474,7 +468,10 @@ mod tests {
         client.cancel_event("event-id-123").await.unwrap();
 
         let request = request_rx.await.unwrap();
-        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/event-id-123 HTTP/1.1"));
+        assert!(
+            request
+                .starts_with("DELETE /calendar/v3/calendars/primary/events/event-id-123 HTTP/1.1")
+        );
         assert!(
             request.contains("authorization: Bearer valid-token")
                 || request.contains("Authorization: Bearer valid-token")
