@@ -1,0 +1,7 @@
+issue_title: "Implement atomic budget reservation, settlement, and release for cost usage"
+issue_description: "Title: Implement BudgetReservation\nProblem Statement: Cost reporting for AI inference was not strictly enforcing atomic reservations with partial settlement. `total_allocated` and `settled` amounts were not being tracked safely and distinctly, preventing proper LLM telemetry and reliable invoice reconciliation.\nResearch Report: Analysis of `BudgetManager` highlighted a single `current` atomic counter which mixed reserved and settled values. A strict reservation boundary with partial settlement updates allows better reconciliation. A `BudgetReservation` RAII guard properly tracks state and updates telemetry reliably.\nDesign Doc: \n- Migrate `BudgetManager` to `Arc<Mutex<BudgetState>>`.\n- Implement `reserve_cents` which grabs the mutex and bounds-checks allocation against limits.\n- Implement `BudgetReservation::settle_partial(actual_amount_cents)` allowing reservations to partially commit their held quota to `settled`, and freeing the unused portion.\n- Implement `Drop` to automatically rollback unshelved quota if the thread panics or cancels before settling.\nImplementation Prompt: `BudgetManager` uses RAII locks allowing proper `total_allocated` vs `settled` counts. Telemetry updates on settlement appropriately attribute usage bounds.\nPriority: High\nScope: `BudgetManager` in `src/server/pricing/budget.rs`."
+issue_priority: "P0"
+issue_category: "backend"
+issue_type: "feature"
+issue_label: "ohc:lane:finance"
+assignees: []
