@@ -59,4 +59,12 @@ impl GoogleCalendarProvider {
             .create_event(summary, start_time, end_time)
             .await
     }
+
+    pub async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        self.client.cancel_event(event_id).await
+    }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        self.client.handle_webhook(payload).await
+    }
 }

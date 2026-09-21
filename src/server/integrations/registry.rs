@@ -1170,6 +1170,19 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.handle_webhook(payload).await;
         }
+
+        let gc_client = {
+            if integration_id == "google_calendar" {
+                let clients = self.google_calendar_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = gc_client {
+            return c.handle_webhook(payload).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
