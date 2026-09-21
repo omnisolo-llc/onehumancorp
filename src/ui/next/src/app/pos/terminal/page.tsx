@@ -605,7 +605,7 @@ export default function POSTerminal() {
 
            {/* Post-Sale Screen */}
            {checkoutComplete && (
-             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%]">
+             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%]">
                <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 w-full max-w-sm text-center animate-in zoom-in-95">
                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>

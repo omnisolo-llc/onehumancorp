@@ -1566,6 +1566,32 @@ pub async fn capture_payment_intent_handler(
                                     let _ = tx.commit().await;
                                 }
 
+                                // Record pos_transactions and pos_ledger_entries for Tap-to-Pay ledger tracking
+                                if let Ok(mut tx) = crate::db::get_pool().begin().await
+                                    && let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                                    let ledger_entry_id = uuid::Uuid::new_v4().to_string();
+                                    let amount = req_data.amount_cents.unwrap_or(0);
+
+                                    let existing: Option<String> = match sqlx::query_scalar("SELECT id FROM pos_transactions WHERE tenant_id = $1 AND stripe_payment_intent_id = $2")
+                                        .bind(&tenant_id).bind(&req_data.payment_intent_id).fetch_optional(&mut *tx).await {
+                                        Ok(id) => id,
+                                        Err(_) => None,
+                                    };
+
+                                    if existing.is_none() {
+                                        let transaction_id = uuid::Uuid::new_v4().to_string();
+                                        if let Err(e) = sqlx::query("INSERT INTO pos_transactions (id, tenant_id, stripe_payment_intent_id, amount_cents, currency, status) VALUES ($1, $2, $3, $4, 'USD', 'COMPLETED')")
+                                            .bind(&transaction_id).bind(&tenant_id).bind(&req_data.payment_intent_id).bind(amount).execute(&mut *tx).await {
+                                            tracing::error!("Failed to insert pos_transaction: {}", e);
+                                        } else if let Err(e) = sqlx::query("INSERT INTO pos_ledger_entries (id, tenant_id, transaction_id, amount_cents, account_type) VALUES ($1, $2, $3, $4, 'revenue')")
+                                            .bind(&ledger_entry_id).bind(&tenant_id).bind(&transaction_id).bind(amount).execute(&mut *tx).await {
+                                            tracing::error!("Failed to insert pos_ledger_entries: {}", e);
+                                        } else if let Err(e) = tx.commit().await {
+                                            tracing::error!("Failed to commit pos_transaction ledger: {}", e);
+                                        }
+                                    }
+                                }
+
                                 // Notify Sales & Revenue Assistant via KAIROS/Orchestrator
                                 if let Ok(mut agent_tx) = crate::db::get_pool().begin().await {
                                     let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'terminal', 'sales_and_revenue', 'record_pos_transaction', $3, 'pending')")
