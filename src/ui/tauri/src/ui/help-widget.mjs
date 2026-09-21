@@ -16,10 +16,20 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     if (document.body) document.body.appendChild(tooltipEl);
     else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltipEl));
 
+
+    function findTooltipTarget(node) {
+        while (node && node !== document && node !== document.body) {
+            if (node.hasAttribute && node.hasAttribute('data-tooltip')) return node;
+            if (node.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[node.id]) return node;
+            node = node.parentNode;
+        }
+        return null;
+    }
+
     function showTooltip(e, text) {
         if (!text) return;
         tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[data-tooltip], [id]') ? e.target.closest('[data-tooltip], [id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+        const targetNode = findTooltipTarget(e.target) || e.target; const targetRect = targetNode.getBoundingClientRect();
 
         let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
         let top = targetRect.bottom + 10;
@@ -44,7 +54,7 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
+        const target = findTooltipTarget(e.target);
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
             const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
@@ -55,7 +65,7 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
+        const target = findTooltipTarget(e.target);
         if (target) {
             hideTooltip();
         }
@@ -63,7 +73,7 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
 
 
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
+        const target = findTooltipTarget(e.target);
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
             const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');

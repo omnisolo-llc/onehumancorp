@@ -227,10 +227,20 @@ document.addEventListener('DOMContentLoaded', () => {
     tooltipEl.className = 'omnisolo-tooltip';
     document.body.appendChild(tooltipEl);
 
+    function findTooltipTarget(node) {
+        while (node && node !== document && node !== document.body) {
+            if (node.hasAttribute && node.hasAttribute('data-tooltip')) return node;
+            if (node.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[node.id]) return node;
+            node = node.parentNode;
+        }
+        return null;
+    }
+
+
     function showTooltip(e, text) {
         if (!text) return;
         tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+        const targetNode = findTooltipTarget(e.target) || e.target; const targetRect = targetNode.getBoundingClientRect();
 
         let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
         let top = targetRect.bottom + 10;
@@ -255,14 +265,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
+        const target = findTooltipTarget(e.target);
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
+        const target = findTooltipTarget(e.target);
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
@@ -270,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id]');
+        const target = findTooltipTarget(e.target);
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             window.touchTimer = setTimeout(() => {
                 showTooltip(e.touches[0], window.OMNISOLO_TOOLTIPS[target.id]);
@@ -280,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('touchend', (e) => {
         clearTimeout(window.touchTimer);
-        const target = e.target.closest('[id]');
+        const target = findTooltipTarget(e.target);
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
@@ -288,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('touchcancel', (e) => {
         clearTimeout(window.touchTimer);
-        const target = e.target.closest('[id]');
+        const target = findTooltipTarget(e.target);
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }

@@ -2,7 +2,9 @@
   "name": "next",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=22.22.1 <23" },
+  "engines": {
+    "node": ">=22.22.1 <23"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -20,6 +22,7 @@
     "@powersync/web": "^1.38.3",
     "@stripe/terminal-js": "^0.26.0",
     "@swagger-api/apidom-core": "1.11.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@types/dompurify": "^3.0.5",
     "@types/pg": "^8.20.0",
