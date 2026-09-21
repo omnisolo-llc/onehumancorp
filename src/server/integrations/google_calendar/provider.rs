@@ -59,4 +59,8 @@ impl GoogleCalendarProvider {
             .create_event(summary, start_time, end_time)
             .await
     }
+
+    pub async fn delete_event(&self, event_id: &str) -> Result<(), String> {
+        self.client.delete_event(event_id).await
+    }
 }
