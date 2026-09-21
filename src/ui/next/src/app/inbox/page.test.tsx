@@ -11,6 +11,8 @@ vi.mock('@powersync/react', () => ({
   useQuery: () => ({ data: queryState.data }),
 }));
 
+global.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pending_approvals: [] }))));
+
 vi.mock('../../lib/powersync/PowerSyncProvider', () => ({
   PowerSyncProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

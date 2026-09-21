@@ -7,9 +7,9 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use hmac::{Hmac, Mac};
 
 pub fn connection_vault(db: &DB) -> Result<ConnectionVault, String> {
     let ledger = match &db.store {
@@ -492,30 +492,66 @@ async fn connect_google_calendar_handler(
         .iter()
         .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
     {
-        return connection_response(StatusCode::FORBIDDEN, false, "Owner approval is required", "unavailable", false).into_response();
+        return connection_response(
+            StatusCode::FORBIDDEN,
+            false,
+            "Owner approval is required",
+            "unavailable",
+            false,
+        )
+        .into_response();
     }
-    let Some(tenant_id) = user.organization_id.filter(|value| !value.trim().is_empty()) else {
-        return connection_response(StatusCode::UNAUTHORIZED, false, "Authenticated organization required", "unavailable", false).into_response();
+    let Some(tenant_id) = user
+        .organization_id
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return connection_response(
+            StatusCode::UNAUTHORIZED,
+            false,
+            "Authenticated organization required",
+            "unavailable",
+            false,
+        )
+        .into_response();
     };
 
     let client_id = match std::env::var("GOOGLE_CALENDAR_CLIENT_ID") {
         Ok(value) if !value.trim().is_empty() => value,
-        _ => return connection_response(StatusCode::SERVICE_UNAVAILABLE, false, "Google Calendar OAuth is not configured", "unavailable", false).into_response(),
+        _ => {
+            return connection_response(
+                StatusCode::SERVICE_UNAVAILABLE,
+                false,
+                "Google Calendar OAuth is not configured",
+                "unavailable",
+                false,
+            )
+            .into_response();
+        }
     };
 
-    let base = std::env::var("OMNISOLO_TUNNEL_BASE_URL").unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
-    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI").unwrap_or_else(|_| format!("{}/api/v1/oauth/google_calendar/callback", base));
+    let base = std::env::var("OMNISOLO_TUNNEL_BASE_URL")
+        .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
+    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI")
+        .unwrap_or_else(|_| format!("{}/api/v1/oauth/google_calendar/callback", base));
 
     let scope = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly";
     let expiration = chrono::Utc::now().timestamp() + 3600;
     let raw_state = format!("{}:{}", tenant_id, expiration);
-    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(std::env::var("OMNISOLO_SECRET_KEY").unwrap_or_else(|_| "dev".into()).as_bytes()).unwrap();
+    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(
+        std::env::var("OMNISOLO_SECRET_KEY")
+            .unwrap_or_else(|_| "dev".into())
+            .as_bytes(),
+    )
+    .unwrap();
     mac.update(raw_state.as_bytes());
     let state = format!("{}.{}", raw_state, hex::encode(mac.finalize().into_bytes()));
 
     let redirect_url = format!(
         "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&scope={}&response_type=code&access_type=offline&prompt=consent&state={}",
-        urlencoding::encode(&client_id), urlencoding::encode(&redirect_uri), urlencoding::encode(scope), urlencoding::encode(&state)
+        urlencoding::encode(&client_id),
+        urlencoding::encode(&redirect_uri),
+        urlencoding::encode(scope),
+        urlencoding::encode(&state)
     );
 
     Json(serde_json::json!({
@@ -535,32 +571,55 @@ pub async fn google_calendar_oauth_callback_handler(
 ) -> impl IntoResponse {
     let split_state: Vec<&str> = query.state.rsplitn(2, '.').collect();
     if split_state.len() != 2 {
-        return (StatusCode::BAD_REQUEST, "Invalid or expired state parameter.").into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            "Invalid or expired state parameter.",
+        )
+            .into_response();
     }
     let raw_state = split_state[1];
     let signature = split_state[0];
 
-    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(std::env::var("OMNISOLO_SECRET_KEY").unwrap_or_else(|_| "dev".into()).as_bytes()).unwrap();
+    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(
+        std::env::var("OMNISOLO_SECRET_KEY")
+            .unwrap_or_else(|_| "dev".into())
+            .as_bytes(),
+    )
+    .unwrap();
     mac.update(raw_state.as_bytes());
     if hex::encode(mac.finalize().into_bytes()) != signature {
-        return (StatusCode::BAD_REQUEST, "Invalid or expired state parameter.").into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            "Invalid or expired state parameter.",
+        )
+            .into_response();
     }
 
     let parts: Vec<&str> = raw_state.split(':').collect();
     if parts.len() != 2 || parts[1].parse::<i64>().unwrap_or(0) < chrono::Utc::now().timestamp() {
-        return (StatusCode::BAD_REQUEST, "Invalid or expired state parameter.").into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            "Invalid or expired state parameter.",
+        )
+            .into_response();
     }
     let tenant_id = parts[0].to_string();
 
     let client_id = std::env::var("GOOGLE_CALENDAR_CLIENT_ID").unwrap_or_default();
     let client_secret = std::env::var("GOOGLE_CALENDAR_CLIENT_SECRET").unwrap_or_default();
-    let base = std::env::var("OMNISOLO_TUNNEL_BASE_URL").unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
-    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI").unwrap_or_else(|_| format!("{}/api/v1/oauth/google_calendar/callback", base));
+    let base = std::env::var("OMNISOLO_TUNNEL_BASE_URL")
+        .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
+    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI")
+        .unwrap_or_else(|_| format!("{}/api/v1/oauth/google_calendar/callback", base));
 
     let token_url = "https://oauth2.googleapis.com/token";
     let client = reqwest::Client::new();
     let params = [
-        ("client_id", client_id.as_str()), ("client_secret", client_secret.as_str()), ("code", query.code.as_str()), ("redirect_uri", redirect_uri.as_str()), ("grant_type", "authorization_code")
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
+        ("code", query.code.as_str()),
+        ("redirect_uri", redirect_uri.as_str()),
+        ("grant_type", "authorization_code"),
     ];
 
     let res = match client.post(token_url).form(&params).send().await {
@@ -572,7 +631,11 @@ pub async fn google_calendar_oauth_callback_handler(
     };
 
     if !res.status().is_success() {
-        tracing::error!("Google Calendar token exchange error {}: {}", res.status(), res.text().await.unwrap_or_default());
+        tracing::error!(
+            "Google Calendar token exchange error {}: {}",
+            res.status(),
+            res.text().await.unwrap_or_default()
+        );
         return (StatusCode::BAD_GATEWAY, "Failed to exchange token").into_response();
     }
 
@@ -584,23 +647,35 @@ pub async fn google_calendar_oauth_callback_handler(
         }
     };
 
-    let access_token = json_res["access_token"].as_str().unwrap_or_default().to_string();
+    let access_token = json_res["access_token"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
     let mut refresh_token = json_res["refresh_token"].as_str().map(|s| s.to_string());
     let expires_in: i64 = json_res["expires_in"].as_i64().unwrap_or(3600);
     let expires_at = chrono::Utc::now() + chrono::Duration::seconds(expires_in);
 
     let Ok(vault) = connection_vault(&state.db) else {
-        return (StatusCode::SERVICE_UNAVAILABLE, "Connection encryption is not configured").into_response();
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Connection encryption is not configured",
+        )
+            .into_response();
     };
     if vault.initialize().await.is_err() {
-        return (StatusCode::SERVICE_UNAVAILABLE, "Connection storage is unavailable").into_response();
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Connection storage is unavailable",
+        )
+            .into_response();
     }
 
     if refresh_token.is_none() {
         // The vault expects a JSON encoded payload for Google Calendar secret with `access_token` and optional `refresh_token`
         if let Ok(key) = vault.read_key(&tenant_id, "google_calendar").await
             && let Ok(json) = serde_json::from_str::<serde_json::Value>(&key)
-            && let Some(r) = json["refresh_token"].as_str() {
+            && let Some(r) = json["refresh_token"].as_str()
+        {
             refresh_token = Some(r.to_string());
         }
     }
@@ -611,33 +686,47 @@ pub async fn google_calendar_oauth_callback_handler(
         "expires_at": expires_at.timestamp()
     });
 
-    match vault.verify_and_store(&tenant_id, "google_calendar", &secret_json.to_string()).await {
+    match vault
+        .verify_and_store(&tenant_id, "google_calendar", &secret_json.to_string())
+        .await
+    {
         Ok(_) => {
             if let crate::db::DbStore::Postgres = &state.db.store {
                 let mut tx = match state.db.pool.begin().await {
                     Ok(t) => t,
-                    Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
+                    Err(_) => {
+                        return (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+                            .into_response();
+                    }
                 };
                 // Insert metadata only into calendar_integrations. access_token and refresh_token are left NULL
                 let _ = sqlx::query(
                     "INSERT INTO calendar_integrations (id, tenant_id, provider, expires_at)
                      VALUES ($1, $2, 'google_calendar', $3)
-                     ON CONFLICT (id) DO UPDATE SET expires_at = $3"
+                     ON CONFLICT (id) DO UPDATE SET expires_at = $3",
                 )
-                .bind(format!("{}_google_calendar", tenant_id)).bind(&tenant_id).bind(expires_at).execute(&mut *tx).await;
+                .bind(format!("{}_google_calendar", tenant_id))
+                .bind(&tenant_id)
+                .bind(expires_at)
+                .execute(&mut *tx)
+                .await;
                 let _ = sqlx::query(
                     "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
                      VALUES ($1, $2, 'google_calendar', 'connected', '{}')
-                     ON CONFLICT (id) DO UPDATE SET status = 'connected'"
+                     ON CONFLICT (id) DO UPDATE SET status = 'connected'",
                 )
-                .bind(format!("{}_google_calendar", tenant_id)).bind(&tenant_id).execute(&mut *tx).await;
+                .bind(format!("{}_google_calendar", tenant_id))
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
                 let _ = tx.commit().await;
             }
-        },
+        }
         Err(_) => return (StatusCode::BAD_GATEWAY, "Failed to store credentials").into_response(),
     };
 
-    let base = std::env::var("OMNISOLO_TUNNEL_BASE_URL").unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
+    let base = std::env::var("OMNISOLO_TUNNEL_BASE_URL")
+        .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
 
     axum::response::Html(format!("<script>if(window.opener) {{ window.opener.postMessage('oauth_success', '{}'); window.close(); }}</script>OAuth callback received. You can close this window.", base)).into_response()
 }
@@ -646,7 +735,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     let state = ToolIntegrationsApiState { db };
     Router::new()
         .route("/", get(get_integrations_handler))
-        .route("/google_calendar/connect", post(connect_google_calendar_handler))
+        .route(
+            "/google_calendar/connect",
+            post(connect_google_calendar_handler),
+        )
         .route("/{id}/connect", post(connect_integration_handler))
         .route("/{id}/verify", post(refresh_integration_handler))
         .route("/{id}", axum::routing::delete(revoke_integration_handler))
@@ -722,30 +814,55 @@ mod tests {
             jti: "jti-1".to_string(),
         };
         let db = Arc::new(DB {
-            pool: sqlx::PgPool::connect_lazy("postgres://unused:unused@127.0.0.1:1/unused").unwrap(),
-            store: crate::db::DbStore::Sqlite(sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap()),
+            pool: sqlx::PgPool::connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: crate::db::DbStore::Sqlite(
+                sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap(),
+            ),
         });
         let state = ToolIntegrationsApiState { db };
-        unsafe { std::env::set_var("GOOGLE_CALENDAR_CLIENT_ID", "test_client_id"); }
-        let response = connect_google_calendar_handler(axum::extract::State(state), axum::extract::Extension(claims)).await.into_response();
+        unsafe {
+            std::env::set_var("GOOGLE_CALENDAR_CLIENT_ID", "test_client_id");
+        }
+        let response = connect_google_calendar_handler(
+            axum::extract::State(state),
+            axum::extract::Extension(claims),
+        )
+        .await
+        .into_response();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         let redirect_url = json["redirect_url"].as_str().unwrap();
         assert!(redirect_url.contains("state="));
         assert!(!redirect_url.contains("state=google_calendar_tenant_123")); // Signed, shouldn't be plain text
-        unsafe { std::env::remove_var("GOOGLE_CALENDAR_CLIENT_ID"); }
+        unsafe {
+            std::env::remove_var("GOOGLE_CALENDAR_CLIENT_ID");
+        }
     }
 
     #[tokio::test]
     async fn test_google_calendar_auth_rejects_missing_state() {
         let db = Arc::new(DB {
-            pool: sqlx::PgPool::connect_lazy("postgres://unused:unused@127.0.0.1:1/unused").unwrap(),
-            store: crate::db::DbStore::Sqlite(sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap()),
+            pool: sqlx::PgPool::connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: crate::db::DbStore::Sqlite(
+                sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap(),
+            ),
         });
         let state = ToolIntegrationsApiState { db };
-        let query = OAuthCallbackQuery { code: "test_code".to_string(), state: "invalid_state".to_string() };
-        let response = google_calendar_oauth_callback_handler(axum::extract::State(state), axum::extract::Query(query)).await.into_response();
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "invalid_state".to_string(),
+        };
+        let response = google_calendar_oauth_callback_handler(
+            axum::extract::State(state),
+            axum::extract::Query(query),
+        )
+        .await
+        .into_response();
         assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
     }
 }

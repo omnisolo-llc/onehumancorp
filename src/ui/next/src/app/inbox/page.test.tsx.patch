@@ -1,0 +1,11 @@
+--- src/ui/next/src/app/inbox/page.test.tsx
++++ src/ui/next/src/app/inbox/page.test.tsx
+@@ -4,7 +4,7 @@
+ import { render, screen, act } from '@testing-library/react';
+ import InboxPage from './page';
+
+-global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ pending_approvals: [] })));
++global.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pending_approvals: [] }))));
+
+ vi.mock('../../lib/powersync/PowerSyncProvider', () => ({
+   usePowerSync: vi.fn(() => ({

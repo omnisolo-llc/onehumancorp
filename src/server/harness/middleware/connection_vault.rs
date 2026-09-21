@@ -200,7 +200,7 @@ impl ConnectionVault {
                 } else {
                     return Err(LedgerError::Invalid);
                 }
-            },
+            }
             _ => request.bearer_auth(secret),
         };
         let response = request.send().await.map_err(|_| LedgerError::State)?;
