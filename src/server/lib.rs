@@ -3982,6 +3982,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             axum::routing::post(api::billing_webhook::calendly_webhook_handler),
         )
         .route(
+            "/api/v1/webhooks/google_calendar",
+            axum::routing::post(api::billing_webhook::google_calendar_webhook_handler),
+        )
+        .route(
             "/api/v1/webhooks/mailchimp",
             axum::routing::post(api::billing_webhook::mailchimp_webhook_handler),
         )

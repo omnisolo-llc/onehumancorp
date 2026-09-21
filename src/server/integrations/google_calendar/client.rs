@@ -19,7 +19,8 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         summary: &str,
         start_time: &str,
         end_time: &str,
-    ) -> Result<String, String>;
+    ) -> Result<(String, Option<String>), String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -86,14 +87,19 @@ impl RealGoogleCalendarClient {
     }
 }
 
-fn created_event_reference(json: &Value) -> Result<String, String> {
+fn created_event_reference(json: &Value) -> Result<(String, Option<String>), String> {
+    let event_id = match json["id"].as_str() {
+        Some(id) if !id.trim().is_empty() => id.to_string(),
+        _ => return Err("Google Calendar create_event response did not include an event id".to_string()),
+    };
+
+    let mut meet_link = None;
+
     if let Some(hangout_link) = json["hangoutLink"].as_str()
         && !hangout_link.trim().is_empty()
     {
-        return Ok(hangout_link.to_string());
-    }
-
-    if let Some(entry_points) = json["conferenceData"]["entryPoints"].as_array()
+        meet_link = Some(hangout_link.to_string());
+    } else if let Some(entry_points) = json["conferenceData"]["entryPoints"].as_array()
         && let Some(video_uri) = entry_points.iter().find_map(|entry_point| {
             let is_video = entry_point["entryPointType"].as_str() == Some("video");
             entry_point["uri"]
@@ -101,19 +107,10 @@ fn created_event_reference(json: &Value) -> Result<String, String> {
                 .filter(|uri| is_video && !uri.trim().is_empty())
         })
     {
-        return Ok(video_uri.to_string());
+        meet_link = Some(video_uri.to_string());
     }
 
-    if let Some(event_id) = json["id"].as_str()
-        && !event_id.trim().is_empty()
-    {
-        return Ok(event_id.to_string());
-    }
-
-    Err(
-        "Google Calendar create_event response did not include an event id or Meet link"
-            .to_string(),
-    )
+    Ok((event_id, meet_link))
 }
 
 #[async_trait]
@@ -157,7 +154,7 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         summary: &str,
         start_time: &str,
         end_time: &str,
-    ) -> Result<String, String> {
+    ) -> Result<(String, Option<String>), String> {
         let url = self.calendar_api_url("calendars/primary/events");
         let token = self.validated_access_token()?;
 
@@ -192,6 +189,33 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         .await
                         .map_err(|e| format!("Google Calendar API response parse error: {}", e))?;
                     created_event_reference(&json)
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let path = format!("calendars/primary/events/{}", event_id);
+        let url = self.calendar_api_url(&path);
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .delete(url)
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() || resp.status() == reqwest::StatusCode::NO_CONTENT {
+                    Ok(())
+                } else if resp.status() == reqwest::StatusCode::NOT_FOUND || resp.status() == reqwest::StatusCode::GONE {
+                    // Idempotent cancellation: if it doesn't exist or is already deleted, we consider it successful
+                    Ok(())
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
@@ -350,7 +374,7 @@ mod tests {
         let client =
             RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
 
-        let created_link = client
+        let (event_id, created_link) = client
             .create_event(
                 "Intro call",
                 "2026-06-06T09:00:00-07:00",
@@ -359,7 +383,8 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(created_link, "https://meet.google.com/aaa-bbbb-ccc");
+        assert_eq!(event_id, "calendar-event-123");
+        assert_eq!(created_link.unwrap(), "https://meet.google.com/aaa-bbbb-ccc");
 
         let request = request_rx.await.unwrap();
         assert!(request.starts_with(
@@ -415,6 +440,23 @@ mod tests {
         assert_eq!(error, "Google Calendar access token is required");
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
         assert!(!*request_seen.lock().await);
+    }
+
+    #[tokio::test]
+    async fn cancel_event_sends_delete_request_and_handles_success() {
+        let response = "";
+        let (base_url, request_rx) = start_google_calendar_server(response).await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        client.cancel_event("calendar-event-123").await.unwrap();
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/calendar-event-123 HTTP/1.1"));
+        assert!(
+            request.contains("authorization: Bearer valid-token")
+                || request.contains("Authorization: Bearer valid-token")
+        );
     }
 
     #[tokio::test]

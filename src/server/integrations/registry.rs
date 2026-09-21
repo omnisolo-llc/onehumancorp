@@ -1403,7 +1403,8 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.create_event(summary, start_time, end_time).await;
+            let (event_id, _) = c.create_event(summary, start_time, end_time).await?;
+            return Ok(event_id);
         }
 
         let cal_client = {

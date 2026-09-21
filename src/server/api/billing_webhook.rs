@@ -1247,6 +1247,14 @@ pub struct CalComAttendee {
     pub name: String,
 }
 
+pub async fn google_calendar_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(_payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    // Google Calendar webhook push notification processing is out of scope. Use background sync.
+    (StatusCode::NOT_IMPLEMENTED, "Google Calendar webhook push notification processing is out of scope. Use background sync.").into_response()
+}
+
 pub async fn calcom_webhook_handler(
     axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<CalComEvent>,

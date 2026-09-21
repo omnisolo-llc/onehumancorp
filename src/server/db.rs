@@ -1260,7 +1260,8 @@ impl DB {
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        external_event_id TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
@@ -1623,7 +1624,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        external_event_id TEXT
                     );
                     CREATE TABLE IF NOT EXISTS quotes (
                         id TEXT PRIMARY KEY,

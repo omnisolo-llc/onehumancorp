@@ -677,3 +677,61 @@ async fn test_stripe_webhook_pos_transaction() {
 
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 }
+
+#[tokio::test]
+async fn test_google_calendar_webhook_handler_returns_not_implemented() {
+    use crate::api::billing_webhook::{WebhookState, google_calendar_webhook_handler};
+    use axum::routing::post;
+    use axum::Router;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(
+        client.clone(),
+    ));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let db_arc = std::sync::Arc::new(db);
+    let transport = std::sync::Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
+    let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+    let orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db_arc.clone(), mesh));
+    let webhook_state = WebhookState {
+        rate_limiter,
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
+    };
+
+    let app = Router::new()
+        .route("/api/v1/webhooks/google_calendar", post(google_calendar_webhook_handler))
+        .with_state(webhook_state);
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let payload = serde_json::json!({ "some": "payload" });
+    let client_req = reqwest::Client::new();
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/google_calendar", addr))
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::NOT_IMPLEMENTED);
+    let body = response.text().await.unwrap();
+    assert_eq!(body, "Google Calendar webhook push notification processing is out of scope. Use background sync.");
+}

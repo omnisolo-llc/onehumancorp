@@ -78,6 +78,58 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
             if let Err(e) = push_bookings_to_calendar(&tenant_id, &provider_client).await {
                 tracing::error!("Failed to push bookings for tenant {}: {}", tenant_id, e); // pii-safe
             }
+
+            // Cancel cancelled bookings from Google Calendar
+            if let Err(e) = cancel_bookings_in_calendar(&tenant_id, &provider_client).await {
+                tracing::error!("Failed to cancel bookings for tenant {}: {}", tenant_id, e); // pii-safe
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn cancel_bookings_in_calendar(
+    tenant_id: &str,
+    provider_client: &GoogleCalendarProvider,
+) -> Result<(), String> {
+    let pool = crate::db::get_pool();
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    auth_utils::set_org_context(&mut *tx, tenant_id)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Find cancelled bookings that still have an active external_event_id
+    let rows = sqlx::query(
+        "SELECT id, external_event_id FROM bookings WHERE status = 'cancelled' AND tenant_id = $1 AND external_event_id IS NOT NULL AND external_event_id != 'CANCELLED'"
+    )
+    .bind(tenant_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+
+    for row in rows {
+        let booking_id: String = row.get("id");
+        let external_event_id: String = row.get("external_event_id");
+
+        match provider_client.cancel_event(&external_event_id).await {
+            Ok(_) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                auth_utils::set_org_context(&mut *tx, tenant_id)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                let _ = sqlx::query("UPDATE bookings SET external_event_id = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+                    .bind(&booking_id)
+                    .bind(tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+                let _ = tx.commit().await;
+            }
+            Err(e) => {
+                tracing::error!("Failed to cancel event for booking {}: {}", booking_id, e);
+            }
         }
     }
 
@@ -96,7 +148,7 @@ async fn push_bookings_to_calendar(
 
     // Find unsynced confirmed bookings
     let rows = sqlx::query(
-        "SELECT id, start_time, end_time FROM bookings WHERE status = 'confirmed' AND tenant_id = $1"
+        "SELECT id, start_time, end_time FROM bookings WHERE status = 'confirmed' AND tenant_id = $1 AND external_event_id IS NULL"
     )
     .bind(tenant_id)
     .fetch_all(&mut *tx)
@@ -114,12 +166,26 @@ async fn push_bookings_to_calendar(
 
         let summary = format!("OmniSolo Booking: {}", booking_id);
 
-        // This is a naive sync. Real implementation would check sync_metadata to avoid creating duplicates.
-        if let Err(e) = provider_client
+        match provider_client
             .create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339())
             .await
         {
-            tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+            Ok((event_id, _meet_link)) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                auth_utils::set_org_context(&mut *tx, tenant_id)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                let _ = sqlx::query("UPDATE bookings SET external_event_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3")
+                    .bind(&event_id)
+                    .bind(&booking_id)
+                    .bind(tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+                let _ = tx.commit().await;
+            }
+            Err(e) => {
+                tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+            }
         }
     }
 
