@@ -129,9 +129,7 @@ impl BudgetManager {
         if self
             .current
             .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_sub(amount_cents)
-                    .map(|next| next.max(0))
+                current.checked_sub(amount_cents).map(|next| next.max(0))
             })
             .is_err()
         {
