@@ -1,9 +1,18 @@
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+
+struct BudgetState {
+    current: i64,
+    allocated: i64,
+    reservations: HashMap<u64, i64>,
+    next_reservation_id: u64,
+}
 
 pub struct BudgetManager {
     pub total_limit: f64,
     pub total_limit_cents: i64,
-    current: AtomicI64,
+    state: Mutex<BudgetState>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
@@ -21,7 +30,12 @@ impl BudgetManager {
         };
         BudgetManager {
             total_limit: limit,
-            current: AtomicI64::new(0),
+            state: Mutex::new(BudgetState {
+                current: 0,
+                allocated: 0,
+                reservations: HashMap::new(),
+                next_reservation_id: 1,
+            }),
             total_limit_cents,
             telemetry_store: None,
             tenant_id: None,
@@ -55,6 +69,7 @@ impl BudgetManager {
         self.record_spend_cents(amount_cents)
     }
 
+    // Retained for compatibility. Routes through immediate reserve+settle.
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
         if amount_cents < 0 {
             return Err("spend amount cannot be negative".to_string());
@@ -70,42 +85,86 @@ impl BudgetManager {
             ); // pii-safe
         }
 
-        // Atomic admission: reject overspend/overflow without changing state.
-        if self
-            .current
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_add(amount_cents)
-                    .filter(|next| *next <= self.total_limit_cents)
-            })
-            .is_err()
+        match self.reserve(amount_cents) {
+            Ok(Some(id)) => {
+                self.settle(id, amount_cents)?;
+                Ok(true)
+            }
+            Ok(None) => Ok(true), // amount_cents == 0
+            Err(_) => Ok(false),
+        }
+    }
+
+    pub fn reserve(&self, amount_cents: i64) -> Result<Option<u64>, String> {
+        if amount_cents < 0 {
+            return Err("reserve amount cannot be negative".to_string());
+        }
+        if amount_cents == 0 {
+            return Ok(None);
+        }
+
+        let mut state = self.state.lock().unwrap();
+
+        let new_total = match state.current.checked_add(state.allocated).and_then(|t| t.checked_add(amount_cents)) {
+            Some(t) => t,
+            None => return Err("reservation would overflow".to_string()),
+        };
+
+        if new_total > self.total_limit_cents {
+            return Err("reservation exceeds budget limit".to_string());
+        }
+
+        state.allocated += amount_cents;
+        let id = state.next_reservation_id;
+        state.next_reservation_id += 1;
+        state.reservations.insert(id, amount_cents);
+
+        Ok(Some(id))
+    }
+
+    pub fn settle(&self, reservation_id: u64, actual_cents: i64) -> Result<(), String> {
+        if actual_cents < 0 {
+            return Err("settle amount cannot be negative".to_string());
+        }
+
         {
-            return Ok(false);
+            let mut state = self.state.lock().unwrap();
+            let reserved = state.reservations.remove(&reservation_id).ok_or_else(|| "invalid reservation ID".to_string())?;
+
+            state.allocated -= reserved;
+            state.current += actual_cents;
         }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0
+            && actual_cents > 0
         {
             store.llm_cost_counter.add(
-                amount_cents as u64,
+                actual_cents as u64,
                 &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
             );
             store.mission_cost_cents.add(
-                amount_cents as u64,
+                actual_cents as u64,
                 &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
             );
         }
 
-        Ok(true)
+        Ok(())
+    }
+
+    pub fn release(&self, reservation_id: u64) -> Result<(), String> {
+        let mut state = self.state.lock().unwrap();
+        let reserved = state.reservations.remove(&reservation_id).ok_or_else(|| "invalid reservation ID".to_string())?;
+        state.allocated -= reserved;
+        Ok(())
     }
 
     pub fn get_remaining(&self) -> f64 {
-        let current = self.current.load(Ordering::SeqCst);
+        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
         (self.total_limit_cents - current) as f64 / 100.0
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.current.load(Ordering::SeqCst);
+        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
         self.total_limit_cents - current
     }
 
@@ -113,27 +172,27 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
         let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
+            return projected_cost_cents > 0 || { let state = self.state.lock().unwrap(); state.current + state.allocated } > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
         projected_cost_cents >= limit_threshold_cents
-            || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
+            || { let state = self.state.lock().unwrap(); state.current + state.allocated } >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
         if total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
         let limit_threshold_cents =
             ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current >= limit_threshold_cents
@@ -147,7 +206,7 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
         let expected_spend = (self.total_limit_cents as f64)
             * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
         current as f64 > expected_spend * 1.5 // 50% higher than expected rate
@@ -157,6 +216,30 @@ impl BudgetManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_partial_settlement_and_duplicates() {
+        let manager = BudgetManager::new(100.0); // 10000 cents
+
+        let id1 = manager.reserve(5000).unwrap().unwrap();
+        // Settle with less than reserved
+        manager.settle(id1, 2000).unwrap();
+        assert_eq!(manager.get_remaining_cents(), 8000); // 10000 - 2000 settled - 0 allocated
+
+        // Cannot settle or release an already settled ID
+        assert!(manager.settle(id1, 1000).is_err());
+        assert!(manager.release(id1).is_err());
+
+        // Test release
+        let id2 = manager.reserve(3000).unwrap().unwrap();
+        assert_eq!(manager.get_remaining_cents(), 5000); // 8000 - 3000 allocated
+        manager.release(id2).unwrap();
+        assert_eq!(manager.get_remaining_cents(), 8000); // Back to 8000
+
+        // Cannot release or settle an already released ID
+        assert!(manager.release(id2).is_err());
+        assert!(manager.settle(id2, 1000).is_err());
+    }
 
     #[test]
     fn concurrent_admission_never_exceeds_limit() {
@@ -196,17 +279,19 @@ mod tests {
 
         assert_eq!(manager.get_remaining(), 100.0);
 
-        assert!(manager.record_spend(50.0).unwrap());
+        let id1 = manager.reserve(5000).unwrap().unwrap();
+        manager.settle(id1, 5000).unwrap();
         assert_eq!(manager.get_remaining(), 50.0);
 
         // Rejected admission must not debit the remaining balance.
-        assert!(!manager.record_spend(60.0).unwrap());
+        assert!(manager.reserve(6000).is_err());
         assert_eq!(manager.get_remaining(), 50.0);
 
-        let err = manager.record_spend(-10.0).unwrap_err();
-        assert_eq!(err, "spend amount cannot be negative");
+        let err = manager.reserve(-1000).unwrap_err();
+        assert_eq!(err, "reserve amount cannot be negative");
 
-        assert!(manager.record_spend_cents(1000).unwrap()); // spend $10
+        let id2 = manager.reserve(1000).unwrap().unwrap(); // spend $10
+        manager.settle(id2, 1000).unwrap();
         assert_eq!(manager.get_remaining(), 40.0);
         assert_eq!(manager.get_remaining_cents(), 4000);
     }
@@ -217,13 +302,58 @@ mod tests {
         assert_eq!(manager.get_remaining(), 100.0);
 
         // Spend exactly the limit
-        assert!(manager.record_spend(100.0).unwrap());
+        let id = manager.reserve(10000).unwrap().unwrap();
+        manager.settle(id, 10000).unwrap();
         assert_eq!(manager.get_remaining(), 0.0);
         assert_eq!(manager.get_remaining_cents(), 0);
 
         // One extra cent must be rejected without changing the balance.
-        assert!(!manager.record_spend(0.01).unwrap());
+        assert!(manager.reserve(1).is_err());
         assert_eq!(manager.get_remaining_cents(), 0);
+    }
+
+
+    #[test]
+    fn test_concurrent_reserve_settle_release() {
+        let manager = std::sync::Arc::new(BudgetManager::new(100.0)); // 10000 cents
+        let mut handles = vec![];
+
+        for _ in 0..5 {
+            let m = manager.clone();
+            handles.push(std::thread::spawn(move || {
+                if let Ok(Some(id)) = m.reserve(2000) {
+                    m.settle(id, 2000).unwrap();
+                }
+            }));
+        }
+
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        // At this point 10000 is consumed, check that further reservations fail
+        assert_eq!(manager.get_remaining_cents(), 0);
+        assert!(manager.reserve(1).is_err());
+
+        // Add more money to test release
+        let manager_release = std::sync::Arc::new(BudgetManager::new(100.0));
+        let mut release_handles = vec![];
+
+        for _ in 0..5 {
+            let m = manager_release.clone();
+            release_handles.push(std::thread::spawn(move || {
+                if let Ok(Some(id)) = m.reserve(2000) {
+                    m.release(id).unwrap();
+                }
+            }));
+        }
+
+        for h in release_handles {
+            h.join().unwrap();
+        }
+
+        // All money should be back
+        assert_eq!(manager_release.get_remaining_cents(), 10000);
     }
 
     #[test]
