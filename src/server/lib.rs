@@ -7766,12 +7766,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         match &db.store {
             crate::db::DbStore::Postgres => {
                 let query_str = if mobile_optimized {
-                    "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                    "SELECT b.id, COALESCE(p.name, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
                  LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
                 } else {
-                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.service_id, COALESCE(p.name, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"

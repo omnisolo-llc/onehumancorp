@@ -722,7 +722,7 @@ pub async fn get_tasks_handler(
                 )
                     .into_response();
             }
-            let rows = sqlx::query("SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC")
+            let rows = sqlx::query("SELECT id, staff_id, COALESCE(title, description) AS title, description, status, priority FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC")
                 .bind(&tenant_id)
                 .fetch_all(&mut *tx)
                 .await;
@@ -992,7 +992,7 @@ pub async fn get_summaries_handler(
                 )
                     .into_response();
             }
-            let rows = sqlx::query("SELECT id, summary_text, escalations, created_at::text AS created_at FROM shift_summaries WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 10")
+            let rows = sqlx::query("SELECT id, summary_text, metrics ->> 'escalations' AS escalations, created_at::text AS created_at FROM shift_summaries WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 10")
                 .bind(&tenant_id)
                 .fetch_all(&mut *tx)
                 .await;

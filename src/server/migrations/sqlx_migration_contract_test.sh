@@ -100,6 +100,21 @@ for required_pattern in \
   fi
 done
 
+runtime_parity_followup="${migration_dir}/226_runtime_schema_parity_followup.sql"
+for required_pattern in \
+  'ADD COLUMN IF NOT EXISTS plan_tier' \
+  'CREATE TRIGGER tenants_sync_tier_columns' \
+  'ADD COLUMN IF NOT EXISTS notes' \
+  'ADD COLUMN IF NOT EXISTS translated_notes' \
+  'ADD COLUMN IF NOT EXISTS title' \
+  'CREATE TABLE IF NOT EXISTS ohc_staff_member' \
+  'CREATE TABLE IF NOT EXISTS ohc_timecard_event'; do
+  if ! grep -Fq "${required_pattern}" "${runtime_parity_followup}"; then
+    echo "runtime parity follow-up is missing required contract: ${required_pattern} (${runtime_parity_followup})" >&2
+    exit 1
+  fi
+done
+
 initial_schema="${migration_dir}/001_initial.sql"
 for required_pattern in \
   'id TEXT PRIMARY KEY' \
