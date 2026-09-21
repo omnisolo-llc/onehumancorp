@@ -90,7 +90,7 @@ export default function PublicBioPage() {
         {!config.remove_branding && (
           <div className="mt-12 pt-8">
             <a
-              href={`https://cloud.omnisolo.co/join?ref=${tenant}`}
+              href={`/onboarding?ref=${encodeURIComponent(tenant)}&source=bio_footer`}
               className={`text-sm font-semibold flex items-center justify-center gap-1 hover:underline ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
             >
               ⚡ Powered by OmniSolo
