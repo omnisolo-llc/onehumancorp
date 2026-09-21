@@ -8295,6 +8295,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
+
+    let google_calendar_webhook_router = axum::Router::new()
+        .nest("/api/v1/webhooks", crate::api::google_calendar_webhook::router(db.clone()));
+
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
@@ -9574,6 +9578,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
+        .merge(google_calendar_webhook_router)
         .merge(protect_internal_ingress(
             api::unified_inbox_webhook::router(db.clone()),
             http_auth_store.clone(),

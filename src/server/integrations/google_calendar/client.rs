@@ -20,6 +20,14 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
+    async fn watch_events(
+        &self,
+        channel_id: &str,
+        webhook_url: &str,
+        token: Option<&str>,
+    ) -> Result<serde_json::Value, String>;
+    async fn stop_watch(&self, channel_id: &str, resource_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -196,6 +204,65 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
             }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let path = format!("calendars/primary/events/{}", event_id);
+        let url = self.calendar_api_url(&path);
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .delete(url)
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) if resp.status().is_success() => Ok(()),
+            Ok(resp) => Err(format!("Google Calendar API error: {}", resp.status())),
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn watch_events(
+        &self,
+        channel_id: &str,
+        webhook_url: &str,
+        channel_token: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        let url = self.calendar_api_url("calendars/primary/events/watch");
+        let token = self.validated_access_token()?;
+
+        let mut payload = serde_json::json!({
+            "id": channel_id,
+            "type": "web_hook",
+            "address": webhook_url,
+        });
+        if let Some(ct) = channel_token {
+            payload.as_object_mut().unwrap().insert("token".to_string(), serde_json::Value::String(ct.to_string()));
+        }
+
+        let res = self.http_client.post(url).bearer_auth(token).json(&payload).send().await;
+        match res {
+            Ok(resp) if resp.status().is_success() => {
+                let json = resp.json::<serde_json::Value>().await.map_err(|e| format!("Parse error: {}", e))?;
+                Ok(json)
+            }
+            Ok(resp) => Err(format!("Google Calendar API error: {}", resp.status())),
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn stop_watch(&self, channel_id: &str, resource_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url("channels/stop");
+        let token = self.validated_access_token()?;
+        let payload = serde_json::json!({ "id": channel_id, "resourceId": resource_id });
+        match self.http_client.post(url).bearer_auth(token).json(&payload).send().await {
+            Ok(resp) if resp.status().is_success() => Ok(()),
+            Ok(resp) => Err(format!("Google Calendar API error: {}", resp.status())),
             Err(e) => Err(format!("Network error: {}", e)),
         }
     }
@@ -443,5 +510,24 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events[0]["start"], "2026-07-21T09:00:00Z");
         assert_eq!(events[0]["end"], "2026-07-21T10:00:00Z");
+    }
+
+    #[tokio::test]
+    async fn cancel_event_sends_delete_request_and_returns_ok() {
+        let response = "";
+        let (base_url, request_rx) = start_google_calendar_server(response).await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let result = client.cancel_event("calendar-event-123").await;
+
+        assert!(result.is_ok());
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/calendar-event-123 HTTP/1.1"));
+        assert!(
+            request.contains("authorization: Bearer valid-token")
+                || request.contains("Authorization: Bearer valid-token")
+        );
     }
 }

@@ -59,4 +59,21 @@ impl GoogleCalendarProvider {
             .create_event(summary, start_time, end_time)
             .await
     }
+
+    pub async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        self.client.cancel_event(event_id).await
+    }
+
+    pub async fn watch_events(
+        &self,
+        channel_id: &str,
+        webhook_url: &str,
+        token: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        self.client.watch_events(channel_id, webhook_url, token).await
+    }
+
+    pub async fn stop_watch(&self, channel_id: &str, resource_id: &str) -> Result<(), String> {
+        self.client.stop_watch(channel_id, resource_id).await
+    }
 }

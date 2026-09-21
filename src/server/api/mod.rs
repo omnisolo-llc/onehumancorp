@@ -37,6 +37,7 @@ pub mod fulfillment;
 pub mod incidents;
 pub mod invoice;
 pub mod local_seo;
+pub mod google_calendar_webhook;
 pub mod mcp_webhook;
 pub mod meta_webhook;
 pub mod recovery;
