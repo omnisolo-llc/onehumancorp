@@ -11,11 +11,6 @@ try:
     has_yaml = True
 except ImportError:
     has_yaml = False
-import sys
-try:
-    import yaml
-except ImportError:
-    pass
 
 SCRIPT = Path(__file__).with_name('release_contract.py')
 

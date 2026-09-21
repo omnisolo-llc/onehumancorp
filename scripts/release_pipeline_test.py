@@ -12,11 +12,6 @@ try:
     has_yaml = True
 except ImportError:
     has_yaml = False
-import sys
-try:
-    import yaml
-except ImportError:
-    pass
 import zipfile
 import release_contract as contract
 
