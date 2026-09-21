@@ -73,6 +73,18 @@ export default function Integrations() {
     loadIntegrations();
   }, []);
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data === 'oauth_success') {
+        setStatusMessage("Google Workspace Calendar connected successfully.");
+        window.location.reload();
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const [showTwilioModal, setShowTwilioModal] = useState(false);

@@ -153,6 +153,7 @@ impl ConnectionVault {
             "stripe" => secret.starts_with("sk_") || secret.starts_with("rk_"),
             "resend" => secret.starts_with("re_"),
             "anthropic_api" => secret.starts_with("sk-ant-"),
+            "google_calendar" => secret.starts_with('{'), // JSON encoding for multiple tokens
             _ => secret.starts_with("sk-"),
         };
         if !prefix_valid {
@@ -174,6 +175,7 @@ impl ConnectionVault {
             "stripe" => "https://api.stripe.com/v1/balance",
             "anthropic_api" => "https://api.anthropic.com/v1/models",
             "resend" => "https://api.resend.com/domains",
+            "google_calendar" => "https://www.googleapis.com/calendar/v3/users/me/calendarList",
             _ => return Err(LedgerError::Invalid),
         };
         let client = reqwest::Client::builder()
@@ -187,6 +189,18 @@ impl ConnectionVault {
             "anthropic_api" => request
                 .header("x-api-key", secret)
                 .header("anthropic-version", "2023-06-01"),
+            "google_calendar" => {
+                let parsed: Result<serde_json::Value, _> = serde_json::from_str(secret);
+                if let Ok(json) = parsed {
+                    if let Some(access_token) = json["access_token"].as_str() {
+                        request.bearer_auth(access_token)
+                    } else {
+                        return Err(LedgerError::Invalid);
+                    }
+                } else {
+                    return Err(LedgerError::Invalid);
+                }
+            },
             _ => request.bearer_auth(secret),
         };
         let response = request.send().await.map_err(|_| LedgerError::State)?;
