@@ -1,9 +1,14 @@
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::Mutex;
+
+pub struct BudgetState {
+    pub current: i64,
+    pub allocated: i64,
+}
 
 pub struct BudgetManager {
     pub total_limit: f64,
     pub total_limit_cents: i64,
-    current: AtomicI64,
+    state: Mutex<BudgetState>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
@@ -21,7 +26,7 @@ impl BudgetManager {
         };
         BudgetManager {
             total_limit: limit,
-            current: AtomicI64::new(0),
+            state: Mutex::new(BudgetState { current: 0, allocated: 0 }),
             total_limit_cents,
             telemetry_store: None,
             tenant_id: None,
@@ -70,17 +75,14 @@ impl BudgetManager {
             ); // pii-safe
         }
 
-        // Atomic admission: reject overspend/overflow without changing state.
-        if self
-            .current
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_add(amount_cents)
-                    .filter(|next| *next <= self.total_limit_cents)
-            })
-            .is_err()
         {
-            return Ok(false);
+            let mut state = self.state.lock().unwrap();
+            let total_usage = state.current.checked_add(state.allocated).unwrap_or(i64::MAX);
+            let projected_total = total_usage.checked_add(amount_cents).unwrap_or(i64::MAX);
+            if projected_total > self.total_limit_cents || total_usage == i64::MAX {
+                return Ok(false);
+            }
+            state.current = state.current.checked_add(amount_cents).unwrap_or(i64::MAX);
         }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
@@ -99,44 +101,151 @@ impl BudgetManager {
         Ok(true)
     }
 
+
+    pub fn reserve_spend(&self, amount: f64) -> Result<bool, String> {
+        if amount < 0.0 {
+            return Err("reserve amount cannot be negative".to_string());
+        }
+        if !amount.is_finite() || amount * 100.0 >= i64::MAX as f64 {
+            return Err("reserve amount must be finite and bounded".to_string());
+        }
+        let amount_cents = (amount * 100.0).round() as i64;
+        self.reserve_spend_cents(amount_cents)
+    }
+
+    pub fn reserve_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("reserve amount cannot be negative".to_string());
+        }
+        if amount_cents == 0 {
+            return Ok(self.get_remaining_cents() >= 0);
+        }
+
+        let mut state = self.state.lock().unwrap();
+        let total_usage = state.current.checked_add(state.allocated).unwrap_or(i64::MAX);
+        let projected_total = total_usage.checked_add(amount_cents).unwrap_or(i64::MAX);
+        if projected_total > self.total_limit_cents || total_usage == i64::MAX {
+            return Ok(false);
+        }
+        state.allocated = state.allocated.checked_add(amount_cents).unwrap_or(i64::MAX);
+        Ok(true)
+    }
+
+    pub fn settle_spend(&self, reserved_amount: f64, actual_amount: f64) -> Result<bool, String> {
+        if reserved_amount < 0.0 || actual_amount < 0.0 {
+            return Err("settle amounts cannot be negative".to_string());
+        }
+        if !reserved_amount.is_finite() || !actual_amount.is_finite() || reserved_amount * 100.0 >= i64::MAX as f64 || actual_amount * 100.0 >= i64::MAX as f64 {
+            return Err("settle amounts must be finite and bounded".to_string());
+        }
+        let reserved_cents = (reserved_amount * 100.0).round() as i64;
+        let actual_cents = (actual_amount * 100.0).round() as i64;
+        self.settle_spend_cents(reserved_cents, actual_cents)
+    }
+
+    pub fn settle_spend_cents(&self, reserved_cents: i64, actual_cents: i64) -> Result<bool, String> {
+        if reserved_cents < 0 || actual_cents < 0 {
+            return Err("settle amounts cannot be negative".to_string());
+        }
+
+        {
+            let mut state = self.state.lock().unwrap();
+
+            // Cannot settle more than what was allocated
+            if state.allocated < reserved_cents {
+                return Err("cannot settle more than allocated".to_string());
+            }
+
+            // Atomic update: release reserved, add actual to current
+            state.allocated = state.allocated.checked_sub(reserved_cents).unwrap_or(0);
+
+            // We allow actual spend to exceed what was reserved,
+            // but we might want to check against the limit first.
+            // If it exceeds the limit, we still record it but it means we went over budget.
+            state.current = state.current.checked_add(actual_cents).unwrap_or(i64::MAX);
+        }
+
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+            && actual_cents > 0
+        {
+            store.llm_cost_counter.add(
+                actual_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                actual_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+        }
+
+        Ok(true)
+    }
+
+    pub fn release_spend(&self, amount: f64) -> Result<bool, String> {
+        if amount < 0.0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        if !amount.is_finite() || amount * 100.0 >= i64::MAX as f64 {
+            return Err("release amount must be finite and bounded".to_string());
+        }
+        let amount_cents = (amount * 100.0).round() as i64;
+        self.release_spend_cents(amount_cents)
+    }
+
+    pub fn release_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+
+        let mut state = self.state.lock().unwrap();
+        if state.allocated < amount_cents {
+            return Err("cannot release more than allocated".to_string());
+        }
+        state.allocated -= amount_cents;
+        Ok(true)
+    }
     pub fn get_remaining(&self) -> f64 {
-        let current = self.current.load(Ordering::SeqCst);
-        (self.total_limit_cents - current) as f64 / 100.0
+        let state = self.state.lock().unwrap();
+        (self.total_limit_cents - (state.current + state.allocated)) as f64 / 100.0
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.current.load(Ordering::SeqCst);
-        self.total_limit_cents - current
+        let state = self.state.lock().unwrap();
+        self.total_limit_cents - (state.current + state.allocated)
     }
 
     pub fn check_alert_threshold(&self) -> bool {
         if self.total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
-        let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
+        let state = self.state.lock().unwrap();
+        let total_usage = state.current + state.allocated;
+        let usage_percent = (total_usage as f64 / self.total_limit_cents as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
+        let state = self.state.lock().unwrap();
+        let total_usage = state.current + state.allocated;
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
+            return projected_cost_cents > 0 || total_usage > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
         projected_cost_cents >= limit_threshold_cents
-            || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
+            || total_usage >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
         if total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let state = self.state.lock().unwrap();
+        let total_usage = state.current + state.allocated;
         let limit_threshold_cents =
             ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
-        current >= limit_threshold_cents
+        total_usage >= limit_threshold_cents
     }
 
     pub fn is_spend_rate_too_high(
@@ -147,16 +256,46 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let state = self.state.lock().unwrap();
+        let total_usage = state.current + state.allocated;
         let expected_spend = (self.total_limit_cents as f64)
             * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
-        current as f64 > expected_spend * 1.5 // 50% higher than expected rate
+        total_usage as f64 > expected_spend * 1.5 // 50% higher than expected rate
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn test_two_phase_commit_budget_management() {
+        let manager = BudgetManager::new(100.0);
+        assert_eq!(manager.get_remaining(), 100.0);
+
+        // Reserve $50
+        assert!(manager.reserve_spend(50.0).unwrap());
+        assert_eq!(manager.get_remaining(), 50.0);
+
+        // Reserve another $60 (should fail as it exceeds limit)
+        assert!(!manager.reserve_spend(60.0).unwrap());
+        assert_eq!(manager.get_remaining(), 50.0);
+
+        // Settle $50 reservation for $40 actual spend
+        assert!(manager.settle_spend(50.0, 40.0).unwrap());
+        assert_eq!(manager.get_remaining(), 60.0);
+
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.current, 4000);
+        assert_eq!(state.allocated, 0);
+        drop(state);
+
+        // Release $10
+        assert!(manager.reserve_spend(20.0).unwrap());
+        assert_eq!(manager.get_remaining(), 40.0);
+        assert!(manager.release_spend(20.0).unwrap());
+        assert_eq!(manager.get_remaining(), 60.0);
+    }
+
 
     #[test]
     fn concurrent_admission_never_exceeds_limit() {
