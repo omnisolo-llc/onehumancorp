@@ -49,6 +49,10 @@ impl GoogleCalendarProvider {
         self.client.get_free_busy(time_min, time_max).await
     }
 
+    pub async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        self.client.cancel_event(event_id).await
+    }
+
     pub async fn create_event(
         &self,
         summary: &str,

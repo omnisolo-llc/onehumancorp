@@ -1602,6 +1602,7 @@ service IntegrationService {
 
   rpc GetFreeBusy(GetFreeBusyRequest) returns (GetFreeBusyResponse);
   rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+  rpc CancelEvent(CancelEventRequest) returns (CancelEventResponse);
   rpc GetBookingLink(GetBookingLinkRequest) returns (GetBookingLinkResponse);
   rpc GenerateMeetingForBooking(GenerateMeetingForBookingRequest) returns (GenerateMeetingForBookingResponse);
 }
@@ -1758,6 +1759,13 @@ message CreateEventRequest {
 
 message CreateEventResponse {
   string event_id = 1;
+}
+message CancelEventRequest {
+  string integration_id = 1;
+  string event_id = 2;
+}
+
+message CancelEventResponse {
 }
 
 message GetBookingLinkRequest {
