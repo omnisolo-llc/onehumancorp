@@ -33,16 +33,17 @@ impl BudgetReservation {
         }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && final_amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    final_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    final_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+            && final_amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                final_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                final_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+        }
 
         self.settled = true;
         Ok(())
@@ -180,16 +181,17 @@ impl BudgetManager {
         }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+            && amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+        }
 
         Ok(true)
     }
@@ -215,7 +217,8 @@ impl BudgetManager {
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || self.state.lock().unwrap().total_allocated_cents > 0;
+            return projected_cost_cents > 0
+                || self.state.lock().unwrap().total_allocated_cents > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
