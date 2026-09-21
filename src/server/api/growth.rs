@@ -3356,6 +3356,21 @@ async fn handle_referral_generate(
         ::server_auth::orchestration::AuthInfo,
     >,
 ) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
+    // Fortification: Check for an existing referral code for this tenant and user (idempotency)
+    let existing_code: Result<Option<String>, _> = sqlx::query_scalar(
+        "SELECT referral_code FROM referrals WHERE tenant_id = $1 AND user_id = $2 LIMIT 1",
+    )
+    .bind(&auth_info.org_id)
+    .bind(&auth_info.agent_id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    if let Ok(Some(code)) = existing_code {
+        return Ok(Json(ReferralGenerateResponse {
+            referral_link: format!("https://omnisolo.co/ref/{}", code),
+        }));
+    }
+
     let ref_code = uuid::Uuid::new_v4().to_string();
     let ref_id = uuid::Uuid::new_v4().to_string();
     let now = std::time::SystemTime::now()
