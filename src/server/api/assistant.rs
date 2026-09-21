@@ -2736,6 +2736,7 @@ mod real_feature_state_tests {
             "CREATE TABLE assistant_memory_records (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, content TEXT NOT NULL, scope TEXT NOT NULL DEFAULT 'global', source TEXT, enabled INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
             "CREATE TABLE assistant_skills (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'Custom', source TEXT NOT NULL DEFAULT 'database', status TEXT NOT NULL, version TEXT, description TEXT, config TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (tenant_id, name))",
             "CREATE TABLE assistant_connectors (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'custom', status TEXT NOT NULL, oauth INTEGER DEFAULT 0, config TEXT, last_error TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (tenant_id, name))",
+            "CREATE TABLE application_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_by TEXT)",
         ] {
             sqlx::query(statement).execute(&pool).await.unwrap();
         }
@@ -2775,6 +2776,37 @@ mod real_feature_state_tests {
             )
         });
         (status, value)
+    }
+
+    #[tokio::test]
+    async fn assistant_settings_persist_observation_masking_without_requiring_agent_name() {
+        let db = test_db().await;
+
+        let (name_status, name_response) = request_json(
+            db.clone(),
+            "PATCH",
+            "/settings",
+            json!({ "agentName": "Operator" }),
+        )
+        .await;
+        assert_eq!(name_status, StatusCode::OK);
+        assert_eq!(name_response["settings"]["agentName"], "Operator");
+
+        let (mask_status, mask_response) = request_json(
+            db.clone(),
+            "PATCH",
+            "/settings",
+            json!({ "observationMasking": false }),
+        )
+        .await;
+        assert_eq!(mask_status, StatusCode::OK);
+        assert_eq!(mask_response["settings"]["agentName"], "Operator");
+        assert_eq!(mask_response["settings"]["observationMasking"], false);
+
+        let (get_status, settings) = request_json(db, "GET", "/settings", json!({})).await;
+        assert_eq!(get_status, StatusCode::OK);
+        assert_eq!(settings["settings"]["agentName"], "Operator");
+        assert_eq!(settings["settings"]["observationMasking"], false);
     }
 
     #[tokio::test]
