@@ -112,6 +112,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
 pub struct ReportCostRequest {
     pub metric_name: String,
     pub value: i64,
+    pub idempotency_key: Option<String>,
     pub labels: std::collections::HashMap<String, String>,
 }
 
@@ -138,6 +139,24 @@ pub async fn report_cost_handler(
         return Err(StatusCode::BAD_REQUEST);
     }
 
+    let pool = crate::db::get_pool();
+
+    if let Some(key) = &req.idempotency_key {
+        let exists: Option<i64> = sqlx::query_scalar(
+            "SELECT 1 FROM usage_idempotency_keys WHERE key = $1 AND tenant_id = $2",
+        )
+        .bind(key)
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None);
+        if exists.is_some() {
+            return Ok(Json(
+                serde_json::json!({ "success": true, "status": "duplicate" }),
+            ));
+        }
+    }
+
     if req.metric_name == "ohc_llm_cost_total_cents" {
         let agent_id = req
             .labels
@@ -155,7 +174,6 @@ pub async fn report_cost_handler(
         }
     }
 
-    let pool = crate::db::get_pool();
     let mut labels = req.labels.clone();
     labels.insert("tenant_id".to_string(), tenant_id.clone());
     let labels_value = serde_json::to_value(labels).unwrap_or(serde_json::json!({}));
@@ -168,6 +186,16 @@ pub async fn report_cost_handler(
         labels_value,
     )
     .await;
+
+    if let Some(key) = &req.idempotency_key {
+        let _ = sqlx::query(
+            "INSERT INTO usage_idempotency_keys (key, tenant_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        )
+        .bind(key)
+        .bind(&tenant_id)
+        .execute(&pool)
+        .await;
+    }
 
     Ok(Json(serde_json::json!({ "success": true })))
 }
