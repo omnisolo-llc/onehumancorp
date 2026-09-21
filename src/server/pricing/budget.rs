@@ -118,13 +118,15 @@ impl BudgetManager {
             return Ok(true);
         }
 
-        let _ = self.current.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-            Some(if current < amount_cents {
-                0
-            } else {
-                current - amount_cents
-            })
-        });
+        let _ = self
+            .current
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                Some(if current < amount_cents {
+                    0
+                } else {
+                    current - amount_cents
+                })
+            });
         Ok(true)
     }
 
