@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct BudgetState {
     pub total_allocated: i64,
@@ -13,7 +12,6 @@ pub struct BudgetManager {
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
 }
-
 
 pub struct BudgetReservation {
     state: std::sync::Arc<std::sync::Mutex<BudgetState>>,
@@ -39,17 +37,17 @@ impl BudgetReservation {
         self.settled = true;
         drop(state);
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            if actual_amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    actual_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    actual_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+            && actual_amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                actual_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                actual_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
         }
 
         Ok(())
@@ -58,10 +56,10 @@ impl BudgetReservation {
 
 impl Drop for BudgetReservation {
     fn drop(&mut self) {
-        if !self.settled {
-            if let Ok(mut state) = self.state.lock() {
-                state.total_allocated -= self.amount_cents;
-            }
+        if !self.settled
+            && let Ok(mut state) = self.state.lock()
+        {
+            state.total_allocated -= self.amount_cents;
         }
     }
 }
@@ -104,7 +102,6 @@ impl BudgetManager {
         self
     }
 
-
     pub fn reserve(&self, amount_cents: i64) -> Result<BudgetReservation, String> {
         if amount_cents < 0 {
             return Err("reserve amount cannot be negative".to_string());
@@ -114,7 +111,7 @@ impl BudgetManager {
         if state
             .total_allocated
             .checked_add(amount_cents)
-            .map_or(true, |next| next > self.total_limit_cents)
+            .is_none_or(|next| next > self.total_limit_cents)
         {
             return Err("budget limit exceeded".to_string());
         }
@@ -161,7 +158,7 @@ impl BudgetManager {
             Ok(res) => {
                 res.settle(amount_cents).unwrap();
                 Ok(true)
-            },
+            }
             Err(_) => Ok(false),
         }
     }
@@ -193,8 +190,7 @@ impl BudgetManager {
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || current >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || current >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
