@@ -8294,6 +8294,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
+        .nest("/api/v1/oauth/google-calendar", api::oauth::google_calendar::router())
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
@@ -8583,7 +8584,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }))
         .route("/api/v1/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .nest("/api/v1/integrations", crate::api::tool_integrations::router(db.clone()))
-        .nest("/api/v1/oauth/google-calendar", api::oauth::google_calendar::router())
         .route("/api/v1/walkup", axum::routing::post(api::walkup::handle_walkup)
             .with_state(api::walkup::AppState { db: db.clone() })
             .route_layer(axum::middleware::from_fn_with_state(
