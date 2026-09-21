@@ -1,0 +1,119 @@
+name: Validate isolated CI repair patch
+on:
+  push:
+    branches: [workbench/ci-head-parallel-20260920]
+    paths: [.github/ci-repair.patch.gz.b64, .github/ci-repair.json]
+permissions:
+  contents: write
+concurrency:
+  group: isolated-ci-repair-workbench
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate the exact repair intent
+        id: intent
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64,gzip,hashlib,json,os,pathlib,re,subprocess
+          assert os.environ['GITHUB_REPOSITORY'] == 'omnisolo-llc/onehumancorp'
+          intent=json.loads(pathlib.Path('.github/ci-repair.json').read_text())
+          assert set(intent)=={'base_sha','expected_tree','patch_sha256','message'}
+          for key in ('base_sha','expected_tree'):
+              assert re.fullmatch('[0-9a-f]{40}',intent[key]),key
+          encoded=pathlib.Path('.github/ci-repair.patch.gz.b64').read_text().strip()
+          patch=gzip.decompress(base64.b64decode(encoded,validate=True))
+          assert hashlib.sha256(patch).hexdigest()==intent['patch_sha256']
+          ref=json.loads(subprocess.check_output(['gh','api','repos/omnisolo-llc/onehumancorp/git/ref/heads/fix/ci-head-parallel-20260920']))
+          assert ref['object']['sha']==intent['base_sha'],'Repair branch changed; rebase before applying'
+          directory=pathlib.Path(os.environ['RUNNER_TEMP'])/'ci-repair-intent'
+          directory.mkdir()
+          (directory/'intent.json').write_text(json.dumps(intent))
+          (directory/'repair.patch').write_bytes(patch)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('base='+intent['base_sha']+'\n')
+          PY
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.intent.outputs.base }}
+          persist-credentials: false
+      - name: Apply only the preimage-checked patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check --index "$RUNNER_TEMP/ci-repair-intent/repair.patch"
+          git apply --index "$RUNNER_TEMP/ci-repair-intent/repair.patch"
+          git rm --ignore-unmatch .github/workflows/ci-repair-source.yml
+          git diff --cached --check
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          intent=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'ci-repair-intent/intent.json').read_text())
+          assert subprocess.check_output(['git','write-tree'],text=True).strip()==intent['expected_tree']
+          PY
+      - uses: ./.github/actions/setup-native
+        with:
+          rust: 'false'
+          node-scope: root
+          cache: 'true'
+      - name: Validate script and workflow regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y python3-yaml
+          node --test scripts/*.test.mjs
+          python3 .github/scripts/check_checkout_paths_test.py
+          python3 .github/scripts/check_native_cache_test.py
+          python3 scripts/release_pipeline_test.py
+          git diff --exit-code
+          git diff --cached --check
+      - name: Create a verified commit object without moving any branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          directory=pathlib.Path(os.environ['RUNNER_TEMP'])/'ci-repair-intent'
+          intent=json.loads((directory/'intent.json').read_text())
+          repo='repos/omnisolo-llc/onehumancorp'
+          def git(*args):
+              return subprocess.check_output(['git',*args],text=True).strip()
+          def api(route,payload=None):
+              args=['gh','api',repo+route]
+              if payload is not None:
+                  args+=['--method','POST','--input','-']
+              return json.loads(subprocess.check_output(args,input=None if payload is None else json.dumps(payload).encode()))
+          assert git('rev-parse','HEAD')==intent['base_sha']
+          assert git('write-tree')==intent['expected_tree']
+          assert api('/git/ref/heads/fix/ci-head-parallel-20260920')['object']['sha']==intent['base_sha']
+          elements=[]
+          for filename in subprocess.check_output(['git','diff','--cached','--no-renames','--name-only','-z']).decode().split('\0'):
+              if not filename: continue
+              if not pathlib.Path(filename).exists():
+                  elements.append({'path':filename,'mode':'100644','type':'blob','sha':None})
+                  continue
+              mode=git('ls-files','--stage','--',filename).split(' ',1)[0]
+              assert mode in ('100644','100755'),filename
+              content=subprocess.check_output(['git','show',':'+filename]).decode('utf-8')
+              elements.append({'path':filename,'mode':mode,'type':'blob','content':content})
+          tree=api('/git/trees',{'base_tree':git('rev-parse','HEAD^{tree}'),'tree':elements})
+          assert tree['sha']==intent['expected_tree'],'Remote tree differs from validated local tree'
+          commit=api('/git/commits',{'message':intent['message'],'tree':tree['sha'],'parents':[intent['base_sha']]})
+          receipt={'commit_sha':commit['sha'],'tree_sha':tree['sha'],'base_sha':intent['base_sha'],'changed_files':[entry['path'] for entry in elements]}
+          (directory/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt))
+          PY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ci-repair-commit-${{ github.run_id }}
+          path: ${{ runner.temp }}/ci-repair-intent/receipt.json
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,6 @@
+{
+  "base_sha": "b6ae01f04db84160faf40db57156370793dda4f6",
+  "expected_tree": "56dc86dfcb97912a26d24b4b0ed5bc88962d9454",
+  "patch_sha256": "d47444167fa540148eb1ea938b2048e5f75151ecde6b3ad07a7466871b97b08d",
+  "message": "ci: isolate Rust lint and qualify all 32 browser shards without retry masking"
+}
