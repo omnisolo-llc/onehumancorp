@@ -1506,6 +1506,26 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
+
+    pub async fn cancel_event(
+        &self,
+        integration_id: &str,
+        event_id: &str,
+    ) -> Result<(), String> {
+        let client = {
+            if integration_id == "google_calendar" {
+                let clients = self.google_calendar_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.cancel_event(event_id).await;
+        }
+
+        Err("integration not found or not supported".to_string())
+    }
 }
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
