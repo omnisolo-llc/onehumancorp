@@ -9,7 +9,7 @@ export default function LinkInBioGeneratorPage() {
   const [storeName, setStoreName] = useState('My Store');
   const [bio, setBio] = useState('Welcome to my storefront!');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
+  const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://omnisolo.co' }]);
   const [tenant, setTenant] = useState('my-store');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,7 +30,7 @@ export default function LinkInBioGeneratorPage() {
              setStoreName(data.store_name);
              setBio(data.bio || '');
              setTheme(data.theme || 'light');
-             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
+             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://omnisolo.co' }]);
              setRemoveBranding(data.remove_branding || false);
           }
         }
@@ -244,8 +244,9 @@ export default function LinkInBioGeneratorPage() {
                             {links.map((link, i) => (
                                 <a
                                     key={i}
-                                    href="#"
-                                    onClick={(e) => e.preventDefault()}
+                                    href={link.url || `/onboarding?ref=${encodeURIComponent(tenant)}&source=link_in_bio_preview`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-black shadow-md hover:shadow-lg'}`}
                                 >
                                     {link.title || 'Link Title'}
