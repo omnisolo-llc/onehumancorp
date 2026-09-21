@@ -20,6 +20,7 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -192,6 +193,29 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         .await
                         .map_err(|e| format!("Google Calendar API response parse error: {}", e))?;
                     created_event_reference(&json)
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .delete(url)
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    Ok(())
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
@@ -415,6 +439,23 @@ mod tests {
         assert_eq!(error, "Google Calendar access token is required");
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
         assert!(!*request_seen.lock().await);
+    }
+
+    #[tokio::test]
+    async fn cancel_event_sends_delete_request() {
+        let response = "";
+        let (base_url, request_rx) = start_google_calendar_server(response).await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        client.cancel_event("event-123").await.unwrap();
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/event-123 HTTP/1.1"));
+        assert!(
+            request.contains("authorization: Bearer valid-token")
+                || request.contains("Authorization: Bearer valid-token")
+        );
     }
 
     #[tokio::test]
