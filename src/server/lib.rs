@@ -3949,6 +3949,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(reverse_tunnel_server.clone());
 
     let webhook_router = axum::Router::new()
+        .nest("/api/v1", crate::api::integrations::routes())
         .route(
             "/api/v1/webhooks/stripe",
             axum::routing::post(api::billing_webhook::stripe_webhook_handler),
@@ -8297,6 +8298,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
+        .nest("/api/v1/integrations", crate::api::integrations::routes())
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;

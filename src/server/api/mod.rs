@@ -67,3 +67,5 @@ pub(crate) mod walkup;
 pub mod work_triage;
 mod ws_batch;
 pub(crate) mod ws_compression;
+
+pub mod integrations;

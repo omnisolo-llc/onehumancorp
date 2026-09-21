@@ -39,6 +39,8 @@ pub fn router<S>(db: Arc<DB>) -> Router<S> where S: Clone + Send + Sync + 'stati
         .route("/resources/{id}", put(update_resource).delete(delete_resource))
         .route("/availability", get(list_availability).post(create_availability))
         .route("/availability/{id}", delete(delete_availability))
+        .route("/:booking_id/cancel", post(cancel_booking))
+        .route("/bookings/{id}/cancel", post(cancel_booking))
         .with_state(state)
 }
 
@@ -335,4 +337,53 @@ async fn delete_availability(
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "internal error"}))).into_response()
         }
     }
+}
+
+pub async fn cancel_booking(
+    State(state): State<AppState>,
+    Path((tenant_id, booking_id)): Path<(String, String)>
+) -> impl IntoResponse {
+    let pool = crate::db::get_pool();
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
+    };
+
+    if let Err(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to set context").into_response();
+    }
+
+    let result = sqlx::query("UPDATE bookings SET status = 'cancelled' WHERE id = $1 AND tenant_id = $2")
+        .bind(&booking_id)
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await;
+
+    if let Err(e) = result {
+        tracing::error!("Failed to cancel booking: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Update failed").into_response();
+    }
+
+    // Atomically create/update enqueue to outbox (Google Calendar cancellation)
+    let sync_result = sqlx::query(
+        "INSERT INTO google_calendar_sync_mappings (booking_id, tenant_id, provider, calendar_id, sync_state)
+         VALUES ($1, $2, 'google_calendar', 'primary', 'delete_pending')
+         ON CONFLICT (booking_id, provider) DO UPDATE SET
+         sync_state = 'delete_pending',
+         updated_at = CURRENT_TIMESTAMP"
+    )
+    .bind(&booking_id)
+    .bind(&tenant_id)
+    .execute(&mut *tx)
+    .await;
+
+    if let Err(e) = sync_result {
+        tracing::error!("Failed to enqueue calendar sync cancellation: {}", e);
+    }
+
+    if let Err(_) = tx.commit().await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to commit").into_response();
+    }
+
+    (StatusCode::OK, "Cancelled").into_response()
 }

@@ -20,6 +20,7 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -199,6 +200,24 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
             Err(e) => Err(format!("Network error: {}", e)),
         }
     }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .delete(url)
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) if resp.status().is_success() => Ok(()),
+            Ok(resp) => Err(format!("Google Calendar API error: {}", resp.status())),
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
 }
 
 impl RealGoogleCalendarClient {
@@ -262,6 +281,7 @@ impl RealGoogleCalendarClient {
             Err(e) => Err(format!("Network error: {}", e)),
         }
     }
+
 }
 
 #[cfg(test)]
@@ -443,5 +463,21 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events[0]["start"], "2026-07-21T09:00:00Z");
         assert_eq!(events[0]["end"], "2026-07-21T10:00:00Z");
+    }
+
+    #[tokio::test]
+    async fn cancel_event_sends_delete_request() {
+        let (base_url, request_rx) = start_google_calendar_server("").await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        client.cancel_event("event-id-123").await.unwrap();
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/event-id-123 HTTP/1.1"));
+        assert!(
+            request.contains("authorization: Bearer valid-token")
+                || request.contains("Authorization: Bearer valid-token")
+        );
     }
 }
