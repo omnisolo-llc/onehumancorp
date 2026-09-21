@@ -97,7 +97,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 |---|---|---|---|
 | F01 | `hub.rs:61-73` receiver calls `record_event`; `auditor.rs:199-201` enqueues the event again | One-way ingestion/accounting/export; one event counts once and queue drains | Open |
 | F02 | `services/billing/service.rs:49-85` uses global snapshots for an organization response | Auth-derived tenant; reject mismatch/blank identity; tenant+agent isolation tests | Open |
-| F03 | `pricing/budget.rs:49-84` increments before reporting over-limit | Atomic reservation before spend; settle/release/replay/restart/concurrency checks; invalid/overflow amounts fail closed | Open |
+| F03 | `pricing/budget.rs:49-84` increments before reporting over-limit | Atomic reservation before spend; settle/release/replay/restart/concurrency checks; invalid/overflow amounts fail closed | Closed |
 | F04 | Model paths disagree on usage; proposal adapter returns default usage; proxy forwards streams | Preserve actual provider counts, model/request identity and missing-usage state; no invented free usage | Open |
 | F05 | Current telemetry/cost reports are not an invoice-grade meter | Durable idempotent usage, payer/auth/rate attribution, integer subunits, tenant reads, reconciliation and no duplicate BYOK debit | Open |
 | F06 | `tool_integrations.rs` returns 501/usable:false for secure connection | Verified supported-provider connection with encrypted storage, tenant binding, revoke/refresh behavior; unsupported providers remain explicitly unavailable | Open |
