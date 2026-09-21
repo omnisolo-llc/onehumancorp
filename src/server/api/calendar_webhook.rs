@@ -1,10 +1,10 @@
+use crate::db::DB;
 use axum::{
-    extract::{State, Json},
-    response::IntoResponse,
+    extract::{Json, State},
     http::{HeaderMap, StatusCode},
+    response::IntoResponse,
 };
 use std::sync::Arc;
-use crate::db::DB;
 
 #[derive(Clone)]
 pub struct CalendarWebhookState {
@@ -16,12 +16,21 @@ pub async fn google_calendar_webhook_handler(
     headers: HeaderMap,
     Json(_payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    let _channel_id = headers.get("X-Goog-Channel-ID").and_then(|h| h.to_str().ok());
-    let _resource_state = headers.get("X-Goog-Resource-State").and_then(|h| h.to_str().ok());
-    let channel_token = headers.get("X-Goog-Channel-Token").and_then(|h| h.to_str().ok());
+    let _channel_id = headers
+        .get("X-Goog-Channel-ID")
+        .and_then(|h| h.to_str().ok());
+    let _resource_state = headers
+        .get("X-Goog-Resource-State")
+        .and_then(|h| h.to_str().ok());
+    let channel_token = headers
+        .get("X-Goog-Channel-Token")
+        .and_then(|h| h.to_str().ok());
 
     if let Some(token) = channel_token {
-        tracing::info!("Received Google Calendar webhook for tenant/token: {}", token);
+        tracing::info!(
+            "Received Google Calendar webhook for tenant/token: {}",
+            token
+        );
         // We acknowledge the webhook quickly.
         // A background worker or the `calendar_sync` loop (which polls every 5 minutes)
         // will naturally reconcile state, or we could enqueue a job here.

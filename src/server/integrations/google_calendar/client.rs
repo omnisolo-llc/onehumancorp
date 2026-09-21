@@ -468,12 +468,16 @@ mod tests {
     async fn cancel_event_handles_success_and_not_found() {
         let response = "";
         let (base_url, request_rx) = start_google_calendar_server(response).await;
-        let client = RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
 
         let result = client.cancel_event("primary", "event-id-123").await;
         assert!(result.is_ok());
 
         let request = request_rx.await.unwrap();
-        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/event-id-123 HTTP/1.1"));
+        assert!(
+            request
+                .starts_with("DELETE /calendar/v3/calendars/primary/events/event-id-123 HTTP/1.1")
+        );
     }
 }

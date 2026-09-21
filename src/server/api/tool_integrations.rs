@@ -489,8 +489,14 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route("/{id}/connect", post(connect_integration_handler))
         .route("/{id}/verify", post(refresh_integration_handler))
         .route("/{id}", axum::routing::delete(revoke_integration_handler))
-        .route("/google_calendar/oauth/connect", post(connect_google_calendar_oauth_handler))
-        .route("/google_calendar/oauth/callback", get(google_calendar_oauth_callback_handler))
+        .route(
+            "/google_calendar/oauth/connect",
+            post(connect_google_calendar_oauth_handler),
+        )
+        .route(
+            "/google_calendar/oauth/callback",
+            get(google_calendar_oauth_callback_handler),
+        )
         .with_state(state)
 }
 
@@ -534,7 +540,7 @@ pub async fn connect_google_calendar_oauth_handler(
     let oauth_state = uuid::Uuid::new_v4().to_string();
 
     // Cache the secure state with the tenant_id in redis (approx 10 minutes)
-    let redis_client = crate::db::redis_pool::get_client().expect("Redis required");
+    let redis_client = crate::redis_pool::get_redis_client().expect("Redis required");
     let mut conn = redis_client
         .get_multiplexed_async_connection()
         .await
@@ -577,7 +583,7 @@ pub async fn google_calendar_oauth_callback_handler(
     let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI").unwrap_or_default();
 
     // Verify the state token and retrieve the tenant_id
-    let redis_client = crate::db::redis_pool::get_client().expect("Redis required");
+    let redis_client = crate::redis_pool::get_redis_client().expect("Redis required");
     let mut conn = redis_client
         .get_multiplexed_async_connection()
         .await
@@ -592,9 +598,13 @@ pub async fn google_calendar_oauth_callback_handler(
 
     let tenant_id = match tenant_id {
         Some(id) => {
-            let _: () = redis::cmd("DEL").arg(&state_key).query_async(&mut conn).await.unwrap_or(());
+            let _: () = redis::cmd("DEL")
+                .arg(&state_key)
+                .query_async(&mut conn)
+                .await
+                .unwrap_or(());
             id
-        },
+        }
         None => return axum::response::Html("Invalid or expired OAuth state. Please try again."),
     };
 
@@ -637,7 +647,9 @@ pub async fn google_calendar_oauth_callback_handler(
                     .await;
                     let _ = tx.commit().await;
 
-                    return axum::response::Html("Google Calendar connected successfully! You can close this window.");
+                    return axum::response::Html(
+                        "Google Calendar connected successfully! You can close this window.",
+                    );
                 }
             }
         }

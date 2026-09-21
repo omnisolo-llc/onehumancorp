@@ -133,14 +133,20 @@ async fn push_bookings_to_calendar(
                     .await
                     .map_err(|e| e.to_string())?;
 
-                if let Err(e) = sqlx::query("UPDATE bookings SET external_event_id = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(&event_id)
-                    .bind(&booking_id)
-                    .bind(tenant_id)
-                    .execute(&mut *tx2)
-                    .await
+                if let Err(e) = sqlx::query(
+                    "UPDATE bookings SET external_event_id = $1 WHERE id = $2 AND tenant_id = $3",
+                )
+                .bind(&event_id)
+                .bind(&booking_id)
+                .bind(tenant_id)
+                .execute(&mut *tx2)
+                .await
                 {
-                    tracing::error!("Failed to save external_event_id for booking {}: {}", booking_id, e);
+                    tracing::error!(
+                        "Failed to save external_event_id for booking {}: {}",
+                        booking_id,
+                        e
+                    );
                 } else {
                     let _ = tx2.commit().await;
                 }
@@ -155,20 +161,29 @@ async fn push_bookings_to_calendar(
         let booking_id: String = row.get("id");
         let external_event_id: String = row.get("external_event_id");
 
-        match provider_client.cancel_event("primary", &external_event_id).await {
+        match provider_client
+            .cancel_event("primary", &external_event_id)
+            .await
+        {
             Ok(_) => {
                 let mut tx2 = pool.begin().await.map_err(|e| e.to_string())?;
                 auth_utils::set_org_context(&mut *tx2, tenant_id)
                     .await
                     .map_err(|e| e.to_string())?;
 
-                if let Err(e) = sqlx::query("UPDATE bookings SET external_event_id = NULL WHERE id = $1 AND tenant_id = $2")
-                    .bind(&booking_id)
-                    .bind(tenant_id)
-                    .execute(&mut *tx2)
-                    .await
+                if let Err(e) = sqlx::query(
+                    "UPDATE bookings SET external_event_id = NULL WHERE id = $1 AND tenant_id = $2",
+                )
+                .bind(&booking_id)
+                .bind(tenant_id)
+                .execute(&mut *tx2)
+                .await
                 {
-                    tracing::error!("Failed to clear external_event_id for cancelled booking {}: {}", booking_id, e);
+                    tracing::error!(
+                        "Failed to clear external_event_id for cancelled booking {}: {}",
+                        booking_id,
+                        e
+                    );
                 } else {
                     let _ = tx2.commit().await;
                 }
