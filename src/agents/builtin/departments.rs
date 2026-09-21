@@ -42,6 +42,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Manages booking calendars and sends reminders\n\
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
+                - Can fetch shipping rates and purchase labels via Shippo\n\
                 - Handles refund requests and returns").leak(),
             allowed_tools: vec![
                 "read",

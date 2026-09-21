@@ -48,6 +48,7 @@ pub mod pydantic;
 pub mod quote;
 pub mod recall;
 pub mod repo_map;
+pub mod shippo;
 pub mod restic;
 pub mod screenshot;
 pub mod skill;
@@ -177,9 +178,11 @@ pub fn all_tools(
         ),
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
-        quote::generate_quote_tool(booking_store, tenant),
+        quote::generate_quote_tool(booking_store, tenant.clone()),
         aider_pair_programming::aider_pair_programming_tool(),
         superpowers_tool::superpowers_skill_tool(),
+        shippo::shippo_fetch_rates_tool(tenant.clone()),
+        shippo::shippo_purchase_label_tool(tenant.clone()),
     ];
 
     if let Some(llm) = agent_llm {
