@@ -53,7 +53,7 @@ export default function StaffPage() {
               {tasks.map((task) => (
                 <div key={task.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                   <span className="text-gray-800">{task.description}</span>
-                  <input type="checkbox" className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <input type="checkbox" aria-label={`Mark ${task.description} complete`} className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                 </div>
               ))}
             </div>
