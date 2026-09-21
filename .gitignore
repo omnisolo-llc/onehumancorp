@@ -149,6 +149,3 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
-
-src/ui/tauri/next_out
-src/ui/tauri/tauri_out
