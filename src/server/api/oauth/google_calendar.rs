@@ -1,36 +1,32 @@
 use axum::{
-    extract::{Extension, Query, State},
+    Json, Router,
+    extract::{Extension, Query},
     response::{IntoResponse, Redirect},
     routing::get,
-    Json, Router,
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
 
-use crate::db::DB;
-
-pub fn router(db: Arc<DB>) -> Router {
+pub fn router() -> Router<Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     Router::new()
         .route("/connect", get(connect))
         .route("/callback", get(callback))
-        .with_state(db)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct ConnectResponse {
     status: String,
     redirect_url: String,
 }
 
-async fn connect(
-    Extension(claims): Extension<::server_common::Claims>,
-) -> impl IntoResponse {
-    let client_id = std::env::var("GOOGLE_CALENDAR_CLIENT_ID")
-        .unwrap_or_else(|_| "mock-client-id".to_string());
-    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI")
-        .unwrap_or_else(|_| "https://cloud.omnisolo.co/api/v1/oauth/google-calendar/callback".to_string());
+async fn connect(Extension(claims): Extension<::server_common::Claims>) -> Json<ConnectResponse> {
+    let client_id =
+        std::env::var("GOOGLE_CALENDAR_CLIENT_ID").unwrap_or_else(|_| "mock-client-id".to_string());
+    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI").unwrap_or_else(|_| {
+        "https://cloud.omnisolo.co/api/v1/oauth/google-calendar/callback".to_string()
+    });
 
     let state = claims.organization_id.unwrap_or_default();
 
@@ -54,10 +50,7 @@ struct CallbackQuery {
     error: Option<String>,
 }
 
-async fn callback(
-    State(db): State<Arc<DB>>,
-    Query(query): Query<CallbackQuery>,
-) -> impl IntoResponse {
+async fn callback(Query(query): Query<CallbackQuery>) -> impl IntoResponse {
     if query.error.is_some() {
         return Redirect::to("/integrations?error=oauth_denied");
     }
@@ -70,12 +63,13 @@ async fn callback(
         None => return Redirect::to("/integrations?error=missing_state"),
     };
 
-    let client_id = std::env::var("GOOGLE_CALENDAR_CLIENT_ID")
-        .unwrap_or_else(|_| "mock-client-id".to_string());
+    let client_id =
+        std::env::var("GOOGLE_CALENDAR_CLIENT_ID").unwrap_or_else(|_| "mock-client-id".to_string());
     let client_secret = std::env::var("GOOGLE_CALENDAR_CLIENT_SECRET")
         .unwrap_or_else(|_| "mock-client-secret".to_string());
-    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI")
-        .unwrap_or_else(|_| "https://cloud.omnisolo.co/api/v1/oauth/google-calendar/callback".to_string());
+    let redirect_uri = std::env::var("GOOGLE_CALENDAR_REDIRECT_URI").unwrap_or_else(|_| {
+        "https://cloud.omnisolo.co/api/v1/oauth/google-calendar/callback".to_string()
+    });
 
     let client = Client::new();
     let res = client
@@ -90,7 +84,7 @@ async fn callback(
         .send()
         .await;
 
-    let (access_token, refresh_token) = match res {
+    let (access_token, _refresh_token) = match res {
         Ok(resp) => {
             if resp.status().is_success() {
                 let json: Value = resp.json().await.unwrap_or_default();
@@ -105,48 +99,18 @@ async fn callback(
     };
 
     if !access_token.is_empty() && !tenant_id.is_empty() {
-        match &db.store {
-            crate::db::DbStore::Postgres => {
-                let _ = sqlx::query(
-                    "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
-                     VALUES ($1, $2, $3, $4, $5)
-                     ON CONFLICT (id) DO UPDATE SET status = $4, integration_code = $5",
-                )
-                .bind("google_calendar")
-                .bind(&tenant_id)
-                .bind("Google Calendar")
-                .bind("connected")
-                .bind(&access_token)
-                .execute(&db.pool)
-                .await;
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                let _ = sqlx::query(
-                    "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
-                     VALUES (?, ?, ?, ?, ?)
-                     ON CONFLICT (id) DO UPDATE SET status = excluded.status, integration_code = excluded.integration_code",
-                )
-                .bind("google_calendar")
-                .bind(&tenant_id)
-                .bind("Google Calendar")
-                .bind("connected")
-                .bind(&access_token)
-                .execute(pool)
-                .await;
-            }
-        }
-
-        // Also register client in the integration registry so downstream API works
-        let mut registry = crate::integrations::registry::INTEGRATION_REGISTRY.write().unwrap();
-        registry.register_connection(
-            &tenant_id,
+        let registry = crate::integrations::registry::IntegrationsRegistry::new();
+        let _ = registry.connect(
             "google_calendar",
-            crate::api::tool_integrations::ConnectIntegrationRequest {
-                bot_token: None,
-                api_token: Some(access_token),
-                from_phone: None,
-                integration_id: Some("google_calendar".to_string()),
-                base_url: None,
+            "https://www.googleapis.com/calendar/v3",
+            ::server_omnisolo::orchestration::ConnectIntegrationRequest {
+                bot_token: "".to_string(),
+                chat_id: "".to_string(),
+                webhook_url: "".to_string(),
+                api_token: access_token,
+                from_phone: "".to_string(),
+                integration_id: "google_calendar".to_string(),
+                base_url: "".to_string(),
             },
         );
     }
@@ -157,7 +121,6 @@ async fn callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, http::Request};
 
     fn mock_claims() -> ::server_common::Claims {
         ::server_common::Claims {
@@ -165,6 +128,11 @@ mod tests {
             organization_id: Some("tenant-123".to_string()),
             roles: vec!["owner".to_string()],
             exp: 10000000000,
+            iat: 10000000000,
+            jti: "".to_string(),
+            email: "".to_string(),
+            session_id: None,
+            username: "".to_string(),
         }
     }
 
@@ -186,10 +154,9 @@ mod tests {
         let redirect_url = response.redirect_url;
         assert_eq!(response.status, "success");
         assert!(redirect_url.contains("client-123.apps.googleusercontent.com"));
-        assert!(
-            redirect_url
-                .contains("https%3A%2F%2Fcloud.omnisolo.co%2Fapi%2Fv1%2Foauth%2Fgoogle-calendar%2Fcallback")
-        );
+        assert!(redirect_url.contains(
+            "https%3A%2F%2Fcloud.omnisolo.co%2Fapi%2Fv1%2Foauth%2Fgoogle-calendar%2Fcallback"
+        ));
         assert!(redirect_url.contains("tenant-123"));
     }
 }
