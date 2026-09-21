@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-
 struct BudgetState {
     current: i64,
     allocated: i64,
@@ -105,7 +104,11 @@ impl BudgetManager {
 
         let mut state = self.state.lock().unwrap();
 
-        let new_total = match state.current.checked_add(state.allocated).and_then(|t| t.checked_add(amount_cents)) {
+        let new_total = match state
+            .current
+            .checked_add(state.allocated)
+            .and_then(|t| t.checked_add(amount_cents))
+        {
             Some(t) => t,
             None => return Err("reservation would overflow".to_string()),
         };
@@ -129,7 +132,10 @@ impl BudgetManager {
 
         {
             let mut state = self.state.lock().unwrap();
-            let reserved = state.reservations.remove(&reservation_id).ok_or_else(|| "invalid reservation ID".to_string())?;
+            let reserved = state
+                .reservations
+                .remove(&reservation_id)
+                .ok_or_else(|| "invalid reservation ID".to_string())?;
 
             state.allocated -= reserved;
             state.current += actual_cents;
@@ -153,18 +159,27 @@ impl BudgetManager {
 
     pub fn release(&self, reservation_id: u64) -> Result<(), String> {
         let mut state = self.state.lock().unwrap();
-        let reserved = state.reservations.remove(&reservation_id).ok_or_else(|| "invalid reservation ID".to_string())?;
+        let reserved = state
+            .reservations
+            .remove(&reservation_id)
+            .ok_or_else(|| "invalid reservation ID".to_string())?;
         state.allocated -= reserved;
         Ok(())
     }
 
     pub fn get_remaining(&self) -> f64 {
-        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
+        let current = {
+            let state = self.state.lock().unwrap();
+            state.current + state.allocated
+        };
         (self.total_limit_cents - current) as f64 / 100.0
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
+        let current = {
+            let state = self.state.lock().unwrap();
+            state.current + state.allocated
+        };
         self.total_limit_cents - current
     }
 
@@ -172,27 +187,38 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 {
             return false;
         }
-        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
+        let current = {
+            let state = self.state.lock().unwrap();
+            state.current + state.allocated
+        };
         let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || { let state = self.state.lock().unwrap(); state.current + state.allocated } > 0;
+            return projected_cost_cents > 0 || {
+                let state = self.state.lock().unwrap();
+                state.current + state.allocated
+            } > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || { let state = self.state.lock().unwrap(); state.current + state.allocated } >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || {
+            let state = self.state.lock().unwrap();
+            state.current + state.allocated
+        } >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
         if total_limit_cents <= 0 {
             return false;
         }
-        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
+        let current = {
+            let state = self.state.lock().unwrap();
+            state.current + state.allocated
+        };
         let limit_threshold_cents =
             ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current >= limit_threshold_cents
@@ -206,7 +232,10 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
-        let current = { let state = self.state.lock().unwrap(); state.current + state.allocated };
+        let current = {
+            let state = self.state.lock().unwrap();
+            state.current + state.allocated
+        };
         let expected_spend = (self.total_limit_cents as f64)
             * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
         current as f64 > expected_spend * 1.5 // 50% higher than expected rate
@@ -311,7 +340,6 @@ mod tests {
         assert!(manager.reserve(1).is_err());
         assert_eq!(manager.get_remaining_cents(), 0);
     }
-
 
     #[test]
     fn test_concurrent_reserve_settle_release() {
