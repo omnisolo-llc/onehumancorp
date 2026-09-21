@@ -109,8 +109,15 @@ impl BudgetManager {
             return Ok(Some(res_id));
         }
 
-        let in_flight_micros: i64 = state.reservations.values().try_fold(0i64, |acc, &val| acc.checked_add(val)).unwrap_or(i64::MAX);
-        let total_requested = state.settled_micros.checked_add(in_flight_micros).and_then(|t| t.checked_add(amount_micros));
+        let in_flight_micros: i64 = state
+            .reservations
+            .values()
+            .try_fold(0i64, |acc, &val| acc.checked_add(val))
+            .unwrap_or(i64::MAX);
+        let total_requested = state
+            .settled_micros
+            .checked_add(in_flight_micros)
+            .and_then(|t| t.checked_add(amount_micros));
 
         if let Some(total) = total_requested
             && total <= self.total_limit_micros
@@ -165,9 +172,16 @@ impl BudgetManager {
     }
 
     fn update_current_cents(&self, state: &BudgetState) {
-        let in_flight_micros: i64 = state.reservations.values().fold(0, |acc, &val| acc.saturating_add(val));
+        let in_flight_micros: i64 = state
+            .reservations
+            .values()
+            .fold(0, |acc, &val| acc.saturating_add(val));
         let total_micros = state.settled_micros.saturating_add(in_flight_micros);
-        let total_cents = if total_micros == i64::MAX { i64::MAX } else { total_micros / 100 };
+        let total_cents = if total_micros == i64::MAX {
+            i64::MAX
+        } else {
+            total_micros / 100
+        };
         self.current.store(total_cents, Ordering::SeqCst);
     }
 
