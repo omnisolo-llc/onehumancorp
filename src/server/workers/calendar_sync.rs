@@ -131,10 +131,12 @@ async fn push_bookings_to_calendar(
         } else {
             // Update booking to mark as synced
             let pool = crate::db::get_pool();
-            let _ = sqlx::query("UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1")
-                .bind(&booking_id)
-                .execute(&pool)
-                .await;
+            let _ = sqlx::query(
+                "UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1",
+            )
+            .bind(&booking_id)
+            .execute(&pool)
+            .await;
         }
     }
 
@@ -152,17 +154,21 @@ async fn push_bookings_to_calendar(
 
             // Mark synced anyway to prevent infinite loop
             let pool = crate::db::get_pool();
-            let _ = sqlx::query("UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1")
-                .bind(&booking_id)
-                .execute(&pool)
-                .await;
+            let _ = sqlx::query(
+                "UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1",
+            )
+            .bind(&booking_id)
+            .execute(&pool)
+            .await;
         } else {
-             // Update booking to mark as synced to prevent infinite loop
-             let pool = crate::db::get_pool();
-             let _ = sqlx::query("UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1")
-                 .bind(&booking_id)
-                 .execute(&pool)
-                 .await;
+            // Update booking to mark as synced to prevent infinite loop
+            let pool = crate::db::get_pool();
+            let _ = sqlx::query(
+                "UPDATE bookings SET sync_metadata = '{\"synced\": true}' WHERE id = $1",
+            )
+            .bind(&booking_id)
+            .execute(&pool)
+            .await;
         }
     }
 

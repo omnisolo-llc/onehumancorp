@@ -154,19 +154,20 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
     }
 
     async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
-        let url = self.calendar_api_url(&format!("calendars/primary/events/{}?sendUpdates=all", event_id));
+        let url = self.calendar_api_url(&format!(
+            "calendars/primary/events/{}?sendUpdates=all",
+            event_id
+        ));
         let token = self.validated_access_token()?;
 
-        let res = self
-            .http_client
-            .delete(url)
-            .bearer_auth(token)
-            .send()
-            .await;
+        let res = self.http_client.delete(url).bearer_auth(token).send().await;
 
         match res {
             Ok(resp) => {
-                if resp.status().is_success() || resp.status().as_u16() == 404 || resp.status().as_u16() == 410 {
+                if resp.status().is_success()
+                    || resp.status().as_u16() == 404
+                    || resp.status().as_u16() == 410
+                {
                     // Consider successfully cancelled if API returns OK, 404 Not Found, or 410 Gone
                     Ok(())
                 } else {
