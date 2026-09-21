@@ -20,6 +20,7 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -146,6 +147,31 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                     Self::parse_free_busy_response(&json)
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .delete(url)
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() || resp.status() == 404 {
+                    Ok(())
+                } else {
+                    let status = resp.status();
+                    let text = resp.text().await.unwrap_or_default();
+                    Err(format!("HTTP {}: {}", status, text))
                 }
             }
             Err(e) => Err(format!("Network error: {}", e)),
@@ -384,6 +410,40 @@ mod tests {
                 .unwrap()
                 .starts_with("ohc-google-meet-")
         );
+    }
+
+    #[tokio::test]
+    async fn cancel_event_sends_delete_request_and_returns_ok() {
+        let response = "";
+        let (base_url, request_rx) = start_google_calendar_server(response).await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        client.cancel_event("calendar-event-123").await.unwrap();
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/calendar-event-123 "));
+        assert!(request.contains("authorization: Bearer valid-token"));
+    }
+
+    #[tokio::test]
+    async fn cancel_event_returns_error_on_failure() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut buffer = [0_u8; 1024];
+            stream.read(&mut buffer).await.unwrap();
+            let response = "HTTP/1.1 500 Internal Server Error\r\n\r\nSomething went wrong";
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let err = client.cancel_event("calendar-event-123").await.unwrap_err();
+        assert!(err.contains("HTTP 500"));
     }
 
     #[tokio::test]
