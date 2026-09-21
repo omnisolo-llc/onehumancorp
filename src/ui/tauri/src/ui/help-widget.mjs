@@ -19,7 +19,12 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     function showTooltip(e, text) {
         if (!text) return;
         tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[data-tooltip], [id]') ? e.target.closest('[data-tooltip], [id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+                let targetNode = e.target;
+        while (targetNode && targetNode !== document) {
+            if ((targetNode.hasAttribute && targetNode.hasAttribute('data-tooltip')) || (targetNode.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[targetNode.id])) break;
+            targetNode = targetNode.parentNode;
+        }
+        const targetRect = (targetNode && targetNode !== document) ? targetNode.getBoundingClientRect() : e.target.getBoundingClientRect();
 
         let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
         let top = targetRect.bottom + 10;
@@ -44,7 +49,14 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
+                let target = e.target;
+        while (target && target !== document) {
+            if ((target.hasAttribute && target.hasAttribute('data-tooltip')) || (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id])) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
             const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
@@ -55,7 +67,14 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
+                let target = e.target;
+        while (target && target !== document) {
+            if ((target.hasAttribute && target.hasAttribute('data-tooltip')) || (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id])) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target) {
             hideTooltip();
         }
@@ -63,7 +82,14 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
 
 
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
+                let target = e.target;
+        while (target && target !== document) {
+            if ((target.hasAttribute && target.hasAttribute('data-tooltip')) || (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id])) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
             const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');

@@ -220,7 +220,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function showTooltip(e, text) {
         if (!text) return;
         tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+                let targetNode = e.target;
+        while (targetNode && targetNode !== document) {
+            if (targetNode.id) break;
+            targetNode = targetNode.parentNode;
+        }
+        const targetRect = (targetNode && targetNode !== document) ? targetNode.getBoundingClientRect() : e.target.getBoundingClientRect();
 
         let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
         let top = targetRect.bottom + 10;
@@ -245,14 +250,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
+                let target = e.target;
+        while (target && target !== document) {
+            if (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
+                let target = e.target;
+        while (target && target !== document) {
+            if (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
@@ -260,7 +279,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id]');
+                let target = e.target;
+        while (target && target !== document) {
+            if (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             window.touchTimer = setTimeout(() => {
                 showTooltip(e.touches[0], window.OMNISOLO_TOOLTIPS[target.id]);
@@ -270,7 +296,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('touchend', (e) => {
         clearTimeout(window.touchTimer);
-        const target = e.target.closest('[id]');
+                let target = e.target;
+        while (target && target !== document) {
+            if (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
@@ -278,7 +311,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('touchcancel', (e) => {
         clearTimeout(window.touchTimer);
-        const target = e.target.closest('[id]');
+                let target = e.target;
+        while (target && target !== document) {
+            if (target.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) {
+                break;
+            }
+            target = target.parentNode;
+        }
+        if (target === document) target = null;
         if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
