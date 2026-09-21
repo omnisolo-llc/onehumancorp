@@ -93,6 +93,22 @@ export default function Integrations() {
       setStatusMessage(`${integration.name} settings are ready to manage.`);
       return;
     }
+    if (id === 'google_calendar') {
+      try {
+        const res = await fetch("/api/v1/oauth/google-calendar/connect");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to connect Google Calendar", e);
+      }
+      setStatusMessage("Failed to initiate Google Calendar connection.");
+      return;
+    }
     if (id === 'twilio') {
       setShowTwilioModal(true);
       setStatusMessage("Choose Twilio channels to finish connecting.");
