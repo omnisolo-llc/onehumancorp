@@ -4,6 +4,7 @@ pub struct BudgetManager {
     pub total_limit: f64,
     pub total_limit_cents: i64,
     current: AtomicI64,
+    allocated: AtomicI64,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
@@ -22,6 +23,7 @@ impl BudgetManager {
         BudgetManager {
             total_limit: limit,
             current: AtomicI64::new(0),
+            allocated: AtomicI64::new(0),
             total_limit_cents,
             telemetry_store: None,
             tenant_id: None,
@@ -52,10 +54,24 @@ impl BudgetManager {
             return Err("spend amount must be finite and bounded".to_string());
         }
         let amount_cents = (amount * 100.0).round() as i64;
-        self.record_spend_cents(amount_cents)
+        if self.reserve_spend_cents(amount_cents)? {
+            self.settle_spend_cents(amount_cents);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if self.reserve_spend_cents(amount_cents)? {
+            self.settle_spend_cents(amount_cents);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub fn reserve_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
         if amount_cents < 0 {
             return Err("spend amount cannot be negative".to_string());
         }
@@ -65,27 +81,43 @@ impl BudgetManager {
 
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
             tracing::info!(
-                "💰 Miser telemetry: Recording budget spend for tenant {}",
+                "💰 Miser telemetry: Reserving budget spend for tenant {}",
                 tid
             ); // pii-safe
         }
 
         // Atomic admission: reject overspend/overflow without changing state.
-        if self
-            .current
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_add(amount_cents)
-                    .filter(|next| *next <= self.total_limit_cents)
-            })
-            .is_err()
-        {
-            return Ok(false);
+        // We use current + allocated (the total exposure) to check against the limit.
+        let mut admitted = false;
+        let _ = self
+            .allocated
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |allocated| {
+                let current = self.current.load(Ordering::SeqCst);
+                if let Some(total_exposure) = current
+                    .checked_add(allocated)
+                    .and_then(|t| t.checked_add(amount_cents))
+                    && total_exposure <= self.total_limit_cents
+                {
+                    admitted = true;
+                    return Some(allocated + amount_cents);
+                }
+                admitted = false;
+                None // Abort update if over limit or overflow
+            });
+
+        Ok(admitted)
+    }
+
+    pub fn settle_spend_cents(&self, amount_cents: i64) {
+        if amount_cents <= 0 {
+            return;
         }
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0
-        {
+        // Move from allocated to current
+        self.allocated.fetch_sub(amount_cents, Ordering::SeqCst);
+        self.current.fetch_add(amount_cents, Ordering::SeqCst);
+
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
             store.llm_cost_counter.add(
                 amount_cents as u64,
                 &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
@@ -95,8 +127,13 @@ impl BudgetManager {
                 &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
             );
         }
+    }
 
-        Ok(true)
+    pub fn release_spend_cents(&self, amount_cents: i64) {
+        if amount_cents <= 0 {
+            return;
+        }
+        self.allocated.fetch_sub(amount_cents, Ordering::SeqCst);
     }
 
     pub fn get_remaining(&self) -> f64 {
@@ -173,6 +210,33 @@ mod tests {
             .sum::<usize>();
         assert_eq!(admitted, 10);
         assert_eq!(manager.get_remaining_cents(), 0);
+    }
+
+    #[test]
+    fn test_reserve_settle_release() {
+        let manager = BudgetManager::new(10.0);
+
+        // Reserve $5
+        assert!(manager.reserve_spend_cents(500).unwrap());
+        // $5 allocated, $0 current, $10 limit
+        assert_eq!(manager.allocated.load(Ordering::SeqCst), 500);
+        assert_eq!(manager.current.load(Ordering::SeqCst), 0);
+
+        // Try to reserve $6 more -> should fail
+        assert!(!manager.reserve_spend_cents(600).unwrap());
+
+        // Settle $3
+        manager.settle_spend_cents(300);
+        assert_eq!(manager.allocated.load(Ordering::SeqCst), 200);
+        assert_eq!(manager.current.load(Ordering::SeqCst), 300);
+
+        // Release remaining $2
+        manager.release_spend_cents(200);
+        assert_eq!(manager.allocated.load(Ordering::SeqCst), 0);
+        assert_eq!(manager.current.load(Ordering::SeqCst), 300);
+
+        // Now $7 available, reserve $6 -> should succeed
+        assert!(manager.reserve_spend_cents(600).unwrap());
     }
 
     #[test]
