@@ -14,7 +14,6 @@ pub struct BudgetManager {
     pub alert_threshold_percent: f64,
 }
 
-
 pub struct BudgetReservation {
     state: Arc<Mutex<BudgetState>>,
     reserved_cents: i64,
@@ -101,7 +100,6 @@ impl BudgetManager {
         self
     }
 
-
     pub fn reserve_cents(&self, amount_cents: i64) -> Result<BudgetReservation, String> {
         if amount_cents < 0 {
             return Err("spend amount cannot be negative".to_string());
@@ -111,7 +109,11 @@ impl BudgetManager {
 
         // If amount_cents > 0, check if we exceed limit.
         if amount_cents > 0 {
-            if guard.total_allocated_cents.checked_add(amount_cents).is_none_or(|next| next > self.total_limit_cents) {
+            if guard
+                .total_allocated_cents
+                .checked_add(amount_cents)
+                .is_none_or(|next| next > self.total_limit_cents)
+            {
                 return Err("budget limit exceeded".to_string());
             }
             guard.total_allocated_cents += amount_cents;
@@ -152,7 +154,7 @@ impl BudgetManager {
             Ok(reservation) => {
                 reservation.settle(amount_cents);
                 Ok(true)
-            },
+            }
             Err(e) if e == "budget limit exceeded" => Ok(false),
             Err(e) => Err(e),
         }
@@ -185,8 +187,7 @@ impl BudgetManager {
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || current >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || current >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
@@ -490,5 +491,4 @@ mod tests {
         assert_eq!(manager.state.lock().unwrap().settled_cents, 2500);
         assert_eq!(manager.state.lock().unwrap().total_allocated_cents, 2500);
     }
-
 }
