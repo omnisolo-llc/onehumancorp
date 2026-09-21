@@ -57,9 +57,9 @@ impl PydanticToolExecutor<ConversationalCheckoutArgs> for ConversationalCheckout
         .map_err(|e| ToolError::LlmRecoverable(format!("DB insert failed: {}", e)))?;
 
         let link = if std::env::var("MERCADOPAGO_ACCESS_TOKEN").is_ok() {
-            "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string()
+            "unavailable".to_string()
         } else {
-            "https://checkout.stripe.com/pay/cs_test_".to_string() + &session_id.replace("-", "")
+            "pending".to_string()
         };
 
         Ok(json!({
