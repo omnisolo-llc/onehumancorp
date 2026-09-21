@@ -59,7 +59,10 @@ impl ShippoProvider {
         let response = self.purchase_label(rate_id).await?;
 
         if !email.is_empty() {
-            let body = format!("Your package has been shipped via {}! Tracking number: {}. You can track it here: {}", response.carrier, response.tracking_number, response.label_url);
+            let body = format!(
+                "Your package has been shipped via {}! Tracking number: {}. You can track it here: {}",
+                response.carrier, response.tracking_number, response.label_url
+            );
             tracing::info!("Sending email to {}: {}", email, body);
         }
         Ok(response)

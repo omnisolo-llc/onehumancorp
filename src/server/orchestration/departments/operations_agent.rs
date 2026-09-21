@@ -464,7 +464,7 @@ impl Department for OperationsAgent {
         }
 
         let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = config {
+        let mut risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
                 ActionRisk::AutoExecute
             } else {
@@ -629,14 +629,27 @@ impl Department for OperationsAgent {
                     )
                 } else if status == "ready for fulfillment" {
                     // Automatically request shipping rates across enabled carriers via Shippo API
-                    let weight = event.payload.get("weight").and_then(|v| v.as_f64()).unwrap_or(16.0);
-                    let dimensions = event.payload.get("dimensions").and_then(|v| v.as_str()).unwrap_or("10x8x6");
+                    let weight = event
+                        .payload
+                        .get("weight")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(16.0);
+                    let dimensions = event
+                        .payload
+                        .get("dimensions")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("10x8x6");
 
                     if let Ok(token) = std::env::var("SHIPPO_API_TOKEN") {
-                        let client = crate::integrations::shippo::provider::ShippoProvider::new(token);
+                        let client =
+                            crate::integrations::shippo::provider::ShippoProvider::new(token);
                         // We fetch rates, then attach them to the payload to draft a label autonomously
                         if let Ok(rates) = client.fetch_rates(weight, dimensions).await {
-                            tracing::info!("Fetched {} Shippo rates for order {}", rates.len(), order_id);
+                            tracing::info!(
+                                "Fetched {} Shippo rates for order {}",
+                                rates.len(),
+                                order_id
+                            );
                             risk = ActionRisk::DraftForReview;
                         }
                     }

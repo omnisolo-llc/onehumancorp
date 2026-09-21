@@ -15,13 +15,13 @@ describe('GiveawayPage', () => {
   });
 
   it('renders correctly', () => {
-    render(<GiveawayPage />);
+    act(() => { render(<GiveawayPage />); });
     expect(screen.getByText('Viral Giveaway Generator 🎁')).toBeDefined();
     expect(screen.getByText('Giveaway Details')).toBeDefined();
   });
 
   it('updates preview when inputs change', () => {
-    render(<GiveawayPage />);
+    act(() => { render(<GiveawayPage />); });
 
     const titleInput = screen.getByPlaceholderText('e.g. Win a $100 Gift Card!');
     act(() => {
@@ -33,7 +33,7 @@ describe('GiveawayPage', () => {
   });
 
   it('shows paywall when removing branding without pro', async () => {
-    render(<GiveawayPage />);
+    act(() => { render(<GiveawayPage />); });
 
     const removeBrandingCheckbox = document.getElementById('removeBranding') as HTMLInputElement;
     act(() => {
