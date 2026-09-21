@@ -596,19 +596,29 @@ impl Department for OperationsAgent {
             }
 
             "tenant.order.created" => {
-                let notes = event
+                let needs_shipping = event
                     .payload
-                    .get("notes")
+                    .get("fulfillment_mode")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                if !notes.is_empty() {
-                    // Extract tenant language preference here if available, defaulting to English/Arabic for now.
-                    format!(
-                        "Translate order notes to the tenant's preferred language for the kitchen: {}",
-                        notes
-                    )
+                    .map(|s| s == "Shipping")
+                    .unwrap_or(false);
+                if needs_shipping {
+                    "Purchase Shipping Label & Process Order".to_string()
                 } else {
-                    "Process Order & Update Inventory".to_string()
+                    let notes = event
+                        .payload
+                        .get("notes")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    if !notes.is_empty() {
+                        // Extract tenant language preference here if available, defaulting to English/Arabic for now.
+                        format!(
+                            "Translate order notes to the tenant's preferred language for the kitchen: {}",
+                            notes
+                        )
+                    } else {
+                        "Process Order & Update Inventory".to_string()
+                    }
                 }
             }
             "tenant.order.updated" => {

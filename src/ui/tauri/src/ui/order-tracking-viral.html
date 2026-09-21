@@ -261,7 +261,7 @@
       btn.disabled = true;
 
       try {
-        const res = await fetch('/api/v1/shippo/rates', {
+        const res = await fetch('/api/v1/fulfillment/rates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ weight: parseFloat(weight), dimensions: dims })
@@ -316,7 +316,7 @@
       const orderId = document.getElementById('tracking-number').value || 'unknown';
 
       try {
-        const res = await fetch('/api/v1/shippo/label', {
+        const res = await fetch('/api/v1/fulfillment/label', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rate_id: selectedRateId, order_id: orderId })
