@@ -1136,7 +1136,7 @@ describe("OnboardingWizard", () => {
     await user.click(backButton);
 
     screen.getByText("Setup Assistant");
-    expect(useOnboardingStore.getState().step).toBe(-2);
+    expect(useOnboardingStore.getState().step).toBe(0);
   });
 
   it("Step 3: Passes initial_products from localStorage to /api/v1/onboarding/start", async () => {

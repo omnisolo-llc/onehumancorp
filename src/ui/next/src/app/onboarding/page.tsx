@@ -1131,8 +1131,8 @@ export default function OnboardingWizard() {
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <button
                     onClick={() => {
-                      updateState({ step: -2 });
-                      syncStateToBackend({ step: -2 });
+                      updateState({ step: 0 });
+                      syncStateToBackend({ step: 0 });
                     }}
                     className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2"
                   >
