@@ -698,7 +698,22 @@
     </div>
 
     <script>
-      document.addEventListener('DOMContentLoaded', async () => {
+
+    function findTooltipTarget(node) {
+        let current = node;
+        while (current && current !== document) {
+            if (current.hasAttribute && current.hasAttribute('data-tooltip')) {
+                return current;
+            }
+            if (current.id && window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[current.id]) {
+                return current;
+            }
+            current = current.parentNode;
+        }
+        return null;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
         const tenant = localStorage.getItem('business_display_name') || 'default-team';
         try {
           const res = await fetch('/api/v1/growth/milestones/check');
@@ -1265,14 +1280,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Desktop hover
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const target = findTooltipTarget(e.target);
         if (target) {
             showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        if (e.target.closest('[data-tooltip]')) {
+        if (findTooltipTarget(e.target)) {
             hideTooltip();
         }
     });
@@ -1280,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const target = findTooltipTarget(e.target);
         if (target) {
             touchTimeout = setTimeout(() => {
                 showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
