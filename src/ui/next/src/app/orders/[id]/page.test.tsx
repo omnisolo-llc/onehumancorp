@@ -27,6 +27,7 @@ describe('OrderDetailsPage', () => {
     render(<OrderDetailsPage />);
     expect(await screen.findByText('A Customer')).toBeDefined();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Ship Order' }));
     expect(screen.getByLabelText('Package weight in ounces')).toHaveValue(null);
     expect(screen.getByLabelText('Package dimensions')).toHaveValue('');
 
@@ -34,7 +35,7 @@ describe('OrderDetailsPage', () => {
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
     fireEvent.click(screen.getByRole('button', { name: 'Get Shipping Rates' }));
     expect(await screen.findByText('UPS Ground')).toBeDefined();
-    expect(screen.getByText('$12.50')).toBeDefined();
+    expect(screen.getByText(/\$12\.50/i)).toBeDefined();
 
     const rateCall = vi.mocked(global.fetch).mock.calls.find(([url]) => url === '/api/v1/shipping/rates');
     expect(JSON.parse(String(rateCall?.[1]?.body))).toEqual({ orderId: 'order-1', weight: '16', dimensions: '10x8x6' });
@@ -42,7 +43,7 @@ describe('OrderDetailsPage', () => {
     fireEvent.click(screen.getByRole('radio', { name: /UPS Ground/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Buy Label' }));
     expect(await screen.findByText('1Z999')).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Open Shipping Label' }).getAttribute('href')).toBe('https://shippo-delivery-east.s3.amazonaws.com/order-1.pdf');
+    expect(screen.getByRole('link', { name: 'Print Shipping Label' }).getAttribute('href')).toBe('https://shippo-delivery-east.s3.amazonaws.com/order-1.pdf');
   });
 
   it('accepts the Rust string amount contract', async () => {
@@ -54,11 +55,12 @@ describe('OrderDetailsPage', () => {
     });
     render(<OrderDetailsPage />);
     await screen.findByText('order-1');
+    fireEvent.click(screen.getByRole('button', { name: 'Ship Order' }));
     fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
     fireEvent.click(screen.getByRole('button', { name: 'Get Shipping Rates' }));
 
-    expect(await screen.findByText('$12.50')).toBeDefined();
+    expect(await screen.findByText(/\$12\.50/i)).toBeDefined();
   });
 
   it('rejects a label URL outside the trusted Shippo delivery hosts', async () => {
@@ -69,6 +71,7 @@ describe('OrderDetailsPage', () => {
     });
     render(<OrderDetailsPage />);
     await screen.findByText('order-1');
+    fireEvent.click(screen.getByRole('button', { name: 'Ship Order' }));
     fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
     fireEvent.click(screen.getByRole('button', { name: 'Get Shipping Rates' }));
@@ -76,7 +79,7 @@ describe('OrderDetailsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Buy Label' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The shipping label could not be confirmed.');
-    expect(screen.queryByRole('link', { name: 'Open Shipping Label' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Print Shipping Label' })).toBeNull();
   });
 
   it('rejects malformed order fields and malformed rates', async () => {
@@ -88,6 +91,7 @@ describe('OrderDetailsPage', () => {
     });
     render(<OrderDetailsPage />);
     expect(await screen.findAllByText('Unavailable')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Ship Order' }));
     fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
     fireEvent.click(screen.getByRole('button', { name: 'Get Shipping Rates' }));

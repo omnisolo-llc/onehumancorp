@@ -25,6 +25,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.order.fulfillment_ready".to_string(),
             "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "tenant.booking.request_received".to_string(),
@@ -595,7 +596,11 @@ impl Department for OperationsAgent {
                 }
             }
 
-            "tenant.order.created" => {
+            "tenant.order.fulfillment_ready" => {
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
+            format!("Draft shipping label for order {}", order_id)
+        }
+        "tenant.order.created" => {
                 let notes = event
                     .payload
                     .get("notes")
