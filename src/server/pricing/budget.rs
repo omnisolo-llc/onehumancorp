@@ -99,17 +99,16 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if let Some(total) = next.checked_add(state.settled) {
-                if total <= self.total_limit_cents {
-                    state.total_allocated = next;
-                    return Some(BudgetReservation {
-                        state: self.state.clone(),
-                        amount: amount_cents,
-                        settled: false,
-                    });
-                }
-            }
+        if let Some(next) = state.total_allocated.checked_add(amount_cents)
+            && let Some(total) = next.checked_add(state.settled)
+            && total <= self.total_limit_cents
+        {
+            state.total_allocated = next;
+            return Some(BudgetReservation {
+                state: self.state.clone(),
+                amount: amount_cents,
+                settled: false,
+            });
         }
         None
     }
