@@ -772,7 +772,7 @@ html.dark .glass-control {
 .app-shell .app-panel,
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 8px !important;
+  border-radius: 16px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
