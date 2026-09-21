@@ -29,8 +29,8 @@ test('User can purchase and print shipping labels for an order', async ({ page }
 
   // Wait for success status
   await expect(page.getByText('Label Purchased Successfully')).toBeVisible({ timeout: 30000 });
-  await expect(page.getByRole('link', { name: /Print Label/ })).toBeVisible({ timeout: 30000 });
   await expect(page.getByText('Shipped', { exact: true }).first()).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole('link', { name: /Print Label/ })).toBeVisible({ timeout: 30000 });
 });
 
 test('User encounters address validation error and corrects it', async ({ page }) => {
