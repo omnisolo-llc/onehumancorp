@@ -1489,7 +1489,7 @@ async fn handle_affiliate_stats(
             .await
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(ROUND(total_earnings * 100)), 0)::BIGINT FROM affiliate_ledgers WHERE tenant_id = $1")
                 .bind(&auth_info.org_id)
                 .fetch_one(&state.pool)
                 .await
@@ -2800,7 +2800,7 @@ pub async fn handle_get_referral_milestones(
 
     // Fallback: mock tracking for growth milestones
     let total_referrals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM growth_team_invites WHERE inviter_id = $1 AND status = 'accepted'",
+        "SELECT COUNT(*) FROM team_invites WHERE tenant_id = $1 AND status = 'ACCEPTED'",
     )
     .bind(tenant_id.clone())
     .fetch_optional(&state.pool)

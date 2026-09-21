@@ -85,6 +85,21 @@ for required_pattern in \
   fi
 done
 
+runtime_parity_migration="${migration_dir}/225_runtime_schema_parity.sql"
+for required_pattern in \
+  'ADD COLUMN IF NOT EXISTS service_id' \
+  'ADD COLUMN IF NOT EXISTS resource_id' \
+  'ADD COLUMN IF NOT EXISTS tenant_id' \
+  'CREATE TRIGGER shared_tasks_sync_owner_ids' \
+  'CREATE TABLE IF NOT EXISTS daily_work_items' \
+  'CREATE TABLE IF NOT EXISTS unified_triage_actions' \
+  'CREATE TABLE IF NOT EXISTS agent_event_subscriptions'; do
+  if ! grep -Fq "${required_pattern}" "${runtime_parity_migration}"; then
+    echo "runtime parity migration is missing required contract: ${required_pattern} (${runtime_parity_migration})" >&2
+    exit 1
+  fi
+done
+
 initial_schema="${migration_dir}/001_initial.sql"
 for required_pattern in \
   'id TEXT PRIMARY KEY' \

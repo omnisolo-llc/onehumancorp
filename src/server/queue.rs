@@ -1116,7 +1116,7 @@ impl TaskQueueService {
         // We could merge this better using jsonb operators or just save status
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-        sqlx::query("UPDATE shared_tasks SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        sqlx::query("UPDATE shared_tasks SET status = 'FAILED', payload = (COALESCE(payload, '{}')::jsonb || $2::jsonb)::text, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .bind(payload_update)
             .execute(&mut *tx)
