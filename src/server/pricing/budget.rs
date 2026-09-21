@@ -89,16 +89,22 @@ impl BudgetManager {
         }
 
         let new_exposure = state.current_exposure_micros().checked_add(amount_micros);
-        if let Some(exposure) = new_exposure {
-            if exposure <= self.total_limit_micros {
-                state.reservations.insert(reservation_id.to_string(), amount_micros);
-                return Ok(true);
-            }
+        if let Some(exposure) = new_exposure
+            && exposure <= self.total_limit_micros
+        {
+            state
+                .reservations
+                .insert(reservation_id.to_string(), amount_micros);
+            return Ok(true);
         }
         Ok(false)
     }
 
-    pub fn settle_micros(&self, reservation_id: &str, final_cost_micros: i64) -> Result<bool, String> {
+    pub fn settle_micros(
+        &self,
+        reservation_id: &str,
+        final_cost_micros: i64,
+    ) -> Result<bool, String> {
         if final_cost_micros < 0 {
             return Err("settle amount cannot be negative".to_string());
         }
@@ -160,23 +166,22 @@ impl BudgetManager {
         let mut state = self.state.lock().map_err(|_| "lock poisoned".to_string())?;
 
         let new_exposure = state.current_exposure_micros().checked_add(amount_micros);
-        if let Some(exposure) = new_exposure {
-            if exposure <= self.total_limit_micros {
-                state.settled_micros += amount_micros;
+        if let Some(exposure) = new_exposure
+            && exposure <= self.total_limit_micros
+        {
+            state.settled_micros += amount_micros;
 
-                if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-                {
-                    store.llm_cost_counter.add(
-                        amount_cents as u64,
-                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                    );
-                    store.mission_cost_cents.add(
-                        amount_cents as u64,
-                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                    );
-                }
-                return Ok(true);
+            if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                store.llm_cost_counter.add(
+                    amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+                store.mission_cost_cents.add(
+                    amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
             }
+            return Ok(true);
         }
         Ok(false)
     }
@@ -211,8 +216,7 @@ impl BudgetManager {
         let limit_threshold_micros = ((self.total_limit_micros as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_micros >= limit_threshold_micros
-            || exposure >= limit_threshold_micros
+        projected_micros >= limit_threshold_micros || exposure >= limit_threshold_micros
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
@@ -221,8 +225,9 @@ impl BudgetManager {
         }
         let state = self.state.lock().unwrap();
         let exposure = state.current_exposure_micros();
-        let limit_threshold_micros =
-            ((total_limit_cents as f64 * 10_000.0) * (self.alert_threshold_percent / 100.0)).round() as i64;
+        let limit_threshold_micros = ((total_limit_cents as f64 * 10_000.0)
+            * (self.alert_threshold_percent / 100.0))
+            .round() as i64;
         exposure >= limit_threshold_micros
     }
 
@@ -313,7 +318,8 @@ mod tests {
                 let manager = manager.clone();
                 std::thread::spawn(move || {
                     let task_id = format!("task_{}", i);
-                    if manager.reserve_micros(&task_id, 200_000).unwrap() { // reserve 20 cents
+                    if manager.reserve_micros(&task_id, 200_000).unwrap() {
+                        // reserve 20 cents
                         // settle for 10 cents
                         manager.settle_micros(&task_id, 100_000).unwrap();
                         1
