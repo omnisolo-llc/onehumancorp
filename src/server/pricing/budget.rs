@@ -1,9 +1,17 @@
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::Mutex;
+
+#[derive(Default)]
+struct BudgetState {
+    current_micros: i64,
+    in_flight_micros: i64,
+    emitted_telemetry_micros: i64,
+}
 
 pub struct BudgetManager {
     pub total_limit: f64,
     pub total_limit_cents: i64,
-    current: AtomicI64,
+    pub total_limit_micros: i64,
+    state: Mutex<BudgetState>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
@@ -12,17 +20,21 @@ pub struct BudgetManager {
 impl BudgetManager {
     pub fn new(limit: f64) -> Self {
         // Invalid limits fail closed; retain the explicit legacy MAX sentinel.
-        let total_limit_cents = if limit == f64::MAX {
-            i64::MAX
+        let (total_limit_cents, total_limit_micros) = if limit == f64::MAX {
+            (i64::MAX, i64::MAX)
         } else if !limit.is_finite() || limit < 0.0 || limit * 100.0 >= i64::MAX as f64 {
-            0
+            (0, 0)
         } else {
-            (limit * 100.0).round() as i64
+            (
+                (limit * 100.0).round() as i64,
+                (limit * 1_000_000.0).round() as i64,
+            )
         };
         BudgetManager {
             total_limit: limit,
-            current: AtomicI64::new(0),
+            state: Mutex::new(BudgetState::default()),
             total_limit_cents,
+            total_limit_micros,
             telemetry_store: None,
             tenant_id: None,
             alert_threshold_percent: 80.0,
@@ -63,6 +75,8 @@ impl BudgetManager {
             return Ok(self.get_remaining_cents() >= 0);
         }
 
+        let amount_micros = amount_cents.saturating_mul(10_000);
+
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
             tracing::info!(
                 "💰 Miser telemetry: Recording budget spend for tenant {}",
@@ -70,73 +84,142 @@ impl BudgetManager {
             ); // pii-safe
         }
 
-        // Atomic admission: reject overspend/overflow without changing state.
-        if self
-            .current
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_add(amount_cents)
-                    .filter(|next| *next <= self.total_limit_cents)
-            })
-            .is_err()
-        {
-            return Ok(false);
-        }
+        let mut state = self.state.lock().unwrap();
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0
-        {
-            store.llm_cost_counter.add(
-                amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-            store.mission_cost_cents.add(
-                amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-        }
+        if let Some(next) = state.current_micros.checked_add(amount_micros) {
+            if next <= self.total_limit_micros {
+                state.current_micros = next;
+                drop(state);
 
-        Ok(true)
+                if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                    store.llm_cost_counter.add(
+                        amount_cents as u64,
+                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                    );
+                    store.mission_cost_cents.add(
+                        amount_cents as u64,
+                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                    );
+                }
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     pub fn get_remaining(&self) -> f64 {
-        let current = self.current.load(Ordering::SeqCst);
-        (self.total_limit_cents - current) as f64 / 100.0
+        let state = self.state.lock().unwrap();
+        (self.total_limit_micros - state.current_micros) as f64 / 1_000_000.0
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.current.load(Ordering::SeqCst);
-        self.total_limit_cents - current
+        let state = self.state.lock().unwrap();
+        (self.total_limit_micros - state.current_micros) / 10_000
     }
 
     pub fn check_alert_threshold(&self) -> bool {
         if self.total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
-        let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
+        let state = self.state.lock().unwrap();
+        let usage_percent = (state.current_micros as f64 / self.total_limit_micros as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
+        let state = self.state.lock().unwrap();
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
+            return projected_cost_cents > 0 || state.current_micros > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
         projected_cost_cents >= limit_threshold_cents
-            || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
+            || (state.current_micros / 10_000) >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
         if total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let state = self.state.lock().unwrap();
         let limit_threshold_cents =
             ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
-        current >= limit_threshold_cents
+        (state.current_micros / 10_000) >= limit_threshold_cents
+    }
+
+    pub fn reserve(&self, amount_micros: i64) -> Result<bool, String> {
+        if amount_micros < 0 {
+            return Err("reserve amount cannot be negative".to_string());
+        }
+        if amount_micros == 0 {
+            return Ok(true);
+        }
+
+        let mut state = self.state.lock().unwrap();
+
+        if let Some(next_in_flight) = state.in_flight_micros.checked_add(amount_micros) {
+            if let Some(total) = state.current_micros.checked_add(next_in_flight) {
+                if total <= self.total_limit_micros {
+                    state.in_flight_micros = next_in_flight;
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
+    pub fn settle(&self, reserved_micros: i64, actual_micros: i64) -> Result<(), String> {
+        if reserved_micros < 0 || actual_micros < 0 {
+            return Err("settle amounts cannot be negative".to_string());
+        }
+
+        let mut state = self.state.lock().unwrap();
+
+        state.in_flight_micros = state.in_flight_micros.saturating_sub(reserved_micros);
+        if state.in_flight_micros < 0 {
+            state.in_flight_micros = 0;
+        }
+
+        if let Some(next_current) = state.current_micros.checked_add(actual_micros) {
+            state.current_micros = std::cmp::min(next_current, self.total_limit_micros);
+        } else {
+            state.current_micros = self.total_limit_micros;
+        }
+
+        // Handle telemetry for the actual_micros delta here.
+        // Convert the difference in cents that haven't been emitted yet.
+        let actual_cents = (state.current_micros - state.emitted_telemetry_micros) / 10_000;
+
+        if actual_cents > 0 {
+            state.emitted_telemetry_micros += actual_cents * 10_000;
+            drop(state);
+
+            if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                store.llm_cost_counter.add(
+                    actual_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+                store.mission_cost_cents.add(
+                    actual_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn release(&self, amount_micros: i64) -> Result<(), String> {
+        if amount_micros < 0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+        let mut state = self.state.lock().unwrap();
+        state.in_flight_micros = state.in_flight_micros.saturating_sub(amount_micros);
+        if state.in_flight_micros < 0 {
+            state.in_flight_micros = 0;
+        }
+        Ok(())
     }
 
     pub fn is_spend_rate_too_high(
@@ -147,16 +230,59 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
-        let expected_spend = (self.total_limit_cents as f64)
+        let state = self.state.lock().unwrap();
+        let expected_spend = (self.total_limit_micros as f64)
             * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
-        current as f64 > expected_spend * 1.5 // 50% higher than expected rate
+        state.current_micros as f64 > expected_spend * 1.5 // 50% higher than expected rate
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_reserve_settle_release() {
+        let manager = BudgetManager::new(1.0); // $1 = 1,000,000 micros
+
+        // Successful reserve
+        assert!(manager.reserve(100_000).unwrap());
+
+        // Cannot exceed limit with new reserve
+        assert!(!manager.reserve(1_000_000).unwrap());
+
+        // Release some
+        manager.release(50_000).unwrap();
+
+        // Settle the rest
+        manager.settle(50_000, 40_000).unwrap(); // Expected $0.04 to be charged
+
+        assert_eq!(manager.get_remaining_cents(), 96); // $1.00 - $0.04 = $0.96 (96 cents)
+    }
+
+    #[test]
+    fn concurrent_reserve_settle_never_exceeds_limit() {
+        let manager = std::sync::Arc::new(BudgetManager::new(1.0)); // 1,000,000 micros = 100 cents
+        let workers: Vec<_> = (0..32)
+            .map(|_| {
+                let manager = manager.clone();
+                std::thread::spawn(move || {
+                    if manager.reserve(100_000).unwrap() { // 10 cents
+                        manager.settle(100_000, 100_000).unwrap();
+                        1_usize
+                    } else {
+                        0_usize
+                    }
+                })
+            })
+            .collect();
+        let admitted = workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap())
+            .sum::<usize>();
+        assert_eq!(admitted, 10);
+        assert_eq!(manager.get_remaining_cents(), 0);
+    }
 
     #[test]
     fn concurrent_admission_never_exceeds_limit() {
