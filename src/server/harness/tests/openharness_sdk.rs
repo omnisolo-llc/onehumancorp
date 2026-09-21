@@ -506,7 +506,7 @@ for line in sys.stdin:
     config
         .environment
         .insert("HOME".to_owned(), "/must/not/be-used".to_owned());
-    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap_or_else(|e| panic!("Spawn failed: {:?}", e));
+    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap();
     let snapshot: serde_json::Value = loop {
         if let Ok(contents) = fs::read_to_string(&record)
             && let Ok(snapshot) = serde_json::from_str(&contents)
@@ -552,12 +552,12 @@ for line in sys.stdin:
     // Leave enough headroom for the child process to acknowledge the prompt
     // under a parallel test load while keeping the runtime's own event wait
     // shorter than the outer assertion timeout.
-    let mut config = fake_runtime_config(script, Duration::from_millis(2000));
+    let mut config = fake_runtime_config(script, Duration::from_millis(3000));
     config.environment.insert(
         "RECORD_PATH".to_owned(),
         record.to_string_lossy().into_owned(),
     );
-    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap_or_else(|e| panic!("Spawn failed: {:?}", e));
+    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap();
     runtime
         .prompt(OpenHarnessCommand::prompt_with_resolved_model(
             "timeout-prompt",
@@ -569,7 +569,7 @@ for line in sys.stdin:
         ))
         .await
         .unwrap();
-    let outcome = tokio::time::timeout(Duration::from_secs(4), runtime.next_event()).await;
+    let outcome = tokio::time::timeout(Duration::from_secs(5), runtime.next_event()).await;
     let error = outcome
         .expect("next_event must have its own timeout")
         .unwrap_err();
@@ -616,7 +616,7 @@ for line in sys.stdin:
         "RECORD_PATH".to_owned(),
         record.to_string_lossy().into_owned(),
     );
-    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap_or_else(|e| panic!("Spawn failed: {:?}", e));
+    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap();
     let stream = runtime
         .prompt_stream(OpenHarnessCommand::prompt_with_resolved_model(
             "drop-prompt",
@@ -688,7 +688,7 @@ for line in sys.stdin:
     assert!(!debug.contains("runtime-debug-secret-canary"));
     assert!(!debug.contains(script));
 
-    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap_or_else(|e| panic!("Spawn failed: {:?}", e));
+    let runtime = OpenHarnessRuntime::spawn(config).await.unwrap();
     let created = runtime
         .request(OpenHarnessCommand::create_session("create-runtime"))
         .await

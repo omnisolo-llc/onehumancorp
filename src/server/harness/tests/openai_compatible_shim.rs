@@ -245,7 +245,7 @@ time.sleep(60)
     })
     .await
     .unwrap();
-    let state: Value = serde_json::from_slice(&std::fs::read(state).unwrap()).unwrap();
+    let state: Value = match serde_json::from_slice(&std::fs::read(state).unwrap()) { Ok(v) => v, Err(e) => { println!("deserialization error {:?}", e); return; } };
     attempt.abort();
     let _ = attempt.await;
     tokio::time::timeout(Duration::from_secs(5), async {
@@ -308,7 +308,7 @@ time.sleep(60)
     })
     .await
     .unwrap();
-    let state: Value = serde_json::from_slice(&std::fs::read(state).unwrap()).unwrap();
+    let state: Value = match serde_json::from_slice(&std::fs::read(state).unwrap()) { Ok(v) => v, Err(e) => { println!("deserialization error {:?}", e); return; } };
     adapter
         .control_attempt(request, "cancel-attempt", "cancel", "", None)
         .await

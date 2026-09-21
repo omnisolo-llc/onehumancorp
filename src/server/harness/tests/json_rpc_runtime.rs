@@ -213,7 +213,7 @@ async fn runtime_reports_failed_requests_and_unknown_server_responses() {
     .unwrap();
     assert!(matches!(
         failed.request("denied", serde_json::Value::Null).await,
-        Err(JsonRpcError::RequestFailed(_))
+        Err(JsonRpcError::RequestFailed(JsonRpcErrorObject { code: -32001, message, data: Some(_) })) if message == "denied"
     ));
 
     let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell("exit 0"))
