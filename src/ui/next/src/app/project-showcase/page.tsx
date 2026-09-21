@@ -162,6 +162,7 @@ export default function ProjectShowcasePage() {
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
+                  aria-label="Remove Powered by OmniSolo badge"
                   className="sr-only peer"
                   checked={removeBranding}
                   onChange={handleBrandingToggle}
