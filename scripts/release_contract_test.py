@@ -5,10 +5,22 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import sys
+try:
+    import yaml
+    has_yaml = True
+except ImportError:
+    has_yaml = False
+import sys
+try:
+    import yaml
+except ImportError:
+    pass
 
 SCRIPT = Path(__file__).with_name('release_contract.py')
 
 
+@unittest.skipIf(not has_yaml, 'pyyaml not installed')
 class ReleaseContractTests(unittest.TestCase):
     def setUp(self):
         self.assertTrue(SCRIPT.is_file(), 'shared release contract must exist')
@@ -154,10 +166,8 @@ class ReleaseContractTests(unittest.TestCase):
             self.contract.check_publication(value, denied)
 
     def test_actual_workflow_matrix_and_publish_dependencies_match_the_contract(self):
-        try:
-            import yaml
-        except ImportError:
-            return self.skipTest("pyyaml not installed")
+        if 'yaml' not in sys.modules:
+            return self.skipTest('pyyaml not installed')
         root = SCRIPT.parent.parent
         workflow = yaml.safe_load((root / '.github/workflows/release.yml').read_text())
         jobs = workflow['jobs']

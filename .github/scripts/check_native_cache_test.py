@@ -8,15 +8,18 @@ import subprocess
 import tempfile
 import tomllib
 import unittest
-
+import sys
 try:
-            import yaml
-        except ImportError:
-            return self.skipTest("pyyaml not installed")
+    import yaml
+    has_yaml = True
+except ImportError:
+    has_yaml = False
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@unittest.skipIf(not has_yaml, 'pyyaml not installed')
 class NativeCacheTests(unittest.TestCase):
     def setUp(self):
         self.action = yaml.safe_load((ROOT / '.github/actions/setup-native/action.yml').read_text())
