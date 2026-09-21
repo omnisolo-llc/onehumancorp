@@ -490,8 +490,10 @@ mod tests {
 
     #[tokio::test]
     async fn cancel_event_rejects_empty_event_id() {
-        let client =
-            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), "http://localhost".to_string());
+        let client = RealGoogleCalendarClient::with_base_url_for_test(
+            "valid-token".to_string(),
+            "http://localhost".to_string(),
+        );
 
         let result = client.cancel_event("   ").await;
         assert_eq!(result.unwrap_err(), "Event ID cannot be empty");
@@ -513,6 +515,9 @@ mod tests {
 
         let result = client.cancel_event("calendar-event-123").await;
 
-        assert_eq!(result.unwrap_err(), "Google Calendar API error: 500 Internal Server Error");
+        assert_eq!(
+            result.unwrap_err(),
+            "Google Calendar API error: 500 Internal Server Error"
+        );
     }
 }

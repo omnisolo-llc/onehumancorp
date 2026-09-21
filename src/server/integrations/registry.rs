@@ -183,7 +183,6 @@ impl Default for IntegrationsRegistry {
     fn default() -> Self {
         Self::new()
     }
-
 }
 
 impl IntegrationsRegistry {
@@ -903,16 +902,17 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn cancel_event(
-        &self,
-        integration_id: &str,
-        event_id: &str,
-    ) -> Result<(), String> {
-        if integration_id == "google_calendar" {
-            let clients = self.google_calendar_clients.read().unwrap();
-            if let Some(c) = clients.get(integration_id).cloned() {
-                return c.cancel_event(event_id).await;
+    pub async fn cancel_event(&self, integration_id: &str, event_id: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "google_calendar" {
+                let clients = self.google_calendar_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
             }
+        };
+        if let Some(c) = client {
+            return c.cancel_event(event_id).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -1174,11 +1174,16 @@ impl IntegrationsRegistry {
     }
 
     pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
-        if integration_id == "google_calendar" {
-            let clients = self.google_calendar_clients.read().unwrap();
-            if let Some(c) = clients.get(integration_id).cloned() {
-                return c.handle_webhook(payload).await;
+        let google_cal_client = {
+            if integration_id == "google_calendar" {
+                let clients = self.google_calendar_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
             }
+        };
+        if let Some(c) = google_cal_client {
+            return c.handle_webhook(payload).await;
         }
 
         let client = {
@@ -1571,7 +1576,9 @@ mod tests {
     #[tokio::test]
     async fn test_google_calendar_cancel_event_dispatch() {
         let registry = IntegrationsRegistry::new();
-        let res = registry.cancel_event("unknown_integration", "event-123").await;
+        let res = registry
+            .cancel_event("unknown_integration", "event-123")
+            .await;
         assert_eq!(res.unwrap_err(), "integration not found or not supported");
     }
 
