@@ -75,14 +75,14 @@ async fn create_checkout_session(
     // 1. Fetch service info to get deposit requirements
     let service_res = match &state.db.store {
         DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, requires_deposit, deposit_amount_cents FROM services WHERE id = ? AND tenant_id = ?")
+            sqlx::query("SELECT id, metadata FROM products WHERE id = ? AND tenant_id = ?")
                 .bind(&payload.service_id).bind(&tenant_id)
                 .fetch_optional(pool).await
         }
         DbStore::Postgres(pool) => {
             let mut tx = pool.begin().await.unwrap();
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-            let result = sqlx::query("SELECT id, requires_deposit, deposit_amount_cents FROM services WHERE id = $1 AND tenant_id = $2")
+            let result = sqlx::query("SELECT id, metadata FROM products WHERE id = $1 AND tenant_id = $2")
                 .bind(&payload.service_id).bind(&tenant_id)
                 .fetch_optional(&mut *tx).await;
             let _ = tx.commit().await;
@@ -92,9 +92,9 @@ async fn create_checkout_session(
 
     let (requires_deposit, deposit_cents) = match service_res {
         Ok(Some(s)) => {
-            // Need to handle missing columns for sqlite grace
-            let req_dep: bool = s.try_get("requires_deposit").unwrap_or(false);
-            let dep_amt: i64 = s.try_get("deposit_amount_cents").unwrap_or(0);
+            let metadata: serde_json::Value = s.try_get("metadata").unwrap_or_else(|_| serde_json::json!({}));
+            let req_dep: bool = metadata.get("requires_deposit").and_then(|v| v.as_bool()).unwrap_or(false);
+            let dep_amt: i64 = metadata.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
             (req_dep, dep_amt)
         }
         Ok(None) => return (StatusCode::NOT_FOUND, Json(serde_json::json!({"error": "service not found"}))).into_response(),
