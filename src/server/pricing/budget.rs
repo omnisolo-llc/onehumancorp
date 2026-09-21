@@ -1,9 +1,14 @@
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::Mutex;
+
+pub struct BudgetState {
+    pub current: i64,
+    pub allocated: i64,
+}
 
 pub struct BudgetManager {
     pub total_limit: f64,
     pub total_limit_cents: i64,
-    current: AtomicI64,
+    state: Mutex<BudgetState>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
@@ -21,7 +26,10 @@ impl BudgetManager {
         };
         BudgetManager {
             total_limit: limit,
-            current: AtomicI64::new(0),
+            state: Mutex::new(BudgetState {
+                current: 0,
+                allocated: 0,
+            }),
             total_limit_cents,
             telemetry_store: None,
             tenant_id: None,
@@ -70,17 +78,17 @@ impl BudgetManager {
             ); // pii-safe
         }
 
-        // Atomic admission: reject overspend/overflow without changing state.
-        if self
-            .current
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_add(amount_cents)
-                    .filter(|next| *next <= self.total_limit_cents)
-            })
-            .is_err()
         {
-            return Ok(false);
+            let mut state = self.state.lock().unwrap();
+            let next_total = state
+                .current
+                .checked_add(state.allocated)
+                .and_then(|t| t.checked_add(amount_cents));
+
+            if next_total.is_none() || next_total.unwrap() > self.total_limit_cents {
+                return Ok(false);
+            }
+            state.current += amount_cents;
         }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
@@ -99,44 +107,105 @@ impl BudgetManager {
         Ok(true)
     }
 
+    pub fn reserve_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("reserve amount cannot be negative".to_string());
+        }
+        if amount_cents == 0 {
+            return Ok(self.get_remaining_cents() >= 0);
+        }
+
+        let mut state = self.state.lock().unwrap();
+        let next_total = state
+            .current
+            .checked_add(state.allocated)
+            .and_then(|t| t.checked_add(amount_cents));
+
+        if next_total.is_none() || next_total.unwrap() > self.total_limit_cents {
+            return Ok(false);
+        }
+        state.allocated += amount_cents;
+        Ok(true)
+    }
+
+    pub fn settle_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("settle amount cannot be negative".to_string());
+        }
+
+        let mut state = self.state.lock().unwrap();
+        state.allocated = std::cmp::max(0, state.allocated - amount_cents);
+        state.current = state.current.saturating_add(amount_cents);
+
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+            && amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+        }
+
+        Ok(true)
+    }
+
+    pub fn release_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("release amount cannot be negative".to_string());
+        }
+
+        let mut state = self.state.lock().unwrap();
+        state.allocated = std::cmp::max(0, state.allocated - amount_cents);
+        Ok(true)
+    }
+
     pub fn get_remaining(&self) -> f64 {
-        let current = self.current.load(Ordering::SeqCst);
-        (self.total_limit_cents - current) as f64 / 100.0
+        let state = self.state.lock().unwrap();
+        let total_used = state.current.saturating_add(state.allocated);
+        (self.total_limit_cents - total_used) as f64 / 100.0
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.current.load(Ordering::SeqCst);
-        self.total_limit_cents - current
+        let state = self.state.lock().unwrap();
+        let total_used = state.current.saturating_add(state.allocated);
+        self.total_limit_cents - total_used
     }
 
     pub fn check_alert_threshold(&self) -> bool {
         if self.total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
-        let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
+        let state = self.state.lock().unwrap();
+        let total_used = state.current.saturating_add(state.allocated);
+        let usage_percent = (total_used as f64 / self.total_limit_cents as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
+        let state = self.state.lock().unwrap();
+        let total_used = state.current.saturating_add(state.allocated);
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
+            return projected_cost_cents > 0 || total_used > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || total_used >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
         if total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let state = self.state.lock().unwrap();
+        let total_used = state.current.saturating_add(state.allocated);
         let limit_threshold_cents =
             ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
-        current >= limit_threshold_cents
+        total_used >= limit_threshold_cents
     }
 
     pub fn is_spend_rate_too_high(
@@ -147,10 +216,11 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let state = self.state.lock().unwrap();
+        let total_used = state.current.saturating_add(state.allocated);
         let expected_spend = (self.total_limit_cents as f64)
             * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
-        current as f64 > expected_spend * 1.5 // 50% higher than expected rate
+        total_used as f64 > expected_spend * 1.5 // 50% higher than expected rate
     }
 }
 
@@ -164,7 +234,14 @@ mod tests {
         let workers: Vec<_> = (0..32)
             .map(|_| {
                 let manager = manager.clone();
-                std::thread::spawn(move || manager.record_spend_cents(10).unwrap())
+                std::thread::spawn(move || {
+                    if manager.reserve_cents(10).unwrap() {
+                        manager.settle_cents(10).unwrap();
+                        true
+                    } else {
+                        false
+                    }
+                })
             })
             .collect();
         let admitted = workers
@@ -173,6 +250,54 @@ mod tests {
             .sum::<usize>();
         assert_eq!(admitted, 10);
         assert_eq!(manager.get_remaining_cents(), 0);
+    }
+
+    #[test]
+    fn test_reserve_cents() {
+        let manager = BudgetManager::new(10.0);
+        assert!(manager.reserve_cents(500).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 500);
+
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.allocated, 500);
+        assert_eq!(state.current, 0);
+        drop(state);
+
+        assert!(manager.reserve_cents(500).unwrap());
+        assert_eq!(manager.get_remaining_cents(), 0);
+
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.allocated, 1000);
+        assert_eq!(state.current, 0);
+        drop(state);
+
+        assert!(!manager.reserve_cents(1).unwrap());
+    }
+
+    #[test]
+    fn test_settle_cents() {
+        let manager = BudgetManager::new(10.0);
+        assert!(manager.reserve_cents(500).unwrap());
+        assert!(manager.settle_cents(500).unwrap());
+
+        assert_eq!(manager.get_remaining_cents(), 500);
+
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.allocated, 0);
+        assert_eq!(state.current, 500);
+    }
+
+    #[test]
+    fn test_release_cents() {
+        let manager = BudgetManager::new(10.0);
+        assert!(manager.reserve_cents(500).unwrap());
+        assert!(manager.release_cents(500).unwrap());
+
+        assert_eq!(manager.get_remaining_cents(), 1000);
+
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.allocated, 0);
+        assert_eq!(state.current, 0);
     }
 
     #[test]
