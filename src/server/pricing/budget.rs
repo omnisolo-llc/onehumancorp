@@ -138,7 +138,7 @@ impl BudgetManager {
         if state
             .total_allocated
             .checked_add(amount_cents)
-            .map_or(true, |next| next > self.total_limit_cents)
+            .is_none_or(|next| next > self.total_limit_cents)
         {
             return Ok(None);
         }
@@ -156,13 +156,13 @@ impl BudgetManager {
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
-        if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            if amount_cents > 0 {
-                tracing::info!(
-                    "💰 Miser telemetry: Recording budget spend for tenant {}",
-                    tid
-                ); // pii-safe
-            }
+        if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+            && amount_cents > 0
+        {
+            tracing::info!(
+                "💰 Miser telemetry: Recording budget spend for tenant {}",
+                tid
+            ); // pii-safe
         }
 
         match self.reserve_cents(amount_cents)? {
