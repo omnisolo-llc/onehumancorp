@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Agent Marketplace E2E', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/agent-marketplace');
-    await expect(page.locator('h1')).toHaveText('Agent Marketplace');
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Agent Marketplace', exact: true })).toBeVisible();
   });
 
   test('Page load and initial agents visible', async ({ page }) => {
