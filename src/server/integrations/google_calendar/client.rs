@@ -20,6 +20,7 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String>;
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -30,18 +31,26 @@ pub struct RealGoogleCalendarClient {
 
 impl RealGoogleCalendarClient {
     pub fn new(access_token: String) -> Self {
+        let http_client = Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| Client::new());
         Self {
             access_token,
-            http_client: Client::new(),
+            http_client,
             base_url: "https://www.googleapis.com".to_string(),
         }
     }
 
     #[cfg(test)]
     fn with_base_url_for_test(access_token: String, base_url: String) -> Self {
+        let http_client = Client::builder()
+            .timeout(std::time::Duration::from_secs(5))
+            .build()
+            .unwrap_or_else(|_| Client::new());
         Self {
             access_token,
-            http_client: Client::new(),
+            http_client,
             base_url,
         }
     }
@@ -192,6 +201,29 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         .await
                         .map_err(|e| format!("Google Calendar API response parse error: {}", e))?;
                     created_event_reference(&json)
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
+        let url = self.calendar_api_url(&format!("calendars/primary/events/{}", event_id));
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .delete(url)
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    Ok(())
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
@@ -443,5 +475,80 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events[0]["start"], "2026-07-21T09:00:00Z");
         assert_eq!(events[0]["end"], "2026-07-21T10:00:00Z");
+    }
+
+    #[tokio::test]
+    async fn cancel_event_sends_delete_request() {
+        let response = "";
+        let (base_url, request_rx) = start_google_calendar_server(response).await;
+        let client = RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        client.cancel_event("test-event-123").await.unwrap();
+
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/test-event-123 HTTP/1.1"));
+        assert!(request.contains("authorization: Bearer valid-token") || request.contains("Authorization: Bearer valid-token"));
+    }
+
+    #[tokio::test]
+    async fn cancel_event_handles_unauthorized_error() {
+        let (request_tx, request_rx) = oneshot::channel();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            let mut buffer = [0_u8; 1024];
+            let read = stream.read(&mut buffer).await.unwrap();
+            request.extend_from_slice(&buffer[..read]);
+
+            let response_body = r#"{"error":{"code":401,"message":"Request is missing required authentication credential."}}"#;
+            let response = format!(
+                "HTTP/1.1 401 Unauthorized\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                response_body.len(),
+                response_body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+        });
+
+        let client = RealGoogleCalendarClient::with_base_url_for_test("invalid-token".to_string(), base_url);
+
+        let error = client.cancel_event("test-event-123").await.unwrap_err();
+        assert_eq!(error, "Google Calendar API error: 401 Unauthorized");
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/test-event-123 HTTP/1.1"));
+    }
+
+    #[tokio::test]
+    async fn cancel_event_handles_not_found_error() {
+        let (request_tx, request_rx) = oneshot::channel();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            let mut buffer = [0_u8; 1024];
+            let read = stream.read(&mut buffer).await.unwrap();
+            request.extend_from_slice(&buffer[..read]);
+
+            let response_body = r#"{"error":{"code":404,"message":"Not Found"}}"#;
+            let response = format!(
+                "HTTP/1.1 404 Not Found\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                response_body.len(),
+                response_body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+        });
+
+        let client = RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let error = client.cancel_event("nonexistent-event").await.unwrap_err();
+        assert_eq!(error, "Google Calendar API error: 404 Not Found");
+        let request = request_rx.await.unwrap();
+        assert!(request.starts_with("DELETE /calendar/v3/calendars/primary/events/nonexistent-event HTTP/1.1"));
     }
 }
