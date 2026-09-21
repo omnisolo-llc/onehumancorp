@@ -907,7 +907,7 @@ export default function OnboardingWizard() {
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div
                   id="chat-messages"
-                  className="glass-control translucent-glass-light dark:translucent-glass-dark flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
+                  className="translucent-glass-light dark:translucent-glass-dark flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
                 >
                   {chatMessages.length === 0 && (
                     <div className="mb-2">
