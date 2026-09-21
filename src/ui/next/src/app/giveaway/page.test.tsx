@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import GiveawayPage from './page';
 
@@ -24,7 +24,9 @@ describe('GiveawayPage', () => {
     render(<GiveawayPage />);
 
     const titleInput = screen.getByPlaceholderText('e.g. Win a $100 Gift Card!');
-    fireEvent.change(titleInput, { target: { value: 'Win a New Car!' } });
+    act(() => {
+      fireEvent.change(titleInput, { target: { value: 'Win a New Car!' } });
+    });
 
     const textElements = screen.getAllByText('Win a New Car!');
     expect(textElements.length).toBeGreaterThan(0);
@@ -34,7 +36,9 @@ describe('GiveawayPage', () => {
     render(<GiveawayPage />);
 
     const removeBrandingCheckbox = document.getElementById('removeBranding') as HTMLInputElement;
-    fireEvent.click(removeBrandingCheckbox);
+    act(() => {
+      fireEvent.click(removeBrandingCheckbox);
+    });
 
     await waitFor(() => {
         expect(screen.getAllByText('Upgrade to Pro')[0]).toBeDefined();

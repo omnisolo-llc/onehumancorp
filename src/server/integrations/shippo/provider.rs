@@ -58,7 +58,6 @@ impl ShippoProvider {
     ) -> Result<PurchaseLabelResponse, String> {
         let response = self.purchase_label(rate_id).await?;
 
-        // Actually email the tracking number to the customer
         if !email.is_empty() {
             let body = format!("Your package has been shipped via {}! Tracking number: {}. You can track it here: {}", response.carrier, response.tracking_number, response.label_url);
             tracing::info!("Sending email to {}: {}", email, body);

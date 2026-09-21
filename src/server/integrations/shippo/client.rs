@@ -334,8 +334,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_wiremock_purchase_label_success() {
-        use wiremock::{MockServer, Mock, ResponseTemplate};
         use wiremock::matchers::{method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
 
         let mock_server = MockServer::start().await;
 
@@ -355,15 +355,18 @@ mod tests {
         let res = client.purchase_label("valid_rate_id").await.unwrap();
 
         assert!(res.success);
-        assert_eq!(res.label_url, "https://shippo-delivery.s3.amazonaws.com/label.pdf");
+        assert_eq!(
+            res.label_url,
+            "https://shippo-delivery.s3.amazonaws.com/label.pdf"
+        );
         assert_eq!(res.tracking_number, "1Z9999999999999999");
         assert_eq!(res.carrier, "UPS");
     }
 
     #[tokio::test]
     async fn test_wiremock_register_webhook_success() {
-        use wiremock::{MockServer, Mock, ResponseTemplate};
         use wiremock::matchers::{method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
 
         let mock_server = MockServer::start().await;
 
