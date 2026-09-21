@@ -4,7 +4,8 @@ import { isRecord, recordOrEmpty } from '@/lib/records';
 import type { Step } from '@/components/Walkthrough';
 type ResourceData = Record<string, unknown> & { settings?: { observationMasking?: boolean } };
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
 import styles from './assistant.module.css';
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
@@ -146,11 +147,27 @@ function SectionButton({
   );
 }
 
+function sectionFromPanel(panel: string | null): Section {
+  return sections.find(([id]) => id === panel)?.[0] ?? 'tasks';
+}
+
 export default function AssistantPage() {
+  return (
+    <Suspense fallback={<p role="status">Loading assistant...</p>}>
+      <AssistantWorkspace />
+    </Suspense>
+  );
+}
+
+function AssistantWorkspace() {
+  const panel = useSearchParams().get('panel');
   const [tasks, setTasks] = useState<AssistantTask[]>([]);
   const [capabilities, setCapabilities] = useState<Required<AssistantCapabilities>>(fallbackCapabilities);
   const [activeTaskId, setActiveTaskId] = useState('');
-  const [section, setSection] = useState<Section>('tasks');
+  const [section, setSection] = useState<Section>(() => sectionFromPanel(panel));
+
+  // Observe query navigation, without resetting section clicks on every render.
+  useEffect(() => { setSection(sectionFromPanel(panel)); }, [panel]);
   const [resultTab, setResultTab] = useState<ResultTab>('Artifacts');
   const [taskSearch, setTaskSearch] = useState('');
   const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | AssistantTaskStatus>('all');
