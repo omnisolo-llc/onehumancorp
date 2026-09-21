@@ -3995,14 +3995,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .with_state(webhook_state);
 
-    let google_calendar_webhook_state = api::integrations_google_calendar_webhook::GoogleCalendarWebhookState {
-        db: (*db).clone(),
-        redis_client: raw_redis_client.clone(),
-    };
+    let google_calendar_webhook_state =
+        api::integrations_google_calendar_webhook::GoogleCalendarWebhookState {
+            db: (*db).clone(),
+            redis_client: raw_redis_client.clone(),
+        };
     let google_calendar_webhook_router = axum::Router::new()
         .route(
             "/api/v1/integrations/google-calendar/webhook",
-            axum::routing::post(api::integrations_google_calendar_webhook::google_calendar_webhook_handler),
+            axum::routing::post(
+                api::integrations_google_calendar_webhook::google_calendar_webhook_handler,
+            ),
         )
         .with_state(google_calendar_webhook_state);
 

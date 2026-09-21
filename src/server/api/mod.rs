@@ -16,13 +16,13 @@ pub mod billing_api;
 #[cfg(test)]
 pub mod billing_api_test;
 pub mod billing_webhook;
-pub mod integrations_google_calendar_webhook;
 #[cfg(test)]
 pub mod billing_webhook_test;
 pub mod chaos;
 pub mod dynamic_workflows;
 pub mod growth;
 pub mod health;
+pub mod integrations_google_calendar_webhook;
 pub mod onboarding;
 pub mod syndication_handler;
 pub mod telemetry;

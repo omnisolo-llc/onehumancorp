@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json},
+    extract::{Json, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
@@ -16,10 +16,18 @@ pub async fn google_calendar_webhook_handler(
     headers: HeaderMap,
     Json(_payload): Json<Value>,
 ) -> impl IntoResponse {
-    let channel_id = headers.get("x-goog-channel-id").and_then(|h| h.to_str().ok());
-    let resource_id = headers.get("x-goog-resource-id").and_then(|h| h.to_str().ok());
-    let resource_state = headers.get("x-goog-resource-state").and_then(|h| h.to_str().ok());
-    let message_number = headers.get("x-goog-message-number").and_then(|h| h.to_str().ok());
+    let channel_id = headers
+        .get("x-goog-channel-id")
+        .and_then(|h| h.to_str().ok());
+    let resource_id = headers
+        .get("x-goog-resource-id")
+        .and_then(|h| h.to_str().ok());
+    let resource_state = headers
+        .get("x-goog-resource-state")
+        .and_then(|h| h.to_str().ok());
+    let message_number = headers
+        .get("x-goog-message-number")
+        .and_then(|h| h.to_str().ok());
 
     if channel_id.is_none() || resource_id.is_none() {
         return StatusCode::FORBIDDEN;
@@ -42,7 +50,10 @@ pub async fn google_calendar_webhook_handler(
     }
 
     // Deduplicate using message number
-    let redis_key = format!("webhook:google_calendar:message_number:{}:{}", channel_id, message_number);
+    let redis_key = format!(
+        "webhook:google_calendar:message_number:{}:{}",
+        channel_id, message_number
+    );
     let mut conn = match state.redis_client.get_multiplexed_async_connection().await {
         Ok(c) => c,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
@@ -63,10 +74,10 @@ pub async fn google_calendar_webhook_handler(
         return StatusCode::NO_CONTENT;
     }
 
-    if let Some(res_state) = resource_state {
-        if res_state == "sync" || res_state == "exists" {
-            // Acknowledge the sync/exists notification
-        }
+    if let Some(res_state) = resource_state
+        && (res_state == "sync" || res_state == "exists")
+    {
+        // Acknowledge the sync/exists notification
     }
 
     // Enqueue a background synchronization job
@@ -82,7 +93,6 @@ pub async fn google_calendar_webhook_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::HeaderValue;
     use axum::response::IntoResponse;
 
     #[tokio::test]
@@ -92,13 +102,10 @@ mod tests {
         let state = GoogleCalendarWebhookState { db, redis_client };
         let headers = HeaderMap::new();
 
-        let response = google_calendar_webhook_handler(
-            State(state),
-            headers,
-            Json(serde_json::json!({})),
-        )
-        .await
-        .into_response();
+        let response =
+            google_calendar_webhook_handler(State(state), headers, Json(serde_json::json!({})))
+                .await
+                .into_response();
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
