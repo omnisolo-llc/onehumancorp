@@ -26,9 +26,10 @@ pub struct BudgetReservation {
 impl Drop for BudgetReservation {
     fn drop(&mut self) {
         if !self.is_settled
-            && let Ok(mut state) = self.state.lock() {
-                state.total_allocated_cents -= self.amount_cents;
-            }
+            && let Ok(mut state) = self.state.lock()
+        {
+            state.total_allocated_cents -= self.amount_cents;
+        }
     }
 }
 
@@ -41,16 +42,17 @@ impl BudgetReservation {
         }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && self.amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    self.amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    self.amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+            && self.amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                self.amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                self.amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+        }
     }
 }
 
@@ -98,26 +100,28 @@ impl BudgetManager {
 
         // Overflow checks and limit check
         if let Some(next) = state.total_allocated_cents.checked_add(amount_cents)
-            && next <= self.total_limit_cents {
-                state.total_allocated_cents = next;
-                let reservation = BudgetReservation {
-                    amount_cents,
-                    state: self.state.clone(),
-                    telemetry_store: self.telemetry_store.clone(),
-                    tenant_id: self.tenant_id.clone(),
-                    is_settled: false,
-                };
+            && next <= self.total_limit_cents
+        {
+            state.total_allocated_cents = next;
+            let reservation = BudgetReservation {
+                amount_cents,
+                state: self.state.clone(),
+                telemetry_store: self.telemetry_store.clone(),
+                tenant_id: self.tenant_id.clone(),
+                is_settled: false,
+            };
 
-                if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-                    && amount_cents > 0 {
-                        tracing::info!(
-                            "💰 Miser telemetry: Recording budget spend for tenant {}",
-                            tid
-                        ); // pii-safe
-                    }
-
-                return Ok(reservation);
+            if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+                && amount_cents > 0
+            {
+                tracing::info!(
+                    "💰 Miser telemetry: Recording budget spend for tenant {}",
+                    tid
+                ); // pii-safe
             }
+
+            return Ok(reservation);
+        }
 
         Err("budget limit exceeded or amount overflow".to_string())
     }
