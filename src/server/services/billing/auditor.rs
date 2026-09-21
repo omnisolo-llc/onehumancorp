@@ -380,29 +380,6 @@ impl CostAuditor {
         (*total_cost * 100.0).round() as i64
     }
 
-    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
-        let agent_costs = self.agent_costs.lock().unwrap();
-        let agent_revenues = self.agent_revenues.lock().unwrap();
-        let agent_tokens = self.agent_tokens.lock().unwrap();
-        let agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
-        let mut result = Vec::new();
-        for (agent_id, cost) in agent_costs.iter() {
-            let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
-            let tokens = agent_tokens.get(agent_id).unwrap_or(&0);
-            let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
-            let roi = self.calculate_roi(*cost, *revenue);
-            let efficiency = self.calculate_efficiency(*cost, *tokens);
-            result.push((
-                agent_id.clone(),
-                *cost,
-                *tokens,
-                roi,
-                efficiency,
-                *storage_bytes,
-            ));
-        }
-        result
-    }
 
     /// Snapshot only the authenticated tenant, including when agent IDs collide.
     /// Legacy global snapshots are operator telemetry and must not serve tenants.

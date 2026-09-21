@@ -101,6 +101,51 @@ async fn tenant_summary_isolates_identical_agent_ids() {
 }
 
 #[tokio::test]
+async fn tenant_isolation_concurrent_usage_and_reporting() {
+    let auditor = Arc::new(CostAuditor::new(config()));
+    let service = MyBillingService::new(auditor.clone());
+    let mut handles = Vec::new();
+
+    for i in 0..50 {
+        let svc = service.clone();
+        handles.push(tokio::spawn(async move {
+            let tenant = format!("tenant-{}", i % 5);
+            let agent = format!("agent-{}", i % 2);
+            let mut u = usage(&tenant, 10);
+            u.agent_id = agent.clone();
+            svc.track_token_usage(authenticated(u, &tenant)).await.unwrap();
+        }));
+    }
+
+    for h in handles {
+        h.await.unwrap();
+    }
+
+    // Since we spawned 50 tasks across 5 tenants, each tenant should get exactly 10 requests.
+    // Each request tracks 10 input tokens, so 10 * 10 = 100 total input tokens per tenant.
+    // Cost config: 0.001 per input token. 100 * 0.001 = 0.1 total cost per tenant.
+    for i in 0..5 {
+        let tenant = format!("tenant-{}", i);
+        let response = service
+            .get_cost_summary(authenticated(usage(&tenant, 0), &tenant))
+            .await
+            .unwrap()
+            .into_inner();
+
+        assert_eq!(response.organization_id, tenant);
+        assert_eq!(response.total_tokens, 100);
+        // Using approximate equality for f64 math
+        assert!((response.total_cost_usd - 0.1).abs() < f64::EPSILON);
+        assert_eq!(response.agents.len(), 2);
+
+        for agent_summary in response.agents {
+            assert_eq!(agent_summary.token_used, 50); // 5 requests per agent per tenant
+            assert!((agent_summary.cost_usd - 0.05).abs() < f64::EPSILON);
+        }
+    }
+}
+
+#[tokio::test]
 async fn tenant_summary_rejects_missing_blank_and_mismatched_identity() {
     let service = MyBillingService::new(Arc::new(CostAuditor::new(config())));
     assert_eq!(

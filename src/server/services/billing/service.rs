@@ -4,6 +4,7 @@ use server_omnisolo::billing::*;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
+#[derive(Clone)]
 pub struct MyBillingService {
     auditor: Arc<CostAuditor>,
 }
