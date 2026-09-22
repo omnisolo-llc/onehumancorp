@@ -1727,10 +1727,26 @@ impl BookingEngineService for NativeBookingService {
 
         let inventory_lock_id = reserve_result.lock_id;
 
-        let checkout_url = format!(
-            "https://checkout.stripe.com/pay/cs_test_{}",
-            session_id.replace("-", "")
-        );
+        let mut checkout_url = String::new();
+
+        if let Ok(stripe_key) = std::env::var("STRIPE_SECRET_KEY") {
+            let client = ::server_integrations_stripe::client::StripeClient::new(stripe_key);
+            let checkout_req = ::server_integrations_stripe::safe_checkout::CheckoutRequest {
+                name: &req.service_id,
+                reference: &session_id,
+                amount_cents: req.amount_cents,
+                interval: None,
+                product: None,
+                currency: "usd",
+                operation_id: &session_id,
+            };
+            if let Ok(receipt) = client
+                .create_checkout_session_idempotent(checkout_req)
+                .await
+            {
+                checkout_url = receipt.url;
+            }
+        }
 
         Ok(Response::new(ConversationalCheckoutSession {
             session_id,
@@ -1738,7 +1754,11 @@ impl BookingEngineService for NativeBookingService {
             customer_id: req.customer_id,
             amount_cents: req.amount_cents,
             inventory_lock_id,
-            checkout_url,
+            checkout_url: if checkout_url.is_empty() {
+                "unavailable".to_string()
+            } else {
+                checkout_url
+            },
             status: "pending".to_string(),
             expires_at_unix: expires_at.timestamp(),
         }))
@@ -2172,11 +2192,11 @@ mod native_booking_tests {
         assert_eq!(session.tenant_id, "t1");
         assert_eq!(session.customer_id, "c1");
         assert_eq!(session.amount_cents, 1000);
-        assert!(
-            session
-                .checkout_url
-                .starts_with("https://checkout.stripe.com/pay/cs_test_")
-        );
+        if std::env::var("STRIPE_SECRET_KEY").is_ok() {
+            assert!(!session.checkout_url.is_empty() && session.checkout_url != "unavailable");
+        } else {
+            assert_eq!(session.checkout_url, "unavailable");
+        }
         assert_eq!(session.status, "pending");
     }
 
