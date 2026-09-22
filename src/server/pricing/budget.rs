@@ -1,9 +1,52 @@
-use std::sync::atomic::{AtomicI64, Ordering};
+pub struct BudgetManagerState {
+    pub total_allocated: i64,
+    pub settled: i64,
+}
+
+pub struct BudgetReservation {
+    state: std::sync::Arc<std::sync::Mutex<BudgetManagerState>>,
+    amount_cents: i64,
+    telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
+    tenant_id: Option<String>,
+    settled: bool,
+}
+
+impl Drop for BudgetReservation {
+    fn drop(&mut self) {
+        if !self.settled && self.amount_cents > 0 {
+            let mut state = self.state.lock().unwrap();
+            state.total_allocated = state.total_allocated.saturating_sub(self.amount_cents);
+        }
+    }
+}
+
+impl BudgetReservation {
+    pub fn settle(mut self) {
+        if !self.settled && self.amount_cents > 0 {
+            {
+                let mut state = self.state.lock().unwrap();
+                state.settled = state.settled.saturating_add(self.amount_cents);
+            }
+            self.settled = true;
+
+            if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                store.llm_cost_counter.add(
+                    self.amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+                store.mission_cost_cents.add(
+                    self.amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+            }
+        }
+    }
+}
 
 pub struct BudgetManager {
     pub total_limit: f64,
     pub total_limit_cents: i64,
-    current: AtomicI64,
+    state: std::sync::Arc<std::sync::Mutex<BudgetManagerState>>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
@@ -21,7 +64,10 @@ impl BudgetManager {
         };
         BudgetManager {
             total_limit: limit,
-            current: AtomicI64::new(0),
+            state: std::sync::Arc::new(std::sync::Mutex::new(BudgetManagerState {
+                total_allocated: 0,
+                settled: 0,
+            })),
             total_limit_cents,
             telemetry_store: None,
             tenant_id: None,
@@ -55,57 +101,71 @@ impl BudgetManager {
         self.record_spend_cents(amount_cents)
     }
 
-    pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+    pub fn reserve(&self, amount_cents: i64) -> Result<BudgetReservation, String> {
         if amount_cents < 0 {
             return Err("spend amount cannot be negative".to_string());
         }
         if amount_cents == 0 {
-            return Ok(self.get_remaining_cents() >= 0);
+            let remaining = self.get_remaining_cents();
+            if remaining < 0 {
+                return Err("budget exhausted".to_string());
+            }
+            return Ok(BudgetReservation {
+                state: self.state.clone(),
+                amount_cents: 0,
+                telemetry_store: self.telemetry_store.clone(),
+                tenant_id: self.tenant_id.clone(),
+                settled: false,
+            });
         }
 
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
             tracing::info!(
                 "💰 Miser telemetry: Recording budget spend for tenant {}",
                 tid
-            ); // pii-safe
-        }
-
-        // Atomic admission: reject overspend/overflow without changing state.
-        if self
-            .current
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-                current
-                    .checked_add(amount_cents)
-                    .filter(|next| *next <= self.total_limit_cents)
-            })
-            .is_err()
-        {
-            return Ok(false);
-        }
-
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0
-        {
-            store.llm_cost_counter.add(
-                amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-            store.mission_cost_cents.add(
-                amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
             );
         }
 
-        Ok(true)
+        {
+            let mut state = self.state.lock().unwrap();
+            let new_allocated = match state.total_allocated.checked_add(amount_cents) {
+                Some(val) => val,
+                None => return Err("spend amount overflow".to_string()),
+            };
+
+            if new_allocated > self.total_limit_cents {
+                return Err("budget exhausted".to_string());
+            }
+            state.total_allocated = new_allocated;
+        }
+
+        Ok(BudgetReservation {
+            state: self.state.clone(),
+            amount_cents,
+            telemetry_store: self.telemetry_store.clone(),
+            tenant_id: self.tenant_id.clone(),
+            settled: false,
+        })
+    }
+
+    pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        match self.reserve(amount_cents) {
+            Ok(reservation) => {
+                reservation.settle();
+                Ok(true)
+            }
+            Err(e) if e == "budget exhausted" || e == "spend amount overflow" => Ok(false),
+            Err(e) => Err(e),
+        }
     }
 
     pub fn get_remaining(&self) -> f64 {
-        let current = self.current.load(Ordering::SeqCst);
+        let current = self.state.lock().unwrap().total_allocated;
         (self.total_limit_cents - current) as f64 / 100.0
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.current.load(Ordering::SeqCst);
+        let current = self.state.lock().unwrap().total_allocated;
         self.total_limit_cents - current
     }
 
@@ -113,27 +173,27 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let current = self.state.lock().unwrap().total_allocated;
         let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
+        let current = self.state.lock().unwrap().total_allocated;
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
+            return projected_cost_cents > 0 || current > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || current >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
         if total_limit_cents <= 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let current = self.state.lock().unwrap().total_allocated;
         let limit_threshold_cents =
             ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current >= limit_threshold_cents
@@ -147,7 +207,7 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
-        let current = self.current.load(Ordering::SeqCst);
+        let current = self.state.lock().unwrap().total_allocated;
         let expected_spend = (self.total_limit_cents as f64)
             * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
         current as f64 > expected_spend * 1.5 // 50% higher than expected rate
