@@ -24,10 +24,12 @@ pub struct BudgetReservation {
 
 impl Drop for BudgetReservation {
     fn drop(&mut self) {
-        if !self.settled {
-            if let Ok(mut state) = self.state.lock() {
-                state.total_allocated_cents = state.total_allocated_cents.saturating_sub(self.amount_cents);
-            }
+        if !self.settled
+            && let Ok(mut state) = self.state.lock()
+        {
+            state.total_allocated_cents = state
+                .total_allocated_cents
+                .saturating_sub(self.amount_cents);
         }
     }
 }
@@ -56,7 +58,9 @@ impl BudgetReservation {
 
         if let Ok(mut state) = self.state.lock() {
             state.settled_cents = state.settled_cents.saturating_add(final_amount_cents);
-            state.total_allocated_cents = state.total_allocated_cents.saturating_sub(self.amount_cents);
+            state.total_allocated_cents = state
+                .total_allocated_cents
+                .saturating_sub(self.amount_cents);
         }
         self.settled = true;
         Ok(())
@@ -106,19 +110,27 @@ impl BudgetManager {
             return Err("reserve amount cannot be negative".to_string());
         }
 
-        let mut state = self.state.lock().map_err(|_| "Failed to acquire budget lock".to_string())?;
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "Failed to acquire budget lock".to_string())?;
 
-        let current_total = state.total_allocated_cents.checked_add(state.settled_cents)
+        let current_total = state
+            .total_allocated_cents
+            .checked_add(state.settled_cents)
             .ok_or_else(|| "Budget arithmetic overflow".to_string())?;
 
-        let projected_total = current_total.checked_add(amount_cents)
+        let projected_total = current_total
+            .checked_add(amount_cents)
             .ok_or_else(|| "Budget arithmetic overflow".to_string())?;
 
         if projected_total > self.total_limit_cents {
             return Err("Budget limit exceeded".to_string());
         }
 
-        state.total_allocated_cents = state.total_allocated_cents.checked_add(amount_cents)
+        state.total_allocated_cents = state
+            .total_allocated_cents
+            .checked_add(amount_cents)
             .ok_or_else(|| "Budget arithmetic overflow".to_string())?;
 
         Ok(BudgetReservation {
@@ -160,8 +172,8 @@ impl BudgetManager {
             Ok(mut reservation) => {
                 let _ = reservation.settle(amount_cents);
                 Ok(true)
-            },
-            Err(_) => Ok(false)
+            }
+            Err(_) => Ok(false),
         }
     }
 
@@ -171,7 +183,9 @@ impl BudgetManager {
 
     pub fn get_remaining_cents(&self) -> i64 {
         if let Ok(state) = self.state.lock() {
-            let used = state.total_allocated_cents.saturating_add(state.settled_cents);
+            let used = state
+                .total_allocated_cents
+                .saturating_add(state.settled_cents);
             self.total_limit_cents.saturating_sub(used)
         } else {
             0
@@ -199,7 +213,9 @@ impl BudgetManager {
             return false;
         }
         let current = if let Ok(state) = self.state.lock() {
-            state.total_allocated_cents.saturating_add(state.settled_cents)
+            state
+                .total_allocated_cents
+                .saturating_add(state.settled_cents)
         } else {
             0
         };
@@ -209,7 +225,9 @@ impl BudgetManager {
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
         let current = if let Ok(state) = self.state.lock() {
-            state.total_allocated_cents.saturating_add(state.settled_cents)
+            state
+                .total_allocated_cents
+                .saturating_add(state.settled_cents)
         } else {
             0
         };
@@ -228,7 +246,9 @@ impl BudgetManager {
             return false;
         }
         let current = if let Ok(state) = self.state.lock() {
-            state.total_allocated_cents.saturating_add(state.settled_cents)
+            state
+                .total_allocated_cents
+                .saturating_add(state.settled_cents)
         } else {
             0
         };
@@ -246,7 +266,9 @@ impl BudgetManager {
             return false;
         }
         let current = if let Ok(state) = self.state.lock() {
-            state.total_allocated_cents.saturating_add(state.settled_cents)
+            state
+                .total_allocated_cents
+                .saturating_add(state.settled_cents)
         } else {
             0
         };
@@ -255,8 +277,6 @@ impl BudgetManager {
         current as f64 > expected_spend * 1.5 // 50% higher than expected rate
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
