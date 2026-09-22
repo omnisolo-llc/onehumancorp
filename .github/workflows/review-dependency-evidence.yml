@@ -1,0 +1,48 @@
+name: Review dependency evidence
+
+on:
+  push:
+    branches: [chore/review-source-evidence-20260921]
+    paths: [.github/workflows/review-dependency-evidence.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: a6700c649c87e0eb77afd626f3a75cacea6f346c
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Fetch locked dependencies without application credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fetch --locked
+          for directory in . src/ui/next src/cli .github/test-tools; do
+            npm --prefix "$directory" ci --include=dev --no-audit --no-fund
+          done
+          mkdir -p evidence
+          git diff --exit-code
+          tar -C "$HOME/.cargo" -czf evidence/cargo-registry.tar.gz registry/cache registry/index
+          tar -czf evidence/node-dependencies.tar.gz node_modules src/ui/next/node_modules src/cli/node_modules .github/test-tools/node_modules
+          git rev-parse HEAD > evidence/source-commit.txt
+          sha256sum Cargo.lock package-lock.json src/ui/next/package-lock.json src/cli/package-lock.json .github/test-tools/package-lock.json > evidence/lockfile-sha256.txt
+          (cd evidence && sha256sum *.tar.gz > SHA256SUMS)
+      - uses: actions/upload-artifact@v6
+        with:
+          name: locked-review-dependencies
+          path: evidence/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
