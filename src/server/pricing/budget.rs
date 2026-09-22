@@ -99,11 +99,12 @@ impl BudgetManager {
         if amount_cents == 0 {
             if self.get_remaining_cents() >= 0 {
                 // If it's zero, we can just give a dummy reservation since nothing is allocated
-                let telemetry = if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-                    Some((store.clone(), tid.clone()))
-                } else {
-                    None
-                };
+                let telemetry =
+                    if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                        Some((store.clone(), tid.clone()))
+                    } else {
+                        None
+                    };
                 return Some(BudgetReservation {
                     state: self.state.clone(),
                     amount_cents: 0,
