@@ -33,17 +33,17 @@ impl BudgetReservation {
             st.settled = st.settled.saturating_add(amount);
         } // explicitly drop the lock
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            if amount > 0 {
-                store.llm_cost_counter.add(
-                    amount as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    amount as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+            && amount > 0
+        {
+            store.llm_cost_counter.add(
+                amount as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                amount as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
         }
     }
 }
@@ -129,7 +129,11 @@ impl BudgetManager {
 
         {
             let mut st = self.state.lock().unwrap();
-            if st.total_allocated.checked_add(amount_cents).map_or(true, |next| next > self.total_limit_cents) {
+            if st
+                .total_allocated
+                .checked_add(amount_cents)
+                .is_none_or(|next| next > self.total_limit_cents)
+            {
                 return Err("budget limit exceeded".to_string());
             }
             st.total_allocated = st.total_allocated.checked_add(amount_cents).unwrap();
@@ -178,8 +182,7 @@ impl BudgetManager {
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
         let current = self.state.lock().unwrap().total_allocated;
-        projected_cost_cents >= limit_threshold_cents
-            || current >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || current >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
