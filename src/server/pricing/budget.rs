@@ -109,7 +109,6 @@ impl BudgetManager {
             return Err("spend amount cannot be negative".to_string());
         }
 
-
         let mut state = self
             .state
             .lock()
