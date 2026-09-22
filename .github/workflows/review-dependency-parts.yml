@@ -1,0 +1,61 @@
+name: Review dependency parts
+on:
+  push:
+    branches: [chore/review-source-evidence-20260921]
+    paths: [.github/workflows/review-dependency-parts.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: locked-review-dependencies
+          run-id: 35672316533
+          github-token: ${{ github.token }}
+          path: evidence
+      - name: Verify and split the existing immutable archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd evidence && sha256sum -c SHA256SUMS)
+          mkdir parts
+          tar -C evidence -cf - . | split -b 300M -d -a 2 - parts/dependencies-
+          sha256sum parts/* > parts/SHA256SUMS
+      - uses: actions/upload-artifact@v6
+        with:
+          name: review-dependencies-00
+          path: parts/dependencies-00
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: review-dependencies-01
+          path: parts/dependencies-01
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: review-dependencies-02
+          path: parts/dependencies-02
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: review-dependencies-03
+          path: parts/dependencies-03
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: review-dependencies-sha256
+          path: parts/SHA256SUMS
+          retention-days: 3
+          if-no-files-found: error
