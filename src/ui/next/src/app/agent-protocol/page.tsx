@@ -146,7 +146,7 @@ export default function AgentProtocolPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
+        <div className="glass-card bg-white/50 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Tasks</h2>
 
           <div className="flex space-x-2 mb-6">
@@ -181,7 +181,7 @@ export default function AgentProtocolPage() {
           </ul>
         </div>
 
-        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
+        <div className="glass-card bg-white/50 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Steps</h2>
           {!selectedTaskId ? (
             <div className="text-gray-500 text-sm italic">Select a task to view its steps.</div>

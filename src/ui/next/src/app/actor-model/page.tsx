@@ -35,7 +35,7 @@ export default function ActorModelPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto font-sans">
+    <div className="p-8 max-w-4xl mx-auto font-sans glass-card">
       <h1 className="text-3xl font-bold mb-4">Actor-Model Message Passing</h1>
       <p className="text-gray-600 mb-8">
         SOTA Harness Patterns (2025-2026): 1. Actor-model message passing - replacing classic ReAct loops.
@@ -67,7 +67,7 @@ export default function ActorModelPage() {
       </button>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50/70 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-lg border border-red-200 shadow-sm" data-testid="error-message">
+        <div className="mt-8 p-4 bg-red-50/70 backdrop-blur-xl saturate-[210%] text-red-700 rounded-lg border border-red-200 shadow-sm" data-testid="error-message">
           <h3 className="font-bold mb-2">Execution Error:</h3>
           <p>{error}</p>
         </div>
