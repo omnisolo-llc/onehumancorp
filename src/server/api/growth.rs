@@ -18,6 +18,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
 
+// NOTE: Referral/viral loops are explicitly deferred per product scope in
+// docs/research/business_capability_and_usage_economics_audit.md until retained value is proven.
+// Do not add new viral tools, referral widgets, or paywalls here.
+// This constraint enforces a fallback/zero WIP approach for premature viral features.
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
     pub content: String,
