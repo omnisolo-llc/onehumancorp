@@ -1,0 +1,50 @@
+name: Review source evidence
+
+on:
+  push:
+    branches: [chore/review-source-evidence-20260921]
+    paths: [.github/workflows/review-source-evidence.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: a6700c649c87e0eb77afd626f3a75cacea6f346c
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Archive committed source and public toolchains only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          test "$(git rev-parse HEAD)" = a6700c649c87e0eb77afd626f3a75cacea6f346c
+          git archive --format=tar.gz -o evidence/source.tar.gz HEAD
+          git rev-parse HEAD > evidence/source-commit.txt
+          git ls-tree -r HEAD > evidence/source-tree.txt
+          rust_root="$(dirname "$(dirname "$(rustup which --toolchain 1.95.0 rustc)")")"
+          tar -C "$rust_root" -czf evidence/rust-linux.tar.gz bin lib
+          node_root="$(dirname "$(dirname "$(command -v node)")")"
+          tar -C "$node_root" -czf evidence/node-linux.tar.gz bin lib include
+          rustc --version > evidence/tool-versions.txt
+          node --version >> evidence/tool-versions.txt
+          (cd evidence && sha256sum *.tar.gz > SHA256SUMS)
+      - uses: actions/upload-artifact@v6
+        with:
+          name: immutable-review-source-and-tools
+          path: evidence/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
