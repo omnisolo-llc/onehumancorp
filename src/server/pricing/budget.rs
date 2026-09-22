@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Default)]
 pub struct BudgetState {
@@ -23,11 +23,17 @@ impl BudgetReservation {
 
         {
             let mut state = self.state.lock().unwrap();
-            state.settled_cents = state.settled_cents.checked_add(final_amount_cents).unwrap_or(i64::MAX);
+            state.settled_cents = state
+                .settled_cents
+                .checked_add(final_amount_cents)
+                .unwrap_or(i64::MAX);
 
             let diff = final_amount_cents - self.amount_cents;
             if diff != 0 {
-                state.total_allocated_cents = state.total_allocated_cents.checked_add(diff).unwrap_or(i64::MAX);
+                state.total_allocated_cents = state
+                    .total_allocated_cents
+                    .checked_add(diff)
+                    .unwrap_or(i64::MAX);
             }
         }
 
@@ -166,7 +172,7 @@ impl BudgetManager {
             Ok(reservation) => {
                 let _ = reservation.settle(amount_cents);
                 Ok(true)
-            },
+            }
             Err(_) => Ok(false),
         }
     }
@@ -198,8 +204,7 @@ impl BudgetManager {
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || current >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || current >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
