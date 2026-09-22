@@ -1,0 +1,69 @@
+name: Review Rust regressions
+on:
+  push:
+    branches: [chore/review-source-evidence-20260921]
+    paths: [.github/workflows/review-rust-regressions.yml, .review/approval-regression.rs]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CARGO_BUILD_JOBS: '1'
+      RUST_TEST_THREADS: '1'
+      CARGO_INCREMENTAL: '0'
+      MALLOC_ARENA_MAX: '2'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: review
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          ref: a6700c649c87e0eb77afd626f3a75cacea6f346c
+          path: source
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: source -> target
+          shared-key: ohc-review-rust-regressions
+          cache-on-failure: true
+          cache-bin: false
+          cache-workspace-crates: false
+      - name: Verify immutable baseline and add the regression target
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = a6700c649c87e0eb77afd626f3a75cacea6f346c
+          cp review/.review/approval-regression.rs source/tests/review_approval_regression.rs
+          mkdir evidence
+          git -C source rev-parse HEAD > evidence/source-commit.txt
+          sha256sum source/tests/review_approval_regression.rs > evidence/test-sha256.txt
+          free -m > evidence/runner-memory.txt
+          rustc --version > evidence/tool-versions.txt
+      - name: Execute regression assertions without changing production code
+        working-directory: source
+        run: |
+          set +e
+          set -o pipefail
+          /usr/bin/time -v cargo test --locked -p omnisolo --test review_approval_regression -- --nocapture 2>&1 | tee ../evidence/rust-red.log
+          code=${PIPESTATUS[0]}
+          echo "$code" > ../evidence/exit-code.txt
+          exit "$code"
+      - name: Package public lint tool for matching local checks
+        if: always()
+        run: |
+          mkdir -p evidence
+          rust_root="$(dirname "$(dirname "$(rustup which --toolchain 1.95.0 rustc)")")"
+          tar -C "$rust_root" -czf evidence/clippy-linux.tar.gz bin/cargo-clippy bin/clippy-driver
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: review-rust-red-evidence
+          path: evidence/
+          retention-days: 3
+          if-no-files-found: error
