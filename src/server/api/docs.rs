@@ -577,7 +577,9 @@ pub fn get_articles() -> Vec<HelpArticle> {
         HelpArticle {
             category: "Payments".to_string(),
             title: "How to Send Proposals and Collect Payments Securely".to_string(),
-            desc: "Send verifiable proposals and securely collect payments using trusted providers.".to_string(),
+            desc:
+                "Send verifiable proposals and securely collect payments using trusted providers."
+                    .to_string(),
             link: "/help/quotes-invoices-approvals".to_string(),
         },
         HelpArticle {
