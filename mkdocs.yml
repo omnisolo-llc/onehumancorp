@@ -68,6 +68,7 @@ nav:
   - Business:
       - Roadmap: business/roadmap.md
       - Execution Plan: business/execution-plan.md
+      - Connected Accounts & Standing Authority: business/operations/connected_accounts_and_standing_authority.md
   - Research:
       - Autonomous Subscription Engine: research/[architecture]_autonomous_subscription_and_recurring_billing_engine.md
       - Research: technical/research/index.md
