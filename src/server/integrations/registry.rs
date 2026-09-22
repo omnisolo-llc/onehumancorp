@@ -1507,11 +1507,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn cancel_event(
-        &self,
-        integration_id: &str,
-        event_id: &str,
-    ) -> Result<(), String> {
+    pub async fn cancel_event(&self, integration_id: &str, event_id: &str) -> Result<(), String> {
         let client = {
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();

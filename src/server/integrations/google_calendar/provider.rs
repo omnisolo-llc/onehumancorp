@@ -3,13 +3,33 @@ use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct GoogleCalendarProvider {
-    client: Arc<dyn GoogleCalendarClientWrapper>,
+    pub client: Arc<dyn GoogleCalendarClientWrapper>,
     metadata: ProviderMetadata,
 }
 
 impl GoogleCalendarProvider {
     pub fn new(access_token: String) -> Self {
-        let client = RealGoogleCalendarClient::new(access_token);
+        let client = RealGoogleCalendarClient::new(access_token, None, None, None);
+
+        Self {
+            client: Arc::new(client),
+            metadata: ProviderMetadata {
+                id: "google_calendar".to_string(),
+                name: "Google Calendar".to_string(),
+                category: "calendar".to_string(),
+                base_url: "https://www.googleapis.com/calendar/v3".to_string(),
+            },
+        }
+    }
+
+    pub fn new_with_auth(
+        access_token: String,
+        refresh_token: Option<String>,
+        expires_at: Option<chrono::DateTime<chrono::Utc>>,
+        token_storage: Option<Arc<dyn super::client::TokenStorage>>,
+    ) -> Self {
+        let client =
+            RealGoogleCalendarClient::new(access_token, refresh_token, expires_at, token_storage);
 
         Self {
             client: Arc::new(client),
@@ -62,5 +82,12 @@ impl GoogleCalendarProvider {
 
     pub async fn cancel_event(&self, event_id: &str) -> Result<(), String> {
         self.client.cancel_event(event_id).await
+    }
+
+    pub async fn list_events_sync(
+        &self,
+        sync_token: Option<&str>,
+    ) -> Result<super::client::SyncEventsResponse, String> {
+        self.client.list_events_sync(sync_token).await
     }
 }
