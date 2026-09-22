@@ -224,8 +224,8 @@ impl BudgetReservation {
             (self.telemetry_store.clone(), self.tenant_id.clone())
         };
 
-        if let (Some(store), Some(tid)) = (telemetry_store, tenant_id)
-            && final_amount_cents > 0 {
+        if let (Some(store), Some(tid)) = (telemetry_store, tenant_id) {
+            if final_amount_cents > 0 {
                 store.llm_cost_counter.add(
                     final_amount_cents as u64,
                     &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
@@ -235,6 +235,7 @@ impl BudgetReservation {
                     &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
                 );
             }
+        }
 
         self.is_settled = true;
         Ok(())
