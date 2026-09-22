@@ -117,12 +117,7 @@ pub async fn handle_quote_action(
             .get("stripe_payment_link")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
-            .unwrap_or_else(|| {
-                format!(
-                    "https://checkout.stripe.com/pay/cs_test_{}",
-                    uuid::Uuid::new_v4().to_string().replace("-", "")
-                )
-            });
+            .unwrap_or_default();
 
         // Fallback to fake url if external integration fails to prevent silently erroring
         if payload.get("stripe_payment_link").is_none() {
@@ -135,8 +130,7 @@ pub async fn handle_quote_action(
                 }
                 Err(err) => {
                     tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
-                    // Still proceed with saving the invoice but log heavily
-                    // Without hard-failing since our e2e expects it to proceed.
+                    stripe_payment_link = "unavailable".to_string();
                 }
             }
         }
