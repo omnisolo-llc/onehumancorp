@@ -14,6 +14,7 @@ pub struct CheckoutRequest<'a> {
     pub product: Option<&'a str>,
     pub currency: &'a str,
     pub operation_id: &'a str,
+    pub metadata: Option<std::collections::HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,6 +69,7 @@ fn checkout_form(
     product: Option<&str>,
     currency: &str,
     return_base: &str,
+    metadata: Option<&std::collections::HashMap<String, String>>,
 ) -> Result<BTreeMap<String, String>, String> {
     if name.trim().is_empty()
         || name.len() > 500
@@ -138,6 +140,11 @@ fn checkout_form(
         }
         form.insert("metadata[product_id]".into(), product.into());
     }
+    if let Some(meta) = metadata {
+        for (k, v) in meta {
+            form.insert(format!("metadata[{}]", k), v.clone());
+        }
+    }
     Ok(form)
 }
 fn parse_receipt(
@@ -182,6 +189,7 @@ impl StripeClient {
             product,
             currency,
             operation_id,
+            metadata,
         } = request;
         let key = self.require_api_key()?;
         if operation_id.trim().is_empty()
@@ -209,6 +217,7 @@ impl StripeClient {
             product,
             currency,
             &return_base,
+            metadata.as_ref(),
         )?;
         let response = reqwest::Client::builder()
             .timeout(Duration::from_secs(20))

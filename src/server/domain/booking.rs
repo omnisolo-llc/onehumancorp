@@ -184,31 +184,41 @@ pub async fn handle_autonomous_quote_action(
         let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
         let stripe_client = StripeClient::new(api_key);
 
-        // Generate a Stripe Payment Link for the deposit
+        // Generate an idempotent checkout session
+        let operation_id = format!("booking-deposit-{}", booking_id.unwrap_or(&uuid::Uuid::new_v4().to_string()));
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("booking_id".to_string(), booking_id.unwrap_or("").to_string());
+        let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
+            name: service,
+            reference: customer_id,
+            amount_cents: deposit_amount_cents,
+            interval: None,
+            product: None,
+            currency: "usd",
+            operation_id,
+            metadata: Some(metadata),
+        };
         let link_res = stripe_client
-            .create_payment_link(service, deposit_amount_cents)
+            .create_checkout_session_idempotent(checkout_req)
             .await;
-        if let Ok(link) = link_res {
-            stripe_payment_link = link;
-        } else if let Err(e) = link_res {
-            tracing::error!("Failed to generate Stripe payment link for deposit: {}", e); // pii-safe
-            // Fallback to dummy link for testing/e2e if API fails
-            stripe_payment_link = format!(
-                "https://buy.stripe.com/test_{}",
-                uuid::Uuid::new_v4()
-                    .simple()
-                    .to_string()
-                    .chars()
-                    .take(16)
-                    .collect::<String>()
-            );
-        }
-        drafted_message = format!(
-            "{}
+        if let Ok(receipt) = link_res {
+            stripe_payment_link = receipt.url;
+            drafted_message = format!(
+                "{}
 
 To secure your booking, please pay the deposit here: {}",
-            drafted_message, stripe_payment_link
-        );
+                generated_message, stripe_payment_link
+            );
+        } else if let Err(e) = link_res {
+            tracing::error!("Failed to generate idempotent Stripe payment link for deposit: {}", e); // pii-safe
+            // Do not fabricate a link if the provider fails.
+            drafted_message = format!(
+                "{}
+
+Your booking deposit is pending. A payment link will be sent shortly.",
+                generated_message
+            );
+        }
     }
 
     // Insert into quotes

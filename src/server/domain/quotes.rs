@@ -117,26 +117,35 @@ pub async fn handle_quote_action(
             .get("stripe_payment_link")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
-            .unwrap_or_else(|| {
-                format!(
-                    "https://checkout.stripe.com/pay/cs_test_{}",
-                    uuid::Uuid::new_v4().to_string().replace("-", "")
-                )
-            });
+            .unwrap_or_else(|| "".to_string());
 
-        // Fallback to fake url if external integration fails to prevent silently erroring
+        // Use idempotent safe checkout session instead of fake URL
         if payload.get("stripe_payment_link").is_none() {
-            match stripe_client
-                .create_checkout_session(scope, client_id, price, None, None, None)
-                .await
-            {
-                Ok(link) => {
-                    stripe_payment_link = link;
+            let amount_cents = (price * 100.0).round() as i64;
+            let operation_id = format!("quote-deposit-{}", invoice_id);
+            let mut metadata = std::collections::HashMap::new();
+            if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
+                metadata.insert("quote_id".to_string(), quote_id.to_string());
+            }
+            metadata.insert("invoice_id".to_string(), invoice_id.to_string());
+            let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                name: scope,
+                reference: client_id,
+                amount_cents,
+                interval: None,
+                product: None,
+                currency: "usd",
+                operation_id,
+                metadata: Some(metadata),
+            };
+
+            match stripe_client.create_checkout_session_idempotent(checkout_req).await {
+                Ok(receipt) => {
+                    stripe_payment_link = receipt.url;
                 }
                 Err(err) => {
-                    tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
-                    // Still proceed with saving the invoice but log heavily
-                    // Without hard-failing since our e2e expects it to proceed.
+                    tracing::error!("Failed to generate idempotent Stripe checkout session link: {}", err); // pii-safe
+                    // Still proceed with saving the invoice but log heavily without fabricating a link.
                 }
             }
         }
