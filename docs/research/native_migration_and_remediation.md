@@ -96,7 +96,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | ID | Finding and source evidence | Required remediation / proof | Initial status |
 |---|---|---|---|
 | F01 | Current code implements a one-way pipeline where `auditor.rs` uses an `event_pipeline` that forwards accounted events to `export_rx`, and `hub.rs` writes them as metrics without calling `record_event` again. | One-way ingestion/accounting/export verified by `ingress_is_accounted_once_and_exports_do_not_feed_back` regression test | Closed |
-| F02 | `services/billing/service.rs:49-85` uses global snapshots for an organization response | Auth-derived tenant; reject mismatch/blank identity; tenant+agent isolation tests | Open |
+| F02 | `services/billing/service.rs:49-85` uses global snapshots for an organization response | Auth-derived tenant; reject mismatch/blank identity; tenant+agent isolation tests | Closed |
 | F03 | `pricing/budget.rs:49-84` increments before reporting over-limit | Atomic reservation before spend; settle/release/replay/restart/concurrency checks; invalid/overflow amounts fail closed | Closed |
 | F04 | Model paths disagree on usage; proposal adapter returns default usage; proxy forwards streams | Preserve actual provider counts, model/request identity and missing-usage state; no invented free usage | Open |
 | F05 | Current telemetry/cost reports are not an invoice-grade meter | Durable idempotent usage, payer/auth/rate attribution, integer subunits, tenant reads, reconciliation and no duplicate BYOK debit | Open |
