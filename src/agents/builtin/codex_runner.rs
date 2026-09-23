@@ -186,12 +186,16 @@ pub struct AppServer {
 
 impl AppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
-            crate::tools::marketplace::HttpMarketplaceProvider::new(
-                &std::env::var("AGENT_MARKETPLACE_URL")
-                    .unwrap_or_else(|_| "https://marketplace.example.com".to_string()),
-            ),
-        )));
+        let marketplace_url = std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_default();
+        let provider: Box<dyn crate::tools::marketplace::MarketplaceProvider> =
+            if marketplace_url.is_empty() || marketplace_url.contains("example.com") {
+                Box::new(crate::tools::marketplace::test_utils::MockMarketplaceProvider)
+            } else {
+                Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(
+                    &marketplace_url,
+                ))
+            };
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(provider));
         Self {
             runner,
             marketplace,

@@ -31,7 +31,11 @@ impl HttpMarketplaceProvider {
     pub fn new(registry_url: &str) -> Self {
         Self {
             registry_url: registry_url.to_string(),
-            http_client: reqwest::Client::new(),
+            http_client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(2))
+                .connect_timeout(std::time::Duration::from_secs(2))
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new()),
         }
     }
 }

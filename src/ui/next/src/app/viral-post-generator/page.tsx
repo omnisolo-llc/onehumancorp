@@ -104,8 +104,8 @@ export default function ViralPostGeneratorPage() {
                             className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                         />
                         <div>
-                            <span className="text-sm font-medium text-gray-900">Remove "Powered by OmniSolo" branding</span>
-                            <p className="text-xs text-gray-500 mt-1">Post without OmniSolo attribution. Requires Pro plan.</p>
+                            <span className="text-sm font-medium text-gray-900">Remove powered-by attribution badge</span>
+                            <p className="text-xs text-gray-500 mt-1">Post without platform attribution watermark. Requires Pro plan.</p>
                         </div>
                         </label>
                     </div>
@@ -177,7 +177,7 @@ export default function ViralPostGeneratorPage() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-8 text-sm leading-relaxed">
-              Make the post 100% white-labeled. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
+              Make the post 100% white-labeled. Upgrade to Pro to remove the watermark.
             </p>
 
             <button

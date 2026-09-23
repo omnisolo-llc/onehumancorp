@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS staff_tasks (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     staff_id TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
     description TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
     priority TEXT NOT NULL DEFAULT 'medium',

@@ -213,7 +213,7 @@ export default function PricingPage() {
               <div>
                   <h3 className="font-semibold text-gray-800">How do I upgrade, downgrade, or cancel?</h3>
                   <p className="text-gray-600 text-sm mt-1 leading-relaxed">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page or by clicking "Manage Plan" above.</p>
-                  <button onClick={handleManageBilling} className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium underline">Manage Plan & Billing</button>
+                  <button onClick={handleManageBilling} className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium underline">Manage Billing Portal</button>
               </div>
               <div>
                   <h3 className="font-semibold text-gray-800">What is the storage limit?</h3>

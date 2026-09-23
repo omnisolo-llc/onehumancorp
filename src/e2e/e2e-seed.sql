@@ -353,14 +353,6 @@ VALUES (
   '{"feature_type":"subscription_churn_risk","customer_id":"e2e-customer-bakery","description":"A subscriber is at risk of churning","reason":"No recent activity in 30 days and renewal is approaching"}'::jsonb,
   '{"feature_type":"subscription_churn_risk","action_type":"DraftForReview","generated_response":"We miss you. Book a complimentary catch-up session and keep your momentum going."}'::jsonb,
   'PENDING_APPROVAL'
-),
-(
-  'e2e-feed-inbox-quote-1',
-  'e2e-tenant',
-  'Sales',
-  '{"description":"Vegan pastry box quote approval","customer_id":"maya_bakes"}'::jsonb,
-  '{"inbox_message_id":"e2e-inbox-msg-1","action_type":"Draft Quote","feature_type":"quote_draft","total_amount":75.00,"total_amount_cents":7500,"scope":"Vegan options for Saturday","line_items":[{"description":"Vegan Pastry Box","unit_price_cents":7500,"quantity":1}]}'::jsonb,
-  'PENDING_APPROVAL'
 )
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
@@ -559,6 +551,123 @@ SET tenant_id = EXCLUDED.tenant_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+CREATE TABLE IF NOT EXISTS applied_client_mutations (
+    client_mutation_id VARCHAR PRIMARY KEY,
+    tenant_id VARCHAR NOT NULL,
+    applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_applied_client_mutations_tenant ON applied_client_mutations(tenant_id);
+ALTER TABLE applied_client_mutations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_applied_client_mutations ON applied_client_mutations;
+CREATE POLICY tenant_isolation_applied_client_mutations ON applied_client_mutations
+    FOR ALL
+    USING (tenant_id::text = current_setting('app.current_tenant', true))
+    WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+CREATE TABLE IF NOT EXISTS agent_feed (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    source TEXT NOT NULL,
+    priority TEXT,
+    title TEXT,
+    description TEXT,
+    payload JSONB,
+    state TEXT NOT NULL DEFAULT 'PENDING_APPROVAL',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_agent_feed_tenant ON agent_feed(tenant_id);
+ALTER TABLE agent_feed ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_agent_feed ON agent_feed;
+CREATE POLICY tenant_isolation_agent_feed ON agent_feed
+    FOR ALL
+    USING (tenant_id::text = current_setting('app.current_tenant', true))
+    WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+CREATE OR REPLACE FUNCTION sync_agent_feed_to_items()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+    VALUES (
+        NEW.id,
+        NEW.tenant_id,
+        NEW.source,
+        jsonb_build_object('description', NEW.description, 'title', NEW.title, 'priority', NEW.priority),
+        CASE
+            WHEN NEW.payload IS NULL THEN '{}'::jsonb
+            WHEN jsonb_typeof(NEW.payload) = 'object' THEN NEW.payload
+            ELSE jsonb_build_object('raw', NEW.payload)
+        END,
+        NEW.state,
+        COALESCE(NEW.created_at, CURRENT_TIMESTAMP),
+        COALESCE(NEW.updated_at, CURRENT_TIMESTAMP)
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        lifecycle_state = EXCLUDED.lifecycle_state,
+        context_payload = EXCLUDED.context_payload,
+        proposed_action = EXCLUDED.proposed_action,
+        updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_agent_feed_sync_items ON agent_feed;
+CREATE TRIGGER trg_agent_feed_sync_items
+AFTER INSERT OR UPDATE ON agent_feed
+FOR EACH ROW
+EXECUTE FUNCTION sync_agent_feed_to_items();
+
+CREATE OR REPLACE FUNCTION sync_agent_feed_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM agent_feed_items WHERE id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_agent_feed_sync_delete ON agent_feed;
+CREATE TRIGGER trg_agent_feed_sync_delete
+AFTER DELETE ON agent_feed
+FOR EACH ROW
+EXECUTE FUNCTION sync_agent_feed_delete();
+
+CREATE OR REPLACE FUNCTION sync_items_to_agent_feed()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE agent_feed
+    SET state = NEW.lifecycle_state,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_items_sync_agent_feed ON agent_feed_items;
+CREATE TRIGGER trg_items_sync_agent_feed
+AFTER UPDATE OF lifecycle_state ON agent_feed_items
+FOR EACH ROW
+EXECUTE FUNCTION sync_items_to_agent_feed();
+
+CREATE TABLE IF NOT EXISTS staff_tasks (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    staff_id TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    priority TEXT NOT NULL DEFAULT 'medium',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_staff_tasks_tenant_id ON staff_tasks(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_staff_tasks_staff_id ON staff_tasks(staff_id);
+ALTER TABLE staff_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_staff_tasks ON staff_tasks;
+CREATE POLICY tenant_isolation_staff_tasks
+ON staff_tasks
+USING (tenant_id::text = current_setting('app.current_tenant', true))
+WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
@@ -574,6 +683,9 @@ ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE omni_inbox_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE service_routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE applied_client_mutations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_feed ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_tasks ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
@@ -590,5 +702,8 @@ ALTER TABLE bookings FORCE ROW LEVEL SECURITY;
 ALTER TABLE omni_inbox_messages FORCE ROW LEVEL SECURITY;
 ALTER TABLE service_routes FORCE ROW LEVEL SECURITY;
 ALTER TABLE job_locations FORCE ROW LEVEL SECURITY;
+ALTER TABLE applied_client_mutations FORCE ROW LEVEL SECURITY;
+ALTER TABLE agent_feed FORCE ROW LEVEL SECURITY;
+ALTER TABLE staff_tasks FORCE ROW LEVEL SECURITY;
 
 COMMIT;

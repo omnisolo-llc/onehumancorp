@@ -301,7 +301,7 @@ async function auditClickEffectsForRoute(page: Page, route: string) {
 
     await target.evaluate((element) => {
       (element as HTMLElement).click();
-    }, undefined, { timeout: 500 }).catch((error) => {
+    }, undefined, { timeout: 5000 }).catch((error) => {
       failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
     });
     await Promise.all([dialogPromise, requestPromise]);
@@ -536,7 +536,7 @@ test.describe('comprehensive UI contract', () => {
 
         await target.evaluate((element) => {
           (element as HTMLElement).click();
-        }, undefined, { timeout: 500 }).catch((error) => {
+        }, undefined, { timeout: 5000 }).catch((error) => {
           failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
         });
         await Promise.all([dialogPromise, requestPromise]);

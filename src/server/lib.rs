@@ -7093,12 +7093,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .fetch_all(&db.pool)
                 .await
                 .map(|rows| rows.into_iter().map(|row| {
+                    let event_src = row.get::<String, _>("event_source");
+                    let prop_action = row.get::<Option<String>, _>("proposed_action");
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "event_source": row.get::<String, _>("event_source"),
+                        "event_source": event_src.clone(),
+                        "source": event_src,
                         "context_payload": row.get::<Option<String>, _>("context_payload"),
-                        "proposed_action": row.get::<Option<String>, _>("proposed_action"),
+                        "proposed_action": prop_action.clone(),
+                        "payload": prop_action,
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                         "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                         "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
@@ -7134,12 +7138,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .fetch_all(pool)
                 .await
                 .map(|rows| rows.into_iter().map(|row| {
+                    let event_src = row.get::<String, _>("event_source");
+                    let prop_action = row.get::<Option<String>, _>("proposed_action");
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "event_source": row.get::<String, _>("event_source"),
+                        "event_source": event_src.clone(),
+                        "source": event_src,
                         "context_payload": row.get::<Option<String>, _>("context_payload"),
-                        "proposed_action": row.get::<Option<String>, _>("proposed_action"),
+                        "proposed_action": prop_action.clone(),
+                        "payload": prop_action,
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                         "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                         "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
