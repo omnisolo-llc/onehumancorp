@@ -329,7 +329,8 @@ pub async fn get_integrations_handler(
         .collect();
 
     if let Ok(vault) = connection_vault(&state.db) {
-        if let Ok(verified) = vault.list(&tenant_id).await {
+        let _verified_res = vault.list(&tenant_id).await;
+        if let Ok(verified) = _verified_res {
             for connection in verified {
                 integrations.retain(|entry| entry.id != connection.provider);
                 integrations.push(IntegrationInfo {
