@@ -8,6 +8,7 @@ pub mod redis_pool;
 pub use ::server_harness as harness;
 pub mod agents;
 pub mod api;
+pub mod powersync;
 
 #[path = "api/setup.rs"]
 mod setup;
@@ -9249,6 +9250,35 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 ::server_auth::strict_bearer_auth_middleware,
             ),
         ))
+        .route("/api/v1/auth/powersync_token", axum::routing::get(|
+            axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+        | async move {
+            let org_id = match claims.organization_id {
+                Some(ref id) => id.clone(),
+                None => {
+                    return axum::response::IntoResponse::into_response((
+                        axum::http::StatusCode::UNAUTHORIZED,
+                        axum::Json(serde_json::json!({ "error": "authentication required" })),
+                    ));
+                }
+            };
+            let powersync_url = std::env::var("OMNISOLO_POWERSYNC_URL")
+                .or_else(|_| std::env::var("POWERSYNC_URL"))
+                .unwrap_or_else(|_| "http://localhost:8080".to_string());
+
+            match crate::powersync::generate_powersync_credentials(&claims.sub, &org_id, &powersync_url) {
+                Ok(creds) => axum::response::IntoResponse::into_response(axum::Json(creds)),
+                Err(err) => axum::response::IntoResponse::into_response((
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::Json(serde_json::json!({ "error": err })),
+                )),
+            }
+        }).route_layer(
+            axum::middleware::from_fn_with_state(
+                http_auth_store.clone(),
+                ::server_auth::strict_bearer_auth_middleware,
+            ),
+        ))
         .merge(api::realtime::router())
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/ohc_job_queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
@@ -9407,11 +9437,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/chat", axum::routing::post(|
-            axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-            axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-            axum::Json(req): axum::Json<ChatRequest>
-        | async move {
+        .route("/api/v1/chat", {
+            let db = db.clone();
+            axum::routing::post(move |
+                axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+                axum::Json(req): axum::Json<ChatRequest>
+            | {
+                let db = db.clone();
+                async move {
             let tenant_id = match claims.organization_id {
                 Some(organization_id) => organization_id,
                 None => return axum::response::IntoResponse::into_response((axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "authentication required" })))),
@@ -9537,7 +9570,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 "reply": reply,
                 "link": { "url": link_url, "title": link_title }
             })))
-        }).route_layer(axum::middleware::from_fn_with_state(
+                }
+            })
+        }.route_layer(axum::middleware::from_fn_with_state(
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
         )))

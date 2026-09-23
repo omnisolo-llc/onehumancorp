@@ -244,7 +244,7 @@ export default function AgentsPage() {
               <div className="flex items-center gap-4"><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1><button id="assistant-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 font-semibold transition-colors mt-2">Start Tour</button></div>
               <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">Expert Center</h2>
               <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-450">
-                Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace.
+                Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace. Your autonomous business team.
               </p>
             </div>
             <div className="space-y-3">
@@ -310,9 +310,9 @@ export default function AgentsPage() {
           </nav>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-250/70 dark:border-zinc-800/70 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
             <span className="font-bold text-zinc-900 dark:text-white">Operational team:</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Manager</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Ambassador</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Promoter</span>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer">The Manager</button>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer">The Ambassador</button>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer">The Promoter</button>
           </div>
         </div>
       </header>

@@ -74,7 +74,7 @@ function LoginForm() {
         <div aria-labelledby="login-title">
           <div className="mb-8 text-center">
             <h1 id="login-title" className="text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
-              Sign in to OmniSolo OneHumanCorp
+              Sign in to OmniSolo OneHumanCorp <span className="sr-only">Login</span>
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               Access your business workspace securely.
@@ -91,6 +91,7 @@ function LoginForm() {
                 disabled={pending}
                 maxLength={254}
                 onChange={(event) => setIdentifier(event.target.value)}
+                placeholder="Email or Username"
                 required
                 value={identifier}
               />
@@ -104,6 +105,7 @@ function LoginForm() {
                 disabled={pending}
                 maxLength={1024}
                 onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
                 required
                 type="password"
                 value={password}
@@ -159,6 +161,9 @@ function LoginForm() {
           <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
             Need an account? <Link className="font-semibold text-[#0066FF]" href="/register">Check registration</Link>
           </p>
+          <div className="mt-3 text-center">
+            <Link role="button" className="text-xs text-gray-500 hover:text-[#0066FF]" href="/onboarding">Start Business Setup</Link>
+          </div>
         </div>
     </PublicAuthShell>
   );

@@ -12,7 +12,7 @@ test.describe('Interactive Poll Generator Growth Loop', () => {
         await page.goto('/interactive-poll-generator');
 
         // Verify the page loaded correctly
-        await expect(page.locator('h1')).toContainText('Interactive Poll Generator');
+        await expect(page.locator('h1').first()).toContainText('Interactive Poll Generator');
 
         // 2. Configure the poll
         // Fill in the question

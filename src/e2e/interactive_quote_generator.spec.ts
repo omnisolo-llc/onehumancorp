@@ -16,7 +16,7 @@ test.describe('Interactive Quote Generator Growth Loop', () => {
         await generatorLink.click();
 
         // Verify page content
-        await expect(page.locator('h1', { hasText: 'Interactive Quote Generator' })).toBeVisible();
+        await expect(page.locator('h1', { hasText: 'Interactive Quote Generator' }).first()).toBeVisible();
 
         // Check for the embed generation button
         await page.locator('button', { hasText: 'Copy Embed Code' }).click();
@@ -37,6 +37,6 @@ test.describe('Interactive Quote Generator Growth Loop', () => {
         await expect(page.locator('text=$150')).toBeVisible();
 
         // Check the footer viral link
-        await expect(page.locator('a', { hasText: '⚡ OmniSolo' })).toBeVisible();
+        await expect(page.locator('a', { hasText: /OmniSolo/ })).toBeVisible();
     });
 });

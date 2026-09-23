@@ -325,7 +325,7 @@ export default function POSTerminal() {
              </div>
            </div>
 
-           <div className="grid grid-cols-3 gap-y-6 gap-x-6 max-w-[280px] mx-auto">
+           <div id="pos-keypad" className="grid grid-cols-3 gap-y-6 gap-x-6 max-w-[280px] mx-auto">
              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                <div key={num} className="flex justify-center">
                  <button

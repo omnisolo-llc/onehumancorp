@@ -448,9 +448,18 @@
             console.error("Failed to load bio config", e);
         }
 
-        storeNameInput.value = currentState.store_name;
-        bioInput.value = currentState.bio;
+        if (document.activeElement !== storeNameInput && !storeNameInput.dataset.dirty) {
+            storeNameInput.value = currentState.store_name;
+        } else {
+            currentState.store_name = storeNameInput.value;
+        }
+        if (document.activeElement !== bioInput && !bioInput.dataset.dirty) {
+            bioInput.value = currentState.bio;
+        } else {
+            currentState.bio = bioInput.value;
+        }
         removeBrandingToggle.checked = currentState.remove_branding;
+        updatePreview();
 
         let saveTimeout;
         function saveState() {
@@ -526,12 +535,14 @@
         }
 
         storeNameInput.addEventListener('input', (e) => {
+            storeNameInput.dataset.dirty = 'true';
             currentState.store_name = e.target.value;
             updatePreview();
             saveState();
         });
 
         bioInput.addEventListener('input', (e) => {
+            bioInput.dataset.dirty = 'true';
             currentState.bio = e.target.value;
             updatePreview();
             saveState();

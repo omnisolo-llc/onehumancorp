@@ -38,14 +38,21 @@ async fn validate_pydantic(
             #[derive(Deserialize)]
             #[allow(dead_code)]
             struct Args {
-                _topic_name: Option<String>,
+                topic_name: String,
             }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(
-                    &e,
-                    Some(&payload.arguments.to_string()),
-                    None,
-                ));
+                let e_str = e.to_string();
+                if e_str.contains("missing field `topic_name`") {
+                    err_msg = Some("Validation Error (Pydantic-first tool schema): missing field `topic_name`".to_string());
+                } else if e_str.contains("invalid type") {
+                    err_msg = Some("Validation Error (Pydantic-first tool schema): Semantic validation failed. Expected string for `topic_name`.".to_string());
+                } else {
+                    err_msg = Some(format_pydantic_error(
+                        &e,
+                        Some(&payload.arguments.to_string()),
+                        None,
+                    ));
+                }
                 is_recoverable = true;
             }
         }
@@ -53,14 +60,19 @@ async fn validate_pydantic(
             #[derive(Deserialize)]
             #[allow(dead_code)]
             struct Args {
-                _query: Option<String>,
+                query: String,
             }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(
-                    &e,
-                    Some(&payload.arguments.to_string()),
-                    None,
-                ));
+                let e_str = e.to_string();
+                if e_str.contains("missing field `query`") {
+                    err_msg = Some("Validation Error (Pydantic-first tool schema): missing field `query`".to_string());
+                } else {
+                    err_msg = Some(format_pydantic_error(
+                        &e,
+                        Some(&payload.arguments.to_string()),
+                        None,
+                    ));
+                }
                 is_recoverable = true;
             }
         }
@@ -68,15 +80,20 @@ async fn validate_pydantic(
             #[derive(Deserialize)]
             #[allow(dead_code)]
             struct Args {
-                _topic_name: Option<String>,
-                _content: Option<String>,
+                topic_name: String,
+                content: String,
             }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(
-                    &e,
-                    Some(&payload.arguments.to_string()),
-                    None,
-                ));
+                let e_str = e.to_string();
+                if e_str.contains("missing field") {
+                    err_msg = Some("Validation Error (Pydantic-first tool schema): missing required fields".to_string());
+                } else {
+                    err_msg = Some(format_pydantic_error(
+                        &e,
+                        Some(&payload.arguments.to_string()),
+                        None,
+                    ));
+                }
                 is_recoverable = true;
             }
         }
@@ -84,14 +101,19 @@ async fn validate_pydantic(
             #[derive(Deserialize)]
             #[allow(dead_code)]
             struct Args {
-                _command: Option<String>,
+                command: String,
             }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(
-                    &e,
-                    Some(&payload.arguments.to_string()),
-                    None,
-                ));
+                let e_str = e.to_string();
+                if e_str.contains("missing field `command`") {
+                    err_msg = Some("Validation Error (Pydantic-first tool schema): missing field `command`".to_string());
+                } else {
+                    err_msg = Some(format_pydantic_error(
+                        &e,
+                        Some(&payload.arguments.to_string()),
+                        None,
+                    ));
+                }
                 is_recoverable = true;
             }
         }

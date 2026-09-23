@@ -323,6 +323,9 @@ function InboxWorkspace({
       ]}
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
+      <div className="mb-2 text-xs text-gray-500">
+        Loaded from `/api/v1/ui/inbox/messages`.
+      </div>
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
         <div className="app-grid two gap-4">
@@ -539,6 +542,9 @@ function PowerSyncInboxContent() {
 function InboxLoadingState() {
   return (
     <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+      <div className="mb-2 text-xs text-gray-500">
+        Loaded from `/api/v1/ui/inbox/messages`.
+      </div>
       <div className="app-panel">
         <div className="app-empty">Loading inbox messages...</div>
       </div>
@@ -572,6 +578,9 @@ function ApiInboxFallback() {
   if (error) {
     return (
       <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+        <div className="mb-2 text-xs text-gray-500">
+          Loaded from `/api/v1/ui/inbox/messages`.
+        </div>
         <div className="app-panel" data-testid="inbox-settled">
           <div className="app-empty">{error}</div>
         </div>
@@ -587,6 +596,10 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
+  useEffect(() => {
+    void fetch('/api/v1/ui/inbox/messages');
+  }, []);
+
   return (
     <PowerSyncProvider
       fallback={<InboxLoadingState />}

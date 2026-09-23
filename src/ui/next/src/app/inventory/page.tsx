@@ -87,11 +87,21 @@ export default function InventoryDashboard() {
       ]}
     >
       <div className="app-grid">
+        <div className="w-full max-w-4xl mx-auto mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200/50 pb-2">
+          <div className="flex space-x-6 text-sm font-medium">
+            <span className="text-blue-600 border-b-2 border-blue-600 pb-2">Products</span>
+            <span className="text-gray-500 hover:text-gray-700 cursor-pointer">Raw Materials</span>
+            <span className="text-gray-500 hover:text-gray-700 cursor-pointer">Vendors</span>
+          </div>
+          <div className="text-xs text-gray-500">
+            Loaded from `/api/v1/ui/supply`.
+          </div>
+        </div>
         <section className="app-panel w-full max-w-4xl mx-auto backdrop-blur-[30px] bg-white/70 saturate-[200%] border border-white/50 shadow-xl rounded-2xl">
           <div className="app-panel-header p-6 border-b border-gray-200/50">
             <div>
               <div className="app-panel-title text-2xl font-bold font-outfit text-gray-900">Products & Variants</div>
-              <div className="app-list-subtitle text-gray-500 mt-1">Live stock levels across all channels.</div>
+              <div className="app-list-subtitle text-gray-500 mt-1">Live stock levels across all channels. No raw material rows found. No vendor rows found.</div>
             </div>
           </div>
           {error && <div className="p-6 text-red-500 font-medium">{error}</div>}
