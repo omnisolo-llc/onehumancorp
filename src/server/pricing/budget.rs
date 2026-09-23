@@ -37,17 +37,17 @@ impl BudgetReservation {
             }
         }
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            if final_amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    final_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    final_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+            && final_amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                final_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                final_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
         }
 
         Ok(())
