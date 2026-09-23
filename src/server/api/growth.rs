@@ -1003,9 +1003,7 @@ async fn handle_generate_review(
 
     (
         StatusCode::OK,
-        Json(GenerateReviewResponse {
-            message: generated,
-        }),
+        Json(GenerateReviewResponse { message: generated }),
     )
 }
 
