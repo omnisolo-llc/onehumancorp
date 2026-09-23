@@ -136,8 +136,9 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if next <= self.total_limit_cents {
+
+        match state.total_allocated.checked_add(amount_cents) {
+            Some(next) if next <= self.total_limit_cents => {
                 state.total_allocated = next;
                 drop(state);
 
@@ -148,16 +149,16 @@ impl BudgetManager {
                     ); // pii-safe
                 }
 
-                return Ok(BudgetReservation {
+                Ok(BudgetReservation {
                     amount_cents,
                     state: self.state.clone(),
                     telemetry_store: self.telemetry_store.clone(),
                     tenant_id: self.tenant_id.clone(),
                     is_settled: false,
-                });
+                })
             }
+            _ => Err("budget limit exceeded".to_string()),
         }
-        Err("budget limit exceeded".to_string())
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
@@ -446,5 +447,35 @@ mod tests {
 
         let manager = BudgetManager::new(100.0);
         assert!(!manager.is_spend_rate_too_high(one_day, std::time::Duration::from_secs(0)));
+    }
+
+    #[test]
+    fn test_budget_reservation_drop_behavior() {
+        let manager = BudgetManager::new(100.0);
+
+        {
+            let _reservation = manager.reserve(5000).unwrap(); // Reserve $50
+            assert_eq!(manager.get_remaining_cents(), 5000); // 10000 - 5000
+            assert_eq!(manager.state.lock().unwrap().total_allocated, 5000);
+            assert_eq!(manager.state.lock().unwrap().settled, 0);
+            // Drop reservation without settling
+        }
+
+        // Ensure budget is rolled back
+        assert_eq!(manager.get_remaining_cents(), 10000);
+        assert_eq!(manager.state.lock().unwrap().total_allocated, 0);
+        assert_eq!(manager.state.lock().unwrap().settled, 0);
+
+        {
+            let reservation = manager.reserve(3000).unwrap(); // Reserve $30
+            assert_eq!(manager.get_remaining_cents(), 7000);
+            reservation.settle().unwrap();
+            // Drop reservation after settling
+        }
+
+        // Ensure budget is NOT rolled back
+        assert_eq!(manager.get_remaining_cents(), 7000);
+        assert_eq!(manager.state.lock().unwrap().total_allocated, 3000);
+        assert_eq!(manager.state.lock().unwrap().settled, 3000);
     }
 }
