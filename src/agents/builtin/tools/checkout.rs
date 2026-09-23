@@ -56,15 +56,11 @@ impl PydanticToolExecutor<ConversationalCheckoutArgs> for ConversationalCheckout
         .await
         .map_err(|e| ToolError::LlmRecoverable(format!("DB insert failed: {}", e)))?;
 
-        let link = if std::env::var("MERCADOPAGO_ACCESS_TOKEN").is_ok() {
-            "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string()
-        } else {
-            "https://checkout.stripe.com/pay/cs_test_".to_string() + &session_id.replace("-", "")
-        };
+        let link = String::new();
 
         Ok(json!({
-            "status": "success",
-            "message": "Conversational checkout session generated with inventory soft-lock (15 min).",
+            "status": "pending",
+            "message": "Checkout provider unconfigured. Draft saved, but payment link is unavailable.",
             "session_id": session_id,
             "inventory_lock_id": inventory_lock_id,
             "checkout_link": link
