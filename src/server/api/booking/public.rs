@@ -113,7 +113,7 @@ async fn create_checkout_session(
     let res = match &state.db.store {
         DbStore::Sqlite(pool) => {
             if requires_deposit && deposit_cents > 0 {
-                stripe_url = Some(format!("https://checkout.stripe.com/pay/cs_test_{}", booking_id));
+                stripe_url = None;
                 sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')")
                     .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339())
                     .execute(pool).await
@@ -128,7 +128,7 @@ async fn create_checkout_session(
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
             let result = if requires_deposit && deposit_cents > 0 {
-                stripe_url = Some(format!("https://checkout.stripe.com/pay/cs_test_{}", booking_id));
+                stripe_url = None;
                 sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')")
                     .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(st).bind(et)
                     .execute(&mut *tx).await
