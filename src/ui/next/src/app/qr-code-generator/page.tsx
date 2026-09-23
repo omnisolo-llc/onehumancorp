@@ -77,6 +77,7 @@ export default function QRCodeGeneratorPage() {
                   {['#111827', '#4f46e5', '#16a34a', '#dc2626', '#d97706'].map(c => (
                     <button
                       key={c}
+                      aria-label={`Select color ${c}`}
                       onClick={() => setQrColor(c)}
                       className={`w-10 h-10 rounded-full border-2 transition-transform ${qrColor === c ? 'scale-110 border-gray-400' : 'border-transparent'}`}
                       style={{ backgroundColor: c }}

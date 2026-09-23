@@ -114,6 +114,7 @@ export default function ReferralFabBuilder() {
                 </div>
                 <button
                   role="switch"
+                  aria-label="Remove Branding"
                   aria-checked={removeBranding}
                   onClick={handleBrandingToggle}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${removeBranding ? 'bg-indigo-600' : 'bg-gray-200'}`}
@@ -201,6 +202,7 @@ export default function ReferralFabBuilder() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative">
             <button
+              aria-label="Close modal"
               onClick={() => setShowPaywall(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >

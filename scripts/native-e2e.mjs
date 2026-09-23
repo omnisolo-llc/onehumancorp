@@ -148,6 +148,7 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
       OMNISOLO_GRPC_CLIENT_CA_PATH: path.join(temp, 'ca.crt'),
       E2E_POSTGRES_CONTAINER: pg, API_BASE_URL: apiOrigin, BACKEND_URL: apiOrigin,
       OMNISOLO_BACKEND_URL: apiOrigin, OMNISOLO_API_URL: apiOrigin, BASE_URL: webOrigin,
+      PLAYWRIGHT_BASE_URL: webOrigin,
       OMNISOLO_WEB_CANONICAL_ORIGIN: webOrigin, OMNISOLO_WEB_LOCAL_DEV: 'true',
       OMNISOLO_WEB_SESSION_KEY_ID: 'e2e-v1', OMNISOLO_WEB_SESSION_SECRET: randomBytes(32).toString('base64url'),
       PLAYWRIGHT_STORAGE_STATE: path.join(temp, 'browser-state.json'),

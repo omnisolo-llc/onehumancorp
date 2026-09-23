@@ -162,6 +162,7 @@ export default function ProjectShowcasePage() {
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
+                  aria-label="Remove Powered by OmniSolo watermark"
                   className="sr-only peer"
                   checked={removeBranding}
                   onChange={handleBrandingToggle}
@@ -270,6 +271,7 @@ export default function ProjectShowcasePage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%] z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
+              aria-label="Close modal"
               onClick={() => setShowPaywall(false)}
               className="absolute top-4 right-4 p-2 text-[#86868B] hover:text-[#1D1D1F] transition-colors"
             >

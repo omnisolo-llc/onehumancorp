@@ -183,6 +183,7 @@ export default function ExitIntentBuilder() {
                   removeBranding ? "bg-[#0071E3]" : "bg-gray-200"
                 }`}
                 role="switch"
+                aria-label="Remove OmniSolo Branding"
                 aria-checked={removeBranding}
               >
                 <span

@@ -94,7 +94,7 @@ export default function StorefrontBuilderPage() {
   // Read state from server on mount
   useEffect(() => {
     fetch('/api/v1/onboarding/state')
-    .then(res => res.json())
+    .then(res => res.ok ? res.json() : null)
     .then(data => {
       if (data && data.builderState) {
         if (data.builderState.bio) setBio(data.builderState.bio);
@@ -155,6 +155,11 @@ export default function StorefrontBuilderPage() {
         body: JSON.stringify({ description: bio })
       });
 
+      if (!response.ok) {
+        updateStatus("idle");
+        return;
+      }
+
       const data = await response.json();
       const blocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === 'HeroBlock' ? 'Hero' :
@@ -199,6 +204,10 @@ export default function StorefrontBuilderPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: `${bio}. Update request: ${chatMessage}. Note: Maintain a 375px optimized card-based mobile UI.` })
       });
+      if (!response.ok) {
+        updateStatus("idle");
+        return;
+      }
       const data = await response.json();
       const newBlocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === "HeroBlock" ? "Hero" :

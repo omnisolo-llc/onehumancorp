@@ -199,6 +199,7 @@ export default function DigitalBusinessCardGeneratorPage() {
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
+                    aria-label="Remove Powered by OmniSolo branding"
                     checked={removeBranding}
                     onChange={handleBrandingToggle}
                     className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
@@ -349,6 +350,7 @@ export default function DigitalBusinessCardGeneratorPage() {
 
             <div className="flex justify-end mb-2">
               <button
+                aria-label="Close modal"
                 onClick={() => setShowSoftPaywall(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-8 h-8 flex items-center justify-center"
               >

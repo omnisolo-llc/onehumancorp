@@ -83,8 +83,9 @@ export default function SettingsPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/v1/settings/delivery")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
+           if (!data) return;
            setDeliverySettings({
              delivery_enabled: data.delivery_enabled || false,
              delivery_radius: data.delivery_radius || 5.0,
@@ -94,7 +95,7 @@ export default function SettingsPage() {
         .catch(e => console.error("Failed to load delivery settings", e)),
 
       fetch("/api/v1/assistant/settings")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.settings?.agentName) {
             setAgentName(data.settings.agentName);
@@ -103,7 +104,7 @@ export default function SettingsPage() {
         .catch(e => console.error("Failed to load assistant settings", e)),
 
       fetch("/api/v1/settings/voice")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data) {
             setVoiceSettings({
@@ -117,7 +118,7 @@ export default function SettingsPage() {
         .catch(e => console.error("Failed to load voice settings", e)),
 
       fetch("/api/v1/settings/telemetry")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data && data.product_telemetry_enabled !== undefined) {
             setProductTelemetryEnabled(data.product_telemetry_enabled);
@@ -126,7 +127,7 @@ export default function SettingsPage() {
         .catch(e => console.error("Failed to load telemetry settings", e)),
 
       fetch("/api/v1/local_seo/discovery_report")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (Array.isArray(data)) {
             setSeoReports(data);
@@ -368,7 +369,7 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">Automatically handle multi-currency payments and localize invoices.</h3>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
+                <input type="checkbox" aria-label="Automatically handle multi-currency payments and localize invoices" className="sr-only peer" defaultChecked />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
               </label>
             </div>
@@ -539,6 +540,7 @@ export default function SettingsPage() {
                   <span>Enable AI Voice Receptionist</span>
                   <input
                     type="checkbox"
+                    aria-label="Enable AI Voice Receptionist"
                     checked={voiceSettings.voice_receptionist_enabled}
                     onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"

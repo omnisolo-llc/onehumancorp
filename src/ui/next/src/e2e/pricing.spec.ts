@@ -36,8 +36,8 @@ test.describe('Pricing Page Loop', () => {
     await page.goto('/pricing');
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
-    const proPrice = page.locator('.omnisolo-growth-card:has-text("Pro")');
-    const businessPrice = page.locator('.omnisolo-growth-card:has-text("Business")');
+    const proPrice = page.locator('.omnisolo-growth-card:has-text("Pro")').first();
+    const businessPrice = page.locator('.omnisolo-growth-card:has-text("Business")').first();
 
     await expect(proPrice).toContainText('$79');
     await expect(proPrice).toContainText('/ month');

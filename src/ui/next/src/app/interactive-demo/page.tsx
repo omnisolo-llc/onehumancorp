@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { cloudUrl } from '../../lib/branding';
 
 function escapeHtmlText(value: string): string {
   return value.replace(/[&<>]/g, (character) => ({
@@ -133,6 +134,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
+                        aria-label="Remove Powered by OmniSolo Badge"
                         className="sr-only peer"
                         checked={removeBranding}
                         onChange={handleToggleBranding}
@@ -145,22 +147,24 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
             </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-800">Embed Code</h2>
-              <p className="text-sm text-gray-600 mb-3">Copy and paste this HTML into your website's code.</p>
-              <div className="relative">
-                <textarea
-                  aria-label="Embed code"
-                  readOnly
-                  value={embedCode}
-                  className="w-full h-40 p-4 bg-gray-900 text-gray-100 text-sm font-mono rounded-lg resize-none focus:outline-none"
-                />
-             <button
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold font-outfit text-gray-800">Embed Code</h2>
+                  <p className="text-sm text-gray-600">Copy and paste this HTML into your website's code.</p>
+                </div>
+                <button
                   onClick={() => navigator.clipboard.writeText(embedCode)}
-                  className="absolute top-2 right-2 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-medium transition-colors backdrop-blur-sm"
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors"
                 >
                   Copy
                 </button>
               </div>
+              <textarea
+                aria-label="Embed code"
+                readOnly
+                value={embedCode}
+                className="w-full h-40 p-4 bg-gray-900 text-gray-100 text-sm font-mono rounded-lg resize-none focus:outline-none"
+              />
             </div>
           </div>
 
@@ -182,7 +186,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
 
                   {!removeBranding && (
                     <div className="mt-4 text-center">
-                      <a href="#" className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">⚡ Powered by OmniSolo</a>
+                      <a href={cloudUrl(`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">⚡ Powered by OmniSolo</a>
                     </div>
                   )}
                 </div>
@@ -199,6 +203,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
 
             <button
+              aria-label="Close modal"
               onClick={() => setShowSoftPaywall(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2"
             >

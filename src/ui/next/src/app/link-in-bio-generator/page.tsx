@@ -244,7 +244,7 @@ export default function LinkInBioGeneratorPage() {
                             {links.map((link, i) => (
                                 <a
                                     key={i}
-                                    href="#"
+                                    href={link.url || `/link/${i + 1}`}
                                     onClick={(e) => e.preventDefault()}
                                     className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-black shadow-md hover:shadow-lg'}`}
                                 >

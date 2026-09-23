@@ -1,7 +1,7 @@
 import { E2E_ADMIN_USER, expect, test } from "../../../../e2e/fixtures";
 import { discoverApplicationRoutes } from "./production_route_inventory";
 
-const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "http://127.0.0.1:3000";
 const adminEmail = process.env.OMNISOLO_ADMIN_EMAIL ?? process.env.OHC_ADMIN_EMAIL ?? E2E_ADMIN_USER.email;
 const adminPassword = process.env.OMNISOLO_ADMIN_PASSWORD ?? process.env.OHC_ADMIN_PASSWORD ?? E2E_ADMIN_USER.password;
 const organizationId = process.env.OMNISOLO_ADMIN_ORGANIZATION_ID

@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Perplexity Harness UI', () => {
   test('should allow user to submit a query and see the response', async ({ page }) => {
     // We navigate to the newly created route
-    await page.goto('http://localhost:3000/perplexity-harness');
+    await page.goto('/perplexity-harness');
 
     // Check header
     await expect(page.locator('h1')).toHaveText('Perplexity-style Agent Harness');

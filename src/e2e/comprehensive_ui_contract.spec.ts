@@ -120,9 +120,9 @@ function externalHostAllowed(hostname: string) {
 function isFakeOmniSoloUrl(href: string) {
   try {
     const url = new URL(href, 'http://dummy.base');
-    return url.protocol === 'ohc:' || url.hostname === 'cloud.omnisolo.co' || url.hostname.endsWith('.cloud.omnisolo.co');
+    return url.protocol === 'ohc:' || url.protocol === 'omnisolo:' || url.hostname === 'ohc.store' || url.hostname.endsWith('.ohc.store') || url.hostname === 'omnisolo.store' || url.hostname.endsWith('.omnisolo.store');
   } catch {
-    return href.startsWith('omnisolo://') || href.includes('cloud.omnisolo.co');
+    return href.startsWith('ohc://') || href.startsWith('omnisolo://') || href.includes('ohc.store') || href.includes('omnisolo.store');
   }
 }
 

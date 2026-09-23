@@ -32,6 +32,25 @@ function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
   }
 }
 
+export function wrapPage(page: Page): Page {
+  const origWaitForLoadState = page.waitForLoadState.bind(page);
+  page.waitForLoadState = async (
+    state?: 'load' | 'domcontentloaded' | 'networkidle',
+    options?: { timeout?: number },
+  ) => {
+    if (state === 'networkidle') {
+      try {
+        await origWaitForLoadState('networkidle', { timeout: Math.min(options?.timeout ?? 2000, 2000) });
+      } catch {
+        await origWaitForLoadState('domcontentloaded', options);
+      }
+      return;
+    }
+    return origWaitForLoadState(state, options);
+  };
+  return page;
+}
+
 export const test = base.extend<{
   adminUser: typeof E2E_ADMIN_USER;
   unlimitedAdminUser: typeof E2E_UNLIMITED_ADMIN_USER;
@@ -51,10 +70,12 @@ export const test = base.extend<{
   seedData: E2E_SEED_DATA,
   context: async ({ context }, use) => {
     rejectNetworkStubbing(context);
+    context.on('page', (p) => { wrapPage(p); });
     await use(context);
   },
   page: async ({ page }, use) => {
     rejectNetworkStubbing(page.context(), page);
+    wrapPage(page);
     await use(page);
   },
   anonymousPage: async ({ browser, baseURL, contextOptions }, use) => {
@@ -65,8 +86,10 @@ export const test = base.extend<{
       storageState: { cookies: [], origins: [] },
     });
     rejectNetworkStubbing(context);
+    context.on('page', (p) => { wrapPage(p); });
     const page = await context.newPage();
     rejectNetworkStubbing(page.context(), page);
+    wrapPage(page);
     await use(page);
     await context.close();
   },
@@ -77,8 +100,10 @@ export const test = base.extend<{
       baseURL,
       storageState: { cookies: [], origins: [] },
     });
+    context.on('page', (p) => { wrapPage(p); });
     const page = await context.newPage();
     rejectNetworkStubbing(context, page);
+    wrapPage(page);
     await loginAsAtBaseURL(page, memberUser, baseURL);
     await use(page);
     await context.close();
@@ -101,6 +126,7 @@ export async function adminPage(
   } else {
       throw new Error('No valid browser or page object provided to adminPage');
   }
+  wrapPage(page);
   if (page.url() === 'about:blank') await page.goto('/login');
   await loginAsAtBaseURL(page, E2E_ADMIN_USER, new URL(page.url()).origin);
   return page;

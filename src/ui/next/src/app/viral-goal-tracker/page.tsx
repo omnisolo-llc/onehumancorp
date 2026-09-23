@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
+import { cloudUrl } from '../../lib/branding';
 
 export default function ViralGoalTrackerPage() {
   useRouter();
@@ -118,7 +119,7 @@ export default function ViralGoalTrackerPage() {
 
               {!hasPro && (
                  <div className="text-center">
-                    <a href="#" className={`text-xs font-medium hover:underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <a href={cloudUrl(`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)} className={`text-xs font-medium hover:underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400 hover:text-gray-600'}`}>
                        ⚡ Powered by OmniSolo
                     </a>
                  </div>
