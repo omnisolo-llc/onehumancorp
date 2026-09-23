@@ -136,26 +136,28 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if next <= self.total_limit_cents {
-                state.total_allocated = next;
-                drop(state);
+        if let Some(next) = state
+            .total_allocated
+            .checked_add(amount_cents)
+            .filter(|&next| next <= self.total_limit_cents)
+        {
+            state.total_allocated = next;
+            drop(state);
 
-                if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-                    tracing::info!(
-                        "💰 Miser telemetry: Recording budget spend for tenant {}",
-                        tid
-                    ); // pii-safe
-                }
-
-                return Ok(BudgetReservation {
-                    amount_cents,
-                    state: self.state.clone(),
-                    telemetry_store: self.telemetry_store.clone(),
-                    tenant_id: self.tenant_id.clone(),
-                    is_settled: false,
-                });
+            if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                tracing::info!(
+                    "💰 Miser telemetry: Recording budget spend for tenant {}",
+                    tid
+                ); // pii-safe
             }
+
+            return Ok(BudgetReservation {
+                amount_cents,
+                state: self.state.clone(),
+                telemetry_store: self.telemetry_store.clone(),
+                tenant_id: self.tenant_id.clone(),
+                is_settled: false,
+            });
         }
         Err("budget limit exceeded".to_string())
     }
