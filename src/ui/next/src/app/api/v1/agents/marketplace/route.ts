@@ -29,7 +29,11 @@ const DEFAULT_AGENTS: Agent[] = [
   },
 ];
 
-const customAgents: Agent[] = [];
+const globalAgents = globalThis as unknown as { __customAgents?: Agent[] };
+if (!globalAgents.__customAgents) {
+  globalAgents.__customAgents = [];
+}
+const customAgents = globalAgents.__customAgents;
 
 async function unwrapResult(response: Response): Promise<Response> {
   if (!response.ok) return response;

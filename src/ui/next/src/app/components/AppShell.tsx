@@ -175,7 +175,7 @@ export function AppShell({
         <div className="app-brand">
           <div className="app-brand-mark">O</div>
           <div>
-            <div className="app-brand-title">OmniSolo OneHumanCorp</div>
+            <div className="app-brand-title">Enterprise Console</div>
             <div className="app-brand-subtitle">Application</div>
           </div>
         </div>

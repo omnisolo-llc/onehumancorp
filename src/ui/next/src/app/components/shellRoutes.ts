@@ -66,7 +66,7 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/affiliate-badge-builder": { title: "Affiliate Badge Builder" },
   "/agent-marketplace": { title: "Agent Marketplace" },
   "/agent-protocol": {
-    title: "Agent Protocol",
+    title: "Agent Protocol UI",
     subtitle: "Standardized Agent Protocol interactions.",
   },
   "/agents": {
@@ -101,6 +101,7 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/group-buy-widget": { title: "Group Buy Widget" },
   "/help": { title: "Help" },
   "/incidents": { title: "Incidents" },
+  "/invoice-generator/view": { title: "Bill Details" },
   "/invoice-generator": { title: "Invoice Generator" },
   "/langgraph": {
     title: "LangGraph",

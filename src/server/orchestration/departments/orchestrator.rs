@@ -685,14 +685,14 @@ impl DepartmentOrchestrator {
                         .is_ok()
                     {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' AND id > $2 ORDER BY id ASC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(context_payload->>'description', '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' AND id > $2 ORDER BY id ASC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(context_payload->>'description', '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -713,8 +713,8 @@ impl DepartmentOrchestrator {
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
                     for row in rows {
-                        let dep_str: String = row.get("department");
-                        let status_str: String = row.get("status");
+                        let dep_str: String = row.try_get("department").unwrap_or_default();
+                        let status_str: String = row.try_get("status").unwrap_or_default();
                         let department = DepartmentType::from_str(&dep_str)
                             .unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
@@ -724,7 +724,7 @@ impl DepartmentOrchestrator {
                             "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
-                        let risk_str: String = row.get("action_risk");
+                        let risk_str: String = row.try_get("action_risk").unwrap_or_default();
                         let action_risk =
                             ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_opt: Option<serde_json::Value> =
@@ -733,10 +733,14 @@ impl DepartmentOrchestrator {
                                 Err(_) => row.try_get::<serde_json::Value, _>("payload").ok(),
                             };
                         results.push(ApprovalRequest {
-                            id: row.get("id"),
-                            tenant_id: row.get("tenant_id"),
+                            id: row.try_get::<String, _>("id").unwrap_or_default(),
+                            tenant_id: row.try_get::<String, _>("tenant_id").unwrap_or_default(),
                             department,
-                            description: row.get("description"),
+                            description: row
+                                .try_get::<Option<String>, _>("description")
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default(),
                             status,
                             action_risk,
                             payload: payload_opt,
@@ -746,14 +750,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' AND id > ? ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(json_extract(context_payload, '$.description'), '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' AND id > ? ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(json_extract(context_payload, '$.description'), '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -762,8 +766,8 @@ impl DepartmentOrchestrator {
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
                     for row in rows {
-                        let dep_str: String = row.get("department");
-                        let status_str: String = row.get("status");
+                        let dep_str: String = row.try_get("department").unwrap_or_default();
+                        let status_str: String = row.try_get("status").unwrap_or_default();
                         let department = DepartmentType::from_str(&dep_str)
                             .unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
@@ -773,7 +777,7 @@ impl DepartmentOrchestrator {
                             "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
-                        let risk_str: String = row.get("action_risk");
+                        let risk_str: String = row.try_get("action_risk").unwrap_or_default();
                         let action_risk =
                             ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_str: Option<String> = match row.try_get::<String, _>("payload")
@@ -787,10 +791,14 @@ impl DepartmentOrchestrator {
                         let payload_opt = payload_str
                             .and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
-                            id: row.get("id"),
-                            tenant_id: row.get("tenant_id"),
+                            id: row.try_get::<String, _>("id").unwrap_or_default(),
+                            tenant_id: row.try_get::<String, _>("tenant_id").unwrap_or_default(),
                             department,
-                            description: row.get("description"),
+                            description: row
+                                .try_get::<Option<String>, _>("description")
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default(),
                             status,
                             action_risk,
                             payload: payload_opt,
@@ -869,14 +877,14 @@ impl DepartmentOrchestrator {
                         .is_ok()
                     {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' AND id < $2 ORDER BY id DESC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(context_payload->>'description', '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' AND id < $2 ORDER BY id DESC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(context_payload->>'description', '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -897,8 +905,8 @@ impl DepartmentOrchestrator {
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
                     for row in rows {
-                        let dep_str: String = row.get("department");
-                        let status_str: String = row.get("status");
+                        let dep_str: String = row.try_get("department").unwrap_or_default();
+                        let status_str: String = row.try_get("status").unwrap_or_default();
                         let department = DepartmentType::from_str(&dep_str)
                             .unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
@@ -908,7 +916,7 @@ impl DepartmentOrchestrator {
                             "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
-                        let risk_str: String = row.get("action_risk");
+                        let risk_str: String = row.try_get("action_risk").unwrap_or_default();
                         let action_risk =
                             ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_opt: Option<serde_json::Value> =
@@ -917,10 +925,14 @@ impl DepartmentOrchestrator {
                                 Err(_) => row.try_get::<serde_json::Value, _>("payload").ok(),
                             };
                         results.push(ApprovalRequest {
-                            id: row.get("id"),
-                            tenant_id: row.get("tenant_id"),
+                            id: row.try_get::<String, _>("id").unwrap_or_default(),
+                            tenant_id: row.try_get::<String, _>("tenant_id").unwrap_or_default(),
                             department,
-                            description: row.get("description"),
+                            description: row
+                                .try_get::<Option<String>, _>("description")
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default(),
                             status,
                             action_risk,
                             payload: payload_opt,
@@ -930,14 +942,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(json_extract(context_payload, '$.description'), '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, COALESCE(json_extract(context_payload, '$.description'), '') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -946,8 +958,8 @@ impl DepartmentOrchestrator {
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
                     for row in rows {
-                        let dep_str: String = row.get("department");
-                        let status_str: String = row.get("status");
+                        let dep_str: String = row.try_get("department").unwrap_or_default();
+                        let status_str: String = row.try_get("status").unwrap_or_default();
                         let department = DepartmentType::from_str(&dep_str)
                             .unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
@@ -957,7 +969,7 @@ impl DepartmentOrchestrator {
                             "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
-                        let risk_str: String = row.get("action_risk");
+                        let risk_str: String = row.try_get("action_risk").unwrap_or_default();
                         let action_risk =
                             ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_str: Option<String> = match row.try_get::<String, _>("payload")
@@ -971,10 +983,14 @@ impl DepartmentOrchestrator {
                         let payload_opt = payload_str
                             .and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
-                            id: row.get("id"),
-                            tenant_id: row.get("tenant_id"),
+                            id: row.try_get::<String, _>("id").unwrap_or_default(),
+                            tenant_id: row.try_get::<String, _>("tenant_id").unwrap_or_default(),
                             department,
-                            description: row.get("description"),
+                            description: row
+                                .try_get::<Option<String>, _>("description")
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default(),
                             status,
                             action_risk,
                             payload: payload_opt,

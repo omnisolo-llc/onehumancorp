@@ -139,7 +139,7 @@ export default function AgentProtocolPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <h1 className="text-3xl font-bold mb-4">Agent Protocol UI</h1>
+      <div className="text-3xl font-bold mb-4">Agent Protocol UI</div>
       <p className="text-gray-600 mb-8">
         Interact with the standardized Agent Protocol (AutoGPT Unique Harness Innovations).
       </p>

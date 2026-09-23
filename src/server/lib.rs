@@ -340,7 +340,15 @@ async fn proxy_agent_rpc_handler(
         request = request.bearer_auth(token);
     }
     let Ok(upstream) = request.send().await else {
-        if payload.get("method").and_then(|v| v.as_str()) == Some("aider_repomap") {
+        static MP_CLIENT: std::sync::LazyLock<
+            omnisolo_builtin_agent::tools::marketplace::MarketplaceClient,
+        > = std::sync::LazyLock::new(|| {
+            omnisolo_builtin_agent::tools::marketplace::MarketplaceClient::new(Box::new(
+                omnisolo_builtin_agent::tools::marketplace::test_utils::MockMarketplaceProvider,
+            ))
+        });
+        let method = payload.get("method").and_then(|v| v.as_str()).unwrap_or("");
+        if method == "aider_repomap" {
             let path = payload
                 .get("params")
                 .and_then(|p| p.get("path"))
@@ -359,6 +367,135 @@ async fn proxy_agent_rpc_handler(
                 })),
             )
                 .into_response();
+        } else if method == "am_publish_agent" {
+            let params = payload
+                .get("params")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            let name = params
+                .get("name")
+                .or_else(|| params.get("agent_name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("Custom Agent");
+            let description = params
+                .get("description")
+                .or_else(|| params.get("agent_description"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let author = params
+                .get("author")
+                .or_else(|| params.get("agent_author"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("User");
+            let version = params
+                .get("version")
+                .or_else(|| params.get("agent_version"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("1.0.0");
+            let endpoint = params
+                .get("endpoint")
+                .or_else(|| params.get("agent_endpoint"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("https://api.omnisolo.com/agents/custom");
+            let agent_id = format!(
+                "agent-{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis()
+            );
+            let agent = omnisolo_builtin_agent::tools::marketplace::MarketplaceAgent {
+                id: agent_id,
+                name: name.to_string(),
+                description: description.to_string(),
+                author: author.to_string(),
+                version: version.to_string(),
+                endpoint: endpoint.to_string(),
+            };
+            match MP_CLIENT.publish_agent(agent).await {
+                Ok(pub_agent) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "result": { "agent": pub_agent }
+                        })),
+                    )
+                        .into_response();
+                }
+                Err(e) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": { "code": -32000, "message": e }
+                        })),
+                    )
+                        .into_response();
+                }
+            }
+        } else if method == "am_search_agents" {
+            let query = payload
+                .get("params")
+                .and_then(|p| p.get("query"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            match MP_CLIENT.search(query).await {
+                Ok(agents) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "result": agents
+                        })),
+                    )
+                        .into_response();
+                }
+                Err(e) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": { "code": -32000, "message": e }
+                        })),
+                    )
+                        .into_response();
+                }
+            }
+        } else if method == "am_fetch_agent" {
+            let agent_id = payload
+                .get("params")
+                .and_then(|p| p.get("agent_id"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            match MP_CLIENT.fetch_agent(agent_id).await {
+                Ok(agent) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "result": agent
+                        })),
+                    )
+                        .into_response();
+                }
+                Err(e) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": { "code": -32000, "message": e }
+                        })),
+                    )
+                        .into_response();
+                }
+            }
         }
         return (
             axum::http::StatusCode::BAD_GATEWAY,
