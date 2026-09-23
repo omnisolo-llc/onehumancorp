@@ -91,7 +91,7 @@ impl BudgetManager {
     }
 
     pub fn with_alert_threshold(mut self, threshold: f64) -> Self {
-        self.alert_threshold_percent = threshold;
+        self.alert_threshold_percent = threshold.clamp(0.0, 100.0);
         self
     }
 
@@ -422,6 +422,15 @@ mod tests {
         let threshold_manager = BudgetManager::new(100.0).with_alert_threshold(0.01);
         threshold_manager.record_spend(0.02).unwrap();
         assert!(threshold_manager.check_alert_threshold());
+    }
+
+    #[test]
+    fn test_alert_threshold_clamping() {
+        let manager = BudgetManager::new(100.0).with_alert_threshold(150.0);
+        assert_eq!(manager.alert_threshold_percent, 100.0);
+
+        let manager_low = BudgetManager::new(100.0).with_alert_threshold(-10.0);
+        assert_eq!(manager_low.alert_threshold_percent, 0.0);
     }
 
     #[test]
