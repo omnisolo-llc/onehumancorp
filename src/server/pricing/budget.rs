@@ -185,15 +185,18 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        if let Some(next) = state.total_allocated.checked_add(amount_cents).filter(|&next| next <= self.total_limit_cents) {
-            state.total_allocated = next;
-            return Ok(Some(BudgetReservation {
-                state: self.state.clone(),
-                amount_cents,
-                is_settled: false,
-                telemetry_store: self.telemetry_store.clone(),
-                tenant_id: self.tenant_id.clone(),
-            }));
+        #[allow(clippy::collapsible_if)]
+        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
+            if next <= self.total_limit_cents {
+                state.total_allocated = next;
+                return Ok(Some(BudgetReservation {
+                    state: self.state.clone(),
+                    amount_cents,
+                    is_settled: false,
+                    telemetry_store: self.telemetry_store.clone(),
+                    tenant_id: self.tenant_id.clone(),
+                }));
+            }
         }
         Ok(None)
     }
