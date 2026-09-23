@@ -249,7 +249,7 @@ async fn draft_agent(
         }
     };
 
-    let total_amount_cents = match checked_proposal_total(&line_items) {
+    let _total_amount_cents = match checked_proposal_total(&line_items) {
         Ok(total) => total,
         Err(message) => {
             return (
@@ -260,7 +260,7 @@ async fn draft_agent(
         }
     };
     // A model-generated draft cannot invent the owner's deposit policy.
-    let required_deposit_cents = 0;
+    let _required_deposit_cents = 0;
 
     let proposal_id = Uuid::new_v4().to_string();
     let mut tx = match pool.begin().await {
@@ -271,8 +271,12 @@ async fn draft_agent(
         }
     };
 
+    // Overwrite total and deposit to 0 and set status to NEEDS_PRICING to prevent committing fabricated pricing
+    let total_amount_cents = 0;
+    let required_deposit_cents = 0;
+
     let insert_res = sqlx::query(
-        "INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())"
+        "INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'NEEDS_PRICING', $4, $5, NOW(), NOW())"
     )
     .bind(&proposal_id)
     .bind(&tenant_id)
@@ -295,7 +299,7 @@ async fn draft_agent(
         .bind(&item_id)
         .bind(&proposal_id)
         .bind(&item.description)
-        .bind(item.unit_price_cents)
+        .bind(0_i64) // Zero out AI-fabricated pricing
         .bind(item.quantity)
         .bind(item.is_optional)
         .execute(&mut *tx)
