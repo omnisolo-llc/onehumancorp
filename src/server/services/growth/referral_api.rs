@@ -4,6 +4,9 @@ pub fn generate_referral_link(user_id: &str) -> Result<String, String> {
     if user_id.is_empty() {
         return Err("userID cannot be empty".to_string());
     }
+    if user_id.len() > 255 {
+        return Err("userID is too long".to_string());
+    }
 
     let mut rng = rand::thread_rng();
     let bytes: [u8; 8] = {
@@ -34,5 +37,8 @@ mod tests {
 
         let err = generate_referral_link("").unwrap_err();
         assert_eq!(err, "userID cannot be empty");
+
+        let err_long = generate_referral_link(&"a".repeat(256)).unwrap_err();
+        assert_eq!(err_long, "userID is too long");
     }
 }
