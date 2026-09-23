@@ -1,6 +1,3 @@
-
-
-
 pub struct BudgetState {
     pub total_allocated: i64,
     pub settled: i64,
@@ -14,7 +11,6 @@ pub struct BudgetManager {
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
 }
-
 
 pub struct BudgetReservation {
     state: std::sync::Arc<std::sync::Mutex<BudgetState>>,
@@ -32,17 +28,17 @@ impl BudgetReservation {
         }
         self.is_completed = true;
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            if self.amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    self.amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    self.amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+            && self.amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                self.amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                self.amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
         }
     }
 
@@ -76,7 +72,10 @@ impl BudgetManager {
         };
         BudgetManager {
             total_limit: limit,
-            state: std::sync::Arc::new(std::sync::Mutex::new(BudgetState { total_allocated: 0, settled: 0 })),
+            state: std::sync::Arc::new(std::sync::Mutex::new(BudgetState {
+                total_allocated: 0,
+                settled: 0,
+            })),
             total_limit_cents,
             telemetry_store: None,
             tenant_id: None,
@@ -129,17 +128,17 @@ impl BudgetManager {
 
         let mut state = self.state.lock().unwrap();
         let next = state.total_allocated.checked_add(amount_cents);
-        if let Some(n) = next {
-            if n <= self.total_limit_cents {
-                state.total_allocated = n;
-                return Ok(Some(BudgetReservation {
-                    state: self.state.clone(),
-                    amount_cents,
-                    telemetry_store: self.telemetry_store.clone(),
-                    tenant_id: self.tenant_id.clone(),
-                    is_completed: false,
-                }));
-            }
+        if let Some(n) = next
+            && n <= self.total_limit_cents
+        {
+            state.total_allocated = n;
+            return Ok(Some(BudgetReservation {
+                state: self.state.clone(),
+                amount_cents,
+                telemetry_store: self.telemetry_store.clone(),
+                tenant_id: self.tenant_id.clone(),
+                is_completed: false,
+            }));
         }
         Ok(None)
     }
@@ -188,8 +187,7 @@ impl BudgetManager {
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || current >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || current >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
