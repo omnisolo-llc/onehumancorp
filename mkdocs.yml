@@ -27,6 +27,8 @@ validation:
         omitted_files: ignore
 nav:
   - Home: index.md
+  - Help Center:
+      - How to Collect Money: help_center/how-to-collect-money.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
       - Universal Harness Master Design: technical/architecture/kairos/master-design-doc.md
