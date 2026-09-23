@@ -56,6 +56,13 @@ impl BudgetReservation {
         }
         Ok(())
     }
+
+    pub fn release(mut self) {
+        let mut state = self.state.lock().unwrap();
+        state.total_allocated = state.total_allocated.saturating_sub(self.amount_cents);
+        drop(state);
+        self.is_settled = true; // Prevents Drop from decrementing it again
+    }
 }
 
 impl Drop for BudgetReservation {
@@ -136,26 +143,26 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if next <= self.total_limit_cents {
-                state.total_allocated = next;
-                drop(state);
+        if let Some(next) = state.total_allocated.checked_add(amount_cents)
+            .filter(|&next| next <= self.total_limit_cents)
+        {
+            state.total_allocated = next;
+            drop(state);
 
-                if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-                    tracing::info!(
-                        "💰 Miser telemetry: Recording budget spend for tenant {}",
-                        tid
-                    ); // pii-safe
-                }
-
-                return Ok(BudgetReservation {
-                    amount_cents,
-                    state: self.state.clone(),
-                    telemetry_store: self.telemetry_store.clone(),
-                    tenant_id: self.tenant_id.clone(),
-                    is_settled: false,
-                });
+            if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                tracing::info!(
+                    "💰 Miser telemetry: Recording budget spend for tenant {}",
+                    tid
+                ); // pii-safe
             }
+
+            return Ok(BudgetReservation {
+                amount_cents,
+                state: self.state.clone(),
+                telemetry_store: self.telemetry_store.clone(),
+                tenant_id: self.tenant_id.clone(),
+                is_settled: false,
+            });
         }
         Err("budget limit exceeded".to_string())
     }
@@ -436,6 +443,27 @@ mod tests {
                 .is_spend_rate_too_high(std::time::Duration::from_secs(10 * 86400), thirty_days)
         );
         // 20% in 10 days is fine
+    }
+
+    #[test]
+    fn test_reservation_release() {
+        let manager = BudgetManager::new(100.0);
+        assert_eq!(manager.get_remaining_cents(), 10000);
+
+        let reservation = manager.reserve(2000).unwrap();
+        assert_eq!(manager.get_remaining_cents(), 8000);
+
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.total_allocated, 2000);
+        assert_eq!(state.settled, 0);
+        drop(state);
+
+        reservation.release();
+        assert_eq!(manager.get_remaining_cents(), 10000);
+
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.total_allocated, 0);
+        assert_eq!(state.settled, 0);
     }
 
     #[test]
