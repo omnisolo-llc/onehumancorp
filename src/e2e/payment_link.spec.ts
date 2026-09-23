@@ -3,7 +3,8 @@ import { adminPage } from './fixtures';
 import { query } from './db_utils';
 
 test.describe('Payment Link E2E', () => {
-  adminPage('User receives actual payment link and webhook updates state to PAID', async ({ page, request }) => {
+  test('User receives actual payment link and webhook updates state to PAID', async ({ page, request }) => {
+    await adminPage(page);
     // 1. Create a draft invoice
     const createRes = await request.post('/api/v1/invoices', {
       data: {

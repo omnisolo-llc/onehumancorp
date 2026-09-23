@@ -462,6 +462,7 @@ async fn approve_proposal(
                 product: Some(&proposal.id),
                 currency: "usd",
                 operation_id: &operation_id,
+                metadata: None,
             },
         )
         .await

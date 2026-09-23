@@ -185,9 +185,9 @@ pub async fn handle_autonomous_quote_action(
         let stripe_client = StripeClient::new(api_key);
 
         // Generate an idempotent checkout session
-        let operation_id = format!("booking-deposit-{}", booking_id.unwrap_or(&uuid::Uuid::new_v4().to_string()));
+        let operation_id = format!("booking-deposit-{}", uuid::Uuid::new_v4());
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("booking_id".to_string(), booking_id.unwrap_or("").to_string());
+        metadata.insert("booking_deposit".to_string(), "true".to_string());
         let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
             name: service,
             reference: customer_id,
@@ -195,7 +195,7 @@ pub async fn handle_autonomous_quote_action(
             interval: None,
             product: None,
             currency: "usd",
-            operation_id,
+            operation_id: &operation_id,
             metadata: Some(metadata),
         };
         let link_res = stripe_client
@@ -207,7 +207,7 @@ pub async fn handle_autonomous_quote_action(
                 "{}
 
 To secure your booking, please pay the deposit here: {}",
-                generated_message, stripe_payment_link
+                drafted_message, stripe_payment_link
             );
         } else if let Err(e) = link_res {
             tracing::error!("Failed to generate idempotent Stripe payment link for deposit: {}", e); // pii-safe
@@ -216,7 +216,7 @@ To secure your booking, please pay the deposit here: {}",
                 "{}
 
 Your booking deposit is pending. A payment link will be sent shortly.",
-                generated_message
+                drafted_message
             );
         }
     }

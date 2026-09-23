@@ -270,6 +270,7 @@ mod tests {
             None,
             "usd",
             "https://owner.example",
+            None,
         )
         .unwrap();
         assert_eq!(form["line_items[0][price_data][unit_amount]"], "15000");
@@ -282,7 +283,8 @@ mod tests {
                 None,
                 None,
                 "jpy",
-                "https://owner.example"
+                "https://owner.example",
+                None,
             )
             .is_err()
         );
@@ -294,7 +296,8 @@ mod tests {
                 None,
                 None,
                 "usd",
-                "http://attacker.example"
+                "http://attacker.example",
+                None,
             )
             .is_err()
         );

@@ -135,7 +135,7 @@ pub async fn handle_quote_action(
                 interval: None,
                 product: None,
                 currency: "usd",
-                operation_id,
+                operation_id: &operation_id,
                 metadata: Some(metadata),
             };
 

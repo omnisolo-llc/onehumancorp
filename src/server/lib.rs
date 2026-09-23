@@ -5160,14 +5160,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         stripe_key,
                                     );
                                 let operation_id = format!("triage-deposit-{}", uuid::Uuid::new_v4());
+                                let triage_id_clone = payload.triage_item_id.clone();
                                 let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
                                     name: "Deposit Payment",
-                                    reference: &cid,
+                                    reference: &triage_id_clone,
                                     amount_cents,
                                     interval: None,
                                     product: None,
                                     currency: "usd",
-                                    operation_id,
+                                    operation_id: &operation_id,
                                     metadata: None,
                                 };
                                 if let Ok(receipt) = stripe_client
@@ -5270,7 +5271,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         interval: None,
                                         product: None,
                                         currency: "usd",
-                                        operation_id,
+                                        operation_id: &operation_id,
                                         metadata: Some(metadata),
                                     };
                                     if let Ok(receipt) = stripe_client
@@ -5683,7 +5684,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         interval: None,
                                         product: None,
                                         currency: "usd",
-                                        operation_id,
+                                        operation_id: &operation_id,
                                         metadata: Some(metadata),
                                     };
                                     if let Ok(receipt) = stripe_client
