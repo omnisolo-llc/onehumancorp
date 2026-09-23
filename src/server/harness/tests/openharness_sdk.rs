@@ -552,7 +552,7 @@ for line in sys.stdin:
     // Leave enough headroom for the child process to acknowledge the prompt
     // under a parallel test load while keeping the runtime's own event wait
     // shorter than the outer assertion timeout.
-    let mut config = fake_runtime_config(script, Duration::from_millis(250));
+    let mut config = fake_runtime_config(script, Duration::from_millis(1000));
     config.environment.insert(
         "RECORD_PATH".to_owned(),
         record.to_string_lossy().into_owned(),
@@ -569,7 +569,7 @@ for line in sys.stdin:
         ))
         .await
         .unwrap();
-    let outcome = tokio::time::timeout(Duration::from_secs(1), runtime.next_event()).await;
+    let outcome = tokio::time::timeout(Duration::from_secs(3), runtime.next_event()).await;
     let error = outcome
         .expect("next_event must have its own timeout")
         .unwrap_err();
