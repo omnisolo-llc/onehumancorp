@@ -117,7 +117,8 @@ impl BudgetManager {
             return Err("spend amount cannot be negative".to_string());
         }
         if amount_cents == 0 {
-            if self.get_remaining_cents() < 0 {
+            let state = self.state.lock().unwrap();
+            if self.total_limit_cents - state.total_allocated < 0 {
                 return Err("budget limit exceeded".to_string());
             }
             return Ok(BudgetReservation {
@@ -154,14 +155,12 @@ impl BudgetManager {
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
-        if amount_cents < 0 {
-            return Err("spend amount cannot be negative".to_string());
-        }
         match self.reserve(amount_cents) {
             Ok(reservation) => {
                 reservation.settle()?;
                 Ok(true)
             }
+            Err(e) if e == "spend amount cannot be negative" => Err(e),
             Err(_) => Ok(false),
         }
     }
