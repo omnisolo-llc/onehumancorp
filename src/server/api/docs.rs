@@ -575,6 +575,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/accept-payments".to_string(),
         },
         HelpArticle {
+            category: "Proposals & Payments".to_string(),
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            desc: "Generate accurate quotes from inquiries, secure owner approvals, and send verifiable checkout links.".to_string(),
+            link: "/help/proposals-payments".to_string(),
+        },
+        HelpArticle {
             category: "AI Agents".to_string(),
             title: "Activate AI Support".to_string(),
             desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(),
