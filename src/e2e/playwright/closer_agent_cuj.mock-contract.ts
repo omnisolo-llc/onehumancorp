@@ -83,8 +83,8 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
     // Verify it changed to SENT
     await expect(page.locator('text=SENT').or(page.locator('text=Sent'))).toBeVisible({ timeout: 10000 });
 
-    // The Stripe payment link should be populated if it was correctly generated
-    // Since Stripe integration uses a mock API key in tests, the fake link starts with https://checkout.stripe.com/pay/cs_test_
-    await expect(page.locator('a[href*="checkout.stripe.com"]')).toBeVisible({ timeout: 10000 }).catch(() => {});
+    // We no longer expect a fabricated cs_test_ Stripe checkout URL to be populated.
+    // It falls back to an empty string when the provider is unconfigured in test.
+    await expect(page.locator('a[href*="checkout.stripe.com"]')).toBeHidden();
   });
 });
