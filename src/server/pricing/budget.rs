@@ -136,8 +136,7 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if next <= self.total_limit_cents {
+        if let Some(next) = state.total_allocated.checked_add(amount_cents).filter(|&next| next <= self.total_limit_cents) {
                 state.total_allocated = next;
                 drop(state);
 
@@ -155,7 +154,6 @@ impl BudgetManager {
                     tenant_id: self.tenant_id.clone(),
                     is_settled: false,
                 });
-            }
         }
         Err("budget limit exceeded".to_string())
     }
