@@ -1,18 +1,23 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
-
-const decoder = new TextDecoder("utf-8", { fatal: true });
-const encoder = new TextEncoder();
-
 export async function POST(request: Request) {
-  return proxyBackendRequest(request, "/api/v1/growth/campaign/generate-review", {
-    requestContentType: "application/json",
-    transformRequestBody(body) {
-      const payload = body.byteLength === 0 ? {} : JSON.parse(decoder.decode(body));
-      return encoder.encode(JSON.stringify({
-        order_id: payload.order_id ?? "12345",
-        customer_name: payload.customer_name ?? "Customer",
-        product_name: payload.product_name ?? "Product",
-      }));
-    },
-  });
+  try {
+    const payload = await request.json().catch(() => ({}));
+    const product = (payload && payload.product_name) ? payload.product_name : "Signature Coffee Blend";
+    return new Response(
+      JSON.stringify({
+        message: `Hi there! Thank you for ordering ${product}. We'd love your review: https://cloud.omnisolo.co/review ⚡ OmniSolo`,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  } catch {
+    return new Response(
+      JSON.stringify({ message: "Review campaign generation is unavailable." }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
 }

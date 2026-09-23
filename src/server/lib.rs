@@ -9228,7 +9228,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/v1/billing", api::billing_api::router(hub.clone()))
+        .nest(
+            "/api/v1/billing",
+            api::billing_api::router(hub.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/assistant", api::assistant::router(db.clone()))
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
@@ -9254,7 +9262,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         )
-        .nest("/api/v1/shipping", api::shipping::router(db.clone()))
+        .nest(
+            "/api/v1/shipping",
+            api::shipping::router(db.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
@@ -9324,14 +9340,31 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ))
         .merge(api::realtime::router())
-        .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .nest(
+            "/api/v1/agent-feed",
+            api::agent_feed::router().with_state(db.pool.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/ohc_job_queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
+        .nest("/api/v1/ohc-job-queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
-        .nest("/api/v1/proposals", api::proposals::router().with_state(db.pool.clone()))
+        .nest(
+            "/api/v1/proposals",
+            api::proposals::router().with_state(db.pool.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest(
             "/api/v1/booking/request",
             api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(

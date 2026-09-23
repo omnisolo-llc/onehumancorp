@@ -68,7 +68,7 @@ export default function LinkInBioGeneratorPage() {
           store_name: storeName,
           bio,
           theme,
-          links,
+          links: links.map((l, i) => ({ id: String(i + 1), title: l.title, url: l.url })),
           remove_branding: removeBranding
         })
       });

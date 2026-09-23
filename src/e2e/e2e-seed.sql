@@ -105,6 +105,17 @@ VALUES
     'e2e-tenant-unlimited',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-starter-user',
+    'starter@example.com',
+    'starter@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    true,
+    'e2e-tenant',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
   )
 ON CONFLICT (id) DO UPDATE
 SET username = EXCLUDED.username,

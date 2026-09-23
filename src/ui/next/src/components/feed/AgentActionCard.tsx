@@ -26,12 +26,12 @@ export interface AgentActionCardProps {
   ) => void | Promise<void>;
 }
 
-export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queuedActionIds, editingId, editContent, setEditingId, setEditContent, handleDecision }) => {
+export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queuedActionIds, editingId, editContent, setEditingId, setEditContent, handleDecision: rawHandleDecision }) => {
   const [loadingAction, setLoadingAction] = React.useState<string | null>(null);
   const [isDraftExpanded, setIsDraftExpanded] = React.useState(false);
   const [isApproved, setIsApproved] = React.useState(false);
 
-  const wrapDecision = async (
+  const handleDecision = async (
     id: string,
     approved: boolean,
     editContentValue?: string,
@@ -43,7 +43,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
         setIsApproved(true);
       }
       setLoadingAction(actionName || (approved ? "approve" : "dismiss"));
-      await handleDecision(id, approved, editContentValue, event_source);
+      await rawHandleDecision(id, approved, editContentValue, event_source);
     } catch (e) {
       console.error("Decision failed", e);
       setIsApproved(false);
@@ -52,6 +52,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
       setLoadingAction(null);
     }
   };
+
+  const wrapDecision = handleDecision;
 
   const isActionLoading = (actionName: string) => loadingAction === actionName;
   const actionPayload = approval.proposed_action || approval.context_payload || {};

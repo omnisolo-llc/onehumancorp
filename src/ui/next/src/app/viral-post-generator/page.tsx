@@ -105,7 +105,7 @@ export default function ViralPostGeneratorPage() {
                         />
                         <div>
                             <span className="text-sm font-medium text-gray-900">Remove "Powered by OmniSolo" branding</span>
-                            <p className="text-xs text-gray-500 mt-1">Make the post 100% white-labeled. Requires Pro plan.</p>
+                            <p className="text-xs text-gray-500 mt-1">Post without OmniSolo attribution. Requires Pro plan.</p>
                         </div>
                         </label>
                     </div>

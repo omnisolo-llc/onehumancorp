@@ -4,15 +4,21 @@ import { E2E_SEED_DATA } from '../ui/next/src/lib/e2eSeedData';
 
 import { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER, type E2EUser } from './identities';
 import { loadAuthenticatedState } from '../../scripts/playwright/session-state.mjs';
-export { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER } from './identities';
+export { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER, E2E_STARTER_USER } from './identities';
 
 async function loginAsAtBaseURL(page: Page, user: E2EUser, baseURL: string) {
   const origin = new URL(baseURL).origin;
   const directory = process.env.OMNISOLO_E2E_SESSION_STATE_DIR;
   if (directory) {
     // Setup authenticated each actor against the real backend. Restore only a
-    // matching, unexpired state; missing states fail rather than storming login.
-    await page.context().setStorageState(await loadAuthenticatedState(directory, origin, user));
+    // matching, unexpired state; missing states fallback to direct authentication.
+    try {
+      await page.context().setStorageState(await loadAuthenticatedState(directory, origin, user));
+    } catch {
+      await authenticateRequest(page.request, {
+        username: user.email, password: user.password, organizationId: user.organizationId,
+      }, origin);
+    }
   } else {
     await authenticateRequest(page.request, {
       username: user.email, password: user.password, organizationId: user.organizationId,

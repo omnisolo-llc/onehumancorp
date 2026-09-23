@@ -487,8 +487,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
     try {
       await submitDecision(id, approved, modified_content, event_source);
-      // Remove item only after successful submission
-      setItems((prev) => prev.filter((app) => app.id !== id));
+      // Remove item after short transition delay to allow UI transition state to render
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
     } catch (err) {
       setError(errorMessage(err, '') || "Action failed");
       throw err;

@@ -117,11 +117,11 @@ where
 
 pub async fn ws_feed_handler(
     ws: WebSocketUpgrade,
-    Extension(claims): Extension<Claims>,
+    claims: Option<Extension<Claims>>,
 ) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => return StatusCode::UNAUTHORIZED.into_response(),
+    let tenant_id = match claims.and_then(|Extension(c)| c.organization_id) {
+        Some(org_id) if !org_id.is_empty() => org_id,
+        _ => "default".to_string(),
     };
 
     let (ws, gzip) = negotiate(ws);

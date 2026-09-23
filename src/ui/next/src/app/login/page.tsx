@@ -96,7 +96,7 @@ function LoginForm() {
                 disabled={pending}
                 maxLength={254}
                 onChange={(event) => setIdentifier(event.target.value)}
-                placeholder="Email"
+                placeholder="Email or Username"
                 aria-label="Email or username"
                 required
                 value={identifier}

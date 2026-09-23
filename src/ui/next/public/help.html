@@ -741,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const articleId = article.link.split('/').pop();
                     html += `
                       <a href="help_article.html?id=${articleId}" class="card glassmorphism glassmorphism">
-                        <h3>${article.title}</h3>
+                        <h4>${article.title}</h4>
                         <p>${article.desc}</p>
                       </a>
                     `;
@@ -1238,7 +1238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="omnisolo-help-tab active" data-target="tab-articles">Articles</button>
             <button class="omnisolo-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="omnisolo-help-tab" data-target="tab-videos">Videos</button>
-            <button class="omnisolo-help-tab" data-target="tab-chat" aria-label="Ask anything">Ask anything</button>
+            <button class="omnisolo-help-tab" id="tab-btn-chat" data-target="tab-chat" aria-label="Ask AI (Ask anything)">Ask AI</button>
         </div>
 
         <div id="tab-articles" class="omnisolo-help-content active">
@@ -1291,8 +1291,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div id="omnisolo-help-chat-input-container">
-                <input type="text" id="omnisolo-help-chat-input" placeholder="Ask anything...">
-                <button id="omnisolo-help-chat-send" aria-label="Send message" disabled>Send</button>
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
             </div>
         </div>
     `;
@@ -1347,8 +1347,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat Logic
-    const chatInput = document.getElementById('omnisolo-help-chat-input');
-    const chatSend = document.getElementById('omnisolo-help-chat-send');
+    const chatInput = document.getElementById('ohc-help-chat-input') || document.getElementById('omnisolo-help-chat-input');
+    const chatSend = document.getElementById('ohc-help-chat-send') || document.getElementById('omnisolo-help-chat-send');
     const chatMessages = document.getElementById('omnisolo-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {

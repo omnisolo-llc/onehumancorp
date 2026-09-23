@@ -19,7 +19,7 @@ type ImportedProduct = {
 
 const DEFAULT_PRODUCTS: ImportedProduct[] = [
   {
-    id: "prod-chocolate-cake-1",
+    id: "Chocolate Cake",
     name: "Chocolate Cake",
     price: "$24.00",
     imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300",

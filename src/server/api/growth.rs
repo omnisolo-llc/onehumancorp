@@ -3412,7 +3412,7 @@ async fn handle_referral_generate(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://omnisolo.co/ref/{}", ref_code),
+                referral_link: format!("https://cloud.omnisolo.co/ref/{}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -4064,7 +4064,7 @@ mod tests {
         .await
         .unwrap();
         let ref_link = res.0.referral_link;
-        assert!(ref_link.starts_with("https://omnisolo.co/ref/"));
+        assert!(ref_link.starts_with("https://cloud.omnisolo.co/ref/"));
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
@@ -5925,6 +5925,7 @@ pub async fn handle_promo_generate(
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct LinkItem {
+    #[serde(default)]
     pub id: String,
     pub title: String,
     pub url: String,
@@ -6037,11 +6038,17 @@ pub async fn handle_post_link_in_bio(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &target_tenant).await;
 
+    let mut links = req.links;
+    for (i, link) in links.iter_mut().enumerate() {
+        if link.id.is_empty() {
+            link.id = format!("{}", i + 1);
+        }
+    }
     let config = LinkInBioConfig {
         store_name: req.store_name,
         bio: req.bio,
         theme: req.theme,
-        links: req.links,
+        links,
     };
 
     let val = serde_json::to_string(&config)

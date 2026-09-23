@@ -126,7 +126,7 @@ export default function PricingPage() {
                     <p className="text-sm text-gray-500 mt-1">Cost transparency and usage tracking</p>
                 </div>
                 <button onClick={handleManageBilling} className="min-h-[44px] px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center whitespace-nowrap">
-                    Manage Plan & Billing
+                    Manage Billing Portal
                 </button>
             </div>
 
