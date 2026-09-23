@@ -158,7 +158,6 @@ impl BudgetManager {
             }
             _ => Err("budget limit exceeded".to_string()),
         }
-        }
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
