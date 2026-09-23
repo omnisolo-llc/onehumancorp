@@ -39,6 +39,7 @@ pub struct AppState {
 
 #[derive(Debug, Deserialize)]
 struct RunParams {
+    #[serde(alias = "message")]
     initial_message: String,
 }
 
@@ -152,53 +153,71 @@ async fn handle_rpc(
         }
     }
 
-    let params: RunParams = match payload.params {
-        Some(ref p) => match serde_json::from_value(p.clone()) {
-            Ok(params) => params,
-            Err(e) => {
-                return Json(JsonRpcResponse {
+    match payload.method.as_str() {
+        "run_async" | "run_sync_blocking" => {
+            let params: RunParams = match payload.params {
+                Some(ref p) => match serde_json::from_value(p.clone()) {
+                    Ok(params) => params,
+                    Err(e) => {
+                        return Json(JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32602,
+                                message: format!("Invalid params: {}", e),
+                                data: None,
+                            }),
+                            id: payload.id,
+                        });
+                    }
+                },
+                None => {
+                    return Json(JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32602,
+                            message: "Invalid params: missing parameters".to_string(),
+                            data: None,
+                        }),
+                        id: payload.id,
+                    });
+                }
+            };
+
+            let _cfg = AgentRunConfig::default();
+            let result = if payload.method == "run_async" {
+                state.runner.run_async(&params.initial_message).await
+            } else {
+                let runner_clone = state.runner.clone();
+                let initial_message = params.initial_message.clone();
+                match tokio::task::spawn_blocking(move || {
+                    runner_clone.run_sync_blocking(&initial_message)
+                })
+                .await
+                {
+                    Ok(res) => res,
+                    Err(e) => Err(format!("Spawn blocking failed: {}", e).into()),
+                }
+            };
+
+            match result {
+                Ok(output) => Json(JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    result: Some(serde_json::Value::String(output)),
+                    error: None,
+                    id: payload.id,
+                }),
+                Err(e) => Json(JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     result: None,
                     error: Some(JsonRpcError {
-                        code: -32602,
-                        message: format!("Invalid params: {}", e),
+                        code: -32000,
+                        message: format!("Execution Error: {}", e),
                         data: None,
                     }),
                     id: payload.id,
-                });
-            }
-        },
-        None => {
-            return Json(JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32602,
-                    message: "Invalid params: missing parameters".to_string(),
-                    data: None,
                 }),
-                id: payload.id,
-            });
-        }
-    };
-
-    let _cfg = AgentRunConfig::default();
-
-    let result = match payload.method.as_str() {
-        "run_async" => state.runner.run_async(&params.initial_message).await,
-        "run_sync_blocking" => {
-            // Note: in a real async server you wouldn't want to actually block the tokio worker thread,
-            // but the method is defined as run_sync_blocking on the Runner.
-            // We'll wrap it in spawn_blocking to avoid starving the executor.
-            let runner_clone = state.runner.clone();
-            let initial_message = params.initial_message.clone();
-            match tokio::task::spawn_blocking(move || {
-                runner_clone.run_sync_blocking(&initial_message)
-            })
-            .await
-            {
-                Ok(res) => res,
-                Err(e) => Err(format!("Spawn blocking failed: {}", e).into()),
             }
         }
         _method => {
@@ -208,7 +227,7 @@ async fn handle_rpc(
             if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(&res_str) {
                 return Json(resp);
             }
-            return Json(JsonRpcResponse {
+            Json(JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 result: None,
                 error: Some(JsonRpcError {
@@ -217,27 +236,8 @@ async fn handle_rpc(
                     data: None,
                 }),
                 id: payload.id,
-            });
+            })
         }
-    };
-
-    match result {
-        Ok(output) => Json(JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
-            result: Some(serde_json::Value::String(output)),
-            error: None,
-            id: payload.id,
-        }),
-        Err(e) => Json(JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
-            result: None,
-            error: Some(JsonRpcError {
-                code: -32000,
-                message: format!("Execution Error: {}", e),
-                data: None,
-            }),
-            id: payload.id,
-        }),
     }
 }
 

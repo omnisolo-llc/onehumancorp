@@ -29,6 +29,7 @@ export interface AgentActionCardProps {
 export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queuedActionIds, editingId, editContent, setEditingId, setEditContent, handleDecision }) => {
   const [loadingAction, setLoadingAction] = React.useState<string | null>(null);
   const [isDraftExpanded, setIsDraftExpanded] = React.useState(false);
+  const [isApproved, setIsApproved] = React.useState(false);
 
   const wrapDecision = async (
     id: string,
@@ -38,10 +39,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
     actionName?: string,
   ) => {
     try {
+      if (approved) {
+        setIsApproved(true);
+      }
       setLoadingAction(actionName || (approved ? "approve" : "dismiss"));
       await handleDecision(id, approved, editContentValue, event_source);
     } catch (e) {
       console.error("Decision failed", e);
+      setIsApproved(false);
     } finally {
       // If the component is still mounted, remove loading state
       setLoadingAction(null);
@@ -68,7 +73,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
   return (
     <div
       key={approval.id}
-      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
+      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${isApproved || approval.lifecycle_state === "APPROVED" ? "!border-green-500 border-green-500 scale-95" : ""} ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
@@ -2635,11 +2640,12 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
           <>
             <button
               onClick={() =>
-                handleDecision(
+                wrapDecision(
                   approval.id,
                   true,
                   undefined,
                   approval.event_source,
+                  "approve",
                 )
               }
               className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"

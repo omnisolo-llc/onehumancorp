@@ -15,7 +15,9 @@ const SAFE_RESPONSE_HEADERS = new Set([
   "etag",
   "last-modified",
   "retry-after",
+  "surrogate-key",
   "www-authenticate",
+  "x-cache",
 ]);
 const SAFE_IDENTITY_VALUE = /^[\x21-\x7e]{1,2048}$/;
 const SAFE_FORWARD_VALUE = /^[\x20-\x7e]{1,256}$/;

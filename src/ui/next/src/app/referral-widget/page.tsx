@@ -187,6 +187,7 @@ export default function ReferralWidgetBuilderPage() {
                   <input
                     type="text"
                     readOnly
+                    aria-label="Referral link preview"
                     value={`https://cloud.omnisolo.co/setup.html?ref=${tenant}&promo=ref123`}
                     className="flex-1 bg-transparent border-none text-xs text-gray-600 dark:text-gray-300 px-2 focus:outline-none"
                   />
@@ -230,6 +231,7 @@ export default function ReferralWidgetBuilderPage() {
             <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">Copy and paste this HTML snippet into your website or post-checkout page.</p>
             <textarea
               readOnly
+              aria-label="Embed Code"
               value={embedCode}
               className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-mono text-xs resize-none"
             />

@@ -64,6 +64,8 @@ export default function QRCodeGeneratorPage() {
                 <label htmlFor="qr-url" className="block text-sm font-semibold text-gray-700 mb-2">Target URL</label>
                 <input
                   id="qr-url"
+                  aria-label="Target URL"
+                  placeholder="https://..."
                   type="text"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -72,7 +74,7 @@ export default function QRCodeGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">Color</label>
+                <label htmlFor="qr-custom-color" className="block text-sm font-semibold text-gray-700 mb-3">Color</label>
                 <div className="flex gap-3">
                   {['#111827', '#4f46e5', '#16a34a', '#dc2626', '#d97706'].map(c => (
                     <button
@@ -84,6 +86,8 @@ export default function QRCodeGeneratorPage() {
                     />
                   ))}
                   <input
+                    id="qr-custom-color"
+                    aria-label="Custom Color"
                     type="color"
                     value={qrColor}
                     onChange={(e) => setQrColor(e.target.value)}
@@ -93,8 +97,10 @@ export default function QRCodeGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Size: {qrSize}px</label>
+                <label htmlFor="qr-size-slider" className="block text-sm font-semibold text-gray-700 mb-2">Size: {qrSize}px</label>
                 <input
+                  id="qr-size-slider"
+                  aria-label="QR Code Size"
                   type="range"
                   min="128"
                   max="1024"

@@ -20,7 +20,7 @@ type QuoteLineItem = Readonly<{
 
 type QuoteResponse = Readonly<{ quote: Quote; line_items: QuoteLineItem[] }>;
 
-const QUOTE_ID = /^[A-Za-z0-9._-]{1,128}$/;
+const QUOTE_ID = /^(quote-\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 function parseQuote(value: unknown): QuoteResponse | null {
   if (value === null || typeof value !== "object") return null;

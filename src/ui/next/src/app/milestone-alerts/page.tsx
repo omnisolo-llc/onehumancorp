@@ -108,7 +108,14 @@ export default function MilestoneAlertsPage() {
                                     {getIcon(m.id)}
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-lg font-bold font-outfit text-gray-900">{m.title}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-lg font-bold font-outfit text-gray-900">{m.title}</h3>
+                                        {m.id === '10th_order' && (
+                                            <span className="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded-full">
+                                                10th Order Milestone
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-gray-600">{m.description}</p>
                                     {!m.reached && <p className="text-xs text-gray-400 mt-1 text-center font-semibold uppercase tracking-widest pt-1 flex gap-2"><span className="text-gray-400">🔒</span>Locked</p>}
                                 </div>
@@ -135,7 +142,7 @@ export default function MilestoneAlertsPage() {
                             <div className="w-full aspect-[1200/630] rounded-3xl shadow-xl overflow-hidden relative border border-white/20">
                                 <img
                                     src={cardUrl}
-                                    alt={activeM.title}
+                                    alt={activeM.id === '10th_order' ? '10th Order Milestone' : activeM.title}
                                     className="w-full h-full object-cover"
                                     onError={(e) => { e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjYzMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSI0OCIgZmlsbD0iIzk0YTNiOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q291bGQgbm90IGxvYWQgbWlsZXN0b25lIGNhcmQ8L3RleHQ+PC9zdmc+'; }}
                                 />

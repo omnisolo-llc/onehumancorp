@@ -55,7 +55,7 @@ export default function QuoteReviewPage() {
           setQuote({
             id,
             customer_id: 'cust-e2e',
-            status: 'PENDING',
+            status: 'DRAFT',
             total_amount_cents: 35000,
             required_deposit_cents: 10000,
             stripe_payment_link: 'https://checkout.stripe.com/test',
@@ -153,7 +153,7 @@ export default function QuoteReviewPage() {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Line Items</h3>
-              {quote.status === 'DRAFT' && !isEditing && (
+              {(quote.status === 'DRAFT' || quote.status === 'PENDING') && !isEditing && (
                 <button onClick={() => setIsEditing(true)} id="edit-quote-btn" className="text-[10px] text-[#0066FF] font-bold">EDIT</button>
               )}
             </div>
@@ -200,7 +200,7 @@ export default function QuoteReviewPage() {
           )}
         </div>
 
-        {quote.status === 'DRAFT' && (
+        {(quote.status === 'DRAFT' || quote.status === 'PENDING') && (
           isEditing ? (
             <button
               id="btn-save-edits"

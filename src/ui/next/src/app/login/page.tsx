@@ -74,10 +74,13 @@ function LoginForm() {
         <div aria-labelledby="login-title">
           <div className="mb-8 text-center">
             <h1 id="login-title" className="text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
-              Login
+              Sign in to OmniSolo OneHumanCorp
             </h1>
+            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mt-2">
+              Login
+            </h2>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              Sign in to OmniSolo OneHumanCorp. Access your business workspace securely.
+              Access your business workspace securely.
             </p>
           </div>
 

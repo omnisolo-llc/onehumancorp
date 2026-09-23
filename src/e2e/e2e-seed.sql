@@ -11,17 +11,19 @@ ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans DISABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules DISABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
+INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
-  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Starter', false),
-  ('e2e-tenant-free', 'OmniSolo E2E Free Bakery', 'Food and beverage', 'Free', false),
-  ('e2e-tenant-business', 'OmniSolo E2E Business Bakery', 'Food and beverage', 'Business', false),
-  ('e2e-tenant-unlimited', 'OmniSolo E2E Pro Bakery', 'Food and beverage', 'Pro', false)
+  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Starter', 'Starter', false),
+  ('e2e-tenant-free', 'OmniSolo E2E Free Bakery', 'Food and beverage', 'Free', 'Free', false),
+  ('e2e-tenant-business', 'OmniSolo E2E Business Bakery', 'Food and beverage', 'Business', 'Business', false),
+  ('e2e-tenant-unlimited', 'OmniSolo E2E Pro Bakery', 'Food and beverage', 'Pro', 'Pro', false)
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
     tier = EXCLUDED.tier,
+    plan_tier = EXCLUDED.plan_tier,
     has_claimed_trial_extension = EXCLUDED.has_claimed_trial_extension,
     updated_at = CURRENT_TIMESTAMP;
 
@@ -199,6 +201,27 @@ SET tenant_id = EXCLUDED.tenant_id,
     email = EXCLUDED.email,
     phone = EXCLUDED.phone,
     preferences = EXCLUDED.preferences,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO bookings (id, tenant_id, customer_id, product_id, service_id, start_time, end_time, status)
+VALUES (
+  'e2e-booking-class-next-day',
+  'e2e-tenant',
+  'e2e-customer-bakery',
+  'e2e-product-class',
+  'e2e-product-class',
+  CURRENT_DATE + INTERVAL '1 day 09:00',
+  CURRENT_DATE + INTERVAL '1 day 10:00',
+  'confirmed'
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    customer_id = EXCLUDED.customer_id,
+    product_id = EXCLUDED.product_id,
+    service_id = EXCLUDED.service_id,
+    start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time,
+    status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO job_templates (id, tenant_id, name)
@@ -404,6 +427,7 @@ ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
@@ -416,5 +440,6 @@ ALTER TABLE appointments FORCE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans FORCE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions FORCE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules FORCE ROW LEVEL SECURITY;
+ALTER TABLE bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;

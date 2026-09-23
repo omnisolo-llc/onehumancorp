@@ -58,9 +58,12 @@ export default function LeadMagnetGeneratorPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
+                <label htmlFor="lead-magnet-title" className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
                 <input
+                  id="lead-magnet-title"
                   type="text"
+                  aria-label="Headline"
+                  placeholder="e.g. Unlock 10% Off"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 animate-all duration-200"
@@ -68,8 +71,11 @@ export default function LeadMagnetGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label htmlFor="lead-magnet-desc" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
+                  id="lead-magnet-desc"
+                  aria-label="Description"
+                  placeholder="e.g. Join our newsletter..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
@@ -78,9 +84,12 @@ export default function LeadMagnetGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
+                <label htmlFor="lead-magnet-btn" className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
                 <input
+                  id="lead-magnet-btn"
                   type="text"
+                  aria-label="Button Text"
+                  placeholder="e.g. Download Now"
                   value={buttonText}
                   onChange={(e) => setButtonText(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 animate-all duration-200"
@@ -94,6 +103,7 @@ export default function LeadMagnetGeneratorPage() {
                     <input
                       type="radio"
                       name="theme"
+                      aria-label="Light theme"
                       checked={theme === 'light'}
                       onChange={() => setTheme('light')}
                       className="text-indigo-600 focus:ring-indigo-500"
@@ -104,6 +114,7 @@ export default function LeadMagnetGeneratorPage() {
                     <input
                       type="radio"
                       name="theme"
+                      aria-label="Dark theme"
                       checked={theme === 'dark'}
                       onChange={() => setTheme('dark')}
                       className="text-indigo-600 focus:ring-indigo-500"
@@ -117,6 +128,7 @@ export default function LeadMagnetGeneratorPage() {
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
+                    aria-label="Remove Powered by OmniSolo Branding"
                     checked={removeBranding}
                     onChange={handleBrandingToggle}
                     className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"

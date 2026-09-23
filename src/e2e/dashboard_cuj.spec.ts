@@ -27,7 +27,7 @@ test.describe('Dashboard CUJ', () => {
     await page.goto('/dashboard');
 
     // Assuming there is a generic button that triggers `setShowEmbedModal(true)`
-    const openEmbedButton = page.getByRole('button', { name: /Embed/i });
+    const openEmbedButton = page.getByRole('button', { name: /Embed/i }).first();
     if (await openEmbedButton.isVisible()) {
         await openEmbedButton.click();
         await expect(page.getByRole('heading', { name: /Embed Storefront/i })).toBeVisible();
@@ -38,7 +38,7 @@ test.describe('Dashboard CUJ', () => {
   test('Persona: Business Owner can view the referral modal', async ({ page }) => {
     await page.goto('/dashboard');
 
-    const openReferralButton = page.getByRole('button', { name: /Referral/i });
+    const openReferralButton = page.getByRole('button', { name: /Referral/i }).first();
     if (await openReferralButton.isVisible()) {
         await openReferralButton.click();
         await expect(page.getByRole('heading', { name: /Help a Business Grow!/i })).toBeVisible();

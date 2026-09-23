@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Omnichannel Inbox UI', () => {
-  test('Owner sees sender id and known customer in inbox', async ({ page }) => {
+  test('Owner sees sender id and known customer in inbox', async ({ anonymousPage: page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');

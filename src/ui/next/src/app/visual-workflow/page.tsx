@@ -62,8 +62,11 @@ export default function VisualWorkflowPage() {
 
       <div className="flex flex-col gap-6 mb-8 p-6 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-          <label className="font-medium text-[#1D1D1F] sm:w-32 text-sm sm:text-base">Input Value:</label>
+          <label htmlFor="workflow-input-value" className="font-medium text-[#1D1D1F] sm:w-32 text-sm sm:text-base">Input Value:</label>
           <input
+            id="workflow-input-value"
+            aria-label="Input Value"
+            placeholder="Hello world"
             type="text"
             className="border border-[#D2D2D7] rounded-xl px-4 py-2.5 flex-grow focus:outline-none focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] transition-all min-h-[44px] bg-white/50"
             value={inputValue}

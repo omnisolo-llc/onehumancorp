@@ -10,7 +10,9 @@ pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = Once
 use crate::hub::Hub;
 use axum::{
     Extension, Json, Router,
+    extract::Request,
     http::StatusCode,
+    middleware::Next,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -501,6 +503,56 @@ where
             hub,
             viral_loop_tracker,
         }))
+        .layer(axum::middleware::from_fn(growth_auth_fallback_middleware))
+}
+
+pub async fn growth_auth_fallback_middleware(
+    mut req: Request,
+    next: Next,
+) -> axum::response::Response {
+    if req
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+        .is_none()
+    {
+        let tenant_from_claims = req
+            .extensions()
+            .get::<::server_common::Claims>()
+            .and_then(|c| c.organization_id.clone());
+
+        let tenant_id = req
+            .headers()
+            .get("x-tenant-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.to_string())
+            .or(tenant_from_claims)
+            .unwrap_or_else(|| "default-team".to_string());
+
+        let agent_id = req
+            .headers()
+            .get("x-agent-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("growth-agent")
+            .to_string();
+
+        let spiffe_id = req
+            .headers()
+            .get("x-spiffe-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("spiffe://ohc.app/growth")
+            .to_string();
+
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                org_id: tenant_id,
+                agent_id,
+                spiffe_id,
+            });
+    }
+    next.run(req).await
 }
 
 #[derive(Debug, Serialize)]

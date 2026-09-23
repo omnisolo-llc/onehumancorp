@@ -177,6 +177,14 @@ export default function AssistantPage() {
   const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const panel = searchParams.get('panel') || searchParams.get('section');
+      if (panel && sections.some(([s]) => s === panel)) {
+        setSection(panel as Section);
+      }
+    }
+
     fetch("/api/v1/walkthrough/assistant")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
@@ -410,7 +418,11 @@ export default function AssistantPage() {
       return;
     }
     setResourceData((current) => ({ ...current, [targetSection]: data }));
-    setActionNotice('Action completed');
+    if (targetSection === 'system' && 'observationMasking' in body) {
+      setActionNotice('UI settings saved');
+    } else {
+      setActionNotice('Action completed');
+    }
     await refreshResource(targetSection).catch(() => {});
   }
 

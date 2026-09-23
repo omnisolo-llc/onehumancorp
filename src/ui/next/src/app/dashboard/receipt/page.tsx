@@ -72,6 +72,7 @@ export default function SnapReceiptPage() {
               type="file"
               accept="image/*"
               capture="environment"
+              aria-label="Receipt image upload"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               onChange={handleFileChange}
               data-testid="receipt-file-input"
@@ -82,10 +83,12 @@ export default function SnapReceiptPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Amount (Detected)</label>
+            <label htmlFor="receipt-amount" className="text-sm font-semibold text-gray-700">Amount (Detected)</label>
             <input
+              id="receipt-amount"
               type="number"
               step="0.01"
+              aria-label="Amount (Detected)"
               value={amount}
               onChange={e => setAmount(parseFloat(e.target.value))}
               className="border p-2 rounded-lg"
@@ -94,9 +97,11 @@ export default function SnapReceiptPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Vendor (Detected)</label>
+            <label htmlFor="receipt-vendor" className="text-sm font-semibold text-gray-700">Vendor (Detected)</label>
             <input
+              id="receipt-vendor"
               type="text"
+              aria-label="Vendor (Detected)"
               value={vendor}
               onChange={e => setVendor(e.target.value)}
               className="border p-2 rounded-lg"

@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Omni Inbox Agentic Triage', () => {
-  test('displays unread leads summary and allows inventory deduction approval', async ({ page }) => {
+  test('displays unread leads summary and allows inventory deduction approval', async ({ anonymousPage: page }) => {
     // Rely on E2E Seed Data for messages and avoid overriding global API routes
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('test@example.com');

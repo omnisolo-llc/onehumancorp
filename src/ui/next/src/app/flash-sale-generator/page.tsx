@@ -106,9 +106,11 @@ export default function FlashSaleGeneratorPage() {
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date & Time</label>
+                    <label htmlFor="flash-sale-end-date" className="block text-sm font-medium text-gray-700 mb-2">End Date & Time</label>
                     <input
+                        id="flash-sale-end-date"
                         type="datetime-local"
+                        aria-label="End Date & Time"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"

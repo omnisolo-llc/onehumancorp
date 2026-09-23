@@ -76,6 +76,8 @@ export default function MysteryDiscountGeneratorPage() {
                 <input
                   id="widget-title"
                   type="text"
+                  aria-label="Widget Title"
+                  placeholder="e.g. Mystery Discount"
                   value={widgetTitle}
                   onChange={(e) => setWidgetTitle(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -86,6 +88,8 @@ export default function MysteryDiscountGeneratorPage() {
                 <label htmlFor="widget-desc" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   id="widget-desc"
+                  aria-label="Description"
+                  placeholder="e.g. Scratch to reveal your prize"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -94,10 +98,13 @@ export default function MysteryDiscountGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Discount Codes (Comma Separated)</label>
+                <label htmlFor="discount-codes" className="block text-sm font-medium text-gray-700 mb-1">Discount Codes (Comma Separated)</label>
                 <p className="text-xs text-gray-500 mb-2">The widget will randomly pick one of these to reveal.</p>
                 <input
+                  id="discount-codes"
                   type="text"
+                  aria-label="Discount Codes (Comma Separated)"
+                  placeholder="MYSTERY10, MYSTERY20"
                   value={discountCodes}
                   onChange={(e) => setDiscountCodes(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
@@ -108,11 +115,11 @@ export default function MysteryDiscountGeneratorPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="theme" value="light" checked={theme === 'light'} onChange={() => setTheme('light')} className="text-purple-600 focus:ring-purple-500" />
+                    <input type="radio" name="theme" value="light" aria-label="Light theme" checked={theme === 'light'} onChange={() => setTheme('light')} className="text-purple-600 focus:ring-purple-500" />
                     <span className="text-sm text-gray-700">Light</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="theme" value="dark" checked={theme === 'dark'} onChange={() => setTheme('dark')} className="text-purple-600 focus:ring-purple-500" />
+                    <input type="radio" name="theme" value="dark" aria-label="Dark theme" checked={theme === 'dark'} onChange={() => setTheme('dark')} className="text-purple-600 focus:ring-purple-500" />
                     <span className="text-sm text-gray-700">Dark</span>
                   </label>
                 </div>
@@ -122,6 +129,7 @@ export default function MysteryDiscountGeneratorPage() {
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
+                    aria-label="Remove Powered by OmniSolo branding"
                     checked={removeBranding}
                     onChange={handleBrandingToggle}
                     className="mt-1 w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
