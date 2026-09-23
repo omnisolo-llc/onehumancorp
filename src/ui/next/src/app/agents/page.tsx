@@ -1083,6 +1083,7 @@ function ConnectorsPanel({
   );
 }
 function AutomationsPanel() {
+  const [approved, setApproved] = useState(false);
   return (
     <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <SectionHeader title="Scheduled Tasks" detail="Recurring expert runs require an automation service connection." />
@@ -1099,6 +1100,22 @@ function AutomationsPanel() {
       <div className="flex items-center gap-2 mb-6">
         <button disabled className="cursor-not-allowed rounded-full bg-zinc-200 text-zinc-500 px-4 py-2 text-xs font-bold">+ Add New</button>
         <button disabled className="cursor-not-allowed rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-500">From Template</button>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Marketing Campaign Review</h4>
+            <p className="text-xs text-zinc-500">Requires manual sign-off before publishing</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setApproved(true)}
+            className="rounded-lg bg-teal-600 px-4 py-2 text-xs font-bold text-white hover:bg-teal-700"
+          >
+            {approved ? 'Approved' : 'Approve & Post'}
+          </button>
+        </div>
       </div>
 
       <p className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/60 p-4 text-sm text-zinc-600 dark:text-zinc-400">

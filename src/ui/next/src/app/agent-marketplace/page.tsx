@@ -126,8 +126,8 @@ export default function AgentMarketplacePage() {
            {!error && agents.length === 0 && (
              <div className="col-span-full flex flex-col items-center justify-center py-20 px-4 rounded-[16px] border border-dashed border-gray-300 text-gray-500 bg-white/50 backdrop-blur-[10px]">
                <svg className="w-12 h-12 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-               <p className="text-lg font-medium text-gray-900 mb-1">No agents found</p>
-               <p className="text-sm text-gray-500">We couldn't find any agents matching "{query}"</p>
+               <p className="text-lg font-medium text-gray-900 mb-1">No agents found matching &quot;{query}&quot;</p>
+               <p className="text-sm text-gray-500">We couldn&apos;t find any agents matching &quot;{query}&quot;</p>
              </div>
            )}
          </div>

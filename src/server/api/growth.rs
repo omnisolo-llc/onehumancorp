@@ -921,9 +921,11 @@ pub struct TeamInvitesMetricsResponse {
     pub metrics: GrowthMetrics,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct CreateTeamInviteRequest {
+    #[serde(default)]
     pub team_id: String,
+    #[serde(default)]
     pub inviter_id: String,
     pub invitee_id: String,
 }
@@ -3428,18 +3430,24 @@ async fn handle_create_team_invite(
     ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
+    let team_id = if req.team_id.trim().is_empty() {
+        auth_info.org_id.clone()
+    } else {
+        req.team_id
+    };
+    let inviter_id = if req.inviter_id.trim().is_empty() {
+        auth_info.agent_id.clone()
+    } else {
+        req.inviter_id
+    };
+
     match tracker
-        .record_invite(
-            &auth_info.org_id,
-            &req.team_id,
-            &req.inviter_id,
-            &req.invitee_id,
-        )
+        .record_invite(&auth_info.org_id, &team_id, &inviter_id, &req.invitee_id)
         .await
     {
         Ok(invite) => {
-            state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
-            let cache_key_prefix = format!("team_invites:{}:", req.team_id);
+            state.viral_loop_tracker.record_invite_sent(&inviter_id);
+            let cache_key_prefix = format!("team_invites:{}:", team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
@@ -3448,7 +3456,7 @@ async fn handle_create_team_invite(
                 .invalidate(&format!("aggregated_metrics_{}", auth_info.org_id))
                 .await;
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": team_id, "inviter_id": inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
             let invite_link = format!("https://omnisolo.co/invite/{}", invite.id);

@@ -54,10 +54,15 @@ export default function InteractiveQuotePage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadQuote = useCallback(async (signal?: AbortSignal) => {
+    if (quoteId === null) {
+      setLoading(false);
+      setQuote(null);
+      setError("Quote not found.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      if (quoteId === null) throw new Error("invalid quote");
       const response = await fetch(`/api/v1/quotes/${encodeURIComponent(quoteId)}`, {
         cache: "no-store",
         signal,

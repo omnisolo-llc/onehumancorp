@@ -593,8 +593,28 @@ export default function Dashboard() {
               </div>
             </div>
             )}
-
-
+            <div className="app-card flex flex-col justify-between border-dashed border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+              <div>
+                <div className="flex items-center gap-2 font-bold text-indigo-900 dark:text-indigo-200">
+                  <span>🔒</span>
+                  <span>Advanced AI Insights</span>
+                </div>
+                <p className="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+                  Unlock predictive analytics, automated restocking triggers, and retention insights.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined" && window.confirm("Upgrade to Pro to access Advanced AI Insights?")) {
+                    router.push("/pricing");
+                  }
+                }}
+                className="mt-4 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
           </div>
         </section>
 

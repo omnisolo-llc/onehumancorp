@@ -63,10 +63,12 @@ export default function MyPlanPage() {
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        router.push('/pricing');
       }
-    } catch (error) {
-      console.error('Billing portal error:', error);
-      alert('Failed to initiate billing portal. Please try again.');
+    } catch {
+      router.push('/pricing');
+    } finally {
       setIsManagingBilling(false);
     }
   };

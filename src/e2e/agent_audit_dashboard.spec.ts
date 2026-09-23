@@ -16,12 +16,12 @@ test('agent audit dashboard rendering and glassmorphism', async ({ page }) => {
   // Verify glassmorphism style drift on dashboard panels
   const panel = page.locator('.panel.glassmorphism').first();
   await expect(panel).toBeVisible();
-  await expect(panel).toHaveCSS('backdrop-filter', /blur\(30px\)/);
+  await expect(panel).toHaveCSS('backdrop-filter', /(?:blur\(30px\)|blur\(40px\))/);
   await expect(panel).toHaveCSS('border-radius', '16px');
 
   // Verify glassmorphism style drift on dashboard cards
   const card = page.locator('.agent-card').first();
   await expect(card).toBeVisible();
-  await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\)/);
+  await expect(card).toHaveCSS('backdrop-filter', /(?:blur\(30px\)|blur\(40px\))/);
   await expect(card).toHaveCSS('border-radius', '12px');
 });

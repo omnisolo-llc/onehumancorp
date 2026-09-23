@@ -116,23 +116,23 @@ export default function LinkInBioGeneratorPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="storeNameInput" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Store / Creator Name</label>
+                  <label htmlFor="storeNameInput" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Business name</label>
                   <input
                     id="storeNameInput"
                     type="text"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    aria-label="Store / Creator Name"
+                    aria-label="Business name"
                     className="w-full px-4 py-2 bg-gray-50 dark:bg-[#1C1C1E] border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label htmlFor="bioInput" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Bio / Description</label>
+                  <label htmlFor="bioInput" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Bio tagline</label>
                   <textarea
                     id="bioInput"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    aria-label="Bio / Description"
+                    aria-label="Bio tagline"
                     className="w-full px-4 py-2 bg-gray-50 dark:bg-[#1C1C1E] border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white h-24"
                   />
                 </div>
@@ -158,7 +158,7 @@ export default function LinkInBioGeneratorPage() {
                         type="text"
                         value={link.title}
                         onChange={(e) => handleLinkChange(index, 'title', e.target.value)}
-                        placeholder="Link Title (e.g. Shop My Collection)"
+                        placeholder="Title (e.g. Visit my Shop)"
                         aria-label={`Link ${index + 1} Title`}
                         className="w-full px-3 py-2 bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-white/10 rounded-lg text-sm outline-none text-gray-900 dark:text-white"
                     />

@@ -64,7 +64,7 @@ test.describe('Digital Business Card Generator E2E', () => {
       await expect(page.getByRole('button', { name: /Save to Contacts|Save vCard/i })).toBeVisible();
 
       // Verify viral loop footer
-      await expect(page.getByText('OmniSolo')).toBeVisible();
+      await expect(page.getByText('OmniSolo').first()).toBeVisible();
     });
   });
 });

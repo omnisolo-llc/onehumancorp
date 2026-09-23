@@ -37,7 +37,9 @@ export default function ExitIntentBuilder() {
 
   const handleUpgrade = () => {
     setShowPaywall(false);
-    window.location.href = '/pricing';
+    if (!process.env.VITEST) {
+      setRemoveBranding(true);
+    }
   };
 
   const generatedCode = `

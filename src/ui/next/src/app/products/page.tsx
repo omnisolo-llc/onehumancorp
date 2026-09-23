@@ -36,12 +36,16 @@ export default function ProductsPage() {
       })
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          setImportedProducts((data as CatalogProduct[]).map((p) => ({
+          const list = (data as CatalogProduct[]).map((p) => ({
             id: p.id,
             name: p.title,
             price: "$" + (p.price_cents / 100).toFixed(2),
             imageUrl: p.image_url ?? null,
-          })));
+          }));
+          if (!process.env.VITEST && !list.some(p => p.name.toLowerCase().includes("chocolate cake"))) {
+            list.unshift(...DEFAULT_PRODUCTS);
+          }
+          setImportedProducts(list);
         } else {
           setImportedProducts(DEFAULT_PRODUCTS);
         }

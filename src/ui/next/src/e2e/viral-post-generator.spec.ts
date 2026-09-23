@@ -17,7 +17,7 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         await expect(checkbox).not.toBeChecked();
 
         // Check the "Remove 'OmniSolo' branding" box
-        await checkbox.check();
+        await checkbox.click();
 
         // Verify the soft paywall modal opens
         const modalHeading = page.locator('text=Upgrade to Pro');

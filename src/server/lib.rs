@@ -224,7 +224,8 @@ async fn read_limited_agent_rpc_body(
 fn allowed_agent_rpc_method(method: &str) -> bool {
     matches!(
         method,
-        "am_fetch_agent"
+        "aider_repomap"
+            | "am_fetch_agent"
             | "am_publish_agent"
             | "am_search_agents"
             | "ap_create_task"
@@ -10101,6 +10102,7 @@ mod tests {
     fn agent_rpc_gateway_confines_methods_and_destination() {
         assert!(allowed_agent_rpc_method("run_agent"));
         assert!(allowed_agent_rpc_method("ap_list_tasks"));
+        assert!(allowed_agent_rpc_method("aider_repomap"));
         assert!(!allowed_agent_rpc_method("admin_delete_everything"));
         assert!(agent_rpc_available(false));
         assert!(!agent_rpc_available(true));
