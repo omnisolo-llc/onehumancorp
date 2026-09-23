@@ -733,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const categories = [...new Set(filteredArticles.map(a => a.category || 'General'))];
 
             categories.forEach(category => {
-                html += `<div class="section-title">${category}</div><div class="grid">`;
+                html += `<h3 class="section-title" style="margin-top: 0; color: #1d1d1f;">${category}</h3><div class="grid">`;
 
                 const catArticles = filteredArticles.filter(a => (a.category || 'General') === category);
                 catArticles.forEach(article => {

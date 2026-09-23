@@ -13,9 +13,9 @@ test.describe('Dashboard Core', () => {
     await expect(page.getByRole('link', { name: /Milestones/i })).toBeVisible();
   });
 
-  test('navigates to login and agents screens', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+  test('navigates to login and agents screens', async ({ anonymousPage, page }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByRole('heading', { name: 'Login' })).toBeVisible();
 
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();

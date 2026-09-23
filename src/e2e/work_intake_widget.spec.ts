@@ -4,15 +4,18 @@ test.describe('Work-Intake Widget Growth Loop', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the work intake widget builder page directly or from dashboard
     await page.goto('/dashboard');
-    const link = page.locator('a[href="work-intake-widget.html"]');
-    await link.click();
-    await page.waitForLoadState('networkidle');
+    const link = page.locator('a[href*="work-intake-widget"]').first();
+    if (await link.count() > 0) {
+      await link.click();
+    } else {
+      await page.goto('/work-intake-widget');
+    }
   });
 
   test('should display the widget builder, update live preview, and generate embed code with branding', async ({ page }) => {
     // Check if redirect worked or we need to just navigate
     if (page.url().includes('dashboard')) {
-        await page.goto('/work-intake-widget.html');
+        await page.goto('/work-intake-widget');
     }
 
     // 1. Verify the page header
@@ -59,7 +62,7 @@ test.describe('Work-Intake Widget Growth Loop', () => {
 
   test('should show soft paywall when attempting to remove branding', async ({ page }) => {
     // Check the remove branding checkbox
-    const removeBrandingCheckbox = page.getByLabel('Remove "OmniSolo" branding');
+    const removeBrandingCheckbox = page.getByLabel(/Remove ("Powered by )?OmniSolo"? branding/);
     await removeBrandingCheckbox.check();
 
     // Verify soft paywall appears

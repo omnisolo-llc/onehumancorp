@@ -996,16 +996,13 @@ pub struct SimulateReferralCheckoutResponse {
 
 async fn handle_generate_review(
     Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateReviewRequest>,
+    Json(_req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
-    let generated = format!(
-        "Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/{}\n\nWarmly,\nThe Team\n\n⚡ OmniSolo",
-        req.customer_name, req.product_name, req.order_id
-    );
-
     (
-        StatusCode::OK,
-        Json(GenerateReviewResponse { message: generated }),
+        StatusCode::NOT_IMPLEMENTED,
+        Json(GenerateReviewResponse {
+            message: "Review campaign generation is unavailable.".to_string(),
+        }),
     )
 }
 
@@ -1476,7 +1473,7 @@ async fn handle_affiliate_stats(
             .await
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0)::bigint FROM affiliate_ledgers WHERE tenant_id = $1")
                 .bind(&auth_info.org_id)
                 .fetch_one(&state.pool)
                 .await
@@ -2787,7 +2784,7 @@ pub async fn handle_get_referral_milestones(
 
     // Fallback: mock tracking for growth milestones
     let total_referrals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM growth_team_invites WHERE inviter_id = $1 AND status = 'accepted'",
+        "SELECT COUNT(*) FROM team_invites WHERE inviter_id = $1 AND (status = 'accepted' OR status = 'ACCEPTED')",
     )
     .bind(tenant_id.clone())
     .fetch_optional(&state.pool)

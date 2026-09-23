@@ -1316,7 +1316,17 @@ pub struct ChangelogSection {
 }
 
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
-    let mut sections = Vec::new();
+    let mut sections = vec![ChangelogSection {
+        version: "Version 1.1 (Latest)".to_string(),
+        screenshot_url: None,
+        content_lines: vec![
+            "### 🌟 New Features".to_string(),
+            "- **Help Center:** Fully searchable help center with video tutorials and articles."
+                .to_string(),
+            "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you."
+                .to_string(),
+        ],
+    }];
     let content = std::include_str!("../../../CHANGELOG.md");
 
     let mut current_version = String::new();

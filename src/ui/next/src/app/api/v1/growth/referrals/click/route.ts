@@ -14,7 +14,10 @@ export async function GET(request: Request) {
       suppressRequestBody: true,
     });
   }
-  const redirect = new URL(target, url.origin);
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || (url.protocol.replace(":", "") || "http");
+  const baseOrigin = host ? `${proto}://${host}` : (process.env.OMNISOLO_WEB_CANONICAL_ORIGIN || url.origin);
+  const redirect = new URL(target, baseOrigin);
   if (ref) redirect.searchParams.set("ref", ref);
   return Response.redirect(redirect);
 }

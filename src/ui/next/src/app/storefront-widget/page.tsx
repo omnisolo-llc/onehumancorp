@@ -189,6 +189,7 @@ export default function StorefrontWidgetPage() {
 
                 <div className="relative group">
                     <textarea
+                        id="storefront-embed-snippet"
                         readOnly
                         value={embedCode}
                         className="w-full h-32 p-4 bg-gray-50 border border-gray-200 min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
