@@ -607,6 +607,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
                 .to_string(),
             link: "/api-docs".to_string(),
         },
+        HelpArticle {
+            category: "Sales & Payments".to_string(),
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            desc: "Learn how to generate accurate proposals, securely collect payments, and manage invoice drafts.".to_string(),
+            link: "/help/proposals-payments".to_string(),
+        },
     ]
 }
 
