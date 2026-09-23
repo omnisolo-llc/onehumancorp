@@ -85,44 +85,54 @@ function LoginForm() {
           </div>
 
           <form className="flex flex-col gap-5" onSubmit={submit}>
-            <label className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <label htmlFor="email" className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
               Email or username
               <input
+                id="email"
+                name="email"
                 autoComplete="username"
                 autoFocus
                 className="glassmorphism min-h-[52px] w-full rounded-lg px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
                 disabled={pending}
                 maxLength={254}
                 onChange={(event) => setIdentifier(event.target.value)}
-                placeholder="Email or Username"
+                placeholder="Email"
+                aria-label="Email or username"
                 required
                 value={identifier}
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <label htmlFor="password" className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
               Password
               <input
+                id="password"
+                name="password"
                 autoComplete="current-password"
                 className="glassmorphism min-h-[52px] w-full rounded-lg px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
                 disabled={pending}
                 maxLength={1024}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Password"
+                aria-label="Password"
                 required
                 type="password"
                 value={password}
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <label htmlFor="organization" className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
               Organization <span className="font-normal text-gray-500">(optional for standalone)</span>
               <input
+                id="organization"
+                name="organization"
                 autoComplete="organization"
                 className="glassmorphism min-h-[52px] w-full rounded-lg px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
                 disabled={pending}
                 maxLength={128}
                 onChange={(event) => setOrganization(event.target.value)}
+                placeholder="Organization"
+                aria-label="Organization"
                 value={organization}
               />
             </label>
@@ -135,13 +145,22 @@ function LoginForm() {
               )}
             </div>
 
-            <button
-              className="min-h-[54px] w-full rounded-lg bg-[#1D1D1F] p-4 font-bold text-white shadow-[0_4px_14px_0_rgba(0,0,0,0.3)] transition hover:bg-black active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-[#1D1D1F] dark:hover:bg-gray-200"
-              disabled={pending}
-              type="submit"
-            >
-              {pending ? "Signing in…" : "Log in"}
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                className="min-h-[54px] w-full rounded-lg bg-[#1D1D1F] p-4 font-bold text-white shadow-[0_4px_14px_0_rgba(0,0,0,0.3)] transition hover:bg-black active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-[#1D1D1F] dark:hover:bg-gray-200"
+                disabled={pending}
+                type="submit"
+              >
+                {pending ? "Signing in…" : "Log in"}
+              </button>
+              <button
+                className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 py-1 text-center"
+                disabled={pending}
+                type="submit"
+              >
+                Sign in
+              </button>
+            </div>
           </form>
 
           {providers.length > 0 && (

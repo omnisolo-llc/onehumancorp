@@ -26,7 +26,7 @@ type Message = {
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
-  if (["open", "pending", ""].includes(normalized)) return "warn";
+  if (["open", "pending", "pending_approval", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
   return "";
 }
@@ -536,7 +536,19 @@ function InboxWorkspace({
 
 function PowerSyncInboxContent() {
   const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
+  const [apiMessages, setApiMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/ui/omni_inbox')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((json) => {
+        if (Array.isArray(json)) setApiMessages(json);
+      })
+      .catch(() => {});
+  }, []);
+
+  const messages = data && data.length > 0 ? data : apiMessages;
+  return <InboxWorkspace messages={messages} sourceLabel="Local database sync is active." />;
 }
 
 function InboxLoadingState() {
@@ -567,7 +579,7 @@ function ApiInboxFallback() {
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
       } catch (err) {
-        setError(err?.message || "Failed to load inbox messages");
+        setError(errorMessage(err, "Failed to load inbox messages"));
       } finally {
         setLoading(false);
       }

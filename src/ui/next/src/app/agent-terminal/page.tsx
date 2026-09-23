@@ -10,12 +10,13 @@ export default function AgentTerminalPage() {
 
   useEffect(() => {
     fetch('/api/v1/payments/terminal/backend')
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data.backend) {
+        if (data?.backend) {
           setBackend(data.backend);
         }
-      });
+      })
+      .catch(() => {});
   }, []);
 
   const handleBackendChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -81,7 +82,7 @@ export default function AgentTerminalPage() {
           </label>
         </div>
 
-        <div className="bg-black/90 text-green-400 font-mono text-sm p-4 rounded-xl h-96 overflow-y-auto shadow-inner mb-4 flex flex-col backdrop-blur-md border border-white/10">
+        <div className="bg-black bg-black/90 text-green-400 font-mono text-sm p-4 rounded-xl h-96 overflow-y-auto shadow-inner mb-4 flex flex-col backdrop-blur-md border border-white/10">
           {output.length === 0 ? (
             <div className="text-gray-500 italic">Welcome to the Multi-Backend Agent Terminal.</div>
           ) : (

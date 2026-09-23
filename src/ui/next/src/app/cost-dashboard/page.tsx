@@ -135,6 +135,7 @@ export default function CostDashboardPage() {
     } catch (error) {
       console.error('Error initiating billing portal:', error);
       setActionMessage('Failed to initiate billing portal. Please try again.');
+      router.push('/pricing');
     } finally {
       setIsActionLoading(false);
     }

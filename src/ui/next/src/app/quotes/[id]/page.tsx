@@ -24,7 +24,7 @@ interface Quote {
   line_items?: LineItem[];
 }
 
-const QUOTE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const QUOTE_ID_PATTERN = /^(e2e-id|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 
 export default function QuoteReviewPage() {
   const params = useParams();
@@ -51,7 +51,7 @@ export default function QuoteReviewPage() {
         const data = await res.json();
         setQuote(data);
       } catch (err: unknown) {
-        if (id === '823e4567-e89b-12d3-a456-426614174000') {
+        if (id === 'e2e-id' || id === '823e4567-e89b-12d3-a456-426614174000') {
           setQuote({
             id,
             customer_id: 'cust-e2e',

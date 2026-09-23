@@ -55,16 +55,16 @@ export default function ViralGoalTrackerPage() {
 
           <div className="space-y-4">
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Goal Target</label>
-                <input type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="goal-target">Goal Target</label>
+                <input id="goal-target" name="goal-target" placeholder="10" aria-label="Goal Target" type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reward Name</label>
-                <input type="text" value={reward} onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="reward-name">Reward Name</label>
+                <input id="reward-name" name="reward-name" placeholder="Reward Name" aria-label="Reward Name" type="text" value={reward} onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="theme-select">Theme</label>
+                <select id="theme-select" name="theme-select" aria-label="Theme" value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>

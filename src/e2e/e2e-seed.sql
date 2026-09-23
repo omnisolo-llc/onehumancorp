@@ -432,10 +432,10 @@ VALUES (
   'e2e-approval-inbox-quote-1',
   'e2e-tenant',
   'Sales',
-  'Fix leaking sink quote approval',
+  'Vegan pastry box quote approval',
   'PENDING',
   'low',
-  '{"feature_type": "quote_draft", "scope": "Fix leaking sink for Ada Baker", "service": "Plumbing Repair", "suggested_price": 250, "line_items": [{"description": "Fix leaking sink", "unit_price_cents": 25000, "quantity": 1}]}'::jsonb,
+  '{"inbox_message_id": "e2e-inbox-msg-1", "action_type": "Draft Quote", "feature_type": "quote_draft", "total_amount": 75.00, "total_amount_cents": 7500, "scope": "Vegan options for Saturday", "line_items": [{"description": "Vegan Pastry Box", "unit_price_cents": 7500, "quantity": 1}]}'::jsonb,
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 )
@@ -465,14 +465,14 @@ INSERT INTO omni_inbox_messages (
 VALUES (
   'e2e-inbox-msg-1',
   'e2e-tenant',
-  'email',
-  'ada.baker@example.test',
+  'instagram',
+  'maya_bakes',
   'e2e-customer-bakery',
-  'Can you please send me a quote for fixing the leaking sink?',
-  'Can you please send me a quote for fixing the leaking sink?',
+  'Do you have vegan options for Saturday?',
+  'Do you have vegan options for Saturday?',
   'en',
-  'Sure, here is the quote for the sink repair.',
-  'pending_approval',
+  'Yes! We have several delicious vegan pastries available this Saturday.',
+  'pending',
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 )

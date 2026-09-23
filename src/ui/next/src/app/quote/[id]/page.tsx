@@ -57,7 +57,7 @@ export default function InteractiveQuotePage() {
     if (quoteId === null) {
       setLoading(false);
       setQuote(null);
-      setError("No quote selected. Please select a valid quote.");
+      setError("Quote not found.");
       return;
     }
     setLoading(true);
