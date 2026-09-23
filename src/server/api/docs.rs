@@ -593,6 +593,13 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/billing-settings".to_string(),
         },
         HelpArticle {
+            category: "Documentation".to_string(),
+            title: "Operating Manual".to_string(),
+            desc: "Setup, Authority, Cost Evidence, and Recovery for your OneHumanCorp system."
+                .to_string(),
+            link: "/help/operating-manual".to_string(),
+        },
+        HelpArticle {
             category: "Advanced".to_string(),
             title: "API Documentation (for Advanced Users)".to_string(),
             desc: "Interactive API reference for connecting external services to your workspace."
@@ -1197,6 +1204,39 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       <p class="text-gray-700 mb-4">
         Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.
       </p>
+            "#.to_string()
+        }),
+        "operating-manual" => Some(HelpArticleDetail {
+            title: "OneHumanCorp Operating Manual".to_string(),
+            content_html: r#"
+      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
+        This manual documents current verified capabilities for setup, integrations, standing authority, cost evidence, and exception recovery based on native-build features.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">1. Establishing the Operation (Setup)</h2>
+      <ul class="list-disc pl-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Business Profile:</strong> You begin by describing what you sell and your target customers. This establishes a persistent business context.</li>
+        <li><strong>Connected Accounts:</strong> To accept payments, you must connect a supported provider (e.g., Stripe) using the "Connect Stripe" option in your setup. We handle the technical details securely, linking directly to your verified bank account without pooling your money with others.</li>
+        <li><strong>Store Generation:</strong> You can request the AI to generate an initial store layout and copy based on your description. You maintain full control to review and modify this before launching.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">2. Standing Authority and Permissions</h2>
+      <ul class="list-disc pl-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Explicit Approval:</strong> Before an AI helper can perform irreversible actions (like sending marketing emails or modifying your store), it will ask for your permission. You must review and approve these tasks in your Inbox.</li>
+        <li><strong>Tenant Scoping:</strong> Your data and operations are strictly isolated. Helpers only access data relevant to your business (tenant isolation).</li>
+        <li><strong>Revocation:</strong> You can cancel tasks, stop agents, or revoke connected credentials at any time. The system strictly enforces these server-side limits.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">3. Cost and Usage</h2>
+      <ul class="list-disc pl-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Direct Provider Bills:</strong> If you connect your own provider accounts (like your own Stripe account or supported AI subscriptions), you pay those providers directly.</li>
+        <li><strong>OneHumanCorp Charges:</strong> We track AI model usage, database storage, and active execution time. We do not currently enforce arbitrary token caps or fixed subscription cohorts.</li>
+        <li><strong>Budgets and Reservations:</strong> Before starting paid work, the system reserves a conservative budget limit to prevent surprise bills. You can see your estimated task costs and maximum authorized spend in your dashboard.</li>
+        <li><strong>Evidence-Based Billing:</strong> You are charged based on durable, deduplicated usage events (e.g., successful AI invocations and completions), not on retries caused by system errors.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">4. Exceptions and Recovery</h2>
+      <ul class="list-disc pl-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Declined Payments & Overdue Follow-ups:</strong> If a customer's payment fails or an invoice goes unpaid, the system records the exception and provides tools to retry or send gentle reminders.</li>
+        <li><strong>Failed Tasks:</strong> If an AI task fails or is interrupted, the system preserves the work state and logs the exact error, allowing you to resume or cancel safely without repeating work.</li>
+        <li><strong>Budget Exhaustion:</strong> If a task attempts to exceed your authorized spend, it is paused immediately, and you will be notified to adjust your budget before it can continue.</li>
+      </ul>
             "#.to_string()
         }),
         _ => None,

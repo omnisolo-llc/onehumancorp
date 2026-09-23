@@ -53,6 +53,12 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 title: "Understanding your invoice".to_string(),
                 content_markdown: "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string(),
             },
+            HelpArticle {
+                id: "operating-manual".to_string(),
+                topic: "Documentation".to_string(),
+                title: "OneHumanCorp Operating Manual".to_string(),
+                content_markdown: "This manual documents current verified capabilities for setup, integrations, standing authority, cost evidence, and exception recovery based on native-build features.".to_string(),
+            },
         ]
     })
 }
