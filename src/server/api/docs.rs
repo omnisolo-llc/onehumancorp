@@ -577,7 +577,8 @@ pub fn get_articles() -> Vec<HelpArticle> {
         HelpArticle {
             category: "Payments".to_string(),
             title: "How to Send Proposals and Collect Payments Securely".to_string(),
-            desc: "Learn how to send proposals with accurate pricing and collect secure payments.".to_string(),
+            desc: "Learn how to send proposals with accurate pricing and collect secure payments."
+                .to_string(),
             link: "/help/proposals-and-payments".to_string(),
         },
         HelpArticle {
@@ -597,6 +598,14 @@ pub fn get_articles() -> Vec<HelpArticle> {
             title: "Manage Billing".to_string(),
             desc: "Update your subscription and payment methods.".to_string(),
             link: "/help/billing-settings".to_string(),
+        },
+        HelpArticle {
+            category: "Account & Billing".to_string(),
+            title: "Connected Accounts and Standing Authority".to_string(),
+            desc:
+                "Set up your connected accounts and establish standing authority for your AI team."
+                    .to_string(),
+            link: "/help/connected-accounts".to_string(),
         },
         HelpArticle {
             category: "Advanced".to_string(),
@@ -1237,6 +1246,35 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Approving Their Work</h2>
       <p class="text-gray-700 mb-4">
         Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.
+      </p>
+            "#.to_string()
+        }),
+        "connected-accounts" => Some(HelpArticleDetail {
+            title: "Connected Accounts and Standing Authority".to_string(),
+            content_html: r#"
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Setup</h2>
+      <p class="text-gray-700 mb-4">
+        To set up your business, you need to configure your connected accounts and establish your standing authority. This ensures that the AI team can operate safely and securely on your behalf.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Connected Accounts</h2>
+      <p class="text-gray-700 mb-4">
+        Link your Google Workspace and Stripe accounts. Verify your connection settings to ensure the AI team can access your tools.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Standing Authority</h2>
+      <p class="text-gray-700 mb-4">
+        Define the scope of the AI team's authority. Set specific rules for external actions, such as sending emails or making payments. Establish a budget and spending limits for the AI team.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Evidence</h2>
+      <p class="text-gray-700 mb-4">
+        Maintain a record of all actions taken by the AI team. Review the evidence feed to verify that the team is completing work as expected.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost</h2>
+      <p class="text-gray-700 mb-4">
+        Monitor the cost of the AI team's operations. Understand the pricing structure and how usage is billed.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Exceptions and Recovery</h2>
+      <p class="text-gray-700 mb-4">
+        Learn how to handle exceptions and errors that may occur during execution. Understand the recovery process and how to resume work after a failure.
       </p>
             "#.to_string()
         }),

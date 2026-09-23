@@ -3,7 +3,6 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Navigation and Aesthetics', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Navigate using the real stack URL
     await page.goto('/setup.html');
   });
 
@@ -27,17 +26,14 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await page.locator('#location-input').fill('Local');
     await page.getByTestId('next-step-btn').nth(7).click(); // to step-target-audience
 
-    // Fill target audience and go to domain
     await expect(page.locator('body')).toContainText('Who is your target audience?');
     await page.locator('#target-audience').fill('Everyone');
     await page.getByTestId('next-step-btn').nth(8).click();
 
-    // Domain step
     await expect(page.locator('body')).toContainText('Where will your business live?');
     const domainStep = page.locator('#step-domain');
     await domainStep.getByTestId('prev-step-btn').click();
 
-    // Assert that we are back at Target Audience step, NOT offer step
     await expect(page.locator('body')).toContainText('Who is your target audience?');
     await expect(page.locator('#step-target-audience')).toBeVisible();
     await expect(page.locator('#step-domain')).toBeHidden();
@@ -45,7 +41,6 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
   });
 
   test('Setup UI should apply macOS translucent glass standards to offer input', async ({ page }) => {
-    // Navigate to step offer
     await page.getByTestId('next-step-btn').first().click();
     await page.getByTestId('context-storefront').click();
     await page.getByTestId('next-step-btn').nth(1).click();
