@@ -328,16 +328,16 @@ pub async fn get_integrations_handler(
         })
         .collect();
 
-    if let Ok(vault) = connection_vault(&state.db)
-        && let Ok(verified) = vault.list(&tenant_id).await
-    {
-        for connection in verified {
-            integrations.retain(|entry| entry.id != connection.provider);
-            integrations.push(IntegrationInfo {
-                id: connection.provider,
-                usable: connection.state == "verified",
-                status: connection.state,
-            });
+    if let Ok(vault) = connection_vault(&state.db) {
+        if let Ok(verified) = vault.list(&tenant_id).await {
+            for connection in verified {
+                integrations.retain(|entry| entry.id != connection.provider);
+                integrations.push(IntegrationInfo {
+                    id: connection.provider,
+                    usable: connection.state == "verified",
+                    status: connection.state,
+                });
+            }
         }
     }
     Json(GetIntegrationsResponse {
