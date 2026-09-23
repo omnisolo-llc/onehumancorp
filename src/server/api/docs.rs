@@ -574,12 +574,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
             desc: "Learn how to accept credit cards and manage your payouts.".to_string(),
             link: "/help/accept-payments".to_string(),
         },
-        HelpArticle {
-            category: "Proposals & Payments".to_string(),
-            title: "How to Send Proposals and Collect Payments Securely".to_string(),
-            desc: "Generate accurate quotes from inquiries, secure owner approvals, and send verifiable checkout links.".to_string(),
-            link: "/help/proposals-payments".to_string(),
-        },
+
         HelpArticle {
             category: "AI Agents".to_string(),
             title: "Activate AI Support".to_string(),
@@ -1156,6 +1151,46 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Sharing Your Store</h2>
       <p class="text-gray-700 mb-4">
         Don't forget to share your store link on social media or with your friends and family. You can find your store's link on your Dashboard.
+      </p>
+            "#.to_string()
+        }),
+        "proposals-payments" => Some(HelpArticleDetail {
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            content_html: r#"
+      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
+        As a small business owner, it's critical to know that the proposals you send to your clients contain the exact scope and pricing you agreed upon, and that payment links are secure and verifiable.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">No More Placeholder Proposals</h2>
+      <p class="text-gray-700 mb-4">
+        OmniSolo ensures that the quote generated directly reflects the customer's inquiry and your explicit business rules. We validate owner-supplied line items and deposits with checked math. If pricing information is missing, the system will mark it as <code>NEEDS_PRICING</code> for your review, rather than guessing or fabricating a fixed amount. Optional, unselected items are strictly excluded from committed totals.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Secure Checkout Links</h2>
+      <p class="text-gray-700 mb-4">
+        When you create an invoice, OmniSolo generates a real, secure session with your connected payment provider (like Stripe). It will not generate fictitious checkout URLs. If a provider is unavailable, it will explicitly state the pending/unavailable status, ensuring you never send a broken link to a client.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Drafts vs. Sent Reminders</h2>
+      <p class="text-gray-700 mb-4">
+        The system clearly distinguishes between drafting a reminder and actually delivering it. We only persist actual, source-grounded drafts. Once an invoice is paid or canceled, stale drafts are automatically retired so you don't accidentally ask a customer twice.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Your Authority</h2>
+      <p class="text-gray-700 mb-4">
+        These actions operate under your standing authority. The system enforces your hard spend reservations, prevents unauthorized effect on your accounts, and allows you to revoke or stop actions at any time.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">How to Use This Feature</h2>
+      <ol class="list-decimal pl-5 text-gray-700 mb-4">
+        <li class="mb-2">Open a Lead or Inquiry in the OmniSolo app.</li>
+        <li class="mb-2">Click <strong>Generate Proposal</strong>. Review the line items carefully. If any items are marked <code>NEEDS_PRICING</code>, fill in the correct amounts.</li>
+        <li class="mb-2">Approve the proposal to finalize the scope and price.</li>
+        <li class="mb-2">When ready, click <strong>Create Invoice</strong>. OmniSolo will securely connect to your payment provider to generate a verifiable checkout link.</li>
+        <li class="mb-2">The resulting email/SMS draft will be placed in your outbox for final review before sending.</li>
+      </ol>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost & Expectations</h2>
+      <p class="text-gray-700 mb-4">
+        These actions use your regular OHC subscription. There are no hidden markup fees on your customer's invoice. Note that standard payment processor fees (like Stripe's transaction fee) still apply and are managed directly in your provider dashboard.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Exceptions and Recovery</h2>
+      <p class="text-gray-700 mb-4">
+        If your payment provider disconnects or fails to create a link, the invoice status will remain "Draft/Pending Provider". You can simply try generating the link again later; the system is designed to retry safely without creating duplicate charges.
       </p>
             "#.to_string()
         }),
