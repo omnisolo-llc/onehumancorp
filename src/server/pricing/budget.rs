@@ -24,10 +24,10 @@ pub struct BudgetReservation {
 
 impl Drop for BudgetReservation {
     fn drop(&mut self) {
-        if self.active {
-            if let Ok(mut state) = self.state.lock() {
-                state.total_allocated = state.total_allocated.saturating_sub(self.amount_cents);
-            }
+        if self.active
+            && let Ok(mut state) = self.state.lock()
+        {
+            state.total_allocated = state.total_allocated.saturating_sub(self.amount_cents);
         }
     }
 }
@@ -42,17 +42,17 @@ impl BudgetReservation {
                 state.settled = state.settled.saturating_add(self.amount_cents);
             }
 
-            if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-                if self.amount_cents > 0 {
-                    store.llm_cost_counter.add(
-                        self.amount_cents as u64,
-                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                    );
-                    store.mission_cost_cents.add(
-                        self.amount_cents as u64,
-                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                    );
-                }
+            if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
+                && self.amount_cents > 0
+            {
+                store.llm_cost_counter.add(
+                    self.amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
+                store.mission_cost_cents.add(
+                    self.amount_cents as u64,
+                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                );
             }
         }
     }
@@ -100,27 +100,30 @@ impl BudgetManager {
             return Err("spend amount cannot be negative".to_string());
         }
 
-        let mut state = self.state.lock().map_err(|_| "mutex poisoned".to_string())?;
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "mutex poisoned".to_string())?;
 
         let next_allocated = state.total_allocated.checked_add(amount_cents);
 
-        if let Some(next) = next_allocated {
-            if next <= self.total_limit_cents {
-                state.total_allocated = next;
-                if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-                    tracing::info!(
-                        "💰 Miser telemetry: Recording budget spend for tenant {}",
-                        tid
-                    ); // pii-safe
-                }
-                return Ok(BudgetReservation {
-                    state: self.state.clone(),
-                    amount_cents,
-                    active: true,
-                    telemetry_store: self.telemetry_store.clone(),
-                    tenant_id: self.tenant_id.clone(),
-                });
+        if let Some(next) = next_allocated
+            && next <= self.total_limit_cents
+        {
+            state.total_allocated = next;
+            if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                tracing::info!(
+                    "💰 Miser telemetry: Recording budget spend for tenant {}",
+                    tid
+                ); // pii-safe
             }
+            return Ok(BudgetReservation {
+                state: self.state.clone(),
+                amount_cents,
+                active: true,
+                telemetry_store: self.telemetry_store.clone(),
+                tenant_id: self.tenant_id.clone(),
+            });
         }
 
         Ok(BudgetReservation {
