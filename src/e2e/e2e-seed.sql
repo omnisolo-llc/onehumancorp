@@ -130,7 +130,8 @@ SET username = EXCLUDED.username,
 -- users.roles array. Seed both representations in this same isolated transaction.
 DELETE FROM identity_user_roles WHERE user_id IN (
   'e2e-admin-user', 'e2e-team-member', 'e2e-leo-user',
-  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user'
+  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user',
+  'e2e-starter-user'
 );
 INSERT INTO identity_user_roles (user_id, role_name, tenant_id, position)
 SELECT u.id, role.role_name, u.tenant_id, (role.position - 1)::integer
@@ -138,7 +139,8 @@ FROM users u
 CROSS JOIN LATERAL unnest(u.roles) WITH ORDINALITY AS role(role_name, position)
 WHERE u.id IN (
   'e2e-admin-user', 'e2e-team-member', 'e2e-leo-user',
-  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user'
+  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user',
+  'e2e-starter-user'
 );
 
 INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
