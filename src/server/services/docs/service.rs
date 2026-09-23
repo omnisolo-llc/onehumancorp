@@ -59,6 +59,42 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 title: "How to Send Proposals and Collect Payments Securely".to_string(),
                 content_markdown: "# How to Send Proposals and Collect Payments Securely\n\n**Problem Statement:**\nAs a small business owner, it's critical to know that the proposals you send to your clients contain the exact scope and pricing you agreed upon, and that payment links are secure and verifiable.\n\n**Current Capabilities:**\n- **No More Placeholder Proposals:** OmniSolo ensures that the quote generated directly reflects the customer's inquiry and your explicit business rules. We validate owner-supplied line items and deposits with checked math. If pricing information is missing, the system will mark it as `NEEDS_PRICING` for your review. Optional, unselected items are strictly excluded from committed totals.\n- **Secure Checkout Links:** When you create an invoice, OmniSolo generates a real, secure session with your connected payment provider (like Stripe). It will not generate fictitious checkout URLs.\n- **Drafts vs. Sent Reminders:** The system clearly distinguishes between drafting a reminder and actually delivering it. We only persist actual, source-grounded drafts.\n- **Your Authority:** These actions operate under your standing authority. The system enforces your hard spend reservations.\n\n**How to Use This Feature:**\n1. Open a Lead or Inquiry in the OmniSolo app.\n2. Click **Generate Proposal**. Review the line items carefully. If any items are marked `NEEDS_PRICING`, fill in the correct amounts.\n3. Approve the proposal to finalize the scope and price.\n4. When ready, click **Create Invoice**. OmniSolo will securely connect to your payment provider to generate a verifiable checkout link.\n5. The resulting email/SMS draft will be placed in your outbox for final review before sending.\n\n**Cost & Expectations:**\nThese actions use your regular OHC subscription. There are no hidden markup fees on your customer's invoice. Note that standard payment processor fees still apply.\n\n**Exceptions and Recovery:**\nIf your payment provider disconnects or fails to create a link, the invoice status will remain \"Draft/Pending Provider\". You can simply try generating the link again later.".to_string(),
             },
+            HelpArticle {
+                id: "capability-economics-migration-1".to_string(),
+                topic: "Operating Capabilities".to_string(),
+                title: "OmniSolo Operating Capabilities and Native Migration".to_string(),
+                content_markdown: "# OmniSolo Operating Capabilities and Native Migration
+
+Welcome to OmniSolo. This guide outlines how you, as a solo independent service owner, can accomplish verified business work with our current product, and what features are currently supported versus planned for future native migrations.
+
+## Current Capability Evidence
+
+Here is how you can use OmniSolo to run your operating business today:
+
+### Business Setup
+- **Current Support:** Comprehensive onboarding state flows exist to help you set up your profile and configure your basic business rules.
+- **Planned Improvements:** We are continuing to enhance the verified owner-ready operating business templates for various service niches.
+
+### Customer Proposals
+- **Current Support:** Tenant and customer records, deposit tracking, and proposal approvals are fully supported.
+- **Planned Improvements:** Currently, intake writes fixed scope independent of inquiries. Future updates will allow for more dynamic, inquiry-driven proposal generation.
+
+### Calendars & Tools
+- **Current Support:** Authenticated Google Calendar and Google Workspace requests are functional for basic scheduling.
+- **Planned Improvements:** Full, secure credential lifecycles and robust connection management are undergoing separate proofing and will be expanded natively.
+
+### Payments
+- **Current Support:** Core invoicing logic is present and available for use.
+- **Planned Improvements:** Complete Stripe and MercadoPago workflows with real provider checkout sessions are currently being reconciled for seamless end-to-end payment collection.
+
+### Agent Coordination
+- **Current Support:** Department and event coordination logic exists within the system.
+- **Planned Improvements:** We are transitioning simulated feed items to real agent execution, providing you with persistent approval workflows and concrete result evidence of your agent\'s actions.
+
+### Provider Runtime
+- **Current Support:** Scoped proxy and secret redaction are implemented for security.
+- **Planned Improvements:** We are finalizing reliable accounting and clear payer modes before full usage billing is enabled across the platform.".to_string(),
+            },
         ]
     })
 }
