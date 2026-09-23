@@ -125,11 +125,8 @@ impl BookingService {
             end_time,
         };
 
-        // Dummy Stripe Link
-        let stripe_link = format!(
-            "https://checkout.stripe.com/pay/cs_test_{}",
-            Uuid::new_v4().to_string().replace("-", "")
-        );
+        // Real provider session requires setup, fallback to empty string
+        let stripe_link = String::new();
 
         Ok((time_slot, stripe_link))
     }
@@ -369,7 +366,7 @@ mod tests {
         // if start_time is between 17 and 20. But start_time is dynamic: `now + 1 day`.
         // So the amount could be 20000 or 23000. Let's just check that it's either.
         assert!(quote.amount == 20000 || quote.amount == 23000);
-        assert!(stripe_link.starts_with("https://checkout.stripe.com/pay/cs_test_"));
+        assert!(stripe_link.is_empty());
         assert!(time_slot.start_time < time_slot.end_time);
     }
 
@@ -1665,11 +1662,8 @@ impl BookingEngineService for NativeBookingService {
             .await
             .map_err(Status::internal)?;
 
-        // Generate dummy stripe link
-        let deposit_stripe_link = format!(
-            "https://checkout.stripe.com/pay/cs_test_{}",
-            booking_id.replace("-", "")
-        );
+        // Real provider session requires setup, fallback to empty string
+        let deposit_stripe_link = String::new();
 
         Ok(Response::new(ReserveTimeSlotResponse {
             booking_id,
@@ -1727,10 +1721,7 @@ impl BookingEngineService for NativeBookingService {
 
         let inventory_lock_id = reserve_result.lock_id;
 
-        let checkout_url = format!(
-            "https://checkout.stripe.com/pay/cs_test_{}",
-            session_id.replace("-", "")
-        );
+        let checkout_url = String::new();
 
         Ok(Response::new(ConversationalCheckoutSession {
             session_id,
@@ -2172,11 +2163,7 @@ mod native_booking_tests {
         assert_eq!(session.tenant_id, "t1");
         assert_eq!(session.customer_id, "c1");
         assert_eq!(session.amount_cents, 1000);
-        assert!(
-            session
-                .checkout_url
-                .starts_with("https://checkout.stripe.com/pay/cs_test_")
-        );
+        assert!(session.checkout_url.is_empty());
         assert_eq!(session.status, "pending");
     }
 
