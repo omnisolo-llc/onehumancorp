@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Public Card Generator - OmniSolo</title>
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --text-color: #1d1d1f;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --card-border: rgba(255, 255, 255, 0.4);
+      --input-bg: #ffffff;
+      --input-border: #d2d2d7;
+      --primary-color: #0066FF;
+      --primary-hover: #0052cc;
+      --secondary-text: #86868b;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #16161a;
+        --text-color: #F5F5F7;
+        --card-bg: rgba(22, 22, 26, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(255, 255, 255, 0.05);
+        --input-border: rgba(255, 255, 255, 0.2);
+        --secondary-text: #A1A1A6;
+      }
+    }
+
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .header {
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .header a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      padding: 32px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-family: inherit;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .toggle-group {
+        background: rgba(255, 255, 255, 0.02);
+      }
+    }
+
+    .toggle-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary-color);
+    }
+
+    .toggle-group label {
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Preview section */
+    .preview-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-wrapper {
+      width: 100%;
+      max-width: 320px;
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .preview-wrapper {
+        background: #222;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      }
+    }
+
+    .preview-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100px;
+      position: relative;
+    }
+
+    .preview-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .preview-avatar {
+        background: #333;
+        border-color: #222;
+      }
+    }
+
+    .preview-content {
+      padding: 56px 24px 24px;
+      text-align: center;
+    }
+
+    .preview-name {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 4px;
+      color: #111;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .preview-name {
+        color: #eee;
+      }
+    }
+
+    .preview-role {
+      font-size: 14px;
+      color: var(--primary-color);
+      font-weight: 600;
+      margin: 0 0 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .preview-desc {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin: 0 0 24px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .preview-desc {
+        color: #aaa;
+      }
+    }
+
+    .preview-btn {
+      background: #111;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-block;
+      text-decoration: none;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .preview-btn {
+        background: #eee;
+        color: #111;
+      }
+    }
+
+    .preview-footer {
+      border-top: 1px solid #eaeaea;
+      padding: 12px;
+      text-align: center;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .preview-footer {
+        border-top-color: #333;
+      }
+    }
+
+    .preview-footer a {
+      color: #888;
+      font-size: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .preview-footer a:hover {
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Agent Public Card</h1>
+    <a href="dashboard.html">← Back to Dashboard</a>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Card Details</h2>
+      <p style="color: var(--secondary-text); font-size: 14px; margin-bottom: 24px;">
+        Generate a shareable public card for your AI agent to build trust with your customers.
+      </p>
+
+      <div class="form-group">
+        <label for="agent-name">Agent Name</label>
+        <input type="text" id="agent-name" value="Nova" />
+      </div>
+
+      <div class="form-group">
+        <label for="agent-role">Agent Role</label>
+        <input type="text" id="agent-role" value="Customer Success Agent" />
+      </div>
+
+      <div class="form-group">
+        <label for="agent-desc">Greeting Message</label>
+        <textarea id="agent-desc">Hi! I'm here 24/7 to answer your questions, help with orders, and make sure you have a great experience.</textarea>
+      </div>
+
+      <div class="toggle-group">
+        <input type="checkbox" id="remove-branding" />
+        <label for="remove-branding">Remove "OmniSolo" Badge (Pro)</label>
+      </div>
+
+      <button class="btn" id="generate-btn">Copy Share Link</button>
+    </div>
+
+    <div class="preview-container">
+      <h3 style="margin-top: 0; color: var(--secondary-text); font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Live Preview</h3>
+
+      <div class="preview-wrapper" id="preview-wrapper">
+        <div class="preview-header">
+          <div class="preview-avatar">🤖</div>
+        </div>
+        <div class="preview-content">
+          <h4 class="preview-name" id="preview-name-el">Nova</h4>
+          <p class="preview-role" id="preview-role-el">Customer Success Agent</p>
+          <p class="preview-desc" id="preview-desc-el">Hi! I'm here 24/7 to answer your questions, help with orders, and make sure you have a great experience.</p>
+
+          <a href="#" class="preview-btn">Chat with me</a>
+        </div>
+        <div class="preview-footer" id="preview-footer-el">
+          <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team" id="branding-link" target="_blank">
+            <span>⚡</span> OmniSolo
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const nameInput = document.getElementById('agent-name');
+      const roleInput = document.getElementById('agent-role');
+      const descInput = document.getElementById('agent-desc');
+      const brandingToggle = document.getElementById('remove-branding');
+
+      const nameEl = document.getElementById('preview-name-el');
+      const roleEl = document.getElementById('preview-role-el');
+      const descEl = document.getElementById('preview-desc-el');
+      const footerEl = document.getElementById('preview-footer-el');
+      const brandingLink = document.getElementById('branding-link');
+      const generateBtn = document.getElementById('generate-btn');
+
+      // Update tenant ID in link if available
+      const tenantId = localStorage.getItem('business_display_name') || 'default-team';
+      brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+
+      function updatePreview() {
+        nameEl.textContent = nameInput.value || 'Agent Name';
+        roleEl.textContent = roleInput.value || 'Agent Role';
+        descEl.textContent = descInput.value || 'Agent greeting...';
+
+        if (brandingToggle.checked) {
+          footerEl.style.display = 'none';
+        } else {
+          footerEl.style.display = 'block';
+        }
+      }
+
+      nameInput.addEventListener('input', updatePreview);
+      roleInput.addEventListener('input', updatePreview);
+      descInput.addEventListener('input', updatePreview);
+      brandingToggle.addEventListener('change', updatePreview);
+
+      generateBtn.addEventListener('click', () => {
+        const urlParams = new URLSearchParams({
+          name: nameInput.value,
+          role: roleInput.value,
+          desc: descInput.value,
+          hideBranding: brandingToggle.checked ? 'true' : 'false',
+          tenant: tenantId
+        });
+
+        const shareUrl = `${window.location.origin}/agent-profile?${urlParams.toString()}`;
+
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          const originalText = generateBtn.textContent;
+          generateBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            generateBtn.textContent = originalText;
+          }, 2000);
+        });
+      });
+    });
+  </script>
+
+<style>
+.omnisolo-tooltip {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.omnisolo-tooltip.visible {
+    opacity: 1;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
+            // Fallback for playwright
+            window.OMNISOLO_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+});
+</script>
+
+
+<script>
+function initWalkthrough() {
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+
+        let currentStep = 0;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+        document.body.appendChild(overlay);
+
+        // Create bubble
+        const bubble = document.createElement('div');
+        bubble.id = 'walkthrough-bubble';
+        bubble.setAttribute('role', 'dialog');
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        document.body.appendChild(bubble);
+
+        function renderStep() {
+            const step = steps[currentStep];
+
+            // Clean up previous highlights
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+                el.style.pointerEvents = '';
+            });
+
+            // Find target
+            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+
+            bubble.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            `;
+
+            document.getElementById('wt-close').onclick = closeWalkthrough;
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+            document.getElementById('wt-next').onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
+
+            if (target) {
+                target.classList.add('walkthrough-highlight');
+                target.style.position = 'relative';
+                target.style.zIndex = '99999';
+                target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
+
+                const rect = target.getBoundingClientRect();
+                // Position bubble below target if space permits, else above
+                if (rect.bottom + 200 < window.innerHeight) {
+                    bubble.style.top = (rect.bottom + 10) + 'px';
+                } else {
+                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                }
+                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+            } else {
+                // Center if no target
+                bubble.style.top = '50%';
+                bubble.style.left = '50%';
+                bubble.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        function closeWalkthrough() {
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+                el.style.pointerEvents = '';
+            });
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+        }
+
+        renderStep();
+    };
+}
+initWalkthrough();
+</script>
+
+</body>
+</html>

@@ -127,12 +127,16 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     let ready = false;
     for (let attempt = 0; attempt < 60; attempt++) {
       execution.signal.throwIfAborted();
-      try { await execute('docker', ['exec', pg, 'pg_isready', '-U', 'ohc'], { env, quiet: true, timeoutMs: 5000 }); ready = true; break; }
+      try {
+        await execute('docker', ['exec', pg, 'pg_isready', '-U', 'ohc', '-d', 'ohc'], { env, quiet: true, timeoutMs: 5000 });
+        await execute('docker', ['exec', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc', '-c',
+          "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END $$; GRANT ohc_bypassrls TO ohc;"], { env, quiet: true, timeoutMs: 5000 });
+        ready = true;
+        break;
+      }
       catch { await delay(1000, undefined, { signal: execution.signal }); }
     }
     if (!ready) throw new Error('PostgreSQL test container did not become ready; no SQLite fallback is permitted');
-    await execute('docker', ['exec', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc', '-c',
-      "CREATE ROLE ohc_bypassrls NOLOGIN; GRANT ohc_bypassrls TO ohc;"], { env });
     await execute('bash', ['deploy/tests/support/generate_test_tls.sh', temp], { env });
     const apiPort = await freePort(), grpcPort = await freePort(), webPort = await freePort();
     const apiOrigin = `http://127.0.0.1:${apiPort}`, webOrigin = `http://127.0.0.1:${webPort}`;

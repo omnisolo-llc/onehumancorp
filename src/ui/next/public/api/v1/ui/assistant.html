@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OmniSolo Assistant Workstation</title>
+    <style>
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* OmniSolo Translucent Glass Theme */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+
+      /* Top Bar */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        z-index: 10;
+      }
+      .header-title {
+        font-weight: 700;
+        font-size: 18px;
+        color: #1d1d1f;
+      }
+      .top-actions {
+        display: flex;
+        gap: 15px;
+      }
+      .top-actions a {
+        text-decoration: none;
+        color: #0066FF;
+        font-weight: 500;
+        font-size: 14px;
+        transition: opacity 0.2s;
+      }
+      .top-actions a:hover {
+        opacity: 0.8;
+      }
+
+      /* Main Layout */
+      .workspace {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* Left Rail */
+      .left-rail {
+        width: 250px;
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      .rail-section {
+        margin-bottom: 20px;
+      }
+      .rail-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #86868b;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .task-item {
+        padding: 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #1d1d1f;
+        background: rgba(255, 255, 255, 0.5);
+      }
+      .task-item:hover, .task-item.active {
+        background: rgba(0, 102, 255, 0.1);
+        color: #0066FF;
+      }
+      .empty-state {
+        color: #86868b;
+        font-style: italic;
+        font-size: 13px;
+        padding: 10px;
+      }
+
+      /* Center Conversation */
+      .center-conversation {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        background-color: transparent;
+      }
+      .task-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .task-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 5px 0;
+      }
+      .task-status {
+        font-size: 12px;
+        color: #86868b;
+      }
+      .messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+      }
+      .message {
+        margin-bottom: 20px;
+        padding: 15px;
+        border-radius: 12px;
+        max-width: 80%;
+      }
+      .message.user {
+        background: rgba(0, 102, 255, 0.1);
+        align-self: flex-end;
+        margin-left: auto;
+      }
+      .message.assistant {
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .composer {
+        padding: 20px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .composer-input {
+        width: 100%;
+        padding: 15px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+        resize: none;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .composer-input:focus {
+        outline: none;
+        border-color: #0066FF;
+      }
+
+      /* Right Panel */
+      .right-panel {
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      .panel-tabs {
+        display: flex;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .panel-tab {
+        padding: 10px 15px;
+        font-size: 14px;
+        cursor: pointer;
+        color: #86868b;
+        border-bottom: 2px solid transparent;
+      }
+      .panel-tab.active {
+        color: #0066FF;
+        border-bottom-color: #0066FF;
+        font-weight: 500;
+      }
+      .result-item {
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+      }
+      .result-icon {
+        margin-right: 10px;
+        font-size: 16px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #16161a;
+          color: #F5F5F7;
+        }
+        .glass-panel {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .header-title, .task-title, .task-item {
+          color: #F5F5F7;
+        }
+        .left-rail, .center-conversation, .task-header, .composer, .panel-tabs {
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .task-item {
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .message.assistant, .composer-input, .result-item {
+          background: rgba(255, 255, 255, 0.1);
+          color: #F5F5F7;
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <header class="glass-panel">
+      <div class="header-title" id="assistant-header-title">Assistant Workspace</div>
+      <div class="top-actions">
+        <a href="#" aria-label="Remote Control">Remote Control</a>
+        <a href="#" aria-label="Automations">Automations</a>
+        <a href="#" aria-label="Memory">Memory</a>
+        <a href="#" aria-label="Skills">Skills</a>
+        <a href="/agents" aria-label="Expert Center">Expert Center</a>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <!-- Left Rail -->
+      <div class="left-rail glass-panel">
+        <div class="rail-section">
+          <div class="rail-title">Workspace</div>
+          <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 10px; background: rgba(255,255,255,0.5);" aria-label="Workspace Selector">
+            <option>Personal Workspace</option>
+          </select>
+        </div>
+
+        <div class="rail-section">
+          <div class="rail-title">Active Tasks</div>
+          <div id="active-tasks-container">
+            <div class="empty-state">No active tasks.</div>
+          </div>
+        </div>
+
+        <div class="rail-section">
+          <div class="rail-title">Filters</div>
+          <div id="filters-container">
+             <div class="empty-state">No filters.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Conversation -->
+      <div class="center-conversation">
+        <div class="task-header">
+          <h2 class="task-title" aria-label="Task Title">New Task</h2>
+          <div class="task-status" aria-label="Task Status">Status: Idle</div>
+        </div>
+
+        <div class="messages" id="messages-container" aria-label="Conversation View">
+            <div class="empty-state" style="text-align: center; margin-top: 40px;">How can I help you today?</div>
+        </div>
+
+        <div class="composer">
+          <textarea class="composer-input" rows="3" placeholder="Tell the assistant what to do next..." aria-label="Composer Input"></textarea>
+        </div>
+      </div>
+
+      <!-- Right Panel -->
+      <div class="right-panel glass-panel" aria-label="Results Panel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" aria-label="Tab: Artifacts">Artifacts</div>
+          <div class="panel-tab" aria-label="Tab: All Files">All Files</div>
+          <div class="panel-tab" aria-label="Tab: Changes">Changes</div>
+          <div class="panel-tab" aria-label="Tab: Preview">Preview</div>
+        </div>
+
+        <div class="result-list" id="results-container">
+            <div class="empty-state">No results to show.</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Load assistant name from state if available
+      document.addEventListener('DOMContentLoaded', () => {
+        const headerTitle = document.getElementById('assistant-header-title');
+
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+            if (state && state.assistantName) {
+              headerTitle.innerText = `${state.assistantName} Workspace`;
+            }
+          }).catch(console.error);
+        } else {
+          const storedName = localStorage.getItem('assistantName');
+          if (storedName) {
+            headerTitle.innerText = `${storedName} Workspace`;
+          }
+        }
+      });
+    </script>
+
+<style>
+.omnisolo-tooltip {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.omnisolo-tooltip.visible {
+    opacity: 1;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
+            // Fallback for playwright
+            window.OMNISOLO_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+});
+</script>
+
+
+<script>
+function initWalkthrough() {
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+
+        let currentStep = 0;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+        document.body.appendChild(overlay);
+
+        // Create bubble
+        const bubble = document.createElement('div');
+        bubble.id = 'walkthrough-bubble';
+        bubble.setAttribute('role', 'dialog');
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        document.body.appendChild(bubble);
+
+        function renderStep() {
+            const step = steps[currentStep];
+
+            // Clean up previous highlights
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+                el.style.pointerEvents = '';
+            });
+
+            // Find target
+            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+
+            bubble.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            `;
+
+            document.getElementById('wt-close').onclick = closeWalkthrough;
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+            document.getElementById('wt-next').onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
+
+            if (target) {
+                target.classList.add('walkthrough-highlight');
+                target.style.position = 'relative';
+                target.style.zIndex = '99999';
+                target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
+
+                const rect = target.getBoundingClientRect();
+                // Position bubble below target if space permits, else above
+                if (rect.bottom + 200 < window.innerHeight) {
+                    bubble.style.top = (rect.bottom + 10) + 'px';
+                } else {
+                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                }
+                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+            } else {
+                // Center if no target
+                bubble.style.top = '50%';
+                bubble.style.left = '50%';
+                bubble.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        function closeWalkthrough() {
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+                el.style.pointerEvents = '';
+            });
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+        }
+
+        renderStep();
+    };
+}
+initWalkthrough();
+</script>
+
+</body>
+</html>

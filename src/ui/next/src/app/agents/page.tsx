@@ -310,9 +310,9 @@ export default function AgentsPage() {
           </nav>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-250/70 dark:border-zinc-800/70 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
             <span className="font-bold text-zinc-900 dark:text-white">Operational team:</span>
-            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer">The Manager</button>
-            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer">The Ambassador</button>
-            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer">The Promoter</button>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Manager</span></button>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Ambassador</span></button>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Promoter</span></button>
           </div>
         </div>
       </header>
