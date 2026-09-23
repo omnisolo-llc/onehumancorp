@@ -635,6 +635,7 @@ impl DashboardService for MyDashboardService {
         );
         let cache =
             DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        #[allow(clippy::collapsible_if)]
         if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
             if !is_stale {
                 return Ok(Response::new(cached));
