@@ -218,6 +218,7 @@ function CheckoutContent() {
                     </div>
                     <input
                       type="checkbox"
+                      aria-label="Neighborhood Collective Points"
                       checked={loyaltyApplied}
                       onChange={() => setLoyaltyApplied((prev) => !prev)}
                       className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"

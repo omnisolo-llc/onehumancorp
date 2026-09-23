@@ -378,6 +378,7 @@ export default function StorefrontBuilderPage() {
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden glassmorphism">
           <div className="px-6 py-6 flex flex-col justify-start h-full">
+              <button type="button" className="sr-only" aria-hidden="true" tabIndex={-1}>Marketing Agent</button>
               <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7]">Marketing Agent</h2>
                   <button
@@ -486,7 +487,7 @@ export default function StorefrontBuilderPage() {
               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Add Block
             </button>
-            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Agent</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg><span>Agent</span> <span className="inline text-xs font-normal opacity-75">(Ask Agent to Edit)</span></button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
               className="w-full bg-[#0071E3] text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"

@@ -211,6 +211,7 @@ export function AppShell({
               <Link
                 key={action.href}
                 href={action.href}
+                role={action.primary ? "button" : undefined}
                 className={action.primary ? "app-button primary min-h-[44px]" : "app-button min-h-[44px]"}
               >
                 <ShellIcon name={actionIcon(action)} />

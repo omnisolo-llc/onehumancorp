@@ -22,7 +22,7 @@ test.describe('Sovereign-to-Cloud Bridge Invite', () => {
     expect(value).toContain('https://omnisolo.co/invite/inv-');
 
     // Verify copy button works (UI feedback)
-    const copyBtn = page.getByRole('button', { name: 'Copy' });
+    const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await copyBtn.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
   });

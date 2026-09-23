@@ -307,8 +307,12 @@ async fn proxy_agent_rpc_handler(
             .into_response();
     }
 
-    let raw_origin = std::env::var("OMNISOLO_AGENT_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let port = std::env::var("OMNISOLO_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(18789);
+    let default_origin = format!("http://127.0.0.1:{}", port);
+    let raw_origin = std::env::var("OMNISOLO_AGENT_URL").unwrap_or(default_origin);
     let Ok(url) = agent_rpc_url(&raw_origin) else {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
@@ -336,6 +340,26 @@ async fn proxy_agent_rpc_handler(
         request = request.bearer_auth(token);
     }
     let Ok(upstream) = request.send().await else {
+        if payload.get("method").and_then(|v| v.as_str()) == Some("aider_repomap") {
+            let path = payload
+                .get("params")
+                .and_then(|p| p.get("path"))
+                .and_then(|v| v.as_str())
+                .unwrap_or(".");
+            let repomap = omnisolo_builtin_agent::aider_repomap::RepoMap::new(path);
+            let result = repomap
+                .generate_map()
+                .unwrap_or_else(|e| format!("Error: {}", e));
+            return (
+                axum::http::StatusCode::OK,
+                axum::Json(serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": payload.get("id"),
+                    "result": result
+                })),
+            )
+                .into_response();
+        }
         return (
             axum::http::StatusCode::BAD_GATEWAY,
             axum::Json(serde_json::json!({ "error": "agent service unavailable" })),
@@ -9590,6 +9614,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         })).layer(axum::middleware::from_fn_with_state(
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
+        )))
+        .merge(omnisolo_builtin_agent::json_rpc_server::create_router(std::sync::Arc::new(
+            omnisolo_builtin_agent::codex_runner::Runner::new(std::sync::Arc::new(
+                omnisolo_builtin_agent::agent::Agent::new(
+                    std::sync::Arc::new(omnisolo_builtin_agent::llm::ollama::OllamaClient::new("http://localhost:11434")),
+                    vec![],
+                ),
+            )),
         )))
         .merge(meta_webhook_router)
         .merge(protect_internal_ingress(
