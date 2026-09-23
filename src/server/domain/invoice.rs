@@ -10,28 +10,35 @@ pub async fn handle_invoice_action(
         // Verify invoice is still unpaid/open before sending
         let invoice_res: Option<(String, Option<String>, f64, Option<i32>)> = sqlx::query_as(
             r#"SELECT status, payment_status, total_amount, amount_paid_cents
-               FROM invoices WHERE id = $1 AND tenant_id = $2"#
+               FROM invoices WHERE id = $1 AND tenant_id = $2"#,
         )
         .bind(invoice_id)
         .bind(tenant_id)
         .fetch_optional(pool)
         .await?;
 
-        let should_send = if let Some((status, payment_status_opt, total_amount, amount_paid_cents_opt)) = invoice_res {
-            let status = status.to_lowercase();
-            let payment_status = payment_status_opt.unwrap_or_default().to_lowercase();
-            let total_cents = (total_amount * 100.0).round() as i64;
-            let amount_paid_cents = amount_paid_cents_opt.unwrap_or(0) as i64;
+        let should_send =
+            if let Some((status, payment_status_opt, total_amount, amount_paid_cents_opt)) =
+                invoice_res
+            {
+                let status = status.to_lowercase();
+                let payment_status = payment_status_opt.unwrap_or_default().to_lowercase();
+                let total_cents = (total_amount * 100.0).round() as i64;
+                let amount_paid_cents = amount_paid_cents_opt.unwrap_or(0) as i64;
 
-            !["paid", "refunded", "void", "cancelled", "canceled"].contains(&payment_status.as_str())
-                && ["open", "sent", "pending", "overdue", "draft"].contains(&status.as_str())
-                && total_cents > amount_paid_cents
-        } else {
-            false
-        };
+                !["paid", "refunded", "void", "cancelled", "canceled"]
+                    .contains(&payment_status.as_str())
+                    && ["open", "sent", "pending", "overdue", "draft"].contains(&status.as_str())
+                    && total_cents > amount_paid_cents
+            } else {
+                false
+            };
 
         if !should_send {
-            tracing::info!("Skipping reminder for invoice {}: already paid, cancelled, or not found", invoice_id);
+            tracing::info!(
+                "Skipping reminder for invoice {}: already paid, cancelled, or not found",
+                invoice_id
+            );
             return Ok(());
         }
 
@@ -45,7 +52,10 @@ pub async fn handle_invoice_action(
         .await?;
 
         if recent_reminder.is_some() {
-            tracing::info!("Skipping reminder for invoice {}: reminder already sent recently", invoice_id);
+            tracing::info!(
+                "Skipping reminder for invoice {}: reminder already sent recently",
+                invoice_id
+            );
             return Ok(());
         }
 
