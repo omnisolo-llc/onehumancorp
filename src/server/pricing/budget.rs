@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-
 pub struct BudgetState {
     pub total_allocated: i64,
     pub settled: i64,
@@ -72,14 +71,20 @@ impl BudgetManager {
         }
 
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            tracing::info!("💰 Miser telemetry: Recording budget spend for tenant {}", tid); // pii-safe
+            tracing::info!(
+                "💰 Miser telemetry: Recording budget spend for tenant {}",
+                tid
+            ); // pii-safe
         }
 
         {
             let mut state = self.state.lock().unwrap();
             let total_usage = state.total_allocated.checked_add(state.settled);
             if let Some(usage) = total_usage {
-                if usage.checked_add(amount_cents).is_some_and(|total| total <= self.total_limit_cents) {
+                if usage
+                    .checked_add(amount_cents)
+                    .is_some_and(|total| total <= self.total_limit_cents)
+                {
                     state.settled = state.settled.saturating_add(amount_cents);
                 } else {
                     return Ok(false);
@@ -90,22 +95,24 @@ impl BudgetManager {
         }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+            && amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+        }
 
         Ok(true)
     }
 
     pub fn get_remaining(&self) -> f64 {
-        let state = self.state.lock().unwrap(); let current = state.total_allocated + state.settled;
+        let state = self.state.lock().unwrap();
+        let current = state.total_allocated + state.settled;
         (self.total_limit_cents - current) as f64 / 100.0
     }
 
@@ -118,7 +125,8 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 {
             return false;
         }
-        let state = self.state.lock().unwrap(); let current = state.total_allocated + state.settled;
+        let state = self.state.lock().unwrap();
+        let current = state.total_allocated + state.settled;
         let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
@@ -139,12 +147,12 @@ impl BudgetManager {
         if total_limit_cents <= 0 {
             return false;
         }
-        let state = self.state.lock().unwrap(); let current = state.total_allocated + state.settled;
+        let state = self.state.lock().unwrap();
+        let current = state.total_allocated + state.settled;
         let limit_threshold_cents =
             ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current >= limit_threshold_cents
     }
-
 
     pub fn reserve(&self, amount_cents: i64) -> Result<BudgetReservation, String> {
         if amount_cents < 0 {
@@ -161,14 +169,20 @@ impl BudgetManager {
         }
 
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            tracing::info!("💰 Miser telemetry: Reserving budget spend for tenant {}", tid);
+            tracing::info!(
+                "💰 Miser telemetry: Reserving budget spend for tenant {}",
+                tid
+            );
         }
 
         {
             let mut state = self.state.lock().unwrap();
             let next = state.total_allocated.checked_add(amount_cents);
             if let Some(next_val) = next {
-                if next_val.checked_add(state.settled).is_some_and(|total| total <= self.total_limit_cents) {
+                if next_val
+                    .checked_add(state.settled)
+                    .is_some_and(|total| total <= self.total_limit_cents)
+                {
                     state.total_allocated = next_val;
                 } else {
                     return Err("insufficient budget".to_string());
@@ -194,7 +208,8 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
-        let state = self.state.lock().unwrap(); let current = state.total_allocated + state.settled;
+        let state = self.state.lock().unwrap();
+        let current = state.total_allocated + state.settled;
         let expected_spend = (self.total_limit_cents as f64)
             * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
         current as f64 > expected_spend * 1.5 // 50% higher than expected rate
@@ -225,16 +240,17 @@ impl BudgetReservation {
         };
 
         if let (Some(store), Some(tid)) = (telemetry_store, tenant_id)
-            && final_amount_cents > 0 {
-                store.llm_cost_counter.add(
-                    final_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-                store.mission_cost_cents.add(
-                    final_amount_cents as u64,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
+            && final_amount_cents > 0
+        {
+            store.llm_cost_counter.add(
+                final_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+            store.mission_cost_cents.add(
+                final_amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
+        }
 
         self.is_settled = true;
         Ok(())
@@ -278,7 +294,6 @@ mod tests {
 
         assert_eq!(manager.get_remaining_cents(), 7000);
     }
-
 
     #[test]
     fn concurrent_admission_never_exceeds_limit() {
