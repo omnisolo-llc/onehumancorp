@@ -192,16 +192,8 @@ pub async fn handle_autonomous_quote_action(
             stripe_payment_link = link;
         } else if let Err(e) = link_res {
             tracing::error!("Failed to generate Stripe payment link for deposit: {}", e); // pii-safe
-            // Fallback to dummy link for testing/e2e if API fails
-            stripe_payment_link = format!(
-                "https://buy.stripe.com/test_{}",
-                uuid::Uuid::new_v4()
-                    .simple()
-                    .to_string()
-                    .chars()
-                    .take(16)
-                    .collect::<String>()
-            );
+            // Empty means payment has not been configured; never invent a payable URL.
+            stripe_payment_link = String::new();
         }
         drafted_message = format!(
             "{}
