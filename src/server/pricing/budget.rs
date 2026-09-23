@@ -226,6 +226,27 @@ impl BudgetManager {
     }
 }
 
+impl std::fmt::Debug for BudgetManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let state = self.state.try_lock();
+        let state_val = match state {
+            Ok(ref s) => format!(
+                "BudgetState {{ total_allocated: {}, settled: {} }}",
+                s.total_allocated, s.settled
+            ),
+            Err(_) => "<locked>".to_string(),
+        };
+
+        f.debug_struct("BudgetManager")
+            .field("total_limit", &self.total_limit)
+            .field("total_limit_cents", &self.total_limit_cents)
+            .field("state", &state_val)
+            .field("tenant_id", &self.tenant_id)
+            .field("alert_threshold_percent", &self.alert_threshold_percent)
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
