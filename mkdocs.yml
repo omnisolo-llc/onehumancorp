@@ -36,6 +36,7 @@ nav:
       - Task Decomposition: technical/architecture/kairos/task-decomposition-design.md
       - Offline Mesh Sync: architecture/mesh/offline_first_sync.md
   - Features:
+      - Connected Accounts: technical/features/connected-accounts/user-guide.md
       - Universal Harness Orchestration: features/kairos_orchestration.md
       - Distributed State Machine: features/kairos/distributed_state_machine.md
       - AutoDream Pipelines: features/kairos/autodream_pipelines.md
