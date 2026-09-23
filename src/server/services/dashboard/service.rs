@@ -635,10 +635,8 @@ impl DashboardService for MyDashboardService {
         );
         let cache =
             DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
-        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(Response::new(cached));
-            }
+        if let Some((cached, false)) = cache.get_with_swr(&cache_key).await {
+            return Ok(Response::new(cached));
         }
 
         let mobile_optimized = req.mobile_optimized;

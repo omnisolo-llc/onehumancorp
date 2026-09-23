@@ -141,22 +141,28 @@ pub async fn report_cost_handler(
 
     let pool = crate::db::get_pool();
 
+    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut idempotency_key_to_insert = None;
+
+    // Check idempotency first (read)
     if let Some(key) = &req.idempotency_key {
         let res = sqlx::query(
-            "INSERT INTO usage_idempotency_keys (key, tenant_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            "SELECT 1 FROM usage_idempotency_keys WHERE key = $1 AND tenant_id = $2",
         )
         .bind(key)
         .bind(&tenant_id)
-        .execute(&pool)
+        .fetch_optional(&mut *tx)
         .await;
 
         match res {
-            Ok(result) => {
-                if result.rows_affected() == 0 {
-                    return Ok(Json(
-                        serde_json::json!({ "success": true, "status": "duplicate" }),
-                    ));
-                }
+            Ok(Some(_)) => {
+                return Ok(Json(
+                    serde_json::json!({ "success": true, "status": "duplicate" }),
+                ));
+            }
+            Ok(None) => {
+                idempotency_key_to_insert = Some(key.clone());
             }
             Err(_) => {
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
@@ -185,14 +191,31 @@ pub async fn report_cost_handler(
     labels.insert("tenant_id".to_string(), tenant_id.clone());
     let labels_value = serde_json::to_value(labels).unwrap_or(serde_json::json!({}));
 
-    let _ = ::server_telemetry::buffer_metric_i64(
-        &pool,
-        &req.metric_name,
-        "gauge",
-        req.value,
-        labels_value,
+    // Perform metric buffer synchronously within the transaction to guarantee idempotency.
+    // The previous implementation used `buffer_metric_i64` which executes outside this transaction context.
+    let _ = sqlx::query(
+        "INSERT INTO telemetry_metrics_buffer (metric_name, metric_type, value, labels) VALUES ($1, $2, $3, $4)",
     )
-    .await;
+    .bind(&req.metric_name)
+    .bind("gauge")
+    .bind(req.value)
+    .bind(labels_value)
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Finally, commit the idempotency key (write)
+    if let Some(key) = idempotency_key_to_insert {
+        let _ = sqlx::query(
+            "INSERT INTO usage_idempotency_keys (key, tenant_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        )
+        .bind(key)
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await;
+    }
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(serde_json::json!({ "success": true })))
 }

@@ -137,7 +137,8 @@ impl BudgetManager {
 
         let mut state = self.state.lock().unwrap();
         if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if next <= self.total_limit_cents {
+            let within_budget = next <= self.total_limit_cents;
+            if within_budget {
                 state.total_allocated = next;
                 drop(state);
 
