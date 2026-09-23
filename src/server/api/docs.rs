@@ -1224,27 +1224,27 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
             content_html: r#"
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Setup</h2>
       <p class="text-gray-700 mb-4">
-        To set up your business, you need to configure your connected accounts and establish your standing authority. This ensures that the AI team can operate safely and securely on your behalf.
+        To let your AI team help your business, you need to connect your accounts and tell the team what they are allowed to do. This keeps your business safe and in your control.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Connected Accounts</h2>
       <p class="text-gray-700 mb-4">
-        Link your Google Workspace and Stripe accounts. Verify your connection settings to ensure the AI team can access your tools.
+        You can connect tools you already use, like Google Workspace for emails and files, and Stripe for payments. When you link these accounts, your AI team can use them to work for you. Always check your connection settings so your team has the right access.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Standing Authority</h2>
       <p class="text-gray-700 mb-4">
-        Define the scope of the AI team's authority. Set specific rules for external actions, such as sending emails or making payments. Establish a budget and spending limits for the AI team.
+        Standing authority is like giving your team a rulebook. You tell them what they can do on their own and what they need to ask you first. You set rules for sending emails or making payments. You set hard spending limits so the team never spends more than you want. You can change these rules or stop the team at any time.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Evidence</h2>
       <p class="text-gray-700 mb-4">
-        Maintain a record of all actions taken by the AI team. Review the evidence feed to verify that the team is completing work as expected.
+        You will always know what your AI team is doing. The app keeps a clear record of all their work. You can check the evidence feed to see the emails they sent, the payments they collected, and the tasks they finished.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost</h2>
       <p class="text-gray-700 mb-4">
-        Monitor the cost of the AI team's operations. Understand the pricing structure and how usage is billed.
+        We want you to understand exactly what you pay for. You pay for the computer power and AI tools the team uses. You will see an estimated cost before a task starts, and a detailed bill when it finishes. There are no hidden fees. Any standard fees from your payment provider still apply.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Exceptions and Recovery</h2>
       <p class="text-gray-700 mb-4">
-        Learn how to handle exceptions and errors that may occur during execution. Understand the recovery process and how to resume work after a failure.
+        Sometimes things go wrong, like a payment link failing to send. If this happens, your AI team will stop and let you know. The app saves their progress, so you can easily try again later without starting over or paying twice.
       </p>
             "#.to_string()
         }),
