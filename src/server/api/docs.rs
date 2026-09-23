@@ -593,6 +593,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/billing-settings".to_string(),
         },
         HelpArticle {
+            category: "Account & Billing".to_string(),
+            title: "Connected Accounts & Your Standing Authority".to_string(),
+            desc: "Understand how to securely connect your accounts and manage the authority granted to your AI team.".to_string(),
+            link: "/help/connected-accounts".to_string(),
+        },
+        HelpArticle {
             category: "Advanced".to_string(),
             title: "API Documentation (for Advanced Users)".to_string(),
             desc: "Interactive API reference for connecting external services to your workspace."
@@ -1196,6 +1202,36 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Approving Their Work</h2>
       <p class="text-gray-700 mb-4">
         Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.
+      </p>
+            "#.to_string()
+        }),
+        "connected-accounts" => Some(HelpArticleDetail {
+            title: "Connected Accounts & Your Standing Authority".to_string(),
+            content_html: r#"
+      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
+        To enable your AI team to work on your behalf, you need to connect your existing provider accounts (like Stripe for payments and OpenAI for AI services).
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Setting Up Your Accounts</h2>
+      <ul class="list-disc ml-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Your Data Stays Yours:</strong> OHC connects securely to your accounts and stores credentials in an encrypted, tenant-bound vault. We do not pool your subscriptions.</li>
+        <li><strong>Supported Providers:</strong> Currently, secure connections are supported for OpenAI and Stripe. Other providers (like generic Google Workspace OAuth) are explicitly marked as unavailable until fully verified.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Understanding Standing Authority</h2>
+      <p class="text-gray-700 mb-4">
+        When you connect an account, you grant the system "standing authority" to perform specific, approved business rules (like generating a draft proposal).
+      </p>
+      <ul class="list-disc ml-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Drafts vs. Actions:</strong> The system will persist drafts (like a proposal or invoice). It will not send them, charge accounts, or make unauthorized commitments without your explicit approval path.</li>
+        <li><strong>Revocation:</strong> You can revoke this authority at any time. If verification of your connection fails, the system safely marks the connection as stale and stops automated actions.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Costs & Evidence</h2>
+      <ul class="list-disc ml-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Your Costs:</strong> OHC tracks costs precisely. You will see an itemized OHC bill for the execution environment and a separate bill directly from your provider (e.g., OpenAI) for your API usage.</li>
+        <li><strong>Evidence of Work:</strong> Every action the system takes generates a durable receipt tied to your specific task and attempt, ensuring you never pay for duplicate work.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Exceptions and Recovery</h2>
+      <p class="text-gray-700 mb-4">
+        If a connection fails or a budget limit is reached, the system will pause the affected automation and notify you. It is designed to recover safely once the connection is refreshed or the limit is resolved.
       </p>
             "#.to_string()
         }),
