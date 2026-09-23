@@ -16,7 +16,7 @@ pub struct BudgetManager {
 }
 
 pub struct BudgetReservation {
-    pub amount_cents: i64,
+    amount_cents: i64,
     pub state: Arc<Mutex<BudgetState>>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     pub tenant_id: Option<String>,
@@ -37,7 +37,10 @@ impl std::fmt::Debug for BudgetReservation {
 impl BudgetReservation {
     pub fn settle(mut self) -> Result<(), String> {
         let mut state = self.state.lock().unwrap();
-        state.settled = state.settled.checked_add(self.amount_cents).ok_or("Overflow in settled amount")?;
+        state.settled = state
+            .settled
+            .checked_add(self.amount_cents)
+            .ok_or("Overflow in settled amount")?;
         self.is_settled = true;
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
@@ -131,25 +134,25 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if next <= self.total_limit_cents {
-                state.total_allocated = next;
+        if let Some(next) = state.total_allocated.checked_add(amount_cents)
+            && next <= self.total_limit_cents
+        {
+            state.total_allocated = next;
 
-                if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-                    tracing::info!(
-                        "💰 Miser telemetry: Recording budget spend for tenant {}",
-                        tid
-                    ); // pii-safe
-                }
-
-                return Ok(BudgetReservation {
-                    amount_cents,
-                    state: self.state.clone(),
-                    telemetry_store: self.telemetry_store.clone(),
-                    tenant_id: self.tenant_id.clone(),
-                    is_settled: false,
-                });
+            if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+                tracing::info!(
+                    "💰 Miser telemetry: Recording budget spend for tenant {}",
+                    tid
+                ); // pii-safe
             }
+
+            return Ok(BudgetReservation {
+                amount_cents,
+                state: self.state.clone(),
+                telemetry_store: self.telemetry_store.clone(),
+                tenant_id: self.tenant_id.clone(),
+                is_settled: false,
+            });
         }
         Err("budget limit exceeded".to_string())
     }
@@ -192,8 +195,7 @@ impl BudgetManager {
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || current >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents || current >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
