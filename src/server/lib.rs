@@ -5159,12 +5159,24 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                     crate::integrations::stripe::client::StripeClient::new(
                                         stripe_key,
                                     );
-                                if let Ok(link) = stripe_client
-                                    .create_payment_link("Deposit Payment", amount_cents)
+                                let operation_id = format!("triage-deposit-{}", uuid::Uuid::new_v4());
+                                let triage_id_clone = payload.triage_item_id.clone();
+                                let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                                    name: "Deposit Payment",
+                                    reference: &triage_id_clone,
+                                    amount_cents,
+                                    interval: None,
+                                    product: None,
+                                    currency: "usd",
+                                    operation_id: &operation_id,
+                                    metadata: None,
+                                };
+                                if let Ok(receipt) = stripe_client
+                                    .create_checkout_session_idempotent(checkout_req)
                                     .await
                                 {
                                     let match_str = captures.get(0).unwrap().as_str();
-                                    action_payload = action_payload.replace(match_str, &link);
+                                    action_payload = action_payload.replace(match_str, &receipt.url);
                                 }
                             }
 
@@ -5240,6 +5252,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                     .and_then(|v| v.as_i64())
                                     .unwrap_or(0);
 
+                                let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
                                 let mut payment_link_str: Option<String> = None;
                                 if required_deposit_cents > 0 {
                                     let stripe_key = std::env::var("STRIPE_API_KEY")
@@ -5248,18 +5261,26 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         crate::integrations::stripe::client::StripeClient::new(
                                             stripe_key,
                                         );
-                                    if let Ok(link) = stripe_client
-                                        .create_payment_link(
-                                            "Deposit for Quote",
-                                            required_deposit_cents,
-                                        )
+                                    let operation_id = format!("quote-deposit-{}", quote_id);
+                                    let mut metadata = std::collections::HashMap::new();
+                                    metadata.insert("quote_id".to_string(), quote_id.clone());
+                                    let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                                        name: "Deposit for Quote",
+                                        reference: &cid,
+                                        amount_cents: required_deposit_cents,
+                                        interval: None,
+                                        product: None,
+                                        currency: "usd",
+                                        operation_id: &operation_id,
+                                        metadata: Some(metadata),
+                                    };
+                                    if let Ok(receipt) = stripe_client
+                                        .create_checkout_session_idempotent(checkout_req)
                                         .await
                                     {
-                                        payment_link_str = Some(link);
+                                        payment_link_str = Some(receipt.url);
                                     }
                                 }
-
-                                let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
 
                                 // Quotes ID is UUID format in Postgres and String in Sqlite, handle based on backend.
                                 let sqlite_quote_id = quote_id.clone();
@@ -5644,6 +5665,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                     .and_then(|v| v.as_i64())
                                     .unwrap_or(0);
 
+                                let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
                                 let mut payment_link_str: Option<String> = None;
                                 if required_deposit_cents > 0 {
                                     let stripe_key = std::env::var("STRIPE_API_KEY")
@@ -5652,18 +5674,26 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         crate::integrations::stripe::client::StripeClient::new(
                                             stripe_key,
                                         );
-                                    if let Ok(link) = stripe_client
-                                        .create_payment_link(
-                                            "Deposit for Quote",
-                                            required_deposit_cents,
-                                        )
+                                    let operation_id = format!("quote-deposit-{}", quote_id);
+                                    let mut metadata = std::collections::HashMap::new();
+                                    metadata.insert("quote_id".to_string(), quote_id.clone());
+                                    let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                                        name: "Deposit for Quote",
+                                        reference: &cid,
+                                        amount_cents: required_deposit_cents,
+                                        interval: None,
+                                        product: None,
+                                        currency: "usd",
+                                        operation_id: &operation_id,
+                                        metadata: Some(metadata),
+                                    };
+                                    if let Ok(receipt) = stripe_client
+                                        .create_checkout_session_idempotent(checkout_req)
                                         .await
                                     {
-                                        payment_link_str = Some(link);
+                                        payment_link_str = Some(receipt.url);
                                     }
                                 }
-
-                                let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
 
                                 // Quotes ID is UUID format in Postgres and String in Sqlite, handle based on backend.
                                 let sqlite_quote_id = quote_id.clone();

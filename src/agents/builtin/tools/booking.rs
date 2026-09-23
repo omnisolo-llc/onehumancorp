@@ -270,7 +270,8 @@ impl PydanticToolExecutor<BookingCreateAppointmentArgs> for BookingCreateAppoint
 
         let id = uuid::Uuid::new_v4().to_string();
 
-        sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')")
+        // Agents cannot confirm a booking without explicit payment verification.
+        sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending_payment')")
             .bind(&id)
             .bind(tenant_id)
             .bind(&args.customer_id)

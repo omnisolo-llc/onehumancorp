@@ -193,6 +193,7 @@ impl StripeClient {
                 product: product_id.as_deref(),
                 currency: target_currency.as_deref().unwrap_or("usd"),
                 operation_id: &operation_id,
+                metadata: None,
             })
             .await?;
         Ok(receipt.url)
