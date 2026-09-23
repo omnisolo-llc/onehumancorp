@@ -1,43 +1,90 @@
-import '@testing-library/jest-dom';
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-vi.mock("next/link", () => ({ default: (props: import('react').AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement("a", { href: props.href }, props.children) }));
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import HelpCenterPage from './page';
-import { TooltipProvider } from '../../components/TooltipRegistry';
-import userEvent from '@testing-library/user-event';
+import "@testing-library/jest-dom";
+import React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+vi.mock("next/link", () => ({
+  default: (props: import("react").AnchorHTMLAttributes<HTMLAnchorElement>) =>
+    React.createElement("a", { href: props.href }, props.children),
+}));
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import HelpCenterPage from "./page";
+import { TooltipProvider } from "../../components/TooltipRegistry";
+import userEvent from "@testing-library/user-event";
 
-describe('HelpCenterPage', () => {
+describe("HelpCenterPage", () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/v1/tooltips') {
-        return Promise.resolve(Response.json({ "test-id": "Tooltip text" }, { status: 200 }));
+      if (url === "/api/v1/tooltips") {
+        return Promise.resolve(
+          Response.json({ "test-id": "Tooltip text" }, { status: 200 }),
+        );
       }
-      if (url === '/api/v1/help') {
-        return Promise.resolve(Response.json([
-            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1", category: "General" },
-            { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store", category: "General" },
-            { title: "API Documentation", desc: "Advanced.", link: "/api-docs", category: "Advanced" }
-          ], { status: 200 }));
+      if (url === "/api/v1/help") {
+        return Promise.resolve(
+          Response.json(
+            [
+              {
+                title: "Getting Started",
+                desc: "Learn how to easily set up your store and accept your first payment.",
+                link: "/help/getting-started-1",
+                category: "General",
+              },
+              {
+                title: "Adding Products",
+                desc: "Add products, track what's in stock, and change how your store looks.",
+                link: "/help/my-store",
+                category: "General",
+              },
+              {
+                title: "API Documentation",
+                desc: "Advanced.",
+                link: "/api-docs",
+                category: "Advanced",
+              },
+            ],
+            { status: 200 },
+          ),
+        );
       }
-      if (typeof url === 'string' && url.includes('/api/v1/help/search')) {
-        const urlObj = new URL('http://localhost' + url);
-        const q = urlObj.searchParams.get('q')?.toLowerCase() || '';
+      if (typeof url === "string" && url.includes("/api/v1/help/search")) {
+        const urlObj = new URL("http://localhost" + url);
+        const q = urlObj.searchParams.get("q")?.toLowerCase() || "";
         const allArticles = [
-            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-            { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
+          {
+            title: "Getting Started",
+            desc: "Learn how to easily set up your store and accept your first payment.",
+            link: "/help/getting-started-1",
+          },
+          {
+            title: "Adding Products",
+            desc: "Add products, track what's in stock, and change how your store looks.",
+            link: "/help/my-store",
+          },
         ];
-        const results = allArticles.filter(a =>
-          a.title.toLowerCase().includes(q) ||
-          a.desc.toLowerCase().includes(q)
+        const results = allArticles.filter(
+          (a) =>
+            a.title.toLowerCase().includes(q) ||
+            a.desc.toLowerCase().includes(q),
         );
         return Promise.resolve(Response.json(results, { status: 200 }));
       }
-      if (url === '/api/v1/videos') {
-        return Promise.resolve(Response.json([
-            { id: 1, title: "How to set up your first store easily", duration: "1:20" },
-            { id: 2, title: "Linking your own website name", duration: "0:45" }
-          ], { status: 200 }));
+      if (url === "/api/v1/videos") {
+        return Promise.resolve(
+          Response.json(
+            [
+              {
+                id: 1,
+                title: "How to set up your first store easily",
+                duration: "1:20",
+              },
+              {
+                id: 2,
+                title: "Linking your own website name",
+                duration: "0:45",
+              },
+            ],
+            { status: 200 },
+          ),
+        );
       }
       return Promise.resolve(Response.json([], { status: 200 }));
     });
@@ -47,44 +94,60 @@ describe('HelpCenterPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders articles loaded from API', async () => {
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+  it("renders articles loaded from API", async () => {
+    render(
+      <TooltipProvider>
+        <HelpCenterPage />
+      </TooltipProvider>,
+    );
 
-    expect(screen.getByText('In-App Help Center')).toBeInTheDocument();
+    expect(screen.getByText("In-App Help Center")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
-      expect(screen.getByText('Adding Products')).toBeInTheDocument();
+      expect(screen.getByText("Getting Started")).toBeInTheDocument();
+      expect(screen.getByText("Adding Products")).toBeInTheDocument();
     });
   });
 
-  it('filters articles based on search query', async () => {
+  it("filters articles based on search query", async () => {
     const user = userEvent.setup();
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(
+      <TooltipProvider>
+        <HelpCenterPage />
+      </TooltipProvider>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText("Getting Started")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
-    await user.type(searchInput, 'products');
+    const searchInput = screen.getByPlaceholderText(
+      "Search for help articles and videos...",
+    );
+    await user.type(searchInput, "products");
 
     await waitFor(() => {
-      expect(screen.queryByText('Getting Started')).not.toBeInTheDocument();
-      expect(screen.getByText('Adding Products')).toBeInTheDocument();
+      expect(screen.queryByText("Getting Started")).not.toBeInTheDocument();
+      expect(screen.getByText("Adding Products")).toBeInTheDocument();
     });
   });
 
-  it('displays no matching articles message when search fails', async () => {
+  it("displays no matching articles message when search fails", async () => {
     const user = userEvent.setup();
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(
+      <TooltipProvider>
+        <HelpCenterPage />
+      </TooltipProvider>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText("Getting Started")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
-    await user.type(searchInput, 'nonexistentxyz123');
+    const searchInput = screen.getByPlaceholderText(
+      "Search for help articles and videos...",
+    );
+    await user.type(searchInput, "nonexistentxyz123");
 
     await waitFor(() => {
       expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
@@ -92,50 +155,72 @@ describe('HelpCenterPage', () => {
     });
   });
 
-  it('renders video tutorials loaded from API', async () => {
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+  it("renders video tutorials loaded from API", async () => {
+    render(
+      <TooltipProvider>
+        <HelpCenterPage />
+      </TooltipProvider>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
-      expect(screen.getByText('Linking your own website name')).toBeInTheDocument();
+      expect(
+        screen.getByText("How to set up your first store easily"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Linking your own website name"),
+      ).toBeInTheDocument();
     });
   });
 
-  it('opens and closes the video modal', async () => {
+  it("opens and closes the video modal", async () => {
     const user = userEvent.setup();
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(
+      <TooltipProvider>
+        <HelpCenterPage />
+      </TooltipProvider>,
+    );
     await waitFor(() => {
-      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
+      expect(
+        screen.getByText("How to set up your first store easily"),
+      ).toBeInTheDocument();
     });
     // The video card container has changed in VideoTutorialList
-    const videoTitle = screen.getByText('How to set up your first store easily');
+    const videoTitle = screen.getByText(
+      "How to set up your first store easily",
+    );
     const videoCard = videoTitle.parentElement?.parentElement;
     if (videoCard) {
       await user.click(videoCard);
     }
     await waitFor(() => {
-      expect(screen.getByLabelText('Close video')).toBeInTheDocument();
+      expect(screen.getByLabelText("Close video")).toBeInTheDocument();
     });
-    const closeBtn = screen.getByLabelText('Close video');
+    const closeBtn = screen.getByLabelText("Close video");
     await user.click(closeBtn);
     await waitFor(() => {
-      expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Close video")).not.toBeInTheDocument();
     });
   });
 
-  it('renders correctly when there are no matching results at all', async () => {
+  it("renders correctly when there are no matching results at all", async () => {
     const user = userEvent.setup();
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(
+      <TooltipProvider>
+        <HelpCenterPage />
+      </TooltipProvider>,
+    );
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText("Getting Started")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
-    await user.type(searchInput, 'nonexistentxyz123');
+    const searchInput = screen.getByPlaceholderText(
+      "Search for help articles and videos...",
+    );
+    await user.type(searchInput, "nonexistentxyz123");
 
     await waitFor(() => {
       expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
-      expect(screen.queryByText('Video Tutorials')).not.toBeInTheDocument();
+      expect(screen.queryByText("Video Tutorials")).not.toBeInTheDocument();
     });
   });
 });

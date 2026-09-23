@@ -136,9 +136,8 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
-        #[allow(clippy::collapsible_if)]
-        if let Some(next) = state.total_allocated.checked_add(amount_cents) {
-            if next <= self.total_limit_cents {
+        match state.total_allocated.checked_add(amount_cents) {
+            Some(next) if next <= self.total_limit_cents => {
                 state.total_allocated = next;
                 drop(state);
 
@@ -149,16 +148,16 @@ impl BudgetManager {
                     ); // pii-safe
                 }
 
-                return Ok(BudgetReservation {
+                Ok(BudgetReservation {
                     amount_cents,
                     state: self.state.clone(),
                     telemetry_store: self.telemetry_store.clone(),
                     tenant_id: self.tenant_id.clone(),
                     is_settled: false,
-                });
+                })
             }
+            _ => Err("budget limit exceeded".to_string()),
         }
-        Err("budget limit exceeded".to_string())
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
