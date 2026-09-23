@@ -98,6 +98,7 @@ export default function ViralPostGeneratorPage() {
                         <label className="flex items-start gap-3 cursor-pointer group">
                         <input
                             type="checkbox"
+                            aria-label='Remove "OmniSolo" branding'
                             checked={removeBranding}
                             onChange={handleBrandingToggle}
                             className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"

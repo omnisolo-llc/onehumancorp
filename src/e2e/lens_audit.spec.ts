@@ -25,10 +25,10 @@ test.describe('Lens Audit Visual Checks', () => {
     await expect(page.getByRole('heading', { name: 'Setup Assistant' }).or(page.locator('h1')).first()).toBeVisible();
   });
 
-  test('should display login fields', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /Log in/i })).toBeVisible();
+  test('should display login fields', async ({ anonymousPage }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
+    await expect(anonymousPage.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
+    await expect(anonymousPage.getByRole('button', { name: /Log in/i })).toBeVisible();
   });
 });

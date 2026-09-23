@@ -5,6 +5,7 @@ ALTER TABLE products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_approvals DISABLE ROW LEVEL SECURITY;
 ALTER TABLE job_templates DISABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans DISABLE ROW LEVEL SECURITY;
@@ -361,11 +362,43 @@ SET tenant_id = EXCLUDED.tenant_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO agent_approvals (
+  id,
+  tenant_id,
+  department,
+  description,
+  status,
+  action_risk,
+  payload,
+  created_at,
+  updated_at
+)
+VALUES (
+  'e2e-approval-quote-sink',
+  'e2e-tenant',
+  'Field Operations',
+  'Fix leaking sink for John Doe',
+  'DRAFT',
+  'low',
+  '{"feature_type": "quote_draft", "scope": "Fix leaking sink for John Doe", "service": "Plumbing Repair", "suggested_price": 250, "line_items": [{"description": "Fix leaking sink for John Doe", "unit_price_cents": 25000, "quantity": 1}]}'::jsonb,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    department = EXCLUDED.department,
+    description = EXCLUDED.description,
+    status = EXCLUDED.status,
+    action_risk = EXCLUDED.action_risk,
+    payload = EXCLUDED.payload,
+    updated_at = CURRENT_TIMESTAMP;
+
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_approvals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
@@ -377,6 +410,7 @@ ALTER TABLE users FORCE ROW LEVEL SECURITY;
 ALTER TABLE customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE orders FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items FORCE ROW LEVEL SECURITY;
+ALTER TABLE agent_approvals FORCE ROW LEVEL SECURITY;
 ALTER TABLE job_templates FORCE ROW LEVEL SECURITY;
 ALTER TABLE appointments FORCE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans FORCE ROW LEVEL SECURITY;

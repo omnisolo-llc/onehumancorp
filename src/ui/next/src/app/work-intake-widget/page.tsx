@@ -55,17 +55,7 @@ export default function WorkIntakeWidgetPage() {
                 <h2 className="text-lg font-semibold font-outfit mb-4">Widget Settings</h2>
 
                 <div className="mb-6">
-                    <label htmlFor="theme-select" className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                    <select
-                        id="theme-select"
-                        value={theme}
-                        onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
-                        className="sr-only"
-                        aria-label="Theme"
-                    >
-                        <option value="light">Light Mode</option>
-                        <option value="dark">Dark Mode</option>
-                    </select>
+                    <span className="block text-sm font-medium text-gray-700 mb-2">Theme</span>
                     <div className="flex bg-gray-100 p-1 rounded-lg">
                         <button
                             aria-pressed={theme === 'light'}

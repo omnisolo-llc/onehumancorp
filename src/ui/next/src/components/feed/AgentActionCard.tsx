@@ -2262,7 +2262,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                   JSON.stringify(updatedPayload),
                   approval.event_source,
                 );
-                setEditingId(null);
+                setTimeout(() => {
+                  setEditingId(null);
+                }, 1500);
               }}
             />
             <div className="flex flex-col sm:flex-row gap-3 w-full">

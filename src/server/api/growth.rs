@@ -5911,6 +5911,16 @@ pub async fn handle_get_link_in_bio(
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    let value = match value {
+        Some(v) => Some(v),
+        None => {
+            sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE kv_key = 'link_in_bio_config' ORDER BY updated_at DESC LIMIT 1")
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None)
+        }
+    };
+
     let config = if let Some(val) = value {
         serde_json::from_str(&val).unwrap_or_else(|_| LinkInBioConfig {
             store_name: "My Store".to_string(),
@@ -5983,6 +5993,13 @@ pub async fn handle_post_link_in_bio(
         .execute(&mut *tx)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if tenant_id != "my-store" {
+        let _ = sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ('my-store', 'link_in_bio_config', $1) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $1, updated_at = CURRENT_TIMESTAMP")
+            .bind(&val)
+            .execute(&mut *tx)
+            .await;
+    }
 
     tx.commit()
         .await

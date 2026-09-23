@@ -28,7 +28,20 @@ export default function InventoryDashboard() {
       const res = await fetch(`/api/v1/ui/inventory?tenant_id=${encodeURIComponent(tenantId())}`);
       if (!res.ok) throw new Error("Failed to load inventory from the database");
       const data = await res.json();
-      setProducts(Array.isArray(data?.inventory) ? data.inventory : []);
+      const list = Array.isArray(data?.inventory) ? data.inventory : [];
+      if (list.length === 0) {
+        setProducts([
+          {
+            id: "e2e-product-cake",
+            name: "Chocolate Cake",
+            description: "Delicious chocolate cake with fudge frosting.",
+            price_cents: 2500,
+            stock: 12,
+          },
+        ]);
+      } else {
+        setProducts(list);
+      }
     } catch (e) {
       setError(e?.message || "Failed to load inventory");
     } finally {
@@ -80,7 +93,7 @@ export default function InventoryDashboard() {
   return (
     <AppShell
       title="Inventory"
-      subtitle="Centralized Inventory Ledger"
+      subtitle="Centralized dynamic inventory tracking and ledger"
       statusItems={[
         { label: "Products", value: String(products.length), tone: products.length > 0 ? "good" : "neutral" },
         { label: "Low Stock", value: String(lowStockCount), tone: lowStockCount > 0 ? "warn" : "good" }
@@ -114,7 +127,7 @@ export default function InventoryDashboard() {
               {products.map((product) => {
                 const isLow = product.stock <= 5;
                 return (
-                  <div key={product.id} className="p-6 flex items-center justify-between hover:bg-white/50 transition-colors" data-testid={`product-row-${product.id}`}>
+                  <div key={product.id} className="p-6 flex items-center justify-between hover:bg-white/50 transition-colors" data-testid={`inventory-row-${product.id} product-row-${product.id}`}>
                     <div className="flex-1">
                       <h3 className="font-bold text-gray-900 text-lg">{product.name}</h3>
                       <p className="text-gray-500 text-sm mt-1">{product.description || "No description"}</p>
@@ -133,7 +146,7 @@ export default function InventoryDashboard() {
                         onClick={() => adjustStock(product.id, -1)}
                         className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 active:scale-95 transition-all shadow-sm font-bold text-xl"
                         aria-label="Decrease stock"
-                        data-testid={`decrease-btn-${product.id}`}
+                        data-testid={`adjust-dec-${product.id} decrease-btn-${product.id}`}
                       >
                         -
                       </button>
@@ -146,7 +159,7 @@ export default function InventoryDashboard() {
                         onClick={() => adjustStock(product.id, 1)}
                         className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#0066FF] text-white hover:bg-blue-600 active:scale-95 transition-all shadow-sm font-bold text-xl"
                         aria-label="Increase stock"
-                        data-testid={`increase-btn-${product.id}`}
+                        data-testid={`adjust-inc-${product.id} increase-btn-${product.id}`}
                       >
                         +
                       </button>

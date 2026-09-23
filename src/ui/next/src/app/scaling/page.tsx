@@ -63,7 +63,7 @@ export default function ScalingPage() {
         </div>
 
         <div className="glass-panel glassmorphism bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-6 mt-4">
-          <div className="glassmorphism bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-6 mb-6">
+          <div className="glass-card glassmorphism bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-6 mb-6">
             <div className="app-metric-label">Current Scale</div>
             <div className="mt-2 text-4xl font-bold text-gray-900">{instances} agents</div>
             <p className="mt-2 text-sm text-gray-600" role="status">{message}</p>

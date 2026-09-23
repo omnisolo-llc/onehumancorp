@@ -16,7 +16,7 @@ test.describe('Spin To Win Generator Growth Loop', () => {
         await generatorLink.click();
 
         // Verify page content
-        await expect(page.locator('h1', { hasText: 'Spin to Win Generator' })).toBeVisible();
+        await expect(page.locator('h1', { hasText: 'Spin to Win Generator' }).first()).toBeVisible();
 
         // Check for the embed generation button
         await page.locator('button', { hasText: 'Generate Widget' }).click();
