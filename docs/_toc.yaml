@@ -32,6 +32,6 @@ toc:
   - title: Vision
     path: /docs/vision/market_strategy.md
   - title: Help Center
-    section: true
+    path: /docs/help_center/index.md
   - title: Capability, Usage Economics, and Native Migration
     path: /docs/help_center/capability_usage_economics_and_native_migration.md
