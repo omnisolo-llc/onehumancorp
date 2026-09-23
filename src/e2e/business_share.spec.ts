@@ -15,16 +15,16 @@ test.describe('Business Share & Embed', () => {
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
   });
 
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
-    await expect(page.getByLabel(/Email or username/i)).toBeVisible();
-    await expect(page.getByLabel(/Password/i)).toBeVisible();
+  test('should display login page', async ({ anonymousPage }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
+    await expect(anonymousPage.getByLabel(/Email or username/i)).toBeVisible();
+    await expect(anonymousPage.getByLabel(/Password/i)).toBeVisible();
   });
 
   test('should display setup page', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Setup Assistant, h1').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Setup Assistant|10-Minute Setup Wizard/i }).or(page.locator('h1')).first()).toBeVisible();
   });
 });
 

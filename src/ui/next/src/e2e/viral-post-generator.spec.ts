@@ -3,8 +3,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 test.describe('Viral Post Generator Soft Paywall', () => {
     test('should show soft paywall modal when attempting to remove branding', async ({ page }) => {
         // Go to the generator page
-        await page.goto('/viral-post-generator.html');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/viral-post-generator');
 
         // Check if the page title is correct
         await expect(page.locator('text=Promoter Agent Post Generator')).toBeVisible();

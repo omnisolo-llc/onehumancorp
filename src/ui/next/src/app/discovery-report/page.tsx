@@ -15,7 +15,7 @@ export default function DiscoveryReportPage() {
   useEffect(() => {
     async function fetchReports() {
       try {
-        const res = await fetch("/api/v1/seo/discovery_report");
+        const res = await fetch("/api/v1/local_seo/discovery_report");
         if (res.ok) {
           const data = await res.json();
           setReports(data);

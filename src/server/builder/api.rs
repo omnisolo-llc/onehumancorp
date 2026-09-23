@@ -277,6 +277,17 @@ pub struct SiteResponse {
     pub domain: Option<String>,
 }
 
+fn parse_tenant_id(organization_id: Option<&str>) -> Result<Uuid, axum::http::StatusCode> {
+    let org = organization_id.unwrap_or_default().trim();
+    if org.is_empty() {
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
+    match Uuid::parse_str(org) {
+        Ok(u) => Ok(u),
+        Err(_) => Ok(Uuid::new_v5(&Uuid::NAMESPACE_DNS, org.as_bytes())),
+    }
+}
+
 #[derive(Deserialize)]
 pub struct CreateSiteRequest {
     pub domain: Option<String>,
@@ -286,8 +297,7 @@ async fn list_sites(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<SiteResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let sites = db::list_sites(&pool, tenant_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -307,8 +317,7 @@ async fn create_site(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateSiteRequest>,
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let site = db::create_site(&pool, tenant_id, payload.domain)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -325,8 +334,7 @@ async fn get_site(
 ) -> Result<Json<SiteStructureResponse>, axum::http::StatusCode> {
     use std::collections::BTreeMap;
 
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
 
     let rows = db::get_site_structure_rows(&pool, tenant_id, site_id)
         .await
@@ -436,8 +444,7 @@ async fn list_pages(
     Path(site_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<PageResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let pages = db::list_pages(&pool, tenant_id, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -460,8 +467,7 @@ async fn create_page(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreatePageRequest>,
 ) -> Result<Json<PageResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let page = db::create_page(&pool, tenant_id, site_id, payload.path, payload.title)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -518,8 +524,7 @@ async fn list_blocks(
     Path(page_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<BlockResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let blocks = db::list_blocks(&pool, tenant_id, page_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -545,8 +550,7 @@ async fn create_block(
     if !validate_block(&payload.block_type, &payload.content) {
         return Err(axum::http::StatusCode::BAD_REQUEST);
     }
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let block = db::create_block(
         &pool,
         tenant_id,
@@ -614,8 +618,7 @@ async fn update_block(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<UpdateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
 
     // Fetch block to check its type for validation
     let existing_block = db::get_block(&pool, tenant_id, block_id)
@@ -686,8 +689,7 @@ async fn reorder_blocks(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ReorderBlocksRequest>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     db::reorder_blocks(&pool, tenant_id, page_id, payload.block_ids)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -699,8 +701,7 @@ async fn publish_site(
     Path(site_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     jobs::enqueue_publish_site_job(&pool, tenant_id, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1232,8 +1233,7 @@ async fn generate_brand_toolbox(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<GenerateBrandToolboxRequest>,
 ) -> Result<Json<BrandToolboxResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let mut toolbox = synthesize_brand_toolbox(&payload);
     let toolbox_json = serde_json::to_value(&toolbox)
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1265,8 +1265,7 @@ async fn get_brand_toolbox(
     Path(toolbox_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<BrandToolboxResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let record = db::get_brand_toolbox(&pool, tenant_id, toolbox_id)
         .await
         .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
@@ -1277,8 +1276,7 @@ async fn list_brand_toolboxes(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<BrandToolboxResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let records = db::list_brand_toolboxes(&pool, tenant_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1294,8 +1292,7 @@ async fn publish_brand_toolbox_website(
     Path(toolbox_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let record = db::get_brand_toolbox(&pool, tenant_id, toolbox_id)
         .await
         .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
@@ -1347,8 +1344,7 @@ async fn generate_storefront(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<GenerateStorefrontRequest>,
 ) -> Result<Json<StoreProfile>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let persisted_brand_dna = if payload.brand_dna.is_none() {
         load_latest_brand_dna(&pool, tenant_id).await
     } else {
@@ -1539,8 +1535,7 @@ async fn publish_draft(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<PublishDraftRequest>,
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = parse_tenant_id(claims.organization_id.as_deref())?;
     let site = publish_store_profile(&pool, tenant_id, payload.domain, payload.draft).await?;
     Ok(Json(site))
 }

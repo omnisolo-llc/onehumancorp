@@ -11,6 +11,7 @@ test.describe('Agentic Subscription Retention & Churn Prediction Feed E2E', () =
     await page.goto('/login');
     await page.getByRole('textbox', { name: 'Email or username' }).fill('leo@example.com');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
+    await page.getByLabel(/Organization/).fill('e2e-tenant');
     await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 

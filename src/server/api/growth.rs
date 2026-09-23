@@ -720,24 +720,15 @@ async fn handle_trial_extension_claim(
     >,
 ) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
     let org_id_str = &auth_info.org_id;
-    let parsed_uuid = uuid::Uuid::parse_str(org_id_str).ok();
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match parsed_uuid {
-        Some(uid) => {
-            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $2")
-                .bind(uid)
-                .bind(org_id_str)
-                .fetch_optional(&state.pool)
-                .await
-        },
-        None => {
-            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE tenant_id = $1")
-                .bind(org_id_str)
-                .fetch_optional(&state.pool)
-                .await
-        }
-    }.map_err(|e| {
+    let has_claimed: Option<bool> = sqlx::query_scalar(
+        "SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1",
+    )
+    .bind(org_id_str)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
         tracing::error!("Failed to query tenant for trial extension check: {}", e); // pii-safe
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -750,21 +741,12 @@ async fn handle_trial_extension_claim(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let update_result = match parsed_uuid {
-        Some(uid) => {
-            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $2")
-                .bind(uid)
-                .bind(org_id_str)
-                .execute(&state.pool)
-                .await
-        },
-        None => {
-            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE tenant_id = $1")
-                .bind(org_id_str)
-                .execute(&state.pool)
-                .await
-        }
-    };
+    let update_result = sqlx::query(
+        "UPDATE tenants SET tier = 'pro', plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1",
+    )
+    .bind(org_id_str)
+    .execute(&state.pool)
+    .await;
 
     match update_result {
         Ok(result) => {
@@ -1012,12 +994,17 @@ pub struct SimulateReferralCheckoutResponse {
 
 async fn handle_generate_review(
     Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<GenerateReviewRequest>,
+    Json(req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
+    let generated = format!(
+        "Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/{}\n\nWarmly,\nThe Team\n\n⚡ OmniSolo",
+        req.customer_name, req.product_name, req.order_id
+    );
+
     (
-        StatusCode::NOT_IMPLEMENTED,
+        StatusCode::OK,
         Json(GenerateReviewResponse {
-            message: "Review campaign generation is unavailable.".to_string(),
+            message: generated,
         }),
     )
 }

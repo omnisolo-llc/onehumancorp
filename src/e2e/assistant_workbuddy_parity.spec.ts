@@ -16,6 +16,7 @@ test.describe('Assistant WorkBuddy Parity', () => {
     await expect(page.getByText('Conversation').first()).toBeVisible();
 
     // Right rail results
+    await page.getByRole('button', { name: 'Results' }).first().click();
     await expect(page.getByText('Results Panel').first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'All Files' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Changes', exact: true }).first()).toBeVisible();
@@ -34,6 +35,7 @@ test.describe('Assistant WorkBuddy Parity', () => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Assistant Tasks' }).first().click();
 
+    await page.getByRole('button', { name: 'New Task' }).first().click();
     const promptInput = page.getByLabel('Task prompt');
     await promptInput.fill('Research next.js features and output a markdown file');
 
@@ -70,6 +72,7 @@ test.describe('Assistant WorkBuddy Parity', () => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Assistant Tasks' }).click();
 
+    await page.getByRole('button', { name: 'Results' }).first().click();
     // Click on All Files
     await page.getByRole('button', { name: 'All Files' }).click();
     await expect(page.getByRole('button', { name: 'All Files' })).toHaveAttribute('aria-pressed', 'true');

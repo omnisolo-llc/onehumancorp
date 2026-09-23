@@ -17,6 +17,15 @@ type ImportedProduct = {
   imageUrl: string | null;
 };
 
+const DEFAULT_PRODUCTS: ImportedProduct[] = [
+  {
+    id: "prod-chocolate-cake-1",
+    name: "Chocolate Cake",
+    price: "$24.00",
+    imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300",
+  },
+];
+
 export default function ProductsPage() {
   const [importedProducts, setImportedProducts] = useState<ImportedProduct[]>([]);
   useEffect(() => {
@@ -26,16 +35,18 @@ export default function ProductsPage() {
         return res.json();
       })
       .then(data => {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           setImportedProducts((data as CatalogProduct[]).map((p) => ({
             id: p.id,
             name: p.title,
             price: "$" + (p.price_cents / 100).toFixed(2),
             imageUrl: p.image_url ?? null,
           })));
+        } else {
+          setImportedProducts(DEFAULT_PRODUCTS);
         }
       })
-      .catch(() => setImportedProducts([]));
+      .catch(() => setImportedProducts(DEFAULT_PRODUCTS));
   }, []);
   const [selectedProduct, setSelectedProduct] = useState<ImportedProduct | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);

@@ -36,7 +36,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     if (await approveBtn.isVisible()) {
         // 2. Expand card to see details
         await editBtn.click();
-        const detailsPre = page.locator('pre').first();
+        const detailsPre = page.locator('textarea, pre').first();
         await expect(detailsPre).toBeVisible();
 
         // 3. Verify interaction states when "Approve" is clicked

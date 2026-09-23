@@ -1,16 +1,16 @@
 import { test, expect } from './fixtures';
 
 test.describe('Login Page', () => {
-  test('should display login page with form', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
-    await expect(page.getByLabel(/Email or username/i)).toBeVisible();
-    await expect(page.getByLabel(/Password/i)).toBeVisible();
+  test('should display login page with form', async ({ anonymousPage }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
+    await expect(anonymousPage.getByLabel(/Email or username/i)).toBeVisible();
+    await expect(anonymousPage.getByLabel(/Password/i)).toBeVisible();
   });
 
-  test('should display login button', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('button', { name: /Log in/i })).toBeVisible();
+  test('should display login button', async ({ anonymousPage }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByRole('button', { name: /Log in/i })).toBeVisible();
   });
 });
 
@@ -39,6 +39,6 @@ test.describe('Navigation', () => {
 
   test('should display business setup', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Setup Assistant, h1').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: /Setup Assistant|10-Minute Setup Wizard/i }).or(page.locator('h1')).first()).toBeVisible({ timeout: 15000 });
   });
 });

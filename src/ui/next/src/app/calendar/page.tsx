@@ -88,7 +88,10 @@ export default function CalendarPage() {
           <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </Link>
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Calendar & Bookings</h1>
+          <h1 className="text-2xl font-bold font-outfit flex items-center gap-2" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>
+            Calendar & Bookings
+            <span className="text-xs bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full">Operations Agent</span>
+          </h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">AI Scheduling</span>
@@ -119,7 +122,8 @@ export default function CalendarPage() {
           )}
 
           <section className="app-card shadow-sm p-6 bg-white" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
-            <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Today</h2>
+            <h2 className="text-xl font-semibold font-outfit mb-2 text-gray-900">Upcoming Appointments</h2>
+            <div className="text-sm font-medium text-gray-500 mb-4">Today</div>
             <div className="space-y-4">
               {isLoading ? (
                 <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center flex flex-col items-center justify-center gap-3">

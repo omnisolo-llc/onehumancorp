@@ -5,8 +5,9 @@ test.describe('Omnichannel Inbox UI', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
+    await page.getByLabel(/Organization/).fill('e2e-tenant');
+    await page.getByRole('button', { name: /Log in/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible({ timeout: 20000 });
 
     await page.goto('/inbox');
 

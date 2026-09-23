@@ -12,12 +12,12 @@ test.describe('Business Manager UI', () => {
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
   });
 
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
-    await expect(page.getByLabel(/Email or username/i)).toBeVisible();
-    await expect(page.getByLabel(/Password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Log in/i })).toBeVisible();
+  test('should display login page', async ({ anonymousPage }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
+    await expect(anonymousPage.getByLabel(/Email or username/i)).toBeVisible();
+    await expect(anonymousPage.getByLabel(/Password/i)).toBeVisible();
+    await expect(anonymousPage.getByRole('button', { name: /Log in/i })).toBeVisible();
   });
 
   test('should display business setup page', async ({ page }) => {

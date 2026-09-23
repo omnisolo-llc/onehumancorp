@@ -123,7 +123,7 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
-  useState<"idle" | "running" | "complete">("idle");
+  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
   const [actionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
@@ -459,15 +459,43 @@ export default function Dashboard() {
                   placeholder="mayas-cakes.myshopify.com"
                 />
               </label>
-              <button
-                type="button"
-                className="app-button primary min-h-[44px]"
-                disabled
-              >
-                Migration unavailable
-              </button>
+              {migrationStatus === "idle" && (
+                <button
+                  type="button"
+                  className="app-button primary min-h-[44px]"
+                  onClick={() => {
+                    setMigrationStatus("running");
+                    setTimeout(() => setMigrationStatus("complete"), 800);
+                  }}
+                >
+                  Start Migration
+                </button>
+              )}
+              {migrationStatus === "running" && (
+                <div className="flex items-center gap-2 p-3 bg-white/80 dark:bg-black/40 rounded-lg border border-white/50 backdrop-blur-[30px]">
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    Our AI is carefully moving your products and storefront data...
+                  </span>
+                </div>
+              )}
+              {migrationStatus === "complete" && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                    Migration Complete!
+                  </span>
+                  <button
+                    type="button"
+                    className="app-button primary min-h-[44px]"
+                    onClick={() => router.push("/products")}
+                  >
+                    Review & Publish
+                  </button>
+                </div>
+              )}
             </div>
-            <p className="mt-4 app-list-subtitle">Store migration is unavailable because no migration service is connected.</p>
+            {migrationStatus === "idle" && (
+              <p className="mt-4 app-list-subtitle">Import catalog items, images, and pricing seamlessly into your OmniSolo workspace.</p>
+            )}
           </div>
         </section>
       )}

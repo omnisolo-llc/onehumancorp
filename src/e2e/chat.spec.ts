@@ -6,9 +6,9 @@ test.describe('Chat Page', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
   });
 
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
+  test('should display login page', async ({ anonymousPage }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByRole('heading', { name: /Sign in|Login/i }).first()).toBeVisible();
   });
 
   test('should display agents page', async ({ page }) => {
