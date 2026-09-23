@@ -32,7 +32,7 @@
             topic_filter: "".to_string(),
         });
         let response = service.search_help_articles(request).await.unwrap().into_inner();
-        assert_eq!(response.articles.len(), 6);
+        assert_eq!(response.articles.len(), 7);
 
         // Test 2: Search by query "payment"
         let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
