@@ -41,6 +41,7 @@ impl BudgetReservation {
             .settled
             .checked_add(self.amount_cents)
             .ok_or("Overflow in settled amount")?;
+        drop(state);
         self.is_settled = true;
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
@@ -124,6 +125,7 @@ impl BudgetManager {
             if self.total_limit_cents - state.total_allocated < 0 {
                 return Err("budget limit exceeded".to_string());
             }
+            drop(state);
             return Ok(BudgetReservation {
                 amount_cents: 0,
                 state: self.state.clone(),
@@ -138,6 +140,7 @@ impl BudgetManager {
             && next <= self.total_limit_cents
         {
             state.total_allocated = next;
+            drop(state);
 
             if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
                 tracing::info!(
