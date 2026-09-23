@@ -10165,6 +10165,7 @@ mod tests {
             "/api/v1/help/getting-started",
             "/api/v1/changelog",
             "/api/v1/api-docs-spec",
+            "/api/v1/help/connected-accounts-standing-authority",
         ] {
             let response = docs
                 .clone()

@@ -599,6 +599,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
                 .to_string(),
             link: "/api-docs".to_string(),
         },
+        HelpArticle {
+            category: "Getting Started".to_string(),
+            title: "Connected Accounts and Standing Authority".to_string(),
+            desc: "Configure your connected accounts and establish standing authority for the AI team.".to_string(),
+            link: "/help/connected-accounts-standing-authority".to_string(),
+        },
     ]
 }
 
@@ -1076,6 +1082,46 @@ pub struct HelpArticleDetail {
 
 pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
     match id {
+        "connected-accounts-standing-authority" => Some(HelpArticleDetail {
+            title: "Connected Accounts and Standing Authority".to_string(),
+            content_html: r#"
+      <div class="prose prose-lg dark:prose-invert">
+        <h2>Setup</h2>
+        <p>To set up your business, you need to configure your connected accounts and establish your standing authority. This ensures that the AI team can operate safely and securely on your behalf.</p>
+
+        <h2>Connected Accounts</h2>
+        <ul>
+          <li>Link your Google Workspace and Stripe accounts.</li>
+          <li>Verify your connection settings to ensure the AI team can access your tools.</li>
+        </ul>
+
+        <h2>Standing Authority</h2>
+        <ul>
+          <li>Define the scope of the AI team's authority.</li>
+          <li>Set specific rules for external actions, such as sending emails or making payments.</li>
+          <li>Establish a budget and spending limits for the AI team.</li>
+        </ul>
+
+        <h2>Evidence</h2>
+        <ul>
+          <li>Maintain a record of all actions taken by the AI team.</li>
+          <li>Review the evidence feed to verify that the team is completing work as expected.</li>
+        </ul>
+
+        <h2>Cost</h2>
+        <ul>
+          <li>Monitor the cost of the AI team's operations.</li>
+          <li>Understand the pricing structure and how usage is billed.</li>
+        </ul>
+
+        <h2>Exceptions and Recovery</h2>
+        <ul>
+          <li>Learn how to handle exceptions and errors that may occur during execution.</li>
+          <li>Understand the recovery process and how to resume work after a failure.</li>
+        </ul>
+      </div>
+            "#.to_string()
+        }),
         "getting-started-1" => Some(HelpArticleDetail {
             title: "Getting Started with Your Store".to_string(),
             content_html: r#"
