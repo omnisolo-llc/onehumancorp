@@ -593,6 +593,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/billing-settings".to_string(),
         },
         HelpArticle {
+            category: "Operations".to_string(),
+            title: "Verified Business Work".to_string(),
+            desc: "Learn how you accomplish verified business work with OmniSolo.".to_string(),
+            link: "/help/verified-business-work".to_string(),
+        },
+        HelpArticle {
             category: "Advanced".to_string(),
             title: "API Documentation (for Advanced Users)".to_string(),
             desc: "Interactive API reference for connecting external services to your workspace."
@@ -1196,6 +1202,26 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Approving Their Work</h2>
       <p class="text-gray-700 mb-4">
         Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.
+      </p>
+            "#.to_string()
+        }),
+        "verified-business-work" => Some(HelpArticleDetail {
+            title: "Verified Business Work".to_string(),
+            content_html: r#"
+      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
+        Learn how your business operates securely and efficiently on our platform.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Setup & Connected Accounts</h2>
+      <p class="text-gray-700 mb-4">
+        New owners configure their store via the Dashboard to set basic business and billing options. You can connect Stripe for payments. Verified OpenAI keys bind to the provider origin to securely support Bring Your Own Key (BYOK).
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Standing Authority & Evidence</h2>
+      <p class="text-gray-700 mb-4">
+        AI agents operate only within the bounded authority of your policies. Messages are for coordination, not proof of success. Actions exceeding authority halt and request explicit approval. Verified actions are grounded in telemetry, durable work records, and provider receipts—forming the ultimate foundation of truth.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost, Exceptions & Recovery</h2>
+      <p class="text-gray-700 mb-4">
+        Inference and platform costs are strictly tracked with hard caps to restrict unapproved spending. If actions fail (e.g., due to missing credentials, exhausted budgets, or declined payments), bounded recovery begins, and workflows persist for your review without losing context.
       </p>
             "#.to_string()
         }),

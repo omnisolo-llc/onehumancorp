@@ -29,3 +29,7 @@ toc:
     path: /docs/business/roadmap.md
   - title: Vision
     path: /docs/vision/market_strategy.md
+  - title: Help Center
+    section: true
+  - title: Verified Business Work
+    path: /docs/help_center/verified-business-work.md
