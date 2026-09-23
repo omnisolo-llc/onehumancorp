@@ -190,25 +190,13 @@ pub async fn handle_autonomous_quote_action(
             .await;
         if let Ok(link) = link_res {
             stripe_payment_link = link;
+            drafted_message = format!(
+                "{}\n\nTo secure your booking, please pay the deposit here: {}",
+                drafted_message, stripe_payment_link
+            );
         } else if let Err(e) = link_res {
             tracing::error!("Failed to generate Stripe payment link for deposit: {}", e); // pii-safe
-            // Fallback to dummy link for testing/e2e if API fails
-            stripe_payment_link = format!(
-                "https://buy.stripe.com/test_{}",
-                uuid::Uuid::new_v4()
-                    .simple()
-                    .to_string()
-                    .chars()
-                    .take(16)
-                    .collect::<String>()
-            );
         }
-        drafted_message = format!(
-            "{}
-
-To secure your booking, please pay the deposit here: {}",
-            drafted_message, stripe_payment_link
-        );
     }
 
     // Insert into quotes

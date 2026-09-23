@@ -119,7 +119,7 @@ pub async fn handle_quote_action(
             .map(|s| s.to_string())
             .unwrap_or_default();
 
-        // Fallback to fake url if external integration fails to prevent silently erroring
+        // Do not fabricate a fake URL if the external integration fails
         if payload.get("stripe_payment_link").is_none() {
             match stripe_client
                 .create_checkout_session(scope, client_id, price, None, None, None)
@@ -130,8 +130,6 @@ pub async fn handle_quote_action(
                 }
                 Err(err) => {
                     tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
-                    // Still proceed with saving the invoice but log heavily
-                    // Without hard-failing since our e2e expects it to proceed.
                 }
             }
         }
