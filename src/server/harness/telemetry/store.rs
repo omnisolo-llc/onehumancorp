@@ -16,6 +16,14 @@ pub struct ViolationStore {
     pub mission_cost_cents: Counter<u64>,
 }
 
+impl std::fmt::Debug for ViolationStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ViolationStore")
+            .field("pool_is_some", &self.pool.is_some())
+            .finish()
+    }
+}
+
 impl ViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.harness.telemetry");
