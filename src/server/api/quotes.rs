@@ -70,8 +70,8 @@ impl ResearcherLlmClient for AdapterLlm {
             let counts = observed
                 .counts
                 .ok_or("Local provider omitted usage; draft accounting requires reconciliation")?;
-            let input_tokens =
-                i32::try_from(counts.input).map_err(|_| "Local input usage exceeds supported range")?;
+            let input_tokens = i32::try_from(counts.input)
+                .map_err(|_| "Local input usage exceeds supported range")?;
             let output_tokens = i32::try_from(counts.output)
                 .map_err(|_| "Local output usage exceeds supported range")?;
             let cache_read_input_tokens = i32::try_from(counts.cached_input)
