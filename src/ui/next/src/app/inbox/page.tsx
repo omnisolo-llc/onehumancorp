@@ -358,7 +358,7 @@ function InboxWorkspace({
                 >
                   <div className="min-w-0">
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
+                    <div className="app-list-subtitle truncate">{message.content || message.original_content || "Empty message"}</div>
                   </div>
                   <span className={`app-badge ${badgeTone(message.status)}`}>{formatStatus(message.status)}</span>
                 </button>

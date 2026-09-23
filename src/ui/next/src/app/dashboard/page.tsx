@@ -525,7 +525,9 @@ export default function Dashboard() {
                 <span aria-hidden="true">A</span>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Assistant Tasks</h3>
+                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Assistant Tasks <span className="sr-only">Open WorkBuddy Assistant</span>
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Open the dashboard task workspace for conversations, artifacts, and assistant actions.</p>
               </div>
               <div className="text-[#0f766e] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">

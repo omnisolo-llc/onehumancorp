@@ -110,7 +110,7 @@ export default function CostDashboardPage() {
 
   const handleManageBilling = async () => {
     if (!myPlanData || myPlanData.current_plan === 'Free') {
-      window.location.href = '/pricing';
+      router.push('/pricing');
       return;
     }
     setIsActionLoading(true);
@@ -130,7 +130,7 @@ export default function CostDashboardPage() {
       if (session.url) {
         window.location.href = session.url;
       } else {
-        window.location.href = '/pricing';
+        router.push('/pricing');
       }
     } catch (error) {
       console.error('Error initiating billing portal:', error);

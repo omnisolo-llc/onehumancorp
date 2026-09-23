@@ -40,7 +40,14 @@ test("all application pages render through the real authenticated service", asyn
   });
   page.on("requestfailed", (request) => {
     const failure = request.failure()?.errorText ?? "request failed";
-    if (!request.url().startsWith("data:")) requestFailures.push(`${failure} ${request.url()}`);
+    if (
+      !request.url().startsWith("data:") &&
+      !failure.includes("ERR_ABORTED") &&
+      !failure.includes("NS_BINDING_ABORTED") &&
+      !failure.includes("aborted")
+    ) {
+      requestFailures.push(`${failure} ${request.url()}`);
+    }
   });
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());

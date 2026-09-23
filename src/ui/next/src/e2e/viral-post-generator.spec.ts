@@ -20,7 +20,7 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         await checkbox.click();
 
         // Verify the soft paywall modal opens
-        const modalHeading = page.locator('text=Upgrade to Pro');
+        const modalHeading = page.getByRole('heading', { name: 'Upgrade to Pro' });
         await expect(modalHeading).toBeVisible();
 
         // Verify the modal text

@@ -671,10 +671,12 @@ async fn load_ui_omni_inbox_from_db(
                     .bind(tenant_id)
                     .fetch_all(&mut *tx)
                     .await?.into_iter().map(|row| {
+                        let original_content = row.get::<String, _>("original_content");
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
+                            "content": original_content,
+                            "original_content": original_content,
                             "draft_reply": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
                             "sender_id": row.get::<String, _>("sender_id"),
@@ -706,10 +708,12 @@ async fn load_ui_omni_inbox_from_db(
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
+                        let original_content = row.get::<String, _>("original_content");
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
+                            "content": original_content,
+                            "original_content": original_content,
                             "draft_reply": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
                             "sender_id": row.get::<String, _>("sender_id"),

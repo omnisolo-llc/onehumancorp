@@ -87,6 +87,8 @@ pub struct UpdateStateRequest {
     pub context_payload: Option<serde_json::Value>,
     #[serde(default)]
     pub edited_payload: Option<String>,
+    #[serde(default)]
+    pub modified_content: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -108,6 +110,7 @@ where
 {
     Router::new()
         .route("/", get(list_feed_items).post(create_feed_item))
+        .route("/{id}", put(update_feed_item_state))
         .route("/{id}/state", put(update_feed_item_state))
         .route("/ws", get(ws_feed_handler))
 }
@@ -441,13 +444,18 @@ async fn update_feed_item_state(
         store: crate::db::DbStore::Postgres,
     }));
 
+    let edited_payload = payload
+        .edited_payload
+        .clone()
+        .or_else(|| payload.modified_content.clone());
+
     if payload.proposed_action.is_some()
         || payload.context_payload.is_some()
-        || payload.edited_payload.is_some()
+        || edited_payload.is_some()
     {
         let mut proposed = payload.proposed_action.clone();
 
-        if let (Some(edited), Some(prop)) = (&payload.edited_payload, proposed.as_mut()) {
+        if let (Some(edited), Some(prop)) = (&edited_payload, proposed.as_mut()) {
             if let Some(obj) = prop.as_object_mut() {
                 if obj.contains_key("draft_reply") {
                     obj.insert(
@@ -465,7 +473,7 @@ async fn update_feed_item_state(
                     "message": edited
                 }));
             }
-        } else if let (Some(edited), None) = (&payload.edited_payload, proposed.as_ref()) {
+        } else if let (Some(edited), None) = (&edited_payload, proposed.as_ref()) {
             // If the user edited but there wasn't a proposed_action provided in the request payload
             // we should try to fetch the existing one and update it, but for simplicity here we
             // just create a new one.

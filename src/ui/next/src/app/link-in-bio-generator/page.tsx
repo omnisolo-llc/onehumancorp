@@ -64,6 +64,7 @@ export default function LinkInBioGeneratorPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          tenant_id: tenant,
           store_name: storeName,
           bio,
           theme,

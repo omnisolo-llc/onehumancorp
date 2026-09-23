@@ -97,7 +97,7 @@ export default function InteractiveInsightWidgetPage() {
                 <div className="text-4xl font-bold font-outfit">{metricValue}</div>
                 {!hasPro && (
                   <div className="mt-4 pt-4 border-t border-gray-100/10 text-center">
-                    <a href={`${origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`} target="_blank" rel="noreferrer" className={`text-xs font-semibold no-underline hover:underline opacity-80 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-500'}`}>
+                    <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`} target="_blank" rel="noopener noreferrer" className={`text-xs font-semibold no-underline hover:underline opacity-80 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-500'}`}>
                       ⚡ Powered by OmniSolo
                     </a>
                   </div>

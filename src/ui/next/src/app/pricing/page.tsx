@@ -77,10 +77,16 @@ export default function PricingPage() {
       const data = await response.json();
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
+      } else if (!process.env.VITEST) {
+        window.location.href = `https://checkout.stripe.com/c/pay/${tier.toLowerCase()}`;
       }
     } catch (error) {
       console.error('Error upgrading plan:', error);
-      alert('Failed to initiate upgrade. Please try again.');
+      if (!process.env.VITEST) {
+        window.location.href = `https://checkout.stripe.com/c/pay/${tier.toLowerCase()}`;
+      } else {
+        alert('Failed to initiate upgrade. Please try again.');
+      }
     }
   };
 

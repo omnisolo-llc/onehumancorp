@@ -12,6 +12,7 @@ ALTER TABLE subscription_plans DISABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules DISABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE omni_inbox_messages DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
@@ -416,6 +417,77 @@ SET tenant_id = EXCLUDED.tenant_id,
     payload = EXCLUDED.payload,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO agent_approvals (
+  id,
+  tenant_id,
+  department,
+  description,
+  status,
+  action_risk,
+  payload,
+  created_at,
+  updated_at
+)
+VALUES (
+  'e2e-approval-inbox-quote-1',
+  'e2e-tenant',
+  'Sales',
+  'Fix leaking sink quote approval',
+  'PENDING',
+  'low',
+  '{"feature_type": "quote_draft", "scope": "Fix leaking sink for Ada Baker", "service": "Plumbing Repair", "suggested_price": 250, "line_items": [{"description": "Fix leaking sink", "unit_price_cents": 25000, "quantity": 1}]}'::jsonb,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    department = EXCLUDED.department,
+    description = EXCLUDED.description,
+    status = EXCLUDED.status,
+    action_risk = EXCLUDED.action_risk,
+    payload = EXCLUDED.payload,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO omni_inbox_messages (
+  id,
+  tenant_id,
+  source,
+  sender_id,
+  customer_id,
+  original_content,
+  translated_content,
+  target_language,
+  draft_reply,
+  status,
+  created_at,
+  updated_at
+)
+VALUES (
+  'e2e-inbox-msg-1',
+  'e2e-tenant',
+  'email',
+  'ada.baker@example.test',
+  'e2e-customer-bakery',
+  'Can you please send me a quote for fixing the leaking sink?',
+  'Can you please send me a quote for fixing the leaking sink?',
+  'en',
+  'Sure, here is the quote for the sink repair.',
+  'pending_approval',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    source = EXCLUDED.source,
+    sender_id = EXCLUDED.sender_id,
+    customer_id = EXCLUDED.customer_id,
+    original_content = EXCLUDED.original_content,
+    translated_content = EXCLUDED.translated_content,
+    target_language = EXCLUDED.target_language,
+    draft_reply = EXCLUDED.draft_reply,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
@@ -428,6 +500,7 @@ ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE omni_inbox_messages ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
@@ -441,5 +514,6 @@ ALTER TABLE subscription_plans FORCE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions FORCE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules FORCE ROW LEVEL SECURITY;
 ALTER TABLE bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE omni_inbox_messages FORCE ROW LEVEL SECURITY;
 
 COMMIT;

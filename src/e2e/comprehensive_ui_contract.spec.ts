@@ -104,12 +104,14 @@ function routeLabel(route: string) {
 
 const allowedExternalHosts = [
   'facebook.com',
+  'linkedin.com',
   'meet.google.com',
   'cloud.omnisolo.co',
   'omnisolo.co',
   'twitter.com',
   'wa.me',
   'www.facebook.com',
+  'www.linkedin.com',
   'x.com',
 ];
 

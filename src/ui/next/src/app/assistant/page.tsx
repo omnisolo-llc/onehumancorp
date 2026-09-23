@@ -847,7 +847,7 @@ function ResourcePage({
         <div className={styles.resourceBlock}>
           <div className={styles.featureGridTwo}>
             <div className={styles.featureCard}>
-              <div className={styles.cardTitle}>Observation Masking</div>
+              <div className={`${styles.cardTitle} cardTitle`}>Observation Masking</div>
               <p className={styles.eyebrow}>Hides the raw output of old tools from the prompt, but keeps the tool_calls themselves visible so the model remembers what it did.</p>
               <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
@@ -882,7 +882,7 @@ function ResourcePage({
               <div className={styles.featureGridTwo}>
                 {block.items.map((item, index) => (
                   <div key={String(item.id || item.name || item.title || `${block.title}-${index}`)} className={styles.featureCard}>
-                    <div className={styles.cardTitle}>{recordTitle(item)}</div>
+                    <div className={`${styles.cardTitle} cardTitle`}>{recordTitle(item)}</div>
                     <dl className={styles.recordFields}>
                       {recordEntries(item).map(([key, value]) => (
                         <div key={key}>

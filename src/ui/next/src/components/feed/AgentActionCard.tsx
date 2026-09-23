@@ -2597,7 +2597,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             </div>
           </>
         ) : editingId === approval.id ? (
-          <div className="flex flex-col gap-3 w-full">
+          <>
             <textarea
               className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
               rows={4}
@@ -2606,14 +2606,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
               data-testid="edit-proposal-textarea"
               autoFocus
             />
-            <div className="flex gap-3">
+            <div className="flex gap-3 w-full">
               <button
                 onClick={() => {
-                  handleDecision(
+                  wrapDecision(
                     approval.id,
                     true,
                     editContent,
                     approval.event_source,
+                    "approve",
                   );
                   setEditingId(null);
                 }}
@@ -2628,6 +2629,27 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )}
               </button>
               <button
+                onClick={() => {
+                  wrapDecision(
+                    approval.id,
+                    true,
+                    editContent,
+                    approval.event_source,
+                    "approve",
+                  );
+                  setEditingId(null);
+                }}
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all shadow-md flex items-center justify-center"
+                data-testid="feed-approve-btn"
+                disabled={loadingAction !== null}
+              >
+                {isActionLoading("approve") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Approve"
+                )}
+              </button>
+              <button
                 onClick={() => setEditingId(null)}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                 data-testid="cancel-edit-proposal"
@@ -2635,9 +2657,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 Cancel
               </button>
             </div>
-          </div>
+          </>
         ) : (
-          <>
+          <div className="flex flex-col gap-3 w-full">
             <button
               onClick={() =>
                 wrapDecision(
@@ -2701,7 +2723,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )}
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

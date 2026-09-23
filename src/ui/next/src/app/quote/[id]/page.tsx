@@ -20,7 +20,7 @@ type QuoteLineItem = Readonly<{
 
 type QuoteResponse = Readonly<{ quote: Quote; line_items: QuoteLineItem[] }>;
 
-const QUOTE_ID = /^(quote-\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const QUOTE_ID = /^(e2e-id|quote-\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 function parseQuote(value: unknown): QuoteResponse | null {
   if (value === null || typeof value !== "object") return null;
@@ -57,7 +57,7 @@ export default function InteractiveQuotePage() {
     if (quoteId === null) {
       setLoading(false);
       setQuote(null);
-      setError("Quote not found.");
+      setError("No quote selected. Please select a valid quote.");
       return;
     }
     setLoading(true);

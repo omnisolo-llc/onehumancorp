@@ -5940,10 +5940,13 @@ pub struct LinkInBioConfig {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct SetLinkInBioConfigReq {
+    pub tenant_id: Option<String>,
     pub store_name: String,
     pub bio: String,
     pub theme: String,
     pub links: Vec<LinkItem>,
+    #[serde(default)]
+    pub remove_branding: Option<bool>,
 }
 
 pub async fn handle_get_link_in_bio(
@@ -6021,13 +6024,18 @@ pub async fn handle_post_link_in_bio(
     >,
     axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id;
+    let target_tenant = req
+        .tenant_id
+        .clone()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| auth_info.org_id.clone());
+
     let mut tx = state
         .pool
         .begin()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &target_tenant).await;
 
     let config = LinkInBioConfig {
         store_name: req.store_name,
@@ -6040,22 +6048,29 @@ pub async fn handle_post_link_in_bio(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ($1, 'link_in_bio_config', $2) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $2, updated_at = CURRENT_TIMESTAMP")
-        .bind(&tenant_id)
+        .bind(&target_tenant)
         .bind(&val)
         .execute(&mut *tx)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if tenant_id != "my-store" {
-        let _ = sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ('my-store', 'link_in_bio_config', $1) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $1, updated_at = CURRENT_TIMESTAMP")
-            .bind(&val)
-            .execute(&mut *tx)
-            .await;
-    }
-
     tx.commit()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if target_tenant != "my-store" {
+        if let Ok(mut tx2) = state.pool.begin().await {
+            let _ = ::server_common::auth_utils::set_org_context(&mut *tx2, "my-store").await;
+            let _ = sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ('my-store', 'link_in_bio_config', $1) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $1, updated_at = CURRENT_TIMESTAMP")
+                .bind(&val)
+                .execute(&mut *tx2)
+                .await;
+            let _ = tx2.commit().await;
+        } else {
+            tracing::warn!("Failed to begin transaction for my-store mirror config");
+        }
+    }
+
     Ok(axum::http::StatusCode::OK)
 }
 
