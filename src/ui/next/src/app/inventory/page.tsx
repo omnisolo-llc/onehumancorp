@@ -93,7 +93,7 @@ export default function InventoryDashboard() {
   return (
     <AppShell
       title="Inventory"
-      subtitle="Centralized dynamic inventory tracking and ledger"
+      subtitle="Centralized dynamic inventory tracking"
       statusItems={[
         { label: "Products", value: String(products.length), tone: products.length > 0 ? "good" : "neutral" },
         { label: "Low Stock", value: String(lowStockCount), tone: lowStockCount > 0 ? "warn" : "good" }

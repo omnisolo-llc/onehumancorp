@@ -27,11 +27,11 @@ export default function LinkInBioGeneratorPage() {
         if (res.ok) {
           const data = await res.json();
           if (data && data.store_name) {
-             setStoreName(data.store_name);
-             setBio(data.bio || '');
-             setTheme(data.theme || 'light');
-             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
-             setRemoveBranding(data.remove_branding || false);
+             setStoreName((curr) => curr === 'My Store' ? data.store_name : curr);
+             setBio((curr) => curr === 'Welcome to my storefront!' ? (data.bio || '') : curr);
+             setTheme((curr) => curr === 'light' ? (data.theme || 'light') : curr);
+             setLinks((curr) => (curr.length === 1 && curr[0].title === 'Shop Now' && data.links && data.links.length > 0) ? data.links : curr);
+             setRemoveBranding((curr) => curr ? curr : (data.remove_branding || false));
           }
         }
       } catch  {

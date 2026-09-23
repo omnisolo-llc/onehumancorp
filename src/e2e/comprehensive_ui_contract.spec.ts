@@ -164,7 +164,7 @@ async function waitForClickEffect(page: Page, beforeUrl: string, beforeSignature
 
 async function gotoReady(page: Page, route: string) {
   await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle', { timeout: 1000 }).catch(() => undefined);
+  await page.waitForLoadState('networkidle', { timeout: 100 }).catch(() => undefined);
   await page.waitForTimeout(100);
   await page.evaluate(() => {
     const controls = Array.from(document.querySelectorAll('input, textarea')) as Array<HTMLInputElement | HTMLTextAreaElement>;

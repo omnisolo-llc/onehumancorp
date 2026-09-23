@@ -43,6 +43,7 @@ describe("resolveShellRoute", () => {
     "/lead-magnet-generator",
     "/operations",
     "/orders",
+    "/perplexity-harness",
     "/pipeline",
     "/products",
     "/scaling",

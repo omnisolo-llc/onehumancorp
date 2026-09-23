@@ -28,6 +28,7 @@ import './ReviewFeedCard';
 
 import { PromoterCard } from "./PromoterCard";
 import { GrowBusinessCard } from "./GrowBusinessCard";
+import { FundingOpportunityCard } from "./FundingOpportunityCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
@@ -553,7 +554,8 @@ export default function Dashboard() {
         </div>
 
         <GrowBusinessCard />
-          <PromoterCard />
+        <PromoterCard />
+        <FundingOpportunityCard />
 
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">

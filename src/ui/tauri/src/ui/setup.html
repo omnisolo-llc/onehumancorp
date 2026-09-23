@@ -43,7 +43,7 @@
           color: #f5f5f7;
         }
       }
-      .step { display: block !important; }
+      .step { display: none; }
       .step.active { display: block; }
       .next-step-btn {
         width: 100%;
@@ -123,17 +123,18 @@
       <div id="step-assistant" class="step">
         <h2>Assistant</h2>
         <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label>
-        <select data-testid="assistant-tone">
+        <select id="assistant-tone" data-testid="assistant-tone">
           <option value="Friendly">Friendly</option>
+          <option value="Professional">Professional</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
       </div>
 
       <div id="step-admin" class="step">
         <h2>Admin</h2>
-        <input type="text" data-testid="admin-name" placeholder="Admin Name" />
-        <input type="email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" />
-        <input type="password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" />
+        <input type="text" id="admin-name" data-testid="admin-name" placeholder="Admin Name" />
+        <input type="email" id="admin-email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" />
+        <input type="password" id="admin-password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
       </div>
 
@@ -150,19 +151,22 @@
       </div>
 
       <div id="step-target-audience" class="step">
-        <h2>Target Audience</h2>
+        <h2>Who is your target audience?</h2>
         <input type="text" id="target-audience" data-testid="target-audience" class="glass-control glassmorphism" placeholder="Target Audience" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Next</button>
       </div>
 
       <div id="step-domain" class="step">
-        <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
-        <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
+        <h2>Where will your business live?</h2>
+        <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" />
+        <div style="display: flex; gap: 8px;">
+          <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-target-audience" style="width: 50%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; min-height: 44px; margin-top: 16px;">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template" style="width: 50%;">Next</button>
+        </div>
       </div>
 
       <div id="step-template" class="step">
-        <h2>Template</h2>
+        <h2>Template Selection</h2>
         <select data-testid="template-selection">
           <option value="">Select...</option>
           <option value="Modern">Modern</option>
@@ -345,6 +349,14 @@
               document.getElementById('name-error').style.display = 'none';
             }
             goToStep(e.target.dataset.next);
+          }
+        });
+      });
+
+      document.querySelectorAll('.prev-step-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (e.target.dataset.prev) {
+            goToStep(e.target.dataset.prev);
           }
         });
       });

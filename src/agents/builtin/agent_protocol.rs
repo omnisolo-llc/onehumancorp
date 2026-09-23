@@ -91,6 +91,13 @@ pub struct AgentProtocolServer {
         std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, Vec<Artifact>>>>,
 }
 
+static TASKS: std::sync::LazyLock<tokio::sync::Mutex<std::collections::HashMap<String, Task>>> =
+    std::sync::LazyLock::new(|| tokio::sync::Mutex::new(std::collections::HashMap::new()));
+
+static STEPS: std::sync::LazyLock<
+    tokio::sync::Mutex<std::collections::HashMap<String, Vec<Step>>>,
+> = std::sync::LazyLock::new(|| tokio::sync::Mutex::new(std::collections::HashMap::new()));
+
 impl AgentProtocolServer {
     pub fn new(runner: Arc<Runner>) -> Self {
         Self {
@@ -117,32 +124,40 @@ impl AgentProtocolServer {
         let task_id = uuid::Uuid::new_v4().to_string();
 
         let resp = Task {
-            task_id,
+            task_id: task_id.clone(),
             input: req.input,
             additional_input: req.additional_input,
             artifacts: vec![],
         };
+
+        TASKS.lock().await.insert(task_id, resp.clone());
 
         serde_json::to_value(&resp).unwrap()
     }
 
     /// GET /ap/v1/agent/tasks
     pub async fn list_tasks(&self) -> serde_json::Value {
-        let mut tasks = Vec::new();
+        let mut tasks: Vec<Task> = {
+            let map = TASKS.lock().await;
+            map.values().cloned().collect()
+        };
+
         if let Some(cp) = &self.runner.core.agent.checkpointer
             && let Ok(threads) = cp.list_threads().await
         {
             for thread_id in threads {
-                let status = match cp.list_checkpoints(&thread_id).await {
-                    Ok(cps) if !cps.is_empty() => "Running",
-                    _ => "Created or Not Found",
-                };
-                tasks.push(Task {
-                    task_id: thread_id.clone(),
-                    input: Some(format!("State from checkpoint: {}", status)),
-                    additional_input: None,
-                    artifacts: vec![],
-                });
+                if !tasks.iter().any(|t| t.task_id == thread_id) {
+                    let status = match cp.list_checkpoints(&thread_id).await {
+                        Ok(cps) if !cps.is_empty() => "Running",
+                        _ => "Created or Not Found",
+                    };
+                    tasks.push(Task {
+                        task_id: thread_id.clone(),
+                        input: Some(format!("State from checkpoint: {}", status)),
+                        additional_input: None,
+                        artifacts: vec![],
+                    });
+                }
             }
         }
 
@@ -161,6 +176,10 @@ impl AgentProtocolServer {
 
     /// GET /ap/v1/agent/tasks/{task_id}
     pub async fn get_task(&self, task_id: &str) -> serde_json::Value {
+        if let Some(task) = TASKS.lock().await.get(task_id).cloned() {
+            return serde_json::to_value(&task).unwrap();
+        }
+
         // Query the Checkpointer to see if the task exists and its state.
         let status = if let Some(cp) = &self.runner.core.agent.checkpointer {
             match cp.list_checkpoints(task_id).await {
@@ -182,21 +201,27 @@ impl AgentProtocolServer {
 
     /// GET /ap/v1/agent/tasks/{task_id}/steps
     pub async fn list_steps(&self, task_id: &str) -> serde_json::Value {
-        let mut steps = Vec::new();
+        let mut steps = {
+            let map = STEPS.lock().await;
+            map.get(task_id).cloned().unwrap_or_default()
+        };
+
         if let Some(cp) = &self.runner.core.agent.checkpointer
             && let Ok(checkpoints) = cp.list_checkpoints(task_id).await
         {
             for (i, checkpoint) in checkpoints.into_iter().enumerate() {
-                steps.push(Step {
-                    task_id: task_id.to_string(),
-                    step_id: checkpoint.checkpoint_id.clone(),
-                    name: Some(format!("Step {}", i + 1)),
-                    status: StepStatus::Completed,
-                    output: Some("Completed step from checkpoint".to_string()),
-                    additional_output: Some(checkpoint.data),
-                    artifacts: vec![],
-                    is_last: i == 0, // Since checkpoints are usually sorted DESC
-                });
+                if !steps.iter().any(|s| s.step_id == checkpoint.checkpoint_id) {
+                    steps.push(Step {
+                        task_id: task_id.to_string(),
+                        step_id: checkpoint.checkpoint_id.clone(),
+                        name: Some(format!("Step {}", i + 1)),
+                        status: StepStatus::Completed,
+                        output: Some("Completed step from checkpoint".to_string()),
+                        additional_output: Some(checkpoint.data),
+                        artifacts: vec![],
+                        is_last: i == 0, // Since checkpoints are usually sorted DESC
+                    });
+                }
             }
         }
 
@@ -215,6 +240,15 @@ impl AgentProtocolServer {
 
     /// GET /ap/v1/agent/tasks/{task_id}/steps/{step_id}
     pub async fn get_step(&self, task_id: &str, step_id: &str) -> serde_json::Value {
+        {
+            let map = STEPS.lock().await;
+            if let Some(steps) = map.get(task_id)
+                && let Some(step) = steps.iter().find(|s| s.step_id == step_id)
+            {
+                return serde_json::to_value(step).unwrap();
+            }
+        }
+
         if let Some(cp) = &self.runner.core.agent.checkpointer
             && let Ok(Some(checkpoint)) = cp.get_checkpoint(task_id, step_id).await
         {
@@ -389,34 +423,37 @@ impl AgentProtocolServer {
         let initial_message = req.input.unwrap_or_else(|| "Continue".to_string());
         let _cfg = crate::agent::AgentRunConfig::default();
 
-        match self.runner.run_async(&initial_message).await {
-            Ok(result) => {
-                let resp = Step {
-                    task_id: task_id.to_string(),
-                    step_id: uuid::Uuid::new_v4().to_string(),
-                    name: None,
-                    status: StepStatus::Completed,
-                    output: Some(result),
-                    additional_output: None,
-                    is_last: true,
-                    artifacts: vec![],
-                };
-                serde_json::to_value(&resp).unwrap()
-            }
-            Err(e) => {
-                let resp = Step {
-                    task_id: task_id.to_string(),
-                    step_id: uuid::Uuid::new_v4().to_string(),
-                    name: None,
-                    status: StepStatus::Failed, // Using standard Failed status for errors
-                    output: Some(format!("Error: {}", e)),
-                    additional_output: None,
-                    is_last: true,
-                    artifacts: vec![],
-                };
-                serde_json::to_value(&resp).unwrap()
-            }
-        }
+        let resp = match self.runner.run_async(&initial_message).await {
+            Ok(result) => Step {
+                task_id: task_id.to_string(),
+                step_id: uuid::Uuid::new_v4().to_string(),
+                name: None,
+                status: StepStatus::Completed,
+                output: Some(result),
+                additional_output: None,
+                is_last: true,
+                artifacts: vec![],
+            },
+            Err(e) => Step {
+                task_id: task_id.to_string(),
+                step_id: uuid::Uuid::new_v4().to_string(),
+                name: None,
+                status: StepStatus::Failed, // Using standard Failed status for errors
+                output: Some(format!("Error: {}", e)),
+                additional_output: None,
+                is_last: true,
+                artifacts: vec![],
+            },
+        };
+
+        STEPS
+            .lock()
+            .await
+            .entry(task_id.to_string())
+            .or_default()
+            .push(resp.clone());
+
+        serde_json::to_value(&resp).unwrap()
     }
 }
 

@@ -13,10 +13,12 @@ ALTER TABLE subscriptions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules DISABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE omni_inbox_messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE service_routes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE job_locations DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
-  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Starter', 'Starter', false),
+  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Free', 'Free', false),
   ('e2e-tenant-free', 'OmniSolo E2E Free Bakery', 'Food and beverage', 'Free', 'Free', false),
   ('e2e-tenant-business', 'OmniSolo E2E Business Bakery', 'Food and beverage', 'Business', 'Business', false),
   ('e2e-tenant-unlimited', 'OmniSolo E2E Pro Bakery', 'Food and beverage', 'Pro', 'Pro', false)
@@ -239,7 +241,10 @@ SET tenant_id = EXCLUDED.tenant_id,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO job_templates (id, tenant_id, name)
-VALUES ('e2e-job-template', 'e2e-tenant', 'E2E Service Visit')
+VALUES
+  ('e2e-job-template', 'e2e-tenant', 'E2E Service Visit'),
+  ('e2e-template-1', 'e2e-tenant', 'Fix leaking sink'),
+  ('e2e-template-2', 'e2e-tenant', 'HVAC Filter Replacement')
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
     name = EXCLUDED.name,
@@ -256,17 +261,40 @@ INSERT INTO appointments (
   location_address,
   notes
 )
-VALUES (
-  'e2e-appointment',
-  'e2e-tenant',
-  'e2e-customer-bakery',
-  'e2e-job-template',
-  'Scheduled',
-  CURRENT_TIMESTAMP + INTERVAL '1 day',
-  CURRENT_TIMESTAMP + INTERVAL '1 day 1 hour',
-  '123 OmniSolo Way',
-  'Seeded browser regression appointment'
-)
+VALUES
+  (
+    'e2e-appointment',
+    'e2e-tenant',
+    'e2e-customer-bakery',
+    'e2e-job-template',
+    'Scheduled',
+    CURRENT_TIMESTAMP + INTERVAL '1 day',
+    CURRENT_TIMESTAMP + INTERVAL '1 day 1 hour',
+    '123 OmniSolo Way',
+    'Seeded browser regression appointment'
+  ),
+  (
+    'e2e-appt-1',
+    'e2e-tenant',
+    'e2e-customer-bakery',
+    'e2e-template-1',
+    'Scheduled',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP + INTERVAL '1 hour',
+    '123 Main St, Austin, TX',
+    'Fix leaking sink appointment'
+  ),
+  (
+    'e2e-appt-2',
+    'e2e-tenant',
+    'e2e-customer-bakery',
+    'e2e-template-2',
+    'Scheduled',
+    CURRENT_TIMESTAMP + INTERVAL '2 hours',
+    CURRENT_TIMESTAMP + INTERVAL '3 hours',
+    '456 Oak Ave, Austin, TX',
+    'HVAC replacement appointment'
+  )
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
     customer_id = EXCLUDED.customer_id,
@@ -276,6 +304,28 @@ SET tenant_id = EXCLUDED.tenant_id,
     scheduled_end_time = EXCLUDED.scheduled_end_time,
     location_address = EXCLUDED.location_address,
     notes = EXCLUDED.notes,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO service_routes (id, tenant_id, agent_id, route_date, status)
+VALUES
+  ('e2e-route-today', 'e2e-tenant', 'e2e-staff-carlos', CURRENT_DATE, 'active')
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    agent_id = EXCLUDED.agent_id,
+    route_date = EXCLUDED.route_date,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status)
+VALUES
+  ('e2e-job-1', 'e2e-tenant', 'e2e-route-today', 'e2e-appt-1', 1, 'pending'),
+  ('e2e-job-2', 'e2e-tenant', 'e2e-route-today', 'e2e-appt-2', 2, 'pending')
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    service_route_id = EXCLUDED.service_route_id,
+    appointment_id = EXCLUDED.appointment_id,
+    sequence_order = EXCLUDED.sequence_order,
+    status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
@@ -302,6 +352,14 @@ VALUES (
   'CustomerSuccess',
   '{"feature_type":"subscription_churn_risk","customer_id":"e2e-customer-bakery","description":"A subscriber is at risk of churning","reason":"No recent activity in 30 days and renewal is approaching"}'::jsonb,
   '{"feature_type":"subscription_churn_risk","action_type":"DraftForReview","generated_response":"We miss you. Book a complimentary catch-up session and keep your momentum going."}'::jsonb,
+  'PENDING_APPROVAL'
+),
+(
+  'e2e-feed-inbox-quote-1',
+  'e2e-tenant',
+  'Sales',
+  '{"description":"Vegan pastry box quote approval","customer_id":"maya_bakes"}'::jsonb,
+  '{"inbox_message_id":"e2e-inbox-msg-1","action_type":"Draft Quote","feature_type":"quote_draft","total_amount":75.00,"total_amount_cents":7500,"scope":"Vegan options for Saturday","line_items":[{"description":"Vegan Pastry Box","unit_price_cents":7500,"quantity":1}]}'::jsonb,
   'PENDING_APPROVAL'
 )
 ON CONFLICT (id) DO UPDATE
@@ -514,6 +572,8 @@ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE omni_inbox_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_routes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_locations ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
@@ -528,5 +588,7 @@ ALTER TABLE subscriptions FORCE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules FORCE ROW LEVEL SECURITY;
 ALTER TABLE bookings FORCE ROW LEVEL SECURITY;
 ALTER TABLE omni_inbox_messages FORCE ROW LEVEL SECURITY;
+ALTER TABLE service_routes FORCE ROW LEVEL SECURITY;
+ALTER TABLE job_locations FORCE ROW LEVEL SECURITY;
 
 COMMIT;

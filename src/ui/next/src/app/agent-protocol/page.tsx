@@ -39,6 +39,14 @@ export default function AgentProtocolPage() {
         body: JSON.stringify({ method: 'ap_create_task', params: { input: taskInput } }),
       });
       if (!res.ok) throw new Error('Failed to create task');
+      const data = await res.json();
+      if (data && data.task_id) {
+        setTasks((prev) => {
+          if (prev.some((t) => t.task_id === data.task_id)) return prev;
+          return [data, ...prev];
+        });
+        setSelectedTaskId(data.task_id);
+      }
       await fetchTasks();
       setTaskInput('');
     } catch (e: unknown) {

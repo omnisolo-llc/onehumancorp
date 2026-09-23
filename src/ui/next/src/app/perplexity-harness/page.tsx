@@ -2,6 +2,7 @@
 import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from "react";
+import { AppShell } from "../components/AppShell";
 
 export default function PerplexityHarness() {
   const [query, setQuery] = useState("");
@@ -35,10 +36,9 @@ export default function PerplexityHarness() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Perplexity-style Agent Harness</h1>
-
-      <form onSubmit={handleSubmit} className="mb-8">
+    <AppShell title="Perplexity-style Agent Harness">
+      <div className="p-8 max-w-4xl mx-auto">
+        <form onSubmit={handleSubmit} className="mb-8">
         <div className="flex gap-4">
           <input
             type="text"
@@ -70,6 +70,7 @@ export default function PerplexityHarness() {
           <p className="whitespace-pre-wrap">{response}</p>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

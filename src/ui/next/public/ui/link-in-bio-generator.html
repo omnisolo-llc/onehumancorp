@@ -426,8 +426,8 @@
         let tenant = window.localStorage.getItem('tenant') || window.localStorage.getItem('tenant_id') || 'my-store';
 
         let currentState = {
-            store_name: '',
-            bio: '',
+            store_name: storeNameInput.value || 'My Store',
+            bio: bioInput.value || 'Welcome to my storefront!',
             theme: 'gradient',
             links: [],
             remove_branding: false
@@ -438,28 +438,29 @@
             const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
             if (response.ok) {
                 const data = await response.json();
-                currentState.store_name = data.store_name || '';
-                currentState.bio = data.bio || '';
-                currentState.theme = data.theme || 'gradient';
-                currentState.links = data.links || [];
-                currentState.remove_branding = !!data.remove_branding;
+                if (!storeNameInput.dataset.dirty) {
+                    currentState.store_name = data.store_name || storeNameInput.value || 'My Store';
+                    storeNameInput.value = currentState.store_name;
+                }
+                if (!bioInput.dataset.dirty) {
+                    currentState.bio = data.bio || bioInput.value || '';
+                    bioInput.value = currentState.bio;
+                }
+                if (!currentState.theme_dirty) {
+                    currentState.theme = data.theme || 'gradient';
+                }
+                if (currentState.links.length === 0) {
+                    currentState.links = data.links || [];
+                }
+                if (!currentState.branding_dirty) {
+                    currentState.remove_branding = !!data.remove_branding;
+                    removeBrandingToggle.checked = currentState.remove_branding;
+                }
+                updatePreview();
             }
         } catch(e) {
             console.error("Failed to load bio config", e);
         }
-
-        if (document.activeElement !== storeNameInput && !storeNameInput.dataset.dirty) {
-            storeNameInput.value = currentState.store_name;
-        } else {
-            currentState.store_name = storeNameInput.value;
-        }
-        if (document.activeElement !== bioInput && !bioInput.dataset.dirty) {
-            bioInput.value = currentState.bio;
-        } else {
-            currentState.bio = bioInput.value;
-        }
-        removeBrandingToggle.checked = currentState.remove_branding;
-        updatePreview();
 
         let saveTimeout;
         function saveState() {
@@ -550,6 +551,7 @@
 
         themeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                currentState.theme_dirty = true;
                 currentState.theme = e.target.dataset.theme;
                 updatePreview();
                 saveState();
@@ -557,6 +559,7 @@
         });
 
         removeBrandingToggle.addEventListener('change', (e) => {
+            currentState.branding_dirty = true;
             currentState.remove_branding = e.target.checked;
             updatePreview();
             saveState();

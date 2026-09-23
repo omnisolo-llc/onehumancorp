@@ -56,6 +56,7 @@ pub mod agent_orchestrate;
 pub mod agent_stream;
 pub mod checkout_api;
 pub mod field_ops;
+pub mod field_service_routing;
 pub mod omnisolo_job_queue;
 pub mod proposals;
 pub mod realtime;
