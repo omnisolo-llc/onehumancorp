@@ -33,3 +33,5 @@ toc:
     path: /docs/vision/market_strategy.md
   - title: Help Center
     path: /docs/help_center/index.md
+  - title: Setup & Authority
+    path: /docs/help_center/setup_accounts_authority.md
