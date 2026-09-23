@@ -4,7 +4,7 @@ test.describe('Business Analytics Widget Soft Paywall', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#dashboard-screen')).toBeVisible();
   });
 
   test('should display the analytics widget with basic metrics', async ({ page }) => {

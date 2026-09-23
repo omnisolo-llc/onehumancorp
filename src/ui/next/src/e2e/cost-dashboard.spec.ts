@@ -43,7 +43,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
 
     await page.locator('a', { hasText: 'Back to My Plan' }).click();
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeHidden();
+    await expect(page).toHaveURL(/\/plan(?:[?#].*)?$/);
   });
 
   test('Cost dashboard handles Budget Health Alert visibility', async ({ page }) => {

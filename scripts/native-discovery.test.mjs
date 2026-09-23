@@ -119,8 +119,10 @@ test('CI shards use complete native browser spec discovery, not a smoke allowlis
   assert.match(runner, /PLAYWRIGHT_TEST_DIR:\s*['"]\.\/src['"]/);
   assert.match(config, /testMatch:\s*['"]\*\*\/\*\.spec\.ts['"]/);
   assert.doesNotMatch(runner, /const maintained\s*=|ciSelection\s*\?\s*\[/);
-  assert.match(ci, /shard:\s*\[1, 2, 3, 4\]/);
+  assert.match(ci, /shard:\s*\[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12\]/);
   assert.match(ci, /test:e2e -- --ci --shard=/);
+  assert.match(ci, /--workers=2/);
+  assert.match(ci, /--retries=0/);
   assert.match(runner, /pass-with-no-tests/);
 });
 

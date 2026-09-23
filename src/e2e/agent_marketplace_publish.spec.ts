@@ -4,7 +4,7 @@ test.describe('Agent Marketplace Publish E2E', () => {
   test('User can publish a new agent and then find it in the marketplace', async ({ page }) => {
     // 1. Navigate to Publish page
     await page.goto('/agent-marketplace/publish');
-    await expect(page.locator('h1')).toHaveText('Publish New Agent');
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Publish New Agent', level: 1 })).toBeVisible();
 
     // 2. Fill out the form
     const uniqueAgentName = `E2E Custom Agent ${Date.now()}`;
@@ -18,7 +18,7 @@ test.describe('Agent Marketplace Publish E2E', () => {
 
     // 4. Wait for redirect back to the marketplace
     await expect(page).toHaveURL(/\/agent-marketplace$/);
-    await expect(page.locator('h1')).toHaveText('Agent Marketplace');
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Agent Marketplace', level: 1 })).toBeVisible();
 
     // 5. Search for the newly created agent
     const searchInput = page.getByPlaceholder('Search for agents...');

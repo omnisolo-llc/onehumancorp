@@ -33,6 +33,8 @@ test('make test covers Rust, Node, CLI, desktop UI, contracts and fresh real-sta
   const result = await runMake('test');
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.commands, [
+    'npm run build:web',
+    'npm run desktop:prepare',
     'cargo test --locked --workspace',
     'npm run test:scripts',
     'npm run test:web',
@@ -45,7 +47,7 @@ test('make test covers Rust, Node, CLI, desktop UI, contracts and fresh real-sta
   ]);
 });
 
-for (const failed of ['cargo test', 'test:web', 'test:contracts', 'build:web', 'test:e2e']) {
+for (const failed of ['desktop:prepare', 'cargo test', 'test:web', 'test:contracts', 'build:web', 'test:e2e']) {
   test(`make test propagates ${failed} failure without reporting success`, async () => {
     const result = await runMake('test', failed);
     assert.notEqual(result.status, 0);
@@ -57,6 +59,8 @@ test('make lint checks Rust formatting/Clippy and JavaScript/TypeScript lint/typ
   const result = await runMake('lint');
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.commands, [
+    'npm run build:web',
+    'npm run desktop:prepare',
     'cargo fmt --all -- --check',
     'cargo clippy --locked --workspace --all-targets -- -D warnings',
     'npm run lint:node',

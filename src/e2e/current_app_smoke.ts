@@ -19,7 +19,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     const panel = page.locator('.app-panel').first();
     await expect(panel).toBeVisible();
     await expect(panel).toHaveCSS('backdrop-filter', /blur\(30px\)|none/);
-    await expect(panel).toHaveCSS('border-radius', '16px');
+    await expect(panel).toHaveCSS('border-radius', '8px');
 
     // Verify glassmorphism style drift on dashboard cards
     const card = page.locator('a[href="/pos/terminal"]').first();
@@ -43,7 +43,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(page.getByRole('heading', { name: 'Customer Referral Program' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/storefront-builder');
-    await expect(page.getByRole('heading', { name: 'Welcome to OmniSolo Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Welcome to OmniSolo OneHumanCorp Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('.animate-fade-in').first()).toBeVisible({ timeout: 5000 });
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
