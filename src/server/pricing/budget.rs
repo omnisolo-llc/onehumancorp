@@ -136,6 +136,7 @@ impl BudgetManager {
         }
 
         let mut state = self.state.lock().unwrap();
+        #[allow(clippy::collapsible_if)]
         if let Some(next) = state.total_allocated.checked_add(amount_cents) {
             if next <= self.total_limit_cents {
                 state.total_allocated = next;
