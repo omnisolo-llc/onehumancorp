@@ -4,6 +4,8 @@ ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS translated_notes TEXT;
 ALTER TABLE agent_feed_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_approvals DISABLE ROW LEVEL SECURITY;
 ALTER TABLE job_templates DISABLE ROW LEVEL SECURITY;
@@ -353,6 +355,14 @@ VALUES (
   '{"feature_type":"subscription_churn_risk","customer_id":"e2e-customer-bakery","description":"A subscriber is at risk of churning","reason":"No recent activity in 30 days and renewal is approaching"}'::jsonb,
   '{"feature_type":"subscription_churn_risk","action_type":"DraftForReview","generated_response":"We miss you. Book a complimentary catch-up session and keep your momentum going."}'::jsonb,
   'PENDING_APPROVAL'
+),
+(
+  'e2e-feed-inbox-quote-1',
+  'e2e-tenant',
+  'Sales',
+  '{"description":"Vegan pastry box quote approval","customer_id":"maya_bakes"}'::jsonb,
+  '{"inbox_message_id":"e2e-inbox-msg-1","action_type":"Draft Quote","feature_type":"quote_draft","total_amount":75.00,"total_amount_cents":7500,"scope":"Vegan options for Saturday","line_items":[{"description":"Vegan Pastry Box","unit_price_cents":7500,"quantity":1}]}'::jsonb,
+  'PENDING_APPROVAL'
 )
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
@@ -668,6 +678,25 @@ ON staff_tasks
 USING (tenant_id::text = current_setting('app.current_tenant', true))
 WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
+CREATE TABLE IF NOT EXISTS shift_summaries (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    shift_date DATE NOT NULL,
+    summary_text TEXT NOT NULL,
+    escalations TEXT,
+    metrics JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE shift_summaries ADD COLUMN IF NOT EXISTS escalations TEXT;
+CREATE INDEX IF NOT EXISTS idx_shift_summaries_tenant_id ON shift_summaries(tenant_id);
+ALTER TABLE shift_summaries ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_shift_summaries ON shift_summaries;
+CREATE POLICY tenant_isolation_shift_summaries
+ON shift_summaries
+USING (tenant_id::text = current_setting('app.current_tenant', true))
+WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
@@ -686,6 +715,7 @@ ALTER TABLE job_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applied_client_mutations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shift_summaries ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
@@ -705,5 +735,6 @@ ALTER TABLE job_locations FORCE ROW LEVEL SECURITY;
 ALTER TABLE applied_client_mutations FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed FORCE ROW LEVEL SECURITY;
 ALTER TABLE staff_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE shift_summaries FORCE ROW LEVEL SECURITY;
 
 COMMIT;

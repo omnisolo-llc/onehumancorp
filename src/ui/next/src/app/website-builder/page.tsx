@@ -126,7 +126,10 @@ export default function WebsiteBuilderPage() {
         }
       }
     })
-    .catch(err => console.error('Failed to load builder state', err))
+    .catch(err => {
+      if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('Failed to fetch'))) return;
+      console.error('Failed to load builder state', err);
+    })
     .finally(() => {
       setIsLoaded(true);
     });

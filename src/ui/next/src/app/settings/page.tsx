@@ -80,6 +80,12 @@ export default function SettingsPage() {
 
 
 
+  const isAbortError = (e: unknown) => {
+    if (!e) return false;
+    const msg = String((e as { message?: string })?.message || e);
+    return (e as { name?: string })?.name === "AbortError" || msg.includes("Failed to fetch") || msg.includes("aborted");
+  };
+
   useEffect(() => {
     Promise.all([
       fetch("/api/v1/settings/delivery")
@@ -92,7 +98,10 @@ export default function SettingsPage() {
              delivery_fee: data.delivery_fee || 8.50,
            });
         })
-        .catch(e => console.error("Failed to load delivery settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load delivery settings", e);
+        }),
 
       fetch("/api/v1/assistant/settings")
         .then(res => res.ok ? res.json() : null)
@@ -101,7 +110,10 @@ export default function SettingsPage() {
             setAgentName(data.settings.agentName);
           }
         })
-        .catch(e => console.error("Failed to load assistant settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load assistant settings", e);
+        }),
 
       fetch("/api/v1/settings/voice")
         .then(res => res.ok ? res.json() : null)
@@ -115,7 +127,10 @@ export default function SettingsPage() {
             });
           }
         })
-        .catch(e => console.error("Failed to load voice settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load voice settings", e);
+        }),
 
       fetch("/api/v1/settings/telemetry")
         .then(res => res.ok ? res.json() : null)
@@ -124,7 +139,10 @@ export default function SettingsPage() {
             setProductTelemetryEnabled(data.product_telemetry_enabled);
           }
         })
-        .catch(e => console.error("Failed to load telemetry settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load telemetry settings", e);
+        }),
 
       fetch("/api/v1/local_seo/discovery_report")
         .then(res => res.ok ? res.json() : null)
@@ -138,7 +156,10 @@ export default function SettingsPage() {
             }
           }
         })
-        .catch(e => console.error("Failed to load seo reports", e))
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load seo reports", e);
+        })
     ]).finally(() => {
       setIsLoading(false);
     });
@@ -156,7 +177,10 @@ export default function SettingsPage() {
           setUsageLogs(data);
         }
       })
-      .catch(e => console.error("Failed to load usage logs", e));
+      .catch(e => {
+        if (isAbortError(e)) return;
+        console.error("Failed to load usage logs", e);
+      });
 
     fetch("/api/v1/settings/authentication", { cache: "no-store" })
       .then(async res => {

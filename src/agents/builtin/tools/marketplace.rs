@@ -133,7 +133,22 @@ impl MarketplaceClient {
 
     /// Search for agents in the marketplace
     pub async fn search(&self, query: &str) -> Result<Vec<MarketplaceAgent>, String> {
-        self.provider.search(query).await
+        let mut results = self.provider.search(query).await?;
+        if let Ok(cache) = self.cache.read() {
+            let q_lower = query.to_lowercase();
+            for agent in cache.values() {
+                if !results.iter().any(|r| r.id == agent.id) {
+                    if q_lower.is_empty()
+                        || agent.name.to_lowercase().contains(&q_lower)
+                        || agent.description.to_lowercase().contains(&q_lower)
+                        || agent.author.to_lowercase().contains(&q_lower)
+                    {
+                        results.push(agent.clone());
+                    }
+                }
+            }
+        }
+        Ok(results)
     }
 
     /// Fetch a specific agent's definition
@@ -253,7 +268,13 @@ pub mod test_utils {
                 return Err("Mock publish error".to_string());
             }
             if agent.id.is_empty() {
-                agent.id = "mock-id-123".to_string();
+                agent.id = format!(
+                    "mock-id-{}",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis()
+                );
             }
             Ok(agent)
         }
