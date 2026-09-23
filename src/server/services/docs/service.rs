@@ -18,6 +18,14 @@ fn get_articles() -> &'static Vec<HelpArticle> {
     HELP_ARTICLES.get_or_init(|| {
         vec![
             HelpArticle {
+                id: "setup-connected-accounts-1".to_string(),
+                topic: "Getting Started".to_string(),
+                title: "Setup, Connected Accounts, and Standing Authority".to_string(),
+                content_markdown: "### 1. Setup and Connected Accounts\nTo run your business, your AI team needs access to specific tools. Currently, you can securely connect **Stripe** (for payments and invoicing) and **OpenAI** (for AI inference).\n- **Security:** Your credentials are encrypted and locked to your specific business. We never store credentials in plain text.\n- **Unsupported Tools:** Connections to other tools are currently disabled to ensure your data remains secure until those integrations are fully verified.\n\n### 2. Standing Authority and Exceptions\nYour AI team operates strictly within the policies you set.\n- **Revocation:** As an owner or admin, you can revoke a connection at any time. When you revoke an account (e.g., Stripe), the system immediately blocks new requests, though requests already sent to the provider may finish.\n- **Exceptions & Recovery:** If a connection becomes invalid, its status changes to \"verification required.\" The AI team will pause workflows relying on that tool until you re-authenticate.\n\n### 3. Cost, Evidence, and Budget Limits\n- **Hard Spend Caps:** Before the AI team takes any action that costs money, it makes a reservation against your budget. If your budget is exhausted, the system fails safely and requests your intervention. It will not overspend.\n- **Usage Accounting:** Every action is durably logged. We never double-charge you for usage on your own API keys.\n- **Evidence:** When the AI team completes a task (like creating an invoice), you receive a verified, source-linked receipt directly from the provider (e.g., Stripe), ensuring you have proof the work was completed.".to_string(),
+            },
+
+
+            HelpArticle {
                 id: "getting-started-1".to_string(),
                 topic: "Getting Started".to_string(),
                 title: "Welcome to OmniSolo".to_string(),

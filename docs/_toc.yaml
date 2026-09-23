@@ -33,3 +33,5 @@ toc:
     path: /docs/vision/market_strategy.md
   - title: Help Center
     path: /docs/help_center/index.md
+  - title: Setup, Connected Accounts, and Standing Authority
+    path: /docs/help_center/setup_connected_accounts_standing_authority.md
