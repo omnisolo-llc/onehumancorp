@@ -133,19 +133,19 @@
 
       <div id="step-offer" class="step">
         <h2>Offer</h2>
-        <input type="text" data-testid="first-offer" placeholder="First Offer" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glass-control glassmorphism" placeholder="First Offer" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-location">Next</button>
       </div>
 
       <div id="step-location" class="step">
         <h2>Location</h2>
-        <input type="text" data-testid="location-input" placeholder="Location" />
+        <input type="text" id="location-input" data-testid="location-input" class="glass-control glassmorphism" placeholder="Location" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Next</button>
       </div>
 
       <div id="step-target-audience" class="step">
         <h2>Target Audience</h2>
-        <input type="text" data-testid="target-audience" placeholder="Target Audience" />
+        <input type="text" id="target-audience" data-testid="target-audience" class="glass-control glassmorphism" placeholder="Target Audience" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Next</button>
       </div>
 
@@ -200,9 +200,9 @@
         state.adminName = getVal('[data-testid="admin-name"]');
         state.adminEmail = getVal('[data-testid="admin-email"]');
         state.adminPassword = getVal('[data-testid="admin-password"]');
-        state.firstOffer = getVal('[data-testid="first-offer"]');
-        state.location = getVal('[data-testid="location-input"]');
-        state.targetAudience = getVal('[data-testid="target-audience"]');
+        state.firstOffer = getVal('#first-offer');
+        state.location = getVal('#location-input');
+        state.targetAudience = getVal('#target-audience');
         state.domainName = getVal('[data-testid="domain-name"]');
         state.templateSelection = getVal('[data-testid="template-selection"]');
         state.assistantTone = getVal('[data-testid="assistant-tone"]');
@@ -242,9 +242,9 @@
         setVal('[data-testid="admin-name"]', state.adminName);
         setVal('[data-testid="admin-email"]', state.adminEmail);
         // Do not restore password from state, keep it empty for security
-        setVal('[data-testid="first-offer"]', state.firstOffer);
-        setVal('[data-testid="location-input"]', state.location);
-        setVal('[data-testid="target-audience"]', state.targetAudience);
+        setVal('#first-offer', state.firstOffer);
+        setVal('#location-input', state.location);
+        setVal('#target-audience', state.targetAudience);
         setVal('[data-testid="domain-name"]', state.domainName);
         setVal('[data-testid="template-selection"]', state.templateSelection);
         setVal('[data-testid="assistant-tone"]', state.assistantTone);
