@@ -225,4 +225,117 @@ mod tests {
         assert_eq!(agent_summary.token_used, 1500);
         assert_eq!(agent_summary.pct, 1.0);
     }
+
+    #[tokio::test]
+    async fn test_get_cost_summary_tenant_isolation() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = Arc::new(CostAuditor::new(config));
+        let service = MyBillingService::new(auditor.clone());
+
+        // Track usage for org_a
+        let req_a = TokenUsage {
+            agent_id: "agent_a".to_string(),
+            organization_id: "org_a".to_string(),
+            model: "model_z".to_string(),
+            prompt_tokens: 1000,
+            completion_tokens: 500,
+            cost_usd: 0.0,
+            occurred_at_unix: 0,
+            cached_tokens: 0,
+        };
+        let mut request_a = Request::new(req_a);
+        request_a
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://test-a".to_string(),
+                org_id: "org_a".to_string(),
+                agent_id: "agent_a".to_string(),
+            });
+        let _ = service.track_token_usage(request_a).await;
+
+        // Track usage for org_b
+        let req_b = TokenUsage {
+            agent_id: "agent_b".to_string(),
+            organization_id: "org_b".to_string(),
+            model: "model_z".to_string(),
+            prompt_tokens: 3000,
+            completion_tokens: 1500,
+            cost_usd: 0.0,
+            occurred_at_unix: 0,
+            cached_tokens: 0,
+        };
+        let mut request_b = Request::new(req_b);
+        request_b
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://test-b".to_string(),
+                org_id: "org_b".to_string(),
+                agent_id: "agent_b".to_string(),
+            });
+        let _ = service.track_token_usage(request_b).await;
+
+        // Verify org_a summary
+        let req_summary_a = TokenUsage {
+            agent_id: "".to_string(),
+            organization_id: "org_a".to_string(),
+            model: "".to_string(),
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            cost_usd: 0.0,
+            occurred_at_unix: 0,
+            cached_tokens: 0,
+        };
+
+        let mut request_summary_a = Request::new(req_summary_a);
+        request_summary_a
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://test-a".to_string(),
+                org_id: "org_a".to_string(),
+                agent_id: "agent_a".to_string(),
+            });
+        let response_a = service.get_cost_summary(request_summary_a).await;
+        assert!(response_a.is_ok());
+        let summary_a = response_a.unwrap().into_inner();
+
+        assert_eq!(summary_a.organization_id, "org_a");
+        assert_eq!(summary_a.total_cost_usd, 2.0); // Only org_a cost
+        assert_eq!(summary_a.total_tokens, 1500); // Only org_a tokens
+        assert_eq!(summary_a.agents.len(), 1);
+        assert_eq!(summary_a.agents[0].agent_id, "agent_a");
+
+        // Verify org_b summary
+        let req_summary_b = TokenUsage {
+            agent_id: "".to_string(),
+            organization_id: "org_b".to_string(),
+            model: "".to_string(),
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            cost_usd: 0.0,
+            occurred_at_unix: 0,
+            cached_tokens: 0,
+        };
+
+        let mut request_summary_b = Request::new(req_summary_b);
+        request_summary_b
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://test-b".to_string(),
+                org_id: "org_b".to_string(),
+                agent_id: "agent_b".to_string(),
+            });
+        let response_b = service.get_cost_summary(request_summary_b).await;
+        assert!(response_b.is_ok());
+        let summary_b = response_b.unwrap().into_inner();
+
+        assert_eq!(summary_b.organization_id, "org_b");
+        assert_eq!(summary_b.total_cost_usd, 6.0); // Only org_b cost (3000*0.001 + 1500*0.002 = 3+3=6)
+        assert_eq!(summary_b.total_tokens, 4500); // Only org_b tokens
+        assert_eq!(summary_b.agents.len(), 1);
+        assert_eq!(summary_b.agents[0].agent_id, "agent_b");
+    }
 }
