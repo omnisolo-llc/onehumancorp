@@ -1628,13 +1628,16 @@ function initWalkthrough() {
                 target.style.background = 'white'; // Make it pop
                 target.style.pointerEvents = 'none';
 
+                target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
                 const rect = target.getBoundingClientRect();
-                // Position bubble below target if space permits, else above
-                if (rect.bottom + 200 < window.innerHeight) {
-                    bubble.style.top = (rect.bottom + 10) + 'px';
+                const bubbleHeight = bubble.offsetHeight || 180;
+                let topPos;
+                if (rect.bottom + bubbleHeight + 20 < window.innerHeight) {
+                    topPos = rect.bottom + 10;
                 } else {
-                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                    topPos = rect.top - bubbleHeight - 10;
                 }
+                bubble.style.top = Math.max(10, Math.min(topPos, window.innerHeight - bubbleHeight - 10)) + 'px';
                 bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
             } else {
                 // Center if no target

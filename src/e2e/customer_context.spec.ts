@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
-  // Use adminPage fixture which handles authentication
-  test('displays customer context in the Ambassador Reply Card', async ({ page }) => {
+  // Use loginAs fixture which handles authentication
+  test('displays customer context in the Ambassador Reply Card', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // Navigate to dashboard
     await page.goto('/dashboard');
 

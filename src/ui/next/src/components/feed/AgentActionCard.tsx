@@ -228,6 +228,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
           actionPayload
             ?.feature_type === "subscription_churn_risk" ||
           actionPayload
+            ?.feature_type === "onboarding_welcome" ||
+          actionPayload
+            ?.feature_type === "proactive_ops" ||
+          actionPayload
             ?.feature_type === "invoice_followup") && (
           <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
             {actionPayload

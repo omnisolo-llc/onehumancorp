@@ -5649,6 +5649,20 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     "DISMISSED"
                 };
+                let envelope_status = if payload.approved {
+                    "COMPLETED"
+                } else {
+                    "DISMISSED"
+                };
+                let _ = sqlx::query(
+                    "UPDATE task_envelopes SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3",
+                )
+                .bind(envelope_status)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
                 let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1 WHERE id = $2 AND tenant_id = $3")
                 .bind(lifecycle_state)
                 .bind(&payload.triage_item_id)
@@ -6051,6 +6065,20 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     "DISMISSED"
                 };
+                let envelope_status = if payload.approved {
+                    "COMPLETED"
+                } else {
+                    "DISMISSED"
+                };
+                let _ = sqlx::query(
+                    "UPDATE task_envelopes SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?",
+                )
+                .bind(envelope_status)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
                 let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ? WHERE id = ? AND tenant_id = ?")
                 .bind(lifecycle_state)
                 .bind(&payload.triage_item_id)
@@ -6757,12 +6785,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let db2 = db.clone();
         let db3 = db.clone();
         let db4 = db.clone();
+        let db5 = db.clone();
         let t_id1 = tenant_id.to_string();
         let t_id2 = tenant_id.to_string();
         let t_id3 = tenant_id.to_string();
         let t_id4 = tenant_id.to_string();
+        let t_id5 = tenant_id.to_string();
 
-        let (legacy_res, feed_res, approvals_res, daily_work_res) = tokio::join!(
+        let (legacy_res, feed_res, approvals_res, daily_work_res, envelope_res) = tokio::join!(
             tokio::spawn(async move {
                 let mut legacy_rows_json = Vec::new();
                 match &db1.store {
@@ -7092,6 +7122,125 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 daily_work_rows_json
+            }),
+            tokio::spawn(async move {
+                let mut envelope_rows_json = Vec::new();
+                match &db5.store {
+                    crate::db::DbStore::Postgres => {
+                        let query_str = if mobile_optimized {
+                            "SELECT id, status, CAST(created_at AS text) AS created_at FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
+                        } else {
+                            "SELECT id, current_department, status, payload::text AS payload, routing_history::text AS routing_history, CAST(created_at AS text) AS created_at FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
+                        };
+                        if let Ok(rows) = sqlx::query(query_str)
+                            .bind(&t_id5)
+                            .fetch_all(&db5.pool)
+                            .await
+                        {
+                            for row in rows {
+                                use sqlx::Row;
+                                let mut map = serde_json::Map::new();
+                                map.insert(
+                                    "id".to_string(),
+                                    serde_json::json!(
+                                        row.try_get::<String, _>("id").unwrap_or_default()
+                                    ),
+                                );
+                                map.insert("tenant_id".to_string(), serde_json::json!(t_id5));
+                                map.insert(
+                                    "intent".to_string(),
+                                    serde_json::json!("task_envelope"),
+                                );
+                                map.insert(
+                                    "status".to_string(),
+                                    serde_json::json!(
+                                        row.try_get::<String, _>("status").unwrap_or_default()
+                                    ),
+                                );
+                                map.insert(
+                                    "created_at".to_string(),
+                                    serde_json::json!(
+                                        row.try_get::<String, _>("created_at").unwrap_or_default()
+                                    ),
+                                );
+
+                                if !mobile_optimized {
+                                    let dept = row
+                                        .try_get::<String, _>("current_department")
+                                        .unwrap_or_default();
+                                    map.insert(
+                                        "customer_info".to_string(),
+                                        serde_json::json!({ "department": dept }),
+                                    );
+                                    let payload_str: String =
+                                        row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                                    let payload_val: serde_json::Value =
+                                        serde_json::from_str(&payload_str)
+                                            .unwrap_or_else(|_| serde_json::json!({}));
+                                    map.insert("suggested_actions".to_string(), payload_val);
+                                }
+
+                                envelope_rows_json.push(serde_json::Value::Object(map));
+                            }
+                        }
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let query_str = if mobile_optimized {
+                            "SELECT id, status, CAST(created_at AS TEXT) AS created_at FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
+                        } else {
+                            "SELECT id, current_department, status, payload, routing_history, CAST(created_at AS TEXT) AS created_at FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
+                        };
+                        if let Ok(rows) = sqlx::query(query_str).bind(&t_id5).fetch_all(pool).await
+                        {
+                            for row in rows {
+                                use sqlx::Row;
+                                let mut map = serde_json::Map::new();
+                                map.insert(
+                                    "id".to_string(),
+                                    serde_json::json!(
+                                        row.try_get::<String, _>("id").unwrap_or_default()
+                                    ),
+                                );
+                                map.insert("tenant_id".to_string(), serde_json::json!(t_id5));
+                                map.insert(
+                                    "intent".to_string(),
+                                    serde_json::json!("task_envelope"),
+                                );
+                                map.insert(
+                                    "status".to_string(),
+                                    serde_json::json!(
+                                        row.try_get::<String, _>("status").unwrap_or_default()
+                                    ),
+                                );
+                                map.insert(
+                                    "created_at".to_string(),
+                                    serde_json::json!(
+                                        row.try_get::<String, _>("created_at").unwrap_or_default()
+                                    ),
+                                );
+
+                                if !mobile_optimized {
+                                    let dept = row
+                                        .try_get::<String, _>("current_department")
+                                        .unwrap_or_default();
+                                    map.insert(
+                                        "customer_info".to_string(),
+                                        serde_json::json!({ "department": dept }),
+                                    );
+                                    let payload_str: String =
+                                        row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                                    let payload_val: serde_json::Value =
+                                        serde_json::from_str(&payload_str)
+                                            .unwrap_or_else(|_| serde_json::json!({}));
+                                    map.insert("suggested_actions".to_string(), payload_val);
+                                }
+
+                                envelope_rows_json.push(serde_json::Value::Object(map));
+                            }
+                        }
+                    }
+                }
+                envelope_rows_json
             })
         );
 
@@ -7106,6 +7255,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
         if let Ok(daily_work_rows) = daily_work_res {
             results.extend(daily_work_rows);
+        }
+        if let Ok(envelope_rows) = envelope_res {
+            results.extend(envelope_rows);
         }
 
         // Sort combined results by created_at DESC

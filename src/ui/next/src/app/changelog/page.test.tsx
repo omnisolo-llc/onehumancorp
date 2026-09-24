@@ -23,7 +23,7 @@ describe('ChangelogPage', () => {
       render(<ChangelogPage />);
     });
 
-    expect(screen.getByText('Release Notes & Changelog')).toBeInTheDocument();
+    expect(screen.getByText('Changelog Updates')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('Version 1.0 (Latest)')).toBeInTheDocument();

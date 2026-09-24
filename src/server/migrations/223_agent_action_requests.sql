@@ -25,6 +25,8 @@ ALTER TABLE agent_action_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPT
 ALTER TABLE agent_action_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE agent_action_requests ADD COLUMN IF NOT EXISTS source TEXT;
 ALTER TABLE agent_action_requests ADD COLUMN IF NOT EXISTS agent_type TEXT;
+ALTER TABLE agent_action_requests ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE agent_action_requests ADD COLUMN IF NOT EXISTS department_type TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_agent_action_requests_tenant_status
     ON agent_action_requests (tenant_id, status, created_at DESC);

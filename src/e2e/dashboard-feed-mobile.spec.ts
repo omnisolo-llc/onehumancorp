@@ -3,7 +3,8 @@ import { expect, test } from './fixtures';
 test.describe('Unified Agent Feed Mobile MVP', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('displays feed and ensures no horizontal scroll on mobile', async ({ page }) => {
+  test('displays feed and ensures no horizontal scroll on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // Navigate to dashboard
     await page.goto('/dashboard');
     await page.waitForLoadState('domcontentloaded');
@@ -27,8 +28,9 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     }
   });
 
-  test('should allow approving an action card in the feed', async ({ page }) => {
+  test('should allow approving an action card in the feed', async ({ page, loginAs, adminUser }) => {
     test.setTimeout(180000);
+    await loginAs(page, adminUser);
 
     // Navigate to dashboard
     await page.goto('/dashboard');
@@ -61,8 +63,9 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     }).toPass({ timeout: 10000 });
   });
 
-  test('should allow dismissing an action card in the feed', async ({ page }) => {
+  test('should allow dismissing an action card in the feed', async ({ page, loginAs, adminUser }) => {
     test.setTimeout(180000);
+    await loginAs(page, adminUser);
 
     // Navigate to dashboard
     await page.goto('/dashboard');

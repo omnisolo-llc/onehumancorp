@@ -215,14 +215,18 @@ const DEFAULT_HELP_ARTICLES: HelpArticle[] = [
 ];
 
 // --- Help Widget System ---
-const isVitest = typeof process !== "undefined" && Boolean(process.env.VITEST);
 
 export function HelpWidget() {
   const router = useRouter();
   const pathname = usePathname();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<HelpTab>("center");
+  const [tab, setTab] = useState<HelpTab>(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("test_chat=true")) {
+      return "chat";
+    }
+    return "center";
+  });
   const isTestChat = typeof window !== 'undefined' && (
     window.location.search.includes('test_chat=true') ||
     (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_E2E === 'true')
@@ -403,19 +407,24 @@ export function HelpWidget() {
         className={`${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"} z-[90] flex items-center gap-2 fixed bottom-6 right-6`}
         data-ui-overlay="true"
       >
+        <button
+          id="ohc-help-btn-text"
+          onClick={() => setOpen(!open)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-[30px] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-sm hover:bg-white text-xs font-semibold cursor-pointer min-h-[44px]"
+          aria-label="Help"
+        >
+          Help
+        </button>
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             id="omnisolo-floating-help-btn"
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px] relative"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px] relative cursor-pointer"
             aria-label="Open help chat"
-            aria-labelledby={isVitest ? undefined : "help-btn-label"}
           >
-            <span id="help-btn-label" className="sr-only">Help</span>
             <span
               id="ohc-floating-help-btn"
               className="absolute inset-0 flex items-center justify-center cursor-pointer"
-              aria-label="Help"
             >
               <svg className="w-8 h-8 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -434,13 +443,20 @@ export function HelpWidget() {
                 key={t.id}
                 data-target={t.target}
                 onClick={() => setTab(t.id)}
-                aria-label={t.id === "chat" ? "Ask anything" : t.ariaLabel}
+                aria-label={t.id === "chat" ? "Ask AI (Ask anything)" : t.ariaLabel}
                 className={`flex-1 min-w-[80px] min-h-[44px] px-3 py-3 text-sm font-bold transition-all whitespace-nowrap ${
                   tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900 hover:bg-white/20 dark:hover:bg-[#16161a]/20"
                 }`}
                 aria-pressed={tab === t.id}
               >
-                {t.label}
+                {t.id === "chat" ? (
+                  <>
+                    <span className="sr-only">Ask AI </span>
+                    {t.label}
+                  </>
+                ) : (
+                  t.label
+                )}
               </button>
             ))}
             <button
