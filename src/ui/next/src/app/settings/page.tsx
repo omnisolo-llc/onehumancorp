@@ -364,7 +364,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <AppShell title="Settings">
+      <AppShell title="Workspace Settings">
         <div className="flex h-64 items-center justify-center">
           <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
@@ -373,7 +373,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell title="Settings">
+    <AppShell title="Workspace Settings">
       <div id="settings-screen" className="mx-auto max-w-4xl space-y-8 font-inter">
         <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
           <div className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Settings</div>

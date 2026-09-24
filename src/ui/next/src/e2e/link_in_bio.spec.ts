@@ -17,7 +17,7 @@ test.describe('Link-in-Bio Generator E2E', () => {
     await bioInput.fill('We bake the best E2E cakes!');
 
     // 4. Update the first link
-    const linkTitleInput = page.locator('input[placeholder="Title (e.g. Visit my Shop)"]').first();
+    const linkTitleInput = page.locator('input[placeholder*="Shop"]').first();
     await linkTitleInput.fill('Our Menu');
 
     const linkUrlInput = page.locator('input[placeholder="URL (e.g. https://...)"]').first();

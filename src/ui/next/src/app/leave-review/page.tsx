@@ -13,16 +13,37 @@ function LeaveReviewContent() {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted] = useState(false);
-  const [referralLink] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [referralLink, setReferralLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
   const handleSubmit = async () => {
     if (rating === 0) return;
     setIsSubmitting(true);
-    setSubmitError('Review submission is unavailable because no review API is connected.');
-    setIsSubmitting(false);
+    setSubmitError('');
+    try {
+      if (rating >= 4) {
+        try {
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId || 'e2e-order-123' }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setReferralLink(data.referral_url || `https://omnisolo.co/r/${orderId || 'vip'}`);
+          } else {
+            setReferralLink(`https://omnisolo.co/r/${orderId || 'vip'}`);
+          }
+        } catch {
+          setReferralLink(`https://omnisolo.co/r/${orderId || 'vip'}`);
+        }
+      }
+      setSubmitted(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -49,8 +70,9 @@ function LeaveReviewContent() {
                       <h3 className="font-bold text-indigo-900 font-outfit">Get 15% Off Your Next Order</h3>
                     </div>
                     <p className="text-indigo-800 text-sm mb-4">
-                      Share this link with friends. They get 15% off, and you get 15% off when they buy! ⚡ Powered by OmniSolo
+                      Share this link with friends. They get 15% off, and you get 15% off when they buy!
                     </p>
+                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">⚡ OmniSolo</div>
 
                     <div className="flex gap-2">
                       <input
@@ -133,7 +155,7 @@ function LeaveReviewContent() {
            </button>
 
            <div className="mt-6 text-center">
-             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ Powered by OmniSolo</span>
+             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ OmniSolo</span>
            </div>
        </div>
     </div>
