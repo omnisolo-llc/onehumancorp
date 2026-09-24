@@ -1,4 +1,0 @@
-{
-  "issue_title": "F10: Tauri packages exported Next assets despite blanket legacy claims",
-  "issue_description": "Audit and remediation evaluation for F10 (stale exported desktop assets). After reading docs/research/native_migration_and_remediation.md, it is noted that Tauri packaging has initial implementation, but final Tauri build/install tests are pending. Due to the current state of CI and outstanding system dependencies (e.g., GLib/GDK/WebKit requirements which block full UI test runs), a substantial fortification is not feasible within the current bounded scope. Proceeding with a no-work finding. Superpowers workflow provenance: Loaded skills: using-superpowers. Revision hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71. Checks performed: codebase exploration and dependency installation attempts. Outcomes: execution pivoted to a no-work finding."
-}
