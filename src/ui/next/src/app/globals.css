@@ -778,7 +778,7 @@ html.dark .glass-control {
 
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 8px !important;
+  border-radius: 16px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -799,7 +799,7 @@ html.dark .glass-control {
 
   .app-shell .glassmorphism,
   .app-shell .glass-card {
-    border-radius: 8px !important;
+    border-radius: 16px !important;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -816,7 +816,7 @@ html.dark .app-shell .app-panel {
 
 html.dark .app-shell .glassmorphism,
 html.dark .app-shell .glass-card {
-  border-radius: 8px !important;
+  border-radius: 16px !important;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1304,7 +1304,7 @@ html.dark .glass-panel {
 }
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 8px !important;
+  border-radius: 16px !important;
 }
 .glass-control {
   border-radius: 8px !important;
