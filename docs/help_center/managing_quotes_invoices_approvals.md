@@ -1,27 +1,31 @@
-# OmniSolo Help Center: Managing Quotes, Invoices, and Approvals
+# How to Send Proposals and Collect Payments Securely
 
-## Title: How to Send Proposals and Collect Payments Securely
+Sending a proposal and getting paid should be easy and safe. OmniSolo makes sure your quotes are accurate and your payment links work.
 
-**Problem Statement:**
-As a small business owner, it's critical to know that the proposals you send to your clients contain the exact scope and pricing you agreed upon, and that payment links are secure and verifiable.
+## Accurate Proposals
+OmniSolo builds quotes based on exactly what your customer asks for and the rules you set. We check the math for you.
+- If any prices are missing, the app marks them as `NEEDS_PRICING` so you can fill them in.
+- The app will not guess prices for you.
+- Optional items are left out of the total until the customer selects them.
 
-**Research Report / Current Capabilities:**
-Based on our latest updates (referencing the current active capability map), OmniSolo now enforces stricter controls on how proposals and invoices are generated:
+## Secure Payment Links
+When you make an invoice, OmniSolo connects directly to your payment provider (like Stripe) to create a real, secure checkout link. If there is a problem connecting to your provider, the app will let you know so you never send a broken link.
 
-- **No More Placeholder Proposals:** OmniSolo ensures that the quote generated directly reflects the customer's inquiry and your explicit business rules. We validate owner-supplied line items and deposits with checked math. If pricing information is missing, the system will mark it as `NEEDS_PRICING` for your review, rather than guessing or fabricating a fixed amount. Optional, unselected items are strictly excluded from committed totals.
-- **Secure Checkout Links:** When you create an invoice, OmniSolo generates a real, secure session with your connected payment provider (like Stripe). It will not generate fictitious checkout URLs. If a provider is unavailable, it will explicitly state the pending/unavailable status, ensuring you never send a broken link to a client.
-- **Drafts vs. Sent Reminders:** The system clearly distinguishes between drafting a reminder and actually delivering it. We only persist actual, source-grounded drafts. Once an invoice is paid or canceled, stale drafts are automatically retired so you don't accidentally ask a customer twice.
-- **Your Authority:** These actions operate under your standing authority. The system enforces your hard spend reservations, prevents unauthorized effect on your accounts, and allows you to revoke or stop actions at any time.
+## Drafts vs. Sent Reminders
+OmniSolo saves your drafts so you can review them. Once an invoice is paid or canceled, old drafts are removed automatically. This way, you won't ask a customer to pay twice by mistake.
 
-**How to Use This Feature:**
+## You Are in Control
+Your AI team only takes actions you approve. You set the rules and limits, and you can stop or change them at any time.
+
+## How to Send a Proposal
 1. Open a Lead or Inquiry in the OmniSolo app.
-2. Click **Generate Proposal**. Review the line items carefully. If any items are marked `NEEDS_PRICING`, fill in the correct amounts.
-3. Approve the proposal to finalize the scope and price.
-4. When ready, click **Create Invoice**. OmniSolo will securely connect to your payment provider to generate a verifiable checkout link.
-5. The resulting email/SMS draft will be placed in your outbox for final review before sending.
+2. Click **Generate Proposal**. Review the items. If any say `NEEDS_PRICING`, add the correct prices.
+3. Approve the proposal to lock in the final price.
+4. Click **Create Invoice**. OmniSolo will securely connect to your payment provider to make a checkout link.
+5. The email or SMS draft will go to your outbox for one last check before you send it.
 
-**Cost & Expectations:**
-These actions use your regular OHC subscription. There are no hidden markup fees on your customer's invoice. Note that standard payment processor fees (like Stripe's transaction fee) still apply and are managed directly in your provider dashboard.
+## Cost
+These features are included in your regular subscription. We do not add any hidden markup fees to your customer's invoice. Standard fees from your payment provider still apply.
 
-**Exceptions and Recovery:**
-If your payment provider disconnects or fails to create a link, the invoice status will remain "Draft/Pending Provider". You can simply try generating the link again later; the system is designed to retry safely without creating duplicate charges.
+## What If Something Goes Wrong?
+If your payment provider disconnects and cannot make a link, the invoice will say "Draft/Pending Provider". Just try again later. The app will safely try again without charging anyone twice.
