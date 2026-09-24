@@ -63,7 +63,10 @@ impl ResearcherLlmClient for LocalLlm {
         }
 
         let (response_text, usage) = if is_test_mode {
-            (r#"{"service": "Plumbing Fix", "price": 250.0}"#.to_string(), Usage::default())
+            (
+                r#"{"service": "Plumbing Fix", "price": 250.0}"#.to_string(),
+                Usage::default(),
+            )
         } else {
             match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                 Ok("minimax") => {
@@ -77,9 +80,9 @@ impl ResearcherLlmClient for LocalLlm {
                     let observed = crate::minimax::LocalLLMClient::new()
                         .reason_with_usage(&prompt, req.max_tokens)
                         .await?;
-                    let counts = observed
-                        .counts
-                        .ok_or("Local provider omitted usage; draft accounting requires reconciliation")?;
+                    let counts = observed.counts.ok_or(
+                        "Local provider omitted usage; draft accounting requires reconciliation",
+                    )?;
                     let input_tokens = i32::try_from(counts.input)
                         .map_err(|_| "Local input usage exceeds supported range")?;
                     let output_tokens = i32::try_from(counts.output)
