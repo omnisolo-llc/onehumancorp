@@ -2059,6 +2059,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         confidence_score REAL DEFAULT 0,
                         product_id TEXT,
                         payload TEXT DEFAULT '{}',
+                        description TEXT,
+                        department_type TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
@@ -3581,6 +3583,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         payload JSON,
                         source VARCHAR(255),
                         agent_type VARCHAR(255),
+                        description TEXT,
+                        department_type VARCHAR(255),
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                         INDEX idx_agent_action_requests_tenant (tenant_id)

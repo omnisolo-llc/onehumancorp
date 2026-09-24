@@ -21,7 +21,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   isAnnual,
   tierName,
   price,
-  priceSuffix = '/ month',
+  priceSuffix = '/month',
   isRecommended = false,
   recommendationText,
   features,

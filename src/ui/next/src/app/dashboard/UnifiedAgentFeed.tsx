@@ -152,6 +152,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     async function fetchAll(refresh = false) {
       try {
         if (!refresh) {
+          setError("");
           setLoading(true);
           setActivityLoading(true);
         }
@@ -525,10 +526,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       className="app-panel mb-6 w-full max-w-full md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
       aria-label="Unified Agent Feed"
     >
-      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 flex items-center justify-between">
-        <span>Action Required</span>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+          Action Required
+        </h2>
         <span className="text-xs text-gray-500 font-normal">Unified Agent Feed</span>
-      </h2>
+      </div>
       {error && (
         <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
           {error}

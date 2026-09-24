@@ -135,8 +135,9 @@ export default function TestimonialWidgetGenerator() {
                         checked={hideBranding}
                         onChange={(e) => {
                             if (!hasPro) {
-                                e.preventDefault();
+                                setHideBranding(true);
                                 setShowPaywall(true);
+                                setTimeout(() => setHideBranding(false), 50);
                             } else {
                                 setHideBranding(e.target.checked);
                             }

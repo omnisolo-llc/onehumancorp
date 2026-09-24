@@ -59,6 +59,8 @@ export default function WorkIntakeWidgetPage() {
                     <select
                         id="theme-select"
                         aria-label="Theme"
+                        aria-hidden="true"
+                        tabIndex={-1}
                         value={theme}
                         onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
                         className="sr-only"

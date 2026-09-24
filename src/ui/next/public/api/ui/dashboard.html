@@ -1582,7 +1582,7 @@ function initWalkthrough() {
         bubble.id = 'walkthrough-bubble';
         bubble.className = 'omnisolo-walkthrough-bubble glassmorphism';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100000; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -1603,7 +1603,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="omnisolo-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="omnisolo-walkthrough-close" aria-label="Close walkthrough" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px; position: relative; z-index: 10;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text || ''}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">

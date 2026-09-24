@@ -719,8 +719,10 @@
 
       removeBrandingCheckbox.addEventListener('change', (e) => {
         if (e.target.checked && !state.hasPro) {
-          e.target.checked = false;
           paywallModal.classList.add('active');
+          setTimeout(() => {
+            removeBrandingCheckbox.checked = false;
+          }, 50);
           return;
         }
         state.removeBranding = e.target.checked;

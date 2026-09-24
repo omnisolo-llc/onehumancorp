@@ -32,8 +32,9 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isProUser) {
-      e.preventDefault();
+      setRemoveBranding(true);
       setShowPaywall(true);
+      setTimeout(() => setRemoveBranding(false), 50);
     } else {
       setRemoveBranding(e.target.checked);
     }

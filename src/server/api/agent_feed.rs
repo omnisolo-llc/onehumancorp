@@ -286,7 +286,7 @@ async fn flush_batch(
     Ok(())
 }
 
-async fn list_feed_items(
+pub async fn list_feed_items(
     State(pool): State<PgPool>,
     Query(query): Query<PaginationQuery>,
     Extension(claims): Extension<Claims>,
@@ -391,7 +391,7 @@ async fn list_feed_items(
     }
 }
 
-async fn create_feed_item(
+pub async fn create_feed_item(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateFeedItemRequest>,

@@ -301,6 +301,15 @@ async fn update_job_status(
         Ok(Some(_)) => {
             let _ = tx.commit().await;
 
+            let cache = ROUTES_CACHE
+                .get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client()));
+            cache
+                .invalidate(&format!("routes_today_{}:false", tenant_id))
+                .await;
+            cache
+                .invalidate(&format!("routes_today_{}:true", tenant_id))
+                .await;
+
             // Broadcast TeammateMeshEvent
             let payload_json = serde_json::json!({
                 "job_id": id,

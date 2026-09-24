@@ -71,7 +71,7 @@ export default function SmartPricingPage() {
       <main className="p-6 md:p-8 flex-1 max-w-3xl mx-auto w-full flex flex-col gap-6">
         <div className="text-center mb-4">
           <p className="text-lg text-[#86868B]">
-            Preview smart-pricing configuration. Activation is unavailable until a pricing-settings API is connected.
+            Preview smart-pricing rules. Activation is unavailable until a pricing-settings API is connected.
           </p>
         </div>
 

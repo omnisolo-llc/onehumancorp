@@ -364,7 +364,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <AppShell title="Workspace Settings">
+      <AppShell title="Settings">
         <div className="flex h-64 items-center justify-center">
           <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
@@ -373,10 +373,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell title="Workspace Settings">
+    <AppShell title="Settings">
       <div id="settings-screen" className="mx-auto max-w-4xl space-y-8 font-inter">
         <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
-          <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Settings</h1>
+          <div className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Settings</div>
           <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and advanced system security.</p>
         </header>
 
