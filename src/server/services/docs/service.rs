@@ -21,81 +21,55 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 id: "getting-started-1".to_string(),
                 topic: "Getting Started".to_string(),
                 title: "Welcome to OmniSolo".to_string(),
-                content_markdown: "Welcome to OmniSolo! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/getting_started.md").to_string(),
             },
             HelpArticle {
                 id: "my-store-1".to_string(),
                 topic: "My Store".to_string(),
                 title: "Setting up your storefront".to_string(),
-                content_markdown: "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/my_store.md").to_string(),
             },
             HelpArticle {
                 id: "payments-1".to_string(),
                 topic: "Payments".to_string(),
                 title: "Accepting your first payment".to_string(),
-                content_markdown: "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/payments.md").to_string(),
             },
             HelpArticle {
                 id: "ai-agents-1".to_string(),
                 topic: "AI Agents".to_string(),
                 title: "Activating your AI Support Agent".to_string(),
-                content_markdown: "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/ai_agents.md").to_string(),
             },
             HelpArticle {
                 id: "marketing-1".to_string(),
                 topic: "Marketing".to_string(),
                 title: "Creating a social media post".to_string(),
-                content_markdown: "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/marketing.md").to_string(),
             },
             HelpArticle {
                 id: "account-billing-1".to_string(),
                 topic: "Account & Billing".to_string(),
                 title: "Understanding your invoice".to_string(),
-                content_markdown: "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/account_billing.md").to_string(),
             },
             HelpArticle {
                 id: "setup-accounts-authority".to_string(),
                 topic: "Getting Started".to_string(),
                 title: "Setup, Connected Accounts, and Standing Authority".to_string(),
-                content_markdown: "# Setup, Connected Accounts, and Standing Authority
-
-Welcome to OmniSolo! Getting your business up and running involves setting up your connected accounts and establishing the standing authority of your AI team.
-
-## Setup
-To set up your business, you need to configure your connected accounts and establish your standing authority. This ensures that the AI team can operate safely and securely on your behalf.
-
-## Connected Accounts
-- **Link Accounts**: Connect your Google Workspace and Stripe accounts.
-- **Verify Settings**: Verify your connection settings to ensure the AI team can access your tools to act on your behalf.
-
-## Standing Authority
-- **Define Scope**: Define the scope of the AI team's authority.
-- **Set Rules**: Set specific rules for external actions, such as sending emails or making payments.
-- **Establish Limits**: Establish a budget and spending limits for the AI team.
-
-## Evidence
-- **Maintain Records**: Maintain a record of all actions taken by the AI team.
-- **Review Feed**: Review the evidence feed to verify that the team is completing work as expected.
-
-## Cost
-- **Monitor Cost**: Monitor the cost of the AI team's operations.
-- **Understand Pricing**: Understand the pricing structure and how usage is billed. Note that your AI usage uses your regular OHC subscription without any hidden markup fees on your customer's invoice.
-
-## Exceptions and Recovery
-- **Handle Exceptions**: Learn how to handle exceptions and errors that may occur during execution.
-- **Recovery Process**: Understand the recovery process and how to resume work after a failure. If an action fails, you can simply retry without the system creating duplicate charges.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/setup_accounts_authority.md").to_string(),
             },
             HelpArticle {
                 id: "proposals-payments".to_string(),
                 topic: "Sales & Payments".to_string(),
                 title: "How to Send Proposals and Collect Payments Securely".to_string(),
-                content_markdown: "# How to Send Proposals and Collect Payments Securely\n\n**Problem Statement:**\nAs a small business owner, it's critical to know that the proposals you send to your clients contain the exact scope and pricing you agreed upon, and that payment links are secure and verifiable.\n\n**Current Capabilities:**\n- **No More Placeholder Proposals:** OmniSolo ensures that the quote generated directly reflects the customer's inquiry and your explicit business rules. We validate owner-supplied line items and deposits with checked math. If pricing information is missing, the system will mark it as `NEEDS_PRICING` for your review. Optional, unselected items are strictly excluded from committed totals.\n- **Secure Checkout Links:** When you create an invoice, OmniSolo generates a real, secure session with your connected payment provider (like Stripe). It will not generate fictitious checkout URLs.\n- **Drafts vs. Sent Reminders:** The system clearly distinguishes between drafting a reminder and actually delivering it. We only persist actual, source-grounded drafts.\n- **Your Authority:** These actions operate under your standing authority. The system enforces your hard spend reservations.\n\n**How to Use This Feature:**\n1. Open a Lead or Inquiry in the OmniSolo app.\n2. Click **Generate Proposal**. Review the line items carefully. If any items are marked `NEEDS_PRICING`, fill in the correct amounts.\n3. Approve the proposal to finalize the scope and price.\n4. When ready, click **Create Invoice**. OmniSolo will securely connect to your payment provider to generate a verifiable checkout link.\n5. The resulting email/SMS draft will be placed in your outbox for final review before sending.\n\n**Cost & Expectations:**\nThese actions use your regular OHC subscription. There are no hidden markup fees on your customer's invoice. Note that standard payment processor fees still apply.\n\n**Exceptions and Recovery:**\nIf your payment provider disconnects or fails to create a link, the invoice status will remain \"Draft/Pending Provider\". You can simply try generating the link again later.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/proposals_payments.md").to_string(),
             },
             HelpArticle {
                 id: "connected-accounts".to_string(),
                 topic: "Account & Billing".to_string(),
                 title: "Connected Accounts and Standing Authority".to_string(),
-                content_markdown: "# Connected Accounts and Standing Authority\n\n## Setup\n\nTo let your AI team help your business, you need to connect your accounts and tell the team what they are allowed to do. This keeps your business safe and in your control.\n\n## Connected Accounts\n\nYou can connect tools you already use, like Google Workspace for emails and files, and Stripe for payments. When you link these accounts, your AI team can use them to work for you. Always check your connection settings so your team has the right access.\n\n## Standing Authority\n\nStanding authority is like giving your team a rulebook. You tell them what they can do on their own and what they need to ask you first.\n- You set rules for sending emails or making payments.\n- You set hard spending limits so the team never spends more than you want.\n- You can change these rules or stop the team at any time.\n\n## Evidence\n\nYou will always know what your AI team is doing. The app keeps a clear record of all their work. You can check the evidence feed to see the emails they sent, the payments they collected, and the tasks they finished.\n\n## Cost\n\nWe want you to understand exactly what you pay for. You pay for the computer power and AI tools the team uses. You will see an estimated cost before a task starts, and a detailed bill when it finishes. There are no hidden fees. Any standard fees from your payment provider still apply.\n\n## Exceptions and Recovery\n\nSometimes things go wrong, like a payment link failing to send. If this happens, your AI team will stop and let you know. The app saves their progress, so you can easily try again later without starting over or paying twice.".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/connected_accounts.md").to_string(),
             },
         ]
     })
