@@ -333,6 +333,10 @@ export default function OnboardingWizard() {
   ]);
 
   const handleIntake = async () => {
+    if (!businessName.trim() || !whatYouSell.trim() || !location.trim()) {
+      updateState({ error: "Please fill out all required fields." });
+      return;
+    }
     updateState({ isLoading: true });
     updateState({ error: "" });
 
@@ -752,7 +756,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism translucent-glass-light dark:translucent-glass-dark"
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-white/40 dark:border-white/10 rounded-[16px]"
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
@@ -2019,7 +2023,7 @@ export default function OnboardingWizard() {
           {step === 4 && (
             <div
               aria-live="polite"
-              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism  shadow-2xl p-4 sm:p-8"
+              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-2xl p-4 sm:p-6"
             >
               <div className="w-24 h-24 relative mb-8">
                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
