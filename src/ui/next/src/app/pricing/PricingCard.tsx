@@ -30,6 +30,10 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   onManageBilling,
   onUpgrade,
 }) => {
+  const normalizedSuffix = isAnnual
+    ? '/month, billed annually'
+    : (priceSuffix.trim() === '/ month' || priceSuffix.trim() === '/month' ? '/month' : priceSuffix);
+
   return (
     <div className={`p-6 flex flex-col justify-between ${isRecommended ? 'relative shadow-xl' : 'shadow-lg'} app-card omnisolo-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full`}>
       {isRecommended && (
@@ -42,7 +46,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
             isAnnual ? `$${Math.floor(basePrice * 0.8)}` : `$${basePrice}`
           ) : (
             price
-          )} <span className="text-sm font-normal text-gray-500">{isAnnual ? '/month, billed annually' : priceSuffix}</span>
+          )} <span className="text-sm font-normal text-gray-500">{normalizedSuffix}</span>
         </p>
         {isRecommended && recommendationText && (
           <p className="text-xs text-indigo-600 font-medium mb-4">{recommendationText}</p>

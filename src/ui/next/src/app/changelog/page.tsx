@@ -61,7 +61,7 @@ export default function ChangelogPage() {
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-black py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
         <h2 data-testid="changelog-title" className="text-3xl sm:text-4xl font-extrabold font-outfit text-gray-900 dark:text-gray-100 mb-8 text-center tracking-tight">
-          Release Notes & Changelog
+          Changelog Updates
         </h2>
         <div className="space-y-8">
           {loading ? (

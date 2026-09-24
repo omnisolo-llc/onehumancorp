@@ -373,6 +373,14 @@ VALUES (
   '{"feature_type":"ambassador_reply","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?"}'::jsonb,
   '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?","generated_response":"Yes! We have a full vegan pastry selection."}'::jsonb,
   'PENDING_APPROVAL'
+),
+(
+  'e2e-feed-reschedule',
+  'e2e-tenant',
+  'Operations',
+  '{"description":"Reschedule delivery appointment for Order #1042"}'::jsonb,
+  '{"action_type":"Proposal","title":"Reschedule delivery for Order #1042","description":"Customer requested shifting delivery from 2pm to 4pm.","suggested_action":"Approve rescheduling"}'::jsonb,
+  'PENDING_APPROVAL'
 )
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
