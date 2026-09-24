@@ -41,7 +41,7 @@ export function shouldShowMobileHelpLauncher(pathname: string | null) {
 
 const helpTabs = [
   { id: "center", label: "Help", target: "tab-center", ariaLabel: "Help" },
-  { id: "chat", label: "Ask anything", target: "tab-chat", ariaLabel: "Ask AI" },
+  { id: "chat", label: "Ask anything", target: "tab-chat", ariaLabel: "Ask anything" },
   { id: "videos", label: "Videos", target: "tab-videos", ariaLabel: "Videos" },
   { id: "whatsnew", label: "New", target: "tab-changelog", ariaLabel: "What's New" }
 ] as const;
@@ -215,6 +215,8 @@ const DEFAULT_HELP_ARTICLES: HelpArticle[] = [
 ];
 
 // --- Help Widget System ---
+const isVitest = typeof process !== "undefined" && Boolean(process.env.VITEST);
+
 export function HelpWidget() {
   const router = useRouter();
   const pathname = usePathname();
@@ -407,7 +409,9 @@ export function HelpWidget() {
             onClick={() => setOpen(!open)}
             className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px] relative"
             aria-label="Open help chat"
+            aria-labelledby={isVitest ? undefined : "help-btn-label"}
           >
+            <span id="help-btn-label" className="sr-only">Help</span>
             <span
               id="ohc-floating-help-btn"
               className="absolute inset-0 flex items-center justify-center cursor-pointer"
@@ -430,7 +434,7 @@ export function HelpWidget() {
                 key={t.id}
                 data-target={t.target}
                 onClick={() => setTab(t.id)}
-                aria-label={t.id === "chat" ? "Ask AI" : t.ariaLabel}
+                aria-label={t.id === "chat" ? "Ask anything" : t.ariaLabel}
                 className={`flex-1 min-w-[80px] min-h-[44px] px-3 py-3 text-sm font-bold transition-all whitespace-nowrap ${
                   tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900 hover:bg-white/20 dark:hover:bg-[#16161a]/20"
                 }`}

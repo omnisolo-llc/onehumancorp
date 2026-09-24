@@ -52,7 +52,7 @@ export function FundingOpportunityCard() {
         <div className="shrink-0 flex items-center gap-2">
           {submitted ? (
             <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-              Submitted
+              Application Sent
             </span>
           ) : (
             <button

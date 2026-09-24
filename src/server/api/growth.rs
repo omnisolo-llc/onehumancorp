@@ -3452,7 +3452,7 @@ async fn handle_referral_generate(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://cloud.omnisolo.co/invite/{}", ref_code),
+                referral_link: format!("https://cloud.omnisolo.co/ref/{}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),

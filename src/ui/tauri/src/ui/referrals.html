@@ -343,7 +343,7 @@
         } else {
           // Fallback
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-          link = `omnisolo://join?ref=${tenantId}`;
+          link = `https://cloud.omnisolo.co/ref/${tenantId}`;
         }
 
         document.getElementById('referral-link').value = link;
@@ -353,7 +353,7 @@
       } catch (e) {
         console.error("Failed to generate referral link", e);
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-        document.getElementById('referral-link').value = `omnisolo://join?ref=${tenantId}`;
+        document.getElementById('referral-link').value = `https://cloud.omnisolo.co/ref/${tenantId}`;
         document.getElementById('loading-state').style.display = 'none';
         document.getElementById('link-state').style.display = 'block';
       }
