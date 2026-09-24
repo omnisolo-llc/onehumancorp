@@ -1,4 +1,0 @@
-{
-  "issue_title": "⚙️ Consolidator: [no-work finding]",
-  "issue_description": "The user requested the Persistent Shared Memory Service (omnisolo.memory). However, strict operating contract constraints in RESEARCH.md require verified owner evidence for new epics. The active mission also explicitly mandates investigating one current issue rather than introducing a new memory engine. Thus, this epic is blocked. A no-work finding is submitted.\n\nSuperpowers Workflow Provenance:\n- Loaded Skills: using-superpowers, writing-plans\n- Revision Hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71\n- Checks Performed: Codebase audit, expansion gate verification\n- Outcomes: Rejected feature due to lack of owner evidence and explicit override in mission.\n\nSource dates: 2026-09-18. Study populations: N/A. Uncertainties: N/A. Metric definitions: N/A. Scope: N/A."
-}
