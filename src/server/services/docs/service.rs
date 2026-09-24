@@ -97,6 +97,13 @@ To set up your business, you need to configure your connected accounts and estab
                 title: "Connected Accounts and Standing Authority".to_string(),
                 content_markdown: "# Connected Accounts and Standing Authority\n\n## Setup\n\nTo let your AI team help your business, you need to connect your accounts and tell the team what they are allowed to do. This keeps your business safe and in your control.\n\n## Connected Accounts\n\nYou can connect tools you already use, like Google Workspace for emails and files, and Stripe for payments. When you link these accounts, your AI team can use them to work for you. Always check your connection settings so your team has the right access.\n\n## Standing Authority\n\nStanding authority is like giving your team a rulebook. You tell them what they can do on their own and what they need to ask you first.\n- You set rules for sending emails or making payments.\n- You set hard spending limits so the team never spends more than you want.\n- You can change these rules or stop the team at any time.\n\n## Evidence\n\nYou will always know what your AI team is doing. The app keeps a clear record of all their work. You can check the evidence feed to see the emails they sent, the payments they collected, and the tasks they finished.\n\n## Cost\n\nWe want you to understand exactly what you pay for. You pay for the computer power and AI tools the team uses. You will see an estimated cost before a task starts, and a detailed bill when it finishes. There are no hidden fees. Any standard fees from your payment provider still apply.\n\n## Exceptions and Recovery\n\nSometimes things go wrong, like a payment link failing to send. If this happens, your AI team will stop and let you know. The app saves their progress, so you can easily try again later without starting over or paying twice.".to_string(),
             },
+
+            HelpArticle {
+                id: "compute-api-charging".to_string(),
+                topic: "Account & Billing".to_string(),
+                title: "Compute/API charging and BYOK".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/compute_api_charging_and_byok.md").to_string(),
+            },
         ]
     })
 }
@@ -114,6 +121,7 @@ fn get_video_tutorials() -> &'static Vec<VideoTutorial> {
             VideoTutorial { id: 8, title: "Understanding analytics".to_string(), duration: "1:00".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
             VideoTutorial { id: 9, title: "Fulfilling orders".to_string(), duration: "0:45".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
             VideoTutorial { id: 10, title: "Processing refunds".to_string(), duration: "0:55".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+
         ]
     })
 }
