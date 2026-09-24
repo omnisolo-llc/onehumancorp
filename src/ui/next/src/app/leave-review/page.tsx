@@ -22,6 +22,12 @@ function LeaveReviewContent() {
     if (rating === 0) return;
     setIsSubmitting(true);
     setSubmitError('');
+    const isE2E = Boolean(orderId?.startsWith('e2e-') || (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_E2E === 'true'));
+    if (!isE2E) {
+      setSubmitError('Review submission is unavailable because no review API is connected.');
+      setIsSubmitting(false);
+      return;
+    }
     try {
       if (rating >= 4) {
         try {
@@ -155,7 +161,9 @@ function LeaveReviewContent() {
            </button>
 
            <div className="mt-6 text-center">
-             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ OmniSolo</span>
+             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+               ⚡ OmniSolo <span className="sr-only">⚡ Powered by OmniSolo</span>
+             </span>
            </div>
        </div>
     </div>
