@@ -420,13 +420,23 @@ export default function Dashboard() {
 
       <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
-          <button
-            onClick={() => router.push("/incidents")}
-            className="h-[44px] px-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
-            data-testid="report-incident-btn"
-          >
-            Report Incident
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowReferralModal(true)}
+              className="h-[44px] px-6 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-200 dark:border-indigo-800/50 rounded-lg"
+              data-testid="referral-program-btn"
+            >
+              Referral Program
+            </button>
+            <button
+              onClick={() => router.push("/incidents")}
+              className="h-[44px] px-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+              data-testid="report-incident-btn"
+            >
+              Report Incident
+            </button>
+          </div>
       </div>
 
       <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6">
@@ -1245,6 +1255,7 @@ export default function Dashboard() {
             <div className="mb-4">
               <p className="text-xs font-semibold text-gray-500 mb-1">Your Unique Link</p>
               <input
+                aria-label="Unique referral link"
                 readOnly
                 value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/e2e-tenant`}
                 className="w-full p-2 border rounded-lg text-sm bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200"

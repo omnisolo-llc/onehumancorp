@@ -1,18 +1,25 @@
 import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
 export async function POST(request: Request) {
+  const bodyText = await request.text();
+  let body: Record<string, unknown> = {};
   try {
-    const res = await proxyBackendRequest(request, "/api/v1/growth/conversational-manager/chat");
+    body = JSON.parse(bodyText) as Record<string, unknown>;
+  } catch {
+    // ignore
+  }
+
+  try {
+    const proxyReq = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: bodyText,
+      signal: request.signal,
+    });
+    const res = await proxyBackendRequest(proxyReq, "/api/v1/growth/conversational-manager/chat");
     if (res.ok) return res;
   } catch {
     // Fall back to local response
-  }
-
-  let body: Record<string, unknown> = {};
-  try {
-    body = (await request.clone().json()) as Record<string, unknown>;
-  } catch {
-    // ignore
   }
 
   const message = typeof body.message === "string" ? body.message.toLowerCase() : "";

@@ -660,11 +660,18 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                   <button
                     type="button"
                     className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px]"
+                    aria-label={
+                      approval.proposed_action?.message && approval.proposed_action.message !== "Approve"
+                        ? approval.proposed_action.message
+                        : "Take Action"
+                    }
                     onClick={() =>
                       wrapDecision(approval.id, true, undefined, "operations")
                     }
                   >
-                    {approval.proposed_action?.message || "Approve"}
+                    {approval.proposed_action?.message && approval.proposed_action.message !== "Approve"
+                      ? approval.proposed_action.message
+                      : "Take Action"}
                   </button>
                   <button
                     type="button"
@@ -1863,10 +1870,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )
               }
               className="w-full sm:flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-red-600 text-white font-bold hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center transform active:scale-95"
-              aria-label="Approve Win-Back Offer"
+              aria-label="Send Win-Back Offer"
               data-testid={`action-card-approve-${approval.id}`}
             >
-              Approve & Send Offer
+              Send Win-Back Offer
             </button>
             <button
               onClick={() =>
@@ -2442,14 +2449,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-              aria-label="Approve"
+              aria-label="Send Win-Back Offer"
               data-testid="feed-approve-btn"
               disabled={loadingAction !== null}
             >
               {isActionLoading("approve") ? (
                 <span className="animate-pulse">Loading...</span>
               ) : (
-                "Approve"
+                "Send Win-Back Offer"
               )}
             </button>
             <button

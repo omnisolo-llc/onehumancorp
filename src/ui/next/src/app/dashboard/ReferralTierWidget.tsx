@@ -82,6 +82,7 @@ export function ReferralTierWidget() {
       <div className="flex flex-col gap-3">
         <input
           id="referral-link-input"
+          aria-label="Referral link"
           type="text"
           readOnly
           value={inviteLink}

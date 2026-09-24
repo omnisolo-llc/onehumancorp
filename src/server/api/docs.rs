@@ -575,7 +575,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/accept-payments".to_string(),
         },
         HelpArticle {
-            category: "Proposals & Payments".to_string(),
+            category: "Proposals & Invoicing".to_string(),
             title: "How to Send Proposals and Collect Payments Securely".to_string(),
             desc: "Generate accurate quotes from inquiries, secure owner approvals, and send verifiable checkout links.".to_string(),
             link: "/help/proposals-payments".to_string(),
@@ -620,7 +620,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/api-docs".to_string(),
         },
         HelpArticle {
-            category: "Sales & Payments".to_string(),
+            category: "Sales & Checkout".to_string(),
             title: "How to Send Proposals and Collect Payments Securely".to_string(),
             desc: "Learn how to generate accurate proposals, securely collect payments, and manage invoice drafts.".to_string(),
             link: "/help/proposals-payments".to_string(),
