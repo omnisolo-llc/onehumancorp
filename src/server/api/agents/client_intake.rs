@@ -62,27 +62,49 @@ impl ResearcherLlmClient for LocalLlm {
             prompt.push_str(&msg.content);
         }
 
-        let response_text = if is_test_mode {
-            r#"{"service": "Plumbing Fix", "price": 250.0}"#.to_string()
+        let (response_text, usage) = if is_test_mode {
+            (
+                r#"{"service": "Plumbing Fix", "price": 250.0}"#.to_string(),
+                Usage::default(),
+            )
         } else {
             match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                 Ok("minimax") => {
                     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(api_key)
+                    let response_text = crate::minimax::MinimaxClient::new(api_key)
                         .reason(&prompt)
-                        .await?
+                        .await?;
+                    (response_text, Usage::default())
                 }
                 _ => {
-                    crate::minimax::LocalLLMClient::new()
-                        .reason(&prompt)
-                        .await?
+                    let observed = crate::minimax::LocalLLMClient::new()
+                        .reason_with_usage(&prompt, req.max_tokens)
+                        .await?;
+                    let counts = observed.counts.ok_or(
+                        "Local provider omitted usage; draft accounting requires reconciliation",
+                    )?;
+                    let input_tokens = i32::try_from(counts.input)
+                        .map_err(|_| "Local input usage exceeds supported range")?;
+                    let output_tokens = i32::try_from(counts.output)
+                        .map_err(|_| "Local output usage exceeds supported range")?;
+                    let cache_read_input_tokens = i32::try_from(counts.cached_input)
+                        .map_err(|_| "Local cache usage exceeds supported range")?;
+                    (
+                        observed.text,
+                        Usage {
+                            input_tokens,
+                            output_tokens,
+                            cache_read_input_tokens,
+                            cache_creation_input_tokens: 0,
+                        },
+                    )
                 }
             }
         };
 
         Ok(ChatResponse {
             message: Message::assistant(response_text),
-            usage: Usage::default(),
+            usage,
             stop_reason: "stop".to_string(),
             response_id: None,
         })

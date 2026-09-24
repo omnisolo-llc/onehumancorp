@@ -59,19 +59,37 @@ impl ResearcherLlmClient for AdapterLlm {
         #[cfg(not(test))]
         let forced_response: Option<String> = None;
 
-        let response_text = if let Some(response) = forced_response {
-            response
+        let (response_text, usage) = if let Some(response) = forced_response {
+            (response, Usage::default())
         } else if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
+            (r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string(), Usage::default())
         } else {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&prompt)
-                .await?
+            let observed = crate::minimax::LocalLLMClient::new()
+                .reason_with_usage(&prompt, req.max_tokens)
+                .await?;
+            let counts = observed
+                .counts
+                .ok_or("Local provider omitted usage; draft accounting requires reconciliation")?;
+            let input_tokens = i32::try_from(counts.input)
+                .map_err(|_| "Local input usage exceeds supported range")?;
+            let output_tokens = i32::try_from(counts.output)
+                .map_err(|_| "Local output usage exceeds supported range")?;
+            let cache_read_input_tokens = i32::try_from(counts.cached_input)
+                .map_err(|_| "Local cache usage exceeds supported range")?;
+            (
+                observed.text,
+                Usage {
+                    input_tokens,
+                    output_tokens,
+                    cache_read_input_tokens,
+                    cache_creation_input_tokens: 0,
+                },
+            )
         };
 
         Ok(ChatResponse {
             message: Message::assistant(response_text),
-            usage: Usage::default(),
+            usage,
             stop_reason: "stop".to_string(),
             response_id: None,
         })
