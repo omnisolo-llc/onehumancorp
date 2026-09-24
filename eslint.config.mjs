@@ -4,7 +4,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: [
+    ignores: [ ".scratch/superpowers/**",
       '**/node_modules/**', '**/target/**', '**/.next/**', '**/dist/**',
       '**/coverage/**', '**/playwright-report/**', '**/test-results/**',
       '**/bazel-*/**', '**/next_out/**', '**/gen/**', '**/.cache/**',
