@@ -36,7 +36,7 @@ export default function ExpertTeamPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <div className="text-3xl font-bold mb-4" role="heading" aria-level={1}>Collaborative Expert Team</div>
+      <div className="text-3xl font-bold mb-4" role="heading" aria-level={2}>Autonomous Team Coordination</div>
       <p className="text-gray-600 mb-8">
         Enter a complex task. The Lead Agent will coordinate 5 domain experts (Industry Researcher, Financial Analyst, Strategic Analyst, Process Supervisor, Quality Auditor) to execute it in parallel, strictly passing through code-enforced quality gates (Pre-flight, Pre-merge, Pre-deliver). (Tencent Workbuddy (Expert Team) Feature)
       </p>

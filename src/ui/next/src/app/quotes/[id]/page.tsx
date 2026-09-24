@@ -58,7 +58,7 @@ export default function QuoteReviewPage() {
             status: 'DRAFT',
             total_amount_cents: 35000,
             required_deposit_cents: 10000,
-            stripe_payment_link: 'https://checkout.stripe.com/test',
+            stripe_payment_link: 'https://cloud.omnisolo.co/quotes/e2e-id/pay',
             line_items: [
               {
                 id: 'item-1',
@@ -193,7 +193,7 @@ export default function QuoteReviewPage() {
           {quote.stripe_payment_link && (
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <p className="text-[11px] font-bold text-[#0071E3] dark:text-blue-400 mb-1 uppercase">Stripe Payment Link</p>
-              <a href={quote.stripe_payment_link} target="_blank" className="text-sm text-[#0066FF] underline break-all">
+              <a href={quote.stripe_payment_link} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0066FF] underline break-all">
                 {quote.stripe_payment_link}
               </a>
             </div>
@@ -212,7 +212,7 @@ export default function QuoteReviewPage() {
         ) : (
           <button
             onClick={handleSend}
-            disabled={sending || (quote.status !== 'DRAFT' && quote.status !== 'PENDING')}
+            disabled={sending || quote.status === 'ACCEPTED'}
             aria-label="Approve & Send Quote"
             className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
           >
