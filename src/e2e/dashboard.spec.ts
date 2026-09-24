@@ -9,7 +9,7 @@ test.describe('Dashboard Core', () => {
 
     // Assert Growth Hub is present
     await expect(page.getByRole('heading', { name: 'Growth & Virality' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Referrals/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Referrals/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /Milestones/i })).toBeVisible();
   });
 

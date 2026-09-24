@@ -184,7 +184,7 @@ export default function LeadMagnetGeneratorPage() {
                 {!removeBranding && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                     <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} className={`text-xs font-semibold no-underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                      ⚡ Powered by OmniSolo
+                      ⚡ OmniSolo <span className="sr-only">⚡ Powered by OmniSolo</span>
                     </a>
                   </div>
                 )}

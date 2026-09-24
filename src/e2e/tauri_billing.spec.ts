@@ -38,7 +38,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('h3', { hasText: 'Pro' })).toBeVisible();
     await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
 
-    await expect(page.locator('button:has-text("Manage Plan"), button:has-text("Upgrade to Starter via Stripe")')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Manage Plan', exact: true }).or(page.locator('button:has-text("Upgrade to Starter via Stripe")'))).toBeVisible();
   });
 
   test('Pricing page allows downgrade to Free for paid users', async ({ page, loginAs }) => {
@@ -50,7 +50,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
     // Verify the Starter plan shows "Manage Plan"
-    const starterBtn = page.locator('button:has-text("Manage Plan"), button:has-text("Upgrade to Starter via Stripe")');
+    const starterBtn = page.getByRole('button', { name: 'Manage Plan', exact: true }).or(page.locator('button:has-text("Upgrade to Starter via Stripe")'));
     await expect(starterBtn).toBeVisible();
     await expect(starterBtn).toHaveText('Manage Plan');
 

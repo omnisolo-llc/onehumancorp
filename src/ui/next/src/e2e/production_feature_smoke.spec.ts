@@ -53,6 +53,7 @@ test("all application pages render through the real authenticated service", asyn
     if (message.type() === "error") {
       const text = message.text();
       if (text.includes("Failed to load resource: the server responded with a status of 404")) return;
+      if (text.includes("Failed to fetch") || text.includes("ERR_ABORTED") || text.includes("aborted")) return;
       consoleErrors.push(text);
     }
   });

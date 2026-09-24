@@ -607,6 +607,9 @@ CREATE POLICY tenant_isolation_agent_feed ON agent_feed
 CREATE OR REPLACE FUNCTION sync_agent_feed_to_items()
 RETURNS TRIGGER AS $$
 BEGIN
+    IF pg_trigger_depth() > 1 THEN
+        RETURN NEW;
+    END IF;
     INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
     VALUES (
         NEW.id,
@@ -626,7 +629,10 @@ BEGIN
         lifecycle_state = EXCLUDED.lifecycle_state,
         context_payload = EXCLUDED.context_payload,
         proposed_action = EXCLUDED.proposed_action,
-        updated_at = CURRENT_TIMESTAMP;
+        updated_at = CURRENT_TIMESTAMP
+    WHERE agent_feed_items.lifecycle_state IS DISTINCT FROM EXCLUDED.lifecycle_state
+       OR agent_feed_items.context_payload IS DISTINCT FROM EXCLUDED.context_payload
+       OR agent_feed_items.proposed_action IS DISTINCT FROM EXCLUDED.proposed_action;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -654,10 +660,14 @@ EXECUTE FUNCTION sync_agent_feed_delete();
 CREATE OR REPLACE FUNCTION sync_items_to_agent_feed()
 RETURNS TRIGGER AS $$
 BEGIN
+    IF pg_trigger_depth() > 1 THEN
+        RETURN NEW;
+    END IF;
     UPDATE agent_feed
     SET state = NEW.lifecycle_state,
         updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.id;
+    WHERE id = NEW.id
+      AND state IS DISTINCT FROM NEW.lifecycle_state;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -746,5 +756,8 @@ ALTER TABLE applied_client_mutations FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed FORCE ROW LEVEL SECURITY;
 ALTER TABLE staff_tasks FORCE ROW LEVEL SECURITY;
 ALTER TABLE shift_summaries FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS service_item_id UUID;
+ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 
 COMMIT;

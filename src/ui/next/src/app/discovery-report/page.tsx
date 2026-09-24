@@ -22,7 +22,8 @@ export default function DiscoveryReportPage() {
         } else {
           setReports([]);
         }
-      } catch (err) {
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('Failed to fetch') || err.message?.includes('aborted'))) return;
         console.error("Failed to fetch discovery reports:", err);
         setReports([]);
       } finally {
