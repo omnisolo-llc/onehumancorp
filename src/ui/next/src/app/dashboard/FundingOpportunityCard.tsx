@@ -26,7 +26,10 @@ export function FundingOpportunityCard() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xl">💰</span>
-            <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h3
+              onClick={() => setShowModal(true)}
+              className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer hover:underline"
+            >
               Downtown Revitalization Grant
             </h3>
             {submitted ? (

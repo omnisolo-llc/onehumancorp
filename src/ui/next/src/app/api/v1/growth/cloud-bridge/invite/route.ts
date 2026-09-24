@@ -5,14 +5,14 @@ const decoder = new TextDecoder("utf-8", { fatal: true });
 const encoder = new TextEncoder();
 
 function fixInviteUrl(urlStr: string): string {
-  if (urlStr.startsWith("https://cloud.omnisolo.co/invite/")) {
+  if (urlStr.startsWith("https://omnisolo.co/invite/")) {
     return urlStr;
   }
   const match = urlStr.match(/\/invite\/(.*)$/);
   if (match) {
-    return `https://cloud.omnisolo.co/invite/${match[1]}`;
+    return `https://omnisolo.co/invite/${match[1]}`;
   }
-  return `https://cloud.omnisolo.co/invite/${urlStr.replace(/^https?:\/\/[^/]+\/?/, "")}`;
+  return `https://omnisolo.co/invite/${urlStr.replace(/^https?:\/\/[^/]+\/?/, "")}`;
 }
 
 function normalizeInvites(data: unknown): { modified: boolean; result: unknown } {
@@ -29,7 +29,7 @@ function normalizeInvites(data: unknown): { modified: boolean; result: unknown }
       const copy: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(val)) {
         if (typeof v === "string" && (k === "invite_link" || k === "invite_url" || k === "url" || v.includes("/invite/"))) {
-          if (!v.startsWith("https://cloud.omnisolo.co/invite/")) {
+          if (!v.startsWith("https://omnisolo.co/invite/")) {
             copy[k] = fixInviteUrl(v);
             modified = true;
           } else {
@@ -102,8 +102,8 @@ export async function GET(request: Request | NextRequest) {
   } catch {
     const id = `inv-${Date.now()}`;
     return NextResponse.json({
-      invite_link: `https://cloud.omnisolo.co/invite/${id}`,
-      invite_url: `https://cloud.omnisolo.co/invite/${id}`,
+      invite_link: `https://omnisolo.co/invite/${id}`,
+      invite_url: `https://omnisolo.co/invite/${id}`,
     });
   }
 }

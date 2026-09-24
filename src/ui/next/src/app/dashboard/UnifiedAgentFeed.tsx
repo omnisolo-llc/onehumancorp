@@ -630,6 +630,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 />
               );
             })}
+            {items.length > 0 && (
+              <div data-testid="triage-feed-empty" className="text-center py-2 text-xs text-gray-500">
+                All caught up on automated triage proposals!
+              </div>
+            )}
           </>
         )}
 

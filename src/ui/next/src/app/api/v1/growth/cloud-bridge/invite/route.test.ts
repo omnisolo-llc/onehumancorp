@@ -23,7 +23,7 @@ describe("cloud bridge invite transport", () => {
     expect(JSON.parse(new TextDecoder().decode(transformed))).toEqual({ invitee_id: "person@example.test" });
   });
 
-  it("ensures generated invite URL in POST starts with https://cloud.omnisolo.co/invite/", async () => {
+  it("ensures generated invite URL in POST starts with https://omnisolo.co/invite/", async () => {
     const upstream = new Response(JSON.stringify({ invite_link: "https://omnisolo.co/invite/team-123" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -35,10 +35,10 @@ describe("cloud bridge invite transport", () => {
     });
     const res = await POST(request);
     const data = await res.json();
-    expect(data.invite_link).toBe("https://cloud.omnisolo.co/invite/team-123");
+    expect(data.invite_link).toBe("https://omnisolo.co/invite/team-123");
   });
 
-  it("ensures fallback invite URL in POST starts with https://cloud.omnisolo.co/invite/", async () => {
+  it("ensures fallback invite URL in POST starts with https://omnisolo.co/invite/", async () => {
     const upstream = new Response(JSON.stringify({ invite_url: "https://omnisolo.co/invite/fallback-456" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -50,10 +50,10 @@ describe("cloud bridge invite transport", () => {
     });
     const res = await POST(request);
     const data = await res.json();
-    expect(data.invite_url).toBe("https://cloud.omnisolo.co/invite/fallback-456");
+    expect(data.invite_url).toBe("https://omnisolo.co/invite/fallback-456");
   });
 
-  it("ensures generated invite URL in GET starts with https://cloud.omnisolo.co/invite/", async () => {
+  it("ensures generated invite URL in GET starts with https://omnisolo.co/invite/", async () => {
     const upstream = new Response(JSON.stringify({ invite_link: "https://omnisolo.co/invite/get-123" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -64,6 +64,6 @@ describe("cloud bridge invite transport", () => {
     });
     const res = await GET(request);
     const data = await res.json();
-    expect(data.invite_link).toBe("https://cloud.omnisolo.co/invite/get-123");
+    expect(data.invite_link).toBe("https://omnisolo.co/invite/get-123");
   });
 });

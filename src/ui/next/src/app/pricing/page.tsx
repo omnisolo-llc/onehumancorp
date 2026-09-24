@@ -225,7 +225,7 @@ export default function PricingPage() {
 
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4">
           <a
-            href="https://omnisolo.com"
+            href="https://omnisolo.co"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-[30px] saturate-[210%] hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold hover:text-indigo-600 uppercase tracking-widest font-outfit text-gray-600"
