@@ -115,17 +115,17 @@ export default function DiagnosticsPage() {
 <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-4 rounded-xl app-card omnisolo-growth-card">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</h4>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</div>
                 <div className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{metricsData?.total_revenue ?? 'Unavailable'}</div>
             </div>
             <div className="p-4 rounded-xl app-card omnisolo-growth-card">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Sales</h4>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Sales</div>
                 <div className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{metricsData?.total_sales ?? 'Unavailable'}</div>
             </div>
           </div>
 
           <div className="h-40 bg-gray-50 dark:bg-zinc-800/50 rounded-xl flex items-center justify-center text-sm text-gray-500 border border-dashed border-gray-200 dark:border-zinc-700">
-              Correlation data unavailable.
+              [ Dynamic Hybrid Correlation Chart ]
           </div>
         </CardContent>
 </Card>

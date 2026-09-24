@@ -50,8 +50,8 @@ pub enum AnyAgentFeedListResponse {
 
 pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AnyAgentFeedListResponse>>> = OnceLock::new();
 
-pub fn get_redis_client() -> redis::Client {
-    crate::redis_pool::get_redis_client().expect("Failed to get Redis client from pool")
+pub fn get_redis_client() -> Option<redis::Client> {
+    crate::redis_pool::get_redis_client()
 }
 
 pub fn get_agent_feed_cache() -> Arc<HybridCache<AnyAgentFeedListResponse>> {
@@ -131,7 +131,18 @@ pub async fn ws_feed_handler(
 async fn handle_feed_socket(socket: WebSocket, tenant_id: String, gzip: bool) {
     let (mut sender, mut receiver) = socket.split();
 
-    let client = get_redis_client();
+    let client = match get_redis_client() {
+        Some(c) => c,
+        None => {
+            tracing::warn!("Redis unavailable for agent feed ws");
+            let _ = sender
+                .send(WsMessage::Text(
+                    "{\"error\":\"Failed to connect to pubsub\"}".into(),
+                ))
+                .await;
+            return;
+        }
+    };
 
     let mut pubsub_conn = match client.get_async_pubsub().await {
         Ok(conn) => conn,
@@ -408,15 +419,16 @@ async fn create_feed_item(
             cache.invalidate_by_tag(&tag).await;
 
             // Publish to Redis Pub/Sub
-            let client = get_redis_client();
-            let topic = format!("agent_feed:{}", tenant_id);
-            if let Ok(payload_json) = serde_json::to_string(&item) {
-                // In background task, to not block response
-                tokio::spawn(async move {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let _: Result<(), _> = conn.publish(topic, payload_json).await;
-                    }
-                });
+            if let Some(client) = get_redis_client() {
+                let topic = format!("agent_feed:{}", tenant_id);
+                if let Ok(payload_json) = serde_json::to_string(&item) {
+                    // In background task, to not block response
+                    tokio::spawn(async move {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let _: Result<(), _> = conn.publish(topic, payload_json).await;
+                        }
+                    });
+                }
             }
 
             (StatusCode::CREATED, Json(item)).into_response()
@@ -500,7 +512,7 @@ async fn update_feed_item_state(
             .await;
 
             // Notify via Redis Pub/Sub for WebSockets
-            if let Some(client) = Some(get_redis_client())
+            if let Some(client) = get_redis_client()
                 && let Ok(mut conn) = client.get_multiplexed_async_connection().await
             {
                 let payload_str = serde_json::json!({

@@ -513,9 +513,18 @@ mod tests {
         let runner = Arc::new(Runner::new(agent));
         let server = AgentProtocolServer::new(runner);
 
+        let initial_resp_json = server.list_tasks().await;
+        let initial_resp: TaskListResponse = serde_json::from_value(initial_resp_json).unwrap();
+        let initial_count = initial_resp.tasks.len();
+
+        let req_json = r#"{"input": "do this task"}"#;
+        let create_resp = server.create_task(req_json).await;
+        let created_task: Task = serde_json::from_value(create_resp).unwrap();
+
         let resp_json = server.list_tasks().await;
         let resp: TaskListResponse = serde_json::from_value(resp_json).unwrap();
-        assert_eq!(resp.tasks.len(), 0);
+        assert_eq!(resp.tasks.len(), initial_count + 1);
+        assert!(resp.tasks.iter().any(|t| t.task_id == created_task.task_id));
         assert_eq!(resp.pagination.total_pages, 1);
     }
 
@@ -526,7 +535,8 @@ mod tests {
         let runner = Arc::new(Runner::new(agent));
         let server = AgentProtocolServer::new(runner);
 
-        let resp_json = server.list_steps("task-123").await;
+        let task_id = format!("task-empty-{}", uuid::Uuid::new_v4());
+        let resp_json = server.list_steps(&task_id).await;
         let resp: TaskStepsListResponse = serde_json::from_value(resp_json).unwrap();
         assert_eq!(resp.steps.len(), 0);
         assert_eq!(resp.pagination.total_pages, 1);
@@ -669,8 +679,9 @@ mod tests {
         let runner = Arc::new(Runner::new(agent));
         let server = AgentProtocolServer::new(runner);
 
+        let task_id = format!("task-invalid-{}", uuid::Uuid::new_v4());
         let req_json = r#"{"input": "step 1", "#; // Invalid JSON
-        let resp_json = server.execute_step("task-123", req_json).await;
+        let resp_json = server.execute_step(&task_id, req_json).await;
 
         let err_resp: ErrorResponse = serde_json::from_value(resp_json).unwrap();
         assert_eq!(err_resp.error, "Invalid request");
@@ -695,8 +706,9 @@ mod tests {
         let runner = Arc::new(Runner::new(agent));
         let server = AgentProtocolServer::new(runner);
 
+        let task_id = format!("task-fail-{}", uuid::Uuid::new_v4());
         let req_json = r#"{"input": "step 1"}"#;
-        let resp_json = server.execute_step("task-123", req_json).await;
+        let resp_json = server.execute_step(&task_id, req_json).await;
 
         let err_resp: Step = serde_json::from_value(resp_json).unwrap();
         assert_eq!(err_resp.status, StepStatus::Failed);

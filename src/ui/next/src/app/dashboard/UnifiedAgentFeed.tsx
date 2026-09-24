@@ -157,7 +157,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         }
         let unifiedData = initialData;
 
-        if (refresh || !unifiedData) {
+        if (refresh || !unifiedData || !unifiedData.items) {
           const unifiedRes = await fetch("/api/v1/agent-feed");
           if (!unifiedRes.ok) {
             throw new Error("Failed to load agent feed");

@@ -680,6 +680,7 @@
               Share on X (Twitter)
             </button>
           </div>
+          <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#operations-map', title: 'Operations Map', text: 'Operations Map'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Tour</button></div>
         </div>
       </div>
 
@@ -1572,7 +1573,7 @@ function initWalkthrough() {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'walkthrough-overlay';
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'fixed z-[90] omnisolo-walkthrough-overlay';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
@@ -1662,5 +1663,6 @@ function initWalkthrough() {
 initWalkthrough();
 </script>
 
+<script src="help-widget.mjs" type="module"></script>
 </body>
 </html>

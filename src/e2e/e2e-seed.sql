@@ -363,6 +363,14 @@ VALUES (
   '{"description":"Vegan pastry box quote approval","customer_id":"maya_bakes"}'::jsonb,
   '{"inbox_message_id":"e2e-inbox-msg-1","action_type":"Draft Quote","feature_type":"quote_draft","total_amount":75.00,"total_amount_cents":7500,"scope":"Vegan options for Saturday","line_items":[{"description":"Vegan Pastry Box","unit_price_cents":7500,"quantity":1}]}'::jsonb,
   'PENDING_APPROVAL'
+),
+(
+  'e2e-feed-ambassador-reply',
+  'e2e-tenant',
+  'Ambassador',
+  '{"feature_type":"ambassador_reply","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?"}'::jsonb,
+  '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?","generated_response":"Yes! We have a full vegan pastry selection."}'::jsonb,
+  'PENDING_APPROVAL'
 )
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,

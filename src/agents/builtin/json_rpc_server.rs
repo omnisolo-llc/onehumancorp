@@ -35,6 +35,7 @@ pub struct JsonRpcError {
 
 pub struct AppState {
     pub runner: Arc<Runner>,
+    pub app_server: Arc<crate::codex_runner::AppServer>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -221,9 +222,8 @@ async fn handle_rpc(
             }
         }
         _method => {
-            let app_server = crate::codex_runner::AppServer::new(state.runner.clone());
             let req_str = serde_json::to_string(&payload).unwrap_or_default();
-            let res_str = app_server.handle_request(&req_str).await;
+            let res_str = state.app_server.handle_request(&req_str).await;
             if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(&res_str) {
                 return Json(resp);
             }
@@ -242,7 +242,8 @@ async fn handle_rpc(
 }
 
 pub fn create_router(runner: Arc<Runner>) -> Router {
-    let state = Arc::new(AppState { runner });
+    let app_server = Arc::new(crate::codex_runner::AppServer::new(runner.clone()));
+    let state = Arc::new(AppState { runner, app_server });
     Router::new()
         .route("/rpc", post(handle_rpc))
         .with_state(state)

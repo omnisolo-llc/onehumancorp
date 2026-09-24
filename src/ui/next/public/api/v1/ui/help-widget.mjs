@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
-        #omnisolo-floating-help-btn {
+        #omnisolo-floating-help-btn, #ohc-floating-help-btn {
             position: fixed;
             bottom: 24px;
             right: 24px;
@@ -196,17 +196,17 @@ document.addEventListener('DOMContentLoaded', () => {
             justify-content: center;
             transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
-        #omnisolo-floating-help-btn:hover {
+        #omnisolo-floating-help-btn:hover, #ohc-floating-help-btn:hover {
             transform: scale(1.05);
             background: rgba(255, 255, 255, 0.3);
             box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
         }
-        #omnisolo-floating-help-btn svg {
+        #omnisolo-floating-help-btn svg, #ohc-floating-help-btn svg {
             width: 28px;
             height: 28px;
             fill: currentColor;
         }
-        #ai-chat-interface {
+        #ai-chat-interface, #ohc-floating-help-widget {
             position: fixed;
             bottom: 96px;
             right: 24px;
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 box-sizing: border-box;
             }
         }
-        #omnisolo-floating-help-header {
+        #omnisolo-floating-help-header, #ohc-floating-help-header {
             padding: 16px;
             background: rgba(255, 255, 255, 0.1);
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
@@ -269,20 +269,20 @@ document.addEventListener('DOMContentLoaded', () => {
             justify-content: space-between;
             align-items: center;
         }
-        #omnisolo-floating-help-header h3 {
+        #omnisolo-floating-help-header h3, #ohc-floating-help-header h3 {
             margin: 0;
             font-size: 18px;
             font-weight: 600;
             color: #0f172a;
         }
-        #omnisolo-floating-help-close {
+        #omnisolo-floating-help-close, #ohc-floating-help-close {
             background: none;
             border: none;
             cursor: pointer;
             color: #64748b;
             padding: 4px;
         }
-        #omnisolo-floating-help-tabs {
+        #omnisolo-floating-help-tabs, #ohc-floating-help-tabs {
             display: flex;
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
             background: rgba(255, 255, 255, 0.1);
@@ -440,7 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the button
     const btn = document.createElement('button');
-    btn.id = 'omnisolo-floating-help-btn';
+    btn.id = 'ohc-floating-help-btn';
+    btn.className = 'omnisolo-floating-help-btn';
     btn.setAttribute('aria-label', 'Open help chat');
     btn.setAttribute('data-tooltip-id', 'omnisolo-floating-help-btn');
     btn.setAttribute('data-tooltip', 'Open Help Center');
@@ -450,15 +451,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the widget
     const widget = document.createElement('div');
-    widget.id = 'ai-chat-interface';
+    widget.id = 'ohc-floating-help-widget';
+    widget.className = 'ai-chat-interface';
     widget.innerHTML = `
-        <div id="omnisolo-floating-help-header">
+        <div id="ohc-floating-help-header">
             <h3>Ask AI Help</h3>
-            <button id="omnisolo-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
+            <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
-        <div id="omnisolo-floating-help-tabs">
+        <div id="ohc-floating-help-tabs">
             <button class="omnisolo-help-tab active" data-target="tab-articles">Articles</button>
             <button class="omnisolo-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="omnisolo-help-tab" data-target="tab-videos">Videos</button>
@@ -538,9 +540,12 @@ document.addEventListener('DOMContentLoaded', () => {
         widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
     });
 
-    document.getElementById('omnisolo-floating-help-close').addEventListener('click', () => {
-        widget.style.display = 'none';
-    });
+    const closeBtn = document.getElementById('ohc-floating-help-close') || document.getElementById('omnisolo-floating-help-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            widget.style.display = 'none';
+        });
+    }
 
     const tabs = widget.querySelectorAll('.omnisolo-help-tab');
     const contents = widget.querySelectorAll('.omnisolo-help-content');

@@ -1464,6 +1464,14 @@ async fn handle_affiliate_generate_link(
     let discount = req.discount_percentage.unwrap_or(10);
     let commission = req.commission_percentage.unwrap_or(10);
 
+    let mut tx = match state.pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if (::server_common::auth_utils::set_org_context(&mut *tx, &auth_info.org_id).await).is_err() {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
     match sqlx::query("INSERT INTO affiliate_links (id, tenant_id, customer_id, affiliate_code, discount_percentage, commission_percentage) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(&id)
         .bind(&auth_info.org_id)
@@ -1471,10 +1479,13 @@ async fn handle_affiliate_generate_link(
         .bind(&affiliate_code)
         .bind(discount)
         .bind(commission)
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await
     {
         Ok(_) => {
+            if tx.commit().await.is_err() {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
             let affiliate_link = format!("https://cloud.omnisolo.co/ref/{}", affiliate_code);
             Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
         }
@@ -3399,16 +3410,27 @@ async fn handle_referral_generate(
         .unwrap()
         .as_secs() as i64;
 
+    let mut tx = match state.pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if (::server_common::auth_utils::set_org_context(&mut *tx, &auth_info.org_id).await).is_err() {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
     match sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
         .bind(&ref_id)
         .bind(&auth_info.org_id)
         .bind(&auth_info.agent_id)
         .bind(&ref_code)
         .bind(now)
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await
     {
         Ok(_) => {
+            if tx.commit().await.is_err() {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
