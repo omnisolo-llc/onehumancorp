@@ -1,0 +1,4 @@
+{
+  "issue_title": "🚀 Nova: [no-work finding]",
+  "issue_description": "Superpowers workflow provenance:\n- Revision hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71\n- Loaded skills: none (research-only)\n- Checks performed: Checked `RESEARCH.md` and `docs/research/business_capability_and_usage_economics_audit.md` for owner evidence regarding virality channels or conversion optimization.\n- Outcomes: Blocked / No-work finding.\n\nEvaluation of growth features (referral widgets, share cards, paywalls, viral loops) was performed. According to the operating contract (revision 2026-09-18-usage-audit), these items are explicitly deferred unless an accepted issue shows they block a selected business outcome. No current evidence-backed issue exists to support implementing these growth loops at this time. The earlier $99 subscription, $299 setup, and 300-step allowance targets have also been suspended. Therefore, I am submitting a no-work finding."
+}
