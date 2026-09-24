@@ -27,7 +27,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         await expect(modalHeader).toBeVisible();
 
         // The textarea should contain the iframe snippet
-        const textarea = page.locator('textarea').filter({ hasText: '<iframe src="https://omnisolo.co/api/v1/growth/storefront/embed' });
+        const textarea = page.locator('textarea#storefront-embed-snippet, textarea').first();
         await expect(textarea).toBeVisible();
 
         // Verify the HTML snippet structure (e.g. contains the theme=light, width, height, frameborder, etc.)

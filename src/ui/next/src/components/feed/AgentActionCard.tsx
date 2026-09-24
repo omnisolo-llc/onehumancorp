@@ -26,11 +26,12 @@ export interface AgentActionCardProps {
   ) => void | Promise<void>;
 }
 
-export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queuedActionIds, editingId, editContent, setEditingId, setEditContent, handleDecision }) => {
+export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queuedActionIds, editingId, editContent, setEditingId, setEditContent, handleDecision: rawHandleDecision }) => {
   const [loadingAction, setLoadingAction] = React.useState<string | null>(null);
   const [isDraftExpanded, setIsDraftExpanded] = React.useState(false);
+  const [isApproved, setIsApproved] = React.useState(false);
 
-  const wrapDecision = async (
+  const handleDecision = async (
     id: string,
     approved: boolean,
     editContentValue?: string,
@@ -38,18 +39,42 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
     actionName?: string,
   ) => {
     try {
+      if (approved) {
+        setIsApproved(true);
+      }
       setLoadingAction(actionName || (approved ? "approve" : "dismiss"));
-      await handleDecision(id, approved, editContentValue, event_source);
+      await rawHandleDecision(id, approved, editContentValue, event_source);
     } catch (e) {
       console.error("Decision failed", e);
+      setIsApproved(false);
     } finally {
       // If the component is still mounted, remove loading state
       setLoadingAction(null);
     }
   };
 
+  const wrapDecision = handleDecision;
+
   const isActionLoading = (actionName: string) => loadingAction === actionName;
-  const actionPayload = approval.proposed_action || approval.context_payload || {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safeJsonParse = (val: any): Record<string, any> => {
+    if (!val) return {};
+    if (typeof val === "object") return val;
+    if (typeof val === "string") {
+      try {
+        const parsed = JSON.parse(val);
+        return typeof parsed === "object" && parsed !== null ? parsed : { message: val, text: val };
+      } catch {
+        return { message: val, text: val };
+      }
+    }
+    return {};
+  };
+
+  const parsedProposed = safeJsonParse(approval.proposed_action);
+  const parsedContext = safeJsonParse(approval.context_payload);
+  const parsedDirectPayload = safeJsonParse(approval.payload);
+  const actionPayload = Object.keys(parsedProposed).length > 0 ? parsedProposed : (Object.keys(parsedDirectPayload).length > 0 ? parsedDirectPayload : parsedContext);
   const structuredContext = typeof actionPayload.context === "object" && actionPayload.context !== null ? actionPayload.context : {};
 
   if (
@@ -65,10 +90,74 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
     );
   }
 
+  if (
+    approval.event_source === "CustomerSuccessAgent" ||
+    approval.event_source === "customer_success_agent"
+  ) {
+    const draftText =
+      (actionPayload?.draft as string) ||
+      (actionPayload?.draft_reply as string) ||
+      (parsedProposed?.draft as string) ||
+      (parsedProposed?.draft_reply as string) ||
+      (parsedDirectPayload?.draft as string) ||
+      (parsedContext?.draft as string) ||
+      "No draft available.";
+    const description =
+      parsedContext?.description ||
+      approval.context_payload?.description ||
+      approval.description ||
+      "";
+    return (
+      <div
+        key={approval.id}
+        className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(0,102,255,0.4)] rounded-[16px] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal relative ${isApproved || approval.lifecycle_state === "APPROVED" ? "!border-green-500 border-green-500 scale-95" : ""}`}
+        data-testid={`triage-card-${approval.id}`}
+      >
+        <div className="absolute top-0 left-0 w-1 h-full bg-[#0066FF]" />
+        <div className="flex justify-between items-start mb-2">
+          <h2 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2 m-0 font-outfit">
+            <span className="text-2xl">✨</span> Needs Attention: Pending Draft
+          </h2>
+          <div className="text-xs font-semibold text-[#0066FF] bg-[#0066FF]/10 px-2 py-1 rounded-[8px]">
+            Action Needed
+          </div>
+        </div>
+        <div className="font-medium text-base text-[#1D1D1F] dark:text-[#F5F5F7]">
+          {description}
+        </div>
+        <div
+          className="bg-[#0066FF]/5 border border-[#0066FF]/10 p-3 rounded-[8px] mb-2 text-sm text-[#0044BB] dark:text-[#60A5FA]"
+          data-testid={`triage-draft-${approval.id}`}
+        >
+          <span className="font-semibold text-[10px] uppercase tracking-wider mb-1 block">
+            Agent&apos;s Proposed Reply
+          </span>
+          {draftText}
+        </div>
+        <div className="flex flex-col gap-2 mt-2">
+          <button
+            className="w-full min-h-[44px] min-w-[44px] bg-[#0066FF] text-white p-3 rounded-[16px] font-semibold border-none shadow-[0_4px_12px_rgba(0,102,255,0.3)] cursor-pointer flex items-center justify-center transition-all hover:bg-blue-600"
+            data-testid={`triage-approve-${approval.id}`}
+            onClick={() => handleDecision(approval.id, true, draftText, approval.event_source)}
+          >
+            <span className="btn-text">Approve & Send</span>
+          </button>
+          <button
+            className="w-full min-h-[44px] min-w-[44px] bg-white/65 dark:bg-black/40 backdrop-blur-[30px] border border-[#0066FF]/30 rounded-[16px] text-[#0066FF] dark:text-blue-400 p-3 font-semibold cursor-pointer hover:bg-white/80"
+            data-testid={`triage-dismiss-${approval.id}`}
+            onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+          >
+            Edit / Deny
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       key={approval.id}
-      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
+      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${isApproved || approval.lifecycle_state === "APPROVED" ? "!border-green-500 border-green-500 scale-95" : ""} ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
@@ -355,8 +444,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 </div>
               </div>
             )}
-            {actionPayload
-              ?.feature_type === "ambassador_reply" && (
+            {(actionPayload?.feature_type === "ambassador_reply" ||
+              parsedProposed?.feature_type === "ambassador_reply" ||
+              parsedContext?.feature_type === "ambassador_reply" ||
+              approval.event_source?.toLowerCase() === "ambassador") && (
               <AmbassadorReplyCard
                 approval={approval}
                 isEditing={editingId === approval.id}
@@ -569,6 +660,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                   <button
                     type="button"
                     className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px]"
+                    aria-label={
+                      approval.proposed_action?.message || "Approve"
+                    }
                     onClick={() =>
                       wrapDecision(approval.id, true, undefined, "operations")
                     }
@@ -1772,10 +1866,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )
               }
               className="w-full sm:flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-red-600 text-white font-bold hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center transform active:scale-95"
-              aria-label="Approve Win-Back Offer"
+              aria-label="Send Win-Back Offer"
               data-testid={`action-card-approve-${approval.id}`}
             >
-              Approve & Send Offer
+              Send Win-Back Offer
             </button>
             <button
               onClick={() =>
@@ -2262,7 +2356,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                   JSON.stringify(updatedPayload),
                   approval.event_source,
                 );
-                setEditingId(null);
+                setTimeout(() => {
+                  setEditingId(null);
+                }, 1500);
               }}
             />
             <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -2563,7 +2659,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 href={`/quotes/${actionPayload?.quote_id || approval.id}`}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
-                data-testid="edit-proposal"
+                data-testid="edit-quote-draft"
               >
                 Edit Draft
               </a>
@@ -2590,7 +2686,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             </div>
           </>
         ) : editingId === approval.id ? (
-          <div className="flex flex-col gap-3 w-full">
+          <>
             <textarea
               className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
               rows={4}
@@ -2599,14 +2695,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
               data-testid="edit-proposal-textarea"
               autoFocus
             />
-            <div className="flex gap-3">
+            <div className="flex gap-3 w-full">
               <button
                 onClick={() => {
-                  handleDecision(
+                  wrapDecision(
                     approval.id,
                     true,
                     editContent,
                     approval.event_source,
+                    "approve",
                   );
                   setEditingId(null);
                 }}
@@ -2621,6 +2718,27 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )}
               </button>
               <button
+                onClick={() => {
+                  wrapDecision(
+                    approval.id,
+                    true,
+                    editContent,
+                    approval.event_source,
+                    "approve",
+                  );
+                  setEditingId(null);
+                }}
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all shadow-md flex items-center justify-center"
+                data-testid="feed-approve-btn"
+                disabled={loadingAction !== null}
+              >
+                {isActionLoading("approve") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Approve"
+                )}
+              </button>
+              <button
                 onClick={() => setEditingId(null)}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                 data-testid="cancel-edit-proposal"
@@ -2628,16 +2746,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 Cancel
               </button>
             </div>
-          </div>
+          </>
         ) : (
-          <>
+          <div className="flex flex-col gap-3 w-full">
             <button
               onClick={() =>
-                handleDecision(
+                wrapDecision(
                   approval.id,
                   true,
                   undefined,
                   approval.event_source,
+                  "approve",
                 )
               }
               className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
@@ -2693,7 +2812,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )}
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

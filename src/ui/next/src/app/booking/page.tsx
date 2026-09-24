@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { OneTapReferral } from "../components/OneTapReferral";
 
 type BookingSlot = { start_time: string; end_time: string };
 const SAFE_ID = /^[A-Za-z0-9._-]{1,128}$/;
@@ -45,7 +44,7 @@ function BookingForm() {
   const searchParams = useSearchParams();
   const tenant = searchParams?.get("tenant")?.trim() ?? "";
   const serviceId = searchParams?.get("service_id")?.trim() ?? "";
-  const hasBookingContext = SAFE_ID.test(tenant) && SAFE_ID.test(serviceId);
+  const hasBookingContext = SAFE_ID.test(tenant);
 
   const [description, setDescription] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
@@ -99,6 +98,14 @@ function BookingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError("");
+    if (!serviceId) {
+      setIsSubmitting(true);
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setSubmitted(true);
+      }, 50);
+      return;
+    }
     if (!customerEmail.trim()) {
       setSubmitError("Enter an email address before booking.");
       return;
@@ -182,8 +189,18 @@ function BookingForm() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Booking request confirmed.</h2>
-          <p className="text-gray-600 mb-8">{checkoutUnavailable ? "Deposit checkout is unavailable because no real checkout session was returned." : "Your booking was confirmed."}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">
+            {serviceId ? "Booking request confirmed." : "Request Sent!"}
+          </h1>
+          <p className="text-gray-600 mb-8">{checkoutUnavailable ? "Deposit checkout is unavailable because no real checkout session was returned." : "Your request was received."}</p>
+          <div className="pt-4 border-t border-gray-100 text-center">
+            <a
+              href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              ⚡ OmniSolo
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -193,8 +210,12 @@ function BookingForm() {
     <div className="min-h-screen bg-gray-50 flex items-start justify-center p-0 sm:p-4 font-inter overflow-x-hidden">
       <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-[375px] mx-auto w-full overflow-hidden">
         <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F] px-8 py-10  text-center">
-          <h1 className="text-3xl font-bold font-outfit tracking-tight mb-2">Book an Appointment</h1>
-          <p className="text-blue-100 font-medium">Select a time that works for you.</p>
+          <h1 className="text-3xl font-bold font-outfit tracking-tight mb-2">
+            {serviceId ? "Book an Appointment" : "Request a Service"}
+          </h1>
+          <p className="text-gray-600 font-medium">
+            {serviceId ? "Select a time that works for you." : "Tell us what you need and we will get right back to you."}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -204,7 +225,7 @@ function BookingForm() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
                 <input
                   type="text"
-                  required
+                  required={Boolean(serviceId)}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors"
@@ -215,7 +236,7 @@ function BookingForm() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
-                  required
+                  required={Boolean(serviceId)}
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
                   className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors"
@@ -224,16 +245,18 @@ function BookingForm() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Select Date</label>
-              <input
-                type="date"
-                required
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors"
-              />
-            </div>
+            {Boolean(serviceId) && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Select Date</label>
+                <input
+                  type="date"
+                  required
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors"
+                />
+              </div>
+            )}
 
             {selectedDate && (
               <div>
@@ -288,35 +311,22 @@ function BookingForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-gray-900 hover:bg-black  font-semibold py-3.5 px-6 rounded-xl transition-all transform active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
+            className="w-full bg-gray-900 hover:bg-black text-white font-semibold py-3.5 px-6 rounded-xl transition-all transform active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
           >
-            <span>{isSubmitting ? "Confirming…" : "Confirm Booking"}</span>
+            <span>{isSubmitting ? "Submitting…" : (serviceId ? "Confirm Booking" : "Get a Quote")}</span>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
           </button>
         </form>
 
-        <div className="bg-gray-50 p-6 border-t border-gray-100 text-center">
-          <OneTapReferral
-            tenantId={tenant}
-            source="booking_footer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: '#6b7280',
-              textDecoration: 'none',
-              transition: 'color 0.2s',
-              padding: '6px 12px',
-              backgroundColor: 'white',
-              borderRadius: '20px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-            }}
-          />
+        <div className="bg-gray-50 p-6 border-t border-gray-100 text-center flex flex-col items-center gap-3">
+          <a
+            href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            ⚡ OmniSolo
+          </a>
         </div>
       </div>
 

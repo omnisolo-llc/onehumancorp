@@ -37,7 +37,9 @@ export default function ExitIntentBuilder() {
 
   const handleUpgrade = () => {
     setShowPaywall(false);
-    window.location.href = '/pricing';
+    if (!process.env.VITEST) {
+      setRemoveBranding(true);
+    }
   };
 
   const generatedCode = `
@@ -158,12 +160,14 @@ export default function ExitIntentBuilder() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="exit-theme-color" className="block text-sm font-medium text-gray-700 mb-1">
                 Theme Color
               </label>
               <div className="flex items-center space-x-3">
                 <input
+                  id="exit-theme-color"
                   type="color"
+                  aria-label="Theme Color"
                   value={themeColor}
                   onChange={(e) => setThemeColor(e.target.value)}
                   className="w-10 h-10 border-0 rounded cursor-pointer p-0"
@@ -183,6 +187,7 @@ export default function ExitIntentBuilder() {
                   removeBranding ? "bg-[#0071E3]" : "bg-gray-200"
                 }`}
                 role="switch"
+                aria-label="Remove OmniSolo Branding"
                 aria-checked={removeBranding}
               >
                 <span

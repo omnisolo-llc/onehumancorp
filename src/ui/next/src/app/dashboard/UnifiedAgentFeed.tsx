@@ -36,7 +36,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     items.forEach(item => {
       const featureType = item.proposed_action?.feature_type || item.context_payload?.feature_type || item.event_source || "unknown";
       const actionType = item.proposed_action?.action_type || "default";
-      const key = `${featureType}-${actionType}`;
+      const key = (featureType === 'ambassador_reply' || featureType.toLowerCase() === 'ambassador') ? `ambassador_reply-${item.id}` : `${featureType}-${actionType}`;
       if (!groups[key]) {
         groups[key] = {
           groupKey: key,
@@ -157,10 +157,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         }
         let unifiedData = initialData;
 
-        if (refresh || !unifiedData) {
+        if (refresh || !unifiedData || !unifiedData.items) {
           const unifiedRes = await fetch("/api/v1/agent-feed");
           if (!unifiedRes.ok) {
-            throw new Error("Failed to load agent feed");
+            throw new Error("Feed temporarily unavailable");
           }
           const refreshedData = await unifiedRes.json();
           unifiedData = initialData
@@ -348,8 +348,29 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 new Date(a.created_at).getTime(),
             );
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const safeParsePayload = (val: any): Record<string, any> => {
+              if (!val) return {};
+              if (typeof val === "object") return val;
+              if (typeof val === "string") {
+                try {
+                  const p = JSON.parse(val);
+                  return typeof p === "object" && p !== null ? p : { description: val, message: val };
+                } catch {
+                  return { description: val, message: val };
+                }
+              }
+              return {};
+            };
+
+            const parsedCombinedItems = combinedItems.map((item) => ({
+              ...item,
+              context_payload: safeParsePayload(item.context_payload),
+              proposed_action: safeParsePayload(item.proposed_action),
+            }));
+
             setItems(
-              combinedItems.filter(
+              parsedCombinedItems.filter(
                 (i) =>
                   i.lifecycle_state !== "APPROVED" &&
                   i.lifecycle_state !== "DISMISSED" &&
@@ -387,8 +408,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
 
       } catch (err) {
-        if (mounted && !refresh) {
-          setError(errorMessage(err, '') || "Failed to load feed");
+        if (!mounted || (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch')))) return;
+        if (!refresh) {
+          setError(errorMessage(err, '') || "Feed temporarily unavailable");
         }
         console.error("Failed to load activity", err);
       } finally {
@@ -487,21 +509,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
     try {
       await submitDecision(id, approved, modified_content, event_source);
-      // Remove item only after successful submission
-      setItems((prev) => prev.filter((app) => app.id !== id));
+      // Remove item after short transition delay to allow UI transition state to render
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
     } catch (err) {
       setError(errorMessage(err, '') || "Action failed");
       throw err;
     }
   };
-
-  if (error) {
-    return (
-      <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
-        {error}
-      </div>
-    );
-  }
 
   return (
     <section
@@ -509,9 +525,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       className="app-panel mb-6 w-full max-w-full md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
       aria-label="Unified Agent Feed"
     >
-      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
-        Action Required
+      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 flex items-center justify-between">
+        <span>Action Required</span>
+        <span className="text-xs text-gray-500 font-normal">Unified Agent Feed</span>
       </h2>
+      {error && (
+        <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
+          {error}
+        </div>
+      )}
       {isOffline && (
         <div className="mb-4 w-full p-2 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
@@ -522,22 +544,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           <span>🔄</span> Pending Sync ({offlineActionsCount})
         </div>
       )}
-      <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
+      <div className="triage-tab-container mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
+          id="tab-proposals"
           onClick={() => setActiveTab("proposals")}
-          className={`flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "proposals"
-              ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
+              ? "active border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           }`}
         >
-          Proposals ({items.length})
+          Proposals
         </button>
         <button
+          id="tab-activity"
           onClick={() => setActiveTab("activity")}
-          className={`flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "activity"
-              ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
+              ? "active border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           }`}
         >

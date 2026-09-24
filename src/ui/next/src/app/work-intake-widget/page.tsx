@@ -51,23 +51,35 @@ export default function WorkIntakeWidgetPage() {
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Editor Sidebar */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 app-card shadow-lg">
+            <div className="p-6 app-card glass-card shadow-lg">
                 <h2 className="text-lg font-semibold font-outfit mb-4">Widget Settings</h2>
 
                 <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                    <label htmlFor="theme-select" className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                    <select
+                        id="theme-select"
+                        aria-label="Theme"
+                        value={theme}
+                        onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
+                        className="sr-only"
+                    >
+                        <option value="light">Light Theme</option>
+                        <option value="dark">Dark Theme</option>
+                    </select>
                     <div className="flex bg-gray-100 p-1 rounded-lg">
                         <button
+                            type="button"
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
+                            type="button"
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -101,6 +113,7 @@ export default function WorkIntakeWidgetPage() {
                         <input
                             type="checkbox"
                             checked={removeBranding}
+                            aria-label='Remove "Powered by OmniSolo" branding'
                             onChange={(e) => {
                               if (e.target.checked) {
                                   setShowSoftPaywall(true);
@@ -111,13 +124,13 @@ export default function WorkIntakeWidgetPage() {
                           }}
                             className="w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
                         />
-                        <span className="text-sm text-gray-700">Remove "Powered by OmniSolo" branding</span>
+                        <span className="text-sm text-gray-700">Remove &quot;Powered by OmniSolo&quot; branding</span>
                     </label>
                     <p className="text-xs text-gray-500 mt-1 ml-6">Requires Pro plan or higher.</p>
                 </div>
             </div>
 
-            <div className="p-6 app-card shadow-lg flex flex-col justify-center gap-4">
+            <div className="p-6 app-card glass-card shadow-lg flex flex-col justify-center gap-4">
                <h3 className="font-semibold text-gray-900">Embed on Your Website</h3>
                <p className="text-sm text-gray-600">Copy this code snippet to add the widget directly to your own site, Notion document, or blog.</p>
                <button
@@ -196,12 +209,12 @@ export default function WorkIntakeWidgetPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
+              Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the &quot;Powered by OmniSolo&quot; watermark.
             </p>
 
             <button
               onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
-              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
+              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700 rounded-xl"
             >
               Upgrade to Pro
             </button>

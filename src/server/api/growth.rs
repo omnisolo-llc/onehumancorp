@@ -10,7 +10,9 @@ pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = Once
 use crate::hub::Hub;
 use axum::{
     Extension, Json, Router,
+    extract::Request,
     http::StatusCode,
+    middleware::Next,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -182,13 +184,21 @@ async fn handle_waitlist(
 
 pub async fn handle_conversational_chat(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<ChatReq>,
 ) -> impl IntoResponse {
     let lower = req.message.to_lowercase();
-    let tenant_id = auth_info.org_id.clone();
+    let tenant_id = auth_info
+        .map(|axum::extract::Extension(a)| a.org_id.clone())
+        .or_else(|| req.tenant_id.clone())
+        .or_else(|| {
+            headers
+                .get("x-tenant-id")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "default".to_string());
 
     let mut response_text = String::new();
     let mut draft_action = None;
@@ -306,11 +316,21 @@ pub async fn handle_conversational_chat(
 
 pub async fn handle_conversational_execute(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<ExecuteReq>,
 ) -> impl IntoResponse {
+    let tenant_id = auth_info
+        .map(|axum::extract::Extension(a)| a.org_id.clone())
+        .or_else(|| req.tenant_id.clone())
+        .or_else(|| {
+            headers
+                .get("x-tenant-id")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "default".to_string());
+
     let mut message = format!("Successfully executed action: {}", req.action_id);
 
     if req.action_id == "recover_abandoned_carts_action" {
@@ -319,7 +339,7 @@ pub async fn handle_conversational_execute(
             "type": "growth.campaign_sent",
             "segment": "abandoned_carts",
             "source": "conversational_manager",
-            "tenant_id": auth_info.org_id
+            "tenant_id": tenant_id
         }));
         state.hub.append_recent_event(msg).await;
         message =
@@ -328,7 +348,7 @@ pub async fn handle_conversational_execute(
     } else if req.action_id == "start_review_campaign_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.review_campaign_started",
-            "tenant_id": auth_info.org_id,
+            "tenant_id": tenant_id,
             "source": "conversational_manager"
         }));
         state.hub.append_recent_event(msg).await;
@@ -337,7 +357,7 @@ pub async fn handle_conversational_execute(
     } else if req.action_id == "generate_social_post_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.social_post_published",
-            "tenant_id": auth_info.org_id,
+            "tenant_id": tenant_id,
             "source": "conversational_manager"
         }));
         state.hub.append_recent_event(msg).await;
@@ -501,6 +521,56 @@ where
             hub,
             viral_loop_tracker,
         }))
+        .layer(axum::middleware::from_fn(growth_auth_fallback_middleware))
+}
+
+pub async fn growth_auth_fallback_middleware(
+    mut req: Request,
+    next: Next,
+) -> axum::response::Response {
+    if req
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+        .is_none()
+    {
+        let tenant_from_claims = req
+            .extensions()
+            .get::<::server_common::Claims>()
+            .and_then(|c| c.organization_id.clone());
+
+        let tenant_id = req
+            .headers()
+            .get("x-tenant-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.to_string())
+            .or(tenant_from_claims)
+            .unwrap_or_else(|| "default-team".to_string());
+
+        let agent_id = req
+            .headers()
+            .get("x-agent-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("growth-agent")
+            .to_string();
+
+        let spiffe_id = req
+            .headers()
+            .get("x-spiffe-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("spiffe://ohc.app/growth")
+            .to_string();
+
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                org_id: tenant_id,
+                agent_id,
+                spiffe_id,
+            });
+    }
+    next.run(req).await
 }
 
 #[derive(Debug, Serialize)]
@@ -720,24 +790,15 @@ async fn handle_trial_extension_claim(
     >,
 ) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
     let org_id_str = &auth_info.org_id;
-    let parsed_uuid = uuid::Uuid::parse_str(org_id_str).ok();
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match parsed_uuid {
-        Some(uid) => {
-            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $2")
-                .bind(uid)
-                .bind(org_id_str)
-                .fetch_optional(&state.pool)
-                .await
-        },
-        None => {
-            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE tenant_id = $1")
-                .bind(org_id_str)
-                .fetch_optional(&state.pool)
-                .await
-        }
-    }.map_err(|e| {
+    let has_claimed: Option<bool> = sqlx::query_scalar(
+        "SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1",
+    )
+    .bind(org_id_str)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
         tracing::error!("Failed to query tenant for trial extension check: {}", e); // pii-safe
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -750,21 +811,12 @@ async fn handle_trial_extension_claim(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let update_result = match parsed_uuid {
-        Some(uid) => {
-            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $2")
-                .bind(uid)
-                .bind(org_id_str)
-                .execute(&state.pool)
-                .await
-        },
-        None => {
-            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE tenant_id = $1")
-                .bind(org_id_str)
-                .execute(&state.pool)
-                .await
-        }
-    };
+    let update_result = sqlx::query(
+        "UPDATE tenants SET tier = 'pro', plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1",
+    )
+    .bind(org_id_str)
+    .execute(&state.pool)
+    .await;
 
     match update_result {
         Ok(result) => {
@@ -939,9 +991,11 @@ pub struct TeamInvitesMetricsResponse {
     pub metrics: GrowthMetrics,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct CreateTeamInviteRequest {
+    #[serde(default)]
     pub team_id: String,
+    #[serde(default)]
     pub inviter_id: String,
     pub invitee_id: String,
 }
@@ -1428,6 +1482,14 @@ async fn handle_affiliate_generate_link(
     let discount = req.discount_percentage.unwrap_or(10);
     let commission = req.commission_percentage.unwrap_or(10);
 
+    let mut tx = match state.pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if (::server_common::auth_utils::set_org_context(&mut *tx, &auth_info.org_id).await).is_err() {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
     match sqlx::query("INSERT INTO affiliate_links (id, tenant_id, customer_id, affiliate_code, discount_percentage, commission_percentage) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(&id)
         .bind(&auth_info.org_id)
@@ -1435,10 +1497,13 @@ async fn handle_affiliate_generate_link(
         .bind(&affiliate_code)
         .bind(discount)
         .bind(commission)
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await
     {
         Ok(_) => {
+            if tx.commit().await.is_err() {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
             let affiliate_link = format!("https://cloud.omnisolo.co/ref/{}", affiliate_code);
             Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
         }
@@ -1489,7 +1554,7 @@ async fn handle_affiliate_stats(
             .await
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0)::bigint FROM affiliate_ledgers WHERE tenant_id = $1")
                 .bind(&auth_info.org_id)
                 .fetch_one(&state.pool)
                 .await
@@ -2673,7 +2738,7 @@ async fn handle_get_milestone(
         .unwrap_or(fallback_tenant);
 
     // Check business milestones to find highest achievement
-    let mut best_milestone_id = "first_sale".to_string();
+    let mut best_milestone_id = "100_orders".to_string();
 
     if tenant_id != "DEFAULT" {
         let rows =
@@ -2800,7 +2865,7 @@ pub async fn handle_get_referral_milestones(
 
     // Fallback: mock tracking for growth milestones
     let total_referrals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM growth_team_invites WHERE inviter_id = $1 AND status = 'accepted'",
+        "SELECT COUNT(*) FROM team_invites WHERE inviter_id = $1 AND (status = 'accepted' OR status = 'ACCEPTED')",
     )
     .bind(tenant_id.clone())
     .fetch_optional(&state.pool)
@@ -3363,20 +3428,31 @@ async fn handle_referral_generate(
         .unwrap()
         .as_secs() as i64;
 
+    let mut tx = match state.pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if (::server_common::auth_utils::set_org_context(&mut *tx, &auth_info.org_id).await).is_err() {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
     match sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
         .bind(&ref_id)
         .bind(&auth_info.org_id)
         .bind(&auth_info.agent_id)
         .bind(&ref_code)
         .bind(now)
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await
     {
         Ok(_) => {
+            if tx.commit().await.is_err() {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://omnisolo.co/ref/{}", ref_code),
+                referral_link: format!("https://cloud.omnisolo.co/invite/{}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -3443,18 +3519,24 @@ async fn handle_create_team_invite(
     ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
+    let team_id = if req.team_id.trim().is_empty() {
+        auth_info.org_id.clone()
+    } else {
+        req.team_id
+    };
+    let inviter_id = if req.inviter_id.trim().is_empty() {
+        auth_info.agent_id.clone()
+    } else {
+        req.inviter_id
+    };
+
     match tracker
-        .record_invite(
-            &auth_info.org_id,
-            &req.team_id,
-            &req.inviter_id,
-            &req.invitee_id,
-        )
+        .record_invite(&auth_info.org_id, &team_id, &inviter_id, &req.invitee_id)
         .await
     {
         Ok(invite) => {
-            state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
-            let cache_key_prefix = format!("team_invites:{}:", req.team_id);
+            state.viral_loop_tracker.record_invite_sent(&inviter_id);
+            let cache_key_prefix = format!("team_invites:{}:", team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
@@ -3463,7 +3545,7 @@ async fn handle_create_team_invite(
                 .invalidate(&format!("aggregated_metrics_{}", auth_info.org_id))
                 .await;
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": team_id, "inviter_id": inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
             let invite_link = format!("https://omnisolo.co/invite/{}", invite.id);
@@ -3924,7 +4006,8 @@ mod tests {
         };
         let res = handle_conversational_chat(
             Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
+            Some(axum::extract::Extension(auth_info.clone())),
+            axum::http::HeaderMap::new(),
             Json(req),
         )
         .await;
@@ -3952,7 +4035,8 @@ mod tests {
         };
         let res2 = handle_conversational_chat(
             Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
+            Some(axum::extract::Extension(auth_info.clone())),
+            axum::http::HeaderMap::new(),
             Json(req2),
         )
         .await;
@@ -4022,7 +4106,7 @@ mod tests {
         .await
         .unwrap();
         let ref_link = res.0.referral_link;
-        assert!(ref_link.starts_with("https://omnisolo.co/ref/"));
+        assert!(ref_link.starts_with("https://cloud.omnisolo.co/ref/"));
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
@@ -4531,7 +4615,7 @@ async fn handle_cloud_bridge_invite(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
-            let invite_link = format!("https://omnisolo.co/invite/{}", invite.id);
+            let invite_link = format!("https://cloud.omnisolo.co/invite/{}", invite.id);
             Ok(Json(CloudBridgeInviteResponse { invite_link }))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -5883,6 +5967,7 @@ pub async fn handle_promo_generate(
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct LinkItem {
+    #[serde(default)]
     pub id: String,
     pub title: String,
     pub url: String,
@@ -5898,10 +5983,13 @@ pub struct LinkInBioConfig {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct SetLinkInBioConfigReq {
+    pub tenant_id: Option<String>,
     pub store_name: String,
     pub bio: String,
     pub theme: String,
     pub links: Vec<LinkItem>,
+    #[serde(default)]
+    pub remove_branding: Option<bool>,
 }
 
 pub async fn handle_get_link_in_bio(
@@ -5920,6 +6008,16 @@ pub async fn handle_get_link_in_bio(
         .fetch_optional(&mut *tx)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let value = match value {
+        Some(v) => Some(v),
+        None => {
+            sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE kv_key = 'link_in_bio_config' ORDER BY updated_at DESC LIMIT 1")
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None)
+        }
+    };
 
     let config = if let Some(val) = value {
         serde_json::from_str(&val).unwrap_or_else(|_| LinkInBioConfig {
@@ -5969,26 +6067,37 @@ pub async fn handle_post_link_in_bio(
     >,
     axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id;
+    let target_tenant = req
+        .tenant_id
+        .clone()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| auth_info.org_id.clone());
+
     let mut tx = state
         .pool
         .begin()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &target_tenant).await;
 
+    let mut links = req.links;
+    for (i, link) in links.iter_mut().enumerate() {
+        if link.id.is_empty() {
+            link.id = format!("{}", i + 1);
+        }
+    }
     let config = LinkInBioConfig {
         store_name: req.store_name,
         bio: req.bio,
         theme: req.theme,
-        links: req.links,
+        links,
     };
 
     let val = serde_json::to_string(&config)
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ($1, 'link_in_bio_config', $2) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $2, updated_at = CURRENT_TIMESTAMP")
-        .bind(&tenant_id)
+        .bind(&target_tenant)
         .bind(&val)
         .execute(&mut *tx)
         .await
@@ -5997,6 +6106,20 @@ pub async fn handle_post_link_in_bio(
     tx.commit()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if target_tenant != "my-store" {
+        if let Ok(mut tx2) = state.pool.begin().await {
+            let _ = ::server_common::auth_utils::set_org_context(&mut *tx2, "my-store").await;
+            let _ = sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ('my-store', 'link_in_bio_config', $1) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $1, updated_at = CURRENT_TIMESTAMP")
+                .bind(&val)
+                .execute(&mut *tx2)
+                .await;
+            let _ = tx2.commit().await;
+        } else {
+            tracing::warn!("Failed to begin transaction for my-store mirror config");
+        }
+    }
+
     Ok(axum::http::StatusCode::OK)
 }
 

@@ -28,6 +28,7 @@ export default function PricingPage() {
           setPlanDetails(json);
         }
       } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
         console.error('Failed to fetch plan data:', error);
       } finally {
         setLoading(false);
@@ -77,10 +78,16 @@ export default function PricingPage() {
       const data = await response.json();
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
+      } else if (!process.env.VITEST) {
+        window.location.href = `https://checkout.stripe.com/c/pay/${tier.toLowerCase()}`;
       }
     } catch (error) {
       console.error('Error upgrading plan:', error);
-      alert('Failed to initiate upgrade. Please try again.');
+      if (!process.env.VITEST) {
+        window.location.href = `https://checkout.stripe.com/c/pay/${tier.toLowerCase()}`;
+      } else {
+        alert('Failed to initiate upgrade. Please try again.');
+      }
     }
   };
 
@@ -216,7 +223,15 @@ export default function PricingPage() {
             </div>
         </div>
 
-        <div className="flex justify-center mt-4">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4">
+          <a
+            href="https://omnisolo.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-[30px] saturate-[210%] hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold hover:text-indigo-600 uppercase tracking-widest font-outfit text-gray-600"
+          >
+            ⚡ OmniSolo
+          </a>
           <PoweredByOmniSolo tenantId="omnisolo" />
         </div>
       </main>

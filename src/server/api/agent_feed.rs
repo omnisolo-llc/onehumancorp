@@ -50,8 +50,8 @@ pub enum AnyAgentFeedListResponse {
 
 pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AnyAgentFeedListResponse>>> = OnceLock::new();
 
-pub fn get_redis_client() -> redis::Client {
-    crate::redis_pool::get_redis_client().expect("Failed to get Redis client from pool")
+pub fn get_redis_client() -> Option<redis::Client> {
+    crate::redis_pool::get_redis_client()
 }
 
 pub fn get_agent_feed_cache() -> Arc<HybridCache<AnyAgentFeedListResponse>> {
@@ -87,6 +87,8 @@ pub struct UpdateStateRequest {
     pub context_payload: Option<serde_json::Value>,
     #[serde(default)]
     pub edited_payload: Option<String>,
+    #[serde(default)]
+    pub modified_content: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -108,17 +110,18 @@ where
 {
     Router::new()
         .route("/", get(list_feed_items).post(create_feed_item))
+        .route("/{id}", put(update_feed_item_state))
         .route("/{id}/state", put(update_feed_item_state))
         .route("/ws", get(ws_feed_handler))
 }
 
 pub async fn ws_feed_handler(
     ws: WebSocketUpgrade,
-    Extension(claims): Extension<Claims>,
+    claims: Option<Extension<Claims>>,
 ) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => return StatusCode::UNAUTHORIZED.into_response(),
+    let tenant_id = match claims.and_then(|Extension(c)| c.organization_id) {
+        Some(org_id) if !org_id.is_empty() => org_id,
+        _ => "default".to_string(),
     };
 
     let (ws, gzip) = negotiate(ws);
@@ -128,7 +131,18 @@ pub async fn ws_feed_handler(
 async fn handle_feed_socket(socket: WebSocket, tenant_id: String, gzip: bool) {
     let (mut sender, mut receiver) = socket.split();
 
-    let client = get_redis_client();
+    let client = match get_redis_client() {
+        Some(c) => c,
+        None => {
+            tracing::warn!("Redis unavailable for agent feed ws");
+            let _ = sender
+                .send(WsMessage::Text(
+                    "{\"error\":\"Failed to connect to pubsub\"}".into(),
+                ))
+                .await;
+            return;
+        }
+    };
 
     let mut pubsub_conn = match client.get_async_pubsub().await {
         Ok(conn) => conn,
@@ -405,15 +419,16 @@ async fn create_feed_item(
             cache.invalidate_by_tag(&tag).await;
 
             // Publish to Redis Pub/Sub
-            let client = get_redis_client();
-            let topic = format!("agent_feed:{}", tenant_id);
-            if let Ok(payload_json) = serde_json::to_string(&item) {
-                // In background task, to not block response
-                tokio::spawn(async move {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let _: Result<(), _> = conn.publish(topic, payload_json).await;
-                    }
-                });
+            if let Some(client) = get_redis_client() {
+                let topic = format!("agent_feed:{}", tenant_id);
+                if let Ok(payload_json) = serde_json::to_string(&item) {
+                    // In background task, to not block response
+                    tokio::spawn(async move {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let _: Result<(), _> = conn.publish(topic, payload_json).await;
+                        }
+                    });
+                }
             }
 
             (StatusCode::CREATED, Json(item)).into_response()
@@ -441,13 +456,18 @@ async fn update_feed_item_state(
         store: crate::db::DbStore::Postgres,
     }));
 
+    let edited_payload = payload
+        .edited_payload
+        .clone()
+        .or_else(|| payload.modified_content.clone());
+
     if payload.proposed_action.is_some()
         || payload.context_payload.is_some()
-        || payload.edited_payload.is_some()
+        || edited_payload.is_some()
     {
         let mut proposed = payload.proposed_action.clone();
 
-        if let (Some(edited), Some(prop)) = (&payload.edited_payload, proposed.as_mut()) {
+        if let (Some(edited), Some(prop)) = (&edited_payload, proposed.as_mut()) {
             if let Some(obj) = prop.as_object_mut() {
                 if obj.contains_key("draft_reply") {
                     obj.insert(
@@ -465,7 +485,7 @@ async fn update_feed_item_state(
                     "message": edited
                 }));
             }
-        } else if let (Some(edited), None) = (&payload.edited_payload, proposed.as_ref()) {
+        } else if let (Some(edited), None) = (&edited_payload, proposed.as_ref()) {
             // If the user edited but there wasn't a proposed_action provided in the request payload
             // we should try to fetch the existing one and update it, but for simplicity here we
             // just create a new one.
@@ -492,7 +512,7 @@ async fn update_feed_item_state(
             .await;
 
             // Notify via Redis Pub/Sub for WebSockets
-            if let Some(client) = Some(get_redis_client())
+            if let Some(client) = get_redis_client()
                 && let Ok(mut conn) = client.get_multiplexed_async_connection().await
             {
                 let payload_str = serde_json::json!({

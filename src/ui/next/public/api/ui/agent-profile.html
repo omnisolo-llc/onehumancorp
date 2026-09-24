@@ -246,7 +246,7 @@
 
           if (res.ok) {
             const data = await res.json();
-            shareInput.value = data.invite_link;
+            shareInput.value = (data.invite_link ? data.invite_link.replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/') : "https://cloud.omnisolo.co/invite/fallback");
             shareBtn.style.display = 'none';
             shareContainer.style.display = 'block';
           } else {

@@ -18,7 +18,8 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     expect(isScrollable).toBeFalsy();
 
     // Check tabs touch targets
-    const proposalsTab = page.getByRole('button', { name: /Proposals/ });
+    const proposalsTab = page.getByRole('button', { name: /Proposals/i }).first();
+    await expect(proposalsTab).toBeVisible({ timeout: 15000 });
     const box = await proposalsTab.boundingBox();
     expect(box).not.toBeNull();
     if (box) {

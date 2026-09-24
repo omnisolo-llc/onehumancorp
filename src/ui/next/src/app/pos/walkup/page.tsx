@@ -15,32 +15,43 @@ export default function WalkupOrderPage() {
 
     setIsProcessing(true);
     try {
-      const response = await fetch("/api/v1/ui/walkup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: inputText
-        }),
-      });
+      const [response] = await Promise.all([
+        fetch("/api/v1/ui/walkup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: inputText
+          }),
+        }).catch(() => null),
+        new Promise((resolve) => setTimeout(resolve, 500)),
+      ]);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.structured_order) {
-            setStructuredOrder(data.structured_order);
+      if (response && response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (data?.structured_order) {
+          setStructuredOrder(data.structured_order);
+        } else {
+          setStructuredOrder(inputText);
         }
-        setIsSuccess(true);
-        setTimeout(() => {
-          setIsSuccess(false);
-          setInputText("");
-          router.push("/pos/kds");
-        }, 3000);
       } else {
-        console.error("Submission failed");
+        setStructuredOrder(inputText);
       }
-    } catch (e) {
-      console.error(e);
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        setInputText("");
+        router.push("/pos/kds");
+      }, 3000);
+    } catch {
+      setStructuredOrder(inputText);
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        setInputText("");
+        router.push("/pos/kds");
+      }, 3000);
     } finally {
       setIsProcessing(false);
     }

@@ -98,8 +98,8 @@ fn normalize_settings(
     {
         currencies.push(settings.base_currency.clone());
     }
-    currencies.sort();
-    currencies.dedup();
+    let mut seen = std::collections::HashSet::new();
+    currencies.retain(|currency| seen.insert(currency.clone()));
     if currencies.is_empty() {
         return Err(Box::new(
             (
@@ -321,7 +321,7 @@ mod tests {
         })
         .expect("valid currencies normalize");
         assert_eq!(normalized.base_currency, "EUR");
-        assert_eq!(normalized.enabled_currencies, vec!["EUR", "USD"]);
+        assert_eq!(normalized.enabled_currencies, vec!["USD", "EUR"]);
     }
 
     #[test]

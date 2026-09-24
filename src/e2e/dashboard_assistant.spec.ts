@@ -4,8 +4,6 @@ test.describe('Dashboard to Assistant Integration', () => {
   test('should link to WorkBuddy Assistant and navigate correctly', async ({ page }) => {
     // 1. Navigate to the dashboard
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
     // 2. Verify the Dashboard heading exists
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 
@@ -17,8 +15,6 @@ test.describe('Dashboard to Assistant Integration', () => {
 
     // 5. Click the link to navigate to the assistant page
     await assistantLink.click();
-    await page.waitForLoadState('networkidle');
-
     // 6. Verify we reached the Agent Assistant page
     await expect(page.getByRole('heading', { name: 'Agent Assistant' })).toBeVisible();
   });

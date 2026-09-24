@@ -4,7 +4,7 @@ test.describe("Dashboard campaign orchestration", () => {
   test("navigates from Dashboard to campaign workflows", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await page.getByRole("link", { name: /Campaign Orchestration/i }).first().click();
+    await page.getByRole("link", { name: /^Campaigns$/i }).first().click();
 
     await expect(page.getByRole("heading", { name: "Campaign Orchestration" })).toBeVisible();
     await expect(page.getByText("Campaign Command Queue")).toBeVisible();

@@ -14,18 +14,25 @@ export default function SmartPricingPage() {
   useEffect(() => {
     // Only fetch on client
     if (typeof window !== "undefined") {
-      const savedEnabled = localStorage.getItem("smartPricingEnabled");
-      if (savedEnabled !== null) setEnabled(JSON.parse(savedEnabled));
+      try {
+        const savedEnabled = localStorage.getItem("smartPricingEnabled");
+        if (savedEnabled !== null) setEnabled(JSON.parse(savedEnabled));
 
-      const savedPerishables = localStorage.getItem("smartPricingPerishables");
-      if (savedPerishables !== null)
-        setDiscountPerishables(JSON.parse(savedPerishables));
+        const savedPerishables = localStorage.getItem("smartPricingPerishables");
+        if (savedPerishables !== null)
+          setDiscountPerishables(JSON.parse(savedPerishables));
 
-      const savedSurge = localStorage.getItem("smartPricingSurge");
-      if (savedSurge !== null) setSurgePricing(JSON.parse(savedSurge));
+        const savedSurge = localStorage.getItem("smartPricingSurge");
+        if (savedSurge !== null) setSurgePricing(JSON.parse(savedSurge));
 
-      const savedMax = localStorage.getItem("smartPricingMaxAdjustment");
-      if (savedMax !== null) setMaxAdjustment(parseInt(savedMax, 10));
+        const savedMax = localStorage.getItem("smartPricingMaxAdjustment");
+        if (savedMax !== null) {
+          const parsed = parseInt(savedMax, 10);
+          if (!isNaN(parsed)) setMaxAdjustment(parsed);
+        }
+      } catch {
+        // Ignore corrupted localStorage data
+      }
     }
   }, []);
 

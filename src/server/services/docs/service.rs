@@ -61,7 +61,7 @@ fn get_articles() -> &'static Vec<HelpArticle> {
             },
             HelpArticle {
                 id: "proposals-payments".to_string(),
-                topic: "Sales & Payments".to_string(),
+                topic: "Sales & Checkout".to_string(),
                 title: "How to Send Proposals and Collect Payments Securely".to_string(),
                 content_markdown: include_str!("../../../../docs/help_center/managing_quotes_invoices_approvals.md").to_string(),
             },

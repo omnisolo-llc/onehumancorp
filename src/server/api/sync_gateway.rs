@@ -244,10 +244,10 @@ pub struct WsQuery {
     pub topics: Option<String>,
 }
 
-fn get_redis_client() -> redis::Client {
+fn get_redis_client() -> Option<redis::Client> {
     let redis_url =
         std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-    redis::Client::open(redis_url).expect("Invalid Redis URL")
+    redis::Client::open(redis_url).ok()
 }
 
 async fn ensure_redis_subscription() {
@@ -259,7 +259,13 @@ async fn ensure_redis_subscription() {
     *is_sub = true;
 
     tokio::spawn(async move {
-        let client = get_redis_client();
+        let client = match get_redis_client() {
+            Some(c) => c,
+            None => {
+                tracing::warn!("Redis unavailable for sync ws");
+                return;
+            }
+        };
         let mut pubsub_conn = match client.get_async_pubsub().await {
             Ok(conn) => conn,
             Err(e) => {

@@ -1,13 +1,14 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Omni Inbox Agentic Triage', () => {
-  test('displays unread leads summary and allows inventory deduction approval', async ({ page }) => {
+  test('displays unread leads summary and allows inventory deduction approval', async ({ anonymousPage: page }) => {
     // Rely on E2E Seed Data for messages and avoid overriding global API routes
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
+    await page.getByLabel(/Organization/).fill('e2e-tenant');
+    await page.getByRole('button', { name: /Log in/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible({ timeout: 20000 });
 
     await page.goto('/inbox');
 

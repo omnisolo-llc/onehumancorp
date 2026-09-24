@@ -80,30 +80,44 @@ export default function SettingsPage() {
 
 
 
+  const isAbortError = (e: unknown) => {
+    if (!e) return false;
+    const msg = String((e as { message?: string })?.message || e);
+    return (e as { name?: string })?.name === "AbortError" || msg.includes("Failed to fetch") || msg.includes("aborted");
+  };
+
   useEffect(() => {
+    document.title = "Settings | OmniSolo OneHumanCorp";
     Promise.all([
       fetch("/api/v1/settings/delivery")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
+           if (!data) return;
            setDeliverySettings({
              delivery_enabled: data.delivery_enabled || false,
              delivery_radius: data.delivery_radius || 5.0,
              delivery_fee: data.delivery_fee || 8.50,
            });
         })
-        .catch(e => console.error("Failed to load delivery settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load delivery settings", e);
+        }),
 
       fetch("/api/v1/assistant/settings")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.settings?.agentName) {
             setAgentName(data.settings.agentName);
           }
         })
-        .catch(e => console.error("Failed to load assistant settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load assistant settings", e);
+        }),
 
       fetch("/api/v1/settings/voice")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data) {
             setVoiceSettings({
@@ -114,19 +128,25 @@ export default function SettingsPage() {
             });
           }
         })
-        .catch(e => console.error("Failed to load voice settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load voice settings", e);
+        }),
 
       fetch("/api/v1/settings/telemetry")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data && data.product_telemetry_enabled !== undefined) {
             setProductTelemetryEnabled(data.product_telemetry_enabled);
           }
         })
-        .catch(e => console.error("Failed to load telemetry settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load telemetry settings", e);
+        }),
 
       fetch("/api/v1/local_seo/discovery_report")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (Array.isArray(data)) {
             setSeoReports(data);
@@ -137,7 +157,10 @@ export default function SettingsPage() {
             }
           }
         })
-        .catch(e => console.error("Failed to load seo reports", e))
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load seo reports", e);
+        })
     ]).finally(() => {
       setIsLoading(false);
     });
@@ -155,7 +178,10 @@ export default function SettingsPage() {
           setUsageLogs(data);
         }
       })
-      .catch(e => console.error("Failed to load usage logs", e));
+      .catch(e => {
+        if (isAbortError(e)) return;
+        console.error("Failed to load usage logs", e);
+      });
 
     fetch("/api/v1/settings/authentication", { cache: "no-store" })
       .then(async res => {
@@ -338,7 +364,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <AppShell title="Settings">
+      <AppShell title="Workspace Settings">
         <div className="flex h-64 items-center justify-center">
           <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
@@ -347,13 +373,38 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell title="Settings">
-      <div className="mx-auto max-w-4xl space-y-8 font-inter">
+    <AppShell title="Workspace Settings">
+      <div id="settings-screen" className="mx-auto max-w-4xl space-y-8 font-inter">
         <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
-          <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Workspace Settings</h1>
+          <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Settings</h1>
           <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and advanced system security.</p>
         </header>
 
+        {/* General Notifications Card */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <h2 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">General Preferences</h2>
+          </div>
+          <div className="app-panel-body p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</span>
+                <select className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800" defaultValue="UTC">
+                  <option value="UTC">UTC</option>
+                  <option value="EST">EST</option>
+                  <option value="PST">PST</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Language</span>
+                <select className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800" defaultValue="en">
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </section>
 
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
@@ -368,7 +419,7 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">Automatically handle multi-currency payments and localize invoices.</h3>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
+                <input type="checkbox" aria-label="Automatically handle multi-currency payments and localize invoices" className="sr-only peer" defaultChecked />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
               </label>
             </div>
@@ -380,7 +431,7 @@ export default function SettingsPage() {
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">SMS Notifications & Security</div>
+              <h3 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Critical SMS Alerts</h3>
               <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Get texts for critical events. Verify your phone number to enable.</div>
             </div>
           </div>
@@ -391,7 +442,7 @@ export default function SettingsPage() {
                 <input
                   aria-label="Mobile Number"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="Mobile Phone Number (e.g. +1234567890)"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isVerified}
@@ -457,7 +508,7 @@ export default function SettingsPage() {
                     onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-800">Email Notifications</span>
+                  <span className="text-sm font-medium text-gray-800">Enable Email Notifications</span>
                 </label>
                 <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
@@ -467,7 +518,7 @@ export default function SettingsPage() {
                     onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-800">Push Notifications</span>
+                  <span className="text-sm font-medium text-gray-800">Enable Push Notifications</span>
                 </label>
               </div>
             </div>
@@ -480,7 +531,7 @@ export default function SettingsPage() {
             <div>
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
-                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery Setup</div>
+                  <h3 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery (DoorDash Drive)</h3>
                   <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure delivery radius and rates.</div>
                 </div>
               </div>
@@ -500,8 +551,9 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Radius (miles)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Delivery Radius (miles)</span>
                     <input
+                      aria-label="Delivery Radius (miles)"
                       type="number"
                       step="0.1"
                       value={deliverySettings.delivery_radius}
@@ -511,8 +563,9 @@ export default function SettingsPage() {
                     />
                   </label>
                   <label className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Flat Fee ($)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Flat Delivery Fee ($)</span>
                     <input
+                      aria-label="Flat Delivery Fee ($)"
                       type="number"
                       step="0.01"
                       value={deliverySettings.delivery_fee}
@@ -539,6 +592,7 @@ export default function SettingsPage() {
                   <span>Enable AI Voice Receptionist</span>
                   <input
                     type="checkbox"
+                    aria-label="Enable AI Voice Receptionist"
                     checked={voiceSettings.voice_receptionist_enabled}
                     onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"

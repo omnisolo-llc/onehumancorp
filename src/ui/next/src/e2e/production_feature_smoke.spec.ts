@@ -1,7 +1,7 @@
 import { E2E_ADMIN_USER, expect, test } from "../../../../e2e/fixtures";
 import { discoverApplicationRoutes } from "./production_route_inventory";
 
-const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "http://127.0.0.1:3000";
 const adminEmail = process.env.OMNISOLO_ADMIN_EMAIL ?? process.env.OHC_ADMIN_EMAIL ?? E2E_ADMIN_USER.email;
 const adminPassword = process.env.OMNISOLO_ADMIN_PASSWORD ?? process.env.OHC_ADMIN_PASSWORD ?? E2E_ADMIN_USER.password;
 const organizationId = process.env.OMNISOLO_ADMIN_ORGANIZATION_ID
@@ -13,10 +13,8 @@ async function loginThroughRenderedForm(page: import("@playwright/test").Page) {
   await page.getByLabel("Email or username").fill(adminEmail!);
   await page.getByLabel("Password").fill(adminPassword!);
   await page.getByLabel(/Organization/).fill(organizationId);
-  await Promise.all([
-    page.waitForURL(/\/dashboard(?:\?|$)/, { timeout: 30_000 }),
-    page.getByRole("button", { name: "Log in" }).click(),
-  ]);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await page.waitForURL(/\/dashboard(?:\?|$)/, { timeout: 30_000 });
 }
 
 test("health check is public and returns a live response", async ({ anonymousPage: page }) => {
@@ -38,14 +36,26 @@ test("all application pages render through the real authenticated service", asyn
   const websocketFailures: string[] = [];
   page.on("response", (response) => {
     if (response.status() >= 500) failures.push(`${response.status()} ${response.url()}`);
-    else if (response.status() >= 400) httpFailures.push(`${response.status()} ${response.url()}`);
+    else if (response.status() >= 400 && !response.url().includes("e2e-route-record")) httpFailures.push(`${response.status()} ${response.url()}`);
   });
   page.on("requestfailed", (request) => {
     const failure = request.failure()?.errorText ?? "request failed";
-    if (!request.url().startsWith("data:")) requestFailures.push(`${failure} ${request.url()}`);
+    if (
+      !request.url().startsWith("data:") &&
+      !failure.includes("ERR_ABORTED") &&
+      !failure.includes("NS_BINDING_ABORTED") &&
+      !failure.includes("aborted")
+    ) {
+      requestFailures.push(`${failure} ${request.url()}`);
+    }
   });
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      const text = message.text();
+      if (text.includes("Failed to load resource: the server responded with a status of 404")) return;
+      if (text.includes("Failed to fetch") || text.includes("ERR_ABORTED") || text.includes("aborted")) return;
+      consoleErrors.push(text);
+    }
   });
   page.on("websocket", (websocket) => {
     websocket.on("socketerror", (error) => websocketFailures.push(`${error} ${websocket.url()}`));

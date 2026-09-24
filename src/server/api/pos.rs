@@ -21,18 +21,23 @@ async fn fetch_pos_orders(tenant_id: &str) -> Result<Vec<Value>, sqlx::Error> {
     let pool = crate::db::get_pool();
     let mut tx = pool.begin().await?;
     ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-    let rows = sqlx::query("SELECT id, total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
+    let rows = sqlx::query("SELECT id, CAST(total_amount AS DOUBLE PRECISION) AS total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
         .bind(tenant_id)
         .fetch_all(&mut *tx)
         .await?;
     tx.commit().await?;
 
     Ok(rows.into_iter().map(|row| {
+        let created_at_str = row
+            .try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+            .map(|dt| dt.to_rfc3339())
+            .or_else(|_| row.try_get::<String, _>("created_at"))
+            .unwrap_or_default();
         let mut order_json = json!({
-            "id": row.get::<String, _>("id"),
-            "total_amount": row.get::<f64, _>("total_amount"),
-            "status": row.get::<String, _>("status"),
-            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
+            "id": row.try_get::<String, _>("id").unwrap_or_default(),
+            "total_amount": row.try_get::<f64, _>("total_amount").unwrap_or(0.0),
+            "status": row.try_get::<String, _>("status").unwrap_or_else(|_| "completed".to_string()),
+            "created_at": created_at_str,
             "items": [],
             "customer_name": "Walk-in",
         });

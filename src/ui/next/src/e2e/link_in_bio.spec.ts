@@ -6,7 +6,7 @@ test.describe('Link-in-Bio Generator E2E', () => {
     await page.goto('/link-in-bio-generator');
 
     // 2. Wait for the page to be ready (ensure "Publish Changes" button is visible)
-    const publishButton = page.locator('button', { hasText: 'Publish Changes' });
+    const publishButton = page.locator('button', { hasText: /Publish Changes|Save & Publish/ });
     await expect(publishButton).toBeVisible();
 
     // 3. Update the business name and bio

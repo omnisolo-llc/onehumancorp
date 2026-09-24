@@ -64,14 +64,14 @@ impl ProactiveAnalysisWorker {
                     let mut unconfirmed_bookings = 0;
                     match &db.store {
                         crate::db::DbStore::Postgres => {
-                            if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM calendar_events WHERE tenant_id = $1 AND status = 'unconfirmed' AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'")
+                            if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM bookings WHERE tenant_id = $1 AND status = 'pending' AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'")
                                 .bind(&tenant_id)
                                 .fetch_one(&db.pool).await {
                                 unconfirmed_bookings = count;
                             }
                         },
                         crate::db::DbStore::Sqlite(_) => {
-                            if let Ok(count) = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM calendar_events WHERE tenant_id = $1 AND status = 'unconfirmed' AND created_at > datetime('now', '-7 days')")
+                            if let Ok(count) = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM bookings WHERE tenant_id = $1 AND status = 'pending' AND created_at > datetime('now', '-7 days')")
                                 .bind(&tenant_id)
                                 .fetch_one(&db.pool).await {
                                 unconfirmed_bookings = count as i64;
@@ -82,14 +82,14 @@ impl ProactiveAnalysisWorker {
                     let mut unfulfilled_orders = 0;
                     match &db.store {
                         crate::db::DbStore::Postgres => {
-                            if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM pos_orders WHERE tenant_id = $1 AND status = 'pending' AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'")
+                            if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending' AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'")
                                 .bind(&tenant_id)
                                 .fetch_one(&db.pool).await {
                                 unfulfilled_orders = count;
                             }
                         },
                         crate::db::DbStore::Sqlite(_) => {
-                            if let Ok(count) = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM pos_orders WHERE tenant_id = $1 AND status = 'pending' AND created_at > datetime('now', '-7 days')")
+                            if let Ok(count) = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending' AND created_at > datetime('now', '-7 days')")
                                 .bind(&tenant_id)
                                 .fetch_one(&db.pool).await {
                                 unfulfilled_orders = count as i64;

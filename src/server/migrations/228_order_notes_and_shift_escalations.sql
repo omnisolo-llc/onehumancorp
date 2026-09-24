@@ -1,0 +1,3 @@
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS translated_notes TEXT;
+ALTER TABLE shift_summaries ADD COLUMN IF NOT EXISTS escalations TEXT;

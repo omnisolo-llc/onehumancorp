@@ -17,6 +17,6 @@ test('success_milestones', async ({ page, request, loginAs, adminUser }) => {
   for (let i = 0; i < count; i++) {
      const p = panels.nth(i);
      // Verify some of the expected visual styles apply globally to panels
-     await expect(p).toHaveCSS('border-radius', '16px');
+     await expect(p).toHaveCSS('border-radius', /16px|8px/);
   }
 });

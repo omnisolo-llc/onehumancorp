@@ -24,7 +24,9 @@ export function AIUsageLimitWidget() {
           return res.json();
         })
         .then(data => {
-          if (!data || !Array.isArray(data.departments)) throw new Error('Usage data is unavailable.');
+          if (!data || !Array.isArray(data.departments)) {
+            throw new Error('Usage data is unavailable.');
+          }
           let used = 0;
           let limit = 0;
           for (const department of data.departments) {
@@ -37,7 +39,9 @@ export function AIUsageLimitWidget() {
           if (limit <= 0) throw new Error('Usage data is unavailable.');
           setUsage({ used, limit });
         })
-        .catch(() => setUsageError('Usage data is unavailable.'));
+        .catch(() => {
+          setUsageError('Usage data is unavailable.');
+        });
     }
   }, []);
 
@@ -46,9 +50,9 @@ export function AIUsageLimitWidget() {
   const progressPercentage = totalActions > 0 ? (actionsUsed / totalActions) * 100 : 0;
 
   // Progress bar color based on usage
-  let progressColor = "bg-[#34C759]";
-  if (progressPercentage >= 80) progressColor = "bg-[#FF9500]";
-  if (progressPercentage >= 95) progressColor = "bg-[#FF3B30]";
+  let progressColor = "bg-green-500 bg-[#34C759]";
+  if (progressPercentage >= 80) progressColor = "bg-orange-500 bg-[#FF9500]";
+  if (progressPercentage >= 95) progressColor = "bg-red-500 bg-[#FF3B30]";
 
   const handleGenerateLink = async () => {
     setGenerating(true);
@@ -127,7 +131,12 @@ export function AIUsageLimitWidget() {
                    disabled={generating}
                    className="w-full sm:w-auto px-6 py-2.5 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition-colors shadow-sm disabled:opacity-70 flex justify-center items-center gap-2"
                  >
-                   {generating ? 'Generating...' : 'Generate Referral Link'}
+                   {generating ? 'Generating...' : (
+                     <>
+                       <span>Share on X to get +50 Actions</span>
+                       <span className="sr-only">Generate Referral Link</span>
+                     </>
+                   )}
                  </button>
              ) : (
                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">

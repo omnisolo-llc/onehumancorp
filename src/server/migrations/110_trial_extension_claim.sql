@@ -1,1 +1,2 @@
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS has_claimed_trial_extension BOOLEAN DEFAULT false;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_tier TEXT DEFAULT 'free';

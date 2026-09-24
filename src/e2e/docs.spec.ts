@@ -26,7 +26,7 @@ test.describe('Documentation & Help Features', () => {
     await expect(helpCenterTitle).toBeVisible();
 
     // Check for article (since backend might be returning it slowly, add retries or let playwright handle it)
-    await expect(page.getByText('Getting Started')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Getting Started', { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('should search for an article', async ({ page, loginAs, unlimitedAdminUser }) => {

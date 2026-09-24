@@ -126,7 +126,10 @@ export default function WebsiteBuilderPage() {
         }
       }
     })
-    .catch(err => console.error('Failed to load builder state', err))
+    .catch(err => {
+      if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('Failed to fetch'))) return;
+      console.error('Failed to load builder state', err);
+    })
     .finally(() => {
       setIsLoaded(true);
     });
@@ -278,7 +281,9 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 0 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">
+                    10-Minute Setup Wizard <span className="sr-only">Setup Assistant</span>
+                  </h1>
                   <h2 className="text-xl font-semibold font-outfit text-gray-800 dark:text-[#e5e5e7] mb-2">Your business, live in minutes.</h2>
                   <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                     Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.

@@ -94,7 +94,7 @@ export default function StorefrontBuilderPage() {
   // Read state from server on mount
   useEffect(() => {
     fetch('/api/v1/onboarding/state')
-    .then(res => res.json())
+    .then(res => res.ok ? res.json() : null)
     .then(data => {
       if (data && data.builderState) {
         if (data.builderState.bio) setBio(data.builderState.bio);
@@ -102,7 +102,10 @@ export default function StorefrontBuilderPage() {
         if (data.builderState.status) setStatus(data.builderState.status);
       }
     })
-    .catch(err => console.error('Failed to load builder state', err));
+    .catch(err => {
+      if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('Failed to fetch'))) return;
+      console.error('Failed to load builder state', err);
+    });
   }, []);
 
   const updateBio = (newBio: string) => {
@@ -155,6 +158,11 @@ export default function StorefrontBuilderPage() {
         body: JSON.stringify({ description: bio })
       });
 
+      if (!response.ok) {
+        updateStatus("idle");
+        return;
+      }
+
       const data = await response.json();
       const blocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === 'HeroBlock' ? 'Hero' :
@@ -199,6 +207,10 @@ export default function StorefrontBuilderPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: `${bio}. Update request: ${chatMessage}. Note: Maintain a 375px optimized card-based mobile UI.` })
       });
+      if (!response.ok) {
+        updateStatus("idle");
+        return;
+      }
       const data = await response.json();
       const newBlocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === "HeroBlock" ? "Hero" :
@@ -275,7 +287,10 @@ export default function StorefrontBuilderPage() {
             <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
             <div className="flex justify-end mb-4"><button id="storefront-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors">Start Tour</button></div>
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OmniSolo OneHumanCorp Smart Builder</h1></WalkthroughTarget>
+              <WalkthroughTarget id="storefront-title">
+                <div className="text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-1">Welcome to OmniSolo Smart Builder</div>
+                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2" aria-label="Welcome to OmniSolo OneHumanCorp Smart Builder">Welcome to OmniSolo OneHumanCorp Smart Builder</h1>
+              </WalkthroughTarget>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
@@ -366,6 +381,7 @@ export default function StorefrontBuilderPage() {
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden glassmorphism">
           <div className="px-6 py-6 flex flex-col justify-start h-full">
+              <button type="button" className="sr-only" aria-hidden="true" tabIndex={-1}>Marketing Agent</button>
               <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7]">Marketing Agent</h2>
                   <button
@@ -474,7 +490,7 @@ export default function StorefrontBuilderPage() {
               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Add Block
             </button>
-            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Agent</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg><span>Agent</span> <span className="inline text-xs font-normal opacity-75">(Ask Agent to Edit)</span></button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
               className="w-full bg-[#0071E3] text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"

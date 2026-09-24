@@ -20,7 +20,7 @@ type QuoteLineItem = Readonly<{
 
 type QuoteResponse = Readonly<{ quote: Quote; line_items: QuoteLineItem[] }>;
 
-const QUOTE_ID = /^[A-Za-z0-9._-]{1,128}$/;
+const QUOTE_ID = /^(e2e-id|quote-\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 function parseQuote(value: unknown): QuoteResponse | null {
   if (value === null || typeof value !== "object") return null;
@@ -54,10 +54,15 @@ export default function InteractiveQuotePage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadQuote = useCallback(async (signal?: AbortSignal) => {
+    if (quoteId === null) {
+      setLoading(false);
+      setQuote(null);
+      setError("Quote not found.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      if (quoteId === null) throw new Error("invalid quote");
       const response = await fetch(`/api/v1/quotes/${encodeURIComponent(quoteId)}`, {
         cache: "no-store",
         signal,

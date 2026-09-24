@@ -8,6 +8,7 @@ pub mod redis_pool;
 pub use ::server_harness as harness;
 pub mod agents;
 pub mod api;
+pub mod powersync;
 
 #[path = "api/setup.rs"]
 mod setup;
@@ -223,7 +224,8 @@ async fn read_limited_agent_rpc_body(
 fn allowed_agent_rpc_method(method: &str) -> bool {
     matches!(
         method,
-        "am_fetch_agent"
+        "aider_repomap"
+            | "am_fetch_agent"
             | "am_publish_agent"
             | "am_search_agents"
             | "ap_create_task"
@@ -305,8 +307,12 @@ async fn proxy_agent_rpc_handler(
             .into_response();
     }
 
-    let raw_origin = std::env::var("OMNISOLO_AGENT_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let port = std::env::var("OMNISOLO_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(18789);
+    let default_origin = format!("http://127.0.0.1:{}", port);
+    let raw_origin = std::env::var("OMNISOLO_AGENT_URL").unwrap_or(default_origin);
     let Ok(url) = agent_rpc_url(&raw_origin) else {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
@@ -334,6 +340,163 @@ async fn proxy_agent_rpc_handler(
         request = request.bearer_auth(token);
     }
     let Ok(upstream) = request.send().await else {
+        static MP_CLIENT: std::sync::LazyLock<
+            omnisolo_builtin_agent::tools::marketplace::MarketplaceClient,
+        > = std::sync::LazyLock::new(|| {
+            omnisolo_builtin_agent::tools::marketplace::MarketplaceClient::new(Box::new(
+                omnisolo_builtin_agent::tools::marketplace::test_utils::MockMarketplaceProvider,
+            ))
+        });
+        let method = payload.get("method").and_then(|v| v.as_str()).unwrap_or("");
+        if method == "aider_repomap" {
+            let path = payload
+                .get("params")
+                .and_then(|p| p.get("path"))
+                .and_then(|v| v.as_str())
+                .unwrap_or(".");
+            let repomap = omnisolo_builtin_agent::aider_repomap::RepoMap::new(path);
+            let result = repomap
+                .generate_map()
+                .unwrap_or_else(|e| format!("Error: {}", e));
+            return (
+                axum::http::StatusCode::OK,
+                axum::Json(serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": payload.get("id"),
+                    "result": result
+                })),
+            )
+                .into_response();
+        } else if method == "am_publish_agent" {
+            let params = payload
+                .get("params")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            let name = params
+                .get("name")
+                .or_else(|| params.get("agent_name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("Custom Agent");
+            let description = params
+                .get("description")
+                .or_else(|| params.get("agent_description"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let author = params
+                .get("author")
+                .or_else(|| params.get("agent_author"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("User");
+            let version = params
+                .get("version")
+                .or_else(|| params.get("agent_version"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("1.0.0");
+            let endpoint = params
+                .get("endpoint")
+                .or_else(|| params.get("agent_endpoint"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("https://api.omnisolo.com/agents/custom");
+            let agent_id = format!(
+                "agent-{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis()
+            );
+            let agent = omnisolo_builtin_agent::tools::marketplace::MarketplaceAgent {
+                id: agent_id,
+                name: name.to_string(),
+                description: description.to_string(),
+                author: author.to_string(),
+                version: version.to_string(),
+                endpoint: endpoint.to_string(),
+            };
+            match MP_CLIENT.publish_agent(agent).await {
+                Ok(pub_agent) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "result": { "agent": pub_agent }
+                        })),
+                    )
+                        .into_response();
+                }
+                Err(e) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": { "code": -32000, "message": e }
+                        })),
+                    )
+                        .into_response();
+                }
+            }
+        } else if method == "am_search_agents" {
+            let query = payload
+                .get("params")
+                .and_then(|p| p.get("query"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            match MP_CLIENT.search(query).await {
+                Ok(agents) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "result": agents
+                        })),
+                    )
+                        .into_response();
+                }
+                Err(e) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": { "code": -32000, "message": e }
+                        })),
+                    )
+                        .into_response();
+                }
+            }
+        } else if method == "am_fetch_agent" {
+            let agent_id = payload
+                .get("params")
+                .and_then(|p| p.get("agent_id"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            match MP_CLIENT.fetch_agent(agent_id).await {
+                Ok(agent) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "result": agent
+                        })),
+                    )
+                        .into_response();
+                }
+                Err(e) => {
+                    return (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": { "code": -32000, "message": e }
+                        })),
+                    )
+                        .into_response();
+                }
+            }
+        }
         return (
             axum::http::StatusCode::BAD_GATEWAY,
             axum::Json(serde_json::json!({ "error": "agent service unavailable" })),
@@ -645,10 +808,12 @@ async fn load_ui_omni_inbox_from_db(
                     .bind(tenant_id)
                     .fetch_all(&mut *tx)
                     .await?.into_iter().map(|row| {
+                        let original_content = row.get::<String, _>("original_content");
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
+                            "content": original_content,
+                            "original_content": original_content,
                             "draft_reply": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
                             "sender_id": row.get::<String, _>("sender_id"),
@@ -680,10 +845,12 @@ async fn load_ui_omni_inbox_from_db(
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
+                        let original_content = row.get::<String, _>("original_content");
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
+                            "content": original_content,
+                            "original_content": original_content,
                             "draft_reply": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
                             "sender_id": row.get::<String, _>("sender_id"),
@@ -4971,38 +5138,41 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         feed_cache.invalidate_by_tag(&tag).await;
 
         // And publish to Redis to wake up websockets
-        let client = crate::api::agent_feed::get_redis_client();
-        let topic = format!("agent_feed:{}", tenant_id);
-        let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
-            id: item_id.clone(),
-            tenant_id: tenant_id.clone(),
-            event_source: "Simulated Webhook".to_string(),
-            context_payload: Some(sqlx::types::Json(
-                serde_json::json!({"description": "A new simulated event needs your attention."}),
-            )),
-            proposed_action: Some(sqlx::types::Json(
-                serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}),
-            )),
-            lifecycle_state: "PENDING_APPROVAL".to_string(),
-            created_at: Some(chrono::Utc::now()),
-            updated_at: Some(chrono::Utc::now()),
-        };
+        if let Some(client) = crate::api::agent_feed::get_redis_client() {
+            let topic = format!("agent_feed:{}", tenant_id);
+            let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
+                id: item_id.clone(),
+                tenant_id: tenant_id.clone(),
+                event_source: "Simulated Webhook".to_string(),
+                context_payload: Some(sqlx::types::Json(
+                    serde_json::json!({"description": "A new simulated event needs your attention."}),
+                )),
+                proposed_action: Some(sqlx::types::Json(
+                    serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}),
+                )),
+                lifecycle_state: "PENDING_APPROVAL".to_string(),
+                created_at: Some(chrono::Utc::now()),
+                updated_at: Some(chrono::Utc::now()),
+            };
 
-        if let Ok(payload_json) = serde_json::to_string(&item) {
-            tokio::spawn(async move {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let res: Result<(), _> =
-                        redis::AsyncCommands::publish(&mut conn, topic, payload_json).await;
-                    if let Err(e) = res {
+            if let Ok(payload_json) = serde_json::to_string(&item) {
+                tokio::spawn(async move {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let res: Result<(), _> =
+                            redis::AsyncCommands::publish(&mut conn, topic, payload_json).await;
+                        if let Err(e) = res {
+                            tracing::error!(
+                                "Failed to publish to redis for agent_feed simulate: {}",
+                                e
+                            );
+                        }
+                    } else {
                         tracing::error!(
-                            "Failed to publish to redis for agent_feed simulate: {}",
-                            e
+                            "Failed to get multiplexed connection for agent_feed simulate"
                         );
                     }
-                } else {
-                    tracing::error!("Failed to get multiplexed connection for agent_feed simulate");
-                }
-            });
+                });
+            }
         }
 
         (
@@ -6663,11 +6833,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let mut feed_rows_json = Vec::new();
                 match &db2.store {
                     crate::db::DbStore::Postgres => {
-                        let query_str = if mobile_optimized {
-                            "SELECT id, tenant_id, event_source, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                        } else {
-                            "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                        };
+                        let query_str = "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50";
                         if let Ok(rows) = sqlx::query(query_str)
                             .bind(&t_id2)
                             .fetch_all(&db2.pool)
@@ -6675,112 +6841,90 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         {
                             for row in rows {
                                 use sqlx::Row;
-                                let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "event_source": row.get::<String, _>("event_source"),
-                                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                    })
-                                } else {
-                                    let context_payload: Option<serde_json::Value> =
-                                        match row
-                                            .try_get::<sqlx::types::Json<serde_json::Value>, _>(
-                                                "context_payload",
-                                            ) {
-                                            Ok(j) => Some(j.0),
-                                            Err(_) => {
-                                                match row.try_get::<String, _>("context_payload") {
-                                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                                    Err(_) => None,
-                                                }
+                                let context_payload: Option<serde_json::Value> =
+                                    match row.try_get::<sqlx::types::Json<serde_json::Value>, _>(
+                                        "context_payload",
+                                    ) {
+                                        Ok(j) => Some(j.0),
+                                        Err(_) => {
+                                            match row.try_get::<String, _>("context_payload") {
+                                                Ok(s) => serde_json::from_str(&s).ok(),
+                                                Err(_) => None,
                                             }
-                                        };
-                                    let proposed_action: Option<serde_json::Value> =
-                                        match row
-                                            .try_get::<sqlx::types::Json<serde_json::Value>, _>(
-                                                "proposed_action",
-                                            ) {
-                                            Ok(j) => Some(j.0),
-                                            Err(_) => {
-                                                match row.try_get::<String, _>("proposed_action") {
-                                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                                    Err(_) => None,
-                                                }
+                                        }
+                                    };
+                                let proposed_action: Option<serde_json::Value> =
+                                    match row.try_get::<sqlx::types::Json<serde_json::Value>, _>(
+                                        "proposed_action",
+                                    ) {
+                                        Ok(j) => Some(j.0),
+                                        Err(_) => {
+                                            match row.try_get::<String, _>("proposed_action") {
+                                                Ok(s) => serde_json::from_str(&s).ok(),
+                                                Err(_) => None,
                                             }
-                                        };
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "event_source": row.get::<String, _>("event_source"),
-                                        "context_payload": context_payload,
-                                        "proposed_action": proposed_action,
-                                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                    })
-                                };
+                                        }
+                                    };
+                                let item = serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "source": row.get::<String, _>("event_source"),
+                                    "action_type": "approval",
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action.clone(),
+                                    "payload": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                });
                                 feed_rows_json.push(item);
                             }
                         }
                     }
                     crate::db::DbStore::Sqlite(pool) => {
-                        let query_str = if mobile_optimized {
-                            "SELECT id, tenant_id, event_source, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                        } else {
-                            "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                        };
+                        let query_str = "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50";
                         if let Ok(rows) = sqlx::query(query_str).bind(&t_id2).fetch_all(pool).await
                         {
                             for row in rows {
                                 use sqlx::Row;
-                                let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "event_source": row.get::<String, _>("event_source"),
-                                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                    })
-                                } else {
-                                    let context_payload: Option<serde_json::Value> =
-                                        match row
-                                            .try_get::<sqlx::types::Json<serde_json::Value>, _>(
-                                                "context_payload",
-                                            ) {
-                                            Ok(j) => Some(j.0),
-                                            Err(_) => {
-                                                match row.try_get::<String, _>("context_payload") {
-                                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                                    Err(_) => None,
-                                                }
+                                let context_payload: Option<serde_json::Value> =
+                                    match row.try_get::<sqlx::types::Json<serde_json::Value>, _>(
+                                        "context_payload",
+                                    ) {
+                                        Ok(j) => Some(j.0),
+                                        Err(_) => {
+                                            match row.try_get::<String, _>("context_payload") {
+                                                Ok(s) => serde_json::from_str(&s).ok(),
+                                                Err(_) => None,
                                             }
-                                        };
-                                    let proposed_action: Option<serde_json::Value> =
-                                        match row
-                                            .try_get::<sqlx::types::Json<serde_json::Value>, _>(
-                                                "proposed_action",
-                                            ) {
-                                            Ok(j) => Some(j.0),
-                                            Err(_) => {
-                                                match row.try_get::<String, _>("proposed_action") {
-                                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                                    Err(_) => None,
-                                                }
+                                        }
+                                    };
+                                let proposed_action: Option<serde_json::Value> =
+                                    match row.try_get::<sqlx::types::Json<serde_json::Value>, _>(
+                                        "proposed_action",
+                                    ) {
+                                        Ok(j) => Some(j.0),
+                                        Err(_) => {
+                                            match row.try_get::<String, _>("proposed_action") {
+                                                Ok(s) => serde_json::from_str(&s).ok(),
+                                                Err(_) => None,
                                             }
-                                        };
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "event_source": row.get::<String, _>("event_source"),
-                                        "context_payload": context_payload,
-                                        "proposed_action": proposed_action,
-                                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                    })
-                                };
+                                        }
+                                    };
+                                let item = serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "source": row.get::<String, _>("event_source"),
+                                    "action_type": "approval",
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action.clone(),
+                                    "payload": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                });
                                 feed_rows_json.push(item);
                             }
                         }
@@ -6810,6 +6954,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                 serde_json::json!(lifecycle_state),
                             );
                         }
+                        if !obj.contains_key("action_type") {
+                            obj.insert("action_type".to_string(), serde_json::json!("approval"));
+                        }
                         if !obj.contains_key("created_at") {
                             obj.insert("created_at".to_string(), serde_json::json!(""));
                         }
@@ -6837,6 +6984,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                     daily_work_rows_json.push(serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": t_id4,
+                                    "action_type": "approval",
                                     "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
                                     "intent": row.get::<String, _>("intent"),
                                     "status": row.get::<String, _>("status"),
@@ -6883,6 +7031,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                     daily_work_rows_json.push(serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": t_id4,
+                                    "action_type": "approval",
                                     "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
                                     "intent": row.get::<String, _>("intent"),
                                     "status": row.get::<String, _>("status"),
@@ -7026,69 +7175,40 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     async fn load_ui_agent_feed_from_db(
         db: &crate::db::DB,
         tenant_id: &str,
-        mobile_optimized: bool,
+        _mobile_optimized: bool,
     ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
         let limit = 20i64;
         match &db.store {
             crate::db::DbStore::Postgres => {
-                if mobile_optimized {
-                    sqlx::query(
-                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
-                )
-                .bind(tenant_id)
-                .bind(limit)
-                .fetch_all(&db.pool)
-                .await
-                .map(|rows| rows.into_iter().map(|row| {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "event_source": row.get::<String, _>("event_source"),
-                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                    })
-                }).collect::<Vec<_>>())
-                } else {
-                    sqlx::query(
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let rows = sqlx::query(
                     "SELECT id, tenant_id, event_source, context_payload::text, proposed_action::text, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type)::text as context_payload, payload::text as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
-                .fetch_all(&db.pool)
-                .await
-                .map(|rows| rows.into_iter().map(|row| {
+                .fetch_all(&mut *tx)
+                .await?;
+                tx.commit().await?;
+                Ok(rows.into_iter().map(|row| {
+                    let event_src = row.get::<String, _>("event_source");
+                    let prop_action = row.get::<Option<String>, _>("proposed_action");
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "event_source": row.get::<String, _>("event_source"),
+                        "event_source": event_src.clone(),
+                        "source": event_src,
                         "context_payload": row.get::<Option<String>, _>("context_payload"),
-                        "proposed_action": row.get::<Option<String>, _>("proposed_action"),
+                        "proposed_action": prop_action.clone(),
+                        "payload": prop_action,
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                         "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                         "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                     })
                 }).collect::<Vec<_>>())
-                }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if mobile_optimized {
-                    sqlx::query(
-                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT ?"
-                )
-                .bind(tenant_id)
-                .bind(tenant_id)
-                .bind(limit)
-                .fetch_all(pool)
-                .await
-                .map(|rows| rows.into_iter().map(|row| {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "event_source": row.get::<String, _>("event_source"),
-                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                    })
-                }).collect::<Vec<_>>())
-                } else {
-                    sqlx::query(
+                sqlx::query(
                     "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT ?"
                 )
                 .bind(tenant_id)
@@ -7097,18 +7217,21 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .fetch_all(pool)
                 .await
                 .map(|rows| rows.into_iter().map(|row| {
+                    let event_src = row.get::<String, _>("event_source");
+                    let prop_action = row.get::<Option<String>, _>("proposed_action");
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "event_source": row.get::<String, _>("event_source"),
+                        "event_source": event_src.clone(),
+                        "source": event_src,
                         "context_payload": row.get::<Option<String>, _>("context_payload"),
-                        "proposed_action": row.get::<Option<String>, _>("proposed_action"),
+                        "proposed_action": prop_action.clone(),
+                        "payload": prop_action,
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                         "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                         "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
                     })
                 }).collect::<Vec<_>>())
-                }
             }
         }
     }
@@ -7768,12 +7891,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let query_str = if mobile_optimized {
                     "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
-                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
                 } else {
-                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, COALESCE(b.service_id, b.product_id, '') AS service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
                 };
                 match sqlx::query(query_str)
@@ -7810,12 +7933,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let query_str = if mobile_optimized {
                     "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
-                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
                 } else {
-                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, COALESCE(b.service_id, b.product_id, '') AS service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
                 };
                 match sqlx::query(query_str)
@@ -8587,39 +8710,47 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             .with_state(api::walkup::AppState { db: db.clone() })
             .route_layer(axum::middleware::from_fn_with_state(
                 http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .merge(
+            axum::Router::new()
                 .route("/api/v1/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
-        .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
-        .route(
-            "/api/v1/ui/inventory",
-            axum::routing::get(api::pos::get_inventory_handler)
-                .post(api::pos::post_inventory_handler)
-                .with_state(hub.clone()),
-        )
-        .route("/api/v1/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
-        .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+                .route("/api/v1/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
+                .route("/api/v1/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
+                .route("/api/v1/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
+                .route("/api/v1/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
+                .route("/api/v1/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
+                .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
+                .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
+                .route(
+                    "/api/v1/ui/inventory",
+                    axum::routing::get(api::pos::get_inventory_handler)
+                        .post(api::pos::post_inventory_handler)
+                        .with_state(hub.clone()),
+                )
+                .route("/api/v1/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
+                .route("/api/v1/ui/inbox", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+                .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
                 .route("/api/v1/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
-        .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
-        .route("/api/v1/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
-        .route("/api/v1/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
-        .route("/api/v1/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
-        .route("/api/v1/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
-        .route("/api/v1/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
-        .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
-        .route("/api/v1/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
-        .route("/api/v1/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
-        .route("/api/v1/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
-        .route("/api/v1/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
-        .route("/api/v1/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
+                .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
+                .route("/api/v1/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
+                .route("/api/v1/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
+                .route("/api/v1/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
+                .route("/api/v1/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
+                .route("/api/v1/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+                .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+                .route("/api/v1/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+                .route("/api/v1/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+                .route("/api/v1/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
+                .route("/api/v1/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
+                .route("/api/v1/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
+                .route("/api/v1/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
+                .route("/api/v1/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
+                .route("/api/v1/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
+                .route("/api/v1/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                )),
+        )
         .route("/api/v1/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
             let store = http_auth_store.clone();
             axum::middleware::from_fn(
@@ -8644,6 +8775,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             )
         }))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
+        .route("/health", axum::routing::get(|| async { "ok" }))
         .route(
             "/readyz",
             axum::routing::get({
@@ -9183,7 +9315,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/v1/billing", api::billing_api::router(hub.clone()))
+        .nest(
+            "/api/v1/billing",
+            api::billing_api::router(hub.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/assistant", api::assistant::router(db.clone()))
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
@@ -9209,7 +9349,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         )
-        .nest("/api/v1/shipping", api::shipping::router(db.clone()))
+        .nest(
+            "/api/v1/shipping",
+            api::shipping::router(db.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
@@ -9249,15 +9397,62 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 ::server_auth::strict_bearer_auth_middleware,
             ),
         ))
+        .route("/api/v1/auth/powersync_token", axum::routing::get(|
+            axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+        | async move {
+            let org_id = match claims.organization_id {
+                Some(ref id) => id.clone(),
+                None => {
+                    return axum::response::IntoResponse::into_response((
+                        axum::http::StatusCode::UNAUTHORIZED,
+                        axum::Json(serde_json::json!({ "error": "authentication required" })),
+                    ));
+                }
+            };
+            let powersync_url = std::env::var("OMNISOLO_POWERSYNC_URL")
+                .or_else(|_| std::env::var("POWERSYNC_URL"))
+                .unwrap_or_else(|_| "http://localhost:8080".to_string());
+
+            match crate::powersync::generate_powersync_credentials(&claims.sub, &org_id, &powersync_url) {
+                Ok(creds) => axum::response::IntoResponse::into_response(axum::Json(creds)),
+                Err(err) => axum::response::IntoResponse::into_response((
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::Json(serde_json::json!({ "error": err })),
+                )),
+            }
+        }).route_layer(
+            axum::middleware::from_fn_with_state(
+                http_auth_store.clone(),
+                ::server_auth::strict_bearer_auth_middleware,
+            ),
+        ))
         .merge(api::realtime::router())
-        .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .nest(
+            "/api/v1/agent-feed",
+            api::agent_feed::router().with_state(db.pool.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/ohc_job_queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
+        .nest("/api/v1/ohc-job-queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
+        .nest("/api/v1/field-service-routing", api::field_service_routing::router(db.clone(), hub.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
-        .nest("/api/v1/proposals", api::proposals::router().with_state(db.pool.clone()))
+        .nest(
+            "/api/v1/proposals",
+            api::proposals::router().with_state(db.pool.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest(
             "/api/v1/booking/request",
             api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(
@@ -9407,11 +9602,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/chat", axum::routing::post(|
-            axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-            axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-            axum::Json(req): axum::Json<ChatRequest>
-        | async move {
+        .route("/api/v1/chat", {
+            let db = db.clone();
+            axum::routing::post(move |
+                axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+                axum::Json(req): axum::Json<ChatRequest>
+            | {
+                let db = db.clone();
+                async move {
             let tenant_id = match claims.organization_id {
                 Some(organization_id) => organization_id,
                 None => return axum::response::IntoResponse::into_response((axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "authentication required" })))),
@@ -9537,7 +9735,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 "reply": reply,
                 "link": { "url": link_url, "title": link_title }
             })))
-        }).route_layer(axum::middleware::from_fn_with_state(
+                }
+            })
+        }.route_layer(axum::middleware::from_fn_with_state(
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
         )))
@@ -9554,6 +9754,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         })).layer(axum::middleware::from_fn_with_state(
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
+        )))
+        .merge(omnisolo_builtin_agent::json_rpc_server::create_router(std::sync::Arc::new(
+            omnisolo_builtin_agent::codex_runner::Runner::new(std::sync::Arc::new(
+                omnisolo_builtin_agent::agent::Agent::new(
+                    std::sync::Arc::new(omnisolo_builtin_agent::llm::ollama::OllamaClient::new("http://localhost:11434")),
+                    vec![],
+                ),
+            )),
         )))
         .merge(meta_webhook_router)
         .merge(protect_internal_ingress(
@@ -10066,6 +10274,7 @@ mod tests {
     fn agent_rpc_gateway_confines_methods_and_destination() {
         assert!(allowed_agent_rpc_method("run_agent"));
         assert!(allowed_agent_rpc_method("ap_list_tasks"));
+        assert!(allowed_agent_rpc_method("aider_repomap"));
         assert!(!allowed_agent_rpc_method("admin_delete_everything"));
         assert!(agent_rpc_available(false));
         assert!(!agent_rpc_available(true));

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viral Order Tracking</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+      color: #1d1d1f;
+    }
+
+    .container {
+      max-width: 450px;
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    p {
+      font-size: 15px;
+      margin-bottom: 25px;
+      line-height: 1.4;
+      color: #86868b;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: white;
+      font-size: 15px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      min-height: 44px;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+    }
+
+    button:hover { background-color: #0052cc; transform: translateY(-1px); }
+    button:active { transform: scale(0.98); }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 25px;
+      color: #0066FF;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      transition: opacity 0.2s;
+    }
+
+    .back-link:hover { opacity: 0.8; }
+
+    #result-area {
+      display: none;
+      margin-top: 25px;
+      padding-top: 25px;
+      border-top: 1px solid rgba(134, 134, 139, 0.2);
+    }
+
+    .card-preview {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.05);
+      text-align: center;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #16161a;
+        color: #F5F5F7;
+      }
+      .container, .card-preview {
+        background: rgba(22, 22, 26, 0.7);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      p {
+        color: #a1a1a6;
+      }
+      #result-area {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      #share-link {
+        background-color: #1c1c1e !important;
+        color: #F5F5F7 !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      }
+      input[type="text"] {
+        background-color: #1c1c1e;
+        color: #F5F5F7;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    .translucent-glass-light {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .glass-control {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      width: 100%;
+      padding: 12px 16px;
+      box-sizing: border-box;
+      font-size: 15px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">📦</div>
+    <h1>Viral Order Tracking</h1>
+    <p>Share a branded order tracking page with your customers. The page includes an integrated "OmniSolo" CTA that brings new owners to the platform and rewards you.</p>
+
+    <input type="text" id="tracking-number" placeholder="Enter Order # or Tracking #" />
+
+    <button id="generate-btn">Generate Tracking Link</button>
+
+
+    <!-- Shippo Multi-Carrier Integration UI -->
+    <button id="ship-order-btn" style="margin-top: 20px; background-color: #34C759; box-shadow: 0 4px 14px 0 rgba(52, 199, 89, 0.39);">Ship Order 🚚</button>
+
+    <div id="shippo-modal" style="display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center;">
+      <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);" id="shippo-modal-overlay"></div>
+      <div class="container translucent-glass-light" style="position: relative; z-index: 101; max-width: 400px; padding: 25px; border-radius: 16px;">
+        <h2 style="font-size: 20px; margin-top: 0;">Ship Order</h2>
+        <p style="font-size: 14px; margin-bottom: 20px;">Enter package dimensions to retrieve discounted rates.</p>
+
+        <input type="text" id="shippo-weight" class="glass-control" placeholder="Weight (oz)" style="min-height: 44px; margin-bottom: 12px;"/>
+        <input type="text" id="shippo-dimensions" class="glass-control" placeholder="Dimensions (L x W x H)" style="min-height: 44px; margin-bottom: 20px;"/>
+
+        <button id="shippo-get-rates-btn" style="background-color: #0066FF; min-height: 44px;">Compare Rates</button>
+
+        <div id="shippo-rates-area" style="display: none; margin-top: 20px; text-align: left;">
+          <p style="font-weight: 600; margin-bottom: 10px;">Select a carrier:</p>
+          <div id="shippo-rates-list" style="margin-bottom: 20px;"></div>
+          <button id="shippo-print-label-btn" style="background-color: #34C759; min-height: 44px;">Print Label</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="result-area">
+      <div class="card-preview">
+        <h2 style="font-size: 16px; margin-top: 0;">Preview</h2>
+        <p style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">Order #<span id="preview-id"></span></p>
+        <p style="font-size: 13px; margin-bottom: 0;">Status: Shipped</p>
+        <div style="margin-top: 20px; font-size: 12px; color: #888;">
+          ⚡ OmniSolo
+        </div>
+      </div>
+
+      <h2 style="font-size: 18px; margin-bottom: 10px;">Tracking Page Ready!</h2>
+      <p style="margin-bottom: 15px; font-weight: 500;">Share this link with your customer:</p>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="share-link" readonly style="flex: 1; padding: 12px; min-height: 44px; margin-bottom: 0; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255, 255, 255, 0.65);" />
+        <button id="copy-btn" style="width: auto; padding: 12px 20px; min-height: 44px; background-color: #1d1d1f; box-shadow: none;">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <a href="/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <script>
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      const trackingNo = document.getElementById('tracking-number').value || '123456';
+
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+
+        // Simulate a small delay for generation
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const baseUrl = window.location.origin;
+        const generatedLink = `${baseUrl}/track/${trackingNo}?ref=${tenantId}`;
+
+        document.getElementById('preview-id').textContent = trackingNo;
+        document.getElementById('share-link').value = generatedLink;
+        document.getElementById('result-area').style.display = 'block';
+
+      } catch (err) {
+        console.error("Error generating tracking link:", err);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Tracking Link';
+      }
+    });
+
+
+    // Shippo Logic
+    document.getElementById('ship-order-btn').addEventListener('click', () => {
+      document.getElementById('shippo-modal').style.display = 'flex';
+    });
+    document.getElementById('shippo-modal-overlay').addEventListener('click', () => {
+      document.getElementById('shippo-modal').style.display = 'none';
+    });
+
+    let selectedRateId = null;
+
+    document.getElementById('shippo-get-rates-btn').addEventListener('click', async () => {
+      const weight = document.getElementById('shippo-weight').value;
+      const dims = document.getElementById('shippo-dimensions').value;
+      const btn = document.getElementById('shippo-get-rates-btn');
+
+      btn.textContent = 'Fetching Rates...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/v1/shippo/rates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weight: parseFloat(weight), dimensions: dims })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const list = document.getElementById('shippo-rates-list');
+          list.innerHTML = '';
+
+          if (data.rates && data.rates.length > 0) {
+            data.rates.slice(0, 3).forEach((rate, i) => {
+              const div = document.createElement('div');
+              div.style.padding = '10px';
+              div.style.marginBottom = '8px';
+              div.style.border = '1px solid rgba(0,0,0,0.1)';
+              div.style.borderRadius = '8px';
+              div.style.cursor = 'pointer';
+              div.style.display = 'flex';
+              div.style.justifyContent = 'space-between';
+              div.innerHTML = `<span><b>${rate.carrier}</b> ${rate.service}</span><span>$${rate.amount}</span>`;
+
+              div.addEventListener('click', () => {
+                Array.from(list.children).forEach(c => c.style.borderColor = 'rgba(0,0,0,0.1)');
+                div.style.borderColor = '#0066FF';
+                div.style.borderWidth = '2px';
+                selectedRateId = rate.id;
+              });
+
+              if (i === 0) {
+                div.click();
+              }
+
+              list.appendChild(div);
+            });
+            document.getElementById('shippo-rates-area').style.display = 'block';
+          }
+        }
+      } catch(e) {
+        console.error(e);
+      } finally {
+        btn.textContent = 'Compare Rates';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('shippo-print-label-btn').addEventListener('click', async () => {
+      if (!selectedRateId) return;
+      const btn = document.getElementById('shippo-print-label-btn');
+      btn.textContent = 'Purchasing...';
+      btn.disabled = true;
+      const orderId = document.getElementById('tracking-number').value || 'unknown';
+
+      try {
+        const res = await fetch('/api/v1/shippo/label', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rate_id: selectedRateId, order_id: orderId })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.label_url) {
+            window.open(data.label_url, '_blank');
+          }
+          document.getElementById('shippo-modal').style.display = 'none';
+        }
+      } catch(e) {
+        console.error(e);
+      } finally {
+        btn.textContent = 'Print Label';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+        const urlInput = document.getElementById('share-link');
+        urlInput.select();
+        try {
+            await navigator.clipboard.writeText(urlInput.value);
+            const btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    });
+  </script>
+  <script src="help-widget.mjs" type="module"></script>
+  </body>
+</html>
