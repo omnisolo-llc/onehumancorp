@@ -15,23 +15,13 @@ pub struct BudgetManager {
     pub alert_threshold_percent: f64,
 }
 
+#[derive(Debug)]
 pub struct BudgetReservation {
     amount_cents: i64,
     pub state: Arc<Mutex<BudgetState>>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     pub tenant_id: Option<String>,
     pub is_settled: bool,
-}
-
-impl std::fmt::Debug for BudgetReservation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BudgetReservation")
-            .field("amount_cents", &self.amount_cents)
-            .field("state", &self.state)
-            .field("tenant_id", &self.tenant_id)
-            .field("is_settled", &self.is_settled)
-            .finish()
-    }
 }
 
 impl BudgetReservation {
