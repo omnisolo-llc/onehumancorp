@@ -189,7 +189,7 @@ pub async fn get_daily_work_handler(
                 tokio::spawn(async move {
                     let mut tx = pool_env.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &t_env).await?;
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&mut *tx).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload::text AS payload, routing_history::text AS routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&mut *tx).await?;
                     tx.commit().await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|e| {

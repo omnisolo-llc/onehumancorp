@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
 import { db } from './db_utils';
 
 test.describe('Missed Lead Recovery Work Triage UI', () => {
@@ -23,35 +22,37 @@ test.describe('Missed Lead Recovery Work Triage UI', () => {
         `);
     });
 
-    test('owner can review and take over missed lead recovery items', async () => {
+    test('owner can review and take over missed lead recovery items', async ({ page, context }) => {
+        const p = await adminPage(page, context);
+
         // Go to Triage dashboard
-        await adminPage.goto('/ui/triage.html');
+        await p.goto('/ui/triage.html');
 
         // Wait for list to load
-        await adminPage.waitForSelector('.app-list-item');
+        await p.waitForSelector('.app-list-item');
 
         // Verify the lead is displayed
-        const card = adminPage.getByTestId('triage-card-work-missed-lead-1');
+        const card = p.getByTestId('triage-card-work-missed-lead-1');
         await expect(card).toBeVisible();
         await card.click();
 
         // Verify detail UI
-        await expect(adminPage.locator('text=E2E Missed Lead User')).toBeVisible();
-        await expect(adminPage.locator('text=Need a plumber ASAP for a leaky pipe.')).toBeVisible();
+        await expect(p.locator('text=E2E Missed Lead User')).toBeVisible();
+        await expect(p.locator('text=Need a plumber ASAP for a leaky pipe.')).toBeVisible();
 
         // Verify the generated action message
-        const editDraft = adminPage.locator('#edit-draft-reply');
+        const editDraft = p.locator('#edit-draft-reply');
         await expect(editDraft).toHaveValue(/Hi E2E Missed Lead User, sorry for the delay!/);
 
         // Verify custom action button based on intent
-        const approveBtn = adminPage.getByTestId('approve-btn');
+        const approveBtn = p.getByTestId('approve-btn');
         await expect(approveBtn).toHaveText(/✨ Take Over/);
 
         // Action taken
         await approveBtn.click();
 
         // Expected success
-        await expect(adminPage.locator('.action-status.success')).toBeVisible({ timeout: 5000 });
-        await expect(adminPage.locator('.action-status.success')).toHaveText('Approved!');
+        await expect(p.locator('.action-status.success')).toBeVisible({ timeout: 5000 });
+        await expect(p.locator('.action-status.success')).toHaveText('Approved!');
     });
 });

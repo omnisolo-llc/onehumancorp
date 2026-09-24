@@ -21,7 +21,7 @@ export default function GettingStartedArticle() {
           <div className="space-y-6 mb-10">
             <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
               <h3 className="font-bold font-outfit text-blue-900 text-xl mb-2">
-                1. Set up your basic info
+                1. Tell us about your business
               </h3>
               <p className="text-blue-800/80">
                 Add your store name and a short bio so customers know who you

@@ -6,7 +6,7 @@ test.describe('Interactive Insight Widget Growth Feature', () => {
     await page.goto('/interactive-insight-widget');
 
     // Verify title and page header
-    await expect(page).toHaveTitle('Insight Widget | OmniSolo');
+    await expect(page).toHaveTitle(/Insight Widget \| OmniSolo/);
     await expect(page.getByRole('heading', { name: 'Insight Widget Builder' })).toBeVisible();
 
     // Verify default metric label and value
@@ -22,7 +22,7 @@ test.describe('Interactive Insight Widget Growth Feature', () => {
     await expect(livePreviewValue).toBeVisible();
 
     // Verify "OmniSolo" watermark is visible in preview
-    const poweredByLink = page.getByRole('link', { name: '⚡ OmniSolo' });
+    const poweredByLink = page.getByRole('link', { name: /OmniSolo/ });
     await expect(poweredByLink).toBeVisible();
 
     // Update metric label and value
@@ -36,7 +36,7 @@ test.describe('Interactive Insight Widget Growth Feature', () => {
     await expect(updatedLivePreviewValue).toBeVisible();
 
     // Attempt to remove branding without Pro
-    const removeBrandingCheckbox = page.getByLabel(/Remove "OmniSolo" Badge/);
+    const removeBrandingCheckbox = page.getByLabel(/Remove .* Badge/);
     await removeBrandingCheckbox.click();
 
     // Verify the soft paywall appears

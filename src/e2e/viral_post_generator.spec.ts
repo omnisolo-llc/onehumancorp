@@ -30,7 +30,7 @@ test.describe('Viral Post Generator', () => {
     // Verify output
     await expect(page.getByText(/Ultimate Developer Coffee/)).toBeVisible();
     await expect(page.getByText(/maximum focus and energy/)).toBeVisible();
-    await expect(page.getByText(/OmniSolo/)).toBeVisible();
+    await expect(page.locator('.whitespace-pre-wrap', { hasText: /OmniSolo/ })).toBeVisible();
 
     // 4. Try to remove branding
     const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "OmniSolo" branding/i });

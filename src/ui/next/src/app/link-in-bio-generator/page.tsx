@@ -27,11 +27,11 @@ export default function LinkInBioGeneratorPage() {
         if (res.ok) {
           const data = await res.json();
           if (data && data.store_name) {
-             setStoreName(data.store_name);
-             setBio(data.bio || '');
-             setTheme(data.theme || 'light');
-             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
-             setRemoveBranding(data.remove_branding || false);
+             setStoreName((curr) => curr === 'My Store' ? data.store_name : curr);
+             setBio((curr) => curr === 'Welcome to my storefront!' ? (data.bio || '') : curr);
+             setTheme((curr) => curr === 'light' ? (data.theme || 'light') : curr);
+             setLinks((curr) => (curr.length === 1 && curr[0].title === 'Shop Now' && data.links && data.links.length > 0) ? data.links : curr);
+             setRemoveBranding((curr) => curr ? curr : (data.remove_branding || false));
           }
         }
       } catch  {
@@ -64,10 +64,11 @@ export default function LinkInBioGeneratorPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          tenant_id: tenant,
           store_name: storeName,
           bio,
           theme,
-          links,
+          links: links.map((l, i) => ({ id: String(i + 1), title: l.title, url: l.url })),
           remove_branding: removeBranding
         })
       });
@@ -158,7 +159,7 @@ export default function LinkInBioGeneratorPage() {
                         type="text"
                         value={link.title}
                         onChange={(e) => handleLinkChange(index, 'title', e.target.value)}
-                        placeholder="Link Title (e.g. Shop My Collection)"
+                        placeholder="Title (e.g. Visit my Shop)"
                         aria-label={`Link ${index + 1} Title`}
                         className="w-full px-3 py-2 bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-white/10 rounded-lg text-sm outline-none text-gray-900 dark:text-white"
                     />
@@ -244,7 +245,7 @@ export default function LinkInBioGeneratorPage() {
                             {links.map((link, i) => (
                                 <a
                                     key={i}
-                                    href="#"
+                                    href={link.url || `/link/${i + 1}`}
                                     onClick={(e) => e.preventDefault()}
                                     className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-black shadow-md hover:shadow-lg'}`}
                                 >

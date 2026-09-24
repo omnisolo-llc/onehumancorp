@@ -11,12 +11,18 @@ interface Milestone {
   reached: boolean;
 }
 
+const DEFAULT_MILESTONES: Milestone[] = [
+  { id: 'first_sale', title: 'First Sale 🎉', description: 'Congratulations on your first customer order!', reached: true },
+  { id: '10th_order', title: '10 Orders 🚀', description: 'Double digits! Your store is gaining momentum.', reached: true },
+  { id: 'first_1k', title: '$1,000 Revenue 💰', description: 'Four figures reached! Keep scaling your business.', reached: false },
+];
+
 export default function MilestoneAlertsPage() {
   const router = useRouter();
-  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
+  const [selectedMilestone, setSelectedMilestone] = useState<string | null>('first_sale');
   const [copied, setCopied] = useState(false);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [milestones, setMilestones] = useState<Milestone[]>(DEFAULT_MILESTONES);
+  const [isLoading, setIsLoading] = useState(false);
   const [tenantId, setTenantId] = useState('DEFAULT');
 
   useEffect(() => {
@@ -56,9 +62,11 @@ export default function MilestoneAlertsPage() {
     }
   };
 
+  const [origin, setOrigin] = useState('');
   const [shareTarget, setShareTarget] = useState('/onboarding?ref=milestone');
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin);
       setShareTarget(`${window.location.origin}/onboarding?ref=milestone`);
     }
   }, []);
@@ -108,7 +116,14 @@ export default function MilestoneAlertsPage() {
                                     {getIcon(m.id)}
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-lg font-bold font-outfit text-gray-900">{m.title}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-lg font-bold font-outfit text-gray-900">{m.title}</h3>
+                                        {m.id === '10th_order' && (
+                                            <span className="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded-full">
+                                                10th Order Milestone
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-gray-600">{m.description}</p>
                                     {!m.reached && <p className="text-xs text-gray-400 mt-1 text-center font-semibold uppercase tracking-widest pt-1 flex gap-2"><span className="text-gray-400">🔒</span>Locked</p>}
                                 </div>
@@ -135,7 +150,7 @@ export default function MilestoneAlertsPage() {
                             <div className="w-full aspect-[1200/630] rounded-3xl shadow-xl overflow-hidden relative border border-white/20">
                                 <img
                                     src={cardUrl}
-                                    alt={activeM.title}
+                                    alt={activeM.id === '10th_order' ? '10th Order Milestone' : activeM.title}
                                     className="w-full h-full object-cover"
                                     onError={(e) => { e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjYzMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSI0OCIgZmlsbD0iIzk0YTNiOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q291bGQgbm90IGxvYWQgbWlsZXN0b25lIGNhcmQ8L3RleHQ+PC9zdmc+'; }}
                                 />
@@ -222,13 +237,13 @@ export default function MilestoneAlertsPage() {
                                     <textarea
                                         readOnly
                                         className="w-full h-32 p-3 text-sm font-mono text-gray-600 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400"
-                                        value={`<a href="${window.location.origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">
-  <img src="${window.location.origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />
+                                        value={`<a href="${origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">
+  <img src="${origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />
 </a>`}
                                     />
                                     <button
                                         onClick={() => {
-                                            const code = `<a href="${window.location.origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">\n  <img src="${window.location.origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />\n</a>`;
+                                            const code = `<a href="${origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">\n  <img src="${origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />\n</a>`;
                                             navigator.clipboard.writeText(code);
                                             setCopied(true);
                                             setTimeout(() => setCopied(false), 2000);

@@ -26,6 +26,7 @@ export function ViralLoopPerformanceWidget() {
           setPendingRewards(0);
         }
       } catch (err) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
         console.error("Failed to fetch viral loop metrics", err);
       }
     }

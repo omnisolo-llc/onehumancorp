@@ -8,7 +8,7 @@ test.describe('Tip Jar Widget Growth Loop', () => {
         await expect(page.locator('h1', { hasText: 'Tip Jar Builder' })).toBeVisible();
 
         // 1. Verify "OmniSolo" watermark is visible in the preview
-        const watermark = page.locator('a', { hasText: '⚡ OmniSolo' });
+        const watermark = page.locator('a', { hasText: /OmniSolo/ });
         await expect(watermark).toBeVisible();
         await expect(watermark).toHaveAttribute('href', /\/api\/v1\/growth\/referrals\/click\?target=\/onboarding/);
 
@@ -18,7 +18,7 @@ test.describe('Tip Jar Widget Growth Loop', () => {
         await expect(page.locator('h3', { hasText: 'Awesome Creator' })).toBeVisible();
 
         // 3. Test the "Remove Branding" toggle triggering the soft paywall
-        const checkboxLabel = page.locator('text=Remove "OmniSolo" Badge');
+        const checkboxLabel = page.locator('text=/Remove .* Badge/');
         await expect(checkboxLabel).toBeVisible();
 
         // Ensure paywall modal is not visible initially

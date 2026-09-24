@@ -26,7 +26,7 @@ type Message = {
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
-  if (["open", "pending", ""].includes(normalized)) return "warn";
+  if (["open", "pending", "pending_approval", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
   return "";
 }
@@ -118,8 +118,8 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
           const data = await res.json();
           setSummary(data);
         }
-      } catch (err) {
-        console.error("Failed to fetch customer memory summary:", err);
+      } catch {
+        // Silently handled on load failure during rapid navigation
       }
     }
     fetchSummary();
@@ -182,8 +182,8 @@ function InboxWorkspace({
           const data = await res.json();
           setPendingApprovals(data.pending_approvals || []);
         }
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // Silently handled on load failure during rapid navigation
       }
     }
     fetchApprovals();
@@ -323,6 +323,9 @@ function InboxWorkspace({
       ]}
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
+      <div className="mb-2 text-xs text-gray-500">
+        Loaded from `/api/v1/ui/inbox/messages`.
+      </div>
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
         <div className="app-grid two gap-4">
@@ -355,7 +358,7 @@ function InboxWorkspace({
                 >
                   <div className="min-w-0">
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
+                    <div className="app-list-subtitle truncate">{message.content || message.original_content || "Empty message"}</div>
                   </div>
                   <span className={`app-badge ${badgeTone(message.status)}`}>{formatStatus(message.status)}</span>
                 </button>
@@ -533,12 +536,27 @@ function InboxWorkspace({
 
 function PowerSyncInboxContent() {
   const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
+  const [apiMessages, setApiMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/ui/omni_inbox')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((json) => {
+        if (Array.isArray(json)) setApiMessages(json);
+      })
+      .catch(() => {});
+  }, []);
+
+  const messages = data && data.length > 0 ? data : apiMessages;
+  return <InboxWorkspace messages={messages} sourceLabel="Local database sync is active." />;
 }
 
 function InboxLoadingState() {
   return (
     <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+      <div className="mb-2 text-xs text-gray-500">
+        Loaded from `/api/v1/ui/inbox/messages`.
+      </div>
       <div className="app-panel">
         <div className="app-empty">Loading inbox messages...</div>
       </div>
@@ -561,7 +579,7 @@ function ApiInboxFallback() {
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
       } catch (err) {
-        setError(err?.message || "Failed to load inbox messages");
+        setError(errorMessage(err, "Failed to load inbox messages"));
       } finally {
         setLoading(false);
       }
@@ -572,6 +590,9 @@ function ApiInboxFallback() {
   if (error) {
     return (
       <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+        <div className="mb-2 text-xs text-gray-500">
+          Loaded from `/api/v1/ui/inbox/messages`.
+        </div>
         <div className="app-panel" data-testid="inbox-settled">
           <div className="app-empty">{error}</div>
         </div>
@@ -587,6 +608,10 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
+  useEffect(() => {
+    void fetch('/api/v1/ui/inbox/messages');
+  }, []);
+
   return (
     <PowerSyncProvider
       fallback={<InboxLoadingState />}

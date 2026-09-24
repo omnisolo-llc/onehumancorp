@@ -5,7 +5,7 @@ test.describe('CrewAI Flow Harness UI', () => {
     await page.goto('/crewai');
 
     // Verify initial load
-    await expect(page.locator('h1')).toHaveText('CrewAI Agent Harness');
+    await expect(page.getByRole('main').getByRole('heading', { name: 'CrewAI Agent Harness', level: 1 })).toBeVisible();
 
     // Try to execute without task
     await page.getByTestId('crewai-execute-btn').click();

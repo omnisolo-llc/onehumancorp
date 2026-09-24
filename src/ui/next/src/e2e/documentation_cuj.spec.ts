@@ -22,7 +22,7 @@ test.describe("Documentation User Journey", () => {
       page.locator("h2", { hasText: "Getting Started" }),
     ).toBeVisible();
     await expect(page.locator("h2", { hasText: "My Store" })).toBeVisible();
-    await expect(page.locator("h2", { hasText: "Payments" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Payments", exact: true })).toBeVisible();
 
     // Verify Videos list loads
     await expect(

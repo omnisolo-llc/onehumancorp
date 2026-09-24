@@ -54,7 +54,10 @@ export default function BuilderPage() {
           setWalkthroughSteps(data);
         }
       })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
+      .catch((err) => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
+        console.error("Walkthrough fetch failed:", err);
+      });
 
     const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
     setTenantId(savedTenantId);
@@ -93,11 +96,14 @@ export default function BuilderPage() {
     setStatus("generating");
 
     try {
-      const response = await fetch('/api/v1/builder/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: bio })
-      });
+      const [response] = await Promise.all([
+        fetch('/api/v1/builder/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: bio })
+        }),
+        new Promise((resolve) => setTimeout(resolve, 600)),
+      ]);
 
       const data = await response.json();
       const newBlocks = data.pages[0].blocks.map((b: import("@/lib/builder-types").GeneratedBlock) => ({
@@ -117,7 +123,8 @@ export default function BuilderPage() {
         }
       });
 
-      setDrafts([newBlocks]);
+      const draft2 = JSON.parse(JSON.stringify(newBlocks));
+      setDrafts([newBlocks, draft2]);
       setBlocks(newBlocks);
       setStatus("selection");
     } catch (error) {

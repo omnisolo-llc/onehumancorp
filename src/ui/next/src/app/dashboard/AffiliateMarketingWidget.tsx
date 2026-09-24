@@ -16,6 +16,7 @@ export default function AffiliateMarketingWidget() {
           setStats(data);
         }
       } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
         console.error("Failed to fetch affiliate stats", error);
       } finally {
         setIsLoading(false);

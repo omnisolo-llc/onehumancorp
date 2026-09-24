@@ -197,10 +197,11 @@ impl RedisRateLimiter {
             && let Some(pool) = &self.db_pool
         {
             use sqlx::Row;
-            if let Ok(record) = sqlx::query("SELECT plan_tier as tier FROM tenants WHERE id = $1")
-                .bind(tenant_id)
-                .fetch_one(pool)
-                .await
+            if let Ok(record) =
+                sqlx::query("SELECT COALESCE(plan_tier, tier) as tier FROM tenants WHERE id = $1")
+                    .bind(tenant_id)
+                    .fetch_one(pool)
+                    .await
                 && let Ok(t) = record.try_get::<Option<String>, _>("tier")
             {
                 tier = t;

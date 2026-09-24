@@ -17,8 +17,8 @@ test.describe('The Promoter Agent Live UI Data', () => {
   test('shows correct title', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/promoter');
-    const title = page.locator('h1');
-    await expect(title).toHaveText('The Promoter');
+    const title = page.getByRole('main').getByRole('heading', { name: 'The Promoter', level: 1 });
+    await expect(title).toBeVisible();
   });
 
   test('does not show mock data', async ({ page, loginAs, unlimitedAdminUser }) => {

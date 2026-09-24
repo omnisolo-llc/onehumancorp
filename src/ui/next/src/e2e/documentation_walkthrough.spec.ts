@@ -18,14 +18,15 @@ test.describe("Documentation Walkthrough E2E", () => {
     // Sometimes it's in the help widget, let's just make sure we find it
     if (await walkthroughBtn.isVisible()) {
         await walkthroughBtn.click({ force: true });
+        await page.waitForURL(/\/storefront-builder/, { timeout: 15000 }).catch(() => {});
 
         // Wait for the walkthrough bubble
         const bubble = page.locator('#walkthrough-bubble');
-        await expect(bubble).toBeVisible();
+        await expect(bubble).toBeVisible({ timeout: 15000 });
 
         // Click next
         const nextBtn = page.locator('#wt-next');
-        await expect(nextBtn).toBeVisible();
+        await expect(nextBtn).toBeVisible({ timeout: 15000 });
         await nextBtn.click();
     }
   });

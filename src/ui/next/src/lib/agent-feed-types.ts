@@ -66,6 +66,7 @@ export interface ActionPayload extends QuotePayload {
   original_payload?: ActionPayload;
   generated_response?: string;
   generated_message?: string;
+  draft?: string;
   draft_reply?: string;
   drafted_email?: { generated_message?: string };
   draft_action?: string;

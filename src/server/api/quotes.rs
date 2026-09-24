@@ -134,10 +134,13 @@ pub struct CreateQuoteRequest {
 
 #[derive(Deserialize)]
 pub struct UpdateQuoteRequest {
+    #[serde(alias = "total_amount")]
     pub total_amount_cents: Option<i64>,
+    #[serde(alias = "required_deposit")]
     pub required_deposit_cents: Option<i64>,
     pub stripe_payment_link: Option<String>,
     pub status: Option<String>,
+    #[serde(default)]
     pub line_items: Vec<QuoteLineItemRequest>,
 }
 

@@ -15,8 +15,8 @@ test.describe('Visual Workflow Orchestrator', () => {
     await page.getByRole('button', { name: '+ Add Output Node' }).click();
 
     // Ensure nodes are added
-    await expect(page.getByText('Input')).toBeVisible();
-    await expect(page.getByText('Output')).toBeVisible();
+    await expect(page.getByText('Input', { exact: true })).toBeVisible();
+    await expect(page.getByText('Output', { exact: true })).toBeVisible();
 
     // Connect nodes
     const connectButtons = page.getByRole('button', { name: 'Connect from previous' });

@@ -55,7 +55,7 @@ describe('FlashSaleGeneratorPage', () => {
     fireEvent.change(titleInput, { target: { value: 'Super Sale' } });
 
     // Change Percent
-    const percentInput = screen.getByPlaceholderText('20');
+    const percentInput = screen.getByPlaceholderText('e.g. 20');
     fireEvent.change(percentInput, { target: { value: '50' } });
 
     // Change Code

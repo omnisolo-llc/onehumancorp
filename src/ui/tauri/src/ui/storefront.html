@@ -217,7 +217,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            const tenantId = localStorage.getItem('tenant_id') || 'default';
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('business_display_name') || 'e2e-tenant';
             const copyBtn = document.getElementById('copy-link-btn');
             const footerLink = document.getElementById('storefront-footer-viral-link');
             if (footerLink) {

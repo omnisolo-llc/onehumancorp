@@ -39,6 +39,14 @@ export default function AgentProtocolPage() {
         body: JSON.stringify({ method: 'ap_create_task', params: { input: taskInput } }),
       });
       if (!res.ok) throw new Error('Failed to create task');
+      const data = await res.json();
+      if (data && data.task_id) {
+        setTasks((prev) => {
+          if (prev.some((t) => t.task_id === data.task_id)) return prev;
+          return [data, ...prev];
+        });
+        setSelectedTaskId(data.task_id);
+      }
       await fetchTasks();
       setTaskInput('');
     } catch (e: unknown) {
@@ -131,7 +139,7 @@ export default function AgentProtocolPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <h1 className="text-3xl font-bold mb-4">Agent Protocol UI</h1>
+      <div className="text-3xl font-bold mb-4">Agent Protocol UI</div>
       <p className="text-gray-600 mb-8">
         Interact with the standardized Agent Protocol (AutoGPT Unique Harness Innovations).
       </p>
@@ -146,7 +154,7 @@ export default function AgentProtocolPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
+        <div className="glassmorphism glass-card bg-white/50 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Tasks</h2>
 
           <div className="flex space-x-2 mb-6">

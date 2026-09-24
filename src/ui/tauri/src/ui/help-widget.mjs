@@ -173,6 +173,9 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('ohc-floating-help-btn') || document.getElementById('omnisolo-floating-help-btn') || document.querySelector('[data-target="tab-videos"]')) {
+        return;
+    }
 // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `

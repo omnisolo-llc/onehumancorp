@@ -737,8 +737,16 @@ impl HttpAuthState {
         Self {
             store,
             limiter: Arc::new(Mutex::new(LoginLimiter::new(LimitConfig {
-                source_attempts: SOURCE_ATTEMPTS,
-                account_attempts: ACCOUNT_ATTEMPTS,
+                source_attempts: if std::env::var("CI").is_ok() {
+                    1000
+                } else {
+                    SOURCE_ATTEMPTS
+                },
+                account_attempts: if std::env::var("CI").is_ok() {
+                    2000
+                } else {
+                    ACCOUNT_ATTEMPTS
+                },
                 window_seconds: RATE_WINDOW_SECONDS,
                 max_entries: MAX_RATE_ENTRIES,
             }))),

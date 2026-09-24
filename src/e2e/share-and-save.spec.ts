@@ -5,8 +5,6 @@ test.describe('Share & Save Viral Loop in Checkout', () => {
   test('User sees Share & Save widget, shares, and gets discount', async ({ page }) => {
     // 1. Navigate to the checkout page directly
     await page.goto('/checkout');
-    await page.waitForLoadState('networkidle');
-
     // 2. Verify the Share & Save widget is visible
     const widget = page.getByTestId('share-and-save-widget');
     await expect(widget).toBeVisible();

@@ -41,7 +41,8 @@ function POSTerminalMobileContent() {
             setCatalog(products);
             localStorage.setItem('omnisolo_catalog_cache', JSON.stringify(products));
           }
-        } catch (e) {
+        } catch (e: unknown) {
+          if (e instanceof Error && (e.name === 'AbortError' || e.message?.includes('Failed to fetch') || e.message?.includes('aborted'))) return;
           console.error("Failed to fetch catalog:", e);
         }
       }

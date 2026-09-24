@@ -276,10 +276,14 @@ export function VoiceAssistant() {
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
           onClick={handleClick}
-          aria-label={accessibleLabel}
+          aria-label="Voice Assistant"
+          aria-labelledby="voice-assistant-acc-label"
           aria-pressed={isRecording}
           data-voice-assistant-surface="trigger"
         >
+          <span id="voice-assistant-acc-label" className="sr-only">
+            {accessibleLabel}
+          </span>
           <svg
             className={`w-8 h-8 ${isRecording ? "text-white" : "text-[#0066FF]"}`}
             fill="none"

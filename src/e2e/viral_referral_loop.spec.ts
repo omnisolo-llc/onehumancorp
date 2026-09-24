@@ -1,12 +1,10 @@
-import { test, expect } from '@playwright/test';
-import { loginAs } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
 
 test.describe('Viral Referral Loop', () => {
     test.use({ viewport: { width: 375, height: 667 } }); // Mobile first
 
-    test('should display "Give $50, Get $50" on the referral dashboard', async ({ page }) => {
-        // Authenticate
-        await loginAs(page, 'test@example.com', 'password123');
+    test('should display "Give $50, Get $50" on the referral dashboard', async ({ page, context }) => {
+        await adminPage(page, context);
 
         // Navigate to dashboard
         await page.goto('/dashboard.html');

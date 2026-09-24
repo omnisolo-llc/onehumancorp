@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, rm, chmod, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { access } from 'node:fs/promises';
 import { distributablePath, validateWebArtifact } from './package-web.mjs';
 import { prepareNodeRuntime } from './node-runtime.mjs';
@@ -44,4 +44,8 @@ export async function prepareDesktop() {
   await writeFile(path.join(destination, 'runtime-manifest.json'), JSON.stringify({
     ...manifest, nodeExecutable: `bin/${nodeName}`, entry: 'web/src/ui/next/native-entry.cjs',
   }, null, 2) + '\n');
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await prepareDesktop();
 }

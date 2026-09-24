@@ -55,10 +55,11 @@ export default function AnthropicGuardrailsPage() {
 
       <div className="space-y-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] p-6 rounded-[16px] shadow-sm border border-white/40">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="tool-to-execute" className="block text-sm font-medium text-gray-700 mb-2">
             Tool to Execute
           </label>
           <input
+            id="tool-to-execute"
             type="text"
             className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-[#0066FF]"
             value={toolName}
@@ -80,10 +81,11 @@ export default function AnthropicGuardrailsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="session-allowed-tools" className="block text-sm font-medium text-gray-700 mb-2">
             Session Allowed Tools (Comma separated - Stage 2)
           </label>
           <input
+            id="session-allowed-tools"
             type="text"
             className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50"
             value={sessionAllowedTools}
@@ -92,10 +94,11 @@ export default function AnthropicGuardrailsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="high-risk-tools" className="block text-sm font-medium text-gray-700 mb-2">
             High Risk Tools (Comma separated - Stage 3)
           </label>
           <input
+            id="high-risk-tools"
             type="text"
             className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50"
             value={highRiskTools}

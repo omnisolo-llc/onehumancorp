@@ -166,10 +166,13 @@
     .btn-cancel:hover { background-color: #f3f4f6; }
 
     .input-area {
+      position: relative;
+      z-index: 10001;
       background: rgba(255, 255, 255, 0.65);
       backdrop-filter: blur(40px) saturate(220%);
       border-top: 1px solid rgba(0, 0, 0, 0.1);
       padding: 12px 20px;
+      padding-right: 80px;
       padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
 
@@ -473,6 +476,21 @@
               }
             });
           }
+        } else if (text.toLowerCase().includes('hour')) {
+          appendAgentMessage("I can help you update your store settings. I've drafted an action for you: Update Business Hours.");
+          const { approveBtn, cancelBtn, cardDiv } = appendActionCard({
+            id: "act_hours_123",
+            title: "Update Business Hours",
+            description: "Change Saturday hours to 10AM - 2PM",
+            action_type: "update_hours",
+            payload: { day: "Saturday", open: "10:00", close: "14:00" }
+          });
+          cancelBtn.addEventListener('click', () => {
+            cardDiv.style.opacity = '0.5';
+            approveBtn.disabled = true;
+            cancelBtn.disabled = true;
+            appendAgentMessage("Action cancelled.");
+          });
         } else {
           appendAgentMessage("Sorry, I'm having trouble connecting right now.");
         }

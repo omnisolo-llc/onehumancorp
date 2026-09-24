@@ -1,12 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Dashboard CUJ', () => {
 
   test('Persona: Business Owner sees dashboard title and analytics', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
     await page.goto('/dashboard');
 
     await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible();
@@ -14,10 +10,6 @@ test.describe('Dashboard CUJ', () => {
   });
 
   test('Persona: Business Owner can view sales and customer metrics', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
     await page.goto('/dashboard');
 
     await expect(page.getByText(/Total Sales/i)).toBeVisible();
@@ -25,10 +17,6 @@ test.describe('Dashboard CUJ', () => {
   });
 
   test('Persona: Business Owner can view the X share button', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
     await page.goto('/dashboard');
 
     const shareButton = page.getByRole('link', { name: /WhatsApp/i });
@@ -36,14 +24,10 @@ test.describe('Dashboard CUJ', () => {
   });
 
   test('Persona: Business Owner can open Embed Modal', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
     await page.goto('/dashboard');
 
     // Assuming there is a generic button that triggers `setShowEmbedModal(true)`
-    const openEmbedButton = page.getByRole('button', { name: /Embed/i });
+    const openEmbedButton = page.getByRole('button', { name: /Embed/i }).first();
     if (await openEmbedButton.isVisible()) {
         await openEmbedButton.click();
         await expect(page.getByRole('heading', { name: /Embed Storefront/i })).toBeVisible();
@@ -52,13 +36,9 @@ test.describe('Dashboard CUJ', () => {
   });
 
   test('Persona: Business Owner can view the referral modal', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
     await page.goto('/dashboard');
 
-    const openReferralButton = page.getByRole('button', { name: /Referral/i });
+    const openReferralButton = page.getByRole('button', { name: /Referral/i }).first();
     if (await openReferralButton.isVisible()) {
         await openReferralButton.click();
         await expect(page.getByRole('heading', { name: /Help a Business Grow!/i })).toBeVisible();

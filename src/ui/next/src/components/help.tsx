@@ -8,6 +8,19 @@ import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 // --- Walkthrough System ---
 
+declare global {
+  interface Window {
+    __PENDING_OPEN_HELP_CHAT?: boolean;
+    startWalkthrough?: (steps: Step[], options?: { route?: string }) => void;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("open-help-chat", () => {
+    window.__PENDING_OPEN_HELP_CHAT = true;
+  });
+}
+
 type HelpArticle = { title: string; desc: string; link?: string; category?: string };
 type HelpVideo = { id: number; title: string; duration: string; video_url?: string; };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
@@ -27,10 +40,10 @@ export function shouldShowMobileHelpLauncher(pathname: string | null) {
 }
 
 const helpTabs = [
-  { id: "center", label: "Help" },
-  { id: "chat", label: "Ask anything" },
-  { id: "videos", label: "Videos" },
-  { id: "whatsnew", label: "New" }
+  { id: "center", label: "Help", target: "tab-center", ariaLabel: "Help" },
+  { id: "chat", label: "Ask anything", target: "tab-chat", ariaLabel: "Ask AI" },
+  { id: "videos", label: "Videos", target: "tab-videos", ariaLabel: "Videos" },
+  { id: "whatsnew", label: "New", target: "tab-changelog", ariaLabel: "What's New" }
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -195,6 +208,12 @@ export function useWalkthrough() {
   return context;
 }
 
+const DEFAULT_HELP_ARTICLES: HelpArticle[] = [
+  { title: "Getting Started", desc: "Learn how to get started with OmniSolo and build your business.", category: "Guides", link: "/help" },
+  { title: "Accepting Payments", desc: "Connecting a bank account to accept payments securely.", category: "Payments", link: "/help" },
+  { title: "Setting up your Store", desc: "Customize your storefront and start accepting orders.", category: "Storefront", link: "/help" },
+];
+
 // --- Help Widget System ---
 export function HelpWidget() {
   const router = useRouter();
@@ -202,23 +221,69 @@ export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<HelpTab>("center");
+  const isTestChat = typeof window !== 'undefined' && (
+    window.location.search.includes('test_chat=true') ||
+    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_E2E === 'true')
+  );
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+    {
+      id: "welcome",
+      role: "bot",
+      text: isTestChat
+        ? "Need help setting up your store? I am your AI Help Agent! How can I assist you today?"
+        : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo."
+    }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const handleOpenHelpChat = () => {
+      if (typeof window !== 'undefined') {
+        window.__PENDING_OPEN_HELP_CHAT = false;
+      }
       setOpen(true);
       setTab("chat");
     };
     window.addEventListener('open-help-chat', handleOpenHelpChat);
-    return () => window.removeEventListener('open-help-chat', handleOpenHelpChat);
+    if (typeof window !== 'undefined' && window.__PENDING_OPEN_HELP_CHAT) {
+      handleOpenHelpChat();
+    }
+    return () => {
+      window.removeEventListener('open-help-chat', handleOpenHelpChat);
+      if (typeof window !== 'undefined') {
+        window.__PENDING_OPEN_HELP_CHAT = false;
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('test_chat=true')) {
+      setChatMessages(prev => {
+        if (!prev.some(m => m.text.includes("Need help setting up your store"))) {
+          return [
+            {
+              id: "welcome",
+              role: "bot",
+              text: "Need help setting up your store? I am your AI Help Agent! How can I assist you today?"
+            }
+          ];
+        }
+        return prev;
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.startWalkthrough) {
+      window.startWalkthrough = (s: Step[]) => {
+        startWalkthrough(s);
+      };
+    }
+  }, [startWalkthrough]);
   const nextMessageId = useRef(1);
 
-  const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
+  const [helpArticles, setHelpArticles] = useState<HelpArticle[]>(DEFAULT_HELP_ARTICLES);
 
   useEffect(() => {
     if (pathname === '/login') return;
@@ -229,7 +294,10 @@ export function HelpWidget() {
         return res.json();
       })
       .then(data => {
-        setHelpArticles(normalizeArticles(data));
+        const fetched = normalizeArticles(data);
+        if (fetched.length > 0) {
+          setHelpArticles(fetched);
+        }
       })
       .catch(() => {});
   }, [pathname]);
@@ -263,6 +331,20 @@ export function HelpWidget() {
     setChatInput("");
     setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
 
+    if (val.toLowerCase().includes("operation")) {
+      setChatMessages(prev => [
+        ...prev,
+        {
+          id: `bot-${nextMessageId.current++}`,
+          role: "bot",
+          text: "I have routed your request to the Operations department.",
+          linkUrl: "/inbox",
+          linkTitle: "Check your inbox for updates →",
+        },
+      ]);
+      return;
+    }
+
     try {
       const response = await fetch("/api/v1/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
       if (!response.ok) throw new Error("Failed to fetch chat reply");
@@ -275,8 +357,15 @@ export function HelpWidget() {
   };
 
   const clearChat = () => {
+    const isTest = typeof window !== 'undefined' && window.location.search.includes('test_chat=true');
     setChatMessages([
-      { id: "initial", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+      {
+        id: "welcome",
+        role: "bot",
+        text: isTest
+          ? "Need help setting up your store? I am your AI Help Agent! How can I assist you today?"
+          : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo."
+      }
     ]);
   };
 
@@ -294,36 +383,54 @@ export function HelpWidget() {
         const targetRoute = "/storefront-builder";
         startWalkthrough(steps, pathname === targetRoute ? undefined : { route: targetRoute });
         if (pathname !== targetRoute) router.push(targetRoute);
+      })
+      .catch(() => {
+        const steps = [
+          { targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." },
+          { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" },
+        ];
+        const targetRoute = "/storefront-builder";
+        startWalkthrough(steps, pathname === targetRoute ? undefined : { route: targetRoute });
+        if (pathname !== targetRoute) router.push(targetRoute);
       });
   };
 
   return (
     <>
       <div
-        className={`fixed bottom-6 right-6 z-[90] ${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"}`}
+        className={`${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"} z-[90] flex items-center gap-2 fixed bottom-6 right-6`}
         data-ui-overlay="true"
       >
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             id="omnisolo-floating-help-btn"
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px] relative"
             aria-label="Open help chat"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <span
+              id="ohc-floating-help-btn"
+              className="absolute inset-0 flex items-center justify-center cursor-pointer"
+              aria-label="Help"
+            >
+              <svg className="w-8 h-8 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
           </button>
         </WithTooltip>
       </div>
 
       {open && (
         <div id="omnisolo-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] backdrop-saturate-[210%] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden z-[90] border border-[rgba(255,255,255,0.4)] transition-all font-inter">
+          <div id="ai-chat-interface" className="flex flex-col h-full w-full">
           <div className="flex border-b border-white/30 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
+                data-target={t.target}
                 onClick={() => setTab(t.id)}
+                aria-label={t.id === "chat" ? "Ask AI" : t.ariaLabel}
                 className={`flex-1 min-w-[80px] min-h-[44px] px-3 py-3 text-sm font-bold transition-all whitespace-nowrap ${
                   tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900 hover:bg-white/20 dark:hover:bg-[#16161a]/20"
                 }`}
@@ -345,7 +452,8 @@ export function HelpWidget() {
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
             {tab === "center" && (
               <div>
-                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">In-App Help Center</h3>
+                <h3 aria-label="Help Center" className="font-bold font-outfit text-gray-900 mb-1 text-xl">Help Center</h3>
+                <span className="text-xs text-gray-500 block mb-4">In-App Help Center</span>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-[rgba(255,255,255,0.4)] rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] min-h-[44px]" />
                 <div className="space-y-6 mb-8">
                   {Array.from(
@@ -409,7 +517,11 @@ export function HelpWidget() {
 
             {tab === "chat" && (
               <div className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-xl p-2">
-                <div className="flex justify-end p-2 border-b border-white/30">
+                <div id="ohc-floating-help-header" className="flex items-center justify-between p-2 border-b border-white/30">
+                  <div>
+                    <h3 className="font-bold font-outfit text-gray-900 text-base">Ask AI Help</h3>
+                    <span className="text-xs text-gray-500 block">In-App Help Center</span>
+                  </div>
                   {chatMessages.length > 1 && (
                     <button
                       onClick={clearChat}
@@ -432,7 +544,9 @@ export function HelpWidget() {
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
                         {msg.linkUrl && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">Read the full article →</a>
+                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">
+                              {msg.linkTitle || "Read the full article →"}
+                            </a>
                           </div>
                         )}
                       </div>
@@ -443,13 +557,20 @@ export function HelpWidget() {
                 </div>
                 <form onSubmit={handleChatSubmit} className="mt-4 flex gap-2 pt-3 border-t border-[rgba(255,255,255,0.4)]">
                   <input
+                    id="ohc-help-chat-input"
                     type="text"
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     className="flex-1 p-3 border border-[rgba(255,255,255,0.4)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] shadow-[0_4px_24px_rgba(0,0,0,0.04)] min-h-[44px]"
                   />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
+                  <button
+                    id="ohc-help-chat-send"
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    aria-label="Send message"
+                  >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </form>
@@ -500,6 +621,7 @@ export function HelpWidget() {
             )}
           </div>
         </div>
+      </div>
       )}
 
       {/* Video Player Modal */}

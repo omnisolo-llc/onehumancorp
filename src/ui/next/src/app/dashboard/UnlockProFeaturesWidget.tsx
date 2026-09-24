@@ -24,6 +24,7 @@ export function UnlockProFeaturesWidget() {
           setInvitesSent(data.total_invites || 0);
         }
       } catch (err) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
         console.error("Failed to fetch invite metrics", err);
       }
     }

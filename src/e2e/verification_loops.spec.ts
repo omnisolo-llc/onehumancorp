@@ -15,9 +15,9 @@ test.describe('Master Catalog B.10 / C.4: Verification Loops UI integration', ()
     await expect(page.getByText(/Sensors \(Feedback\)/i)).toBeVisible();
 
     // Check for specific UI elements representing the Verification Loops
-    await expect(page.getByText(/LLM Judge/i)).toBeVisible();
-    await expect(page.getByText(/Visual Verifier/i)).toBeVisible();
-    await expect(page.getByText(/Computational Guide/i)).toBeVisible();
+    await expect(page.getByText(/LLM Judge/i).first()).toBeVisible();
+    await expect(page.getByText(/Visual Verifier/i).first()).toBeVisible();
+    await expect(page.getByText(/Computational Guide/i).first()).toBeVisible();
 
     // Test interacting with one of the tools
     const llmJudgeInput = page.getByPlaceholder(/Task definition for LLM Judge/i).first();

@@ -104,12 +104,14 @@ function routeLabel(route: string) {
 
 const allowedExternalHosts = [
   'facebook.com',
+  'linkedin.com',
   'meet.google.com',
   'cloud.omnisolo.co',
   'omnisolo.co',
   'twitter.com',
   'wa.me',
   'www.facebook.com',
+  'www.linkedin.com',
   'x.com',
 ];
 
@@ -120,9 +122,9 @@ function externalHostAllowed(hostname: string) {
 function isFakeOmniSoloUrl(href: string) {
   try {
     const url = new URL(href, 'http://dummy.base');
-    return url.protocol === 'ohc:' || url.hostname === 'cloud.omnisolo.co' || url.hostname.endsWith('.cloud.omnisolo.co');
+    return url.protocol === 'ohc:' || url.protocol === 'omnisolo:' || url.hostname === 'ohc.store' || url.hostname.endsWith('.ohc.store') || url.hostname === 'omnisolo.store' || url.hostname.endsWith('.omnisolo.store');
   } catch {
-    return href.startsWith('omnisolo://') || href.includes('cloud.omnisolo.co');
+    return href.startsWith('ohc://') || href.startsWith('omnisolo://') || href.includes('ohc.store') || href.includes('omnisolo.store');
   }
 }
 
@@ -162,7 +164,7 @@ async function waitForClickEffect(page: Page, beforeUrl: string, beforeSignature
 
 async function gotoReady(page: Page, route: string) {
   await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle', { timeout: 1000 }).catch(() => undefined);
+  await page.waitForLoadState('networkidle', { timeout: 100 }).catch(() => undefined);
   await page.waitForTimeout(100);
   await page.evaluate(() => {
     const controls = Array.from(document.querySelectorAll('input, textarea')) as Array<HTMLInputElement | HTMLTextAreaElement>;
@@ -299,7 +301,7 @@ async function auditClickEffectsForRoute(page: Page, route: string) {
 
     await target.evaluate((element) => {
       (element as HTMLElement).click();
-    }, undefined, { timeout: 500 }).catch((error) => {
+    }, undefined, { timeout: 5000 }).catch((error) => {
       failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
     });
     await Promise.all([dialogPromise, requestPromise]);
@@ -534,7 +536,7 @@ test.describe('comprehensive UI contract', () => {
 
         await target.evaluate((element) => {
           (element as HTMLElement).click();
-        }, undefined, { timeout: 500 }).catch((error) => {
+        }, undefined, { timeout: 5000 }).catch((error) => {
           failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
         });
         await Promise.all([dialogPromise, requestPromise]);

@@ -55,8 +55,11 @@ export default function ViralBeforeAfterSliderPage() {
 
             <div className="space-y-5 flex-1">
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Widget Title</label>
+                    <label htmlFor="widget-title" className="block text-sm font-semibold text-gray-700 mb-1">Widget Title</label>
                     <input
+                        id="widget-title"
+                        aria-label="Widget Title"
+                        placeholder="Our Work"
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
@@ -64,8 +67,10 @@ export default function ViralBeforeAfterSliderPage() {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Before Image URL</label>
+                    <label htmlFor="before-image-url" className="block text-sm font-semibold text-gray-700 mb-1">Before Image URL</label>
                     <input
+                        id="before-image-url"
+                        aria-label="Before Image URL"
                         type="text"
                         value={beforeUrl}
                         onChange={(e) => setBeforeUrl(e.target.value)}
@@ -74,8 +79,10 @@ export default function ViralBeforeAfterSliderPage() {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">After Image URL</label>
+                    <label htmlFor="after-image-url" className="block text-sm font-semibold text-gray-700 mb-1">After Image URL</label>
                     <input
+                        id="after-image-url"
+                        aria-label="After Image URL"
                         type="text"
                         value={afterUrl}
                         onChange={(e) => setAfterUrl(e.target.value)}
@@ -85,11 +92,12 @@ export default function ViralBeforeAfterSliderPage() {
                 </div>
 
                 <div className="pt-4 border-t border-gray-100 mt-4">
-                    <label className="flex items-center gap-3 cursor-pointer group">
+                    <label htmlFor="removeBranding" className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative flex items-center">
                             <input
                                 type="checkbox"
                                 id="removeBranding"
+                                aria-label='Remove "Powered by OmniSolo" Badge'
                                 checked={hasPro}
                                 onChange={handleRemoveBranding}
                                 className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition-colors"
@@ -145,6 +153,7 @@ export default function ViralBeforeAfterSliderPage() {
 
                 <textarea
                     readOnly
+                    aria-label="Embed Slider Code"
                     value={embedCode}
                     className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-800 resize-none focus:outline-none mb-4"
                 />

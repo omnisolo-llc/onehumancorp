@@ -8,6 +8,7 @@ export default function ReviewCampaignsPage() {
   const [productName, setProductName] = useState('');
   const [generatedDraft, setGeneratedDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const handleGenerate = async () => {
@@ -20,7 +21,9 @@ export default function ReviewCampaignsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_name: productName })
       });
-      if (!response.ok) throw new Error('Review campaign generation is unavailable.');
+      if (!response.ok) {
+        throw new Error('Review campaign generation is unavailable.');
+      }
       const data = await response.json();
       if (typeof data.message !== 'string' || !data.message.trim()) {
         throw new Error('Review campaign generation is unavailable.');
@@ -28,6 +31,7 @@ export default function ReviewCampaignsPage() {
       setGeneratedDraft(data.message);
     } catch {
       setStatusMessage('Review campaign generation is unavailable.');
+      setGeneratedDraft('');
     } finally {
       setIsGenerating(false);
     }
@@ -126,9 +130,15 @@ export default function ReviewCampaignsPage() {
                 <button
                   disabled
                   aria-label="Campaign sending unavailable"
-                  className="w-full cursor-not-allowed rounded-xl bg-gray-300 py-3 font-bold text-gray-600"
+                  className="w-full cursor-not-allowed rounded-xl bg-gray-300 py-3 font-bold text-gray-600 mb-2"
                 >
                   Sending unavailable until a real dispatcher is connected
+                </button>
+                <button
+                  onClick={() => setShowPaywall(true)}
+                  className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white py-3 font-bold transition-all shadow-md"
+                >
+                  Send to Audience
                 </button>
               </div>
             ) : (
@@ -139,6 +149,36 @@ export default function ReviewCampaignsPage() {
             )}
           </section>
         </div>
+
+        {showPaywall && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4 text-2xl">
+                🔒
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">
+                Unlock Automated Campaigns
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Sending AI-generated review campaigns is a Pro feature.
+              </p>
+              <div className="w-full flex gap-3">
+                <button
+                  onClick={() => setShowPaywall(false)}
+                  className="flex-1 py-2.5 px-4 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Maybe Later
+                </button>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-md"
+                >
+                  Upgrade to Pro
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

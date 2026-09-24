@@ -37,7 +37,7 @@ test.describe('In-App Help & Documentation Features', () => {
     await helpBtn.click();
 
     // Widget should be open
-    await expect(page.getByRole('button', { name: 'Help', exact: true }).or(page.getByText('Interactive Tours'))).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Help', exact: true }).or(page.getByText('Interactive Tours')).first()).toBeVisible();
 
     // Switch to Ask AI tab
     await page.getByRole('button', { name: 'Ask AI' }).click();

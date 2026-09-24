@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 test('Verify interactive element container interactions app-card v2', async ({ page }) => {
-  await page.goto('http://localhost:3000/website-builder');
+  await page.goto('/website-builder');
   const cards = page.locator('.app-card');
   if(await cards.count() > 0) {
       const radius = await cards.first().evaluate((el) => window.getComputedStyle(el).borderRadius);

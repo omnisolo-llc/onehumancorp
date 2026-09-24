@@ -5,7 +5,7 @@ test.describe('Hybrid Landing Page E2E', () => {
     await page.goto('/hybrid-landing');
 
     // Verify main header
-    await expect(page.locator('h1')).toHaveText(/Your Business.\s*Your AI. Your Rules./);
+    await expect(page.locator('h1').first()).toHaveText(/Your Business.\s*Your AI. Your Rules./);
 
     // Verify cards content
     await expect(page.locator('text=Local Sovereignty')).toBeVisible();

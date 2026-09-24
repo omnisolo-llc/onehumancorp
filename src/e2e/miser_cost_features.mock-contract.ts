@@ -43,7 +43,7 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant-starter" };
     await loginAs(page, starterUser);
     await page.goto('/pricing');
 
@@ -129,7 +129,7 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Pricing Page displays Manage Plan for active paid tier', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant-starter" };
     await loginAs(page, starterUser);
 
     await page.goto('/pricing');
@@ -141,7 +141,7 @@ test.describe('Miser Cost Features E2E', () => {
   });
 
   test('Soft Limit Approaching triggers on projected cost threshold with real data', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant-starter" };
     await loginAs(page, starterUser);
 
     // Let's create realistic data for cost threshold alert via actual API interactions

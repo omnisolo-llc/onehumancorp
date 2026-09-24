@@ -50,12 +50,12 @@ function QuoteCalculatorContent() {
         <div className="min-h-screen flex items-center justify-center font-inter w-full" style={getThemeStyles()}>
             <div className="w-full h-full flex flex-col justify-between">
                 <div className="p-6 flex-1">
-                    <h3 className="text-xl font-bold mb-4 font-outfit text-center">{serviceName} Quote</h3>
+                    <h1 className="text-xl font-bold mb-4 font-outfit text-center">{serviceName} Quote</h1>
 
                     <div className="space-y-4">
                         {basePrice > 0 && (
                             <div className="flex justify-between items-center opacity-80">
-                                <span>Base Price</span>
+                                <span>Base Price:</span>
                                 <span className="font-semibold">${basePrice.toFixed(2)}</span>
                             </div>
                         )}

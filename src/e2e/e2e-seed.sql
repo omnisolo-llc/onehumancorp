@@ -4,23 +4,32 @@ ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS translated_notes TEXT;
 ALTER TABLE agent_feed_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_approvals DISABLE ROW LEVEL SECURITY;
 ALTER TABLE job_templates DISABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans DISABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules DISABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE omni_inbox_messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE service_routes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE job_locations DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
+INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
-  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Starter', false),
-  ('e2e-tenant-free', 'OmniSolo E2E Free Bakery', 'Food and beverage', 'Free', false),
-  ('e2e-tenant-business', 'OmniSolo E2E Business Bakery', 'Food and beverage', 'Business', false),
-  ('e2e-tenant-unlimited', 'OmniSolo E2E Pro Bakery', 'Food and beverage', 'Pro', false)
+  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Free', 'Free', false),
+  ('e2e-tenant-free', 'OmniSolo E2E Free Bakery', 'Food and beverage', 'Free', 'Free', false),
+  ('e2e-tenant-starter', 'OmniSolo E2E Starter Bakery', 'Food and beverage', 'Starter', 'Starter', false),
+  ('e2e-tenant-business', 'OmniSolo E2E Business Bakery', 'Food and beverage', 'Business', 'Business', false),
+  ('e2e-tenant-unlimited', 'OmniSolo E2E Pro Bakery', 'Food and beverage', 'Pro', 'Pro', false)
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
     tier = EXCLUDED.tier,
+    plan_tier = EXCLUDED.plan_tier,
     has_claimed_trial_extension = EXCLUDED.has_claimed_trial_extension,
     updated_at = CURRENT_TIMESTAMP;
 
@@ -30,6 +39,7 @@ SET base_currency = 'USD',
 WHERE id IN (
   'e2e-tenant',
   'e2e-tenant-free',
+  'e2e-tenant-starter',
   'e2e-tenant-business',
   'e2e-tenant-unlimited'
 );
@@ -101,6 +111,17 @@ VALUES
     'e2e-tenant-unlimited',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-starter-user',
+    'starter@example.com',
+    'starter@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    true,
+    'e2e-tenant-starter',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
   )
 ON CONFLICT (id) DO UPDATE
 SET username = EXCLUDED.username,
@@ -115,7 +136,8 @@ SET username = EXCLUDED.username,
 -- users.roles array. Seed both representations in this same isolated transaction.
 DELETE FROM identity_user_roles WHERE user_id IN (
   'e2e-admin-user', 'e2e-team-member', 'e2e-leo-user',
-  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user'
+  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user',
+  'e2e-starter-user'
 );
 INSERT INTO identity_user_roles (user_id, role_name, tenant_id, position)
 SELECT u.id, role.role_name, u.tenant_id, (role.position - 1)::integer
@@ -123,7 +145,8 @@ FROM users u
 CROSS JOIN LATERAL unnest(u.roles) WITH ORDINALITY AS role(role_name, position)
 WHERE u.id IN (
   'e2e-admin-user', 'e2e-team-member', 'e2e-leo-user',
-  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user'
+  'e2e-free-user', 'e2e-business-user', 'e2e-unlimited-admin-user',
+  'e2e-starter-user'
 );
 
 INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
@@ -200,8 +223,32 @@ SET tenant_id = EXCLUDED.tenant_id,
     preferences = EXCLUDED.preferences,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO bookings (id, tenant_id, customer_id, product_id, service_id, start_time, end_time, status)
+VALUES (
+  'e2e-booking-class-next-day',
+  'e2e-tenant',
+  'e2e-customer-bakery',
+  'e2e-product-class',
+  'e2e-product-class',
+  CURRENT_DATE + INTERVAL '1 day 09:00',
+  CURRENT_DATE + INTERVAL '1 day 10:00',
+  'confirmed'
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    customer_id = EXCLUDED.customer_id,
+    product_id = EXCLUDED.product_id,
+    service_id = EXCLUDED.service_id,
+    start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
 INSERT INTO job_templates (id, tenant_id, name)
-VALUES ('e2e-job-template', 'e2e-tenant', 'E2E Service Visit')
+VALUES
+  ('e2e-job-template', 'e2e-tenant', 'E2E Service Visit'),
+  ('e2e-template-1', 'e2e-tenant', 'Fix leaking sink'),
+  ('e2e-template-2', 'e2e-tenant', 'HVAC Filter Replacement')
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
     name = EXCLUDED.name,
@@ -218,17 +265,40 @@ INSERT INTO appointments (
   location_address,
   notes
 )
-VALUES (
-  'e2e-appointment',
-  'e2e-tenant',
-  'e2e-customer-bakery',
-  'e2e-job-template',
-  'Scheduled',
-  CURRENT_TIMESTAMP + INTERVAL '1 day',
-  CURRENT_TIMESTAMP + INTERVAL '1 day 1 hour',
-  '123 OmniSolo Way',
-  'Seeded browser regression appointment'
-)
+VALUES
+  (
+    'e2e-appointment',
+    'e2e-tenant',
+    'e2e-customer-bakery',
+    'e2e-job-template',
+    'Scheduled',
+    CURRENT_TIMESTAMP + INTERVAL '1 day',
+    CURRENT_TIMESTAMP + INTERVAL '1 day 1 hour',
+    '123 OmniSolo Way',
+    'Seeded browser regression appointment'
+  ),
+  (
+    'e2e-appt-1',
+    'e2e-tenant',
+    'e2e-customer-bakery',
+    'e2e-template-1',
+    'Scheduled',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP + INTERVAL '1 hour',
+    '123 Main St, Austin, TX',
+    'Fix leaking sink appointment'
+  ),
+  (
+    'e2e-appt-2',
+    'e2e-tenant',
+    'e2e-customer-bakery',
+    'e2e-template-2',
+    'Scheduled',
+    CURRENT_TIMESTAMP + INTERVAL '2 hours',
+    CURRENT_TIMESTAMP + INTERVAL '3 hours',
+    '456 Oak Ave, Austin, TX',
+    'HVAC replacement appointment'
+  )
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
     customer_id = EXCLUDED.customer_id,
@@ -238,6 +308,28 @@ SET tenant_id = EXCLUDED.tenant_id,
     scheduled_end_time = EXCLUDED.scheduled_end_time,
     location_address = EXCLUDED.location_address,
     notes = EXCLUDED.notes,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO service_routes (id, tenant_id, agent_id, route_date, status)
+VALUES
+  ('e2e-route-today', 'e2e-tenant', 'e2e-staff-carlos', CURRENT_DATE, 'active')
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    agent_id = EXCLUDED.agent_id,
+    route_date = EXCLUDED.route_date,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status)
+VALUES
+  ('e2e-job-1', 'e2e-tenant', 'e2e-route-today', 'e2e-appt-1', 1, 'pending'),
+  ('e2e-job-2', 'e2e-tenant', 'e2e-route-today', 'e2e-appt-2', 2, 'pending')
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    service_route_id = EXCLUDED.service_route_id,
+    appointment_id = EXCLUDED.appointment_id,
+    sequence_order = EXCLUDED.sequence_order,
+    status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
@@ -264,6 +356,22 @@ VALUES (
   'CustomerSuccess',
   '{"feature_type":"subscription_churn_risk","customer_id":"e2e-customer-bakery","description":"A subscriber is at risk of churning","reason":"No recent activity in 30 days and renewal is approaching"}'::jsonb,
   '{"feature_type":"subscription_churn_risk","action_type":"DraftForReview","generated_response":"We miss you. Book a complimentary catch-up session and keep your momentum going."}'::jsonb,
+  'PENDING_APPROVAL'
+),
+(
+  'e2e-feed-inbox-quote-1',
+  'e2e-tenant',
+  'Sales',
+  '{"description":"Vegan pastry box quote approval","customer_id":"maya_bakes"}'::jsonb,
+  '{"inbox_message_id":"e2e-inbox-msg-1","action_type":"Draft Quote","feature_type":"quote_draft","total_amount":75.00,"total_amount_cents":7500,"scope":"Vegan options for Saturday","line_items":[{"description":"Vegan Pastry Box","unit_price_cents":7500,"quantity":1}]}'::jsonb,
+  'PENDING_APPROVAL'
+),
+(
+  'e2e-feed-ambassador-reply',
+  'e2e-tenant',
+  'Ambassador',
+  '{"feature_type":"ambassador_reply","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?"}'::jsonb,
+  '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?","generated_response":"Yes! We have a full vegan pastry selection."}'::jsonb,
   'PENDING_APPROVAL'
 )
 ON CONFLICT (id) DO UPDATE
@@ -361,26 +469,370 @@ SET tenant_id = EXCLUDED.tenant_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO agent_approvals (
+  id,
+  tenant_id,
+  department,
+  description,
+  status,
+  action_risk,
+  payload,
+  created_at,
+  updated_at
+)
+VALUES (
+  'e2e-approval-quote-sink',
+  'e2e-tenant',
+  'Field Operations',
+  'Fix leaking sink for John Doe',
+  'DRAFT',
+  'low',
+  '{"feature_type": "quote_draft", "scope": "Fix leaking sink for John Doe", "service": "Plumbing Repair", "suggested_price": 250, "line_items": [{"description": "Fix leaking sink for John Doe", "unit_price_cents": 25000, "quantity": 1}]}'::jsonb,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    department = EXCLUDED.department,
+    description = EXCLUDED.description,
+    status = EXCLUDED.status,
+    action_risk = EXCLUDED.action_risk,
+    payload = EXCLUDED.payload,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO agent_approvals (
+  id,
+  tenant_id,
+  department,
+  description,
+  status,
+  action_risk,
+  payload,
+  created_at,
+  updated_at
+)
+VALUES (
+  'e2e-approval-inbox-quote-1',
+  'e2e-tenant',
+  'Sales',
+  'Vegan pastry box quote approval',
+  'PENDING',
+  'low',
+  '{"inbox_message_id": "e2e-inbox-msg-1", "action_type": "Draft Quote", "feature_type": "quote_draft", "total_amount": 75.00, "total_amount_cents": 7500, "scope": "Vegan options for Saturday", "line_items": [{"description": "Vegan Pastry Box", "unit_price_cents": 7500, "quantity": 1}]}'::jsonb,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    department = EXCLUDED.department,
+    description = EXCLUDED.description,
+    status = EXCLUDED.status,
+    action_risk = EXCLUDED.action_risk,
+    payload = EXCLUDED.payload,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO omni_inbox_messages (
+  id,
+  tenant_id,
+  source,
+  sender_id,
+  customer_id,
+  original_content,
+  translated_content,
+  target_language,
+  draft_reply,
+  status,
+  created_at,
+  updated_at
+)
+VALUES (
+  'e2e-inbox-msg-1',
+  'e2e-tenant',
+  'instagram',
+  'maya_bakes',
+  'e2e-customer-bakery',
+  'Do you have vegan options for Saturday?',
+  'Do you have vegan options for Saturday?',
+  'en',
+  'Yes! We have several delicious vegan pastries available this Saturday.',
+  'pending',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    source = EXCLUDED.source,
+    sender_id = EXCLUDED.sender_id,
+    customer_id = EXCLUDED.customer_id,
+    original_content = EXCLUDED.original_content,
+    translated_content = EXCLUDED.translated_content,
+    target_language = EXCLUDED.target_language,
+    draft_reply = EXCLUDED.draft_reply,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS applied_client_mutations (
+    client_mutation_id VARCHAR PRIMARY KEY,
+    tenant_id VARCHAR NOT NULL,
+    applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_applied_client_mutations_tenant ON applied_client_mutations(tenant_id);
+ALTER TABLE applied_client_mutations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_applied_client_mutations ON applied_client_mutations;
+CREATE POLICY tenant_isolation_applied_client_mutations ON applied_client_mutations
+    FOR ALL
+    USING (tenant_id::text = current_setting('app.current_tenant', true))
+    WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+CREATE TABLE IF NOT EXISTS agent_feed (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    source TEXT NOT NULL,
+    priority TEXT,
+    title TEXT,
+    description TEXT,
+    payload JSONB,
+    state TEXT NOT NULL DEFAULT 'PENDING_APPROVAL',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_agent_feed_tenant ON agent_feed(tenant_id);
+ALTER TABLE agent_feed ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_agent_feed ON agent_feed;
+CREATE POLICY tenant_isolation_agent_feed ON agent_feed
+    FOR ALL
+    USING (tenant_id::text = current_setting('app.current_tenant', true))
+    WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+CREATE OR REPLACE FUNCTION sync_agent_feed_to_items()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF pg_trigger_depth() > 1 THEN
+        RETURN NEW;
+    END IF;
+    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+    VALUES (
+        NEW.id,
+        NEW.tenant_id,
+        NEW.source,
+        jsonb_build_object('description', NEW.description, 'title', NEW.title, 'priority', NEW.priority),
+        CASE
+            WHEN NEW.payload IS NULL THEN '{}'::jsonb
+            WHEN jsonb_typeof(NEW.payload) = 'object' THEN NEW.payload
+            ELSE jsonb_build_object('raw', NEW.payload)
+        END,
+        NEW.state,
+        COALESCE(NEW.created_at, CURRENT_TIMESTAMP),
+        COALESCE(NEW.updated_at, CURRENT_TIMESTAMP)
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        lifecycle_state = EXCLUDED.lifecycle_state,
+        context_payload = EXCLUDED.context_payload,
+        proposed_action = EXCLUDED.proposed_action,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE agent_feed_items.lifecycle_state IS DISTINCT FROM EXCLUDED.lifecycle_state
+       OR agent_feed_items.context_payload IS DISTINCT FROM EXCLUDED.context_payload
+       OR agent_feed_items.proposed_action IS DISTINCT FROM EXCLUDED.proposed_action;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_agent_feed_sync_items ON agent_feed;
+CREATE TRIGGER trg_agent_feed_sync_items
+AFTER INSERT OR UPDATE ON agent_feed
+FOR EACH ROW
+EXECUTE FUNCTION sync_agent_feed_to_items();
+
+CREATE OR REPLACE FUNCTION sync_agent_feed_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM agent_feed_items WHERE id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_agent_feed_sync_delete ON agent_feed;
+CREATE TRIGGER trg_agent_feed_sync_delete
+AFTER DELETE ON agent_feed
+FOR EACH ROW
+EXECUTE FUNCTION sync_agent_feed_delete();
+
+CREATE OR REPLACE FUNCTION sync_items_to_agent_feed()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF pg_trigger_depth() > 1 THEN
+        RETURN NEW;
+    END IF;
+    UPDATE agent_feed
+    SET state = NEW.lifecycle_state,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.id
+      AND state IS DISTINCT FROM NEW.lifecycle_state;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_items_sync_agent_feed ON agent_feed_items;
+CREATE TRIGGER trg_items_sync_agent_feed
+AFTER UPDATE OF lifecycle_state ON agent_feed_items
+FOR EACH ROW
+EXECUTE FUNCTION sync_items_to_agent_feed();
+
+CREATE TABLE IF NOT EXISTS staff_tasks (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    staff_id TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    priority TEXT NOT NULL DEFAULT 'medium',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_staff_tasks_tenant_id ON staff_tasks(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_staff_tasks_staff_id ON staff_tasks(staff_id);
+ALTER TABLE staff_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_staff_tasks ON staff_tasks;
+CREATE POLICY tenant_isolation_staff_tasks
+ON staff_tasks
+USING (tenant_id::text = current_setting('app.current_tenant', true))
+WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+CREATE TABLE IF NOT EXISTS shift_summaries (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    shift_date DATE NOT NULL,
+    summary_text TEXT NOT NULL,
+    escalations TEXT,
+    metrics JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE shift_summaries ADD COLUMN IF NOT EXISTS escalations TEXT;
+CREATE INDEX IF NOT EXISTS idx_shift_summaries_tenant_id ON shift_summaries(tenant_id);
+ALTER TABLE shift_summaries ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_shift_summaries ON shift_summaries;
+CREATE POLICY tenant_isolation_shift_summaries
+ON shift_summaries
+USING (tenant_id::text = current_setting('app.current_tenant', true))
+WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_approvals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE omni_inbox_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_routes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE applied_client_mutations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_feed ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shift_summaries ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
 ALTER TABLE customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE orders FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items FORCE ROW LEVEL SECURITY;
+ALTER TABLE agent_approvals FORCE ROW LEVEL SECURITY;
 ALTER TABLE job_templates FORCE ROW LEVEL SECURITY;
 ALTER TABLE appointments FORCE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans FORCE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions FORCE ROW LEVEL SECURITY;
 ALTER TABLE fulfillment_schedules FORCE ROW LEVEL SECURITY;
+ALTER TABLE bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE omni_inbox_messages FORCE ROW LEVEL SECURITY;
+ALTER TABLE service_routes FORCE ROW LEVEL SECURITY;
+ALTER TABLE job_locations FORCE ROW LEVEL SECURITY;
+ALTER TABLE applied_client_mutations FORCE ROW LEVEL SECURITY;
+ALTER TABLE agent_feed FORCE ROW LEVEL SECURITY;
+ALTER TABLE staff_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE shift_summaries FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS service_item_id UUID;
+ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+
+INSERT INTO customers (id, tenant_id, name, email, phone)
+VALUES ('648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'e2e-tenant', 'E2E Quoting Customer', 'quoting.cust@example.test', '+15559876543')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, valid_until)
+VALUES (
+    '823e4567-e89b-12d3-a456-426614174000',
+    'e2e-tenant',
+    '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b',
+    'DRAFT',
+    15000,
+    5000,
+    CURRENT_TIMESTAMP + INTERVAL '30 days'
+)
+ON CONFLICT (id) DO UPDATE SET
+    tenant_id = EXCLUDED.tenant_id,
+    customer_id = EXCLUDED.customer_id,
+    status = EXCLUDED.status,
+    total_amount_cents = EXCLUDED.total_amount_cents,
+    required_deposit_cents = EXCLUDED.required_deposit_cents,
+    valid_until = EXCLUDED.valid_until,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO quote_line_items (id, quote_id, tenant_id, description, unit_price_cents, quantity, is_optional)
+VALUES (
+    'e2e-line-item-sink-repair',
+    '823e4567-e89b-12d3-a456-426614174000',
+    'e2e-tenant',
+    'Fix leaking sink including labor and standard materials',
+    15000,
+    1,
+    FALSE
+)
+ON CONFLICT (id) DO UPDATE SET
+    quote_id = EXCLUDED.quote_id,
+    tenant_id = EXCLUDED.tenant_id,
+    description = EXCLUDED.description,
+    unit_price_cents = EXCLUDED.unit_price_cents,
+    quantity = EXCLUDED.quantity,
+    is_optional = EXCLUDED.is_optional,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at, metadata)
+VALUES
+    ('bm-e2e-first-sale', 'e2e-tenant', 'first_sale', CURRENT_TIMESTAMP, '{"title":"First Sale","amount":1500}'::jsonb),
+    ('bm-e2e-rev-1k', 'e2e-tenant', 'revenue_1k', CURRENT_TIMESTAMP, '{"title":"Four-Figure Club","amount":100000}'::jsonb),
+    ('bm-e2e-100-orders', 'e2e-tenant', '100_orders', CURRENT_TIMESTAMP, '{"title":"100 Orders","amount":100}'::jsonb),
+    ('bm-default-first-sale', 'DEFAULT', 'first_sale', CURRENT_TIMESTAMP, '{"title":"First Sale","amount":1500}'::jsonb),
+    ('bm-default-rev-1k', 'DEFAULT', 'revenue_1k', CURRENT_TIMESTAMP, '{"title":"Four-Figure Club","amount":100000}'::jsonb),
+    ('bm-default-100-orders', 'DEFAULT', '100_orders', CURRENT_TIMESTAMP, '{"title":"100 Orders","amount":100}'::jsonb)
+ON CONFLICT (tenant_id, milestone_type) DO UPDATE SET
+    reached_at = EXCLUDED.reached_at,
+    metadata = EXCLUDED.metadata;
+
+INSERT INTO opportunities (id, tenant_id, title, stage, estimated_value, priority)
+VALUES
+    ('opp-test-1', 'e2e-tenant', 'Branding Design', 'Proposal', 150000, 'high'),
+    ('opp-test-2', 'e2e-tenant', 'Marketing Consultation', 'Qualified', 50000, 'medium')
+ON CONFLICT (id) DO UPDATE SET
+    tenant_id = EXCLUDED.tenant_id,
+    title = EXCLUDED.title,
+    stage = EXCLUDED.stage,
+    estimated_value = EXCLUDED.estimated_value,
+    priority = EXCLUDED.priority,
+    updated_at = CURRENT_TIMESTAMP;
+
+ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quotes FORCE ROW LEVEL SECURITY;
+ALTER TABLE quote_line_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quote_line_items FORCE ROW LEVEL SECURITY;
+ALTER TABLE business_milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_milestones FORCE ROW LEVEL SECURITY;
+ALTER TABLE opportunities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opportunities FORCE ROW LEVEL SECURITY;
 
 COMMIT;

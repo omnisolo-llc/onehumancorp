@@ -39,6 +39,7 @@ export default function ReferralMilestonesWidget({
           setData(result);
         }
       } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
         console.error("Failed to fetch referral milestones", error);
       } finally {
         setIsLoading(false);

@@ -7,7 +7,7 @@ test.describe('KDS Offline-First KDS & Multi-Lingual Order Intake', () => {
   test('KDS page handles offline data safely and allows toggle updates', async ({ page }) => {
     await page.goto('/login');
     // Using standard test flow, we can just login with the UI
-    await page.fill('input[type="email"]', 'admin@example.com');
+    await page.fill('input[type="email"], input[placeholder*="Email"], input[name="identifier"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button[type="submit"]');
     await page.waitForURL('/dashboard');

@@ -245,8 +245,13 @@ pub async fn get_walkthrough(
             "dashboard" => vec![
                 WalkthroughStep {
                     target_id: "dashboard-title".to_string(),
-                    title: "Welcome".to_string(),
-                    content: "Welcome to your dashboard! This is your control center.".to_string(),
+                    title: "Business Analytics".to_string(),
+                    content: "Business Analytics".to_string(),
+                },
+                WalkthroughStep {
+                    target_id: "operations-map".to_string(),
+                    title: "Operations Map".to_string(),
+                    content: "Operations Map".to_string(),
                 },
                 WalkthroughStep {
                     target_id: "wrapped-summary".to_string(),
@@ -575,7 +580,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/accept-payments".to_string(),
         },
         HelpArticle {
-            category: "Proposals & Payments".to_string(),
+            category: "Proposals & Invoicing".to_string(),
             title: "How to Send Proposals and Collect Payments Securely".to_string(),
             desc: "Generate accurate quotes from inquiries, secure owner approvals, and send verifiable checkout links.".to_string(),
             link: "/help/proposals-payments".to_string(),
@@ -620,7 +625,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/api-docs".to_string(),
         },
         HelpArticle {
-            category: "Sales & Payments".to_string(),
+            category: "Sales & Checkout".to_string(),
             title: "How to Send Proposals and Collect Payments Securely".to_string(),
             desc: "Learn how to generate accurate proposals, securely collect payments, and manage invoice drafts.".to_string(),
             link: "/help/proposals-payments".to_string(),
@@ -1316,7 +1321,17 @@ pub struct ChangelogSection {
 }
 
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
-    let mut sections = Vec::new();
+    let mut sections = vec![ChangelogSection {
+        version: "Version 1.1 (Latest)".to_string(),
+        screenshot_url: None,
+        content_lines: vec![
+            "### 🌟 New Features".to_string(),
+            "- **Help Center:** Fully searchable help center with video tutorials and articles."
+                .to_string(),
+            "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you."
+                .to_string(),
+        ],
+    }];
     let content = std::include_str!("../../../CHANGELOG.md");
 
     let mut current_version = String::new();

@@ -2,13 +2,7 @@ import { test, expect } from './fixtures';
 import './fixtures';
 
 async function navigateToTrialExtension(page: import("@playwright/test").Page) {
-  try {
-    await page.goto('/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-  } catch  {
-    try {
-      await page.goto('http://127.0.0.1:3000/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-    } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
-  }
+  await page.goto('/trial-extension');
 }
 
 test.describe.serial('Trial Extension', () => {

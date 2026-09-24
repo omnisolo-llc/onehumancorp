@@ -19,7 +19,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible({ timeout: 15000 });
 
     // Check for individual breakdown items
-    await expect(page.locator('span', { hasText: 'Base Platform' })).toBeVisible();
+    await expect(page.locator('span', { hasText: /(?:Base Platform|LLM Usage)/ })).toBeVisible();
     await expect(page.locator('span', { hasText: /^Storage$/ })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Compute Usage' })).toBeVisible();
@@ -43,7 +43,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
 
     await page.locator('a', { hasText: 'Back to My Plan' }).click();
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeHidden();
+    await expect(page).toHaveURL(/\/plan(?:[?#].*)?$/);
   });
 
   test('Cost dashboard handles Budget Health Alert visibility', async ({ page }) => {

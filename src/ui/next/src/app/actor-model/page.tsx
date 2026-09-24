@@ -42,7 +42,7 @@ export default function ActorModelPage() {
         Communicate with the agent swarm using an Actor-Model design.
       </p>
 
-      <div className="mb-6 space-y-4">
+      <div className="mb-6 space-y-4 glass-card p-6 rounded-xl border border-white/40 bg-white/60">
         <div>
           <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
             Message to the Swarm
@@ -67,7 +67,7 @@ export default function ActorModelPage() {
       </button>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50/70 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-lg border border-red-200 shadow-sm" data-testid="error-message">
+        <div className="mt-8 p-4 bg-red-50/70 backdrop-blur-xl saturate-[210%] text-red-700 rounded-lg border border-red-200 shadow-sm" data-testid="error-message">
           <h3 className="font-bold mb-2">Execution Error:</h3>
           <p>{error}</p>
         </div>

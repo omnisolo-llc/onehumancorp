@@ -134,7 +134,7 @@ export default function WhatsAppLinkGeneratorPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OmniSolo" Badge (Pro)</span>
+                        <span className="text-sm font-medium text-gray-700">Remove &quot;Powered by OmniSolo&quot; Badge (Pro)</span>
                     </label>
                 </div>
 

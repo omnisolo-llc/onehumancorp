@@ -2,7 +2,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Milestone Celebration Growth Loop', () => {
     test('displays milestone modal and correct links after login', async ({ page }) => {
-        await page.goto('/milestones');
+        await page.goto('/milestone-alerts');
 
         await expect(page.getByRole('heading', { name: /Success Milestones/i })).toBeVisible();
         await expect(page.getByText('10th Order Milestone')).toBeVisible();

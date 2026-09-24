@@ -144,7 +144,7 @@ export default function TestimonialWidgetGenerator() {
                         className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
                     <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2 cursor-pointer">
-                        Remove "Powered by OmniSolo" Badge
+                        Remove "OmniSolo" Badge
                         {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                     </label>
                 </div>
@@ -279,7 +279,7 @@ export default function TestimonialWidgetGenerator() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
+              Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark.
             </p>
 
             <button

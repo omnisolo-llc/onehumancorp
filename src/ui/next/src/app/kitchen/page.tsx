@@ -91,7 +91,7 @@ export default function KitchenView() {
     <AppShell title="Kitchen Command Center">
       <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-inter">
         <header className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border-b border-[rgba(255,255,255,0.4)] sticky top-0 z-50 px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold font-outfit">Kitchen Command Center</h1>
+          <div className="text-xl font-bold font-outfit">Kitchen Command Center</div>
           <div id="queue-dashboard" className={offlineQueueCount > 0 ? "bg-[#FF9500]/20 text-[#FF9500] px-3 py-1 rounded-full text-sm font-medium border border-[#FF9500]/30" : "hidden"}>
             {offlineQueueCount} Pending Sync
           </div>

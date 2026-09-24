@@ -31,7 +31,11 @@ impl HttpMarketplaceProvider {
     pub fn new(registry_url: &str) -> Self {
         Self {
             registry_url: registry_url.to_string(),
-            http_client: reqwest::Client::new(),
+            http_client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(2))
+                .connect_timeout(std::time::Duration::from_secs(2))
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new()),
         }
     }
 }
@@ -129,7 +133,22 @@ impl MarketplaceClient {
 
     /// Search for agents in the marketplace
     pub async fn search(&self, query: &str) -> Result<Vec<MarketplaceAgent>, String> {
-        self.provider.search(query).await
+        let mut results = self.provider.search(query).await?;
+        if let Ok(cache) = self.cache.read() {
+            let q_lower = query.to_lowercase();
+            for agent in cache.values() {
+                if !results.iter().any(|r| r.id == agent.id) {
+                    if q_lower.is_empty()
+                        || agent.name.to_lowercase().contains(&q_lower)
+                        || agent.description.to_lowercase().contains(&q_lower)
+                        || agent.author.to_lowercase().contains(&q_lower)
+                    {
+                        results.push(agent.clone());
+                    }
+                }
+            }
+        }
+        Ok(results)
     }
 
     /// Fetch a specific agent's definition

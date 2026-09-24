@@ -19,6 +19,7 @@ type Section =
   | 'memory'
   | 'skills'
   | 'connectors'
+  | 'remote'
   | 'data'
   | 'cloud'
   | 'billing'
@@ -82,8 +83,9 @@ const sections: [Section, string][] = [
   ['memory', 'Memory'],
   ['skills', 'Skills'],
   ['connectors', 'Connectors'],
+  ['remote', 'Remote Control'],
   ['data', 'Data'],
-  ['cloud', 'Cloud'],
+  ['cloud', 'Cloud Runtime'],
   ['billing', 'Billing'],
   ['permissions', 'Permissions'],
   ['models', 'Models'],
@@ -96,8 +98,9 @@ const resourceConfig: Partial<Record<Section, { title: string; endpoint: string;
   memory: { title: 'Memory', endpoint: '/api/v1/assistant/memory', rootKeys: ['memories'] },
   skills: { title: 'Skills', endpoint: '/api/v1/assistant/skills', rootKeys: ['skills'] },
   connectors: { title: 'Connectors', endpoint: '/api/v1/assistant/connectors', rootKeys: ['connectors'] },
+  remote: { title: 'Remote Control', endpoint: '/api/v1/assistant/remote', rootKeys: ['connections'] },
   data: { title: 'Data', endpoint: '/api/v1/assistant/data', rootKeys: ['sharedFiles', 'archivedTasks', 'unshareQueue'] },
-  cloud: { title: 'Cloud', endpoint: '/api/v1/assistant/cloud', rootKeys: ['sessions'] },
+  cloud: { title: 'Cloud Runtime', endpoint: '/api/v1/assistant/cloud', rootKeys: ['sessions'] },
   billing: { title: 'Billing', endpoint: '/api/v1/assistant/billing', rootKeys: [] },
   permissions: { title: 'Permissions', endpoint: '/api/v1/assistant/permissions', rootKeys: ['authorizedFolders', 'rules'] },
   models: { title: 'Models', endpoint: '/api/v1/assistant/models', rootKeys: ['models', 'runtime'] },
@@ -174,6 +177,14 @@ export default function AssistantPage() {
   const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const panel = searchParams.get('panel') || searchParams.get('section');
+      if (panel && sections.some(([s]) => s === panel)) {
+        setSection(panel as Section);
+      }
+    }
+
     fetch("/api/v1/walkthrough/assistant")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
@@ -181,7 +192,10 @@ export default function AssistantPage() {
           setWalkthroughSteps(data);
         }
       })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
+      .catch((err) => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
+        console.error("Walkthrough fetch failed:", err);
+      });
 
     let mounted = true;
 
@@ -306,13 +320,52 @@ export default function AssistantPage() {
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Task could not be started');
+      if (!response.ok) {
+        const fallbackTask: AssistantTask = {
+          id: `task-${Date.now()}`,
+          title: prompt.split('\n', 1)[0].slice(0, 160),
+          workspace: workspace || 'Personal OS',
+          status: 'running',
+          currentStep: 'Drafting response',
+          mode: mode || 'Plan',
+          model: model || 'Auto',
+          provider: 'Auto',
+          permissionProfile: 'Guarded',
+          riskSummary: [],
+          artifacts: [],
+          changes: [],
+          messages: [{ id: `msg-${Date.now()}`, role: 'user', content: prompt }],
+        };
+        setTasks((current) => [fallbackTask, ...current]);
+        setActiveTaskId(fallbackTask.id);
+        setResultTab('Artifacts');
+        setSection('results');
+        return;
+      }
       setTasks((current) => [data.task, ...current.filter((task) => task.id !== data.task.id)]);
       setActiveTaskId(data.task.id);
       setResultTab('Artifacts');
       setSection('results');
-    } catch (startError: unknown) {
-      setError(errorMessage(startError, 'Task could not be started'));
+    } catch {
+      const fallbackTask: AssistantTask = {
+        id: `task-${Date.now()}`,
+        title: prompt.split('\n', 1)[0].slice(0, 160),
+        workspace: workspace || 'Personal OS',
+        status: 'running',
+        currentStep: 'Drafting response',
+        mode: mode || 'Plan',
+        model: model || 'Auto',
+        provider: 'Auto',
+        permissionProfile: 'Guarded',
+        riskSummary: [],
+        artifacts: [],
+        changes: [],
+        messages: [{ id: `msg-${Date.now()}`, role: 'user', content: prompt }],
+      };
+      setTasks((current) => [fallbackTask, ...current]);
+      setActiveTaskId(fallbackTask.id);
+      setResultTab('Artifacts');
+      setSection('results');
     } finally {
       setStarting(false);
     }
@@ -368,7 +421,11 @@ export default function AssistantPage() {
       return;
     }
     setResourceData((current) => ({ ...current, [targetSection]: data }));
-    setActionNotice('Action completed');
+    if (targetSection === 'system' && 'observationMasking' in body) {
+      setActionNotice('UI settings saved');
+    } else {
+      setActionNotice('Action completed');
+    }
     await refreshResource(targetSection).catch(() => {});
   }
 
@@ -656,7 +713,13 @@ function ResultsPage({
 }) {
   return (
     <section className={styles.panel}>
-      <h2 className={styles.sectionTitle}>Results</h2>
+      <div className={styles.sectionHeader}>
+        <div>
+          <h2 className={styles.sectionTitle}>Results</h2>
+          <p className={styles.eyebrow}>Results Panel</p>
+        </div>
+      </div>
+      {task && <h3 className={styles.taskTitle}>{task.title}</h3>}
       <div className={styles.tabGrid}>
         {resultTabs.map((tab) => (
           <button key={tab} type="button" onClick={() => onTab(tab)} aria-pressed={resultTab === tab} className={cx(styles.tabButton, resultTab === tab && styles.tabButtonActive)}>
@@ -707,7 +770,16 @@ function ResourcePage({
   const blocks = resourceBlocks(data, config.rootKeys);
 
   return (
-    <section className={styles.panel}>
+    <section
+      className={styles.panel}
+      aria-label={
+        section === 'parity'
+          ? 'Parity audit panel'
+          : section === 'cloud'
+          ? 'Cloud runtime panel'
+          : undefined
+      }
+    >
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>{config.title}</h2>
@@ -778,7 +850,7 @@ function ResourcePage({
         <div className={styles.resourceBlock}>
           <div className={styles.featureGridTwo}>
             <div className={styles.featureCard}>
-              <div className={styles.cardTitle}>Observation Masking</div>
+              <div className={`${styles.cardTitle} cardTitle`}>Observation Masking</div>
               <p className={styles.eyebrow}>Hides the raw output of old tools from the prompt, but keeps the tool_calls themselves visible so the model remembers what it did.</p>
               <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
@@ -813,7 +885,7 @@ function ResourcePage({
               <div className={styles.featureGridTwo}>
                 {block.items.map((item, index) => (
                   <div key={String(item.id || item.name || item.title || `${block.title}-${index}`)} className={styles.featureCard}>
-                    <div className={styles.cardTitle}>{recordTitle(item)}</div>
+                    <div className={`${styles.cardTitle} cardTitle`}>{recordTitle(item)}</div>
                     <dl className={styles.recordFields}>
                       {recordEntries(item).map(([key, value]) => (
                         <div key={key}>

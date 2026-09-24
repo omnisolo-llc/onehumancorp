@@ -110,55 +110,73 @@ async fn update_assistant_settings(
         .get("agentName")
         .and_then(|value| value.as_str())
         .map(str::trim)
-        .filter(|value| !value.is_empty() && value.chars().count() <= 100)
-        .ok_or(StatusCode::BAD_REQUEST)?;
-    let key = assistant_setting_key(&tenant_id);
-    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
-        sqlx::query(
-            "INSERT INTO application_settings (`key`, value, updated_at, updated_by)
-             VALUES (?, ?, CURRENT_TIMESTAMP, ?) ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP, updated_by = VALUES(updated_by)",
-        )
-        .bind(&key)
-        .bind(agent_name)
-        .bind(&claims.sub)
-        .execute(&pool)
-        .await
-        .map_err(|error| {
-            tracing::error!("Failed to write MySQL assistant settings: {error}");
-            StatusCode::SERVICE_UNAVAILABLE
-        })?;
-    } else {
-        match &db.store {
-            DbStore::Postgres => {
-                sqlx::query(
-                    "INSERT INTO application_settings (key, value, updated_at, updated_by)
-                     VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
-                     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP, updated_by = EXCLUDED.updated_by",
-                )
-                .bind(&key)
-                .bind(agent_name)
-                .bind(&claims.sub)
-                .execute(&db.pool)
-                .await
-                .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-            }
-            DbStore::Sqlite(pool) => {
-                sqlx::query(
-                    "INSERT INTO application_settings (key, value, updated_at, updated_by)
-                     VALUES (?, ?, CURRENT_TIMESTAMP, ?)
-                     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by",
-                )
-                .bind(&key)
-                .bind(agent_name)
-                .bind(&claims.sub)
-                .execute(pool)
-                .await
-                .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+        .filter(|value| !value.is_empty() && value.chars().count() <= 100);
+    let observation_masking = payload
+        .get("observationMasking")
+        .and_then(|value| value.as_bool());
+
+    if agent_name.is_none() && observation_masking.is_none() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    if let Some(agent_name) = agent_name {
+        let key = assistant_setting_key(&tenant_id);
+        if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            sqlx::query(
+                "INSERT INTO application_settings (`key`, value, updated_at, updated_by)
+                 VALUES (?, ?, CURRENT_TIMESTAMP, ?) ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP, updated_by = VALUES(updated_by)",
+            )
+            .bind(&key)
+            .bind(agent_name)
+            .bind(&claims.sub)
+            .execute(&pool)
+            .await
+            .map_err(|error| {
+                tracing::error!("Failed to write MySQL assistant settings: {error}");
+                StatusCode::SERVICE_UNAVAILABLE
+            })?;
+        } else {
+            match &db.store {
+                DbStore::Postgres => {
+                    sqlx::query(
+                        "INSERT INTO application_settings (key, value, updated_at, updated_by)
+                         VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+                         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP, updated_by = EXCLUDED.updated_by",
+                    )
+                    .bind(&key)
+                    .bind(agent_name)
+                    .bind(&claims.sub)
+                    .execute(&db.pool)
+                    .await
+                    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+                }
+                DbStore::Sqlite(pool) => {
+                    sqlx::query(
+                        "INSERT INTO application_settings (key, value, updated_at, updated_by)
+                         VALUES (?, ?, CURRENT_TIMESTAMP, ?)
+                         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by",
+                    )
+                    .bind(&key)
+                    .bind(agent_name)
+                    .bind(&claims.sub)
+                    .execute(pool)
+                    .await
+                    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+                }
             }
         }
     }
+
+    let mut settings = serde_json::Map::new();
+    if let Some(name) = agent_name {
+        settings.insert("agentName".to_string(), serde_json::json!(name));
+    }
+    if let Some(masking) = observation_masking {
+        settings.insert("observationMasking".to_string(), serde_json::json!(masking));
+    }
+
     Ok(Json(serde_json::json!({
-        "settings": { "agentName": agent_name },
+        "settings": settings,
     })))
 }
 

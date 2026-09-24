@@ -63,13 +63,30 @@ export default function ScalingPage() {
         </div>
 
         <div className="glass-panel glassmorphism bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-6 mt-4">
-          <div className="glassmorphism bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-6 mb-6">
-            <div className="app-metric-label">Current Scale</div>
+          <div className="glass-card glassmorphism bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-6 mb-6">
+            <div className="app-metric-label">Current Scale: {instances} instances</div>
             <div className="mt-2 text-4xl font-bold text-gray-900">{instances} agents</div>
+            <div className="text-xs text-gray-500 mt-1">Min 1 Max 10 instance range bounds</div>
             <p className="mt-2 text-sm text-gray-600" role="status">{message}</p>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3 mb-6">
+            <button
+              type="button"
+              className="app-button min-w-[44px]"
+              onClick={() => updateScale(instances - 1)}
+              disabled={instances <= minInstances}
+            >
+              -
+            </button>
+            <button
+              type="button"
+              className="app-button primary min-w-[44px]"
+              onClick={() => updateScale(instances + 1)}
+              disabled={instances >= maxInstances}
+            >
+              +
+            </button>
             <button
               type="button"
               className="app-button"
@@ -136,7 +153,7 @@ export default function ScalingPage() {
                   </div>
                 ))}
                 {results.length > 20 && (
-                  <div className="text-sm text-gray-500 italic">... and {results.length - 20} more results not shown.</div>
+                  <div className="text-sm text-gray-500 italic">and {results.length - 20} more results not shown.</div>
                 )}
               </div>
             </div>

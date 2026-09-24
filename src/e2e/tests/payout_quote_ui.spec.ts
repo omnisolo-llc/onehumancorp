@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 // Standard E2E verification for the Owner Feed UI components
 test.describe('Owner Feed - UI Components Verify', () => {
@@ -10,7 +10,7 @@ test.describe('Owner Feed - UI Components Verify', () => {
     test('Verify minimum touch target on standard dashboard buttons', async ({ page }) => {
         // Ensure all primary action buttons on the dashboard have 44px min size
         // We'll wait for the dashboard to be ready, then check visible buttons
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Find visible buttons that look like primary actions
         const buttons = page.locator('button:visible');

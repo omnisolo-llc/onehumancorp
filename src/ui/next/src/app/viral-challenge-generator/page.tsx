@@ -53,22 +53,22 @@ export default function ViralChallengeGeneratorPage() {
 
           <div className="space-y-4">
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Challenge Name</label>
-                <input type="text" value={title} id="challenge-name" onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <label htmlFor="challenge-name" className="block text-sm font-medium text-gray-700 mb-1">Challenge Name</label>
+                <input aria-label="Challenge Name" placeholder="Challenge Name" type="text" value={title} id="challenge-name" onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div className="grid grid-cols-2 gap-4">
                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Days)</label>
-                    <input type="number" value={duration} id="challenge-duration" onChange={(e) => setDuration(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label htmlFor="challenge-duration" className="block text-sm font-medium text-gray-700 mb-1">Duration (Days)</label>
+                    <input aria-label="Duration (Days)" placeholder="30" type="number" value={duration} id="challenge-duration" onChange={(e) => setDuration(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                  </div>
                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reward</label>
-                    <input type="text" value={reward} id="challenge-reward" onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label htmlFor="challenge-reward" className="block text-sm font-medium text-gray-700 mb-1">Reward</label>
+                    <input aria-label="Reward" placeholder="Reward" type="text" value={reward} id="challenge-reward" onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                  </div>
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <label htmlFor="challenge-theme" className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
+                <select id="challenge-theme" aria-label="Theme" value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>
@@ -77,6 +77,7 @@ export default function ViralChallengeGeneratorPage() {
                 <input
                     type="checkbox"
                     id="removeBranding"
+                    aria-label='Remove "Powered by OmniSolo" Badge'
                     checked={hasPro}
                     onChange={handleRemoveBranding}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
@@ -97,7 +98,7 @@ export default function ViralChallengeGeneratorPage() {
              Generate
           </button>
           <div id="result-area" className={generated ? "block" : "hidden"}>
-             <input type="text" id="generated-url" className="hidden" readOnly value={embedUrl} />
+             <input type="text" id="generated-url" aria-label="Generated URL" className="hidden" readOnly value={embedUrl} />
           </div>
 
           <div className="mt-8 bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">

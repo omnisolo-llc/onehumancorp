@@ -4,7 +4,7 @@ import ProductsPage from './page';
 
 // Mock AppShell to avoid complex rendering issues
 vi.mock('../components/AppShell', () => ({
-  AppShell: ({ children, actions }: import('react').ComponentProps<typeof import('../components/AppShell').AppShell>) => (
+  AppShell: ({ children, actions = [] }: import('react').ComponentProps<typeof import('../components/AppShell').AppShell>) => (
     <div data-testid="app-shell">
       {actions.map((action) => (
         <a key={action.label} href={action.href}>{action.label}</a>

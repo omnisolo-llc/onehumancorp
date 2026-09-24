@@ -1,7 +1,7 @@
 import { request as playwrightRequest, type FullConfig } from '@playwright/test';
 import { authenticateRequest } from './authenticate';
 import { chmod } from 'node:fs/promises';
-import { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER } from './identities';
+import { E2E_ADMIN_USER, E2E_UNLIMITED_ADMIN_USER, E2E_MEMBER_USER, E2E_STARTER_USER } from './identities';
 import { saveAuthenticatedState } from '../../scripts/playwright/session-state.mjs';
 
 export default async function globalSetup(config: FullConfig) {
@@ -45,7 +45,7 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   const directory = process.env.OMNISOLO_E2E_SESSION_STATE_DIR;
-  const actors = directory ? [E2E_ADMIN_USER, E2E_MEMBER_USER, E2E_UNLIMITED_ADMIN_USER] : [E2E_ADMIN_USER];
+  const actors = directory ? [E2E_ADMIN_USER, E2E_MEMBER_USER, E2E_UNLIMITED_ADMIN_USER, E2E_STARTER_USER] : [E2E_ADMIN_USER];
   for (const actor of actors) {
     const request = await playwrightRequest.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
     try {

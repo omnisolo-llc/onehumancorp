@@ -32,6 +32,9 @@ export default function ManagerDashboard() {
           setTasks(data.tasks || []);
         }
       } catch (err) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('Failed to fetch'))) {
+          return;
+        }
         console.error("Error fetching manager data:", err);
       } finally {
         setLoading(false);

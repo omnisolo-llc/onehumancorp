@@ -106,4 +106,17 @@ describe('ReferralsPage', () => {
     });
     expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
   });
+
+  it('renders embed code snippet area', async () => {
+    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
+    });
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
+    const embedCodeEl = document.getElementById('embed-code');
+    expect(embedCodeEl).not.toBeNull();
+    expect(embedCodeEl?.textContent).toContain('<iframe src="https://mybusiness.cloud.omnisolo.co');
+  });
 });

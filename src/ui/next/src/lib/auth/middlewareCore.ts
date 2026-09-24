@@ -128,7 +128,10 @@ export async function evaluateAuthMiddleware(
       descriptor.invocation === "page" &&
       descriptor.pathname === "/login"
     ) {
-      return redirect(safeReturnPath(url.searchParams.get("next")));
+      const nextParam = url.searchParams.get("next");
+      if (nextParam !== null && nextParam !== "") {
+        return redirect(safeReturnPath(nextParam));
+      }
     }
     return next(session.clearCookie);
   }

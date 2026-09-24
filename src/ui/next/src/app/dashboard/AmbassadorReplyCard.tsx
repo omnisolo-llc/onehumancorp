@@ -39,9 +39,27 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
   onSaveEdit,
   setEditContent
 }) => {
-  const payloadSource = approval.payload?.original_payload || approval.payload || approval.proposed_action || approval.context_payload || {};
-  const pastOrders = payloadSource.past_orders;
-  const contextUsed = payloadSource.context_used;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safeParse = (val: any): Record<string, any> => {
+    if (!val) return {};
+    if (typeof val === "object") return val;
+    if (typeof val === "string") {
+      try {
+        const p = JSON.parse(val);
+        return typeof p === "object" && p !== null ? p : {};
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  };
+
+  const parsedPayload = safeParse(approval.payload);
+  const parsedProposed = safeParse(approval.proposed_action);
+  const parsedContext = safeParse(approval.context_payload);
+  const payloadSource = parsedPayload?.original_payload || parsedProposed?.original_payload || parsedContext?.original_payload || parsedProposed || parsedContext || parsedPayload || {};
+  const pastOrders = payloadSource.past_orders || parsedContext.past_orders || parsedProposed.past_orders || parsedPayload.past_orders;
+  const contextUsed = payloadSource.context_used || parsedContext.context_used || parsedProposed.context_used || parsedPayload.context_used;
 
   return (
     <div className="app-list-item mb-4 p-4 bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex flex-col gap-3" data-testid="ambassador-reply-card">

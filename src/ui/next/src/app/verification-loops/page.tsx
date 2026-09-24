@@ -95,7 +95,7 @@ export default function VerificationLoopsPage() {
             rows={4}
             value={outputText}
             onChange={(e) => setOutputText(e.target.value)}
-            placeholder="e.g. echo 'ok'; e\x78it 0"
+            placeholder={"e.g. echo 'ok'; e\\x78it 0"}
           />
         </div>
 

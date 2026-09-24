@@ -15,7 +15,7 @@ test.describe('Morning Briefing & Insight Chat Dashboard Integration', () => {
     // Type a message in the Insight Chat
     const chatInput = page.locator('[data-testid="insight-chat-input"]');
     await expect(chatInput).toBeVisible();
-    await chatInput.fill('message');
+    await chatInput.fill('Check my dm inbox');
 
     // Submit the message
     const submitBtn = page.locator('[data-testid="insight-chat-submit"]');
@@ -23,9 +23,9 @@ test.describe('Morning Briefing & Insight Chat Dashboard Integration', () => {
     await submitBtn.click();
 
     // Ensure the message gets added to history and agent responds
-    await expect(page.getByText('message')).toBeVisible();
+    await expect(page.getByText('Check my dm inbox')).toBeVisible();
 
     // Agent response checks (matches one of the expected mocked responses based on keyword)
-    await expect(page.getByText(/You have no recent messages|Your latest messages are from:/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/You have no recent messages|Your latest messages are from:/i).first()).toBeVisible({ timeout: 10000 });
   });
 });

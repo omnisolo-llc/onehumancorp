@@ -10,8 +10,12 @@ export default function SonaPatternsPage() {
 
   useEffect(() => {
     fetch('/api/v1/sona')
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : null)
       .then(d => {
+        if (!d) {
+          setLoading(false);
+          return;
+        }
         if (d.error) {
           setError(d.error);
         } else if (d.patterns) {
@@ -86,7 +90,7 @@ export default function SonaPatternsPage() {
                   successful_tools: [newTool],
                   outcome_score: 1.0
                 })
-              }).then(() => { fetch('/api/v1/sona').then(r => r.json()).then(d => { if (d.patterns) { setPatterns(d.patterns); } setNewTaskContext(''); setNewTool(''); }); });
+              }).then(() => { fetch('/api/v1/sona').then(r => r.ok ? r.json() : null).then(d => { if (d?.patterns) { setPatterns(d.patterns); } setNewTaskContext(''); setNewTool(''); }); });
             }}
             className="bg-[#0071E3] text-white p-2 rounded w-fit"
             disabled={!newTaskContext || !newTool}

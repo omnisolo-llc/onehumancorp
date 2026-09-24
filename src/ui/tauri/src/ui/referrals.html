@@ -428,12 +428,16 @@
     // Button actions
     document.getElementById('copy-btn').addEventListener('click', () => {
       const link = document.getElementById('referral-link').value;
-      navigator.clipboard.writeText(link).then(() => {
-        const btn = document.getElementById('copy-btn');
-        const originalText = btn.innerText;
+      const btn = document.getElementById('copy-btn');
+      const originalText = btn.innerText;
+      const setCopied = () => {
         btn.innerText = "Copied!";
         setTimeout(() => { btn.innerText = originalText; }, 2000);
-      });
+      };
+      setCopied();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).catch(() => {});
+      }
     });
 
     document.getElementById('share-native-btn').addEventListener('click', async () => {

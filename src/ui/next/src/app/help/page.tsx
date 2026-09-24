@@ -109,7 +109,7 @@ export default function HelpCenterPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading && articles.length === 0 && videos.length === 0 ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
           </div>

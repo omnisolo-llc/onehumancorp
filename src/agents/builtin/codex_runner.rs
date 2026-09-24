@@ -186,12 +186,16 @@ pub struct AppServer {
 
 impl AppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
-            crate::tools::marketplace::HttpMarketplaceProvider::new(
-                &std::env::var("AGENT_MARKETPLACE_URL")
-                    .unwrap_or_else(|_| "https://marketplace.example.com".to_string()),
-            ),
-        )));
+        let marketplace_url = std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_default();
+        let provider: Box<dyn crate::tools::marketplace::MarketplaceProvider> =
+            if marketplace_url.is_empty() || marketplace_url.contains("example.com") {
+                Box::new(crate::tools::marketplace::test_utils::MockMarketplaceProvider)
+            } else {
+                Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(
+                    &marketplace_url,
+                ))
+            };
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(provider));
         Self {
             runner,
             marketplace,
@@ -708,6 +712,17 @@ impl AppServer {
                 .unwrap_or("")
                 .to_string();
 
+            let mut run_cfg = self.runner.core.runtime_config.clone();
+            if let Some(lg) = req
+                .params
+                .get("config")
+                .and_then(|c| c.as_object())
+                .and_then(|o| o.get("enable_langgraph_mechanic"))
+                .and_then(|v| v.as_bool())
+            {
+                run_cfg.enable_langgraph_mechanic = lg;
+            }
+
             let mut total_cost = 0.0;
             let mut on_event = |e: AgentEvent| {
                 if let AgentEvent::CostUpdate { total_cost_usd } = e {
@@ -730,7 +745,7 @@ impl AppServer {
                 );
             }
 
-            if let Some(guardrail_cfg) = self.runner.core.runtime_config.guardrails.as_ref()
+            if let Some(guardrail_cfg) = run_cfg.guardrails.as_ref()
                 && let Err(e) = guardrail_cfg.check_input(&ctx_message)
             {
                 let resp = JsonRpcResponse {
@@ -750,11 +765,7 @@ impl AppServer {
                 .runner
                 .core
                 .agent
-                .run(
-                    &self.runner.core.runtime_config,
-                    &ctx_message,
-                    &mut on_event,
-                )
+                .run(&run_cfg, &ctx_message, &mut on_event)
                 .await
             {
                 Ok(result) => {

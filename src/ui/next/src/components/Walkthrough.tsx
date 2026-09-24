@@ -5,6 +5,7 @@ import { WithTooltip } from './TooltipRegistry';
 
 export type Step = {
   targetId: string;
+  target_id?: string;
   title: string;
   content: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
@@ -25,7 +26,8 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
     if (!isOpen || steps.length === 0) return;
 
     const currentStep = steps[currentStepIndex];
-    const targetElement = document.getElementById(currentStep.targetId);
+    const targetId = currentStep.targetId || currentStep.target_id || '';
+    const targetElement = document.getElementById(targetId);
     setTargetRect(null);
 
     if (targetElement) {
@@ -187,7 +189,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         )}
 
         <div className="flex justify-between items-start mb-3">
-          <h4 className="font-bold font-outfit text-gray-900 dark:text-gray-100 text-lg leading-tight pr-4">{currentStep.title}</h4>
+          <h3 className="font-bold font-outfit text-gray-900 dark:text-gray-100 text-lg leading-tight pr-4">{currentStep.title}</h3>
           <button onClick={handleSkip} id="wt-close" aria-label="Close walkthrough" className="wt-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] rounded-full p-1.5 transition-all flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
