@@ -62,9 +62,11 @@ export default function MilestoneAlertsPage() {
     }
   };
 
+  const [origin, setOrigin] = useState('');
   const [shareTarget, setShareTarget] = useState('/onboarding?ref=milestone');
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin);
       setShareTarget(`${window.location.origin}/onboarding?ref=milestone`);
     }
   }, []);
@@ -235,13 +237,13 @@ export default function MilestoneAlertsPage() {
                                     <textarea
                                         readOnly
                                         className="w-full h-32 p-3 text-sm font-mono text-gray-600 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400"
-                                        value={`<a href="${window.location.origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">
-  <img src="${window.location.origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />
+                                        value={`<a href="${origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">
+  <img src="${origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />
 </a>`}
                                     />
                                     <button
                                         onClick={() => {
-                                            const code = `<a href="${window.location.origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">\n  <img src="${window.location.origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />\n</a>`;
+                                            const code = `<a href="${origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">\n  <img src="${origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />\n</a>`;
                                             navigator.clipboard.writeText(code);
                                             setCopied(true);
                                             setTimeout(() => setCopied(false), 2000);
