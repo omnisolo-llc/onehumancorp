@@ -17,7 +17,7 @@ use uuid::Uuid;
 fn resolved_model() -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(ReasoningEffort::Max),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: None,
@@ -71,7 +71,7 @@ async fn responses_provider() -> (SocketAddr, tokio::task::JoinHandle<(String, S
             let response = serde_json::to_vec(&json!({
                 "id": "shim-response-1",
                 "status": "completed",
-                "model": "gpt-5.6-luna",
+                "model": "gpt-6-luna",
                 "output": [{
                     "type": "message",
                     "role": "assistant",
@@ -146,7 +146,7 @@ print(response['output'][0]['content'][0]['text'])
             "OPENAI_API_BASE_URL",
             format!("http://{provider_address}/v1"),
         )
-        .with_environment("OPENAI_MODEL", "gpt-5.6-luna")
+        .with_environment("OPENAI_MODEL", "gpt-6-luna")
         .with_environment("OPENAI_REASONING_EFFORT", "max")
         .with_timeout(Duration::from_secs(3)),
     );
@@ -197,7 +197,7 @@ print(response['output'][0]['content'][0]['text'])
     let (request_line, authorization, body) = provider.await.unwrap();
     assert_eq!(request_line, "POST /v1/responses HTTP/1.1");
     assert_eq!(authorization, format!("Bearer {secret}"));
-    assert_eq!(body["model"], "gpt-5.6-luna");
+    assert_eq!(body["model"], "gpt-6-luna");
     assert_eq!(body["input"], "Answer through the shared provider");
     std::fs::remove_dir_all(fixture_dir).unwrap();
     assert!(
@@ -230,7 +230,7 @@ time.sleep(60)
             )
             .with_environment("OPENAI_API_KEY", "drop-fixture-token")
             .with_environment("OPENAI_API_BASE_URL", "http://127.0.0.1:1/v1")
-            .with_environment("OPENAI_MODEL", "gpt-5.6-luna")
+            .with_environment("OPENAI_MODEL", "gpt-6-luna")
             .with_timeout(Duration::from_secs(90)),
     );
     let attempt = tokio::spawn(async move {
@@ -283,7 +283,7 @@ time.sleep(60)
             )
             .with_environment("OPENAI_API_KEY", "drop-fixture-token")
             .with_environment("OPENAI_API_BASE_URL", "http://127.0.0.1:1/v1")
-            .with_environment("OPENAI_MODEL", "gpt-5.6-luna")
+            .with_environment("OPENAI_MODEL", "gpt-6-luna")
             .with_timeout(Duration::from_secs(90)),
     );
     let request = HarnessSessionRequest::new("tenant", Uuid::new_v4(), Uuid::new_v4());

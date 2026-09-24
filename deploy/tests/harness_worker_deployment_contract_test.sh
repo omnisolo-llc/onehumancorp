@@ -102,7 +102,7 @@ for file in "$repo_root/deploy/docker-compose.yml" "$repo_root/deploy/helm/omnis
   grep -q 'OPENAI_API_BASE_URL' "$file"
   grep -q 'OPENAI_MODEL' "$file"
   grep -q 'OPENAI_REASONING_EFFORT' "$file"
-  grep -q 'gpt-5.6-luna' "$file"
+  grep -q 'gpt-6-luna' "$file"
   grep -q 'max' "$file"
   reject_file_pattern 'OMNISOLO_HARNESS_API_KEY' "$file"
   reject_file_pattern 'OMNISOLO_HARNESS_BASE_URL' "$file"

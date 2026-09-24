@@ -232,7 +232,7 @@ harnessWorkers:
         targetCPUUtilizationPercentage: 70
       env:
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: &openaiSecretEnv
         - name: OPENAI_API_KEY
@@ -253,7 +253,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_ARGS_JSON: '["app-server","--stdio"]'
         OMNISOLO_HARNESS_PROTOCOL: codex_app_server
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: opencode
@@ -271,7 +271,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_ARGS_JSON: '[]'
         OMNISOLO_HARNESS_PROTOCOL: opencode_http
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: deepseek
@@ -290,7 +290,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_PROTOCOL: deepseek_json_rpc
         DSH_CORDIS_CONFIG: /etc/omnisolo/deepseek/cordis.yml
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: pi
@@ -308,7 +308,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_ARGS_JSON: '["--mode","rpc","--no-session"]'
         OMNISOLO_HARNESS_PROTOCOL: pi_rpc
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: kimi
@@ -326,7 +326,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_ARGS_JSON: '[]'
         OMNISOLO_HARNESS_PROTOCOL: kimi_acp
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: openhands
@@ -344,7 +344,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_ARGS_JSON: '[]'
         OMNISOLO_HARNESS_PROTOCOL: openhands_http
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: openharness
@@ -362,7 +362,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_ARGS_JSON: '["/opt/omnisolo/openharness_bridge.py"]'
         OMNISOLO_HARNESS_PROTOCOL: openharness_sdk
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: aider
@@ -381,7 +381,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
         OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: goose
@@ -400,7 +400,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
         OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: open-interpreter
@@ -419,7 +419,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
         OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
     - id: plandex
@@ -442,7 +442,7 @@ harnessWorkers:
         OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
         OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
         OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
-        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_MODEL: gpt-6-luna
         OPENAI_REASONING_EFFORT: max
       secretEnv: *openaiSecretEnv
 modelRuntimeWorkers:

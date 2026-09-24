@@ -49,7 +49,7 @@ class KimiAcpBridgeTest(unittest.TestCase):
             environment = {
                 "OPENAI_API_KEY": "secret-canary",
                 "OPENAI_API_BASE_URL": "https://llmapi.omnisolo.co/v1",
-                "OPENAI_MODEL": "gpt-5.6-luna",
+                "OPENAI_MODEL": "gpt-6-luna",
                 "KIMI_SHARE_DIR": directory,
             }
 
@@ -62,17 +62,17 @@ class KimiAcpBridgeTest(unittest.TestCase):
             )
             config_path = Path(directory) / "config.json"
             config = json.loads(config_path.read_text())
-            self.assertEqual(config["default_model"], "gpt-5.6-luna")
+            self.assertEqual(config["default_model"], "gpt-6-luna")
             self.assertFalse(config["default_thinking"])
             self.assertEqual(
                 config["providers"]["omnisolo"]["type"], "openai_responses"
             )
             self.assertEqual(
-                config["models"]["gpt-5.6-luna"]["model"], "gpt-5.6-luna"
+                config["models"]["gpt-6-luna"]["model"], "gpt-6-luna"
             )
             self.assertIn(
                 "thinking",
-                config["models"]["gpt-5.6-luna"]["capabilities"],
+                config["models"]["gpt-6-luna"]["capabilities"],
             )
             self.assertNotIn("secret-canary", config_path.read_text())
             self.assertEqual(stat.S_IMODE(config_path.stat().st_mode), 0o600)
@@ -115,7 +115,7 @@ class KimiAcpBridgeTest(unittest.TestCase):
             environment = {
                 "OPENAI_API_KEY": "secret-canary",
                 "OPENAI_API_BASE_URL": "https://llmapi.omnisolo.co/v1",
-                "OPENAI_MODEL": "gpt-5.6-luna",
+                "OPENAI_MODEL": "gpt-6-luna",
                 "TMPDIR": directory,
             }
 
@@ -140,7 +140,7 @@ class KimiAcpBridgeTest(unittest.TestCase):
                 environment = {
                     "OPENAI_API_KEY": "secret-canary",
                     "OPENAI_API_BASE_URL": base_url,
-                    "OPENAI_MODEL": "gpt-5.6-luna",
+                    "OPENAI_MODEL": "gpt-6-luna",
                     "KIMI_SHARE_DIR": directory,
                 }
 
@@ -154,7 +154,7 @@ class KimiAcpBridgeTest(unittest.TestCase):
             environment = {
                 "OPENAI_API_KEY": "secret-canary",
                 "OPENAI_API_BASE_URL": "https://llmapi.omnisolo.co/v1",
-                "OPENAI_MODEL": "gpt-5.6-luna\nmalicious",
+                "OPENAI_MODEL": "gpt-6-luna\nmalicious",
                 "KIMI_SHARE_DIR": directory,
             }
 

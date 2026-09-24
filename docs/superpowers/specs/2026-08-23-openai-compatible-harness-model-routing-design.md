@@ -22,7 +22,7 @@ The public worker defaults are:
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Secret used for the OpenAI-compatible endpoint | none |
 | `OPENAI_API_BASE_URL` | API root before provider paths | none |
-| `OPENAI_MODEL` | Default model ID for new sessions/tasks | `gpt-5.6-luna` |
+| `OPENAI_MODEL` | Default model ID for new sessions/tasks | `gpt-6-luna` |
 | `OPENAI_REASONING_EFFORT` | Default reasoning effort | `max` |
 
 For the OmniSolo Sub2API deployment, `OPENAI_API_BASE_URL` is
@@ -65,7 +65,7 @@ reasoning effort, context/output limits, API dialect, capabilities, and model
 binding revision/digest. It is immutable for an attempt. Changing the model
 creates a new attempt binding; it does not rewrite prior events.
 
-The initial default is model ID `gpt-5.6-luna` with reasoning effort `max`.
+The initial default is model ID `gpt-6-luna` with reasoning effort `max`.
 These are separate fields. An adapter must translate both, reject an invalid
 combination, or emit a typed capability downgrade requiring policy acceptance.
 It must never silently discard `max`.
@@ -170,7 +170,7 @@ source credential and maps it to `OPENAI_API_KEY` in child environments. It sets
 
 ```text
 OPENAI_API_BASE_URL=https://llmapi.omnisolo.co/v1
-OPENAI_MODEL=gpt-5.6-luna
+OPENAI_MODEL=gpt-6-luna
 OPENAI_REASONING_EFFORT=max
 ```
 
@@ -201,7 +201,7 @@ This work is complete only when:
 3. All eight registry entries have real adapters using the transports above.
 4. Deterministic unit, codec, process/server, worker, database, deployment, and
    secret-redaction tests pass.
-5. The live Sub2API matrix passes all eight harnesses using `gpt-5.6-luna` and
+5. The live Sub2API matrix passes all eight harnesses using `gpt-6-luna` and
    records how `max` was applied or explicitly downgraded.
 6. Docker and Kubernetes can scale every harness and model runtime pool
    independently.

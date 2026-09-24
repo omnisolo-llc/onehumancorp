@@ -18,7 +18,7 @@
       "binding_digest": "sha256:runtime-unbound",
       "binding_revision": "worker-env-v1",
       "integration_mode": "native",
-      "model_id": "gpt-5.6-luna",
+      "model_id": "gpt-6-luna",
       "provider_route": "openai-compatible",
       "reasoning_effort": "max",
       "response_id": "resp_039547be55dd9a1d016aa037cf565087d0a3d2621cd9589bab"
@@ -68,7 +68,7 @@
           "binding_digest": "sha256:runtime-unbound",
           "binding_revision": "worker-env-v1",
           "integration_mode": "native",
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max",
           "response_id": "resp_04b1433721b57cf2016aa0378490bc87d0aa976c7984be655e"
@@ -125,7 +125,7 @@
     "usage_observed": true
   },
   "harness_id": "omnisolo",
-  "model": "gpt-5.6-luna",
+  "model": "gpt-6-luna",
   "native_session_deleted": true,
   "reasoning_effort": "max",
   "schema": "omnisolo.live_harness_result.v1",

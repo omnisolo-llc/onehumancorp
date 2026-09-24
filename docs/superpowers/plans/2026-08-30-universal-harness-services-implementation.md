@@ -344,13 +344,13 @@ a valid Responses body. Add tests that:
 let facade = ProviderFacade::start(
     upstream.url(),
     "upstream-secret",
-    selection("gpt-5.6-luna"),
+    selection("gpt-6-luna"),
 ).await.unwrap();
 let response = reqwest::Client::new()
     .post(format!("{}/responses", facade.route().base_url()))
     .bearer_auth(facade.route().token())
     .json(&json!({
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "input": "hello",
         "stream": false
     }))

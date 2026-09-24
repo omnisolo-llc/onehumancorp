@@ -26,7 +26,7 @@ args = sys.argv[1:]
 command = os.path.basename(sys.argv[0])
 if command == 'curl':
     path = args[args.index('--output') + 1]
-    data = {'data':[{'id':'gpt-5.6-luna'}]} if args[-1].endswith('/models') else {'text':'OMNISOLO_PROVIDER_PREFLIGHT_OK'}
+    data = {'data':[{'id':'gpt-6-luna'}]} if args[-1].endswith('/models') else {'text':'OMNISOLO_PROVIDER_PREFLIGHT_OK'}
     open(path, 'w').write(json.dumps(data))
     print('200', end='')
 elif command == 'docker':
@@ -40,7 +40,7 @@ elif command == 'cargo':
         print('OMNISOLO_LIVE_RESULT=' + json.dumps({
             'schema':'omnisolo.live_harness_result.v1', 'status':'passed',
             'harness_id':os.environ['OMNISOLO_LIVE_HARNESS_ID'],
-            'model':'gpt-5.6-luna', 'reasoning_effort':'max', 'native_session_deleted':True,
+            'model':'gpt-6-luna', 'reasoning_effort':'max', 'native_session_deleted':True,
             'evidence':{'reasoning_translation':{'kind':'native','requested':'max','effective':'xhigh'},
                         'assistant_text':'OMNISOLO_LIVE_HARNESS_OK',
                         'usage':[{'total_tokens':3}], 'usage_observed':True,
@@ -70,9 +70,9 @@ elif command == 'cargo':
     def test_resume_retains_verified_native_gate_and_runs_only_failed_shim(self):
         from scripts.tests.test_live_harness_resume import report_fixture
         report = report_fixture()
-        report['model'] = 'gpt-5.6-luna'
+        report['model'] = 'gpt-6-luna'
         for row in report['results']:
-            row['model'] = 'gpt-5.6-luna'
+            row['model'] = 'gpt-6-luna'
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'prior.json'
             path.write_text(json.dumps(report))

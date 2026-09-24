@@ -20,7 +20,7 @@ WORKDIR /workspace
 USER 1000:1000
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
     OMNISOLO_HARNESS_HEALTH_ADDR=0.0.0.0:8091 \
-    OPENAI_MODEL=gpt-5.6-luna \
+    OPENAI_MODEL=gpt-6-luna \
     OPENAI_REASONING_EFFORT=max \
     RUST_LOG=info
 EXPOSE 8090 8091
@@ -39,7 +39,7 @@ COPY --from=build /usr/local/bin/omnisolo-harness-worker /usr/local/bin/omnisolo
 WORKDIR /workspace
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
     OMNISOLO_HARNESS_HEALTH_ADDR=0.0.0.0:8091 \
-    OPENAI_MODEL=gpt-5.6-luna \
+    OPENAI_MODEL=gpt-6-luna \
     OPENAI_REASONING_EFFORT=max \
     RUST_LOG=info
 EXPOSE 8090 8091
@@ -105,7 +105,7 @@ COPY --chmod=0755 src/server/harness/sidecars/openai_compatible_shim.py /usr/loc
 WORKDIR /workspace
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
     OMNISOLO_HARNESS_HEALTH_ADDR=0.0.0.0:8091 \
-    OPENAI_MODEL=gpt-5.6-luna \
+    OPENAI_MODEL=gpt-6-luna \
     OPENAI_REASONING_EFFORT=max \
     RUST_LOG=info
 EXPOSE 8090 8091
@@ -127,7 +127,7 @@ COPY --from=build /usr/local/bin/omnisolo-harness-worker /usr/local/bin/omnisolo
 WORKDIR /workspace
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
     OMNISOLO_HARNESS_HEALTH_ADDR=0.0.0.0:8091 \
-    OPENAI_MODEL=gpt-5.6-luna \
+    OPENAI_MODEL=gpt-6-luna \
     OPENAI_REASONING_EFFORT=max \
     RUST_LOG=info
 EXPOSE 8090 8091

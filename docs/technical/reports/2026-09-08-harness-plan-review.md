@@ -108,7 +108,7 @@ retained the eleven completed rows and reran Plandex; `resumed_from` records
 the original report's SHA-256 and retained rows. This was a completed native
 gate followed by a shim retry, not an uninterrupted successful invocation.
 
-The selected upstream model is `gpt-5.6-luna` with `max` reasoning. Kimi reports
+The selected upstream model is `gpt-6-luna` with `max` reasoning. Kimi reports
 an explicit native translation to boolean `thinking`; the bridge preserves
 `max` on the actual provider request. A pinned CLI wire probe confirmed that
 selection and returned 14,269 input and 12 output tokens. OpenHarness also

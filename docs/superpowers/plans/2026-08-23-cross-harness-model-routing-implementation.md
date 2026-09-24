@@ -4,7 +4,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Route a portable session/task model selection into every advertised OmniSolo harness and prove all eight harnesses execute `gpt-5.6-luna` through Sub2API.
+**Goal:** Route a portable session/task model selection into every advertised OmniSolo harness and prove all eight harnesses execute `gpt-6-luna` through Sub2API.
 
 **Architecture:** Add a detached, non-secret resolved model selection to the canonical request and capsule path, resolve deployment defaults in the worker, and translate that selection through native stdio, ACP, HTTP, or SDK-sidecar adapters. Keep each harness behind `HarnessAdapter`, preserve native protocol records, and run deterministic contract tests before an opt-in real API matrix.
 
@@ -30,7 +30,7 @@ Add assertions constructing this typed value and proving it survives request and
 ```rust
 let selection = ResolvedModelSelection {
     provider_route: "openai-compatible".into(),
-    model_id: "gpt-5.6-luna".into(),
+    model_id: "gpt-6-luna".into(),
     reasoning_effort: Some(ReasoningEffort::Max),
     api_dialect: ModelApiDialect::OpenAiResponses,
     context_window: None,
@@ -87,7 +87,7 @@ global process environment:
 ```rust
 assert_eq!(config.api_key.as_deref(), Some("new-key"));
 assert_eq!(config.api_base_url.as_deref(), Some("https://llmapi.omnisolo.co/v1"));
-assert_eq!(config.model, "gpt-5.6-luna");
+assert_eq!(config.model, "gpt-6-luna");
 assert_eq!(config.reasoning_effort, ReasoningEffort::Max);
 assert!(!format!("{config:?}").contains("new-key"));
 ```
@@ -105,7 +105,7 @@ variables and has no model/effort fields.
 - [ ] **Step 3: Implement resolved worker defaults**
 
 Read `OPENAI_API_KEY`, `OPENAI_API_BASE_URL`, `OPENAI_MODEL`, and
-`OPENAI_REASONING_EFFORT`; default model/effort to `gpt-5.6-luna`/`max`; retain
+`OPENAI_REASONING_EFFORT`; default model/effort to `gpt-6-luna`/`max`; retain
 the old key/base names only as lower-priority fallbacks; inject the key into the
 child environment; store model defaults in `ProcessHarnessSpec` without putting
 the key in `args`.
@@ -183,7 +183,7 @@ git commit -m "feat: dispatch native harness transports"
 
 - [ ] **Step 1: Write failing Codex codec tests**
 
-Assert `thread/start` receives `model: "gpt-5.6-luna"`,
+Assert `thread/start` receives `model: "gpt-6-luna"`,
 `modelProvider: "omnisolo"`, and `reasoningEffort: "max"` from the typed
 selection, and that worker provider overrides use the `/v1` base with Responses
 wire API.
@@ -224,7 +224,7 @@ git commit -m "feat: route model selection to codex"
 
 Cover `initialize` with provider/model/max tokens, `session/prompt`, completion
 notifications, usage, cancellation, shutdown, malformed frames, and process
-exit. Assert `gpt-5.6-luna` and `max` reach initialization and that
+exit. Assert `gpt-6-luna` and `max` reach initialization and that
 `DEEPSEEK_API_KEY`/`DEEPSEEK_BASE_URL` exist only in the child environment.
 
 - [ ] **Step 2: Run the DeepSeek test target and observe missing codec failure**
@@ -303,7 +303,7 @@ git commit -m "feat: integrate kimi over acp"
 Cover prompt, steer, follow-up, abort, model selection, thinking level,
 streamed text/tool events, usage, session state, compaction, and clean exit.
 Assert generated `models.json` uses `openai-responses`, model
-`gpt-5.6-luna`, and maps maximum effort to Pi's `xhigh` level.
+`gpt-6-luna`, and maps maximum effort to Pi's `xhigh` level.
 
 - [ ] **Step 2: Run tests and observe missing Pi runtime failure**
 
@@ -378,7 +378,7 @@ git commit -m "feat: integrate opencode server"
 
 Cover health/readiness, conversation creation/resume/delete, prompt streaming,
 actions/observations, approvals, cancellation, usage, typed provider errors,
-and shutdown. Assert LLM configuration uses `openai/gpt-5.6-luna`, the selected
+and shutdown. Assert LLM configuration uses `openai/gpt-6-luna`, the selected
 base URL, and maximum reasoning only when accepted by the SDK.
 
 - [ ] **Step 2: Run tests and observe missing adapter failure**
@@ -542,7 +542,7 @@ git commit -m "feat: deploy independently scalable harness pools"
 - [ ] **Step 1: Write the ignored live test harness and matrix assertions**
 
 Require `OMNISOLO_RUN_LIVE_HARNESS_E2E=1` and `SUB2API_API_KEY`; map the latter
-to child `OPENAI_API_KEY`; query `/v1/models`; require `gpt-5.6-luna`; run one
+to child `OPENAI_API_KEY`; query `/v1/models`; require `gpt-6-luna`; run one
 no-tool prompt through each harness; capture model, reasoning translation,
 terminal text, usage, duration, and failure class in JSON.
 
@@ -567,7 +567,7 @@ Run:
 ```bash
 OMNISOLO_RUN_LIVE_HARNESS_E2E=1 \
 OPENAI_API_BASE_URL=https://llmapi.omnisolo.co/v1 \
-OPENAI_MODEL=gpt-5.6-luna \
+OPENAI_MODEL=gpt-6-luna \
 OPENAI_REASONING_EFFORT=max \
 bash scripts/test-live-harness-matrix.sh
 ```

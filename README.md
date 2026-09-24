@@ -17,7 +17,7 @@ or Kubernetes.
 
 The public OpenAI-compatible worker contract is `OPENAI_API_KEY`,
 `OPENAI_API_BASE_URL`, `OPENAI_MODEL`, and `OPENAI_REASONING_EFFORT`; the default
-model and effort are `gpt-5.6-luna` and `max`. See the
+model and effort are `gpt-6-luna` and `max`. See the
 [harness compatibility inventory](docs/omnisolo-harness-compatibility-inventory.md)
 for native protocol and lifecycle support.
 

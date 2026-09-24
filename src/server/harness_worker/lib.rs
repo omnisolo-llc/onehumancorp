@@ -26,7 +26,7 @@ pub const OPENAI_API_BASE_URL: &str = "OPENAI_API_BASE_URL";
 pub const OPENAI_MODEL: &str = "OPENAI_MODEL";
 pub const OPENAI_REASONING_EFFORT: &str = "OPENAI_REASONING_EFFORT";
 
-const DEFAULT_MODEL: &str = "gpt-5.6-luna";
+const DEFAULT_MODEL: &str = "gpt-6-luna";
 const DEFAULT_OPENAI_API_BASE_URL: &str = "https://api.openai.com/v1";
 const DEPRECATED_API_KEY: &str = "OMNISOLO_HARNESS_API_KEY";
 const DEPRECATED_BASE_URL: &str = "OMNISOLO_HARNESS_BASE_URL";
@@ -890,7 +890,7 @@ mod tests {
             ("OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS", "45"),
             (OPENAI_API_KEY, "secret-canary"),
             (OPENAI_API_BASE_URL, "https://llmapi.omnisolo.co/v1"),
-            (OPENAI_MODEL, "gpt-5.6-luna"),
+            (OPENAI_MODEL, "gpt-6-luna"),
             (OPENAI_REASONING_EFFORT, "max"),
             (DEPRECATED_API_KEY, "deprecated-secret"),
             (DEPRECATED_BASE_URL, "https://deprecated.example/v1"),
@@ -903,7 +903,7 @@ mod tests {
         assert_eq!(explicit.pool_id, "pi-pool");
         assert_eq!(explicit.executable.as_deref(), Some("pi"));
         assert_eq!(explicit.protocol.as_deref(), Some("pi_rpc"));
-        assert_eq!(explicit.openai_model.as_deref(), Some("gpt-5.6-luna"));
+        assert_eq!(explicit.openai_model.as_deref(), Some("gpt-6-luna"));
         assert_eq!(
             explicit.deprecated_api_key.as_deref(),
             Some("deprecated-secret")
@@ -1050,7 +1050,7 @@ mod tests {
         let mut input = worker_input();
         input.openai_api_key = Some("new-key".to_owned());
         input.openai_api_base_url = Some("https://llmapi.omnisolo.co/v1".to_owned());
-        input.openai_model = Some("gpt-5.6-luna".to_owned());
+        input.openai_model = Some("gpt-6-luna".to_owned());
         input.openai_reasoning_effort = Some("max".to_owned());
         input.deprecated_api_key = Some("deprecated-key".to_owned());
         input.deprecated_base_url = Some("https://deprecated.example/v1".to_owned());
@@ -1062,14 +1062,14 @@ mod tests {
         assert!(!spec.environment.contains_key(OPENAI_API_BASE_URL));
         assert_eq!(
             spec.environment.get(OPENAI_MODEL),
-            Some(&"gpt-5.6-luna".to_owned())
+            Some(&"gpt-6-luna".to_owned())
         );
         assert_eq!(
             spec.environment.get(OPENAI_REASONING_EFFORT),
             Some(&"max".to_owned())
         );
         assert!(spec.api_base_url.is_none());
-        assert_eq!(selection.model_id, "gpt-5.6-luna");
+        assert_eq!(selection.model_id, "gpt-6-luna");
         assert_eq!(selection.reasoning_effort, Some(ReasoningEffort::Max));
         assert_eq!(selection.api_dialect, ModelApiDialect::OpenAiResponses);
         assert_eq!(selection.provider_route, "openai-compatible");
@@ -1105,7 +1105,7 @@ mod tests {
         input.protocol = Some("kimi_acp".to_owned());
         input.openai_api_key = Some("kimi-secret-canary".to_owned());
         input.openai_api_base_url = Some("https://llmapi.omnisolo.co/v1".to_owned());
-        input.openai_model = Some("gpt-5.6-luna".to_owned());
+        input.openai_model = Some("gpt-6-luna".to_owned());
         input.openai_reasoning_effort = Some("max".to_owned());
 
         let config = WorkerConfig::from_input(input).unwrap();
@@ -1121,7 +1121,7 @@ mod tests {
         let config = WorkerConfig::from_input(worker_input()).unwrap();
         let spec = config.process_spec.as_ref().unwrap();
         let selection = spec.resolved_model.as_ref().unwrap();
-        assert_eq!(selection.model_id, "gpt-5.6-luna");
+        assert_eq!(selection.model_id, "gpt-6-luna");
         assert_eq!(selection.reasoning_effort, Some(ReasoningEffort::Max));
         assert_eq!(selection.provider_route, "openai");
         assert_eq!(config.default_resolved_model.as_ref(), Some(selection));
@@ -1133,9 +1133,9 @@ mod tests {
     #[test]
     fn openai_model_is_trimmed_and_blank_values_use_the_default() {
         for (configured, expected) in [
-            ("  gpt-5.6-luna-custom  ", "gpt-5.6-luna-custom"),
-            ("\tgpt-5.6-luna-tabbed\n", "gpt-5.6-luna-tabbed"),
-            ("   ", "gpt-5.6-luna"),
+            ("  gpt-6-luna-custom  ", "gpt-6-luna-custom"),
+            ("\tgpt-6-luna-tabbed\n", "gpt-6-luna-tabbed"),
+            ("   ", "gpt-6-luna"),
         ] {
             let mut input = worker_input();
             input.openai_model = Some(configured.to_owned());
@@ -1173,7 +1173,7 @@ mod tests {
             Some("https://llmapi.omnisolo.co/v1")
         );
         let selection = config.default_resolved_model.as_ref().unwrap();
-        assert_eq!(selection.model_id, "gpt-5.6-luna");
+        assert_eq!(selection.model_id, "gpt-6-luna");
         assert_eq!(selection.reasoning_effort, Some(ReasoningEffort::Max));
         let serialized = serde_json::to_string(selection).unwrap();
         assert!(!serialized.contains("secret-canary"));
@@ -1220,7 +1220,7 @@ mod tests {
             config.provider_api_key.as_ref().map(SecretValue::expose),
             Some("deprecated-key")
         );
-        assert_eq!(selection.model_id, "gpt-5.6-luna");
+        assert_eq!(selection.model_id, "gpt-6-luna");
         assert_eq!(selection.reasoning_effort, Some(ReasoningEffort::Max));
     }
 

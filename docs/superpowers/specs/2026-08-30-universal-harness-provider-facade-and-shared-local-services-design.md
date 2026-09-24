@@ -178,7 +178,7 @@ Requested model intent and realized routing stay distinct:
   credentials or live route tokens.
 
 The selection precedence remains task snapshot, session snapshot, then worker
-defaults. `OPENAI_MODEL` defaults to `gpt-5.6-luna` and
+defaults. `OPENAI_MODEL` defaults to `gpt-6-luna` and
 `OPENAI_REASONING_EFFORT` defaults to `max` in the live OmniSolo deployment.
 
 Every adapter must translate the reasoning value, reject it, or emit an

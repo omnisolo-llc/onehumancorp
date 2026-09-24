@@ -25,7 +25,7 @@ const SESSION_ID: &str = "ses_contract_1";
 fn selection() -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(ReasoningEffort::Max),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: Some(400_000),
@@ -63,7 +63,7 @@ fn temporary_parent(label: &str) -> PathBuf {
 fn generated_config_is_responses_compatible_portable_and_secret_free() {
     let config = build_opencode_config(&selection(), "https://llmapi.omnisolo.co/v1/").unwrap();
     let provider = &config["provider"][OPENCODE_PROVIDER_ID];
-    let model = &provider["models"]["gpt-5.6-luna"];
+    let model = &provider["models"]["gpt-6-luna"];
 
     assert_eq!(provider["npm"], "@ai-sdk/openai");
     assert_eq!(
@@ -345,7 +345,7 @@ async fn serve_one_responses_request(provider_listener: TcpListener) -> Value {
     let (method, path, body) = read_request(&mut stream).await.unwrap();
     assert_eq!(method, "POST");
     assert_eq!(path, "/v1/responses");
-    assert_eq!(body["model"], "gpt-5.6-luna");
+    assert_eq!(body["model"], "gpt-6-luna");
     assert_eq!(body["reasoning"]["effort"], "max");
     write_responses_stream(&mut stream, "opencode-provider-ok").await;
     body
@@ -359,7 +359,7 @@ async fn write_responses_stream(stream: &mut TcpStream, text: &str) {
         "object": "response",
         "created_at": 1_777_777_777,
         "status": "completed",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-6-luna",
         "output": [{
             "id": message_id,
             "type": "message",
@@ -381,12 +381,12 @@ async fn write_responses_stream(stream: &mut TcpStream, text: &str) {
     let events = vec![
         json!({"type":"response.created","sequence_number":0,"response":{
             "id":response_id,"object":"response","created_at":1_777_777_777,
-            "status":"in_progress","model":"gpt-5.6-luna","output":[],"parallel_tool_calls":true,
+            "status":"in_progress","model":"gpt-6-luna","output":[],"parallel_tool_calls":true,
             "tool_choice":"auto","tools":[],"usage":null
         }}),
         json!({"type":"response.in_progress","sequence_number":1,"response":{
             "id":response_id,"object":"response","created_at":1_777_777_777,
-            "status":"in_progress","model":"gpt-5.6-luna","output":[],"parallel_tool_calls":true,
+            "status":"in_progress","model":"gpt-6-luna","output":[],"parallel_tool_calls":true,
             "tool_choice":"auto","tools":[],"usage":null
         }}),
         json!({"type":"response.output_item.added","sequence_number":2,"output_index":0,
@@ -469,7 +469,7 @@ async fn synchronous_prompt_maps_selected_provider_model_text_usage_and_abort() 
         .unwrap();
     assert_eq!(prompt.method, "POST");
     assert_eq!(prompt.body["model"]["providerID"], OPENCODE_PROVIDER_ID);
-    assert_eq!(prompt.body["model"]["modelID"], "gpt-5.6-luna");
+    assert_eq!(prompt.body["model"]["modelID"], "gpt-6-luna");
     assert_eq!(prompt.body["variant"], "max");
     assert_eq!(prompt.body["parts"][0]["type"], "text");
     assert_eq!(prompt.body["parts"][0]["text"], "Answer exactly once");
@@ -1532,7 +1532,7 @@ fn session_json() -> Value {
         "time":{"created":1,"updated":1},
         "model": {
             "providerID": OPENCODE_PROVIDER_ID,
-            "id":"gpt-5.6-luna",
+            "id":"gpt-6-luna",
             "variant":"max"
         }
     })
@@ -1546,7 +1546,7 @@ fn prompt_json() -> Value {
             "role":"assistant",
             "time":{"created":1,"completed":2},
             "parentID":"msg_user_1",
-            "modelID":"gpt-5.6-luna",
+            "modelID":"gpt-6-luna",
             "providerID":OPENCODE_PROVIDER_ID,
             "mode":"build",
             "agent":"build",

@@ -79,7 +79,7 @@ async fn worker_binary_loads_public_environment_and_redacts_preflight_failures()
         .env("OMNISOLO_HARNESS_PROTOCOL", "codex_app_server")
         .env("OPENAI_API_KEY", secret)
         .env("OPENAI_API_BASE_URL", "https://llmapi.omnisolo.co/v1")
-        .env("OPENAI_MODEL", "gpt-5.6-luna")
+        .env("OPENAI_MODEL", "gpt-6-luna")
         .env("OPENAI_REASONING_EFFORT", "max")
         .env("RUST_LOG", "info");
     if let Ok(profile_file) = std::env::var("LLVM_PROFILE_FILE") {
@@ -130,7 +130,7 @@ async fn responses_provider() -> (
                 let response = serde_json::to_vec(&serde_json::json!({
                     "id":"resp_worker_omni_1",
                     "status":"completed",
-                    "model":"gpt-5.6-luna",
+                    "model":"gpt-6-luna",
                     "output":[{"type":"message","role":"assistant","content":[{
                         "type":"output_text","text":"worker-provider-ok"
                     }]}],
@@ -184,7 +184,7 @@ async fn models_provider() -> (
                 .unwrap_or_default();
             let response = serde_json::to_vec(&serde_json::json!({
                 "object": "list",
-                "data": [{"id": "gpt-5.6-luna", "object": "model"}]
+                "data": [{"id": "gpt-6-luna", "object": "model"}]
             }))
             .unwrap();
             stream
@@ -303,7 +303,7 @@ done
     assert_eq!(binding.durable_sequence, 1);
     let binding_payload: serde_json::Value = serde_json::from_slice(&binding.payload).unwrap();
     assert_eq!(binding_payload["event_type"], "inference.model_binding");
-    assert_eq!(binding_payload["payload"]["model_id"], "gpt-5.6-luna");
+    assert_eq!(binding_payload["payload"]["model_id"], "gpt-6-luna");
     assert_eq!(binding_payload["payload"]["reasoning_effort"], "max");
 
     let event = events.next().await.unwrap().unwrap();
@@ -368,7 +368,7 @@ done
         .env("OMNISOLO_HARNESS_PROTOCOL", "custom")
         .env("OPENAI_API_KEY", secret)
         .env("OPENAI_API_BASE_URL", &upstream_base_url)
-        .env("OPENAI_MODEL", "gpt-5.6-luna")
+        .env("OPENAI_MODEL", "gpt-6-luna")
         .env("OPENAI_REASONING_EFFORT", "max")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -593,7 +593,7 @@ async fn worker_binary_routes_omnisolo_through_the_configured_responses_provider
             "OPENAI_API_BASE_URL",
             format!("http://{provider_address}/v1"),
         )
-        .env("OPENAI_MODEL", "gpt-5.6-luna")
+        .env("OPENAI_MODEL", "gpt-6-luna")
         .env("OPENAI_REASONING_EFFORT", "max")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -676,7 +676,7 @@ async fn worker_binary_routes_omnisolo_through_the_configured_responses_provider
     assert!(wire.contains("usage.recorded"));
     assert!(!wire.contains(secret));
     let provider_body = provider.await.unwrap();
-    assert_eq!(provider_body["model"], "gpt-5.6-luna");
+    assert_eq!(provider_body["model"], "gpt-6-luna");
     assert_eq!(provider_body["reasoning"]["effort"], "max");
     assert!(!provider_body.to_string().contains(secret));
     stop(&mut child).await;

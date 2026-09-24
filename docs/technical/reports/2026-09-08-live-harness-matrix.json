@@ -2,7 +2,7 @@
   "schema": "omnisolo.live_harness_matrix.v1",
   "status": "passed",
   "native_gate": "passed",
-  "model": "gpt-5.6-luna",
+  "model": "gpt-6-luna",
   "reasoning_effort": "max",
   "results": [
     {
@@ -16,7 +16,7 @@
           "binding_digest": "sha256:runtime-unbound",
           "binding_revision": "worker-env-v1",
           "integration_mode": "native",
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max",
           "response_id": "resp_04f700c4bac82f98016aa0562248ac87d08b1d38ab65c6aa41"
@@ -57,7 +57,7 @@
               "binding_digest": "sha256:runtime-unbound",
               "binding_revision": "worker-env-v1",
               "integration_mode": "native",
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max",
               "response_id": "resp_0042365e96cde33f016aa055a5562887d09caa7675db1cd233"
@@ -118,7 +118,7 @@
         "usage_observed": true
       },
       "harness_id": "omnisolo",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -146,7 +146,7 @@
           "harness_id": "codex",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -194,7 +194,7 @@
               "harness_id": "codex",
               "integration_mode": "native",
               "max_output_tokens": null,
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max"
             },
@@ -472,7 +472,7 @@
         "usage_observed": true
       },
       "harness_id": "codex",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -500,7 +500,7 @@
           "harness_id": "opencode",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -548,7 +548,7 @@
               "harness_id": "opencode",
               "integration_mode": "native",
               "max_output_tokens": null,
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max"
             },
@@ -624,7 +624,7 @@
         "usage_observed": true
       },
       "harness_id": "opencode",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -652,7 +652,7 @@
           "harness_id": "deepseek",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -700,7 +700,7 @@
               "harness_id": "deepseek",
               "integration_mode": "native",
               "max_output_tokens": null,
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max"
             },
@@ -817,7 +817,7 @@
         "usage_observed": true
       },
       "harness_id": "deepseek",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -845,7 +845,7 @@
           "harness_id": "pi",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -893,7 +893,7 @@
               "harness_id": "pi",
               "integration_mode": "native",
               "max_output_tokens": null,
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max"
             },
@@ -1083,7 +1083,7 @@
         "usage_observed": true
       },
       "harness_id": "pi",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -1111,7 +1111,7 @@
           "harness_id": "kimi",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -1160,7 +1160,7 @@
               "harness_id": "kimi",
               "integration_mode": "native",
               "max_output_tokens": null,
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max"
             },
@@ -1239,7 +1239,7 @@
         "usage_observed": true
       },
       "harness_id": "kimi",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -1267,7 +1267,7 @@
           "harness_id": "openhands",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -1315,7 +1315,7 @@
               "harness_id": "openhands",
               "integration_mode": "native",
               "max_output_tokens": null,
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max"
             },
@@ -1341,7 +1341,7 @@
                     "cache_write_tokens": 0,
                     "completion_tokens": 8235,
                     "context_window": 922000,
-                    "model": "openai/gpt-5.6-luna",
+                    "model": "openai/gpt-6-luna",
                     "per_turn_token": 14339,
                     "prompt_tokens": 45297,
                     "reasoning_tokens": 5343,
@@ -1350,46 +1350,46 @@
                   "costs": [
                     {
                       "cost": 0.0070832,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "timestamp": 1788895333.0311575
                     },
                     {
                       "cost": 0.0033437199999999997,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "timestamp": 1788895373.7681894
                     },
                     {
                       "cost": 0.0042156,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "timestamp": 1788895406.9774668
                     },
                     {
                       "cost": 0.0011654399999999998,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "timestamp": 1788895416.17458
                     }
                   ],
                   "max_budget_per_task": null,
-                  "model_name": "openai/gpt-5.6-luna",
+                  "model_name": "openai/gpt-6-luna",
                   "response_latencies": [
                     {
                       "latency": 89.38044953346252,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGYxYTI3MTU3OWZjNzU4NzAxNmFhMDYwMGY2ZDI0ODdkMDk1MGZjYzMzYzRjMmRlYjg="
                     },
                     {
                       "latency": 37.68898797035217,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGYxYTI3MTU3OWZjNzU4NzAxNmFhMDYwNjlmMWRjODdkMDk3NTAwMWNmZWY5OWUxY2E="
                     },
                     {
                       "latency": 32.46659874916077,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGYxYTI3MTU3OWZjNzU4NzAxNmFhMDYwOTA5OWRjODdkMGE0MDljNmRlOGIwOTM5ZTU="
                     },
                     {
                       "latency": 8.46095061302185,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGYxYTI3MTU3OWZjNzU4NzAxNmFhMDYwYjE5NGY4ODdkMDlhMGIwNDJmNGRjNTkwM2I="
                     }
                   ],
@@ -1399,7 +1399,7 @@
                       "cache_write_tokens": 0,
                       "completion_tokens": 4640,
                       "context_window": 922000,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "per_turn_token": 12216,
                       "prompt_tokens": 7576,
                       "reasoning_tokens": 3106,
@@ -1410,7 +1410,7 @@
                       "cache_write_tokens": 0,
                       "completion_tokens": 1897,
                       "context_window": 922000,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "per_turn_token": 13224,
                       "prompt_tokens": 11327,
                       "reasoning_tokens": 1552,
@@ -1421,7 +1421,7 @@
                       "cache_write_tokens": 0,
                       "completion_tokens": 1465,
                       "context_window": 922000,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "per_turn_token": 13753,
                       "prompt_tokens": 12288,
                       "reasoning_tokens": 617,
@@ -1432,7 +1432,7 @@
                       "cache_write_tokens": 0,
                       "completion_tokens": 233,
                       "context_window": 922000,
-                      "model": "openai/gpt-5.6-luna",
+                      "model": "openai/gpt-6-luna",
                       "per_turn_token": 14339,
                       "prompt_tokens": 14106,
                       "reasoning_tokens": 68,
@@ -1477,7 +1477,7 @@
                 "cache_write_tokens": 0,
                 "completion_tokens": 6185,
                 "context_window": 922000,
-                "model": "openai/gpt-5.6-luna",
+                "model": "openai/gpt-6-luna",
                 "per_turn_token": 10953,
                 "prompt_tokens": 17836,
                 "reasoning_tokens": 4416,
@@ -1486,26 +1486,26 @@
               "costs": [
                 {
                   "cost": 0.008292599999999999,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788895539.011505
                 },
                 {
                   "cost": 0.00149852,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788895556.877143
                 }
               ],
               "max_budget_per_task": null,
-              "model_name": "openai/gpt-5.6-luna",
+              "model_name": "openai/gpt-6-luna",
               "response_latencies": [
                 {
                   "latency": 108.34506607055664,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMDk1OTY2ZTgyYmI3YjE0MDAxNmFhMDYwYzk1ZTVjODdkMGFlYTgwNTZlNWZiNzQ3YzE="
                 },
                 {
                   "latency": 15.277081966400146,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMDk1OTY2ZTgyYmI3YjE0MDAxNmFhMDYxMzgxZGM0ODdkMDlkOTA2NWEwZmYwM2MzZjg="
                 }
               ],
@@ -1515,7 +1515,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 5679,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 13068,
                   "prompt_tokens": 7389,
                   "reasoning_tokens": 4218,
@@ -1526,7 +1526,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 506,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 10953,
                   "prompt_tokens": 10447,
                   "reasoning_tokens": 198,
@@ -1539,7 +1539,7 @@
         "usage_observed": true
       },
       "harness_id": "openhands",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -1567,7 +1567,7 @@
           "harness_id": "openharness",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -1615,7 +1615,7 @@
               "harness_id": "openharness",
               "integration_mode": "native",
               "max_output_tokens": null,
-              "model_id": "gpt-5.6-luna",
+              "model_id": "gpt-6-luna",
               "provider_route": "openai-compatible",
               "reasoning_effort": "max"
             },
@@ -1689,7 +1689,7 @@
         "usage_observed": true
       },
       "harness_id": "openharness",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -1717,7 +1717,7 @@
           "harness_id": "aider",
           "integration_mode": "openai_compatible",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -1739,7 +1739,7 @@
         "usage_observed": true
       },
       "harness_id": "aider",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -1767,7 +1767,7 @@
           "harness_id": "goose",
           "integration_mode": "openai_compatible",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -1789,7 +1789,7 @@
         "usage_observed": true
       },
       "harness_id": "goose",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -1817,7 +1817,7 @@
           "harness_id": "open-interpreter",
           "integration_mode": "openai_compatible",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -1839,7 +1839,7 @@
         "usage_observed": true
       },
       "harness_id": "open-interpreter",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",
@@ -1867,7 +1867,7 @@
           "harness_id": "plandex",
           "integration_mode": "openai_compatible",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -1889,7 +1889,7 @@
         "usage_observed": true
       },
       "harness_id": "plandex",
-      "model": "gpt-5.6-luna",
+      "model": "gpt-6-luna",
       "native_session_deleted": true,
       "reasoning_effort": "max",
       "schema": "omnisolo.live_harness_result.v1",

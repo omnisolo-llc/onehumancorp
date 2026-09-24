@@ -102,7 +102,7 @@ references, never the backing store or its authority.
 
 The deployment contract is `OPENAI_API_KEY`, `OPENAI_API_BASE_URL`,
 `OPENAI_MODEL`, and `OPENAI_REASONING_EFFORT`. Defaults are
-`gpt-5.6-luna` and `max`; credentials are injected only into worker/child
+`gpt-6-luna` and `max`; credentials are injected only into worker/child
 environments and are excluded from portable sessions and capsules.
 
 Every model-backed native attempt begins with one durable

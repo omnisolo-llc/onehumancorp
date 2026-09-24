@@ -17,7 +17,7 @@
       "harness_id": "codex",
       "integration_mode": "native",
       "max_output_tokens": null,
-      "model_id": "gpt-5.6-luna",
+      "model_id": "gpt-6-luna",
       "provider_route": "openai-compatible",
       "reasoning_effort": "max"
     },
@@ -65,7 +65,7 @@
           "harness_id": "codex",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -381,7 +381,7 @@
     "usage_observed": true
   },
   "harness_id": "codex",
-  "model": "gpt-5.6-luna",
+  "model": "gpt-6-luna",
   "native_session_deleted": true,
   "reasoning_effort": "max",
   "schema": "omnisolo.live_harness_result.v1",

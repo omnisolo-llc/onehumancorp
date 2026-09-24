@@ -16,7 +16,7 @@ use uuid::Uuid;
 fn selection(effort: ReasoningEffort) -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "omnisolo-openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(effort),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: Some(400_000),
@@ -60,12 +60,12 @@ fn commands_match_pi_0731_rpc_shapes_without_jsonrpc_fields() {
             json!({"id":"cmd-4","type":"abort"}),
         ),
         (
-            PiRpcCommand::set_model("cmd-5", "omnisolo-openai-compatible", "gpt-5.6-luna"),
+            PiRpcCommand::set_model("cmd-5", "omnisolo-openai-compatible", "gpt-6-luna"),
             json!({
                 "id":"cmd-5",
                 "type":"set_model",
                 "provider":"omnisolo-openai-compatible",
-                "modelId":"gpt-5.6-luna"
+                "modelId":"gpt-6-luna"
             }),
         ),
         (
@@ -164,7 +164,7 @@ fn models_json_is_openai_responses_and_references_environment_credential() {
     assert_eq!(provider["baseUrl"], "https://llmapi.omnisolo.co/v1");
     assert_eq!(provider["api"], "openai-responses");
     assert_eq!(provider["apiKey"], "OPENAI_API_KEY");
-    assert_eq!(provider["models"][0]["id"], "gpt-5.6-luna");
+    assert_eq!(provider["models"][0]["id"], "gpt-6-luna");
     assert_eq!(provider["models"][0]["reasoning"], true);
     assert_eq!(provider["models"][0]["contextWindow"], 400_000);
     assert_eq!(provider["models"][0]["maxTokens"], 128_000);
@@ -241,7 +241,7 @@ fn decoder_maps_streams_tools_usage_terminal_and_preserves_native_context() {
                 "content":[{"type":"text","text":"hello world"}],
                 "api":"openai-responses",
                 "provider":"omnisolo-openai-compatible",
-                "model":"gpt-5.6-luna",
+                "model":"gpt-6-luna",
                 "usage":{"input":10,"output":2,"cacheRead":0,"cacheWrite":0,"totalTokens":12,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},
                 "stopReason":"stop",
                 "timestamp":1
@@ -387,7 +387,7 @@ while IFS= read -r line; do
   id=$(printf '%s' "$line" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
   type=$(printf '%s' "$line" | sed -n 's/.*"type":"\([^"]*\)".*/\1/p')
   case "$type" in
-    set_model) printf '%s\n' "{\"id\":\"$id\",\"type\":\"response\",\"command\":\"set_model\",\"success\":true,\"data\":{\"provider\":\"omnisolo-openai-compatible\",\"id\":\"gpt-5.6-luna\"}}" ;;
+    set_model) printf '%s\n' "{\"id\":\"$id\",\"type\":\"response\",\"command\":\"set_model\",\"success\":true,\"data\":{\"provider\":\"omnisolo-openai-compatible\",\"id\":\"gpt-6-luna\"}}" ;;
     set_thinking_level) printf '%s\n' "{\"id\":\"$id\",\"type\":\"response\",\"command\":\"set_thinking_level\",\"success\":true}" ;;
     prompt)
       printf '%s\n' "{\"id\":\"$id\",\"type\":\"response\",\"command\":\"prompt\",\"success\":true}"
@@ -409,7 +409,7 @@ done
         .request(PiRpcCommand::set_model(
             "model-1",
             "omnisolo-openai-compatible",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
         ))
         .await
         .unwrap();
@@ -493,7 +493,7 @@ done
         .request(PiRpcCommand::set_model(
             "model-1",
             "omnisolo-openai-compatible",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
         ))
         .await
         .unwrap();

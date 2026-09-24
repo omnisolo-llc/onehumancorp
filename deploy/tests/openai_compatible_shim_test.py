@@ -172,7 +172,7 @@ class OpenAiCompatibleShimTest(unittest.TestCase):
         environment = {
             "OPENAI_API_KEY": SECRET,
             "OPENAI_API_BASE_URL": base_url,
-            "OPENAI_MODEL": "gpt-5.6-luna",
+            "OPENAI_MODEL": "gpt-6-luna",
             "OPENAI_REASONING_EFFORT": "max",
             "PLANDEX_API_HOST": "http://127.0.0.1:%d" % self.server.server_port,
             "PATH": str(self.bin_dir) + os.pathsep + os.environ.get("PATH", ""),
@@ -241,7 +241,7 @@ class OpenAiCompatibleShimTest(unittest.TestCase):
             request = requests[0]
             self.assertEqual(request["path"], "/v1/chat/completions")
             self.assertEqual(request["authorization"], "Bearer " + SECRET)
-            self.assertEqual(request["body"]["model"], "gpt-5.6-luna")
+            self.assertEqual(request["body"]["model"], "gpt-6-luna")
             self.assertEqual(request["body"]["messages"][0]["content"], "shared prompt")
             if harness_id == "plandex":
                 self.assertTrue(

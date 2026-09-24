@@ -35,7 +35,7 @@ class Handler(BaseHTTPRequestHandler):
             "id": "chatcmpl-fixture",
             "object": "chat.completion",
             "created": 1,
-            "model": "gpt-5.6-luna",
+            "model": "gpt-6-luna",
             "choices": [
                 {
                     "index": 0,
@@ -51,7 +51,7 @@ class Handler(BaseHTTPRequestHandler):
                 "object": "response",
                 "created_at": 1,
                 "status": "completed",
-                "model": "gpt-5.6-luna",
+                "model": "gpt-6-luna",
                 "output": [
                     {
                         "id": "msg-fixture",
@@ -123,7 +123,7 @@ class Handler(BaseHTTPRequestHandler):
                     "id": "chatcmpl-fixture",
                     "object": "chat.completion.chunk",
                     "created": 1,
-                    "model": "gpt-5.6-luna",
+                    "model": "gpt-6-luna",
                     "choices": [
                         {
                             "index": 0,
@@ -136,7 +136,7 @@ class Handler(BaseHTTPRequestHandler):
                     "id": "chatcmpl-fixture",
                     "object": "chat.completion.chunk",
                     "created": 1,
-                    "model": "gpt-5.6-luna",
+                    "model": "gpt-6-luna",
                     "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
                     "usage": data["usage"],
                 },
@@ -161,7 +161,7 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 os.environ.update(
     OPENAI_API_KEY="fixture-only-token",
     OPENAI_API_BASE_URL=f"http://127.0.0.1:{server.server_port}/v1",
-    OPENAI_MODEL="gpt-5.6-luna",
+    OPENAI_MODEL="gpt-6-luna",
     OPENAI_REASONING_EFFORT="max",
     OMNISOLO_SHIM_TIMEOUT_SECS="30",
 )

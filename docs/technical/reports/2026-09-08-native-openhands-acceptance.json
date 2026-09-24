@@ -17,7 +17,7 @@
       "harness_id": "openhands",
       "integration_mode": "native",
       "max_output_tokens": null,
-      "model_id": "gpt-5.6-luna",
+      "model_id": "gpt-6-luna",
       "provider_route": "openai-compatible",
       "reasoning_effort": "max"
     },
@@ -65,7 +65,7 @@
           "harness_id": "openhands",
           "integration_mode": "native",
           "max_output_tokens": null,
-          "model_id": "gpt-5.6-luna",
+          "model_id": "gpt-6-luna",
           "provider_route": "openai-compatible",
           "reasoning_effort": "max"
         },
@@ -91,7 +91,7 @@
                 "cache_write_tokens": 0,
                 "completion_tokens": 9683,
                 "context_window": 922000,
-                "model": "openai/gpt-5.6-luna",
+                "model": "openai/gpt-6-luna",
                 "per_turn_token": 15652,
                 "prompt_tokens": 72989,
                 "reasoning_tokens": 6240,
@@ -100,66 +100,66 @@
               "costs": [
                 {
                   "cost": 0.0089734,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788891499.766577
                 },
                 {
                   "cost": 0.00217352,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788891523.6529434
                 },
                 {
                   "cost": 0.00174144,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788891547.024161
                 },
                 {
                   "cost": 0.00102672,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788891564.95504
                 },
                 {
                   "cost": 0.0009698,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788891620.55049
                 },
                 {
                   "cost": 0.0014714,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "timestamp": 1788891641.2450995
                 }
               ],
               "max_budget_per_task": null,
-              "model_name": "openai/gpt-5.6-luna",
+              "model_name": "openai/gpt-6-luna",
               "response_latencies": [
                 {
                   "latency": 115.5156478881836,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGU4ZWRmNTFiNTkzZWQ4YzAxNmFhMDUwZmEzZTk4ODdkMGI5MjJmZWQxNmU4ZjQxZjQ="
                 },
                 {
                   "latency": 21.88934588432312,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGU4ZWRmNTFiNTkzZWQ4YzAxNmFhMDUxNmY4ZWZjODdkMDg3ZjgzNjNhMTZlZDkxZjI="
                 },
                 {
                   "latency": 22.678044319152832,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGU4ZWRmNTFiNTkzZWQ4YzAxNmFhMDUxODYyZDdjODdkMDlmZmI5OTU5NWU2OGI1ZmE="
                 },
                 {
                   "latency": 16.22246766090393,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGU4ZWRmNTFiNTkzZWQ4YzAxNmFhMDUxOWU4NGMwODdkMDhhYjgxYjI4NzVlMmYxYzc="
                 },
                 {
                   "latency": 54.895994424819946,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGU4ZWRmNTFiNTkzZWQ4YzAxNmFhMDUxYWY4YjkwODdkMDlmMmEzYTA1ODA1Mzg1ZGQ="
                 },
                 {
                   "latency": 19.995662212371823,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMGU4ZWRmNTFiNTkzZWQ4YzAxNmFhMDUxZTczMTYwODdkMGE2ZDNiY2M4ZWJiMWI0ZTQ="
                 }
               ],
@@ -169,7 +169,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 6214,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 13797,
                   "prompt_tokens": 7583,
                   "reasoning_tokens": 4623,
@@ -180,7 +180,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 910,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 12308,
                   "prompt_tokens": 11398,
                   "reasoning_tokens": 670,
@@ -191,7 +191,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 1069,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 13039,
                   "prompt_tokens": 11970,
                   "reasoning_tokens": 270,
@@ -202,7 +202,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 429,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 13587,
                   "prompt_tokens": 13158,
                   "reasoning_tokens": 119,
@@ -213,7 +213,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 416,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 14289,
                   "prompt_tokens": 13873,
                   "reasoning_tokens": 130,
@@ -224,7 +224,7 @@
                   "cache_write_tokens": 0,
                   "completion_tokens": 645,
                   "context_window": 922000,
-                  "model": "openai/gpt-5.6-luna",
+                  "model": "openai/gpt-6-luna",
                   "per_turn_token": 15652,
                   "prompt_tokens": 15007,
                   "reasoning_tokens": 428,
@@ -269,7 +269,7 @@
             "cache_write_tokens": 0,
             "completion_tokens": 5736,
             "context_window": 922000,
-            "model": "openai/gpt-5.6-luna",
+            "model": "openai/gpt-6-luna",
             "per_turn_token": 10757,
             "prompt_tokens": 17750,
             "reasoning_tokens": 4179,
@@ -278,26 +278,26 @@
           "costs": [
             {
               "cost": 0.0079908,
-              "model": "openai/gpt-5.6-luna",
+              "model": "openai/gpt-6-luna",
               "timestamp": 1788891756.1000345
             },
             {
               "cost": 0.00124432,
-              "model": "openai/gpt-5.6-luna",
+              "model": "openai/gpt-6-luna",
               "timestamp": 1788891767.6637986
             }
           ],
           "max_budget_per_task": null,
-          "model_name": "openai/gpt-5.6-luna",
+          "model_name": "openai/gpt-6-luna",
           "response_latencies": [
             {
               "latency": 102.29367971420288,
-              "model": "openai/gpt-5.6-luna",
+              "model": "openai/gpt-6-luna",
               "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMDRlYTYyYzRiYzY5MGIzZTAxNmFhMDUyMDg0Y2JjODdkMGI4ZjBkYmEyYzI0NzMzYTc="
             },
             {
               "latency": 9.603112697601318,
-              "model": "openai/gpt-5.6-luna",
+              "model": "openai/gpt-6-luna",
               "response_id": "resp_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDpOb25lO3Jlc3BvbnNlX2lkOnJlc3BfMDRlYTYyYzRiYzY5MGIzZTAxNmFhMDUyNzAyOGU0ODdkMGFkMjZmZmQ0MWEwMTYxZWE="
             }
           ],
@@ -307,7 +307,7 @@
               "cache_write_tokens": 0,
               "completion_tokens": 5445,
               "context_window": 922000,
-              "model": "openai/gpt-5.6-luna",
+              "model": "openai/gpt-6-luna",
               "per_turn_token": 12729,
               "prompt_tokens": 7284,
               "reasoning_tokens": 4059,
@@ -318,7 +318,7 @@
               "cache_write_tokens": 0,
               "completion_tokens": 291,
               "context_window": 922000,
-              "model": "openai/gpt-5.6-luna",
+              "model": "openai/gpt-6-luna",
               "per_turn_token": 10757,
               "prompt_tokens": 10466,
               "reasoning_tokens": 120,
@@ -331,7 +331,7 @@
     "usage_observed": true
   },
   "harness_id": "openhands",
-  "model": "gpt-5.6-luna",
+  "model": "gpt-6-luna",
   "native_session_deleted": true,
   "reasoning_effort": "max",
   "schema": "omnisolo.live_harness_result.v1",

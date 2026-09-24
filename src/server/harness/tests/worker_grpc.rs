@@ -39,7 +39,7 @@ async fn grpc_worker_preflight_rejects_a_missing_native_harness_before_serving()
             std::iter::empty::<String>(),
             "codex",
         )
-        .with_model_routing(resolved_model("gpt-5.6-luna"), None),
+        .with_model_routing(resolved_model("gpt-6-luna"), None),
     );
 
     let error = service.preflight().await.unwrap_err();
