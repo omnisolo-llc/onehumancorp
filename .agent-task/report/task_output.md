@@ -1,0 +1,4 @@
+{
+  "issue_title": "🧙 Wizard: [no-work finding]",
+  "issue_description": "Task: Business capability and usage economics audit review.\n\nFinding: No-work finding. The current scope priorities require an explicit evidence-backed decision with verified owner evidence before starting new epics. The audit records owner anecdotes and public stories, which do not establish willingness to pay or a winning segment. Therefore, there is insufficient evidence to implement a new wizard feature or onboard specific verticals. Routine actions outside explicit standing authority are blocked by the expansion gate.\n\nSuperpowers workflow provenance:\n- Loaded skills: skills/using-superpowers/SKILL.md\n- Revision hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71\n- Checks performed: Codebase exploration and capability map review\n- Outcomes: Blocked due to lack of explicit owner evidence."
+}
