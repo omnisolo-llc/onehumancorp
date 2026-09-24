@@ -189,7 +189,7 @@ pub async fn connect_integration_handler(
             .into_response();
         }
     };
-    if matches!(validated.integration_id.as_str(), "openai_api" | "stripe") {
+    if ::server_harness::middleware::connection_vault::supported(validated.integration_id.as_str()) {
         let Some(secret) = validated.api_token.as_deref() else {
             return connection_response(
                 StatusCode::BAD_REQUEST,
@@ -380,7 +380,7 @@ async fn refresh_integration_handler(
         )
         .into_response();
     };
-    if !matches!(id.as_str(), "openai_api" | "stripe") {
+    if !::server_harness::middleware::connection_vault::supported(id.as_str()) {
         return connection_response(
             StatusCode::NOT_IMPLEMENTED,
             false,
