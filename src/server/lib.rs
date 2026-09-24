@@ -9466,16 +9466,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         )
-        .route(
-            "/api/v1/agent-feed",
-            axum::routing::get(api::agent_feed::list_feed_items)
-                .post(api::agent_feed::create_feed_item)
-                .route_layer(axum::middleware::from_fn_with_state(
-                    http_auth_store.clone(),
-                    ::server_auth::strict_bearer_auth_middleware,
-                ))
-                .with_state(db.pool.clone()),
-        )
         .nest("/api/v1/ohc_job_queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
         .nest("/api/v1/ohc-job-queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
