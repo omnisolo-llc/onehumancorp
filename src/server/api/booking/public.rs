@@ -106,14 +106,36 @@ async fn create_checkout_session(
 
     // 2. Either create booking directly or generate a Stripe Checkout Session
     let booking_id = uuid::Uuid::new_v4().to_string();
-    let mut stripe_url = None;
     let st = chrono::DateTime::parse_from_rfc3339(&payload.start_time).unwrap();
     let et = chrono::DateTime::parse_from_rfc3339(&payload.end_time).unwrap();
+
+    let mut stripe_url = None;
+    if requires_deposit && deposit_cents > 0 {
+        if let Ok(stripe_key) = crate::api::tool_integrations::stripe_key_for_tenant(&state.db, &tenant_id).await {
+            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+            if stripe_client.require_api_key().is_ok() {
+                use sha2::{Digest, Sha256};
+                let operation_id = format!("booking:{:x}", Sha256::digest(format!("{}:{}", tenant_id, booking_id)));
+                if let Ok(receipt) = stripe_client.create_checkout_session_idempotent(
+                    crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                        name: &format!("Deposit for Service {}", payload.service_id),
+                        reference: &booking_id,
+                        amount_cents: deposit_cents,
+                        interval: None,
+                        product: Some(&payload.service_id),
+                        currency: "usd",
+                        operation_id: &operation_id,
+                    }
+                ).await {
+                    stripe_url = Some(receipt.url);
+                }
+            }
+        }
+    }
 
     let res = match &state.db.store {
         DbStore::Sqlite(pool) => {
             if requires_deposit && deposit_cents > 0 {
-                stripe_url = None;
                 sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')")
                     .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339())
                     .execute(pool).await
@@ -128,7 +150,6 @@ async fn create_checkout_session(
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
             let result = if requires_deposit && deposit_cents > 0 {
-                stripe_url = None;
                 sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')")
                     .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(st).bind(et)
                     .execute(&mut *tx).await
