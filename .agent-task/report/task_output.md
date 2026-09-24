@@ -1,0 +1,4 @@
+{
+  "issue_title": "No-work finding: Missing owner evidence for UX Wizard new epics",
+  "issue_description": "The request asks to design and develop frictionless, delightful onboarding steppers, AI setup workflows, and first-workflow setup flows. However, the One Human Corp operating contract (revision 2026-09-18-usage-audit) dictates that new epics need an explicit evidence-backed decision, and strict operating contract constraints override contradictory direct user requests to implement features. Since there is no verified owner evidence provided for these new features, a 'no-work finding' is submitted.\n\nSuperpowers workflow provenance:\n- Loaded skills: using-superpowers\n- Revision hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71\n- Checks performed: Codebase and documentation audit for UX Wizard onboarding epics owner evidence.\n- Outcomes: No owner evidence found. Exiting with no-work finding."
+}
