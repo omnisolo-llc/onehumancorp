@@ -661,17 +661,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                     type="button"
                     className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px]"
                     aria-label={
-                      approval.proposed_action?.message && approval.proposed_action.message !== "Approve"
-                        ? approval.proposed_action.message
-                        : "Take Action"
+                      approval.proposed_action?.message || "Approve"
                     }
                     onClick={() =>
                       wrapDecision(approval.id, true, undefined, "operations")
                     }
                   >
-                    {approval.proposed_action?.message && approval.proposed_action.message !== "Approve"
-                      ? approval.proposed_action.message
-                      : "Take Action"}
+                    {approval.proposed_action?.message || "Approve"}
                   </button>
                   <button
                     type="button"
@@ -2449,14 +2445,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-              aria-label="Send Win-Back Offer"
+              aria-label="Approve"
               data-testid="feed-approve-btn"
               disabled={loadingAction !== null}
             >
               {isActionLoading("approve") ? (
                 <span className="animate-pulse">Loading...</span>
               ) : (
-                "Send Win-Back Offer"
+                "Approve"
               )}
             </button>
             <button

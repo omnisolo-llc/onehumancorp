@@ -42,7 +42,7 @@ export default function VerificationLoopsPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <div className="text-3xl font-bold mb-4 text-gray-900">Verification Loops</div>
+      <h1 className="text-3xl font-bold mb-4 text-gray-900">Verification Loops</h1>
       <p className="text-gray-600 mb-8">
         Test agent output against distinct verification loops: Computational Guides (bash/linters), Visual Verifiers (Playwright), or Inferential Sensors (LLM Judge).
       </p>
@@ -95,7 +95,7 @@ export default function VerificationLoopsPage() {
             rows={4}
             value={outputText}
             onChange={(e) => setOutputText(e.target.value)}
-            placeholder="e.g. echo 'ok'; e\x78it 0"
+            placeholder={"e.g. echo 'ok'; e\\x78it 0"}
           />
         </div>
 

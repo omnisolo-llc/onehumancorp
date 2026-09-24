@@ -138,7 +138,7 @@ export function useTooltip() {
   return context;
 }
 
-export function WithTooltip({ children, id, defaultText }: { children: ReactNode, id: string, defaultText?: string }) {
+export function WithTooltip({ children, id, defaultText, className }: { children: ReactNode, id: string, defaultText?: string, className?: string }) {
   const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const text = getTooltip(id) || defaultText || DEFAULT_TOOLTIPS[id] || id;
@@ -195,7 +195,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
       id={id}
-      className="inline-block relative cursor-help"
+      className={className ? `${className} relative cursor-help` : "inline-block relative cursor-help"}
       data-tooltip-id={id}
       data-tooltip={text}
     >

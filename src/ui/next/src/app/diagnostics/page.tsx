@@ -69,7 +69,7 @@ export default function DiagnosticsPage() {
 <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-3 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50 text-sm">
-               <span className="font-semibold text-gray-500">System Status: </span>{healthData?.status ? (healthData.status === 'ok' ? 'All systems operational' : healthData.status) : 'All systems operational'}
+               <span className="font-semibold text-gray-500">System Status: </span>{(healthData?.status === 'ok' || healthData?.status === 'healthy') ? 'All systems operational' : (healthData?.status || 'All systems operational')}
             </div>
             <div className="p-3 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50 text-sm">
                <span className="font-semibold text-gray-500">Database: </span>Healthy

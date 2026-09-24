@@ -36,7 +36,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     items.forEach(item => {
       const featureType = item.proposed_action?.feature_type || item.context_payload?.feature_type || item.event_source || "unknown";
       const actionType = item.proposed_action?.action_type || "default";
-      const key = `${featureType}-${actionType}`;
+      const key = (featureType === 'ambassador_reply' || featureType.toLowerCase() === 'ambassador') ? `ambassador_reply-${item.id}` : `${featureType}-${actionType}`;
       if (!groups[key]) {
         groups[key] = {
           groupKey: key,
@@ -160,7 +160,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         if (refresh || !unifiedData || !unifiedData.items) {
           const unifiedRes = await fetch("/api/v1/agent-feed");
           if (!unifiedRes.ok) {
-            throw new Error("Failed to load agent feed");
+            throw new Error("Feed temporarily unavailable");
           }
           const refreshedData = await unifiedRes.json();
           unifiedData = initialData
@@ -410,7 +410,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       } catch (err) {
         if (!mounted || (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch')))) return;
         if (!refresh) {
-          setError(errorMessage(err, '') || "Failed to load feed");
+          setError(errorMessage(err, '') || "Feed temporarily unavailable");
         }
         console.error("Failed to load activity", err);
       } finally {
@@ -525,8 +525,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       className="app-panel mb-6 w-full max-w-full md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
       aria-label="Unified Agent Feed"
     >
-      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
-        Action Required
+      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 flex items-center justify-between">
+        <span>Action Required</span>
+        <span className="text-xs text-gray-500 font-normal">Unified Agent Feed</span>
       </h2>
       {error && (
         <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
@@ -543,22 +544,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           <span>🔄</span> Pending Sync ({offlineActionsCount})
         </div>
       )}
-      <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
+      <div className="triage-tab-container mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
+          id="tab-proposals"
           onClick={() => setActiveTab("proposals")}
-          className={`flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "proposals"
-              ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
+              ? "active border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           }`}
         >
-          Proposals ({items.length})
+          Proposals
         </button>
         <button
+          id="tab-activity"
           onClick={() => setActiveTab("activity")}
-          className={`flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "activity"
-              ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
+              ? "active border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           }`}
         >

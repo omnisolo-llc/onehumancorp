@@ -256,7 +256,9 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    function initEmbedBuilder() {
+      if (window.__embedBuilderInitialized) return;
+      window.__embedBuilderInitialized = true;
       const typeBtns = document.querySelectorAll('.type-btn:not(.theme-btn)');
       const themeBtns = document.querySelectorAll('.theme-btn');
       const tenantInput = document.getElementById('tenantId');
@@ -326,7 +328,12 @@
 
       // Initial render
       updateUI();
-    });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initEmbedBuilder);
+    } else {
+      initEmbedBuilder();
+    }
   </script>
   <script src="help-widget.mjs" type="module"></script>
   </body>

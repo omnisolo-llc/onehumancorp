@@ -200,25 +200,24 @@ export default function QuoteReviewPage() {
           )}
         </div>
 
-        {(quote.status === 'DRAFT' || quote.status === 'PENDING') && (
-          isEditing ? (
-            <button
-              id="btn-save-edits"
-              onClick={saveQuoteChanges}
-              disabled={sending}
-              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
-            >
-              {sending ? 'Saving...' : 'Save Changes'}
-            </button>
-          ) : (
-            <button
-              onClick={handleSend}
-              disabled={sending}
-              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
-            >
-              {sending ? 'Sending...' : 'Approve & Send Quote'}
-            </button>
-          )
+        {isEditing ? (
+          <button
+            id="btn-save-edits"
+            onClick={saveQuoteChanges}
+            disabled={sending}
+            className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
+          >
+            {sending ? 'Saving...' : 'Save Changes'}
+          </button>
+        ) : (
+          <button
+            onClick={handleSend}
+            disabled={sending || (quote.status !== 'DRAFT' && quote.status !== 'PENDING')}
+            aria-label="Approve & Send Quote"
+            className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
+          >
+            {sending ? 'Sending...' : quote.status === 'SENT' ? 'Approve & Send Quote' : 'Approve & Send Quote'}
+          </button>
         )}
 
         <button

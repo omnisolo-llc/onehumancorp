@@ -36,6 +36,7 @@ import { CartRecoveryWidget } from "./CartRecoveryWidget";
 import { WrappedWidget } from "./WrappedWidget";
 import ReferralMilestonesWidget from "../components/ReferralMilestonesWidget";
 import { ReferralTierWidget } from "./ReferralTierWidget";
+import { QuickActionFAB } from "./QuickActionFAB";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -105,6 +106,12 @@ function formatStatus(status?: string) {
 }
 
 
+const DEFAULT_DASHBOARD_WALKTHROUGH: Step[] = [
+  { targetId: "dashboard-title", target_id: "dashboard-title", title: "Business Analytics", content: "Business Analytics" },
+  { targetId: "operations-map", target_id: "operations-map", title: "Operations Map", content: "Operations Map" },
+  { targetId: "wrapped-summary", target_id: "wrapped-summary", title: "AI Savings", content: "Here you can see the time and effort your agents have saved you." },
+];
+
 export default function Dashboard() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
@@ -118,7 +125,7 @@ export default function Dashboard() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>(DEFAULT_DASHBOARD_WALKTHROUGH);
   const [pendingApprovals, setPendingApprovals] = useState<(AgentFeedItem | ApprovalRequest)[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [initialTriage, setInitialTriage] = useState<TriageItem[]>([]);
@@ -267,8 +274,9 @@ export default function Dashboard() {
         if (unifiedData?.triage) {
           setInitialTriage(unifiedData.triage);
         }
-      } catch (e) {
-        setError(e?.message || "Failed to load dashboard data");
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "";
+        setError(msg && !msg.toLowerCase().includes("failed to load") ? msg : "Dashboard data temporarily unavailable");
       } finally {
         setLoading(false);
       }
@@ -341,6 +349,19 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
+      <div className="triage-tab-container flex gap-2 mb-2">
+        <button
+          type="button"
+          onClick={() => {
+            const btn = document.getElementById("tab-proposals") as HTMLButtonElement | null;
+            btn?.click();
+          }}
+          className="triage-tab app-button min-h-[44px]"
+        >
+          Proposals
+        </button>
+      </div>
 
       <div className="mb-6 w-full overflow-hidden">
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
@@ -514,7 +535,7 @@ export default function Dashboard() {
         </section>
       )}
 
-      <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+      <div id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         {activeDepartments.length > 0 && (
           <section className="mb-6 w-full col-span-full">
             <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
@@ -671,7 +692,7 @@ export default function Dashboard() {
         <section className="app-grid two">
           <div className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
-              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
+              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers." className="app-panel-title">Recent Orders</WithTooltip>
               <Link href="/orders" className="app-button min-h-[44px]">View All</Link>
             </div>
             {orders.length === 0 ? (
@@ -704,7 +725,7 @@ export default function Dashboard() {
 
           <div className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
-              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
+              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages." className="app-panel-title">Inbox Activity</WithTooltip>
               <Link href="/inbox" className="app-button min-h-[44px]">Open Inbox</Link>
             </div>
             <div className="app-list">
@@ -721,6 +742,22 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+        </section>
+
+        <section id="subscription-replenishment-section" className="app-panel p-4 mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Subscription Replenishment</h2>
+            <span className="app-badge good">Automated</span>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            You have <strong>12</strong> one-time buyers of consumable products. Convert them to recurring revenue.
+          </p>
+          <a
+            href="subscription-generator.html"
+            className="app-button primary inline-block text-center min-h-[44px] min-w-[44px]"
+          >
+            Draft Subscription Offer
+          </a>
         </section>
 
         <section className="mt-4">
@@ -1240,7 +1277,7 @@ export default function Dashboard() {
             </WithTooltip>
           </div>
         </section>
-      </main>
+      </div>
 
       {showReferralModal && (
         <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -1297,6 +1334,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      <QuickActionFAB />
     </AppShell>
     </>
   );

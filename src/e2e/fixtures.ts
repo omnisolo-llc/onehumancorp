@@ -27,6 +27,13 @@ async function loginAsAtBaseURL(page: Page, user: E2EUser, baseURL: string) {
   await page.goto(new URL('/dashboard', baseURL).toString());
 }
 
+export const e2ePage = {
+  setupSession: async (page: Page) => {
+    const baseURL = (page.context() as unknown as { _options?: { baseURL?: string } })._options?.baseURL || 'http://localhost:3000';
+    await loginAsAtBaseURL(page, E2E_ADMIN_USER, baseURL);
+  },
+};
+
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
   const reject = () => {
     throw new Error('E2E tests must use the real UI and real services. Playwright network substitution is not allowed.');

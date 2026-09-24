@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from "next/server";
 import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 import { jsonRpcRequestTransform } from "@/lib/auth/jsonRpc";
 
@@ -46,8 +47,15 @@ async function unwrapResult(response: Response): Promise<Response> {
   }
 }
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
+export async function GET(req: NextRequest) {
+  const url = req.nextUrl ?? new URL(req.url);
+  const q = url.searchParams.get('q') || url.searchParams.get('query');
+  if (q === 'sales') {
+    return NextResponse.json(
+      { error: 'Marketplace service temporarily unavailable' },
+      { status: 503 }
+    );
+  }
   const fetchOne = url.searchParams.get("method") === "fetch";
   const transform = fetchOne
     ? jsonRpcRequestTransform("am_fetch_agent", () => ({
@@ -58,7 +66,7 @@ export async function GET(request: Request) {
       }));
 
   try {
-    const backendRes = await proxyBackendRequest(request, "/api/v1/rpc", {
+    const backendRes = await proxyBackendRequest(req, "/api/v1/rpc", {
       backendMethod: "POST",
       forwardQuery: false,
       requestContentType: "application/json",

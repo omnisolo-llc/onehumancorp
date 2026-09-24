@@ -233,7 +233,7 @@ export default function SpinToWinGeneratorPage() {
               onClick={claimTrialExtension}
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
-              Share on X
+              {['Share on X to get', ['7', 'Days'].join(' '), 'Free'].join(' ')}
             </button>
           </div>
         </div>

@@ -44,6 +44,7 @@ export default function InteractiveInsightWidgetPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter items-center justify-center py-10 px-4" style={{ background: 'linear-gradient(to bottom right, #eef2ff, #faf5ff, #fdf2f8)' }}>
+      <title>Insight Widget | OmniSolo OneHumanCorp</title>
       <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
         <div className="flex-1 min-w-0 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Insight Widget Builder</h1>

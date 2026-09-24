@@ -2738,7 +2738,7 @@ async fn handle_get_milestone(
         .unwrap_or(fallback_tenant);
 
     // Check business milestones to find highest achievement
-    let mut best_milestone_id = "first_sale".to_string();
+    let mut best_milestone_id = "100_orders".to_string();
 
     if tenant_id != "DEFAULT" {
         let rows =
@@ -3452,7 +3452,7 @@ async fn handle_referral_generate(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://cloud.omnisolo.co/ref/{}", ref_code),
+                referral_link: format!("https://cloud.omnisolo.co/invite/{}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -4615,7 +4615,7 @@ async fn handle_cloud_bridge_invite(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
-            let invite_link = format!("https://omnisolo.co/invite/{}", invite.id);
+            let invite_link = format!("https://cloud.omnisolo.co/invite/{}", invite.id);
             Ok(Json(CloudBridgeInviteResponse { invite_link }))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),

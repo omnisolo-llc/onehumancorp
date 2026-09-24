@@ -224,7 +224,8 @@ impl WorkflowExecutor {
             .map(|n| n.id.clone())
             .ok_or_else(|| "No input node found in graph".to_string())?;
 
-        let (final_state, stopped_at) = self.execute_from_node(start_node_id, state).await?;
+        let (final_state, stopped_at) =
+            self.execute_from_node(start_node_id.clone(), state).await?;
 
         if let Some(last_node) = stopped_at {
             if let Some(node) = self.graph.nodes.iter().find(|n| n.id == last_node) {
@@ -232,6 +233,9 @@ impl WorkflowExecutor {
                     if let Some(edge) = self.graph.edges.iter().find(|e| e.target == last_node)
                         && let Some(val) = final_state.get(&edge.source)
                     {
+                        return Ok(val.clone());
+                    }
+                    if let Some(val) = final_state.get(&start_node_id) {
                         return Ok(val.clone());
                     }
                     return Ok("Visual orchestration completed with no data".to_string());
@@ -328,7 +332,15 @@ impl WorkflowExecutor {
                     NodeType::Output => {
                         return Ok((state, Some(current_node_id)));
                     }
-                    NodeType::Input { name: _ } => {}
+                    NodeType::Input { name } => {
+                        let val = state
+                            .get(name)
+                            .or_else(|| state.get(&node.id))
+                            .cloned()
+                            .or_else(|| state.values().next().cloned())
+                            .unwrap_or_default();
+                        state.insert(node.id.clone(), val);
+                    }
                     NodeType::HumanInLoop { prompt_template } => {
                         let mut prompt = prompt_template.clone();
                         for (k, v) in &state {

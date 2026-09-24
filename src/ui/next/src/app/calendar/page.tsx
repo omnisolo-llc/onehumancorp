@@ -90,13 +90,14 @@ export default function CalendarPage() {
           </Link>
           <h1 className="text-2xl font-bold font-outfit flex items-center gap-2" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>
             Calendar & Bookings
-            <span className="text-xs bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full">Operations Agent</span>
           </h1>
+          <h2 className="text-xs bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full inline-block">Operations Agent</h2>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">AI Scheduling</span>
+          <span className="text-sm font-medium text-gray-700"><span>AI Scheduling</span> (Zero-Setup)</span>
           <button
-            aria-label="Toggle AI Scheduling"
+            role="switch"
+            aria-label="AI Scheduling (Zero-Setup)"
             aria-pressed={aiEnabled}
             onClick={() => setAiEnabled(!aiEnabled)}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${aiEnabled ? 'bg-[#34C759]' : 'bg-gray-300'}`}

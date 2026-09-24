@@ -71,9 +71,6 @@ export default function GlobalCommerceSettingsPage() {
 
   async function saveSettings() {
     if (isSaving) return;
-    if (typeof window !== "undefined" && !process.env.VITEST && typeof window.confirm === "function" && !window.confirm("Save changes to currency settings?")) {
-      return;
-    }
     setIsSaving(true);
     setError(null);
     setStatus(null);
@@ -98,6 +95,9 @@ export default function GlobalCommerceSettingsPage() {
       ]);
       if (!res1.ok) throw new Error("save rejected");
       setStatus("Currency settings saved.");
+      if (typeof window !== "undefined" && typeof window.alert === "function") {
+        window.alert("Settings saved successfully");
+      }
     } catch {
       setError("Currency settings could not be saved.");
     } finally {
@@ -127,7 +127,7 @@ export default function GlobalCommerceSettingsPage() {
           Used for store prices and business reporting.
         </p>
         <label className="mt-4 block text-sm font-medium" htmlFor="base-currency">
-          Base currency
+          Base Currency
         </label>
         <select
           aria-label="Base currency"
@@ -167,6 +167,7 @@ export default function GlobalCommerceSettingsPage() {
         disabled={isSaving}
         onClick={() => void saveSettings()}
         type="button"
+        aria-label="Save changes"
       >
         {isSaving ? "Saving..." : "Save changes"}
       </button>

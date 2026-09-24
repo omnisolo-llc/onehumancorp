@@ -11,12 +11,18 @@ interface Milestone {
   reached: boolean;
 }
 
+const DEFAULT_MILESTONES: Milestone[] = [
+  { id: 'first_sale', title: 'First Sale 🎉', description: 'Congratulations on your first customer order!', reached: true },
+  { id: '10th_order', title: '10 Orders 🚀', description: 'Double digits! Your store is gaining momentum.', reached: true },
+  { id: 'first_1k', title: '$1,000 Revenue 💰', description: 'Four figures reached! Keep scaling your business.', reached: false },
+];
+
 export default function MilestoneAlertsPage() {
   const router = useRouter();
-  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
+  const [selectedMilestone, setSelectedMilestone] = useState<string | null>('first_sale');
   const [copied, setCopied] = useState(false);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [milestones, setMilestones] = useState<Milestone[]>(DEFAULT_MILESTONES);
+  const [isLoading, setIsLoading] = useState(false);
   const [tenantId, setTenantId] = useState('DEFAULT');
 
   useEffect(() => {

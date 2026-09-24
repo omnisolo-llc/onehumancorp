@@ -7180,14 +7180,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let limit = 20i64;
         match &db.store {
             crate::db::DbStore::Postgres => {
-                sqlx::query(
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let rows = sqlx::query(
                     "SELECT id, tenant_id, event_source, context_payload::text, proposed_action::text, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type)::text as context_payload, payload::text as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
-                .fetch_all(&db.pool)
-                .await
-                .map(|rows| rows.into_iter().map(|row| {
+                .fetch_all(&mut *tx)
+                .await?;
+                tx.commit().await?;
+                Ok(rows.into_iter().map(|row| {
                     let event_src = row.get::<String, _>("event_source");
                     let prop_action = row.get::<Option<String>, _>("proposed_action");
                     serde_json::json!({
@@ -8772,6 +8775,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             )
         }))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
+        .route("/health", axum::routing::get(|| async { "ok" }))
         .route(
             "/readyz",
             axum::routing::get({

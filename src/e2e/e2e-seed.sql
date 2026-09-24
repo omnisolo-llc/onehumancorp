@@ -760,4 +760,79 @@ ALTER TABLE shift_summaries FORCE ROW LEVEL SECURITY;
 ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS service_item_id UUID;
 ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 
+INSERT INTO customers (id, tenant_id, name, email, phone)
+VALUES ('648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'e2e-tenant', 'E2E Quoting Customer', 'quoting.cust@example.test', '+15559876543')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, valid_until)
+VALUES (
+    '823e4567-e89b-12d3-a456-426614174000',
+    'e2e-tenant',
+    '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b',
+    'DRAFT',
+    15000,
+    5000,
+    CURRENT_TIMESTAMP + INTERVAL '30 days'
+)
+ON CONFLICT (id) DO UPDATE SET
+    tenant_id = EXCLUDED.tenant_id,
+    customer_id = EXCLUDED.customer_id,
+    status = EXCLUDED.status,
+    total_amount_cents = EXCLUDED.total_amount_cents,
+    required_deposit_cents = EXCLUDED.required_deposit_cents,
+    valid_until = EXCLUDED.valid_until,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO quote_line_items (id, quote_id, tenant_id, description, unit_price_cents, quantity, is_optional)
+VALUES (
+    'e2e-line-item-sink-repair',
+    '823e4567-e89b-12d3-a456-426614174000',
+    'e2e-tenant',
+    'Fix leaking sink including labor and standard materials',
+    15000,
+    1,
+    FALSE
+)
+ON CONFLICT (id) DO UPDATE SET
+    quote_id = EXCLUDED.quote_id,
+    tenant_id = EXCLUDED.tenant_id,
+    description = EXCLUDED.description,
+    unit_price_cents = EXCLUDED.unit_price_cents,
+    quantity = EXCLUDED.quantity,
+    is_optional = EXCLUDED.is_optional,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at, metadata)
+VALUES
+    ('bm-e2e-first-sale', 'e2e-tenant', 'first_sale', CURRENT_TIMESTAMP, '{"title":"First Sale","amount":1500}'::jsonb),
+    ('bm-e2e-rev-1k', 'e2e-tenant', 'revenue_1k', CURRENT_TIMESTAMP, '{"title":"Four-Figure Club","amount":100000}'::jsonb),
+    ('bm-e2e-100-orders', 'e2e-tenant', '100_orders', CURRENT_TIMESTAMP, '{"title":"100 Orders","amount":100}'::jsonb),
+    ('bm-default-first-sale', 'DEFAULT', 'first_sale', CURRENT_TIMESTAMP, '{"title":"First Sale","amount":1500}'::jsonb),
+    ('bm-default-rev-1k', 'DEFAULT', 'revenue_1k', CURRENT_TIMESTAMP, '{"title":"Four-Figure Club","amount":100000}'::jsonb),
+    ('bm-default-100-orders', 'DEFAULT', '100_orders', CURRENT_TIMESTAMP, '{"title":"100 Orders","amount":100}'::jsonb)
+ON CONFLICT (tenant_id, milestone_type) DO UPDATE SET
+    reached_at = EXCLUDED.reached_at,
+    metadata = EXCLUDED.metadata;
+
+INSERT INTO opportunities (id, tenant_id, title, stage, estimated_value, priority)
+VALUES
+    ('opp-test-1', 'e2e-tenant', 'Branding Design', 'Proposal', 150000, 'high'),
+    ('opp-test-2', 'e2e-tenant', 'Marketing Consultation', 'Qualified', 50000, 'medium')
+ON CONFLICT (id) DO UPDATE SET
+    tenant_id = EXCLUDED.tenant_id,
+    title = EXCLUDED.title,
+    stage = EXCLUDED.stage,
+    estimated_value = EXCLUDED.estimated_value,
+    priority = EXCLUDED.priority,
+    updated_at = CURRENT_TIMESTAMP;
+
+ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quotes FORCE ROW LEVEL SECURITY;
+ALTER TABLE quote_line_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quote_line_items FORCE ROW LEVEL SECURITY;
+ALTER TABLE business_milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_milestones FORCE ROW LEVEL SECURITY;
+ALTER TABLE opportunities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opportunities FORCE ROW LEVEL SECURITY;
+
 COMMIT;

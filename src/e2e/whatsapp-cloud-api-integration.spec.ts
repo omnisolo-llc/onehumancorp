@@ -4,7 +4,7 @@ test.describe('WhatsApp Cloud API Integration', () => {
     test('user can link their WhatsApp Cloud API account', async ({ page }) => {
         // Login and navigate to Integrations
         await page.goto('/login');
-        await page.fill('input[name="email"]', 'admin@example.com');
+        await page.fill('input[name="email"]', 'test@example.com');
         await page.fill('input[name="password"]', 'password123');
         await page.click('button[type="submit"]');
         await page.waitForURL('/dashboard');

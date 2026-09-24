@@ -55,7 +55,7 @@ function QuoteCalculatorContent() {
                     <div className="space-y-4">
                         {basePrice > 0 && (
                             <div className="flex justify-between items-center opacity-80">
-                                <span>Base Price</span>
+                                <span>Base Price:</span>
                                 <span className="font-semibold">${basePrice.toFixed(2)}</span>
                             </div>
                         )}

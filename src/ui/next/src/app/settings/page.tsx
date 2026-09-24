@@ -87,6 +87,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    document.title = "Settings | OmniSolo OneHumanCorp";
     Promise.all([
       fetch("/api/v1/settings/delivery")
         .then(res => res.ok ? res.json() : null)
@@ -375,10 +376,35 @@ export default function SettingsPage() {
     <AppShell title="Workspace Settings">
       <div id="settings-screen" className="mx-auto max-w-4xl space-y-8 font-inter">
         <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
-          <div className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">System Configuration</div>
+          <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Settings</h1>
           <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and advanced system security.</p>
         </header>
 
+        {/* General Notifications Card */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <h2 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">General Preferences</h2>
+          </div>
+          <div className="app-panel-body p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</span>
+                <select className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800" defaultValue="UTC">
+                  <option value="UTC">UTC</option>
+                  <option value="EST">EST</option>
+                  <option value="PST">PST</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Language</span>
+                <select className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800" defaultValue="en">
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </section>
 
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
@@ -405,7 +431,7 @@ export default function SettingsPage() {
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">SMS Notifications & Security</div>
+              <h3 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Critical SMS Alerts</h3>
               <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Get texts for critical events. Verify your phone number to enable.</div>
             </div>
           </div>
@@ -416,7 +442,7 @@ export default function SettingsPage() {
                 <input
                   aria-label="Mobile Number"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="Mobile Phone Number (e.g. +1234567890)"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isVerified}
@@ -482,7 +508,7 @@ export default function SettingsPage() {
                     onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-800">Email Notifications</span>
+                  <span className="text-sm font-medium text-gray-800">Enable Email Notifications</span>
                 </label>
                 <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
@@ -492,7 +518,7 @@ export default function SettingsPage() {
                     onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-800">Push Notifications</span>
+                  <span className="text-sm font-medium text-gray-800">Enable Push Notifications</span>
                 </label>
               </div>
             </div>
@@ -505,7 +531,7 @@ export default function SettingsPage() {
             <div>
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
-                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery Setup</div>
+                  <h3 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery (DoorDash Drive)</h3>
                   <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure delivery radius and rates.</div>
                 </div>
               </div>
@@ -525,8 +551,9 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Radius (miles)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Delivery Radius (miles)</span>
                     <input
+                      aria-label="Delivery Radius (miles)"
                       type="number"
                       step="0.1"
                       value={deliverySettings.delivery_radius}
@@ -536,8 +563,9 @@ export default function SettingsPage() {
                     />
                   </label>
                   <label className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Flat Fee ($)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Flat Delivery Fee ($)</span>
                     <input
+                      aria-label="Flat Delivery Fee ($)"
                       type="number"
                       step="0.01"
                       value={deliverySettings.delivery_fee}
