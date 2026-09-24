@@ -1,0 +1,1 @@
+{"issue_title": "🧙 Wizard: Setup Experience UX Research", "issue_description": "Found that the wizard setup is already fully implemented at /onboarding. No further functional changes required to the current wizard. The components make use of standard layouts."}
