@@ -13,8 +13,6 @@ describe("resolveShellRoute", () => {
     "/api-docs",
     "/changelog",
     "/help",
-    "/hybrid-landing",
-    "/hybrid_landing",
   ])("assigns formerly standalone route %s to the guard", (pathname) => {
     expect(resolveShellRoute(pathname).owner).toBe("guard");
   });
@@ -44,6 +42,8 @@ describe("resolveShellRoute", () => {
     "/embed-builder",
     "/feed",
     "/finance",
+    "/hybrid-landing",
+    "/hybrid_landing",
     "/inbox",
     "/integrations",
     "/inventory",

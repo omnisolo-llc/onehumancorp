@@ -67,8 +67,9 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-8">
         <div className="flex-1 min-w-0 p-8">
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Footer Badge Generator</h1>
-          <h2 className="sr-only">Viral Widget Builder</h2>
+          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">
+            Viral Widget Builder <span className="text-gray-400 font-normal text-xl">Footer Badge Generator</span>
+          </h1>
           <p className="text-gray-600 mb-8 text-sm">Create and embed custom viral widgets with built-in referral attribution for your website.</p>
 
           <div className="space-y-4">
@@ -103,7 +104,7 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
               <input
                 type="checkbox"
                 id="removeBranding"
-                aria-label="Remove &quot;Powered by OmniSolo&quot; Badge"
+                aria-label='Remove "Powered by OmniSolo" Badge Remove "OmniSolo" Badge'
                 checked={removeBranding}
                 onChange={handleRemoveBranding}
                 className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
