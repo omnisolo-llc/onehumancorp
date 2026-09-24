@@ -955,7 +955,7 @@
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
           window.__TAURI__.core.invoke("generate_cloud_invite").then((link) => {
-            referralLink.value = link;
+            referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "https://cloud.omnisolo.co/invite/fallback";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           }).catch((err) => {
@@ -972,7 +972,7 @@
                 body: JSON.stringify({ invitee_id: "pending" })
             });
             const data = await res.json();
-                  referralLink.value = data.invite_link || "https://cloud.omnisolo.co/invite/fallback";
+                  referralLink.value = (data.invite_link || "https://cloud.omnisolo.co/invite/fallback").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
           } catch(e) {
             console.error(e);
                   referralLink.value = "https://cloud.omnisolo.co/invite/fallback";
@@ -1272,7 +1272,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
-            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+            showTooltip(e, text);
         }
     });
 
@@ -1288,7 +1290,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+                const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+                showTooltip(e, text);
             }, 500); // 500ms long press
         }
     });

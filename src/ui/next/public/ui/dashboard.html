@@ -1875,7 +1875,7 @@
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
           window.__TAURI__.core.invoke("generate_cloud_bridge_invite").then((link) => {
-            referralLink.value = link;
+            referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           }).catch((err) => {
@@ -1894,7 +1894,7 @@
             });
             const data = await res.json();
           const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
-            referralLink.value = data.invite_link || "";
+            referralLink.value = (data.invite_link || "").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           } catch(e) {
@@ -3153,7 +3153,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = e.target;
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
-            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+            showTooltip(e, text);
         }
     });
 
@@ -3170,8 +3172,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target) {
             const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
+                const guideText = target.id === 'dashboard-walkthrough-btn' ? `${text} Start an interactive guide to learn how to use OmniSolo.` : text;
                 window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
+                    showTooltip(e.touches ? e.touches[0] : e, guideText);
                 }, 500); // 500ms long press
             }
         }
@@ -3194,7 +3197,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+                const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+                showTooltip(e, text);
             }, 500); // 500ms long press
         }
     });

@@ -50,7 +50,7 @@ async function unwrapResult(response: Response): Promise<Response> {
 export async function GET(req: NextRequest) {
   const url = req.nextUrl ?? new URL(req.url);
   const q = url.searchParams.get('q') || url.searchParams.get('query');
-  if (q === 'sales') {
+  if (q?.trim().toLowerCase() === 'sales') {
     return NextResponse.json(
       { error: 'Marketplace service temporarily unavailable' },
       { status: 503 }

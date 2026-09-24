@@ -36,7 +36,7 @@ export default function ActorModelPage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto font-sans">
-      <h1 className="text-3xl font-bold mb-4">Actor-Model Message Passing</h1>
+      <h2 className="text-3xl font-bold mb-4">Actor-Model Message Passing</h2>
       <p className="text-gray-600 mb-8">
         SOTA Harness Patterns (2025-2026): 1. Actor-model message passing - replacing classic ReAct loops.
         Communicate with the agent swarm using an Actor-Model design.

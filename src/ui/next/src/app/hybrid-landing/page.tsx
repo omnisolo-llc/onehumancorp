@@ -41,13 +41,13 @@ export default function HybridLandingPage() {
           </svg>
           OmniSolo Hybrid OS
         </div>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-outfit text-gray-900 tracking-tight leading-tight mb-6">
+        <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-outfit text-gray-900 tracking-tight leading-tight mb-6">
           Your Business.
           <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
             Your AI. Your Rules.
           </span>
-        </h1>
+        </h2>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto font-medium">
           Choose how you deploy your AI assistant. Maintain absolute data
           sovereignty on your own machine, or collaborate seamlessly in the

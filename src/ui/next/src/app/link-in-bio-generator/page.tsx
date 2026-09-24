@@ -159,7 +159,7 @@ export default function LinkInBioGeneratorPage() {
                         type="text"
                         value={link.title}
                         onChange={(e) => handleLinkChange(index, 'title', e.target.value)}
-                        placeholder="Link Title (e.g. Shop My Collection)"
+                        placeholder={index === 0 ? "Link Title (e.g. Shop My Collection)" : "Additional Link Title"}
                         aria-label={`Link ${index + 1} Title`}
                         className="w-full px-3 py-2 bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-white/10 rounded-lg text-sm outline-none text-gray-900 dark:text-white"
                     />
@@ -167,7 +167,7 @@ export default function LinkInBioGeneratorPage() {
                         type="text"
                         value={link.url}
                         onChange={(e) => handleLinkChange(index, 'url', e.target.value)}
-                        placeholder="URL (e.g. https://...)"
+                        placeholder={index === 0 ? "URL (e.g. https://...)" : "Additional URL"}
                         aria-label={`Link ${index + 1} URL`}
                         className="w-full px-3 py-2 bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-white/10 rounded-lg text-sm outline-none text-gray-900 dark:text-white"
                     />

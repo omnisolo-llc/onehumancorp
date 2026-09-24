@@ -133,9 +133,7 @@ export default function ViralJobBoardGeneratorPage() {
                 <h2 className="text-2xl font-bold font-outfit text-center mb-2">
                   {boardTitle || 'We are hiring!'}
                 </h2>
-                <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
-                  {description || 'Join our team.'}
-                </p>
+                <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>{description || 'Join our team.'}</p>
 
                 <div className="w-full space-y-3 mb-6">
                   <div className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50/10 transition-colors" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
