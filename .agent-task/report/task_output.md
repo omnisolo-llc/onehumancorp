@@ -1,0 +1,4 @@
+{
+  "issue_title": "F14: Workload/cost instrumentation and repeatable benchmark/export",
+  "issue_description": "We investigated F14 (No measured representative serving costs or owner outcomes). As per the remediation ledger andRESEARCH.md, there are no representative customer-serving cost, owner interviews, willingness-to-pay result or paid-retention result measured in this work yet. Therefore this is a no-work finding.\n\nSuperpowers Workflow Provenance:\n- Loaded skills: using-superpowers, brainstorming\n- Revision hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71\n- Checks performed: Read RESEARCH.md, docs/research/native_migration_and_remediation.md, and docs/research/business_capability_and_usage_economics_audit.md.\n- Outcomes: Established that measuring true production cost requires real workload baselines that do not currently exist, resulting in a no-work finding."
+}
