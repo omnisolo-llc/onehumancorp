@@ -83,8 +83,8 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
     // Verify it changed to SENT
     await expect(page.locator('text=SENT').or(page.locator('text=Sent'))).toBeVisible({ timeout: 10000 });
 
-    // The Stripe payment link should be populated if it was correctly generated
-    // Since Stripe checkout URLs are not fabricated anymore, we no longer expect a hardcoded stripe.com URL to be visible.
-    // Verified via explicit pending/unavailable state or real session if configured.
+// We no longer expect a fabricated cs_test_ Stripe checkout URL to be populated.
+    // It falls back to an empty string when the provider is unconfigured in test.
+    await expect(page.locator('a[href*="checkout.stripe.com"]')).toBeHidden();
   });
 });

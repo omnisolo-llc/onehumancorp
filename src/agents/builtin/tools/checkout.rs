@@ -59,8 +59,8 @@ impl PydanticToolExecutor<ConversationalCheckoutArgs> for ConversationalCheckout
         let link = String::new();
 
         Ok(json!({
-            "status": "success",
-            "message": "Conversational checkout session generated with inventory soft-lock (15 min).",
+            "status": "pending",
+            "message": "Checkout provider unconfigured. Draft saved, but payment link is unavailable.",
             "session_id": session_id,
             "inventory_lock_id": inventory_lock_id,
             "checkout_link": link
