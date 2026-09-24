@@ -32,7 +32,7 @@ export default function GrowthReferralWidget() {
         throw new Error('Failed to generate invite');
       }
       const data = await res.json();
-      setReferralLink(data.invite_link);
+      setReferralLink((data.invite_link || '').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/'));
     } catch (err: unknown) {
       setError(errorMessage(err, 'Failed to generate invite'));
     } finally {

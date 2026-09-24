@@ -56,7 +56,8 @@ export function DashboardViralInviteWidget() {
 
   const handleShareX = (e: React.MouseEvent) => {
     e.preventDefault();
-    const text = `Start your business on OmniSolo OneHumanCorp using my referral link: ${referralLink}`;
+    const shareUrl = referralLink.replace('/ref/', '/invite/');
+    const text = `Start your business on OmniSolo OneHumanCorp using my referral link: ${shareUrl}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   };
 
