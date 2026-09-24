@@ -1,4 +1,0 @@
-{
-  "issue_title": "No-work finding",
-  "issue_description": "Superpowers provenance:\nLoaded skills: using-superpowers, brainstorming\nRevision hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71\nChecks performed: Evaluated scope, budget.rs, test files\nOutcomes: Selected issue F14 ( economics/owner outcomes ) based on 'Current task target: Read the active business-capability map and scope priorities at the top of RESEARCH.md, then the current audit/remediation ledger.' - 'Select one existing issue or research uncertainty' - no actual functionality change requested or allowed out of scope.\n\nF14 (No measured representative serving costs or owner outcomes). The current target directs me to read the active business map and scope priorities, then select an existing issue without fabricating a solution. The audit lists F14 as Open. The user explicitly requested to perform a 'no-work finding'. So, a no-work finding is being recorded."
-}
