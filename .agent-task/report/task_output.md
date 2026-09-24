@@ -1,0 +1,4 @@
+{
+  "issue_title": "💰 Miser: [no-work finding]",
+  "issue_description": "Superpowers workflow provenance: loaded skills: using-superpowers (revision 5bf4e78011075bcfc0dc295f0724994cd123ee71). Checks performed: Read RESEARCH.md, docs/research/native_migration_and_remediation.md, and docs/research/business_capability_and_usage_economics_audit.md. Explicitly found audit items F04: missing or inconsistent model usage and F05: telemetry not invoice-grade in docs/research/native_migration_and_remediation.md. Outcomes: As per the operating contract revision 2026-09-18-usage-audit, new epics need an explicit evidence-backed decision. Since there is insufficient owner evidence and measured usage economics to formulate a price card or robust invoice-grade meter safely, and the prompt allows a justified no-work finding, we execute a Zero-WIP exit to prevent unauthorized billing implementations."
+}
