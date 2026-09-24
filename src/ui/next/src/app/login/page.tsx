@@ -47,6 +47,10 @@ function LoginForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
+    if (!identifier.trim() || !password) {
+      setError(GENERIC_ERROR);
+      return;
+    }
     setPending(true);
     setError(null);
     try {
@@ -84,7 +88,7 @@ function LoginForm() {
             </p>
           </div>
 
-          <form className="flex flex-col gap-5" onSubmit={submit}>
+          <form className="flex flex-col gap-5" onSubmit={submit} noValidate>
             <label htmlFor="email" className="flex flex-col gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
               Email or username
               <input

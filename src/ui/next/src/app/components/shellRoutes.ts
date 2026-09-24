@@ -10,7 +10,6 @@ const standardSubtitle = "Use this workspace from the dashboard navigation.";
 
 const pageOwnedExactRoutes = new Set([
   "/action-center",
-  "/actor-model",
   "/agent-activity",
   "/ai-usage-paywall",
   "/ai-workspace",

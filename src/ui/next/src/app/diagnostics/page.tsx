@@ -37,6 +37,7 @@ export default function DiagnosticsPage() {
           setMetricsData(metricsJson);
         }
       } catch (err) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
         console.error('Failed to load diagnostics', err);
       } finally {
         setLoading(false);

@@ -149,6 +149,7 @@ export default function AgentsPage() {
       setFeed(feedData.pending_approvals || []);
       setWorkflows(workflowsData.workflows || []);
     } catch (err) {
+      if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
       console.error('Failed to fetch agent data concurrently:', err);
     }
   }, []);

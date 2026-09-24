@@ -387,7 +387,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
 
       } catch (err) {
-        if (mounted && !refresh) {
+        if (!mounted || (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch')))) return;
+        if (!refresh) {
           setError(errorMessage(err, '') || "Failed to load feed");
         }
         console.error("Failed to load activity", err);

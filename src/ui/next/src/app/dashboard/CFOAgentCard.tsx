@@ -30,6 +30,10 @@ export const CFOAgentCard: React.FC = () => {
           setData(DEFAULT_CFO_DATA);
         }
       } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) {
+          setData(DEFAULT_CFO_DATA);
+          return;
+        }
         console.error('Failed to fetch CFO safe to spend data:', error);
         setData(DEFAULT_CFO_DATA);
       } finally {

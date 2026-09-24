@@ -20,7 +20,7 @@ ALTER TABLE job_locations DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
-  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Free', 'Free', false),
+  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Starter', 'Starter', false),
   ('e2e-tenant-free', 'OmniSolo E2E Free Bakery', 'Food and beverage', 'Free', 'Free', false),
   ('e2e-tenant-business', 'OmniSolo E2E Business Bakery', 'Food and beverage', 'Business', 'Business', false),
   ('e2e-tenant-unlimited', 'OmniSolo E2E Pro Bakery', 'Food and beverage', 'Pro', 'Pro', false)

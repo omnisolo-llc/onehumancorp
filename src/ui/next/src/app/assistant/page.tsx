@@ -192,7 +192,10 @@ export default function AssistantPage() {
           setWalkthroughSteps(data);
         }
       })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
+      .catch((err) => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
+        console.error("Walkthrough fetch failed:", err);
+      });
 
     let mounted = true;
 

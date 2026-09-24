@@ -37,6 +37,10 @@ export function VideoTutorialList({
         setFetchedLoading(false);
       })
       .catch(err => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) {
+          setFetchedLoading(false);
+          return;
+        }
         console.error('Failed to load video tutorials', err);
         setFetchedLoading(false);
       });

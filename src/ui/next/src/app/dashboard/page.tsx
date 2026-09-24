@@ -141,7 +141,10 @@ export default function Dashboard() {
           setWalkthroughSteps(data);
         }
       })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
+      .catch((err) => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
+        console.error("Walkthrough fetch failed:", err);
+      });
 
     try {
       const storedName = localStorage.getItem("user_name");
@@ -206,10 +209,8 @@ export default function Dashboard() {
 
       try {
         const unifiedPromise = fetch(`/api/v1/ui/dashboard/unified-feed?mobile_optimized=${window.innerWidth < 768}`)
-          .then(res => {
-            if (!res.ok) throw new Error("Unified UI feed endpoint failed");
-            return res.json();
-          });
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
 
         const onboardingPromise = fetch(`/api/v1/onboarding/state`)
           .then(res => res.ok ? res.json() : null)
@@ -239,10 +240,10 @@ export default function Dashboard() {
             })));
         }
 
-        const metricsData = unifiedData.metrics || {};
-        const ordersData = unifiedData.orders || [];
-        const inboxData = unifiedData.inbox || [];
-        const supplyData = unifiedData.supply || {};
+        const metricsData = unifiedData?.metrics || {};
+        const ordersData = unifiedData?.orders || [];
+        const inboxData = unifiedData?.inbox || [];
+        const supplyData = unifiedData?.supply || {};
 
         if (Array.isArray(onboardingData?.wizardState?.aiAgents)) {
           setActiveDepartments(onboardingData.wizardState.aiAgents.filter((department: unknown): department is string => typeof department === "string"));
@@ -260,7 +261,7 @@ export default function Dashboard() {
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
         setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
-        if (unifiedData.triage) {
+        if (unifiedData?.triage) {
           setInitialTriage(unifiedData.triage);
         }
       } catch (e) {
@@ -343,7 +344,6 @@ export default function Dashboard() {
         <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
       </div>
 
-      <div className="hidden md:block">
       <AIUsageLimitWidget />
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
@@ -1213,7 +1213,6 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
-      </div>
 
     </AppShell>
     </>

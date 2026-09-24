@@ -30,6 +30,7 @@ export default function MyPlanPage() {
           setData(json);
         }
       } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
         console.error('Failed to fetch plan data:', error);
       } finally {
         setLoading(false);

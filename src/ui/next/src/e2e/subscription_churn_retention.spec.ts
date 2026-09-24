@@ -22,7 +22,7 @@ test.describe('Agentic Subscription Retention & Churn Prediction Feed E2E', () =
     await expect(page.getByTestId('agent-feed').first()).toBeVisible({ timeout: 25000 });
 
     // Assert that we see a churn risk Action Card
-    const churnCard = page.locator('div', { hasText: 'at risk of churning' }).first();
+    const churnCard = page.locator('[data-testid="agent-feed-card"]').filter({ hasText: 'at risk of churning' }).first();
     await expect(churnCard).toBeVisible({ timeout: 15000 });
 
     const approveBtn = churnCard.locator('button', { hasText: 'Approve' }).first();

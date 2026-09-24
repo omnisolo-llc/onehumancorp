@@ -268,13 +268,7 @@ pub mod test_utils {
                 return Err("Mock publish error".to_string());
             }
             if agent.id.is_empty() {
-                agent.id = format!(
-                    "mock-id-{}",
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_millis()
-                );
+                agent.id = "mock-id-123".to_string();
             }
             Ok(agent)
         }

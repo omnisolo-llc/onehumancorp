@@ -40,6 +40,7 @@ export default function TeamPage() {
         setApprovals(data.pending_approvals || []);
       }
     } catch (error) {
+      if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
       console.error("Failed to fetch approvals", error);
     } finally {
       setLoading(false);
