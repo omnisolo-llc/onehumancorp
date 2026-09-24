@@ -29,6 +29,34 @@ pub struct LineItemRequest {
 
 struct AdapterLlm {}
 
+fn checked_proposal_total(items: &[LineItemRequest]) -> Result<i64, &'static str> {
+    if items.len() > 100 {
+        return Err("At most 100 line items are supported");
+    }
+    items.iter().try_fold(0_i64, |total, item| {
+        if item.description.trim().is_empty()
+            || item.description.len() > 4000
+            || item.quantity <= 0
+            || item.quantity > 1_000_000
+            || item.unit_price_cents < 0
+        {
+            return Err(
+                "Line items require a description, positive bounded quantity and nonnegative price",
+            );
+        }
+        let amount = item
+            .unit_price_cents
+            .checked_mul(i64::from(item.quantity))
+            .ok_or("Line item amount is too large")?;
+        // Optional items are not selected commitments and are excluded from totals.
+        let amount = if item.is_optional { 0 } else { amount };
+        total
+            .checked_add(amount)
+            .filter(|value| *value <= 99_999_999)
+            .ok_or("Proposal total exceeds the supported amount")
+    })
+}
+
 #[cfg(test)]
 fn forced_test_service_item_response(prompt: &str) -> Option<String> {
     let candidate = prompt
@@ -165,7 +193,10 @@ impl QuoteGenerationWorker {
             }
         };
 
-        let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+        let total_amount_cents = match checked_proposal_total(&line_items) {
+            Ok(total) => total,
+            Err(e) => return Err(format!("Invalid quote line items generated: {}", e)),
+        };
         let required_deposit_cents = total_amount_cents / 3;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -243,7 +274,10 @@ impl QuoteGenerationWorker {
                 }
             }
 
-            let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+            let total_amount_cents = match checked_proposal_total(&line_items) {
+                Ok(total) => total,
+                Err(e) => return Err(format!("Invalid quote line items generated after tax: {}", e)),
+            };
             let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
 
             let quote_res = sqlx::query(
