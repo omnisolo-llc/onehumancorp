@@ -497,6 +497,32 @@ async fn proxy_agent_rpc_handler(
                 }
             }
         }
+        static FALLBACK_APP_SERVER: std::sync::LazyLock<
+            omnisolo_builtin_agent::codex_runner::AppServer,
+        > = std::sync::LazyLock::new(|| {
+            let agent = std::sync::Arc::new(omnisolo_builtin_agent::agent::Agent::new(
+                std::sync::Arc::new(omnisolo_builtin_agent::llm::ollama::OllamaClient::new(
+                    "http://localhost:11434",
+                )),
+                vec![],
+            ));
+            let runner =
+                std::sync::Arc::new(omnisolo_builtin_agent::codex_runner::Runner::new(agent));
+            omnisolo_builtin_agent::codex_runner::AppServer::new(runner)
+        });
+        if let Ok(req_str) = serde_json::to_string(&payload) {
+            let resp_str = FALLBACK_APP_SERVER.handle_request(&req_str).await;
+            if let Ok(resp_json) = serde_json::from_str::<serde_json::Value>(&resp_str)
+                && (resp_json.get("result").is_some()
+                    || resp_json
+                        .get("error")
+                        .and_then(|e| e.get("code"))
+                        .and_then(|c| c.as_i64())
+                        != Some(-32601))
+            {
+                return (axum::http::StatusCode::OK, axum::Json(resp_json)).into_response();
+            }
+        }
         return (
             axum::http::StatusCode::BAD_GATEWAY,
             axum::Json(serde_json::json!({ "error": "agent service unavailable" })),
@@ -7891,12 +7917,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let query_str = if mobile_optimized {
                     "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
-                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
                 } else {
-                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, COALESCE(b.service_id, b.product_id, '') AS service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, COALESCE(b.service_id, '') AS service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
                 };
                 match sqlx::query(query_str)
@@ -7933,12 +7959,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let query_str = if mobile_optimized {
                     "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
-                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
                 } else {
-                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, COALESCE(b.service_id, b.product_id, '') AS service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, COALESCE(b.service_id, '') AS service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = COALESCE(b.product_id, b.service_id) AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
                 };
                 match sqlx::query(query_str)

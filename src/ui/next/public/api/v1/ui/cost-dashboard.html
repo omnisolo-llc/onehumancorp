@@ -434,6 +434,7 @@
             ]);
 
             if (planRes.ok) {
+                const planData = await planRes.json();
                 const myPlanEl = document.getElementById('my-plan-name');
                 if (myPlanEl) myPlanEl.innerText = planData.current_plan;
                 const costDashboardPlanEl = document.getElementById('cost-dashboard-plan-name');

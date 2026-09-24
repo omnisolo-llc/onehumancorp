@@ -392,24 +392,53 @@
     }
 
 
+    function updateJobCardInPlace(jobId, newStatus) {
+      const card = document.querySelector(`[data-testid="job-card-${jobId}"]`);
+      if (card) {
+        const statusEl = card.querySelector(`[data-testid="job-status-${jobId}"]`) || card.querySelector('.job-status');
+        if (statusEl) {
+          statusEl.className = `job-status status-${newStatus}`;
+          statusEl.textContent = newStatus.replace('_', ' ');
+        }
+        let actionButtons = '';
+        if (newStatus === 'pending') {
+          actionButtons = `
+            <button class="btn btn-primary" data-testid="btn-start-travel-${jobId}" onclick="updateJobStatus('${jobId}', 'en_route')">Start Travel</button>
+          `;
+        } else if (newStatus === 'en_route') {
+          actionButtons = `
+            <button class="btn btn-primary" data-testid="btn-arrived-${jobId}" onclick="updateJobStatus('${jobId}', 'on_site')">Arrived On-Site</button>
+          `;
+        } else if (newStatus === 'on_site') {
+          actionButtons = `
+            <button class="btn btn-secondary">Generate Quote</button>
+            <button class="btn btn-primary" data-testid="btn-job-done-${jobId}" onclick="updateJobStatus('${jobId}', 'done')">Job Done</button>
+          `;
+        } else if (newStatus === 'done') {
+          actionButtons = `
+            <button class="btn btn-secondary" style="flex: 1;">Tap to Pay</button>
+          `;
+        }
+        const actionsRow = card.querySelector('.actions-row');
+        if (actionsRow) {
+          actionsRow.innerHTML = actionButtons;
+        }
+      }
+    }
+
     async function updateJobStatus(jobId, newStatus) {
       // Optimistic UI update
       if (currentRoutesData) {
-          let updated = false;
           for (const route of currentRoutesData) {
               for (const job of (route.jobs || [])) {
                   if (job.id === jobId) {
                       job.status = newStatus;
-                      updated = true;
                       break;
                   }
               }
-              if (updated) break;
-          }
-          if (updated) {
-              renderRoutes(currentRoutesData);
           }
       }
+      updateJobCardInPlace(jobId, newStatus);
 
       if (!navigator.onLine) {
           enqueueOfflineMutation({
@@ -438,9 +467,6 @@
             });
             throw new Error('Failed to update status');
         }
-
-        // Refresh the list to get ground truth from the server
-        await fetchRoutes();
       } catch (err) {
         console.error(err);
       }
