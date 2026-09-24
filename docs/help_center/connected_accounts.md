@@ -23,6 +23,3 @@ You will always know what your AI team is doing. The app keeps a clear record of
 
 We want you to understand exactly what you pay for. You pay for the computer power and AI tools the team uses. You will see an estimated cost before a task starts, and a detailed bill when it finishes. There are no hidden fees. Any standard fees from your payment provider still apply.
 
-## Exceptions and Recovery
-
-Sometimes things go wrong, like a payment link failing to send. If this happens, your AI team will stop and let you know. The app saves their progress, so you can easily try again later without starting over or paying twice.

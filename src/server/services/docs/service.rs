@@ -71,6 +71,13 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 title: "Connected Accounts and Standing Authority".to_string(),
                 content_markdown: include_str!("../../../../docs/help_center/connected_accounts.md").to_string(),
             },
+            HelpArticle {
+                id: "exceptions-recovery".to_string(),
+                topic: "Support & Troubleshooting".to_string(),
+                title: "Exceptions and Recovery".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/exceptions_and_recovery.md").to_string(),
+            },
+
         ]
     })
 }
