@@ -10,9 +10,6 @@ export default function ReferralsPage() {
   const [referralLink, setReferralLink] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [dataAction, setDataAction] = useState('');
-  useState('');
-  useState<{message: string, isError: boolean} | null>(null);
-  useState(false);
 
   useEffect(() => {
     const fallbackReferralLink = () => {
@@ -167,6 +164,21 @@ export default function ReferralsPage() {
         <GrowthReferralWidget />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Embed on Your Website</h3>
+                <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OmniSolo storefront widget directly to your existing website.</p>
+                <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
+                    <pre id="embed-code">
+{`<iframe src="https://mybusiness.cloud.omnisolo.co/api/v1/growth/storefront/embed"
+  width="100%"
+  height="600"
+  frameborder="0"
+  style="border-radius: 12px; border: 1px solid #eaeaea;">
+</iframe>`}
+                    </pre>
+                </div>
+            </div>
+
             <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Manage Data</h3>
                <p className="text-sm text-gray-600 mb-6">Track your referral performance, view recent invites, or export your growth data.</p>

@@ -35,6 +35,7 @@ import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
 import { WrappedWidget } from "./WrappedWidget";
 import ReferralMilestonesWidget from "../components/ReferralMilestonesWidget";
+import { ReferralTierWidget } from "./ReferralTierWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -130,6 +131,8 @@ export default function Dashboard() {
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
   const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
 
 
 
@@ -715,11 +718,26 @@ export default function Dashboard() {
             <ReferralMilestonesWidget />
             <DashboardViralInviteWidget />
             <UnlockProFeaturesWidget />
+            <ReferralTierWidget />
           </div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>
               <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowReferralModal(true)}
+                className="app-button px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 min-h-[44px]"
+              >
+                Referral Program
+              </button>
+              <button
+                onClick={() => setShowEmbedModal(true)}
+                className="app-button px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 min-h-[44px]"
+              >
+                Embed Storefront
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1213,6 +1231,60 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
+
+      {showReferralModal && (
+        <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Help a Business Grow!</h2>
+              <button onClick={() => setShowReferralModal(false)} className="text-gray-500 hover:text-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center">✕</button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Share OmniSolo with fellow entrepreneurs and get rewarded.
+            </p>
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-500 mb-1">Your Unique Link</p>
+              <input
+                readOnly
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/e2e-tenant`}
+                className="w-full p-2 border rounded-lg text-sm bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
+              />
+            </div>
+            <button
+              onClick={() => setShowReferralModal(false)}
+              className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium min-h-[44px]"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showEmbedModal && (
+        <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Embed Storefront</h2>
+              <button onClick={() => setShowEmbedModal(false)} className="text-gray-500 hover:text-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center">✕</button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Embed your storefront on any external site or blog.
+            </p>
+            <button
+              onClick={() => setShowEmbedModal(false)}
+              className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium mb-2 min-h-[44px]"
+            >
+              Copy Code
+            </button>
+            <button
+              onClick={() => setShowEmbedModal(false)}
+              className="w-full py-2 border rounded-lg font-medium min-h-[44px]"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
     </AppShell>
     </>

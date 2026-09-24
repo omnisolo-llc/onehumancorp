@@ -246,12 +246,14 @@
           if (res.ok) {
             const data = await res.json();
             if (data.referral_link) {
-              referralLink = data.referral_link;
+              referralLink = data.referral_link.replace('/ref/', '/invite/');
             }
           }
         } catch (e) {
           // Using default format for demo due to API error
         }
+
+        referralLink = referralLink.replace('/ref/', '/invite/');
 
         let brandingHtml = '';
         if (!removeBranding) {
@@ -259,7 +261,7 @@
   <div style="margin-top: 16px; text-align: center; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 16px;">
     <a href="${referralLink}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:#86868b;font-family:sans-serif;font-size:12px;font-weight:500;text-decoration:none;">
       <svg style="width:12px;height:12px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      Powered by OmniSolo
+      ⚡ Powered by OmniSolo
     </a>
   </div>`;
         }

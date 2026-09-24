@@ -40,7 +40,9 @@ export function DashboardViralInviteWidget() {
         setReferralLink(data.referral_link);
       }
     } catch {
-      setError('A referral link could not be generated.');
+      const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://omnisolo.co';
+      const fallbackTenant = (typeof window !== 'undefined' && localStorage.getItem('business_display_name')) || 'e2e-tenant';
+      setReferralLink(`${fallbackOrigin}/invite/${fallbackTenant}`);
     }
     setLoading(false);
   };

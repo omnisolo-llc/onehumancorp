@@ -89,6 +89,7 @@ export default function GrowthReferralWidget() {
                 <button
                   onClick={generateLink}
                   disabled={loading}
+                  aria-label="Unlock Cloud Collaboration"
                   className="w-full md:w-auto app-button min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white border-none py-3 px-6 text-base rounded-md"
                 >
                   {loading ? 'Generating...' : 'Invite to Cloud Team'}

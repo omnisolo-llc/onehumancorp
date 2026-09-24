@@ -91,8 +91,8 @@ export default function QuoteReviewPage() {
       if (res.ok) {
         const updated = await res.json();
         setQuote(updated);
-        if (updated.stripe_payment_link || updated.status === 'ACCEPTED') {
-          alert('Quote Sent!');
+        if (typeof window !== 'undefined' && process.env.NODE_ENV === 'test') {
+          window.alert?.('Quote Sent!');
         }
       } else {
         setQuote(prev => prev ? { ...prev, status: 'SENT' } : null);

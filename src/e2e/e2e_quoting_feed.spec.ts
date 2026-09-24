@@ -17,7 +17,7 @@ test.describe('Quote Feed e2e', () => {
 
     // 3. Tap approve
     // Deep link works
-    await page.locator('[data-testid="review-quote-draft"]').click();
+    await page.locator('[data-testid="review-quote-draft"]').first().click();
 
     await expect(page.locator('role=dialog')).toBeVisible();
 

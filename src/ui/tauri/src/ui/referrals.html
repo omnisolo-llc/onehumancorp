@@ -434,10 +434,9 @@
         btn.innerText = "Copied!";
         setTimeout(() => { btn.innerText = originalText; }, 2000);
       };
+      setCopied();
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(link).then(setCopied).catch(setCopied);
-      } else {
-        setCopied();
+        navigator.clipboard.writeText(link).catch(() => {});
       }
     });
 

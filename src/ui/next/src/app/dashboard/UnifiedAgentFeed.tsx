@@ -348,8 +348,29 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 new Date(a.created_at).getTime(),
             );
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const safeParsePayload = (val: any): Record<string, any> => {
+              if (!val) return {};
+              if (typeof val === "object") return val;
+              if (typeof val === "string") {
+                try {
+                  const p = JSON.parse(val);
+                  return typeof p === "object" && p !== null ? p : { description: val, message: val };
+                } catch {
+                  return { description: val, message: val };
+                }
+              }
+              return {};
+            };
+
+            const parsedCombinedItems = combinedItems.map((item) => ({
+              ...item,
+              context_payload: safeParsePayload(item.context_payload),
+              proposed_action: safeParsePayload(item.proposed_action),
+            }));
+
             setItems(
-              combinedItems.filter(
+              parsedCombinedItems.filter(
                 (i) =>
                   i.lifecycle_state !== "APPROVED" &&
                   i.lifecycle_state !== "DISMISSED" &&
@@ -498,14 +519,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     }
   };
 
-  if (error) {
-    return (
-      <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
-        {error}
-      </div>
-    );
-  }
-
   return (
     <section
       id="unified-agent-feed-section"
@@ -515,6 +528,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
         Action Required
       </h2>
+      {error && (
+        <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
+          {error}
+        </div>
+      )}
       {isOffline && (
         <div className="mb-4 w-full p-2 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.

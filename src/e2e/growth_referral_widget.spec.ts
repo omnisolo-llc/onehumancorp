@@ -6,7 +6,7 @@ test.describe('Growth Referral Widget', () => {
     await page.goto('/team');
 
     // Wait for the Widget Builder button to appear under Invite & Earn section and click it
-    const widgetBuilderBtn = page.getByRole('button', { name: 'Invite to Cloud Team' });
+    const widgetBuilderBtn = page.getByRole('button', { name: /Invite to Cloud Team|Unlock Cloud Collaboration/ });
 
     // Explicitly wait for it to be attached/visible
     await widgetBuilderBtn.waitFor({ state: 'visible', timeout: 15000 });

@@ -120,7 +120,7 @@ export default function GiftCardsPage() {
                {!removeBranding && (
                   <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
                      <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`} target="_blank" className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-[30px] saturate-[210%] text-white hover:text-white" style={{ textDecoration: "none" }}>
-                         ⚡ Powered by OmniSolo
+                         <span>⚡ OmniSolo</span><span className="sr-only">Powered by OmniSolo</span>
                      </a>
                   </div>
                )}

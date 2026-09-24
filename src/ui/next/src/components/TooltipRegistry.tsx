@@ -29,7 +29,13 @@ export const DEFAULT_TOOLTIPS: Record<string, string> = {
   "dashboard-walkthrough-btn": "Take a quick tour of the dashboard.",
   "help-advanced-toggle-tooltip": "Show advanced developer options.",
   "help-btn-tooltip-appshell": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
-  "checkout-pay-tooltip": "Click to process your payment."
+  "checkout-pay-tooltip": "Click to process your payment.",
+  "dashboard-tooltip": "View your daily sales and overall business health.",
+  "inventory-tooltip": "Check and adjust your product inventory levels.",
+  "orders-tooltip": "View and manage incoming customer orders.",
+  "total-sales-tooltip": "Total gross revenue generated.",
+  "recent-orders-tooltip": "Recent customer transactions.",
+  "inbox-activity-tooltip": "Recent customer messages and inquiries.",
 };
 
 export function TooltipProvider({ children }: { children: ReactNode }) {
@@ -110,7 +116,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(144, Math.min(windowWidth - 144, tooltipRect.left + tooltipRect.width / 2)),
-            marginTop: '-100%'
+            transform: 'translate(-50%, -100%)',
           }}
         >
           {tooltipText}
@@ -135,14 +141,15 @@ export function useTooltip() {
 export function WithTooltip({ children, id, defaultText }: { children: ReactNode, id: string, defaultText?: string }) {
   const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const text = getTooltip(id) || defaultText || DEFAULT_TOOLTIPS[id] || id;
 
   const handleMouseEnter = React.useCallback(() => {
     if (wrapperRef.current) {
       setTooltipRect(wrapperRef.current.getBoundingClientRect());
-      setTooltipText(getTooltip(id) || defaultText || id);
+      setTooltipText(text);
       setActiveTooltip(id);
     }
-  }, [id, defaultText, getTooltip, setActiveTooltip, setTooltipRect]);
+  }, [id, text, setActiveTooltip, setTooltipRect, setTooltipText]);
 
   const handleMouseLeave = React.useCallback(() => {
     setActiveTooltip(null);
@@ -189,6 +196,8 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onContextMenu={(e) => e.preventDefault()}
       id={id}
       className="inline-block relative cursor-help"
+      data-tooltip-id={id}
+      data-tooltip={text}
     >
       {children}
     </div>

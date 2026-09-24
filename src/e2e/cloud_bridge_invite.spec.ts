@@ -11,7 +11,7 @@ test.describe('Sovereign-to-Cloud Bridge Invite', () => {
     await expect(page.getByText('Sovereign-to-Cloud Bridge')).toBeVisible();
 
     // Click Invite to Cloud Team button
-    const generateBtn = page.getByRole('button', { name: 'Invite to Cloud Team' });
+    const generateBtn = page.getByRole('button', { name: /Invite to Cloud Team|Unlock Cloud Collaboration/ });
     await generateBtn.click();
 
     // Verify link is generated

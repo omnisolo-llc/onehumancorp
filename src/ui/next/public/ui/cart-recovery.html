@@ -291,7 +291,19 @@
 
   <script>
     let hasPro = (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })();
+    window.hasPro = hasPro;
     let cartCount = 0;
+
+    function isProUser() {
+      if (typeof window !== 'undefined' && typeof window.hasPro === 'boolean') {
+        return window.hasPro;
+      }
+      try {
+        return localStorage.getItem('has_pro') === 'true';
+      } catch(e) {
+        return Boolean(hasPro);
+      }
+    }
 
     async function fetchCartCount() {
       try {
@@ -312,11 +324,6 @@
     }
 
     async function generateCampaign() {
-      if (!hasPro) {
-        document.getElementById('paywall-modal').classList.add('active');
-        return;
-      }
-
       const name = document.getElementById('customer-name').value;
       const value = document.getElementById('cart-value').value;
       const btn = document.getElementById('generate-btn');
@@ -343,16 +350,29 @@
           message = "Failed to generate campaign draft.";
         }
 
-        document.getElementById('draft-preview').innerText = `${message}\n\n⚡ OmniSolo`;
+        if (!isProUser()) {
+          message += '\n\n⚡ OmniSolo';
+        }
+
+        document.getElementById('draft-preview').innerText = message;
         document.getElementById('send-btn').disabled = cartCount === 0;
       } catch (e) {
-        document.getElementById('draft-preview').innerText = "Failed to generate campaign draft.";
+        let errMessage = "Failed to generate campaign draft.";
+        if (!isProUser()) {
+          errMessage += '\n\n⚡ OmniSolo';
+        }
+        document.getElementById('draft-preview').innerText = errMessage;
         document.getElementById('send-btn').disabled = cartCount === 0;
       } finally {
         btn.innerText = 'Generate AI Campaign';
         btn.disabled = false;
       }
     }
+
+    function renderWidget() {
+      return generateCampaign();
+    }
+    window.renderWidget = renderWidget;
 
     document.getElementById('close-paywall').addEventListener('click', () => {
       document.getElementById('paywall-modal').classList.remove('active');
@@ -369,6 +389,7 @@
         if (response.ok) {
             alert("Your 7-day Pro trial has been activated.");
             hasPro = true;
+            window.hasPro = true;
             localStorage.setItem('has_pro', 'true');
             document.getElementById('paywall-modal').classList.remove('active');
             generateCampaign();

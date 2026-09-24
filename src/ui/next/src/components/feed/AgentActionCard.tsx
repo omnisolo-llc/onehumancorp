@@ -56,7 +56,25 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
   const wrapDecision = handleDecision;
 
   const isActionLoading = (actionName: string) => loadingAction === actionName;
-  const actionPayload = approval.proposed_action || approval.context_payload || {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safeJsonParse = (val: any): Record<string, any> => {
+    if (!val) return {};
+    if (typeof val === "object") return val;
+    if (typeof val === "string") {
+      try {
+        const parsed = JSON.parse(val);
+        return typeof parsed === "object" && parsed !== null ? parsed : { message: val, text: val };
+      } catch {
+        return { message: val, text: val };
+      }
+    }
+    return {};
+  };
+
+  const parsedProposed = safeJsonParse(approval.proposed_action);
+  const parsedContext = safeJsonParse(approval.context_payload);
+  const parsedDirectPayload = safeJsonParse(approval.payload);
+  const actionPayload = Object.keys(parsedProposed).length > 0 ? parsedProposed : (Object.keys(parsedDirectPayload).length > 0 ? parsedDirectPayload : parsedContext);
   const structuredContext = typeof actionPayload.context === "object" && actionPayload.context !== null ? actionPayload.context : {};
 
   if (
@@ -79,8 +97,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
     const draftText =
       (actionPayload?.draft as string) ||
       (actionPayload?.draft_reply as string) ||
+      (parsedProposed?.draft as string) ||
+      (parsedProposed?.draft_reply as string) ||
+      (parsedDirectPayload?.draft as string) ||
+      (parsedContext?.draft as string) ||
       "No draft available.";
     const description =
+      parsedContext?.description ||
       approval.context_payload?.description ||
       approval.description ||
       "";
@@ -421,8 +444,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 </div>
               </div>
             )}
-            {actionPayload
-              ?.feature_type === "ambassador_reply" && (
+            {(actionPayload?.feature_type === "ambassador_reply" ||
+              parsedProposed?.feature_type === "ambassador_reply" ||
+              parsedContext?.feature_type === "ambassador_reply" ||
+              approval.event_source?.toLowerCase() === "ambassador") && (
               <AmbassadorReplyCard
                 approval={approval}
                 isEditing={editingId === approval.id}

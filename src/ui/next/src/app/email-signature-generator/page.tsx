@@ -142,6 +142,7 @@ export default function EmailSignatureGeneratorPage() {
                     <label className="flex items-start gap-3 cursor-pointer group">
                         <input
                             type="checkbox"
+                            aria-label='Remove "OmniSolo" branding'
                             checked={removeBranding}
                             onChange={(e) => {
                                 if (e.target.checked) {
@@ -154,7 +155,7 @@ export default function EmailSignatureGeneratorPage() {
                             className="mt-1 w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
                         />
                         <div>
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "Powered by OmniSolo" branding</span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "OmniSolo" branding</span>
                             <p className="text-xs text-gray-500 mt-1">Requires Pro plan or higher.</p>
                         </div>
                     </label>
