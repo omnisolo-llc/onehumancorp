@@ -31,7 +31,7 @@ describe('SmartPricingPage', () => {
   it('renders the smart pricing header', () => {
     render(<SmartPricingPage />);
     expect(screen.getByText('Smart Pricing')).toBeDefined();
-    expect(screen.getByText(/Preview smart-pricing configuration/i)).toBeDefined();
+    expect(screen.getByText(/Preview smart-pricing rules/i)).toBeDefined();
   });
 
   it('toggles smart pricing and shows configuration', async () => {

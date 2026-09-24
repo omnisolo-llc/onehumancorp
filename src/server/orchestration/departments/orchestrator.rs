@@ -626,6 +626,21 @@ impl DepartmentOrchestrator {
                         .execute(&mut *tx)
                         .await.map_err(|_| "Unable to persist approval")?;
 
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, department_type, description, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                    )
+                    .bind(&req.id)
+                    .bind(&req.tenant_id)
+                    .bind(req.action_risk.to_string())
+                    .bind(status_str)
+                    .bind(req.department.to_string())
+                    .bind(&req.description)
+                    .bind(sqlx::types::Json(req.payload.clone().unwrap_or_default()))
+                    .bind(now)
+                    .bind(now)
+                    .execute(&mut *tx)
+                    .await;
+
                     tx.commit().await.map_err(|_| "Unable to commit approval")?;
                 }
             }
@@ -647,6 +662,21 @@ impl DepartmentOrchestrator {
                 .bind(now)
                 .execute(pool)
                 .await.map_err(|_| "Unable to persist approval")?;
+
+                let _ = sqlx::query(
+                    "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, department_type, description, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(&req.id)
+                .bind(&req.tenant_id)
+                .bind(req.action_risk.to_string())
+                .bind(status_str)
+                .bind(req.department.to_string())
+                .bind(&req.description)
+                .bind(&proposed_action_str)
+                .bind(now)
+                .bind(now)
+                .execute(pool)
+                .await;
             }
         }
 

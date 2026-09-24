@@ -330,11 +330,20 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
-        <WalkthroughTarget id="dashboard-title">
-          <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back.{userName ? ` ${userName}` : ''}</h2>
-        </WalkthroughTarget>
-        <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
+      <div className="mb-6 p-6 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <WalkthroughTarget id="dashboard-title">
+            <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back.{userName ? ` ${userName}` : ''}</h2>
+          </WalkthroughTarget>
+          <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowReferralModal(true)}
+          className="app-button min-h-[44px]"
+        >
+          Referral Program
+        </button>
       </div>
 
       {onboardingStatus !== "launched" && (
@@ -349,19 +358,6 @@ export default function Dashboard() {
           </button>
         </div>
       )}
-
-      <div className="triage-tab-container flex gap-2 mb-2">
-        <button
-          type="button"
-          onClick={() => {
-            const btn = document.getElementById("tab-proposals") as HTMLButtonElement | null;
-            btn?.click();
-          }}
-          className="triage-tab app-button min-h-[44px]"
-        >
-          Proposals
-        </button>
-      </div>
 
       <div className="mb-6 w-full overflow-hidden">
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}

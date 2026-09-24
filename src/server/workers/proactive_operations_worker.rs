@@ -13,7 +13,7 @@ impl ProactiveOperationsWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
-            poll_interval: Duration::from_secs(60), // Check every minute in dev
+            poll_interval: Duration::from_secs(2), // Check every 2 seconds in dev / test
         }
     }
 

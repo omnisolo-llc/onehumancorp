@@ -500,14 +500,18 @@ async fn proxy_agent_rpc_handler(
         static FALLBACK_APP_SERVER: std::sync::LazyLock<
             omnisolo_builtin_agent::codex_runner::AppServer,
         > = std::sync::LazyLock::new(|| {
-            let agent = std::sync::Arc::new(omnisolo_builtin_agent::agent::Agent::new(
+            let mut agent = omnisolo_builtin_agent::agent::Agent::new(
                 std::sync::Arc::new(omnisolo_builtin_agent::llm::ollama::OllamaClient::new(
                     "http://localhost:11434",
                 )),
                 vec![],
+            );
+            agent.sona_matcher = Some(std::sync::Arc::new(tokio::sync::Mutex::new(
+                omnisolo_builtin_agent::sona_patterns::PatternMatcher::new(),
+            )));
+            let runner = std::sync::Arc::new(omnisolo_builtin_agent::codex_runner::Runner::new(
+                std::sync::Arc::new(agent),
             ));
-            let runner =
-                std::sync::Arc::new(omnisolo_builtin_agent::codex_runner::Runner::new(agent));
             omnisolo_builtin_agent::codex_runner::AppServer::new(runner)
         });
         if let Ok(req_str) = serde_json::to_string(&payload) {
@@ -9461,6 +9465,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     ::server_auth::strict_bearer_auth_middleware,
                 ),
             ),
+        )
+        .route(
+            "/api/v1/agent-feed",
+            axum::routing::get(api::agent_feed::list_feed_items)
+                .post(api::agent_feed::create_feed_item)
+                .route_layer(axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ))
+                .with_state(db.pool.clone()),
         )
         .nest("/api/v1/ohc_job_queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
         .nest("/api/v1/ohc-job-queue", api::omnisolo_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))

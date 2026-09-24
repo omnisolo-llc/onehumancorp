@@ -93,7 +93,7 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
     subtitle: "Manage schedule, bookings, and upcoming work.",
   },
   "/cart-recovery": { title: "Cart Recovery" },
-  "/changelog": { title: "Changelog" },
+  "/changelog": { title: "Release Notes & Changelog" },
   "/chaos-report": { title: "Chaos Report" },
   "/compliance-feed": { title: "Compliance Feed" },
   "/dashboard/growth/affiliates": { title: "Affiliate Growth" },
