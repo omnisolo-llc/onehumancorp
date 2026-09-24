@@ -401,7 +401,7 @@ impl RedisRateLimiter {
                 );
             }
             return Ok(RateLimitStatus {
-                is_allowed: true, // Soft limit per requirements
+                is_allowed: false, // Hard limit per requirements
                 soft_limit_reached: true,
                 user_message: Some(format!(
                     "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
@@ -429,7 +429,7 @@ impl RedisRateLimiter {
                 );
             }
             return Ok(RateLimitStatus {
-                is_allowed: true, // Soft limit per requirements
+                is_allowed: false, // Hard limit per requirements
                 soft_limit_reached: true,
                 user_message: Some(format!(
                     "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
@@ -487,7 +487,7 @@ impl RedisRateLimiter {
                 );
             }
             return Ok(RateLimitStatus {
-                is_allowed: true, // Soft limit per requirements
+                is_allowed: false, // Hard limit per requirements
                 soft_limit_reached: true,
                 user_message: Some(format!(
                     "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
@@ -554,7 +554,7 @@ impl RedisRateLimiter {
                 );
             }
             return Ok(RateLimitStatus {
-                is_allowed: true, // Soft limit per requirements
+                is_allowed: false, // Hard limit per requirements
                 soft_limit_reached: true,
                 user_message: Some(format!(
                     "You've reached your {} tier limit of {} agents. Upgrade to unlock more power!",
@@ -647,7 +647,7 @@ impl RedisRateLimiter {
                     );
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit per requirements
+                    is_allowed: false, // Hard limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
@@ -807,7 +807,7 @@ mod tests {
 
             // Check quota now
             let status = limiter.check_product_quota(tenant_id).await.unwrap();
-            assert!(status.is_allowed);
+            assert!(!status.is_allowed);
             assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
         }
     }
@@ -894,7 +894,7 @@ mod tests {
 
             // Check quota now
             let status = limiter.check_agent_quota(tenant_id).await.unwrap();
-            assert!(status.is_allowed);
+            assert!(!status.is_allowed);
             assert!(status.soft_limit_reached); // Limit is 1 for Free tier
         }
     }
@@ -959,6 +959,7 @@ mod tests {
                 let _ = limiter.record_action(tenant_id, agent_id).await;
             }
             let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+            assert!(!status.is_allowed);
             assert!(status.soft_limit_reached);
         }
     }
@@ -997,7 +998,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_rate_limit_status_is_always_allowed_soft_limit() {
+    async fn test_rate_limit_status_is_not_allowed_hard_limit() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
             && let Ok(client) = redis::Client::open(redis_url)
         {
@@ -1022,7 +1023,7 @@ mod tests {
             }
             let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
 
-            assert!(status.is_allowed);
+            assert!(!status.is_allowed);
             assert!(status.soft_limit_reached);
         }
     }
