@@ -98,7 +98,7 @@ function UnlockContent() {
 
             <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
                 <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide hover:underline opacity-70 hover:opacity-100 transition-opacity" style={{ color: '#6b7280' }}>
-                    ⚡ Powered by OmniSolo
+                    ⚡ OmniSolo <span className="sr-only">(Powered by OmniSolo)</span>
                 </a>
             </div>
         </div>

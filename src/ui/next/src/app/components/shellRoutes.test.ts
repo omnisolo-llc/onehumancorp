@@ -9,6 +9,12 @@ describe("resolveShellRoute", () => {
     "/client-portal",
     "/storefront-widget",
     "/website-builder",
+    "/actor-model",
+    "/api-docs",
+    "/changelog",
+    "/help",
+    "/hybrid-landing",
+    "/hybrid_landing",
   ])("assigns formerly standalone route %s to the guard", (pathname) => {
     expect(resolveShellRoute(pathname).owner).toBe("guard");
   });
@@ -22,16 +28,13 @@ describe("resolveShellRoute", () => {
 
   test.each([
     "/action-center",
-    "/actor-model",
     "/agent-activity",
     "/ai-usage-paywall",
     "/ai-workspace",
     "/analytics",
-    "/api-docs",
     "/assistant",
     "/business-analytics",
     "/business-setup",
-    "/changelog",
     "/cost-dashboard",
     "/dashboard",
     "/dashboard/growth/affiliates",
@@ -41,9 +44,6 @@ describe("resolveShellRoute", () => {
     "/embed-builder",
     "/feed",
     "/finance",
-    "/help",
-    "/hybrid-landing",
-    "/hybrid_landing",
     "/inbox",
     "/integrations",
     "/inventory",
