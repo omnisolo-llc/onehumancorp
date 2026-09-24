@@ -1,0 +1,4 @@
+{
+  "issue_title": "No-work finding: F07 and F08 are already resolved",
+  "issue_description": "F07 and F08 findings regarding fabricated proposal terms and checkout links have already been resolved. The client_intake function in src/server/api/proposals.rs no longer generates a fixed $5,000 scope/deposit but instead calculates it dynamically from line items. Similarly, invoice.rs no longer invents a checkout URL but explicitly leaves it empty if payment isn't configured, and booking/reserve.rs also handles it correctly. Superpowers workflow provenance: loaded skills: using-superpowers, verification-before-completion, brainstorming. revision hash: 5bf4e78011075bcfc0dc295f0724994cd123ee71. checks performed: explored codebase, checked proposals.rs and invoice.rs for F07 and F08 issues. outcomes: No actionable work found, recorded a no-work finding."
+}
