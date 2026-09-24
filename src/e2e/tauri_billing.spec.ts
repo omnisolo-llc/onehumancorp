@@ -42,7 +42,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
   });
 
   test('Pricing page allows downgrade to Free for paid users', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant-starter" };
     await loginAs(page, starterUser);
 
     await page.goto(`/pricing`);

@@ -16,7 +16,7 @@ export const E2E_MEMBER_USER = {
 } as const;
 
 export const E2E_STARTER_USER = {
-  email: 'starter@example.com', password: 'password123', role: 'ADMIN', organizationId: 'e2e-tenant',
+  email: 'starter@example.com', password: 'password123', role: 'ADMIN', organizationId: 'e2e-tenant-starter',
 } as const;
 
 export type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_UNLIMITED_ADMIN_USER | typeof E2E_MEMBER_USER | typeof E2E_STARTER_USER;

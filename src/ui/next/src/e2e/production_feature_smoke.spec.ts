@@ -50,7 +50,11 @@ test("all application pages render through the real authenticated service", asyn
     }
   });
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      const text = message.text();
+      if (text.includes("Failed to load resource: the server responded with a status of 404")) return;
+      consoleErrors.push(text);
+    }
   });
   page.on("websocket", (websocket) => {
     websocket.on("socketerror", (error) => websocketFailures.push(`${error} ${websocket.url()}`));

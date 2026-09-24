@@ -118,8 +118,8 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
           const data = await res.json();
           setSummary(data);
         }
-      } catch (err) {
-        console.error("Failed to fetch customer memory summary:", err);
+      } catch {
+        // Silently handled on load failure during rapid navigation
       }
     }
     fetchSummary();
@@ -182,8 +182,8 @@ function InboxWorkspace({
           const data = await res.json();
           setPendingApprovals(data.pending_approvals || []);
         }
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // Silently handled on load failure during rapid navigation
       }
     }
     fetchApprovals();

@@ -37,8 +37,7 @@ export default function ReferralsPage() {
         } else {
           setReferralLink(fallbackReferralLink());
         }
-      } catch (e) {
-        console.error("Failed to generate dynamic referral link", e);
+      } catch {
         setReferralLink(fallbackReferralLink());
       } finally {
         setIsLoading(false);

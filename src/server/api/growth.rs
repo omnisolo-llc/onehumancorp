@@ -184,13 +184,21 @@ async fn handle_waitlist(
 
 pub async fn handle_conversational_chat(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<ChatReq>,
 ) -> impl IntoResponse {
     let lower = req.message.to_lowercase();
-    let tenant_id = auth_info.org_id.clone();
+    let tenant_id = auth_info
+        .map(|axum::extract::Extension(a)| a.org_id.clone())
+        .or_else(|| req.tenant_id.clone())
+        .or_else(|| {
+            headers
+                .get("x-tenant-id")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "default".to_string());
 
     let mut response_text = String::new();
     let mut draft_action = None;
@@ -308,11 +316,21 @@ pub async fn handle_conversational_chat(
 
 pub async fn handle_conversational_execute(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<ExecuteReq>,
 ) -> impl IntoResponse {
+    let tenant_id = auth_info
+        .map(|axum::extract::Extension(a)| a.org_id.clone())
+        .or_else(|| req.tenant_id.clone())
+        .or_else(|| {
+            headers
+                .get("x-tenant-id")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "default".to_string());
+
     let mut message = format!("Successfully executed action: {}", req.action_id);
 
     if req.action_id == "recover_abandoned_carts_action" {
@@ -321,7 +339,7 @@ pub async fn handle_conversational_execute(
             "type": "growth.campaign_sent",
             "segment": "abandoned_carts",
             "source": "conversational_manager",
-            "tenant_id": auth_info.org_id
+            "tenant_id": tenant_id
         }));
         state.hub.append_recent_event(msg).await;
         message =
@@ -330,7 +348,7 @@ pub async fn handle_conversational_execute(
     } else if req.action_id == "start_review_campaign_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.review_campaign_started",
-            "tenant_id": auth_info.org_id,
+            "tenant_id": tenant_id,
             "source": "conversational_manager"
         }));
         state.hub.append_recent_event(msg).await;
@@ -339,7 +357,7 @@ pub async fn handle_conversational_execute(
     } else if req.action_id == "generate_social_post_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.social_post_published",
-            "tenant_id": auth_info.org_id,
+            "tenant_id": tenant_id,
             "source": "conversational_manager"
         }));
         state.hub.append_recent_event(msg).await;
@@ -3988,7 +4006,8 @@ mod tests {
         };
         let res = handle_conversational_chat(
             Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
+            Some(axum::extract::Extension(auth_info.clone())),
+            axum::http::HeaderMap::new(),
             Json(req),
         )
         .await;
@@ -4016,7 +4035,8 @@ mod tests {
         };
         let res2 = handle_conversational_chat(
             Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
+            Some(axum::extract::Extension(auth_info.clone())),
+            axum::http::HeaderMap::new(),
             Json(req2),
         )
         .await;

@@ -20,8 +20,9 @@ ALTER TABLE job_locations DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
-  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Starter', 'Starter', false),
+  ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Free', 'Free', false),
   ('e2e-tenant-free', 'OmniSolo E2E Free Bakery', 'Food and beverage', 'Free', 'Free', false),
+  ('e2e-tenant-starter', 'OmniSolo E2E Starter Bakery', 'Food and beverage', 'Starter', 'Starter', false),
   ('e2e-tenant-business', 'OmniSolo E2E Business Bakery', 'Food and beverage', 'Business', 'Business', false),
   ('e2e-tenant-unlimited', 'OmniSolo E2E Pro Bakery', 'Food and beverage', 'Pro', 'Pro', false)
 ON CONFLICT (id) DO UPDATE
@@ -38,6 +39,7 @@ SET base_currency = 'USD',
 WHERE id IN (
   'e2e-tenant',
   'e2e-tenant-free',
+  'e2e-tenant-starter',
   'e2e-tenant-business',
   'e2e-tenant-unlimited'
 );
@@ -117,7 +119,7 @@ VALUES
     '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
     ARRAY['ADMIN'],
     true,
-    'e2e-tenant',
+    'e2e-tenant-starter',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   )

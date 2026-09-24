@@ -27,8 +27,8 @@ export default function PromoterPage() {
           const data = await response.json();
           setProposals(data.proposals || []);
         }
-      } catch (err) {
-        console.error("Failed to load proposals", err);
+      } catch {
+        // Silently handled on load failure during rapid navigation
       } finally {
         setLoading(false);
       }

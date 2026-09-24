@@ -41,6 +41,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
 
         // 3. Verify interaction states when "Approve" is clicked
         const targetCard = page.locator('[data-testid^="triage-card-"]').filter({ has: approveBtn }).first();
+        const cardTestId = await targetCard.getAttribute('data-testid');
         await approveBtn.click();
 
         // The card should transition to green border and slightly scale down
@@ -48,7 +49,11 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
         await expect(targetCard).toHaveClass(/scale-95/);
 
         // Card should disappear after 500ms
-        await expect(targetCard).not.toBeVisible({ timeout: 2000 });
+        if (cardTestId) {
+          await expect(page.locator(`[data-testid="${cardTestId}"]`)).not.toBeVisible({ timeout: 2000 });
+        } else {
+          await expect(targetCard).not.toBeVisible({ timeout: 2000 });
+        }
     }
   });
 

@@ -72,6 +72,65 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
     );
   }
 
+  if (
+    approval.event_source === "CustomerSuccessAgent" ||
+    approval.event_source === "customer_success_agent"
+  ) {
+    const draftText =
+      (actionPayload?.draft as string) ||
+      (actionPayload?.draft_reply as string) ||
+      "No draft available.";
+    const description =
+      approval.context_payload?.description ||
+      approval.description ||
+      "";
+    return (
+      <div
+        key={approval.id}
+        className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(0,102,255,0.4)] rounded-[16px] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal relative ${isApproved || approval.lifecycle_state === "APPROVED" ? "!border-green-500 border-green-500 scale-95" : ""}`}
+        data-testid={`triage-card-${approval.id}`}
+      >
+        <div className="absolute top-0 left-0 w-1 h-full bg-[#0066FF]" />
+        <div className="flex justify-between items-start mb-2">
+          <h2 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2 m-0 font-outfit">
+            <span className="text-2xl">✨</span> Needs Attention: Pending Draft
+          </h2>
+          <div className="text-xs font-semibold text-[#0066FF] bg-[#0066FF]/10 px-2 py-1 rounded-[8px]">
+            Action Needed
+          </div>
+        </div>
+        <div className="font-medium text-base text-[#1D1D1F] dark:text-[#F5F5F7]">
+          {description}
+        </div>
+        <div
+          className="bg-[#0066FF]/5 border border-[#0066FF]/10 p-3 rounded-[8px] mb-2 text-sm text-[#0044BB] dark:text-[#60A5FA]"
+          data-testid={`triage-draft-${approval.id}`}
+        >
+          <span className="font-semibold text-[10px] uppercase tracking-wider mb-1 block">
+            Agent&apos;s Proposed Reply
+          </span>
+          {draftText}
+        </div>
+        <div className="flex flex-col gap-2 mt-2">
+          <button
+            className="w-full min-h-[44px] min-w-[44px] bg-[#0066FF] text-white p-3 rounded-[16px] font-semibold border-none shadow-[0_4px_12px_rgba(0,102,255,0.3)] cursor-pointer flex items-center justify-center transition-all hover:bg-blue-600"
+            data-testid={`triage-approve-${approval.id}`}
+            onClick={() => handleDecision(approval.id, true, draftText, approval.event_source)}
+          >
+            <span className="btn-text">Approve & Send</span>
+          </button>
+          <button
+            className="w-full min-h-[44px] min-w-[44px] bg-white/65 dark:bg-black/40 backdrop-blur-[30px] border border-[#0066FF]/30 rounded-[16px] text-[#0066FF] dark:text-blue-400 p-3 font-semibold cursor-pointer hover:bg-white/80"
+            data-testid={`triage-dismiss-${approval.id}`}
+            onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+          >
+            Edit / Deny
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       key={approval.id}
