@@ -43,7 +43,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     if (pathname === '/login') return;
 
     const abortController = new AbortController();
-    const fetchTooltips = async () => {
+    const fetchTooltips = async (retries = 2) => {
       try {
         const response = await fetch("/api/v1/tooltips", { signal: abortController.signal });
         if (!response.ok) {
@@ -58,6 +58,9 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           window.OMNISOLO_TOOLTIPS = { ...(window.OMNISOLO_TOOLTIPS || {}), ...safeTooltips };
         }
       } catch {
+        if (retries > 0 && !abortController.signal.aborted) {
+          setTimeout(() => fetchTooltips(retries - 1), 1000);
+        }
         // Built-in tooltip copy remains available while the optional service is offline.
       }
     };
