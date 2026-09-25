@@ -193,7 +193,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       {/* Provisioning Overlay */}
       {isProvisioning && (
-        <div className="absolute inset-0 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[10px] flex flex-col items-center justify-center rounded-[16px]">
+        <div className="absolute inset-0 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[10px] flex flex-col items-center justify-center rounded-[16px] ease-[cubic-bezier(0.4,0,0.2,1)] duration-[250ms] animate-fade-in">
           <div className="w-16 h-16 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin mb-6"></div>
           <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 animate-pulse">
             Building Your Business...
@@ -214,7 +214,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
                   // Optional: auto send after setting
                   // setTimeout(() => handleSend(), 0);
                 }}
-                className="text-xs font-medium min-h-[44px] px-4 py-2 flex items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
+                className="text-xs font-medium min-h-[44px] px-4 py-2 flex items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] transition-all border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] ease-[cubic-bezier(0.4,0,0.2,1)] duration-[250ms] active:scale-[0.98]"
               >
                 {chip}
               </button>
@@ -230,14 +230,14 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading || isProvisioning}
             placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
-            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-[8px] py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-[8px] py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0066FF] disabled:opacity-50 transition-colors ease-[cubic-bezier(0.4,0,0.2,1)] duration-[250ms]"
           />
           <button
             id="generate-storefront-btn"
             data-testid="generate-storefront-btn"
             type="submit"
             disabled={!input.trim() || isLoading || isProvisioning}
-            className="absolute right-1 top-1.5 w-10 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-[8px] transition-colors"
+            className="absolute right-1 top-1.5 w-10 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-[8px] transition-all ease-[cubic-bezier(0.4,0,0.2,1)] duration-[250ms] active:scale-[0.98]"
           >
             <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>

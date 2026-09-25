@@ -753,7 +753,7 @@ export default function OnboardingWizard() {
       <div
         id="setup-screen"
         data-voice-assistant-surface="glass"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism translucent-glass-light dark:translucent-glass-dark"
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-2xl rounded-none sm:rounded-[16px] glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%]"
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
@@ -880,7 +880,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 0 && (
-            <div data-voice-assistant-surface="glass" className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full glassmorphism  p-4">
+            <div data-voice-assistant-surface="glass" className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full p-4">
               <button
                 onClick={() => {
                   updateState({ step: -2 });
@@ -2026,7 +2026,7 @@ export default function OnboardingWizard() {
             <div
               aria-live="polite"
               data-voice-assistant-surface="glass"
-              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism  shadow-2xl p-4 sm:p-8"
+              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in p-4 sm:p-8"
             >
               <div className="w-24 h-24 relative mb-8">
                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -2157,7 +2157,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div data-voice-assistant-surface="glass" className="p-3 glassmorphism  flex flex-col items-center mb-6">
+                <div data-voice-assistant-surface="glass" className="p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] flex flex-col items-center mb-6">
                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">
                     Your Shareable Link
                   </p>

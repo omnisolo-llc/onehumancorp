@@ -43,14 +43,14 @@ export default function ZeroClickBuilderPage() {
         {!generatedStore ? (
           <OnboardingChatAgent onComplete={handleChatComplete} />
         ) : (
-          <div className="glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-[#1D1D1F] dark:text-white mb-2">
+              <h2 className="text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
                 Your business is live!
               </h2>
               <p className="text-[#424245] dark:text-[#A1A1A6]">
@@ -72,14 +72,14 @@ export default function ZeroClickBuilderPage() {
                   onClick={() => {
                     router.push('/dashboard');
                   }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
+                  className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md ease-[cubic-bezier(0.4,0,0.2,1)] duration-[250ms]"
                 >
                   🚀 Launch My Store
                 </button>
 
                 <button
                   onClick={handleShare}
-                  className="w-full flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a91da] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
+                  className="w-full flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a91da] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md ease-[cubic-bezier(0.4,0,0.2,1)] duration-[250ms]"
                 >
                   🐦 Share on X (Twitter)
                 </button>
