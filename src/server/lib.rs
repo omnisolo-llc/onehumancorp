@@ -6722,7 +6722,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let limit_ledger = 50i64;
         match &db.store {
         crate::db::DbStore::Postgres => {
-            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM omnisolo_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM omnisolo_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
+            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(&db.pool)
@@ -6747,7 +6747,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM omnisolo_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM omnisolo_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") }
+            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") }
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(pool)
