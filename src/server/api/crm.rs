@@ -34,7 +34,7 @@ mod crm_tests {
     #[tokio::test]
     async fn test_list_opportunities_handler_compilation() {
         // Simple test to improve module coverage without breaking dependencies
-        assert!(true);
+
     }
 }
 
