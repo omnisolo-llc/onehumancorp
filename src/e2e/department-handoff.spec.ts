@@ -25,7 +25,7 @@ test.describe('Department Handoff Protocol', () => {
 
         // 2. Act: Owner navigates to the Work Triage feed
         page = await adminPage(page);
-        await page.goto('/ui/triage.html');
+        await page.goto(`/ui/triage.html?tenant_id=${tenantId}&bypass_cache=true&t=${Date.now()}`);
         await page.waitForLoadState('networkidle');
 
         // 3. Assert: The task envelope is displayed correctly

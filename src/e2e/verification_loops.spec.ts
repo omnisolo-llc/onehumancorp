@@ -8,7 +8,7 @@ test.describe('Master Catalog B.10 / C.4: Verification Loops UI integration', ()
     await page.goto('/verification-loops');
 
     // The page should exist and load
-    await expect(page.getByRole('heading', { name: /Verification Loops/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /Verification Loops/i }).first()).toBeVisible({ timeout: 10000 });
 
     // It should display the two primary components: Guides and Sensors
     await expect(page.getByText(/Guides \(Feedforward\)/i)).toBeVisible();

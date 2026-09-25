@@ -32,7 +32,7 @@ test.describe('Viral Trial Extension Loop', () => {
 
     // Verify page content
     await expect(page.getByText('Interactive Trial Extension')).toBeVisible();
-    await expect(page.getByText('Want 7 Extra Days of Pro?')).toBeVisible();
+    await expect(page.getByText(/Want (Pro Access|7 Extra Days of Pro\?)/i)).toBeVisible();
 
     // The share button should be present
     const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });

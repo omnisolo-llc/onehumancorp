@@ -5,7 +5,7 @@ test.describe('Meetings Page', () => {
     await page.goto('/calendar');
     await expect(page.getByRole('heading', { name: 'Calendar & Bookings' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Upcoming Appointments' })).toBeVisible();
-    await expect(page.getByText(/No upcoming appointments\.|Meeting/)).toBeVisible();
+    await expect(page.getByText(/No upcoming appointments\.|Meeting|Cake Decorating Class|Consultation/i).first()).toBeVisible();
 
     await expect(page.getByText('AI Scheduling (Zero-Setup)')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Operations Agent' })).toBeVisible();

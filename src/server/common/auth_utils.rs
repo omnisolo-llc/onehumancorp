@@ -104,6 +104,7 @@ pub struct UiTenantQuery {
     pub tenant: Option<String>,
     pub mobile_optimized: Option<bool>,
     pub fields: Option<String>,
+    pub bypass_cache: Option<bool>,
 }
 
 pub fn ui_tenant_id(query: &UiTenantQuery) -> String {
