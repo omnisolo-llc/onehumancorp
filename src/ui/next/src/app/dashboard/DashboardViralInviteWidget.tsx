@@ -58,7 +58,7 @@ export function DashboardViralInviteWidget() {
     e.preventDefault();
     const shareUrl = referralLink.replace('/ref/', '/invite/').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/');
     const text = `Start your business on OmniSolo OneHumanCorp using my referral link: ${shareUrl}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURI(text)}`, '_blank');
   };
 
   return (

@@ -14,6 +14,8 @@ pub struct ConnectWhatsAppCloudApiReq {
 pub struct ConnectIntegrationRes {
     pub success: bool,
     pub message: String,
+    pub status: String,
+    pub usable: bool,
 }
 
 pub async fn connect_whatsapp_cloud_api(
@@ -34,10 +36,14 @@ pub async fn connect_whatsapp_cloud_api(
         Ok(_) => Json(ConnectIntegrationRes {
             success: true,
             message: "WhatsApp Cloud API connected successfully".to_string(),
+            status: "connected".to_string(),
+            usable: true,
         }),
         Err(e) => Json(ConnectIntegrationRes {
             success: false,
             message: format!("Failed to connect: {}", e),
+            status: "disconnected".to_string(),
+            usable: false,
         }),
     }
 }
@@ -72,10 +78,14 @@ pub async fn connect_whatsapp(
         Ok(_) => Json(ConnectIntegrationRes {
             success: true,
             message: "WhatsApp connected successfully".to_string(),
+            status: "connected".to_string(),
+            usable: true,
         }),
         Err(e) => Json(ConnectIntegrationRes {
             success: false,
             message: format!("Failed to connect: {}", e),
+            status: "disconnected".to_string(),
+            usable: false,
         }),
     }
 }
