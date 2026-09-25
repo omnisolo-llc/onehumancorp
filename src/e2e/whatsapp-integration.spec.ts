@@ -75,7 +75,7 @@ test.describe('WhatsApp Integration UI', () => {
     await expect(page.getByText('Connect your WhatsApp Business Account directly using the WhatsApp Cloud API.')).toBeVisible();
 
     // Close modal
-    await page.locator('button').filter({ has: page.locator('svg') }).click();
+    await page.locator('.fixed.inset-0 button[aria-label="Close modal"]').click();
     await expect(page.getByRole('heading', { name: 'Connect WhatsApp Cloud API' })).toBeHidden();
   });
 

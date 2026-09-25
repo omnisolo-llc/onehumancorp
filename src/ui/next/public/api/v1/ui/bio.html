@@ -259,8 +259,8 @@
     </div>
 
     <!-- Expandable Floating Badge -->
-    <div id="omnisolo-badge" class="omnisolo-floating-badge">
-        <div class="badge-header" id="omnisolo-badge-header">
+    <div id="ohc-badge" class="omnisolo-floating-badge">
+        <div class="badge-header" id="ohc-badge-header">
             <span class="badge-icon">⚡</span>
             <span>OmniSolo</span>
         </div>
@@ -273,9 +273,11 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        // Extract tenant from URL path: /bio/:tenant
+        // Extract tenant from URL query param or path: /bio/:tenant or ?tenant=:tenant
+        const params = new URLSearchParams(window.location.search);
         const pathParts = window.location.pathname.split('/');
-        const tenant = pathParts[pathParts.length - 1] || 'my-store';
+        const lastPart = pathParts[pathParts.length - 1];
+        const tenant = params.get('tenant') || (lastPart && !lastPart.endsWith('.html') ? lastPart : 'my-store');
 
         const titleEl = document.getElementById('title');
         const bioEl = document.getElementById('bio');
@@ -306,8 +308,8 @@
         bioEl.textContent = data.bio;
 
         // Setup Badge Interactive Logic
-        const badge = document.getElementById('omnisolo-badge');
-        const badgeHeader = document.getElementById('omnisolo-badge-header');
+        const badge = document.getElementById('ohc-badge') || document.getElementById('omnisolo-badge');
+        const badgeHeader = document.getElementById('ohc-badge-header') || document.getElementById('omnisolo-badge-header');
         const ctaLink = document.getElementById('badge-cta-link');
 
         if (data.remove_branding) {

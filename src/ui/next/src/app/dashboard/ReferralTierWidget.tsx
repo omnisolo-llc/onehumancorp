@@ -59,7 +59,8 @@ export function ReferralTierWidget() {
     <div
       id="referral-tier-widget"
       data-testid="referral-tier-widget"
-      className="omnisolo-growth-card app-card glassmorphism p-6 mb-6 rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-900/20"
+      data-voice-assistant-surface="glass"
+      className="omnisolo-growth-card glassmorphism p-6 mb-6 rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-900/20"
     >
       <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Referral Tier</h3>
       <p id="referral-tier-status" className="text-sm text-gray-700 dark:text-gray-300 mb-2">

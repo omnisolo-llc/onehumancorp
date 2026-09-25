@@ -56,7 +56,8 @@ export function UnlockProFeaturesWidget() {
   return (
     <div
       data-testid="unlock-pro-features-widget"
-      className="glassmorphism app-card p-6 rounded-2xl mb-6 shadow-sm border border-purple-100 dark:border-purple-900/50 bg-gradient-to-br from-white to-purple-50/50 dark:from-gray-900 dark:to-purple-900/20"
+      data-voice-assistant-surface="glass"
+      className="glassmorphism p-6 rounded-2xl mb-6 shadow-sm border border-purple-100 dark:border-purple-900/50 bg-gradient-to-br from-white to-purple-50/50 dark:from-gray-900 dark:to-purple-900/20"
     >
       <div className="flex justify-between items-start mb-4">
         <div>

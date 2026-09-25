@@ -326,15 +326,11 @@
     } catch (e) {}
 
     function updatePreview() {
-      const url = new URL(window.location.origin + '/api/v1/growth/founder-story/embed');
-      url.searchParams.set('tenant', state.tenant);
-      url.searchParams.set('founder_name', state.founderName);
-      url.searchParams.set('story_text', state.storyText);
-      url.searchParams.set('reward', state.reward);
-      url.searchParams.set('theme', state.theme);
-      url.searchParams.set('hideBranding', state.removeBranding);
-
-      previewFrame.src = url.toString();
+      const origin = window.location.origin;
+      const fNameEncoded = encodeURIComponent(state.founderName);
+      const storyEncoded = encodeURIComponent(state.storyText);
+      const rewardEncoded = encodeURIComponent(state.reward);
+      previewFrame.src = `${origin}/api/v1/growth/founder-story/embed?tenant=${encodeURIComponent(state.tenant)}&founder_name=${fNameEncoded}&story_text=${storyEncoded}&reward=${rewardEncoded}&theme=${encodeURIComponent(state.theme)}&hideBranding=${state.removeBranding}`;
     }
 
     founderNameInput.addEventListener('input', (e) => {

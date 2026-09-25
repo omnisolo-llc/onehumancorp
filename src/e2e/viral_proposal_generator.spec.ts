@@ -13,7 +13,7 @@ test.describe('Viral Proposal Generator Loop', () => {
     await proposalLink.click();
 
     // Verify page content
-    await expect(page.getByRole('heading', { name: 'Proposal Generator' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Proposal Generator', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Create Professional Proposal' })).toBeVisible();
 
     // Fill out the form

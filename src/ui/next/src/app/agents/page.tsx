@@ -233,7 +233,7 @@ export default function AgentsPage() {
     }
   }
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
       <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
       <header className="min-w-0 max-w-full border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
         <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
