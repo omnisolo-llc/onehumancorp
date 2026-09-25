@@ -24,6 +24,19 @@ async function loginAsAtBaseURL(page: Page, user: E2EUser, baseURL: string) {
       username: user.email, password: user.password, organizationId: user.organizationId,
     }, origin);
   }
+  try {
+    await page.context().addInitScript((orgId) => {
+      try {
+        localStorage.setItem('tenant_id', orgId);
+        localStorage.setItem('tenant', orgId);
+        localStorage.setItem('business_display_name', orgId);
+      } catch {
+        // ignore
+      }
+    }, user.organizationId);
+  } catch {
+    // ignore
+  }
   await page.goto(new URL('/dashboard', baseURL).toString());
   try {
     await page.evaluate((orgId) => {
@@ -38,7 +51,9 @@ async function loginAsAtBaseURL(page: Page, user: E2EUser, baseURL: string) {
 
 export const e2ePage = {
   setupSession: async (page: Page) => {
-    const baseURL = (page.context() as unknown as { _options?: { baseURL?: string } })._options?.baseURL || 'http://localhost:3000';
+    const baseURL = (page.context() as unknown as { _options?: { baseURL?: string } })._options?.baseURL
+      || process.env.PLAYWRIGHT_BASE_URL
+      || 'http://localhost:3000';
     await loginAsAtBaseURL(page, E2E_ADMIN_USER, baseURL);
   },
 };
@@ -150,6 +165,7 @@ export async function adminPage(
   }
   wrapPage(page);
   const baseURL = (page.context() as unknown as { _options?: { baseURL?: string } })._options?.baseURL
+    || process.env.PLAYWRIGHT_BASE_URL
     || 'http://127.0.0.1:18789';
   await loginAsAtBaseURL(page, E2E_ADMIN_USER, baseURL);
   if (typeof contextOrCallback === 'function') {

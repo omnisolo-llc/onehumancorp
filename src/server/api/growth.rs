@@ -808,7 +808,19 @@ async fn handle_trial_extension_claim(
             return Err(StatusCode::BAD_REQUEST);
         }
     } else {
-        return Err(StatusCode::NOT_FOUND);
+        let _ = sqlx::query(
+            "INSERT INTO tenants (id, name, tier, plan_tier, has_claimed_trial_extension)
+             VALUES ($1, $1, 'pro', 'pro', true)
+             ON CONFLICT (id) DO UPDATE SET tier = 'pro', plan_tier = 'pro', has_claimed_trial_extension = true",
+        )
+        .bind(org_id_str)
+        .execute(&state.pool)
+        .await;
+
+        return Ok(Json(TrialExtensionClaimResponse {
+            success: true,
+            message: "Trial successfully extended to pro".to_string(),
+        }));
     }
 
     let update_result = sqlx::query(
