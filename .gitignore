@@ -151,3 +151,5 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
+out/
+next_out/
