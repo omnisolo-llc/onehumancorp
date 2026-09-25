@@ -1658,6 +1658,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         is_subscribable BOOLEAN DEFAULT FALSE,
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
+                        is_sold_out BOOLEAN DEFAULT FALSE,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );

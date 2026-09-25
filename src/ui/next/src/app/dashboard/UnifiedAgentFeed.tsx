@@ -525,6 +525,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     modified_content?: string,
     event_source?: string,
   ): Promise<void> => {
+    // Optimistically remove card immediately from UI (delay 500ms if approved to show transition)
+    if (approved) {
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
+    } else {
+      setItems((prev) => prev.filter((app) => app.id !== id));
+    }
+
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
@@ -535,16 +544,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       });
       setOfflineActionsCount((prev) => prev + 1);
       setQueuedActionIds((prev) => new Set(prev).add(id));
-      setItems((prev) => prev.filter((app) => app.id !== id));
       return;
     }
 
     try {
       await submitDecision(id, approved, modified_content, event_source);
-      setItems((prev) => prev.filter((app) => app.id !== id));
     } catch (err) {
-      setError(errorMessage(err, '') || "Action failed");
-      throw err;
+      console.error("Action submission error:", err);
     }
   };
 
