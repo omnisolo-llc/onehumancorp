@@ -1,4 +1,0 @@
-{
-  "issue_title": "F14: No measured representative serving costs or owner outcomes",
-  "issue_description": "Evaluating F14 from the remediation ledger. The objective requires establishing workload-specific baselines, measured representative serving costs, and owner outcomes for a current business workflow. However, gathering this evidence requires access to a permissioned set of real owners and actual invoice reconciliation to measure setup/review/correction time, willingness to pay, and real serving costs without fabricating baselines or participants. As an autonomous agent, I cannot conduct live owner interviews or run live customer actions without authorization. Therefore, this is a blocked no-work finding. No arbitrary instrumentation was implemented to avoid polluting the codebase with unverified benchmarks."
-}
