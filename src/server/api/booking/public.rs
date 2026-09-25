@@ -111,7 +111,10 @@ async fn create_checkout_session(
 
     let mut stripe_url = None;
     if requires_deposit && deposit_cents > 0 {
-        if let Ok(stripe_key) = crate::api::tool_integrations::stripe_key_for_tenant(&state.db, &tenant_id).await {
+        let stripe_key_res = crate::api::tool_integrations::stripe_key_for_tenant(&state.db, &tenant_id).await;
+        let mut session_created = false;
+
+        if let Ok(stripe_key) = stripe_key_res {
             let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
             if stripe_client.require_api_key().is_ok() {
                 use sha2::{Digest, Sha256};
@@ -128,8 +131,13 @@ async fn create_checkout_session(
                     }
                 ).await {
                     stripe_url = Some(receipt.url);
+                    session_created = true;
                 }
             }
+        }
+
+        if !session_created {
+            return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({"error": "deposit checkout is unavailable"}))).into_response();
         }
     }
 
