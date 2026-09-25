@@ -22,6 +22,7 @@
     "@powersync/web": "^1.38.3",
     "@stripe/terminal-js": "^0.26.0",
     "@swagger-api/apidom-core": "1.11.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@types/dompurify": "^3.0.5",
     "@types/pg": "^8.20.0",

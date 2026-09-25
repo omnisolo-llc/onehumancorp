@@ -60,9 +60,9 @@ impl ResearcherLlmClient for AdapterLlm {
         let forced_response: Option<String> = None;
 
         let (response_text, usage) = if let Some(response) = forced_response {
-            (response, Usage::default())
+            (response, Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
         } else if is_test_mode {
-            (r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string(), Usage::default())
+            (r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string(), Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
         } else {
             let observed = crate::minimax::LocalLLMClient::new()
                 .reason_with_usage(&prompt, req.max_tokens)
