@@ -69,7 +69,9 @@ export default function WinBackCampaignPage() {
       setShowSoftPaywall(false);
       setTrialStatus('Pro access activated.');
       if (typeof window !== 'undefined') {
-        alert(['Your', ['7', 'day'].join('-'), 'Pro trial has been activated.'].join(' '));
+        setTimeout(() => {
+          alert(['Your', ['7', 'day'].join('-'), 'Pro trial has been activated.'].join(' '));
+        }, 50);
       }
       await generateDraft();
     }

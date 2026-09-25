@@ -549,16 +549,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     modified_content?: string,
     event_source?: string,
   ): Promise<void> => {
-    // Record as decided immediately to prevent polling re-adding it
     decidedIdsRef.current.add(id);
-
-    if (approved) {
-      setTimeout(() => {
-        setItems((prev) => prev.filter((app) => app.id !== id));
-      }, 500);
-    } else {
-      setItems((prev) => prev.filter((app) => app.id !== id));
-    }
+    setItems((prev) => prev.filter((app) => app.id !== id));
 
     if (isOffline) {
       // Enqueue offline action

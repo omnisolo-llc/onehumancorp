@@ -26,7 +26,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const [reserving, setReserving] = useState(false);
   const [sessionId] = useState<string | null>(null);
   const [pendingReconciliation, setPendingReconciliation] = useState<{ product_id: string; shortage: number }[]>([]);
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>('tap');
 
 
 
@@ -108,7 +108,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
     if (typeof window !== 'undefined' && !navigator.onLine) {
        // Offline Mode Payment Enqueue
-       setStatus('Offline Tap-to-Pay. Authorizing locally...');
+       setStatus('Processing offline payment...');
 
        if (cart && cart.length > 0) {
            cart.forEach(item => {
@@ -147,7 +147,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        }
 
        setTimeout(() => {
-         setStatus('Saved Offline - Will sync when connected');
+         setStatus('Payment saved offline. Will sync when network is restored.');
          if (onSuccess) onSuccess();
        }, 1500);
        return;
@@ -381,6 +381,10 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           {selectedMethod === 'tap' && connectedReader && (
             <div className="mt-4">
               <button onClick={async () => {
+                if (typeof window !== 'undefined' && !navigator.onLine) {
+                  await processPayment();
+                  return;
+                }
                 setStatus('Initializing Tap to Pay...');
                 setReserving(true);
                 try {
@@ -405,8 +409,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                 } finally {
                   setReserving(false);
                 }
-              }} id="tap-to-pay-btn" disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-                {reserving ? 'Processing...' : `Confirm & Tap ${(amount / 100).toFixed(2)}`}
+              }} id="tap-to-pay-btn" disabled={reserving} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+                {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
               </button>
             </div>
           )}

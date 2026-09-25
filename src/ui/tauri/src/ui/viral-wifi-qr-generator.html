@@ -254,7 +254,7 @@
       <div class="config-panel">
         <div class="form-group">
           <label for="network-name">Network Name</label>
-          <input type="text" id="network-name" value="Guest WiFi" oninput="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); else { const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value; }">
+          <input type="text" id="network-name" value="Guest WiFi" oninput="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';" onchange="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';" onkeyup="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';">
         </div>
 
         <div class="form-group" style="display: flex; align-items: center; gap: 8px;">

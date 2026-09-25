@@ -63,7 +63,10 @@ export function AIUsageLimitWidget() {
     setGenerating(true);
     setReferralError(null);
     try {
-      const response = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+      const [response] = await Promise.all([
+        fetch('/api/v1/growth/referrals/generate', { method: 'POST' }),
+        new Promise((resolve) => setTimeout(resolve, 200)),
+      ]);
       if (!response.ok) throw new Error('Referral link generation is unavailable.');
       const data = await response.json();
       if (typeof data.referral_link !== 'string' || !data.referral_link) throw new Error('Referral link generation is unavailable.');

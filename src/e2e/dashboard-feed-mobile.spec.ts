@@ -1,7 +1,43 @@
 import { expect, test } from './fixtures';
+import { db } from './db_utils';
 
 test.describe('Unified Agent Feed Mobile MVP', () => {
   test.use({ viewport: { width: 375, height: 812 } });
+
+  test.beforeEach(async () => {
+    await db.query(`
+      INSERT INTO agent_feed_items (
+        id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at
+      )
+      VALUES 
+      (
+        'e2e-feed-mobile-card-1',
+        'e2e-tenant',
+        'Ambassador',
+        '{"feature_type":"ambassador_reply","source":"Instagram","past_orders":"Returning Customer","context_used":"Prefers vegan options.","original_message":"Do you have gluten free?"}'::jsonb,
+        '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"Instagram","past_orders":"Returning Customer","context_used":"Prefers vegan options.","original_message":"Do you have gluten free?","generated_response":"Yes, we have gluten free options."}'::jsonb,
+        'PENDING_APPROVAL',
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+      ),
+      (
+        'e2e-feed-mobile-card-2',
+        'e2e-tenant',
+        'Ambassador',
+        '{"feature_type":"ambassador_reply","source":"SMS","past_orders":"New Customer","context_used":"Wedding cake inquiry","original_message":"Can I get a quote?"}'::jsonb,
+        '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"SMS","past_orders":"New Customer","context_used":"Wedding cake inquiry","original_message":"Can I get a quote?","generated_response":"I would be delighted to help with your wedding cake quote."}'::jsonb,
+        'PENDING_APPROVAL',
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        lifecycle_state = 'PENDING_APPROVAL',
+        context_payload = EXCLUDED.context_payload,
+        proposed_action = EXCLUDED.proposed_action,
+        created_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP;
+    `);
+  });
 
   test('displays feed and ensures no horizontal scroll on mobile', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);

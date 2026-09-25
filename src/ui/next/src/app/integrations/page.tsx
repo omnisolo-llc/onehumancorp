@@ -207,7 +207,9 @@ export default function Integrations() {
       ));
       setShowWhatsAppModal(false);
       setStatusMessage("Twilio for WhatsApp connected.");
-      router.push('/inbox');
+      setTimeout(() => {
+        router.push('/inbox');
+      }, 1000);
     } catch  {
       setStatusMessage("Failed to connect Twilio for WhatsApp.");
     }

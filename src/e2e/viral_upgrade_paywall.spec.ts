@@ -18,7 +18,7 @@ test.describe('Viral SaaS Upgrade Soft Paywall Growth Loop', () => {
     await expect(widgetHeading).toBeVisible();
 
     // 2. Verify the progress text
-    await expect(page.getByText(/\d+ \/ 3/)).toBeVisible();
+    await expect(page.getByText(/\d+ \/ 3/).first()).toBeVisible();
     await expect(page.getByText(/\d+ more to unlock/)).toBeVisible();
 
     // 3. Verify the share/copy button is present

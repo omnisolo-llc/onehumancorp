@@ -58,11 +58,9 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     // Verify the "OmniSolo" viral loop branding is inside the generated draft
     await expect(draft).toContainText('OmniSolo');
 
-    // 8. Test sending the campaign
-    // Instead of evaluate, we click via Playwright to ensure React events fire
-    await page.getByRole('button', { name: /Send to 34 Inactive Customers/i }).click({ force: true });
-
-    // Verify success message
-    await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 15000 });
+    // 8. Test sending the campaign - fails closed until real dispatcher is connected
+    const sendBtn = page.getByRole('button', { name: /Campaign sending unavailable/i });
+    await expect(sendBtn).toBeVisible();
+    await expect(sendBtn).toBeDisabled();
   });
 });

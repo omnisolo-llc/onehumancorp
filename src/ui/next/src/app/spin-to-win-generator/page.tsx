@@ -27,7 +27,7 @@ export default function SpinToWinGeneratorPage() {
   const handleGenerate = () => {
     const prizes = discounts.split(',').map(d => d.trim()).filter(d => d);
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
-    const prizesParam = prizes.length > 0 ? `&prizes=${encodeURIComponent(prizes.join(', '))}` : '';
+    const prizesParam = prizes.length > 0 ? `&prizes=${prizes.join(', ')}` : '';
     const iframeSrc = `${origin}/api/v1/growth/spin-to-win/embed?campaign=${encodeURIComponent(campaignName)}&reward=${encodeURIComponent(reward)}&tenant=${encodeURIComponent(tenant)}${prizesParam}`;
 
     const code = `<!-- OmniSolo Spin to Win Widget -->

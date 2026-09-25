@@ -7,7 +7,7 @@ test.describe('Conversational Checkout Flow', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('maya@ohc.test');
     await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Login' }).click();
+    await page.getByRole('button', { name: /Log ?in/i }).first().click();
 
     // Verify successful login
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();

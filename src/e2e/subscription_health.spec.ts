@@ -59,7 +59,7 @@ test.describe('Subscription Health & Churn Prevention', () => {
 
     await loginAs(page, adminUser);
     await page.goto('/dashboard/unified-feed');
-    const card = page.locator('[data-testid="agent-feed-card"]', { hasText: 'sub_health_test_1' });
+    const card = page.locator('[data-testid="agent-feed-card"]', { hasText: 'sub_health_test_1' }).first();
     await expect(card).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('identified subscriber sub_health_test_1 as at-risk')).toBeVisible({ timeout: 15000 });
 

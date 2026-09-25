@@ -909,12 +909,26 @@
         </button>
       </div>
 
-      <div class="omnisolo-growth-card app-card">
+      <div class="omnisolo-growth-card app-card cloud-bridge">
         <h2>Grow Your Team</h2>
         <p><a href="email-signature-generator.html" class="btn-secondary" style="text-decoration: none; padding: 6px 12px; font-size: 14px; margin-bottom: 10px; display: inline-block;">Email Signature Generator</a></p>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
-        <a href="referrals.html" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 8px;" data-tooltip="Click here to share access with a team member.">Referral Dashboard</a>
+        <button id="generate-link-btn" class="btn-primary" style="background-color: #0066FF; color: white; border: none; padding: 14px 24px; border-radius: 12px; font-weight: 600; font-size: 16px; width: 100%; cursor: pointer; transition: transform 0.2s, background-color 0.2s; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
+
+        <div class="link-container" id="link-container" style="margin-top: 20px; display: none;">
+          <input type="text" class="link-input" id="referral-link" readonly value="" style="width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(0, 0, 0, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 12px;" />
+          <div class="action-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-secondary" id="copy-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600;" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
+            <button class="btn-secondary" id="share-whatsapp-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; background-color: #25D366; color: white; border: none;">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-twitter-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; background-color: #000000; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+              Share on X
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top: 15px;"><a href="referrals.html" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-bottom: 8px;" data-tooltip="Click here to share access with a team member.">Referral Dashboard</a></div>
         <a href="viral-powered-by-omnisolo-widget.html" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-bottom: 8px;">Footer Branding Generator</a>
         <a href="viral-community-goal-generator.html" id="viral-community-goal-link" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-bottom: 8px;">Community Goal Generator</a>
         <a href="referral-leaderboard-generator.html" id="leaderboard-link" class="btn-outline" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Generate a gamified leaderboard for your website.">Leaderboard Generator 🏆</a>
@@ -1339,6 +1353,69 @@
             }
           }
         } catch(e) { console.error('Failed to fetch milestones', e); }
+
+        const generateBtn = document.getElementById('generate-link-btn');
+        const linkContainer = document.getElementById('link-container');
+        const copyBtn = document.getElementById('copy-btn');
+        const referralLink = document.getElementById('referral-link');
+
+        if (generateBtn && linkContainer && copyBtn && referralLink) {
+          generateBtn.addEventListener('click', async () => {
+            generateBtn.innerText = "Generating...";
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              try {
+                const link = await window.__TAURI__.core.invoke("generate_cloud_invite");
+                referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "https://cloud.omnisolo.co/invite/fallback";
+              } catch(err) {
+                referralLink.value = "https://cloud.omnisolo.co/invite/fallback";
+              }
+            } else {
+              try {
+                const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ invitee_id: "pending" })
+                });
+                const data = await res.json();
+                referralLink.value = (data.invite_link || "https://cloud.omnisolo.co/invite/fallback").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
+              } catch(e) {
+                referralLink.value = "https://cloud.omnisolo.co/invite/fallback";
+              }
+            }
+            generateBtn.style.display = 'none';
+            linkContainer.style.display = 'block';
+          });
+
+          copyBtn.addEventListener('click', () => {
+            const link = referralLink.value;
+            const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
+            navigator.clipboard.writeText(text).then(() => {
+              copyBtn.innerText = "Copied!";
+              setTimeout(() => { copyBtn.innerText = "Copy"; }, 2000);
+            }).catch(() => {
+              copyBtn.innerText = "Copied!";
+              setTimeout(() => { copyBtn.innerText = "Copy"; }, 2000);
+            });
+          });
+
+          const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
+          if (shareWhatsAppBtn) {
+            shareWhatsAppBtn.addEventListener('click', () => {
+              const link = referralLink.value;
+              const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+            });
+          }
+
+          const shareTwitterBtn = document.getElementById('share-twitter-btn');
+          if (shareTwitterBtn) {
+            shareTwitterBtn.addEventListener('click', () => {
+              const link = referralLink.value;
+              const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
+              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+            });
+          }
+        }
 
         const shareSavingsBtn = document.getElementById('share-savings-btn');
         const savingsStatus = document.getElementById('savings-status');
