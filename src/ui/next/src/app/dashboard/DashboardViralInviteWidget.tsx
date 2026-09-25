@@ -25,7 +25,7 @@ export function DashboardViralInviteWidget() {
       const w = window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } };
       if (w.__TAURI__ && w.__TAURI__.core) {
         const link = await w.__TAURI__.core.invoke('generate_referral_link');
-        setReferralLink(link);
+        setReferralLink(typeof link === 'string' ? link : '');
       } else {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
@@ -56,7 +56,7 @@ export function DashboardViralInviteWidget() {
 
   const handleShareX = (e: React.MouseEvent) => {
     e.preventDefault();
-    const shareUrl = referralLink.replace('/ref/', '/invite/');
+    const shareUrl = referralLink.replace('/ref/', '/invite/').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/');
     const text = `Start your business on OmniSolo OneHumanCorp using my referral link: ${shareUrl}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   };

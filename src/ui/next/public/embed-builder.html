@@ -222,8 +222,8 @@
       <div class="form-group">
         <label>Widget Type</label>
         <div class="type-selectors">
-          <button class="type-btn active" data-type="booking">booking</button>
-          <button class="type-btn" data-type="quote">quote</button>
+          <button class="type-btn active" data-type="booking" onclick="if(window.__setType) window.__setType('booking')">booking</button>
+          <button class="type-btn" data-type="quote" onclick="if(window.__setType) window.__setType('quote')">quote</button>
         </div>
       </div>
 
@@ -235,8 +235,8 @@
       <div class="form-group">
         <label for="theme">Theme</label>
         <div class="type-selectors">
-          <button class="type-btn active theme-btn" data-theme="light">light</button>
-          <button class="type-btn theme-btn" data-theme="dark">dark</button>
+          <button class="type-btn active theme-btn" data-theme="light" onclick="if(window.__setTheme) window.__setTheme('light')">light</button>
+          <button class="type-btn theme-btn" data-theme="dark" onclick="if(window.__setTheme) window.__setTheme('dark')">dark</button>
         </div>
       </div>
 
@@ -297,21 +297,33 @@
         previewPoweredBy.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}`;
       }
 
+      window.__setType = function(type) {
+        currentType = type;
+        typeBtns.forEach(b => {
+          if (b.dataset.type === type) b.classList.add('active');
+          else b.classList.remove('active');
+        });
+        updateUI();
+      };
+
+      window.__setTheme = function(theme) {
+        currentTheme = theme;
+        themeBtns.forEach(b => {
+          if (b.dataset.theme === theme) b.classList.add('active');
+          else b.classList.remove('active');
+        });
+        updateUI();
+      };
+
       typeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-          typeBtns.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          currentType = btn.dataset.type;
-          updateUI();
+          window.__setType(btn.dataset.type);
         });
       });
 
       themeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-          themeBtns.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          currentTheme = btn.dataset.theme;
-          updateUI();
+          window.__setTheme(btn.dataset.theme);
         });
       });
 
@@ -329,10 +341,9 @@
       // Initial render
       updateUI();
     }
+    initEmbedBuilder();
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initEmbedBuilder);
-    } else {
-      initEmbedBuilder();
     }
   </script>
   <script src="help-widget.mjs" type="module"></script>

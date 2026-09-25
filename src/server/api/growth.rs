@@ -438,6 +438,7 @@ where
             get(handle_interactive_poll_embed),
         )
         .route("/milestone", get(handle_get_milestone))
+        .route("/milestone/card", get(handle_get_milestone_card))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
         .route(
