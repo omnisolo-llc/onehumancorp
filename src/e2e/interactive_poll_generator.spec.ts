@@ -16,7 +16,7 @@ test.describe('Interactive Poll Generator Growth Loop', () => {
 
         // 2. Configure the poll
         // Fill in the question
-        await page.fill('input[placeholder="e.g. What flavor should we make next?"]', 'Which new feature should we build?');
+        await page.fill('input[placeholder="E.g., What should we build next?"]', 'Which new feature should we build?');
 
         // Wait for the preview to update
         await expect(page.locator('h3:has-text("Which new feature should we build?")')).toBeVisible();

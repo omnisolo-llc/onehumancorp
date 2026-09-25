@@ -19,7 +19,7 @@ test.describe('Unlock Pro Features Virality Widget', () => {
         await expect(widget.locator('text=Copied Link!')).toBeVisible();
     } else {
         // If it's already unlocked (e.g. >= 3 invites), check for unlocked state
-        await expect(widget.locator('text=Pro Features Unlocked!')).toBeVisible();
+        await expect(widget.locator('text=Invite target reached')).toBeVisible();
     }
   });
 });

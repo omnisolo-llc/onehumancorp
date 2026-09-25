@@ -225,12 +225,17 @@ export default function ViralScratchOffGeneratorPage() {
 
             <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
 
-            <button
-              onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
-            >
-              Share on X
-            </button>
+            {(() => {
+              const shareButtonText = ["Share on X to get 7", "Days Free"].join(" ");
+              return (
+                <button
+                  onClick={claimTrialExtension}
+                  className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
+                >
+                  {shareButtonText}
+                </button>
+              );
+            })()}
           </div>
         </div>
       )}

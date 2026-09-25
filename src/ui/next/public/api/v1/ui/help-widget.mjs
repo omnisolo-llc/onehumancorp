@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.createElement('button');
     btn.id = 'ohc-floating-help-btn';
     btn.className = 'omnisolo-floating-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
+    btn.setAttribute('aria-label', 'Open Help Center');
     btn.setAttribute('data-tooltip-id', 'omnisolo-floating-help-btn');
     btn.setAttribute('data-tooltip', 'Open Help Center');
     btn.title = 'Help';

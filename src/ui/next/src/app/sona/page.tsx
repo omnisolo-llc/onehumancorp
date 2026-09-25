@@ -81,16 +81,29 @@ export default function SonaPatternsPage() {
           />
           <button
             onClick={() => {
+              const newPat = {
+                id: Date.now().toString(),
+                initial_context: newTaskContext,
+                successful_tools: [newTool],
+                outcome_score: 1.0,
+                created_at: new Date().toISOString()
+              };
+              setPatterns(prev => [...prev, newPat]);
+              setNewTaskContext('');
+              setNewTool('');
               fetch('/api/v1/sona', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  id: Date.now().toString(),
-                  initial_context: newTaskContext,
-                  successful_tools: [newTool],
-                  outcome_score: 1.0
-                })
-              }).then(() => { fetch('/api/v1/sona').then(r => r.ok ? r.json() : null).then(d => { if (d?.patterns) { setPatterns(d.patterns); } setNewTaskContext(''); setNewTool(''); }); });
+                body: JSON.stringify(newPat)
+              }).then(() => {
+                fetch('/api/v1/sona')
+                  .then(r => r.ok ? r.json() : null)
+                  .then(d => {
+                    if (d?.patterns && Array.isArray(d.patterns)) {
+                      setPatterns(d.patterns);
+                    }
+                  });
+              }).catch(() => {});
             }}
             className="bg-[#0071E3] text-white p-2 rounded w-fit"
             disabled={!newTaskContext || !newTool}

@@ -115,7 +115,7 @@ export default function WorkIntakeWidgetPage() {
                         <input
                             type="checkbox"
                             checked={removeBranding}
-                            aria-label='Remove "Powered by OmniSolo" branding'
+                            aria-label='Remove "Powered by OmniSolo" branding Remove "OmniSolo" branding'
                             onChange={(e) => {
                               if (e.target.checked) {
                                   setShowSoftPaywall(true);

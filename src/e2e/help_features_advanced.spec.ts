@@ -32,7 +32,7 @@ test.describe('In-App Help & Documentation Features', () => {
     // We will check the help widget.
 
     // Open help widget
-    const helpBtn = page.getByRole('button', { name: 'Help' });
+    const helpBtn = page.getByRole('button', { name: 'Help', exact: true });
     await helpBtn.waitFor({ state: 'visible' });
     await helpBtn.click();
 
