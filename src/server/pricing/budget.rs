@@ -1,82 +1,42 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
+use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PayerMode {
+    #[default]
+    Managed,
+    Byok,
+}
+
 pub struct BudgetState {
     pub total_allocated: i64,
-    pub settled: i64,
 }
 
 pub struct BudgetManager {
-    pub total_limit: f64,
     pub total_limit_cents: i64,
-    pub state: Arc<Mutex<BudgetState>>,
-    pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
-    tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
-}
-
-#[derive(Debug)]
-pub struct BudgetReservation {
-    amount_cents: i64,
-    pub state: Arc<Mutex<BudgetState>>,
-    pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
+    pub state: Mutex<BudgetState>,
     pub tenant_id: Option<String>,
-    pub is_settled: bool,
-}
-
-impl BudgetReservation {
-    pub fn settle(mut self) -> Result<(), String> {
-        let mut state = self.state.lock().unwrap();
-        state.settled = state
-            .settled
-            .checked_add(self.amount_cents)
-            .ok_or("Overflow in settled amount")?;
-        drop(state);
-        self.is_settled = true;
-
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            store.llm_cost_counter.add(
-                self.amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-            store.mission_cost_cents.add(
-                self.amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-        }
-        Ok(())
-    }
-}
-
-impl Drop for BudgetReservation {
-    fn drop(&mut self) {
-        if !self.is_settled {
-            let mut state = self.state.lock().unwrap();
-            state.total_allocated = state.total_allocated.saturating_sub(self.amount_cents);
-        }
-    }
+    pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
 }
 
 impl BudgetManager {
-    pub fn new(limit: f64) -> Self {
-        // Invalid limits fail closed; retain the explicit legacy MAX sentinel.
-        let total_limit_cents = if limit == f64::MAX {
-            i64::MAX
-        } else if !limit.is_finite() || limit < 0.0 || limit * 100.0 >= i64::MAX as f64 {
-            0
-        } else {
-            (limit * 100.0).round() as i64
-        };
-        BudgetManager {
-            total_limit: limit,
-            state: Arc::new(Mutex::new(BudgetState {
-                total_allocated: 0,
-                settled: 0,
-            })),
+    pub fn new(total_limit: f64) -> Self {
+        let total_limit_cents =
+            if total_limit.is_nan() || total_limit.is_infinite() || total_limit < 0.0 {
+                -1 // Fail closed for invalid limits
+            } else if total_limit > (i64::MAX as f64) / 100.0 {
+                i64::MAX
+            } else {
+                (total_limit * 100.0).round() as i64
+            };
+
+        Self {
             total_limit_cents,
-            telemetry_store: None,
-            tenant_id: None,
             alert_threshold_percent: 80.0,
+            state: Mutex::new(BudgetState { total_allocated: 0 }),
+            tenant_id: None,
+            telemetry_store: None,
         }
     }
 
@@ -95,80 +55,92 @@ impl BudgetManager {
         self
     }
 
-    pub fn record_spend(&self, amount: f64) -> Result<bool, String> {
-        if amount < 0.0 {
-            return Err("spend amount cannot be negative".to_string());
-        }
-        if !amount.is_finite() || amount * 100.0 >= i64::MAX as f64 {
-            return Err("spend amount must be finite and bounded".to_string());
-        }
-        let amount_cents = (amount * 100.0).round() as i64;
-        self.record_spend_cents(amount_cents)
-    }
-
-    pub fn reserve(&self, amount_cents: i64) -> Result<BudgetReservation, String> {
-        if amount_cents < 0 {
-            return Err("spend amount cannot be negative".to_string());
-        }
-        if amount_cents == 0 {
-            let state = self.state.lock().unwrap();
-            if self.total_limit_cents - state.total_allocated < 0 {
-                return Err("budget limit exceeded".to_string());
-            }
-            drop(state);
-            return Ok(BudgetReservation {
-                amount_cents: 0,
-                state: self.state.clone(),
-                telemetry_store: self.telemetry_store.clone(),
-                tenant_id: self.tenant_id.clone(),
-                is_settled: false,
-            });
-        }
-
-        let mut state = self.state.lock().unwrap();
-        match state.total_allocated.checked_add(amount_cents) {
-            Some(next) if next <= self.total_limit_cents => {
-                state.total_allocated = next;
-                drop(state);
-
-                if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-                    tracing::info!(
-                        "💰 Miser telemetry: Recording budget spend for tenant {}",
-                        tid
-                    ); // pii-safe
-                }
-
-                Ok(BudgetReservation {
-                    amount_cents,
-                    state: self.state.clone(),
-                    telemetry_store: self.telemetry_store.clone(),
-                    tenant_id: self.tenant_id.clone(),
-                    is_settled: false,
-                })
-            }
-            _ => Err("budget limit exceeded".to_string()),
-        }
-    }
-
-    pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
-        match self.reserve(amount_cents) {
-            Ok(reservation) => {
-                reservation.settle()?;
-                Ok(true)
-            }
-            Err(e) if e == "spend amount cannot be negative" => Err(e),
-            Err(_) => Ok(false),
-        }
-    }
-
     pub fn get_remaining(&self) -> f64 {
-        let current = self.state.lock().unwrap().total_allocated;
-        (self.total_limit_cents - current) as f64 / 100.0
+        self.get_remaining_cents() as f64 / 100.0
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.state.lock().unwrap().total_allocated;
-        self.total_limit_cents - current
+        if self.total_limit_cents <= 0 {
+            return 0;
+        }
+        let allocated = self.state.lock().unwrap().total_allocated;
+        self.total_limit_cents.saturating_sub(allocated).max(0)
+    }
+
+    /// Record spend with the default PayerMode::Managed.
+    pub fn record_spend(&self, amount: f64) -> Result<bool, String> {
+        self.record_spend_with_mode(amount, PayerMode::Managed)
+    }
+
+    /// Record spend with a specific PayerMode. BYOK spends are not deducted from the OHC budget.
+    pub fn record_spend_with_mode(
+        &self,
+        amount: f64,
+        payer_mode: PayerMode,
+    ) -> Result<bool, String> {
+        if amount.is_nan() || amount.is_infinite() {
+            return Err("invalid spend amount".to_string());
+        }
+        if amount < 0.0 {
+            return Err("spend amount cannot be negative".to_string());
+        }
+
+        if amount > (i64::MAX as f64) / 100.0 {
+            return Err("spend amount too large".to_string());
+        }
+
+        let amount_cents = (amount * 100.0).round() as i64;
+        self.record_spend_cents_with_mode(amount_cents, payer_mode)
+    }
+
+    /// Record spend in cents with the default PayerMode::Managed.
+    pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        self.record_spend_cents_with_mode(amount_cents, PayerMode::Managed)
+    }
+
+    /// Record spend in cents with a specific PayerMode.
+    pub fn record_spend_cents_with_mode(
+        &self,
+        amount_cents: i64,
+        payer_mode: PayerMode,
+    ) -> Result<bool, String> {
+        if amount_cents < 0 {
+            return Err("spend amount cannot be negative".to_string());
+        }
+
+        // Emit telemetry if configured, regardless of payer mode.
+        // We include a unique idempotency key for every event.
+        if let Some(store) = &self.telemetry_store {
+            let tenant = self.tenant_id.as_deref().unwrap_or("unknown");
+            let idempotency_key = Uuid::new_v4().to_string();
+            let mode_str = match payer_mode {
+                PayerMode::Managed => "MANAGED",
+                PayerMode::Byok => "BYOK",
+            };
+            store.record_spend(tenant, amount_cents, mode_str, &idempotency_key);
+        }
+
+        // BYOK inference costs are visually tracked but explicitly zeroed out in OHC's internal revenue ledger.
+        // Therefore, they do not consume the OHC-managed budget.
+        if payer_mode == PayerMode::Byok {
+            return Ok(true); // Always allow BYOK spend as it doesn't hit OHC budget limits.
+        }
+
+        if self.total_limit_cents <= 0 {
+            return Ok(amount_cents == 0); // Only allow 0 if limit is <= 0
+        }
+
+        let mut state = self.state.lock().unwrap();
+
+        // Check if we can allocate without overflowing or exceeding limit
+        if let Some(new_total) = state.total_allocated.checked_add(amount_cents)
+            && new_total <= self.total_limit_cents
+        {
+            state.total_allocated = new_total;
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 
     pub fn check_alert_threshold(&self) -> bool {
@@ -176,7 +148,7 @@ impl BudgetManager {
             return false;
         }
         let current = self.state.lock().unwrap().total_allocated;
-        let usage_percent = (current as f64 / self.total_limit_cents as f64) * 100.0;
+        let usage_percent = (current as f64) / (self.total_limit_cents as f64) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
@@ -271,6 +243,27 @@ mod tests {
         assert!(manager.record_spend_cents(1000).unwrap()); // spend $10
         assert_eq!(manager.get_remaining(), 40.0);
         assert_eq!(manager.get_remaining_cents(), 4000);
+    }
+
+    #[test]
+    fn test_budget_manager_byok() {
+        let manager = BudgetManager::new(100.0);
+        assert_eq!(manager.get_remaining(), 100.0);
+
+        // BYOK spend should not decrease remaining balance
+        assert!(
+            manager
+                .record_spend_cents_with_mode(1000, PayerMode::Byok)
+                .unwrap()
+        );
+        assert_eq!(manager.get_remaining(), 100.0);
+
+        assert!(
+            manager
+                .record_spend_with_mode(50.0, PayerMode::Byok)
+                .unwrap()
+        );
+        assert_eq!(manager.get_remaining(), 100.0);
     }
 
     #[test]

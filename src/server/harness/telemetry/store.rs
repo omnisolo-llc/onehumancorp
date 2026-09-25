@@ -47,6 +47,27 @@ impl ViolationStore {
         }
     }
 
+    pub fn record_spend(
+        &self,
+        tenant_id: &str,
+        amount_cents: i64,
+        mode_str: &str,
+        idempotency_key: &str,
+    ) {
+        // Here we just emit the open telemetry metric for tracking the spend
+        // The idempotency key and other tags can be added via the KeyValue store
+        if amount_cents > 0 {
+            self.mission_cost_cents.add(
+                amount_cents as u64,
+                &[
+                    KeyValue::new("tenant", tenant_id.to_string()),
+                    KeyValue::new("payer_mode", mode_str.to_string()),
+                    KeyValue::new("idempotency_key", idempotency_key.to_string()),
+                ],
+            );
+        }
+    }
+
     pub async fn record_violation(
         &self,
         tenant_id: &str,
