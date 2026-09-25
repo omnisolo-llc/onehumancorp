@@ -7360,60 +7360,94 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         _mobile_optimized: bool,
     ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
         let limit = 20i64;
+        let query_pg = r#"
+            SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
+            UNION ALL
+            SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+            UNION ALL
+            SELECT id, tenant_id, 'orders' as event_source, jsonb_build_object('description', 'Pending Order') as context_payload, jsonb_build_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
+            UNION ALL
+            SELECT id, tenant_id, 'invoices' as event_source, jsonb_build_object('description', 'Action Required: Overdue Invoice') as context_payload, jsonb_build_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
+            ORDER BY created_at DESC LIMIT $2
+        "#;
+        let query_sqlite = r#"
+            SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ?
+            UNION ALL
+            SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected')
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+            UNION ALL
+            SELECT id, tenant_id, 'orders' as event_source, json_object('description', 'Pending Order') as context_payload, json_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = ? AND status = 'pending'
+            UNION ALL
+            SELECT id, tenant_id, 'invoices' as event_source, json_object('description', 'Action Required: Overdue Invoice') as context_payload, json_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = ? AND status IN ('draft', 'overdue')
+            ORDER BY created_at DESC LIMIT ?
+        "#;
         match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                let rows = sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload::text, proposed_action::text, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type)::text as context_payload, payload::text as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
-                )
+                let rows = sqlx::query_as::<
+                    _,
+                    crate::domain::repository::agent_feed_repo::AgentFeedItem,
+                >(query_pg)
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(&mut *tx)
                 .await?;
                 tx.commit().await?;
-                Ok(rows.into_iter().map(|row| {
-                    let event_src = row.get::<String, _>("event_source");
-                    let prop_action = row.get::<Option<String>, _>("proposed_action");
+                Ok(rows.into_iter().map(|item| {
+                    let prop = item.proposed_action.map(|j| j.0);
+                    let ctx = item.context_payload.map(|j| j.0);
                     serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "event_source": event_src.clone(),
-                        "source": event_src,
-                        "context_payload": row.get::<Option<String>, _>("context_payload"),
-                        "proposed_action": prop_action.clone(),
-                        "payload": prop_action,
-                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                        "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                        "id": item.id,
+                        "tenant_id": item.tenant_id,
+                        "event_source": item.event_source.clone(),
+                        "source": item.event_source,
+                        "context_payload": ctx,
+                        "proposed_action": prop.clone(),
+                        "payload": prop,
+                        "lifecycle_state": item.lifecycle_state,
+                        "created_at": item.created_at.map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                        "updated_at": item.updated_at.map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                     })
-                }).collect::<Vec<_>>())
+                }).collect())
             }
             crate::db::DbStore::Sqlite(pool) => {
-                sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT ?"
-                )
+                let rows = sqlx::query_as::<
+                    _,
+                    crate::domain::repository::agent_feed_repo::AgentFeedItem,
+                >(query_sqlite)
+                .bind(tenant_id)
+                .bind(tenant_id)
+                .bind(tenant_id)
+                .bind(tenant_id)
                 .bind(tenant_id)
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(pool)
-                .await
-                .map(|rows| rows.into_iter().map(|row| {
-                    let event_src = row.get::<String, _>("event_source");
-                    let prop_action = row.get::<Option<String>, _>("proposed_action");
+                .await?;
+                Ok(rows.into_iter().map(|item| {
+                    let prop = item.proposed_action.map(|j| j.0);
+                    let ctx = item.context_payload.map(|j| j.0);
                     serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "event_source": event_src.clone(),
-                        "source": event_src,
-                        "context_payload": row.get::<Option<String>, _>("context_payload"),
-                        "proposed_action": prop_action.clone(),
-                        "payload": prop_action,
-                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                        "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
+                        "id": item.id,
+                        "tenant_id": item.tenant_id,
+                        "event_source": item.event_source.clone(),
+                        "source": item.event_source,
+                        "context_payload": ctx,
+                        "proposed_action": prop.clone(),
+                        "payload": prop,
+                        "lifecycle_state": item.lifecycle_state,
+                        "created_at": item.created_at.map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                        "updated_at": item.updated_at.map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                     })
-                }).collect::<Vec<_>>())
+                }).collect())
             }
         }
     }

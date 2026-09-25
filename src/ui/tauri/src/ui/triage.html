@@ -556,7 +556,9 @@
         const listEl = document.getElementById("triage-list");
         const detailEl = document.getElementById("triage-detail");
         try {
-          const res = await fetch(`/api/v1/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
+          const urlParams = new URLSearchParams(window.location.search);
+          const bypass = urlParams.get('bypass_cache') ? '&bypass_cache=true' : '';
+          const res = await fetch(`/api/v1/ui/triage?tenant_id=${encodeURIComponent(tenantId())}${bypass}`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();

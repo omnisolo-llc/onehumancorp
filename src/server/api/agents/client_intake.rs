@@ -65,7 +65,11 @@ impl ResearcherLlmClient for LocalLlm {
         let (response_text, usage) = if is_test_mode {
             (
                 r#"{"service": "Plumbing Fix", "price": 250.0}"#.to_string(),
-                Usage::default(),
+                Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    ..Default::default()
+                },
             )
         } else {
             match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {

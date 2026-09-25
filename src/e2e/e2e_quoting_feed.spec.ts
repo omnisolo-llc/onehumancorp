@@ -16,9 +16,8 @@ test.describe('Quote Feed e2e', () => {
     await expect(page.getByText('Fix leaking sink for John Doe').first()).toBeVisible({ timeout: 15000 });
 
     // 3. Tap approve
-    // Deep link works
     const reviewBtn = page.locator('[data-testid="review-quote-draft"]').first();
-    await reviewBtn.scrollIntoViewIfNeeded();
+    await expect(reviewBtn).toBeVisible({ timeout: 15000 });
     await reviewBtn.click();
 
     const dialog = page.locator('[role="dialog"], [data-testid="quote-review-dialog"]').first();

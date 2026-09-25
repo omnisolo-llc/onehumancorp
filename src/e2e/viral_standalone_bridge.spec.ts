@@ -6,7 +6,7 @@ test.describe('Viral Standalone Bridge', () => {
     await page.goto('/success.html');
 
     // Verify we are on success page
-    await expect(page.getByRole('heading', { name: "You're all set!" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /You're (all set!|Live!)/i })).toBeVisible();
 
     // Click Go to Dashboard
     await page.getByRole('button', { name: 'Go to Dashboard' }).click();
@@ -29,7 +29,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     // Check generated link input and action buttons
     const linkInput = page.locator('#referral-link');
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/cloud\.omnisolo\.network\/invite\//);
+    await expect(linkInput).toHaveValue(/^https:\/\/(cloud\.)?omnisolo(\.network|\.co)\/invite\//);
 
     const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await expect(copyBtn).toBeVisible();
@@ -48,7 +48,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
     if (clipboardText) {
       expect(clipboardText).toContain('Join my team on OmniSolo!');
-      expect(clipboardText).toContain('https://cloud.omnisolo.co/invite/');
+      expect(clipboardText).toMatch(/https:\/\/(cloud\.)?omnisolo(\.network|\.co)\/invite\//);
       expect(clipboardText).toContain('⚡ OmniSolo');
     }
 

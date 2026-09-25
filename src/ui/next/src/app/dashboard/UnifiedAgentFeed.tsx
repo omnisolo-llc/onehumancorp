@@ -65,13 +65,21 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   const groupedProposals = useMemo(() => {
     const groups: Record<string, { groupKey: string; title: string; items: AgentFeedItem[] }> = {};
     items.forEach(item => {
-      const featureType = item.proposed_action?.feature_type || item.context_payload?.feature_type || item.event_source || "unknown";
-      const actionType = item.proposed_action?.action_type || "default";
-      const key = (featureType === 'ambassador_reply' || featureType.toLowerCase() === 'ambassador') ? `ambassador_reply-${item.id}` : `${featureType}-${actionType}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const propAction: any = typeof item.proposed_action === "string" ? (() => { try { return JSON.parse(item.proposed_action); } catch { return {}; } })() : (item.proposed_action || {});
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ctxPayload: any = typeof item.context_payload === "string" ? (() => { try { return JSON.parse(item.context_payload); } catch { return {}; } })() : (item.context_payload || {});
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawPayload: any = typeof (item as any).payload === "string" ? (() => { try { return JSON.parse((item as any).payload); } catch { return {}; } })() : ((item as any).payload || {});
+
+      const featureType = propAction?.feature_type || ctxPayload?.feature_type || rawPayload?.feature_type || item.event_source || "unknown";
+      const actionType = propAction?.action_type || "default";
+      const isAmb = featureType === 'ambassador_reply' || (typeof featureType === 'string' && featureType.toLowerCase() === 'ambassador') || item.event_source?.toLowerCase() === 'ambassador';
+      const key = isAmb ? `ambassador_reply-${item.id}` : `${featureType}-${actionType}`;
       if (!groups[key]) {
         groups[key] = {
           groupKey: key,
-          title: featureType.replace(/_/g, " "),
+          title: String(featureType).replace(/_/g, " "),
           items: []
         };
       }
@@ -397,6 +405,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
             const parsedCombinedItems = combinedItems.map((item) => ({
               ...item,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              payload: safeParsePayload((item as any).payload || item.proposed_action),
               context_payload: safeParsePayload(item.context_payload),
               proposed_action: safeParsePayload(item.proposed_action),
             }));
@@ -525,8 +535,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     modified_content?: string,
     event_source?: string,
   ): Promise<void> => {
-    // Optimistically remove card immediately from UI
-    setItems((prev) => prev.filter((app) => app.id !== id));
+    // Optimistically remove card immediately from UI (delay 500ms if approved to show transition)
+    if (approved) {
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
+    } else {
+      setItems((prev) => prev.filter((app) => app.id !== id));
+    }
 
     if (isOffline) {
       // Enqueue offline action
@@ -667,12 +683,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
             {groupedProposals.map((group) => {
               if (group.items.length === 1) {
                 const approval = group.items[0];
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const propAction: any = typeof approval.proposed_action === "string" ? (() => { try { return JSON.parse(approval.proposed_action); } catch { return {}; } })() : (approval.proposed_action || {});
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const ctxPayload: any = typeof approval.context_payload === "string" ? (() => { try { return JSON.parse(approval.context_payload); } catch { return {}; } })() : (approval.context_payload || {});
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const rawPayload: any = typeof (approval as any).payload === "string" ? (() => { try { return JSON.parse((approval as any).payload); } catch { return {}; } })() : ((approval as any).payload || {});
+
                 const isAmbassador =
                   approval.event_source === "ambassador" ||
                   approval.event_source?.toLowerCase() === "ambassador" ||
-                  approval.payload?.feature_type === "ambassador_reply" ||
-                  approval.proposed_action?.feature_type === "ambassador_reply" ||
-                  approval.context_payload?.feature_type === "ambassador_reply";
+                  rawPayload?.feature_type === "ambassador_reply" ||
+                  propAction?.feature_type === "ambassador_reply" ||
+                  ctxPayload?.feature_type === "ambassador_reply";
 
                 if (isAmbassador) {
                   return (
