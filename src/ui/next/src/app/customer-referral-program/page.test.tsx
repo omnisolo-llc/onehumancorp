@@ -115,7 +115,7 @@ describe('CustomerReferralProgramPage', () => {
         fireEvent.click(toggle);
     });
 
-    expect(screen.queryByText('Pro Feature')).toBeNull();
+    await waitFor(() => { expect(screen.queryByText('Pro Feature')).toBeNull(); });
     // The exact text "⚡ Powered by OmniSolo" in the preview should be removed
     expect(screen.queryByText('⚡ Powered by OmniSolo')).toBeNull();
   });
