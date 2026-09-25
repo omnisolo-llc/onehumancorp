@@ -7,8 +7,9 @@ test('viral_upgrade_paywall', async ({ page, request, loginAs, adminUser }) => {
 });
 
 test.describe('Viral SaaS Upgrade Soft Paywall Growth Loop', () => {
-  test('should display the upgrade paywall widget on the dashboard', async ({ page }) => {
+  test('should display the upgrade paywall widget on the dashboard', async ({ page, loginAs, adminUser }) => {
     // Navigate to dashboard
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 

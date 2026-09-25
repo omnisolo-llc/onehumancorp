@@ -653,7 +653,7 @@ export function HelpWidget() {
           aria-modal="true"
         >
           <div
-            className="bg-black backdrop-blur-3xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in"
+            className="bg-black backdrop-blur-3xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] max-h-[90vh] mx-auto aspect-[9/16] relative animate-pop-in"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

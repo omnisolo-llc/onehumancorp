@@ -54,7 +54,7 @@ test.describe('Interactive Poll Generator Growth Loop', () => {
             await page.goto(embedUrl);
 
             // Verify the poll rendered correctly
-            await expect(page.locator('h3')).toContainText('Which new feature should we build?');
+            await expect(page.locator('h3').first()).toContainText('Which new feature should we build?');
             await expect(page.locator('button:has-text("AI Analytics")')).toBeVisible();
             await expect(page.locator('button:has-text("Mobile App")')).toBeVisible();
             await expect(page.locator('button:has-text("Dark Mode")')).toBeVisible();

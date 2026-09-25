@@ -18,6 +18,7 @@ test.describe('Documentation Features', () => {
     await page.goto('/');
     const helpButton = page.locator('#omnisolo-floating-help-btn');
     await expect(helpButton).toBeVisible();
+    await helpButton.scrollIntoViewIfNeeded();
     await helpButton.click({ force: true });
 
     // Help Widget appears
@@ -35,6 +36,7 @@ test.describe('Documentation Features', () => {
     await page.goto('/');
     const helpButton = page.locator('#omnisolo-floating-help-btn');
     await expect(helpButton).toBeVisible();
+    await helpButton.scrollIntoViewIfNeeded();
     await helpButton.click({ force: true });
 
     // Check if the walkthrough start button is there

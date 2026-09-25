@@ -110,6 +110,7 @@ where
 {
     Router::new()
         .route("/", get(list_feed_items).post(create_feed_item))
+        .route("", get(list_feed_items).post(create_feed_item))
         .route("/{id}", put(update_feed_item_state))
         .route("/{id}/state", put(update_feed_item_state))
         .route("/ws", get(ws_feed_handler))
