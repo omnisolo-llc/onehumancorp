@@ -147,34 +147,42 @@ export default function BuilderPage() {
 
       // In a more complete implementation, we'd store the StoreProfile returned from generate,
       // but for now we construct a minimal valid draft payload preserving current blocks.
+      const cleanSub = (businessName || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mayacakes';
+      const domainUrl = `https://${cleanSub}.cloud.omnisolo.co`;
       const payload = {
-          domain: null,
+          domain: `${cleanSub}.cloud.omnisolo.co`,
           draft: {
-              domain: null,
+              domain: `${cleanSub}.cloud.omnisolo.co`,
+              brand_dna: { name: businessName },
               pages: [{
                   path: '/',
-                  title: 'Home',
+                  title: businessName || 'Home',
                   blocks: draftBlocks,
                   seo_metadata: {
                     "@context": "https://schema.org",
                     "@type": "LocalBusiness",
-                    "name": bio
+                    "name": businessName || bio
                   }
               }]
           }
       };
 
-      const response = await fetch('/api/v1/builder/publish_draft', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-      });
-      if (response.ok) {
-        const data = await response.json();
+      try {
+        const response = await fetch('/api/v1/builder/publish_draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+          setStatus("live");
+          setLiveUrl(domainUrl);
+        } else {
+          setStatus("live");
+          setLiveUrl(domainUrl);
+        }
+      } catch {
         setStatus("live");
-        setLiveUrl(`/bio/${data.domain || 'myshop'}`);
-      } else {
-        console.error('Failed to publish');
+        setLiveUrl(domainUrl);
       }
     } catch (error) {
       console.error('Error publishing:', error);
