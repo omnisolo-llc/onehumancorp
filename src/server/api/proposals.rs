@@ -99,6 +99,17 @@ impl ResearcherLlmClient for AdapterLlm {
             prompt.push_str(&msg.content);
         }
 
+        let is_test_mode = cfg!(test);
+
+        if is_test_mode {
+            return Ok(ChatResponse {
+                message: Message::assistant(r#"[{"description": "Generated Item", "unit_price_cents": 1000, "quantity": 2, "is_optional": false}]"#.to_string()),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+                stop_reason: "stop".to_string(),
+                response_id: None,
+            });
+        }
+
         let observed = crate::minimax::LocalLLMClient::new()
             .reason_with_usage(&prompt, req.max_tokens)
             .await?;

@@ -25,7 +25,7 @@ impl ResearcherLlmClient for AdapterLlm {
 
         let is_test_mode = cfg!(test);
 
-        let response_text = if is_test_mode {
+        let (response_text, usage) = if is_test_mode {
             let candidate = prompt
                 .split_once("test-service-item:")
                 .map(|(_, after)| after.split_whitespace().next().unwrap_or(""));
@@ -39,22 +39,25 @@ impl ResearcherLlmClient for AdapterLlm {
                 None
             };
 
-            if let Some(id) = service_item_id {
+            let response_text = if let Some(id) = service_item_id {
                 format!(
                     r#"[{{"description":"Test service item","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{id}"}}]"#
                 )
             } else {
                 r#"[{{"description":"Generated Item","unit_price_cents":1000,"quantity":2,"is_optional":false,"service_item_id":null}}]"#.to_string()
-            }
+            };
+            (response_text, Usage { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 })
         } else {
             let client = ::omnisolo_builtin_agent::llm::minimax::MiniMaxClient::from_env().unwrap();
             let res = client.chat(req.clone()).await?;
-            res.message.content
+            (res.message.content, res.usage)
         };
 
         Ok(ChatResponse {
             message: Message::assistant(response_text),
-            ..Default::default()
+            usage,
+            stop_reason: "stop".to_string(),
+            response_id: None,
         })
     }
 }
