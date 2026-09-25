@@ -710,9 +710,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
-            filteredVideos = allVideos.filter(v =>
-                v.title.toLowerCase().includes(lowerQuery)
-            );
+            const queryWords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+            filteredVideos = allVideos.filter(v => {
+                const titleLower = v.title.toLowerCase();
+                return titleLower.includes(lowerQuery) || queryWords.some(w => titleLower.includes(w));
+            });
         }
 
         if (filteredArticles.length === 0 && filteredVideos.length === 0) {
@@ -739,8 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 catArticles.forEach(article => {
                     // Extract article ID from link for Tauri routing
                     const articleId = article.link.split('/').pop();
+                    const href = articleId === 'api-docs' ? 'api-docs.html' : `help_article.html?id=${articleId}`;
                     html += `
-                      <a href="help_article.html?id=${articleId}" class="card glassmorphism glassmorphism">
+                      <a href="${href}" class="card glassmorphism glassmorphism">
                         <h4>${article.title}</h4>
                         <p>${article.desc}</p>
                       </a>

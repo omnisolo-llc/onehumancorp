@@ -21,7 +21,7 @@ test.describe('Zero-Click Onboarding Flow', () => {
     await page.locator('#generate-storefront-btn').click();
 
     // Wait for the approval details screen
-    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('h1', { hasText: 'Ready to Launch' }).first()).toBeVisible({ timeout: 30000 });
     await expect(page.locator('#approval-details')).toBeVisible();
 
     // Click Approve & Publish

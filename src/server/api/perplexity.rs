@@ -1,18 +1,15 @@
-use axum::{extract::State, routing::post, Json, Router};
+use axum::{Json, Router, routing::post};
+use omnisolo_builtin_agent::perplexity::{PerplexityAgent, PerplexityLlmClient};
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use omnisolo_builtin_agent_lib::perplexity::PerplexityAgent;
-
-// We use the exact mock from tests, to make the agent testable in e2e isolated environments
-use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 struct E2EPerplexityLlm {
     responses: Mutex<Vec<String>>,
 }
 
 #[async_trait::async_trait]
-impl omnisolo_builtin_agent_lib::llm::LlmClient for E2EPerplexityLlm {
+impl PerplexityLlmClient for E2EPerplexityLlm {
     async fn chat(
         &self,
         _req: ChatRequest,
@@ -26,6 +23,7 @@ impl omnisolo_builtin_agent_lib::llm::LlmClient for E2EPerplexityLlm {
 
         Ok(ChatResponse {
             message: Message::assistant(&content),
+            usage: Usage::default(),
             stop_reason: "stop".to_string(),
             response_id: Some("mock-id".to_string()),
         })
@@ -46,7 +44,9 @@ async fn handle_perplexity_query(
     Json(req): Json<PerplexityQueryReq>,
 ) -> Result<Json<PerplexityQueryResp>, String> {
     let llm = Arc::new(E2EPerplexityLlm {
-        responses: Mutex::new(vec!["According to source [1], the sky is blue. [1] https://example.com".to_string()]),
+        responses: Mutex::new(vec![
+            "According to source [1], the sky is blue. [1] https://example.com".to_string(),
+        ]),
     });
 
     let agent = PerplexityAgent::new(llm, "default".to_string());
@@ -57,6 +57,9 @@ async fn handle_perplexity_query(
     }
 }
 
-pub fn router() -> Router {
+pub fn router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     Router::new().route("/query", post(handle_perplexity_query))
 }

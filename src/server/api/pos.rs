@@ -265,7 +265,7 @@ pub async fn post_inventory_handler(
                         .await;
 
                 // Update centralized inventory level
-                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1), quantity = GREATEST(0, quantity + $1) WHERE (variant_id = $2 OR product_id = $2) AND tenant_id = $3 RETURNING id")
+                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1), updated_at = CURRENT_TIMESTAMP WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
                         .bind(quantity_change)
                         .bind(item_id)
                         .bind(&tenant_id)
@@ -278,7 +278,7 @@ pub async fn post_inventory_handler(
                 } else if let Ok(None) = &update_res {
                     // Insert if not exists
                     inv_lvl_id = uuid::Uuid::new_v4().to_string();
-                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, product_id, location, location_id, available_count, quantity) VALUES ($1, $2, $3, $3, $4, $4, GREATEST(0, 12 + $5), GREATEST(0, 12 + $5))")
+                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count, committed_count) VALUES ($1, $2, $3, $4, GREATEST(0, 12 + $5), 0)")
                             .bind(&inv_lvl_id)
                             .bind(&tenant_id)
                             .bind(item_id)
