@@ -45,7 +45,7 @@ test.describe('WhatsApp Integration UI', () => {
     await expect(phoneInput).toHaveValue('+1234567890');
 
     // Close modal
-    await page.locator('button').filter({ has: page.locator('svg') }).click();
+    await page.locator('.fixed.inset-0 button[aria-label="Close modal"]').click();
     await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp' })).toBeHidden();
   });
 
