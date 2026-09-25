@@ -1036,14 +1036,24 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         }
-        "invoice.payment_succeeded" | "invoice.paid" => {
-            let stripe_invoice_id = payload
+        "invoice.payment_succeeded" | "invoice.paid" | "checkout.session.completed" => {
+            let mut stripe_invoice_id = payload
                 .data
                 .object
                 .get("id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
+
+            if payload.r#type == "checkout.session.completed" {
+                stripe_invoice_id = payload
+                    .data
+                    .object
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+            }
             if !stripe_invoice_id.is_empty() {
                 match &webhook_state.db.store {
                     crate::db::DbStore::Postgres => {
