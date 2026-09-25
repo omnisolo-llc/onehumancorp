@@ -6275,10 +6275,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
         match &db.store {
             crate::db::DbStore::Postgres => {
-                if mobile_optimized {
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let res = if mobile_optimized {
                     sqlx::query("SELECT o.id, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status FROM orders o WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
                     .bind(tenant_id)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -6289,7 +6291,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
                     .bind(tenant_id)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -6299,7 +6301,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             "created_at": row.get::<String, _>("created_at")
                         })
                     }).collect())
-                }
+                };
+                tx.commit().await?;
+                res
             }
             crate::db::DbStore::Sqlite(pool) => {
                 if mobile_optimized {
@@ -6471,10 +6475,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
         match &db.store {
             crate::db::DbStore::Postgres => {
-                if mobile_optimized {
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let res = if mobile_optimized {
                     sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -6486,7 +6492,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -6501,7 +6507,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             "created_at": row.get::<String, _>("created_at")
                         })
                     }).collect())
-                }
+                };
+                tx.commit().await?;
+                res
             }
             crate::db::DbStore::Sqlite(pool) => {
                 if mobile_optimized {
@@ -6650,11 +6658,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let limit = 20i64;
         match &db.store {
             crate::db::DbStore::Postgres => {
-                if mobile_optimized {
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let res = if mobile_optimized {
                     sqlx::query("SELECT id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
                     .bind(tenant_id)
                     .bind(limit)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -6668,7 +6678,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
                     .bind(tenant_id)
                     .bind(limit)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -6680,7 +6690,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             "payload": row.get::<Option<serde_json::Value>, _>("payload")
                         })
                     }).collect())
-                }
+                };
+                tx.commit().await?;
+                res
             }
             crate::db::DbStore::Sqlite(pool) => {
                 if mobile_optimized {
@@ -6726,10 +6738,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let limit_ledger = 50i64;
         match &db.store {
         crate::db::DbStore::Postgres => {
-            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
+            let mut tx = db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+            let res = if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
                 .bind(tenant_id)
                 .bind(limit_ledger)
-                .fetch_all(&db.pool)
+                .fetch_all(&mut *tx)
                 .await.map(|rows| rows.into_iter().map(|row| {
                     if mobile_optimized {
                         serde_json::json!({
@@ -6748,7 +6762,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339()
                         })
                     }
-                }).collect())
+                }).collect());
+            tx.commit().await?;
+            res
         },
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") }
@@ -6801,15 +6817,38 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let mut legacy_rows_json = Vec::new();
                 match &db1.store {
                     crate::db::DbStore::Postgres => {
-                        if mobile_optimized {
-                            let query_str = "SELECT id, status, CAST(created_at AS text) AS created_at, action_type, source, context FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type, t.source, t.context FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type, t.channel AS source, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
-                            if let Ok(rows) = sqlx::query(query_str)
-                                .bind(&t_id1)
-                                .fetch_all(&db1.pool)
-                                .await
-                            {
-                                for row in rows {
-                                    use sqlx::Row;
+                        let mut rows_opt = None;
+                        if let Ok(mut tx) = db1.pool.begin().await {
+                            let ctx_res =
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id1)
+                                    .await;
+                            if ctx_res.is_ok() {
+                                if mobile_optimized {
+                                    let query_str = "SELECT id, status, CAST(created_at AS text) AS created_at, action_type, source, context FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type, t.source, t.context FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type, t.channel AS source, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
+                                    if let Ok(rows) = sqlx::query(query_str)
+                                        .bind(&t_id1)
+                                        .fetch_all(&mut *tx)
+                                        .await
+                                    {
+                                        rows_opt = Some((rows, true));
+                                    }
+                                } else {
+                                    let query_str = "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
+                                    if let Ok(rows) = sqlx::query(query_str)
+                                        .bind(&t_id1)
+                                        .fetch_all(&mut *tx)
+                                        .await
+                                    {
+                                        rows_opt = Some((rows, false));
+                                    }
+                                }
+                                let _ = tx.commit().await;
+                            }
+                        }
+                        if let Some((rows, is_mobile)) = rows_opt {
+                            for row in rows {
+                                use sqlx::Row;
+                                if is_mobile {
                                     let item = serde_json::json!({
                                         "id": row.get::<String, _>("id"),
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
@@ -6819,17 +6858,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         "context": row.try_get::<String, _>("context").unwrap_or_default(),
                                     });
                                     legacy_rows_json.push(item);
-                                }
-                            }
-                        } else {
-                            let query_str = "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
-                            if let Ok(rows) = sqlx::query(query_str)
-                                .bind(&t_id1)
-                                .fetch_all(&db1.pool)
-                                .await
-                            {
-                                for row in rows {
-                                    use sqlx::Row;
+                                } else {
                                     let item = serde_json::json!({
                                         "id": row.get::<String, _>("id"),
                                         "tenant_id": row.get::<String, _>("tenant_id"),
@@ -6897,12 +6926,24 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let mut feed_rows_json = Vec::new();
                 match &db2.store {
                     crate::db::DbStore::Postgres => {
-                        let query_str = "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50";
-                        if let Ok(rows) = sqlx::query(query_str)
-                            .bind(&t_id2)
-                            .fetch_all(&db2.pool)
-                            .await
-                        {
+                        let mut rows_opt = None;
+                        if let Ok(mut tx) = db2.pool.begin().await {
+                            let ctx_res =
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id2)
+                                    .await;
+                            if ctx_res.is_ok() {
+                                let query_str = "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50";
+                                if let Ok(rows) = sqlx::query(query_str)
+                                    .bind(&t_id2)
+                                    .fetch_all(&mut *tx)
+                                    .await
+                                {
+                                    rows_opt = Some(rows);
+                                }
+                                let _ = tx.commit().await;
+                            }
+                        }
+                        if let Some(rows) = rows_opt {
                             for row in rows {
                                 use sqlx::Row;
                                 let context_payload: Option<serde_json::Value> =
@@ -7032,16 +7073,28 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let mut daily_work_rows_json = Vec::new();
                 match &db4.store {
                     crate::db::DbStore::Postgres => {
-                        let query_str = if mobile_optimized {
-                            "SELECT id, signal_id, intent, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
-                        } else {
-                            "SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
-                        };
-                        if let Ok(rows) = sqlx::query(query_str)
-                            .bind(&t_id4)
-                            .fetch_all(&db4.pool)
-                            .await
-                        {
+                        let mut rows_opt = None;
+                        if let Ok(mut tx) = db4.pool.begin().await {
+                            let ctx_res =
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id4)
+                                    .await;
+                            if ctx_res.is_ok() {
+                                let query_str = if mobile_optimized {
+                                    "SELECT id, signal_id, intent, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                                } else {
+                                    "SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                                };
+                                if let Ok(rows) = sqlx::query(query_str)
+                                    .bind(&t_id4)
+                                    .fetch_all(&mut *tx)
+                                    .await
+                                {
+                                    rows_opt = Some(rows);
+                                }
+                                let _ = tx.commit().await;
+                            }
+                        }
+                        if let Some(rows) = rows_opt {
                             for row in rows {
                                 use sqlx::Row;
                                 if mobile_optimized {
@@ -7131,16 +7184,28 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 let mut envelope_rows_json = Vec::new();
                 match &db5.store {
                     crate::db::DbStore::Postgres => {
-                        let query_str = if mobile_optimized {
-                            "SELECT id, status, CAST(created_at AS text) AS created_at FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
-                        } else {
-                            "SELECT id, current_department, status, payload::text AS payload, routing_history::text AS routing_history, CAST(created_at AS text) AS created_at FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
-                        };
-                        if let Ok(rows) = sqlx::query(query_str)
-                            .bind(&t_id5)
-                            .fetch_all(&db5.pool)
-                            .await
-                        {
+                        let mut rows_opt = None;
+                        if let Ok(mut tx) = db5.pool.begin().await {
+                            let ctx_res =
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id5)
+                                    .await;
+                            if ctx_res.is_ok() {
+                                let query_str = if mobile_optimized {
+                                    "SELECT id, status, CAST(created_at AS text) AS created_at FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
+                                } else {
+                                    "SELECT id, current_department, status, payload::text AS payload, routing_history::text AS routing_history, CAST(created_at AS text) AS created_at FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC LIMIT 50"
+                                };
+                                if let Ok(rows) = sqlx::query(query_str)
+                                    .bind(&t_id5)
+                                    .fetch_all(&mut *tx)
+                                    .await
+                                {
+                                    rows_opt = Some(rows);
+                                }
+                                let _ = tx.commit().await;
+                            }
+                        }
+                        if let Some(rows) = rows_opt {
                             for row in rows {
                                 use sqlx::Row;
                                 let mut map = serde_json::Map::new();
@@ -7282,13 +7347,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let limit = 20i64;
         match &db.store {
             crate::db::DbStore::Postgres => {
-                if mobile_optimized {
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let res = if mobile_optimized {
                     sqlx::query(
                     "SELECT id, title, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1 OR tenant_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
-                .fetch_all(&db.pool)
+                .fetch_all(&mut *tx)
                 .await
                 .map(|rows| rows.into_iter().map(|row| {
                     serde_json::json!({
@@ -7305,7 +7372,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .bind(tenant_id)
                 .bind(limit)
-                .fetch_all(&db.pool)
+                .fetch_all(&mut *tx)
                 .await
                 .map(|rows| rows.into_iter().map(|row| {
                     serde_json::json!({
@@ -7317,7 +7384,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                     })
                 }).collect::<Vec<_>>())
-                }
+                };
+                tx.commit().await?;
+                res
             }
             crate::db::DbStore::Sqlite(pool) => {
                 if mobile_optimized {
@@ -7369,7 +7438,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             UNION ALL
             SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
+            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL
@@ -7383,7 +7452,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             UNION ALL
             SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected')
+            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected')
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL
@@ -8041,10 +8110,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
         match &db.store {
             crate::db::DbStore::Postgres => {
-                if mobile_optimized {
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let res = if mobile_optimized {
                     sqlx::query("SELECT id, CAST(COALESCE(total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(status, '') AS status FROM invoices WHERE tenant_id = $1 AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         use sqlx::Row;
                         serde_json::json!({
@@ -8056,7 +8127,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     sqlx::query("SELECT id, COALESCE(client_name, '') AS customer_name, CAST(COALESCE(total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM invoices WHERE tenant_id = $1 AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
-                    .fetch_all(&db.pool)
+                    .fetch_all(&mut *tx)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         use sqlx::Row;
                         serde_json::json!({
@@ -8067,7 +8138,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             "created_at": row.get::<String, _>("created_at")
                         })
                     }).collect())
-                }
+                };
+                tx.commit().await?;
+                res
             }
             crate::db::DbStore::Sqlite(pool) => {
                 if mobile_optimized {
@@ -8108,6 +8181,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
         match &db.store {
             crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
                 let query_str = if mobile_optimized {
                     "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
@@ -8119,35 +8194,37 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                  LEFT JOIN products p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
                 };
-                match sqlx::query(query_str)
-            .bind(tenant_id)
-            .fetch_all(&db.pool)
-            .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                    let ai_summary = format!("AI Brief: Upcoming {} session. Previous interaction noted.", row.get::<String, _>("product_title"));
-                    if mobile_optimized {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
-                            "ai_summary": ai_summary,
-                        })
-                    } else {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "service_id": row.get::<String, _>("service_id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                            "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
-                            "ai_summary": ai_summary,
-                        })
-                    }
-                }).collect::<Vec<_>>()),
-                Err(e) => Err(e),
-            }
+                let res = match sqlx::query(query_str)
+                    .bind(tenant_id)
+                    .fetch_all(&mut *tx)
+                    .await {
+                        Ok(rows) => Ok(rows.into_iter().map(|row| {
+                            let ai_summary = format!("AI Brief: Upcoming {} session. Previous interaction noted.", row.get::<String, _>("product_title"));
+                            if mobile_optimized {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "product_title": row.get::<String, _>("product_title"),
+                                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                    "status": row.get::<String, _>("status"),
+                                    "ai_summary": ai_summary,
+                                })
+                            } else {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "customer_name": row.get::<String, _>("customer_name"),
+                                    "service_id": row.get::<String, _>("service_id"),
+                                    "product_title": row.get::<String, _>("product_title"),
+                                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                    "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                    "status": row.get::<String, _>("status"),
+                                    "ai_summary": ai_summary,
+                                })
+                            }
+                        }).collect::<Vec<_>>()),
+                        Err(e) => Err(e),
+                    };
+                tx.commit().await?;
+                res
             }
             crate::db::DbStore::Sqlite(pool) => {
                 let query_str = if mobile_optimized {
