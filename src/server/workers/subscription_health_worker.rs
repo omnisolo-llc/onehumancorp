@@ -25,7 +25,7 @@ impl SubscriptionHealthWorker {
         let db = self.db.clone();
         let orchestrator = self.orchestrator.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30)); // Poll every 30s
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(1)); // Poll every 1s
             loop {
                 interval.tick().await;
                 let mut postgres_transaction = match &db.store {
@@ -56,7 +56,7 @@ impl SubscriptionHealthWorker {
                 };
                 let job = match &db.store {
                     crate::db::DbStore::Postgres => {
-                        sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = (SELECT id FROM ohc_job_queue WHERE status = 'PENDING' AND next_retry_at <= NOW() AND job_type = 'subscription_health' FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, tenant_id, payload")
+                        sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = (SELECT id FROM ohc_job_queue WHERE status = 'PENDING' AND (next_retry_at IS NULL OR next_retry_at <= NOW()) AND job_type = 'subscription_health' FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, tenant_id, payload")
                             .fetch_optional(&mut **postgres_transaction.as_mut().expect("postgres transaction")).await.unwrap_or(None)
                             .map(|r| {
                                 let job_id: String = r.get("id");
@@ -66,7 +66,7 @@ impl SubscriptionHealthWorker {
                             })
                     },
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                         sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = (SELECT id FROM ohc_job_queue WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type = 'subscription_health' LIMIT 1) RETURNING id, tenant_id, payload")
+                         sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = (SELECT id FROM ohc_job_queue WHERE status = 'PENDING' AND (next_retry_at IS NULL OR next_retry_at <= CURRENT_TIMESTAMP) AND job_type = 'subscription_health' LIMIT 1) RETURNING id, tenant_id, payload")
                             .fetch_optional(sqlite_pool).await.unwrap_or(None)
                             .map(|r| {
                                 let job_id: String = r.get("id");

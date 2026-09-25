@@ -61,7 +61,7 @@ export function UnlockProFeaturesWidget() {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-bold text-gray-900 dark:text-white font-outfit text-xl flex items-center gap-2">
-            <span className="text-2xl">✨</span> Referral Progress
+            <span className="text-2xl">✨</span> Unlock Pro Features (Referral Progress)
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Track confirmed invites. Any associated reward must be verified by the billing service.

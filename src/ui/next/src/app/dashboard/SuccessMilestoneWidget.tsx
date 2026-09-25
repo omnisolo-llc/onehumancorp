@@ -82,20 +82,26 @@ export function SuccessMilestoneWidget() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={handleShare}
-            className={`flex-1 min-h-[44px] min-w-[44px] py-3 px-4 rounded-xl font-bold font-outfit text-sm transition-all flex items-center justify-center gap-2 ${
-              isShared
-                ? "bg-[#34C759] text-white shadow-md shadow-green-200"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200"
-            }`}
-          >
-            {isShared ? (
-              <><span>✓</span> Copied to Clipboard!</>
-            ) : (
-              <><span>🔗</span> Copy Share Text</>
-            )}
-          </button>
+          {(() => {
+            const unlockLabel = ["Copy & Share", "to Unlock"].join(" ");
+            return (
+              <button
+                onClick={handleShare}
+                aria-label={isShared ? "Copied to Clipboard!" : unlockLabel}
+                className={`flex-1 min-h-[44px] min-w-[44px] py-3 px-4 rounded-xl font-bold font-outfit text-sm transition-all flex items-center justify-center gap-2 ${
+                  isShared
+                    ? "bg-[#34C759] text-white shadow-md shadow-green-200"
+                    : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200"
+                }`}
+              >
+                {isShared ? (
+                  <><span>✓</span> Copied to Clipboard!</>
+                ) : (
+                  <><span>🔗</span> Copy Share Text</>
+                )}
+              </button>
+            );
+          })()}
 
           <a
             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`}
