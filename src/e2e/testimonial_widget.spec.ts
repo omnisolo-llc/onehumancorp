@@ -48,7 +48,7 @@ test.describe('Testimonial Widget Generator E2E', () => {
 
         await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
-        await page.getByRole('button', { name: 'Close' }).click();
+        await page.getByRole('button', { name: 'Close', exact: true }).click();
         await expect(modalHeading).not.toBeVisible();
     });
 });

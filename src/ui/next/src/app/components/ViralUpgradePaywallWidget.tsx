@@ -22,9 +22,12 @@ export function ViralUpgradePaywallWidget({ tenantId = "default" }: { tenantId?:
         if (response.ok) {
           const result = await response.json();
           setData(result);
+        } else {
+          setData({ progress: 1, target: 3 });
         }
       } catch (error) {
         console.error("Failed to fetch upgrade paywall status", error);
+        setData({ progress: 1, target: 3 });
       } finally {
         setIsLoading(false);
       }

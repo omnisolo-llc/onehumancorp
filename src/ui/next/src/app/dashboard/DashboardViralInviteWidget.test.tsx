@@ -62,7 +62,7 @@ describe('DashboardViralInviteWidget', () => {
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('https://cloud.omnisolo.co/ref/test-tenant-123')
+      expect.stringContaining('https://cloud.omnisolo.co/invite/test-tenant-123')
     );
     expect(screen.getByText('Copied!')).toBeDefined();
 

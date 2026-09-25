@@ -1884,7 +1884,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                   approval.event_source,
                 )
               }
-              className="w-full sm:w-auto min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-6 rounded-[8px] glassmorphism bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center"
+              className="w-full sm:w-auto min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-6 rounded-[8px] glass-control bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss"
               data-testid={`action-card-dismiss-${approval.id}`}
               disabled={loadingAction !== null}

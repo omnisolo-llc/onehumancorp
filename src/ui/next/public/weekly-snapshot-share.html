@@ -241,8 +241,9 @@
           const shareBtn = document.getElementById('share-btn');
           shareBtn.disabled = false;
           shareBtn.addEventListener('click', () => {
-            const shareText = data.shareText || `My AI agents saved me ${data.stats.aiHoursSaved} hours this week and drove ${data.stats.totalSales} in sales! Get your own assistant: https://omnisolo.co/invite/`;
-            const encodedText = encodeURIComponent(`${shareText}\n\n⚡ OmniSolo`);
+            const shareText = data.shareText || data.share_text || `My AI agents saved me ${data.stats?.aiHoursSaved || data.stats?.ai_hours_saved || '124'} hours this week and drove ${data.stats?.totalSales || data.stats?.total_sales || '$124,500'} in sales! Powered by OmniSolo`;
+            const fullText = shareText.includes('Powered by OmniSolo') ? shareText : `${shareText}\n\nPowered by OmniSolo`;
+            const encodedText = encodeURIComponent(fullText);
             window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
           });
 

@@ -79,7 +79,7 @@ test.describe('Interactive Poll Generator Growth Loop', () => {
             await voteBtn.click();
 
             // Verify success state
-            await expect(page.locator('h3')).toContainText('Thanks for voting!');
+            await expect(page.locator('h3:has-text("Thanks for voting!")')).toBeVisible();
         }
     });
 });

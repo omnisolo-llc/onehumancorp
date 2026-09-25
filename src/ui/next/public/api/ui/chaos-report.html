@@ -208,6 +208,14 @@
             const errorPathFill = document.getElementById('error-path-fill');
 
             function applyTheme() {
+                const firstDiv = document.querySelector('div');
+                if (firstDiv) {
+                    if (isDarkMode) {
+                        firstDiv.classList.add('dark');
+                    } else {
+                        firstDiv.classList.remove('dark');
+                    }
+                }
                 if (isDarkMode) {
                     body.classList.remove('light-mode');
                     body.classList.add('dark-mode');

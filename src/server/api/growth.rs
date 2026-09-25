@@ -2398,7 +2398,7 @@ async fn handle_wrapped(
             top_product: "Vegan Celebration Cake".to_string(),
             ai_hours_saved: 124,
         },
-        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OmniSolo Year in Review:".to_string(),
+        share_text: "My AI agents saved me 124 hours this week and drove $124,500 in sales! Powered by OmniSolo".to_string(),
     })
 }
 
@@ -5979,6 +5979,8 @@ pub struct LinkInBioConfig {
     pub bio: String,
     pub theme: String,
     pub links: Vec<LinkItem>,
+    #[serde(default)]
+    pub remove_branding: bool,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -6036,6 +6038,7 @@ pub async fn handle_get_link_in_bio(
                     url: "/booking".to_string(),
                 },
             ],
+            remove_branding: false,
         })
     } else {
         LinkInBioConfig {
@@ -6054,6 +6057,7 @@ pub async fn handle_get_link_in_bio(
                     url: "/booking".to_string(),
                 },
             ],
+            remove_branding: false,
         }
     };
 
@@ -6091,6 +6095,7 @@ pub async fn handle_post_link_in_bio(
         bio: req.bio,
         theme: req.theme,
         links,
+        remove_branding: req.remove_branding.unwrap_or(false),
     };
 
     let val = serde_json::to_string(&config)
@@ -6542,7 +6547,7 @@ pub async fn handle_waitlist_embed(
 
     <div class="input-group">
       <input type="email" placeholder="Your email address" id="email-input" />
-      <button id="join-btn">Join</button>
+      <button id="join-btn">Join Waitlist</button>
     </div>
 
     <div id="success-message" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
