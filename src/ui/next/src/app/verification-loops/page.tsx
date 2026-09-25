@@ -42,7 +42,7 @@ export default function VerificationLoopsPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <h2 className="text-3xl font-bold mb-4 text-gray-900">Verification Loops</h2>
+      <h1 className="text-3xl font-bold mb-4 text-gray-900">Verification Loops</h1>
       <p className="text-gray-600 mb-8">
         Test agent output against distinct verification loops: Computational Guides (bash/linters), Visual Verifiers (Playwright), or Inferential Sensors (LLM Judge).
       </p>

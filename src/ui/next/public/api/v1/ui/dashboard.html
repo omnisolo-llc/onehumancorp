@@ -1554,7 +1554,24 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(res => res.json())
         .then(data => {
-            aiMsg.textContent = data.reply || data.response || "Sorry, I could not process that.";
+            const replyText = typeof data.reply === 'string' ? data.reply : (data.reply?.text || data.response || "Sorry, I could not process that.");
+            aiMsg.textContent = replyText;
+            const link = data.link || data.reply?.link;
+            if (link && (link.title || link.url)) {
+                const linkEl = document.createElement('a');
+                linkEl.href = link.url || '#';
+                linkEl.textContent = link.title || "Read the full article →";
+                linkEl.style.display = 'block';
+                linkEl.style.marginTop = '8px';
+                aiMsg.appendChild(linkEl);
+            } else if (data.link_url || data.link_title) {
+                const linkEl = document.createElement('a');
+                linkEl.href = data.link_url || '#';
+                linkEl.textContent = data.link_title || "Read the full article →";
+                linkEl.style.display = 'block';
+                linkEl.style.marginTop = '8px';
+                aiMsg.appendChild(linkEl);
+            }
             messages.scrollTop = messages.scrollHeight;
         })
         .catch(err => {
