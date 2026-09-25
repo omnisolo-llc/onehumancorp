@@ -8,14 +8,20 @@ pub struct TerminalTokenResponse {
     pub token: String,
 }
 
+fn default_terminal_currency() -> String {
+    "usd".to_string()
+}
+
 #[derive(serde::Deserialize)]
 pub struct PaymentIntentRequest {
-    pub amount_cents: i64,
+    pub amount_cents: Option<i64>,
+    #[serde(default = "default_terminal_currency")]
     pub currency: String,
     pub product_id: Option<String>,
     pub quantity: Option<i32>,
     pub order_id: Option<String>,
     pub idempotency_key: Option<String>,
+    pub total: Option<f64>,
 }
 
 #[derive(serde::Serialize)]
@@ -1157,7 +1163,10 @@ pub async fn create_payment_intent_handler(
     }
 
     // Compute dynamic yield price before generating payment intent
-    let mut final_amount_cents = req_data.amount_cents;
+    let initial_amount_cents = req_data
+        .amount_cents
+        .unwrap_or_else(|| (req_data.total.unwrap_or(0.0) * 100.0).round() as i64);
+    let mut final_amount_cents = initial_amount_cents;
 
     if let Some(product_id) = &req_data.product_id {
         let calculated_price = ::server_pricing::engine::apply_yield_management(
@@ -1165,7 +1174,7 @@ pub async fn create_payment_intent_handler(
             &tenant_id,
             product_id,
             chrono::Utc::now(),
-            req_data.amount_cents,
+            initial_amount_cents,
         )
         .await;
         final_amount_cents = calculated_price;

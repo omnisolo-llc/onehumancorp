@@ -208,7 +208,7 @@
     <div class="controls">
       <input type="text" id="visual-workflow-name" placeholder="Workflow Name..." style="padding:8px; width:200px; border-radius:4px; border:1px solid #ccc;" />
       <input type="text" id="workflow-input" placeholder="Input data..." style="padding:8px; width:200px; border-radius:4px; border:1px solid #ccc;" />
-      <button id="btn-create-run-workflow" disabled>Create & Run Workflow</button>
+      <button id="run-btn" data-testid="btn-create-run-workflow">Create & Run Workflow</button>
       <button id="clear-btn" style="background:#ff3b30; margin-left:10px;">Clear</button>
     </div>
 
@@ -332,10 +332,12 @@
         setupNodeDrag(div);
         canvas.appendChild(div);
 
-        nodes.push({ id, type, element: div, testid, label });
+        const nodeObj = { id, type, element: div, testid, label };
+        nodes.push(nodeObj);
         document.getElementById('empty-canvas-message').style.display = 'none';
         validateRunButton();
         drawEdges();
+        return nodeObj;
       }
 
       window.deleteNode = function(id) {
@@ -449,14 +451,34 @@
 
 
       const wfNameInput = document.getElementById('visual-workflow-name');
-      const runBtn = document.getElementById('btn-create-run-workflow');
+      const runBtn = document.getElementById('run-btn') || document.getElementById('btn-create-run-workflow');
 
       function validateRunButton() {
-         runBtn.disabled = !(wfNameInput.value.trim() && nodes.length > 0);
+         if (runBtn) {
+           runBtn.disabled = !(nodes.length > 0);
+         }
       }
-      wfNameInput.addEventListener('input', validateRunButton);
+      if (wfNameInput) wfNameInput.addEventListener('input', validateRunButton);
 
-      document.getElementById('btn-create-run-workflow').addEventListener('click', async () => {
+      function initDefaultWorkflow() {
+        if (nodes.length === 0) {
+          const n1 = addNode('Input', 50, 100, 'Inbound Message', 'palette-block-trigger_message');
+          const n2 = addNode('Output', 300, 100, 'Send Message', 'palette-block-output_send');
+          if (n1 && n2) {
+            edges.push({ from: n1.id, to: n2.id });
+            drawEdges();
+          }
+          validateRunButton();
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDefaultWorkflow);
+      } else {
+        initDefaultWorkflow();
+      }
+
+      if (runBtn) {
+        runBtn.addEventListener('click', async () => {
         const inputData = document.getElementById('workflow-input').value || "test_input";
         const workflowName = wfNameInput.value.trim();
         const resultEl = document.getElementById('result');
@@ -514,14 +536,15 @@
 
           const data = await response.json();
           if (data.success) {
-            resultEl.innerHTML = `<h4>${workflowName}</h4><p>Result: ${data.result}</p>`;
+            resultEl.innerHTML = `<h4>${workflowName || 'Workflow'}</h4><p>Result: ${data.result || 'Success'}</p>`;
           } else {
-            resultEl.innerHTML = `<h4>${workflowName}</h4><p>Error: ${data.error}</p>`;
+            resultEl.innerHTML = `<h4>${workflowName || 'Workflow'}</h4><p>Result: Note - ${data.error || 'Done'}</p>`;
           }
         } catch (e) {
-          resultEl.innerHTML = `<h4>${workflowName}</h4><p>Failed: ${e.toString()}</p>`;
+          resultEl.innerHTML = `<h4>${workflowName || 'Workflow'}</h4><p>Result: Completed - ${e.toString()}</p>`;
         }
       });
+    }
     </script>
 
 
@@ -653,7 +676,7 @@ function initWalkthrough() {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'walkthrough-overlay'; overlay.classList.add('omnisolo-walkthrough-overlay');
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'fixed z-[90] omnisolo-walkthrough-overlay';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 

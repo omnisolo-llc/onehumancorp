@@ -9,7 +9,7 @@ test.describe('Verification Loops', () => {
     await expect(page.locator('h1', { hasText: 'Verification Loops' }).first()).toHaveText('Verification Loops');
 
     // Fill in the task context
-    await page.fill('textarea[placeholder="e.g. Write a bash script that echoes \'ok\'."]', 'Test task');
+    await page.fill('textarea[placeholder*="Write a bash script"]', 'Test task');
 
     // Fill in the agent output (command)
     await page.locator('textarea').nth(1).fill("echo 'ok'; e\x78it 0");
@@ -20,8 +20,8 @@ test.describe('Verification Loops', () => {
     await page.click('button:has-text("Run Computational Guide")');
 
     // Verify that the success message appears
-    await expect(page.locator('text=Verification Passed')).toBeVisible();
-    await expect(page.locator('text=Verification passed successfully.')).toBeVisible();
+    await expect(page.locator('text=Verification Passed').first()).toBeVisible();
+    await expect(page.locator('text=Verification passed successfully.').first()).toBeVisible();
   });
 
   test('should fail when API returns an error', async ({ page }) => {
@@ -37,7 +37,7 @@ test.describe('Verification Loops', () => {
     await page.click('button:has-text("Run Computational Guide")');
 
     // Verify that the failure message appears
-    await expect(page.locator('text=Verification Failed')).toBeVisible();
-    await expect(page.locator('text=Computational guide verification failed')).toBeVisible();
+    await expect(page.locator('text=Verification Failed').first()).toBeVisible();
+    await expect(page.locator('text=Computational guide verification failed').first()).toBeVisible();
   });
 });

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { executeSql } from './db_utils';
 import { E2E_ADMIN_USER } from './identities';
 
@@ -27,7 +27,7 @@ test.describe('Subscription Health & Churn Prevention', () => {
     }
   });
 
-  test('Worker identifies at-risk subscriber and agent drafts win-back message', async ({ page }) => {
+  test('Worker identifies at-risk subscriber and agent drafts win-back message', async ({ page, loginAs, adminUser }) => {
     await executeSql(`
       INSERT INTO subscription_plans (id, tenant_id, name, price_cents, frequency)
       VALUES ('plan_health_1', '${tenantId}', 'Music Lessons', 5000, 'monthly')
@@ -57,6 +57,7 @@ test.describe('Subscription Health & Churn Prevention', () => {
       expect(JSON.stringify(check[0])).toContain('sub_health_test_1');
     }).toPass({ timeout: 15000 });
 
+    await loginAs(page, adminUser);
     await page.goto('/dashboard/unified-feed');
     const card = page.locator('[data-testid="agent-feed-card"]', { hasText: 'sub_health_test_1' });
     await expect(card).toBeVisible({ timeout: 15000 });

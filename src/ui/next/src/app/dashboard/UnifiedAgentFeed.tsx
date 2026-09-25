@@ -198,7 +198,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         }
         let unifiedData = initialData;
 
-        if (refresh || !unifiedData || !unifiedData.items) {
+        if (refresh || !unifiedData || !unifiedData.items || unifiedData.items.length === 0) {
           const unifiedRes = await fetch("/api/v1/agent-feed");
           if (!unifiedRes.ok) {
             throw new Error("Feed temporarily unavailable");
@@ -540,13 +540,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     // Record as decided immediately to prevent polling re-adding it
     decidedIdsRef.current.add(id);
 
-    if (approved) {
-      setTimeout(() => {
-        setItems((prev) => prev.filter((app) => app.id !== id));
-      }, 500);
-    } else {
-      setItems((prev) => prev.filter((app) => app.id !== id));
-    }
+    setItems((prev) => prev.filter((app) => app.id !== id));
 
     if (isOffline) {
       // Enqueue offline action

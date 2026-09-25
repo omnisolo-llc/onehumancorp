@@ -331,8 +331,9 @@ export default function Integrations() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">WhatsApp Phone Number</label>
+                  <label htmlFor="whatsapp-phone-number" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">WhatsApp Phone Number</label>
                   <input
+                    id="whatsapp-phone-number"
                     type="text"
                     value={whatsappTwilioCreds.phoneNumber}
                     onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, phoneNumber: e.target.value }))}

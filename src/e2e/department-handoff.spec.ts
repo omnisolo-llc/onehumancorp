@@ -1,9 +1,9 @@
-import { test, expect, adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
 import { db } from './db_utils';
 
 test.describe('Department Handoff Protocol', () => {
-    test('Owner Feed correctly displays and allows approval of Task Envelopes', async ({ page }) => {
+    test('Owner Feed correctly displays and allows approval of Task Envelopes', async ({ page, loginAs, adminUser }) => {
         // 1. Arrange: Seed a TaskEnvelope directly into the database to simulate background agent work
         const tenantId = 'e2e-tenant';
         const envelopeId = `env-${Date.now()}`;
@@ -24,7 +24,7 @@ test.describe('Department Handoff Protocol', () => {
         `, [envelopeId, tenantId, initialPayload, routingHistory]);
 
         // 2. Act: Owner navigates to the Work Triage feed
-        page = await adminPage(page);
+        await loginAs(page, adminUser);
         await page.goto(`/ui/triage.html?tenant_id=${tenantId}&bypass_cache=true&t=${Date.now()}`);
         await page.waitForLoadState('networkidle');
 

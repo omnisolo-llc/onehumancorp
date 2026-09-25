@@ -548,7 +548,7 @@ function PowerSyncInboxContent() {
   }, []);
 
   const messages = data && data.length > 0 ? data : apiMessages;
-  return <InboxWorkspace messages={messages} sourceLabel="Local database sync is active." />;
+  return <InboxWorkspace messages={messages} sourceLabel="Loaded securely via PowerSync local embedded DB." />;
 }
 
 function InboxLoadingState() {
