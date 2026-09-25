@@ -363,6 +363,7 @@ export default function Integrations() {
                   💬
                 </div>
                 <button
+                  aria-label="Close modal"
                   onClick={() => setShowWhatsAppCloudApiModal(false)}
                   className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                 >
@@ -400,6 +401,7 @@ export default function Integrations() {
                   🔔
                 </div>
                 <button
+                  aria-label="Close modal"
                   onClick={() => setShowTwilioModal(false)}
                   className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                 >

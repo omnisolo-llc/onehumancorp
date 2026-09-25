@@ -5,7 +5,7 @@ import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
-import "./AmbassadorReplyCard";
+import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
 import "./InstagramDMCard";
 import { AgentActionCard } from "../../components/feed/AgentActionCard";
 import { GroupedAgentActionCard } from "../../components/feed/GroupedAgentActionCard";
@@ -667,6 +667,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
             {groupedProposals.map((group) => {
               if (group.items.length === 1) {
                 const approval = group.items[0];
+                const isAmbassador =
+                  approval.event_source === "ambassador" ||
+                  approval.event_source?.toLowerCase() === "ambassador" ||
+                  approval.payload?.feature_type === "ambassador_reply" ||
+                  approval.proposed_action?.feature_type === "ambassador_reply" ||
+                  approval.context_payload?.feature_type === "ambassador_reply";
+
+                if (isAmbassador) {
+                  return (
+                    <AmbassadorReplyCard
+                      key={approval.id}
+                      approval={approval}
+                      onApprove={() => handleDecision(approval.id, true)}
+                      onDismiss={() => handleDecision(approval.id, false)}
+                    />
+                  );
+                }
+
                 return (
                   <AgentActionCard
                     key={approval.id}
@@ -714,12 +732,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="glassmorphism w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]" data-testid="activity-feed-loading">
+              <div data-voice-assistant-surface="glass" className="glassmorphism w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]" data-testid="activity-feed-loading">
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="glassmorphism w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center" data-testid="activity-feed-empty">
+              <div data-voice-assistant-surface="glass" className="glassmorphism w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center" data-testid="activity-feed-empty">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
@@ -729,6 +747,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
               {activities.map((activity) => (
                 <div
                   key={activity.id}
+                  data-voice-assistant-surface="glass"
                   className="glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
                   data-testid="activity-feed-entry"
                 >
