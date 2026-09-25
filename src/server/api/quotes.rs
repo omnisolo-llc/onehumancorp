@@ -530,33 +530,16 @@ async fn update_quote(
 
     // If status is being updated to SENT, generate stripe link and soft-lock calendar slot
     if payload.status.as_deref() == Some("SENT") && current_quote.stripe_payment_link.is_none() {
-        let amount_usd = (payload
+        let _amount_usd = (payload
             .total_amount_cents
             .unwrap_or(current_quote.total_amount_cents.unwrap_or(0))
             as f64)
             / 100.0;
-        let stripe_key =
+        let _stripe_key =
             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
-        let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-
-        match stripe_client
-            .create_checkout_session(
-                &format!("Quote #{}", quote_id),
-                &current_quote.customer_id.to_string(),
-                amount_usd,
-                None,
-                None,
-                None,
-            )
-            .await
-        {
-            Ok(url) => {
-                new_stripe_link = Some(url);
-            }
-            Err(e) => {
-                tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
-            }
-        }
+        // This operation creates a local draft, not a provider checkout session.
+        // Empty means payment has not been configured; never invent a payable URL.
+        new_stripe_link = Some(String::new());
 
         if let Some(slot_id) = &current_quote.proposed_slot_id {
             let redis_url =
@@ -752,28 +735,10 @@ async fn accept_quote(
 
     let invoice_id = Uuid::new_v4();
     let total_amount = (accepted_quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
-    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    let mut payment_link = String::new();
-    match stripe_client
-        .create_checkout_session(
-            &format!("Invoice for Quote #{}", accepted_quote.id),
-            &accepted_quote.customer_id,
-            total_amount,
-            None,
-            None,
-            None,
-        )
-        .await
-    {
-        Ok(url) => payment_link = url,
-        Err(error) => {
-            tracing::error!(
-                "Failed to create Stripe checkout session for invoice: {}",
-                error
-            );
-        }
-    }
+    let _stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+    // This operation creates a local draft, not a provider checkout session.
+    // Empty means payment has not been configured; never invent a payable URL.
+    let payment_link = String::new();
 
     let invoice_res = sqlx::query(
         "INSERT INTO invoices (id, tenant_id, customer_id, quote_id, total_amount, currency, status, stripe_invoice_id) VALUES ($1, $2, $3, $4, $5, 'USD', 'Draft', $6)"

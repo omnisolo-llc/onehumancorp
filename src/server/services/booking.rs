@@ -1721,6 +1721,8 @@ impl BookingEngineService for NativeBookingService {
 
         let inventory_lock_id = reserve_result.lock_id;
 
+        // This operation creates a local draft, not a provider checkout session.
+        // Empty means payment has not been configured; never invent a payable URL.
         let checkout_url = String::new();
 
         Ok(Response::new(ConversationalCheckoutSession {
