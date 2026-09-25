@@ -1,0 +1,4 @@
+{
+  "issue_title": "F08: Checkout-looking URLs fabrication",
+  "issue_description": "Investigation into finding F08 regarding fabricated checkout-looking URLs in invoice.rs and booking helpers. The audit stated `invoice.rs:45-48` fabricated checkout URLs. A review of `src/server/api/invoice.rs` (lines 169-171) shows this has already been fixed: `// This operation creates a local draft, not a provider checkout session. // Empty means payment has not been configured; never invent a payable URL. let stripe_payment_link = String::new();`. Additionally, booking routes in `src/server/api/booking/public.rs` and `src/server/orchestration/departments/orchestrator.rs` were audited and confirmed to correctly create real provider sessions using `StripeClient::create_checkout_session_idempotent` or `stripe.create_checkout_session` instead of fabricating checkout-looking URLs. Thus, this issue is already fixed, resulting in a no-work finding."
+}
