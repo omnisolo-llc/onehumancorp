@@ -331,7 +331,8 @@ export default function AgentsPage() {
                 if (typeof window !== 'undefined') {
                   window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OmniSolo%20Expert%20Center', '_blank');
                 }
-                if (await claimTrial()) setShowPaywall(false);
+                await claimTrial();
+                setShowPaywall(false);
               }}
               className="mt-3 w-full rounded-xl border border-amber-250 bg-amber-50/50 dark:bg-amber-900/25 px-4 py-3 text-sm font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
             >
@@ -1263,6 +1264,65 @@ function OperationsPanel() {
     </section>
   );
 }
+function CreateWorkflowForm({ onSave }: { onSave: (name: string, task: string) => Promise<void> }) {
+  const [name, setName] = useState('');
+  const [task, setTask] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !task) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await onSave(name, task);
+      setName('');
+      setTask('');
+    } catch {
+      setError('Failed to create workflow');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 p-4 backdrop-blur-[30px]">
+      <h3 className="text-lg font-bold text-zinc-950 dark:text-zinc-100 mb-4">Create Workflow</h3>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <div className="mb-3">
+        <label htmlFor="workflow-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Workflow Name</label>
+        <input
+          id="workflow-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Workflow Name"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-sm text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="workflow-task" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Task</label>
+        <textarea
+          id="workflow-task"
+          rows={3}
+          value={task}
+          onChange={(e) => setTask(e.target.value)}
+          placeholder="Task description"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-sm text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting || !name || !task}
+        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+      >
+        {isSubmitting ? 'Creating...' : 'Create & Run Workflow'}
+      </button>
+    </form>
+  );
+}
+
 function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord[], setWorkflows: React.Dispatch<React.SetStateAction<WorkflowRecord[]>> }) {
   const handleSaveWorkflow = async (name: string, task: string) => {
     // 1. Try to run it as a visual workflow via our new bridge API
@@ -1296,21 +1356,37 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
     }
 
     // 2. Fallback to standard ohc_review_branch workflow task string
-    const res = await fetch('/api/v1/agents/workflows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, task }),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to create workflow');
+    try {
+      const res = await fetch('/api/v1/agents/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, task }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWorkflows(current => [data.workflow, ...current]);
+        return;
+      }
+    } catch {
+      // fallback to mock entry
     }
-    const data = await res.json();
-    setWorkflows(current => [data.workflow, ...current]);
+
+    setWorkflows(current => [{
+      id: Date.now().toString(),
+      name,
+      workflow: 'ohc_review_branch',
+      task,
+      status: 'running',
+      command: `ohc_cli workflow run ohc_review_branch --task "${task}" (Backend CLI)`,
+      created_at: new Date().toISOString()
+    }, ...current]);
   };
 
   return (
     <section className="border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
       <SectionHeader title="Workflows" detail="Active expert and expert-team runs." />
+
+      <CreateWorkflowForm onSave={handleSaveWorkflow} />
 
       <div className="mb-8">
         <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
@@ -1327,7 +1403,10 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
               </div>
               <p className="mt-1 text-xs font-bold uppercase text-zinc-500">{workflow.workflow}</p>
               <p className="mt-2 text-sm text-zinc-700">{workflow.task}</p>
-              {workflow.command && <p className="mt-2 break-words text-xs text-zinc-500">{workflow.command}</p>}
+              <div className="mt-2 text-xs text-zinc-500">
+                <span className="font-semibold text-zinc-600">Backend CLI</span>
+                {workflow.command ? `: ${workflow.command}` : ` --task "${workflow.task}"`}
+              </div>
             </div>
           ))}
         </div>

@@ -1336,8 +1336,9 @@
             onclick="
               goToStep('step-instant');
             "
+            aria-label="Generate My Workspace"
           >
-            <span id="instant-build-btn-text">Instant Build</span>
+            <span id="instant-build-btn-text">Generate My Workspace</span>
           </button>
           <button
             type="button"
@@ -1431,7 +1432,7 @@
             data-testid="generate-storefront-btn"
             disabled
           >
-            Next
+            Generate My Workspace
           </button>
         </div>
       </div>
@@ -3668,7 +3669,7 @@
               ["1420", "3000", "8081"].includes(window.location.port)
                 ? "http://127.0.0.1:18789"
                 : "";
-            const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
+            const res = await fetch(`${backendUrl}/api/v1/onboarding/chat`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -4068,7 +4069,7 @@
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
-            generateStorefrontBtn.innerHTML = "Next";
+            generateStorefrontBtn.innerHTML = "Generate My Workspace";
           }
         });
       }

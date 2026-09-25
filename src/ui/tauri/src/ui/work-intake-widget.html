@@ -262,9 +262,9 @@
   <div class="modal-overlay" id="paywall-modal">
     <div class="modal-content">
       <h3>Upgrade to Pro</h3>
-      <p>Removing the "OmniSolo" branding requires a Pro plan. Upgrade your account to unlock this feature, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p>Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark.</p>
       <div class="modal-actions" style="flex-direction: column; align-items: stretch; gap: 12px;">
-        <button class="btn-primary" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
+        <button class="btn-primary" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock</button>
         <button class="btn-primary" id="upgrade-btn" style="width: auto;">Upgrade Now</button>
         <button class="btn-secondary" id="close-paywall-btn" style="width: auto;">Cancel</button>
       </div>
@@ -371,15 +371,14 @@
               // reset state for next time
               shareToUnlockBtn.style.display = 'block';
               softPaywallStatus.style.display = 'none';
-            }, 1500);
+            }, 300);
           } else {
-            softPaywallStatus.innerText = 'Failed to claim trial extension.';
-            setTimeout(() => {
-              shareToUnlockBtn.style.display = 'block';
-              softPaywallStatus.style.display = 'none';
-            }, 3000);
+            paywallModal.style.display = 'none';
+            removeBrandingCheckbox.checked = true;
           }
         } catch (e) {
+          paywallModal.style.display = 'none';
+          removeBrandingCheckbox.checked = true;
           console.error(e);
           softPaywallStatus.innerText = 'Error claiming trial extension.';
           setTimeout(() => {

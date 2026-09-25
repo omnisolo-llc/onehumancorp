@@ -319,6 +319,26 @@ export default function Dashboard() {
   ];
 
 
+  const feedInitialData = useMemo(() => ({
+    items: dashboardData?.initialAgentFeed?.items,
+    proposals: pendingApprovals,
+    activity: activities,
+    orders,
+    inbox: messages,
+    triage: initialTriage,
+    priority_tasks: dashboardData?.priority_tasks || [],
+    pendingReviews: dashboardData?.pendingReviews || []
+  }), [
+    dashboardData?.initialAgentFeed?.items,
+    pendingApprovals,
+    activities,
+    orders,
+    messages,
+    initialTriage,
+    dashboardData?.priority_tasks,
+    dashboardData?.pendingReviews
+  ]);
+
   return (
     <>
     <AppShell
@@ -362,7 +382,7 @@ export default function Dashboard() {
 
       <div className="mb-6 w-full overflow-hidden">
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-        <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
+        <UnifiedAgentFeed initialData={feedInitialData} />
       </div>
 
       <AIUsageLimitWidget />

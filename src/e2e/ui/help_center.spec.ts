@@ -49,7 +49,7 @@ test.describe('Help Center & Documentation Features', () => {
 
     // 5. Verify API docs loaded (Swagger UI)
     await expect(page.locator('text=Advanced:')).toBeVisible();
-    await expect(page.locator('.swagger-ui')).toBeVisible();
+    await expect(page.locator('.swagger-ui').first()).toBeVisible();
   });
 
   test('Owner can trigger Interactive Walkthroughs from the Help Widget', async ({ page }) => {

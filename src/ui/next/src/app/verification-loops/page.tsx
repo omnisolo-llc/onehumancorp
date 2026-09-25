@@ -82,7 +82,7 @@ export default function VerificationLoopsPage() {
             rows={4}
             value={taskContext}
             onChange={(e) => setTaskContext(e.target.value)}
-            placeholder="e.g. Write a bash script that echoes 'ok'."
+            placeholder="Task definition for LLM Judge (e.g. Write a bash script that echoes 'ok'.)"
           />
         </div>
 
@@ -95,7 +95,7 @@ export default function VerificationLoopsPage() {
             rows={4}
             value={outputText}
             onChange={(e) => setOutputText(e.target.value)}
-            placeholder={"e.g. echo 'ok'; e\\x78it 0"}
+            placeholder={"Output to evaluate (e.g. echo 'ok'; e\\x78it 0)"}
           />
         </div>
 

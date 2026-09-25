@@ -13,6 +13,6 @@ test.describe('API Documentation', () => {
 
     // Check for the title inside Swagger UI
     const apiTitle = page.getByText('OmniSolo Advanced API Reference');
-    await expect(apiTitle).toBeVisible();
+    await expect(apiTitle.first()).toBeVisible();
   });
 });
