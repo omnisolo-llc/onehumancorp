@@ -45,6 +45,7 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
 
         // Create a custom product to verify data is isolated correctly
         await page.getByRole('link', { name: 'Products', exact: true }).click();
+        await page.waitForURL('**/products');
         await page.getByRole('button', { name: 'New Product' }).click();
 
         await expect(page.getByRole('heading', { name: 'Add Product' })).toBeVisible();

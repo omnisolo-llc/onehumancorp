@@ -96,11 +96,14 @@ export default function BuilderPage() {
     setStatus("generating");
 
     try {
+      const promptDescription = businessName
+        ? `${businessName}. ${businessCategory ? businessCategory + '. ' : ''}${bio}`
+        : bio;
       const [response] = await Promise.all([
         fetch('/api/v1/builder/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: bio })
+          body: JSON.stringify({ description: promptDescription })
         }),
         new Promise((resolve) => setTimeout(resolve, 600)),
       ]);

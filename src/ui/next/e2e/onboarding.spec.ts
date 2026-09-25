@@ -26,7 +26,7 @@ test.describe('Onboarding Flow E2E', () => {
 
     // Chat Step 2: Description
     await expect(page.getByText('What do you sell?')).toBeVisible();
-    await page.fill('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]', 'Vegan cakes');
+    await page.locator('textarea[placeholder*="I bake custom vegan cakes"]').fill('Vegan cakes');
     await page.click('text=Next');
 
     // Chat Step 3: Location

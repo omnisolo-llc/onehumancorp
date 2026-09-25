@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProPlan } from '../components/useProPlan';
 
 export default function ViralPoweredByOmniSoloWidgetPage() {
@@ -12,6 +12,7 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
   const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -26,15 +27,20 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
     if (typeof document !== 'undefined') {
       document.title = "Viral Widget Builder | OmniSolo OneHumanCorp";
     }
+
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
   }, [hasPro]);
 
   const isProUser = hasPro || (typeof window !== 'undefined' && localStorage.getItem('has_pro') === 'true');
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isProUser) {
-      setRemoveBranding(true);
+      setRemoveBranding(false);
       setShowPaywall(true);
-      setTimeout(() => setRemoveBranding(false), 50);
     } else {
       setRemoveBranding(e.target.checked);
     }
@@ -58,7 +64,10 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
       }
     }
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current);
+    }
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
   };
 
   if (!isClient) return <div className="min-h-screen bg-indigo-50" />;
