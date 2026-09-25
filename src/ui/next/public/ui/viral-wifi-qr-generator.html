@@ -319,7 +319,9 @@
 
         const payload = `https://omnisolo.co/checkout?product=${encodeURIComponent(state.networkName)}`;
         qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payload)}`;
-        document.getElementById('embed-code').textContent = `<img src="${qrImage.src}" alt="WiFi QR" />`;
+        const embedPayload = `https://cloud.omnisolo.co/checkout?product=${encodeURIComponent(state.networkName)}`;
+        const embedSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(embedPayload)}`;
+        document.getElementById('embed-code').textContent = `<img src="${embedSrc}" alt="WiFi QR" />`;
 
         previewBranding.style.display = state.removeBranding ? 'none' : 'block';
       };

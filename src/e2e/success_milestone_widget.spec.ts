@@ -14,7 +14,7 @@ test.describe('Success Milestone Widget', () => {
     await expect(copyBtn).toBeVisible();
 
     // Verify share on X link
-    const xLink = page.getByRole('link', { name: /Share on X/i });
+    const xLink = page.getByRole('link', { name: /Share on X/i }).first();
     await expect(xLink).toBeVisible();
     await expect(xLink).toHaveAttribute('href', /twitter\.com\/intent\/tweet/);
 

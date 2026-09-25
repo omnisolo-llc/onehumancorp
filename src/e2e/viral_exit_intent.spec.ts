@@ -55,6 +55,7 @@ test.describe('Viral Exit-Intent Loop', () => {
     // 7. Verify "Back to Dashboard" footer link
     const backLink = page.locator('a.back-link', { hasText: 'Back to Dashboard' });
     await expect(backLink).toBeVisible();
+    await backLink.scrollIntoViewIfNeeded();
     await backLink.click();
 
     // Verify we're back

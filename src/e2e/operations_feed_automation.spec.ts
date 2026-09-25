@@ -8,7 +8,7 @@ test.describe('Operations Agent Task Automation', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // 2. Check the Agent Feed for the Operations Agent task
-    const operationsTaskCard = page.locator('text=Review Daily Prep Checklist').locator('..');
+    const operationsTaskCard = page.locator('div').filter({ has: page.getByTestId('feed-approve-btn') }).filter({ hasText: 'Review Daily Prep Checklist' }).first();
     await expect(operationsTaskCard).toBeVisible({ timeout: 10000 });
 
     // Ensure buttons are visible

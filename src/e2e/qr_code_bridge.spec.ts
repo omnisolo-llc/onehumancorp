@@ -47,7 +47,9 @@ test.describe('Invisible Offline-to-Online QR Commerce Bridge', () => {
         // Close the modal
         page.locator('button').filter({ has: page.locator('svg') }).first(); // Assuming the close btn has SVG and is first button inside modal
         // A more robust selector for the close button
-        await page.locator('.fixed button').first().click();
+        const closeBtn = page.locator('.fixed button').first();
+        await closeBtn.scrollIntoViewIfNeeded();
+        await closeBtn.click({ force: true });
 
         // Modal should be gone
         await expect(modalTitle).toBeHidden();
