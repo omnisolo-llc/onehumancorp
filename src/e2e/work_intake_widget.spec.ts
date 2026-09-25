@@ -63,7 +63,7 @@ test.describe('Work-Intake Widget Growth Loop', () => {
   test('should show soft paywall when attempting to remove branding', async ({ page }) => {
     // Check the remove branding checkbox
     const removeBrandingCheckbox = page.getByLabel(/Remove ("Powered by )?OmniSolo"? branding/);
-    await removeBrandingCheckbox.check();
+    await removeBrandingCheckbox.click();
 
     // Verify soft paywall appears
     await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
