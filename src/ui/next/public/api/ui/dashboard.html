@@ -1219,16 +1219,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 
     if (!window.OMNISOLO_TOOLTIPS) {
-        window.OMNISOLO_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OMNISOLO_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
-        });
+        window.OMNISOLO_TOOLTIPS = {
+            "nav-store": "Your Storefront. This is where you manage what you sell.",
+            "nav-agents": "AI Helpers. These are your digital employees.",
+            "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+            "search-input": "Search our knowledge base for help articles.",
+            "dashboard-walkthrough-btn": "Take a tour of the dashboard",
+        };
+        fetch("/api/v1/tooltips").then(r => r.ok ? r.json() : null).then(data => {
+            if (data && typeof data === 'object') {
+                Object.assign(window.OMNISOLO_TOOLTIPS, data);
+            }
+        }).catch(() => {});
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -1487,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.id = 'ohc-help-chat-overlay';
     overlay.innerHTML = `
         <div id="ohc-help-chat-header">
-            <h3>Ask anything</h3>
+            <h3>Ask AI Help</h3>
             <button id="ohc-help-close" aria-label="Close help chat">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
