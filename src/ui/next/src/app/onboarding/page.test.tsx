@@ -1292,4 +1292,40 @@ describe("OnboardingWizard", () => {
     });
     await user.click(skipBtns[0]);
   });
+
+
+  it("syncs flat state directly to the backend rather than wrapping it in wizardState", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    const fetchCalls: { url: Parameters<typeof fetch>[0]; options?: RequestInit }[] = [];
+    global.fetch = vi.fn().mockImplementation((url, options) => {
+      fetchCalls.push({ url, options });
+      return Promise.resolve(Response.json({}, { status: 200 }));
+    });
+
+    act(() => {
+      useOnboardingStore.setState({ step: -2 });
+    });
+
+    await renderOnboardingWizard();
+
+    // Start Business sends state step: 1
+    const startBtn = screen.getAllByRole("button", { name: "Start My Business" })[0];
+    await user.click(startBtn);
+
+    await waitFor(() => {
+      const stateCalls = fetchCalls.filter(c => typeof c.url === 'string' && c.url.includes('/api/v1/onboarding/state') && c.options?.method === 'POST');
+      expect(stateCalls.length).toBeGreaterThan(0);
+
+      const syncCall = stateCalls[stateCalls.length - 1];
+      expect(typeof syncCall.options?.body).toBe('string');
+
+      const payload = JSON.parse(syncCall.options?.body as string);
+
+      // Verify the step is at the top level and wizardState wrapper is NOT present
+      expect(payload).toHaveProperty('step');
+      expect(payload).not.toHaveProperty('wizardState');
+      expect(payload.step).toBe(1);
+    }, { timeout: 3000 });
+  });
 });
