@@ -696,6 +696,11 @@ impl DepartmentOrchestrator {
         let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
         let topic = format!("agent_feed:{}", req.tenant_id);
         let _ = self.mesh.publish(&topic, payload_bytes).await;
+
+        let cache = crate::api::agent_feed::get_agent_feed_cache();
+        let tag = format!("agent_feed_tenant:{}", req.tenant_id);
+        cache.invalidate_by_tag(&tag).await;
+
         Ok(())
     }
 

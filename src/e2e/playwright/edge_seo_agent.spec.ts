@@ -9,7 +9,7 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
         await page.fill('input[name="password"]', 'password123');
         await page.click('button:has-text("Sign In")');
 
-        await expect(page.locator('text="Unified Agent Feed"').first().or(page.locator('text="Dashboard"').first())).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('text="Unified Agent Feed"').or(page.locator('text="Dashboard"')).first()).toBeVisible({ timeout: 15000 });
 
         // Navigate to products/inventory to trigger updates via UI
         await page.goto('/dashboard/products');

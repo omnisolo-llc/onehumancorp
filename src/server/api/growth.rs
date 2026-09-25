@@ -1286,12 +1286,20 @@ async fn handle_generate_win_back(
     Json(req): Json<GenerateWinBackRequest>,
 ) -> impl IntoResponse {
     let offer = req.offer.unwrap_or_else(|| "a special offer".to_string());
-    Json(GenerateWinBackResponse {
-        subject: format!("We miss you! Here is {}", offer),
-        body: format!(
+    let body_text = if let Some((discount, product)) = offer.split_once(" off ") {
+        format!(
+            "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} off your next order on {} with code WINBACK.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
+            discount, product
+        )
+    } else {
+        format!(
             "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
             offer
-        ),
+        )
+    };
+    Json(GenerateWinBackResponse {
+        subject: format!("We miss you! Here is {}", offer),
+        body: body_text,
     })
 }
 

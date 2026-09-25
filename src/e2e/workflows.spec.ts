@@ -10,7 +10,7 @@ test.describe('Agent Workflows', () => {
     await expect(page.getByRole('heading', { name: 'Create Workflow' })).toBeVisible();
     await page.locator('#workflow-name').fill(workflowName);
     await page.locator('#workflow-task').fill('Review this branch for security and deployment regressions.');
-    await page.getByRole('button', { name: 'Create & Run Workflow' }).click();
+    await page.getByRole('button', { name: 'Create & Run Workflow' }).first().click();
 
     await expect(page.getByText(workflowName)).toBeVisible();
     await expect(page.getByText('ohc_review_branch').first()).toBeVisible();

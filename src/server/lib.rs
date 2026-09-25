@@ -6687,7 +6687,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             "description": row.get::<String, _>("description"),
                             "status": row.get::<String, _>("status"),
                             "action_risk": row.get::<String, _>("action_risk"),
-                            "payload": row.get::<Option<serde_json::Value>, _>("payload")
+                            "payload": row.try_get::<Option<sqlx::types::Json<serde_json::Value>>, _>("payload")
+                                .ok()
+                                .flatten()
+                                .map(|j| j.0)
+                                .or_else(|| {
+                                    row.try_get::<Option<String>, _>("payload")
+                                        .ok()
+                                        .flatten()
+                                        .and_then(|s| serde_json::from_str(&s).ok())
+                                })
                         })
                     }).collect())
                 };
@@ -6833,7 +6842,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         rows_opt = Some((rows, true));
                                     }
                                 } else {
-                                    let query_str = "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
+                                    let query_str = "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload::text AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
                                     if let Ok(rows) = sqlx::query(query_str)
                                         .bind(&t_id1)
                                         .fetch_all(&mut *tx)
@@ -6852,7 +6861,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                     let item = serde_json::json!({
                                         "id": row.get::<String, _>("id"),
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_else(|_| row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default()),
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
                                         "source": row.try_get::<String, _>("source").unwrap_or_default(),
                                         "context": row.try_get::<String, _>("context").unwrap_or_default(),
@@ -6867,7 +6876,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
                                         "context": row.try_get::<String, _>("context").unwrap_or_default(),
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_else(|_| row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default()),
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
                                         "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                     });
@@ -6887,7 +6896,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                     let item = serde_json::json!({
                                         "id": row.get::<String, _>("id"),
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_else(|_| row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default()),
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
                                         "source": row.try_get::<String, _>("source").unwrap_or_default(),
                                         "context": row.try_get::<String, _>("context").unwrap_or_default(),
@@ -6910,7 +6919,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                         "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
                                         "context": row.try_get::<String, _>("context").unwrap_or_default(),
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_else(|_| row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default()),
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
                                         "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                     });
@@ -7438,7 +7447,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             UNION ALL
             SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
+            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL
@@ -7452,7 +7461,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             UNION ALL
             SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected')
+            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL
