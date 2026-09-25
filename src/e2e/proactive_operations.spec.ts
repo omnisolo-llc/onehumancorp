@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Proactive Operations Task Feed', () => {
-  test('Persona: Jun the Location Manager opens app and interacts with proactive ops tasks', async ({ page }) => {
+  test('Persona: Jun the Location Manager opens app and interacts with proactive ops tasks', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
 
     await page.waitForTimeout(2000);
