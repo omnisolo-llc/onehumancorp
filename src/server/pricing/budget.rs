@@ -183,7 +183,7 @@ impl BudgetManager {
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
         let current = self.state.lock().unwrap().total_allocated;
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || current > 0;
+            return false;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
@@ -382,8 +382,8 @@ mod tests {
         assert!(manager.is_projected_cost_over_threshold(1500)); // $15
 
         let zero_manager = BudgetManager::new(0.0);
-        assert!(zero_manager.is_projected_cost_over_threshold(800));
-        assert!(zero_manager.is_projected_cost_over_threshold(1));
+        assert!(!zero_manager.is_projected_cost_over_threshold(800));
+        assert!(!zero_manager.is_projected_cost_over_threshold(1));
         assert!(!zero_manager.is_projected_cost_over_threshold(0));
     }
 
