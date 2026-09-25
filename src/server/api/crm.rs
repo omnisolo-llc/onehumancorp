@@ -31,10 +31,15 @@ pub struct UpdateOpportunityStageRequest {
 
 #[cfg(test)]
 mod crm_tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_list_opportunities_handler_compilation() {
-        // Simple test to improve module coverage without breaking dependencies
-        assert!(true);
+        let query = OpportunitiesQuery {
+            tenant_id: Some("t1".to_string()),
+            mobile_optimized: Some(false),
+        };
+        assert_eq!(query.tenant_id.as_deref(), Some("t1"));
     }
 }
 

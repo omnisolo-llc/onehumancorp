@@ -22,7 +22,6 @@ const pageOwnedExactRoutes = new Set([
   "/dashboard/campaigns",
   "/dashboard/growth/affiliates",
   "/dashboard/growth/reputation",
-  "/dashboard/unified-feed",
   "/diagnostics",
   "/edge-storefront-setup",
   "/embed-builder",
