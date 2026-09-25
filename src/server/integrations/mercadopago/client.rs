@@ -30,7 +30,7 @@ impl MercadoPagoClient {
             || self.access_token.contains("mock")
             || self.access_token.contains("dummy")
         {
-            return Err("Mercado Pago access token is required".to_string());
+            return Err("Mercado Pago payment is currently unavailable".to_string());
         }
 
         let url = "https://api.mercadopago.com/checkout/preferences";
@@ -90,7 +90,7 @@ impl MercadoPagoClient {
             || self.access_token.contains("mock")
             || self.access_token.contains("dummy")
         {
-            return Err("Mercado Pago access token is required".to_string());
+            return Err("Mercado Pago payment is currently unavailable".to_string());
         }
 
         let url = "https://api.mercadopago.com/v1/payments";
@@ -146,7 +146,7 @@ mod tests {
         let result = client
             .create_checkout_preference("price_123", "tenant_123")
             .await;
-        assert_eq!(result.unwrap_err(), "Mercado Pago access token is required");
+        assert_eq!(result.unwrap_err(), "Mercado Pago payment is currently unavailable");
     }
 
     #[tokio::test]
@@ -155,7 +155,7 @@ mod tests {
         let result = client
             .create_payment(100.0, "Test payment", "test@example.com")
             .await;
-        assert_eq!(result.unwrap_err(), "Mercado Pago access token is required");
+        assert_eq!(result.unwrap_err(), "Mercado Pago payment is currently unavailable");
     }
 
     #[tokio::test]

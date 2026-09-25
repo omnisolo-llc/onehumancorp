@@ -85,7 +85,7 @@ mod tests {
         let result = provider
             .create_checkout_preference("price_123", "tenant_123")
             .await;
-        assert_eq!(result.unwrap_err(), "Mercado Pago access token is required");
+        assert_eq!(result.unwrap_err(), "Mercado Pago payment is currently unavailable");
     }
 
     #[tokio::test]
@@ -94,7 +94,7 @@ mod tests {
         let result = provider
             .create_payment(100.0, "Test payment", "test@example.com")
             .await;
-        assert_eq!(result.unwrap_err(), "Mercado Pago access token is required");
+        assert_eq!(result.unwrap_err(), "Mercado Pago payment is currently unavailable");
     }
 
     #[tokio::test]
