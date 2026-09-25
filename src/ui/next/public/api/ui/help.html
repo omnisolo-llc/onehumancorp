@@ -1043,7 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
             height: 28px;
             fill: currentColor;
         }
-        #ai-chat-interface {
+        #ai-chat-interface, #omnisolo-floating-help-widget, #ohc-floating-help-widget {
             position: fixed;
             bottom: 96px;
             right: 24px;
@@ -1063,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: 1px solid rgba(0,0,0,0.05);
         }
         @media (max-width: 480px) {
-            #ai-chat-interface {
+            #ai-chat-interface, #omnisolo-floating-help-widget, #ohc-floating-help-widget {
                 bottom: 0;
                 right: 0;
                 width: 100vw;
@@ -1218,7 +1218,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the button
     const btn = document.createElement('button');
-    btn.id = 'omnisolo-floating-help-btn';
+    btn.id = 'ohc-floating-help-btn';
+    btn.className = 'omnisolo-floating-help-btn';
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -1226,7 +1227,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the widget
     const widget = document.createElement('div');
-    widget.id = 'omnisolo-floating-help-widget';
+    widget.id = 'ohc-floating-help-widget';
+    widget.className = 'omnisolo-floating-help-widget';
     widget.innerHTML = `
         <div id="omnisolo-floating-help-header">
             <h3>Ask AI Help</h3>
@@ -1285,7 +1287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div id="tab-chat" class="omnisolo-help-content glassmorphism" style="padding-bottom: 12px;">
-            <div id="omnisolo-help-chat-messages">
+            <div id="ohc-help-chat-messages" class="omnisolo-help-chat-messages">
                 <div class="omnisolo-chat-msg agent">
                     Need help setting up your store? I am your AI Help Agent! How can I assist you today?
                 </div>
@@ -1349,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Chat Logic
     const chatInput = document.getElementById('ohc-help-chat-input') || document.getElementById('omnisolo-help-chat-input');
     const chatSend = document.getElementById('ohc-help-chat-send') || document.getElementById('omnisolo-help-chat-send');
-    const chatMessages = document.getElementById('omnisolo-help-chat-messages');
+    const chatMessages = document.getElementById('ohc-help-chat-messages') || document.getElementById('omnisolo-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {
         const msg = document.createElement('div');
@@ -1579,6 +1581,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-  <script src="help-widget.mjs" type="module"></script>
+  <!-- help-widget already inlined above -->
 </body>
 </html>

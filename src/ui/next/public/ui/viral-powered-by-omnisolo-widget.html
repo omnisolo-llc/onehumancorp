@@ -230,7 +230,10 @@
           if (res.ok) {
             const data = await res.json();
             if (data.referral_link) {
-              referralLink = data.referral_link;
+              referralLink = data.referral_link.replace(/\/ref\//, '/invite/');
+              if (!referralLink.includes('/invite/')) {
+                referralLink = `https://cloud.omnisolo.co/invite/${tenantId}`;
+              }
             }
           }
         } catch (e) {

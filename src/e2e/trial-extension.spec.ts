@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import './fixtures';
 
 async function navigateToTrialExtension(page: import("@playwright/test").Page) {
-  await page.goto('/trial-extension');
+  await page.goto('/trial-extension.html');
 }
 
 test.describe.serial('Trial Extension', () => {

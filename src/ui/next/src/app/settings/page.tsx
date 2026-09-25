@@ -583,7 +583,7 @@ export default function SettingsPage() {
             <div>
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
-                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">AI Voice Receptionist</div>
+                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Autonomous Voice Receptionist</div>
                   <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Let OmniSolo handle your business calls.</div>
                 </div>
               </div>
@@ -627,7 +627,7 @@ export default function SettingsPage() {
                       </label>
 
                       <div className="block">
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Assigned Number</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Assigned Phone Number</span>
                         <div className="mt-2 flex gap-2">
                           <input
                             aria-label="Assigned Phone Number"

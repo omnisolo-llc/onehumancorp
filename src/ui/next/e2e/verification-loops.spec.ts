@@ -12,7 +12,7 @@ test.describe('Verification Loops', () => {
     await page.fill('textarea[placeholder="e.g. Write a bash script that echoes \'ok\'."]', 'Test task');
 
     // Fill in the agent output (command)
-    await page.fill('textarea[placeholder="e.g. echo \'ok\'; e\\x78it 0"]', "echo 'ok'; e\x78it 0");
+    await page.locator('textarea').nth(1).fill("echo 'ok'; e\x78it 0");
 
 
 
@@ -29,7 +29,7 @@ test.describe('Verification Loops', () => {
     await page.goto('/verification-loops');
 
     // Fill in the agent output (command)
-    await page.fill('textarea[placeholder="e.g. echo \'ok\'; e\\x78it 0"]', "echo 'error'; e\x78it 1");
+    await page.locator('textarea').nth(1).fill("echo 'error'; e\x78it 1");
 
 
 

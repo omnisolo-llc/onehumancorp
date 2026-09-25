@@ -51,10 +51,10 @@ export function ViralTrialExtensionWidget() {
     <div className="mt-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-100 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
       <div className="font-bold text-gray-900 text-sm mb-2 font-outfit flex items-center gap-2">
-        <span className="text-indigo-600">🚀</span> Want 7 Extra Days of Pro?
+        <span className="text-indigo-600">🚀</span> Want Pro Access?
       </div>
       <p className="text-xs text-gray-600 mb-3">
-        Share on X (Twitter) to unlock a free week of advanced features.
+        Share on X (Twitter) to request access to advanced features.
       </p>
       <button
         onClick={handleShareAndClaim}

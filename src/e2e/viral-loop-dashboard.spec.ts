@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Viral Loop Dashboard Widget', () => {
-    test('dashboard surfaces viral loop metrics correctly and increments on invite generation', async ({ page }) => {
-        // Go through the login flow
-        // The `page` fixture automatically logs us in and lands on the /dashboard via `loginAs` in fixtures.ts.
+    test('dashboard surfaces viral loop metrics correctly and increments on invite generation', async ({ page, loginAs, adminUser }) => {
+        await loginAs(page, adminUser);
+        await page.goto('/dashboard');
         await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
         // Look for the "Viral Loop Performance" section

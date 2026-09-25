@@ -4,7 +4,8 @@ test.describe('Viral Share Cards Growth Loop', () => {
   test('verify social share cards flow and viral branding', async ({ page }) => {
     test.setTimeout(90000);
 
-    // Verify Dashboard loading state passes (the fixture navigates here)
+    // Navigate to dashboard
+    await page.goto('/dashboard');
     await page.waitForURL('**/dashboard');
 
     // We are on /dashboard. Wait for the heading.

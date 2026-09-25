@@ -294,7 +294,7 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    function initWifiGenerator() {
       // State
       let state = {
         hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
@@ -352,7 +352,13 @@
 
       // Initial render
       updatePreview();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initWifiGenerator);
+    } else {
+      initWifiGenerator();
+    }
   </script>
 </body>
 </html>

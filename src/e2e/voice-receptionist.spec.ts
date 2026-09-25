@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Voice Receptionist', () => {
-  test('Admin can enable and configure the AI Voice Receptionist', async ({ page }) => {
+  test('Admin can enable and configure the AI Voice Receptionist', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // Navigate to settings page
     await page.goto('/settings');
     await expect(page).toHaveTitle(/Settings/);

@@ -31,7 +31,7 @@ export default function ViralJobBoardGeneratorPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Viral Job Board Generator 📢</h1>
+        <h1 aria-label="Viral Job Board Generator" className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Viral Job Board Generator 📢</h1>
         <button
           onClick={() => router.push('/dashboard')}
           className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors"

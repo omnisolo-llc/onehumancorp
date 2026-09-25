@@ -2354,15 +2354,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
               onClose={() => setEditingId(null)}
               initialPayload={approval.proposed_action || approval.context_payload}
               onApprove={(updatedPayload) => {
-                handleDecision(
-                  approval.id,
-                  true,
-                  JSON.stringify(updatedPayload),
-                  approval.event_source,
-                );
+                setTimeout(() => {
+                  handleDecision(
+                    approval.id,
+                    true,
+                    JSON.stringify(updatedPayload),
+                    approval.event_source,
+                  );
+                }, 2000);
                 setTimeout(() => {
                   setEditingId(null);
-                }, 1500);
+                }, 2500);
               }}
             />
             <div className="flex flex-col sm:flex-row gap-3 w-full">

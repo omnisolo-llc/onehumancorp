@@ -128,7 +128,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     await chatBtn.click({ force: true });
 
     // The chat widget should open
-    const chatWidget = page.locator('#ohc-floating-help-widget').first();
+    const chatWidget = page.locator('#ohc-floating-help-widget, #omnisolo-floating-help-widget').first();
     await expect(chatWidget).toBeVisible();
 
     // Switch to Ask AI tab

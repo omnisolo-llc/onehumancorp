@@ -9609,8 +9609,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ),
         ))
         .merge(api::realtime::router())
-        .nest(
-            "/api/v1/agent-feed",
+        .merge(
             api::agent_feed::router().with_state(db.pool.clone()).route_layer(
                 axum::middleware::from_fn_with_state(
                     http_auth_store.clone(),
@@ -10573,8 +10572,7 @@ mod tests {
         use tower::ServiceExt;
         let pool = crate::db::create_dummy_pg_pool().await;
         let auth_store = std::sync::Arc::new(crate::auth::Store::new());
-        let app = axum::Router::new().nest(
-            "/api/v1/agent-feed",
+        let app = axum::Router::new().merge(
             crate::api::agent_feed::router()
                 .with_state(pool)
                 .route_layer(axum::middleware::from_fn_with_state(

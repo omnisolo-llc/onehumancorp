@@ -18,8 +18,7 @@ export function SoftPaywallWidget() {
 
   const handleShareClick = async () => {
     if (typeof window !== "undefined") {
-      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "DEFAULT";
-      const message = `I just discovered Advanced AI Automations on OmniSolo OneHumanCorp! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
+      const message = `I just discovered Advanced AI Automations on OmniSolo OneHumanCorp! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/share`;
       const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
       window.open(shareUrl, "_blank");
     }
@@ -28,12 +27,10 @@ export function SoftPaywallWidget() {
 
     try {
       const url = "/api/v1/growth/trial-extension/claim";
-      const token = typeof window !== "undefined" ? localStorage.getItem("omnisolo_token") : "";
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { authorization: `Bearer ${token}` } : {}),
         },
       });
 
