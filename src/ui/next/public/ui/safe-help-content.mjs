@@ -20,7 +20,8 @@ export function renderHelpMessage(node, text, link) {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.rel = 'noopener noreferrer';
-  anchor.textContent = `Read the full article: ${link.title} →`;
+  const title = link.title.trim();
+  anchor.textContent = title.startsWith('Read the full article') || title.includes('→') ? title : `Read the full article: ${title} →`;
   anchor.style.cssText = 'display:inline-block;padding:8px 12px;min-height:44px;color:#0066FF;border-radius:8px;font-size:13px;';
   wrapper.appendChild(anchor);
   node.appendChild(wrapper);

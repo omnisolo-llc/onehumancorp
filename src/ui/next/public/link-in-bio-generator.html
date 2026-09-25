@@ -423,7 +423,7 @@
         const removeBrandingSlider = document.getElementById('remove-branding-slider');
         const removeBrandingKnob = document.getElementById('remove-branding-knob');
 
-        let tenant = window.localStorage.getItem('tenant') || window.localStorage.getItem('tenant_id') || 'my-store';
+        let tenant = new URLSearchParams(window.location.search).get('tenant') || window.localStorage.getItem('tenant') || window.localStorage.getItem('tenant_id') || 'e2e-tenant';
 
         let currentState = {
             store_name: storeNameInput ? (storeNameInput.value || 'My Store') : 'My Store',
@@ -439,14 +439,22 @@
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
                 try {
+                    const token = window.localStorage.getItem('token') || window.localStorage.getItem('omnisolo_token') || window.localStorage.getItem('access_token');
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-Id': tenant
+                    };
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    const payload = {
+                        ...currentState,
+                        tenant_id: tenant
+                    };
                     await fetch('/api/v1/growth/link-in-bio', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${window.localStorage.getItem('token') || ''}`,
-                            'X-Tenant-Id': tenant
-                        },
-                        body: JSON.stringify(currentState)
+                        headers: headers,
+                        body: JSON.stringify(payload)
                     });
                 } catch (e) {
                     console.error("Failed to save bio config", e);

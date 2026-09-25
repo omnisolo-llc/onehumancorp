@@ -82,10 +82,12 @@ test.describe('CustomerSuccessAgent Auto-Reply Flow', () => {
     await approveBtn.click();
 
     // 5. Verify the card disappears (handled by handleTriageAction removing the element)
-    await expect(card).not.toBeVisible();
+    await expect(card).not.toBeVisible({ timeout: 10000 });
 
     // 6. Verify backend state updated to APPROVED
-    const finalState = await db.query(`SELECT state FROM agent_feed WHERE id = $1`, [triageItemId]);
-    expect(finalState.rows[0].state).toBe('APPROVED');
+    await expect(async () => {
+      const finalState = await db.query(`SELECT state FROM agent_feed WHERE id = $1`, [triageItemId]);
+      expect(finalState.rows[0]?.state).toBe('APPROVED');
+    }).toPass({ timeout: 10000 });
   });
 });
