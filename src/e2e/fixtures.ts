@@ -25,6 +25,15 @@ async function loginAsAtBaseURL(page: Page, user: E2EUser, baseURL: string) {
     }, origin);
   }
   await page.goto(new URL('/dashboard', baseURL).toString());
+  try {
+    await page.evaluate((orgId) => {
+      localStorage.setItem('tenant_id', orgId);
+      localStorage.setItem('tenant', orgId);
+      localStorage.setItem('business_display_name', orgId);
+    }, user.organizationId);
+  } catch {
+    // ignore if context was destroyed or closed
+  }
 }
 
 export const e2ePage = {
@@ -127,20 +136,24 @@ export { expect };
 
 export async function adminPage(
   browserOrPage: Browser | Page,
-  context?: BrowserContext,
+  contextOrCallback?: BrowserContext | ((page: Page) => Promise<void>),
 ): Promise<Page> {
   let page: Page;
   if ('newPage' in browserOrPage) {
       page = await browserOrPage.newPage();
   } else if ('goto' in browserOrPage) {
       page = browserOrPage;
-  } else if (context) {
-      page = await context.newPage();
+  } else if (contextOrCallback && 'newPage' in contextOrCallback) {
+      page = await contextOrCallback.newPage();
   } else {
       throw new Error('No valid browser or page object provided to adminPage');
   }
   wrapPage(page);
-  if (page.url() === 'about:blank') await page.goto('/login');
-  await loginAsAtBaseURL(page, E2E_ADMIN_USER, new URL(page.url()).origin);
+  const baseURL = (page.context() as unknown as { _options?: { baseURL?: string } })._options?.baseURL
+    || 'http://127.0.0.1:18789';
+  await loginAsAtBaseURL(page, E2E_ADMIN_USER, baseURL);
+  if (typeof contextOrCallback === 'function') {
+    await contextOrCallback(page);
+  }
   return page;
 }

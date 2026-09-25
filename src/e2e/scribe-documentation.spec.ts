@@ -37,7 +37,7 @@ test.describe('Documentation UI Components', () => {
         }
 
         // Click Ask AI tab
-        const askAiTab = page.locator('button', { hasText: 'Ask AI' });
+        const askAiTab = page.locator('button', { hasText: 'Ask AI' }).last();
         await askAiTab.click();
 
         // Type 'getting started' and send
