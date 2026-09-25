@@ -829,6 +829,9 @@ export default function OnboardingWizard() {
                   />
                 </svg>
               </div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-blue-600 mb-1">
+                Welcome
+              </div>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
                 Setup Assistant
               </h2>
@@ -839,6 +842,7 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
+                  aria-label="Start My Business"
                   className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px] min-h-[44px]"
                   onClick={() => {
                     updateState({ step: 1 });
@@ -846,6 +850,7 @@ export default function OnboardingWizard() {
                   }}
                 >
                   Start My Business
+                  <span className="sr-only">Start Onboarding</span>
                 </button>
                 <button
                   type="button"

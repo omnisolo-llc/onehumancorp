@@ -351,11 +351,11 @@
             <h2>Profile Details</h2>
             <div class="form-group">
                 <label>Business Name</label>
-                <input type="text" id="store-name" value="My Store">
+                <input type="text" id="store-name" value="My Store" oninput="this.dataset.dirty='true'; if(window.onStoreNameInput) window.onStoreNameInput(this.value)">
             </div>
             <div class="form-group">
                 <label>Bio / Tagline</label>
-                <textarea id="bio-text" rows="2">Welcome to my storefront!</textarea>
+                <textarea id="bio-text" rows="2" oninput="this.dataset.dirty='true'; if(window.onBioInput) window.onBioInput(this.value)">Welcome to my storefront!</textarea>
             </div>
             <div class="form-group">
                 <label>Theme</label>
@@ -516,6 +516,17 @@
             });
         }
 
+        window.onStoreNameInput = (val) => {
+            currentState.store_name = val;
+            updatePreview();
+            saveState();
+        };
+        window.onBioInput = (val) => {
+            currentState.bio = val;
+            updatePreview();
+            saveState();
+        };
+
         if (storeNameInput) {
             storeNameInput.addEventListener('input', (e) => {
                 storeNameInput.dataset.dirty = 'true';
@@ -575,11 +586,13 @@
                 const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
                 if (response.ok) {
                     const data = await response.json();
-                    if (!storeNameInput.dataset.dirty) {
+                    const isNameDirty = storeNameInput.dataset.dirty || (storeNameInput.value && storeNameInput.value !== 'My Store');
+                    if (!isNameDirty) {
                         currentState.store_name = data.store_name || storeNameInput.value || 'My Store';
                         storeNameInput.value = currentState.store_name;
                     }
-                    if (!bioInput.dataset.dirty) {
+                    const isBioDirty = bioInput.dataset.dirty || (bioInput.value && bioInput.value !== 'Welcome to my storefront!');
+                    if (!isBioDirty) {
                         currentState.bio = data.bio || bioInput.value || '';
                         bioInput.value = currentState.bio;
                     }

@@ -438,6 +438,7 @@ where
             get(handle_interactive_poll_embed),
         )
         .route("/milestone", get(handle_get_milestone))
+        .route("/milestone/card", get(handle_get_milestone_card))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
         .route(
@@ -509,7 +510,6 @@ where
             "/reputation/simulate-referral-checkout",
             post(handle_simulate_referral_checkout),
         )
-        .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))

@@ -1304,7 +1304,7 @@ html.dark .glass-panel {
 }
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
 }
 .glass-control {
   border-radius: 8px !important;
