@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { AppShell } from "@/app/components/AppShell";
 
 interface ChatMessage {
   id: string;
@@ -45,60 +44,58 @@ export default function AgentChatPage() {
   };
 
   return (
-    <AppShell title="Agent Chat">
-      <div className="flex flex-col flex-1 w-full max-w-4xl mx-auto px-4 py-6 h-[calc(100vh-80px)]">
-        <div className="flex items-center justify-between border-b pb-4 mb-4">
-          <h1 className="text-xl font-bold font-outfit text-gray-900 dark:text-gray-100">
-            Agent Accountant Chat
-          </h1>
-          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-            Online
-          </span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-md p-4 rounded-2xl shadow-sm text-sm ${
-                  msg.sender === "user"
-                    ? "bg-[#0066FF] text-white"
-                    : "bg-white/80 dark:bg-[#1E1E24] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
-                }`}
-              >
-                {msg.text}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 flex gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Type your financial query or balance question..."
-            rows={2}
-            className="flex-1 p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#16161A] text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none resize-none"
-          />
-          <button
-            type="button"
-            aria-label="Send message"
-            onClick={handleSend}
-            className="px-6 py-2 bg-[#0066FF] text-white rounded-xl font-medium text-sm hover:bg-[#0052cc] transition-colors self-end min-h-[44px]"
-          >
-            Send
-          </button>
-        </div>
+    <div className="flex flex-col flex-1 w-full max-w-4xl mx-auto px-4 py-6 h-[calc(100vh-80px)]">
+      <div className="flex items-center justify-between border-b pb-4 mb-4">
+        <h1 className="text-xl font-bold font-outfit text-gray-900 dark:text-gray-100">
+          Agent Accountant Chat
+        </h1>
+        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+          Online
+        </span>
       </div>
-    </AppShell>
+
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-md p-4 rounded-2xl shadow-sm text-sm ${
+                msg.sender === "user"
+                  ? "bg-[#0066FF] text-white"
+                  : "bg-white/80 dark:bg-[#1E1E24] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
+              }`}
+            >
+              {msg.text}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 flex gap-2">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          placeholder="Type your financial query or balance question..."
+          rows={2}
+          className="flex-1 p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#16161A] text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none resize-none"
+        />
+        <button
+          type="button"
+          aria-label="Send message"
+          onClick={handleSend}
+          className="px-6 py-2 bg-[#0066FF] text-white rounded-xl font-medium text-sm hover:bg-[#0052cc] transition-colors self-end min-h-[44px]"
+        >
+          Send
+        </button>
+      </div>
+    </div>
   );
 }

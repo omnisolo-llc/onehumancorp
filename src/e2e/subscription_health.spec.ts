@@ -32,7 +32,7 @@ test.describe('Subscription Health & Churn Prevention', () => {
       const check = await executeSql(`
         SELECT description, payload
         FROM agent_action_requests
-        WHERE tenant_id = '${tenantId}' AND department_type = 'CustomerSuccess'
+        WHERE tenant_id = '${tenantId}' AND (department_type = 'customer_success' OR department_type = 'CustomerSuccess')
         ORDER BY created_at DESC LIMIT 1
       `);
       expect(check.length).toBeGreaterThan(0);
