@@ -152,7 +152,7 @@ export default function GrowthReferralWidget() {
               <button
                 onClick={() => {
                   const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'default-team') : 'default-team';
-                  navigator.clipboard.writeText(`<iframe src="https://cloud.omnisolo.co/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ OmniSolo</a></div>`);
+                  navigator.clipboard.writeText(`<iframe src="https://omnisolo.co/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ OmniSolo</a></div>`);
                   alert('Embed code copied to clipboard!');
                 }}
                 className="w-full app-button min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white border-none py-3 px-6 text-sm rounded-md"

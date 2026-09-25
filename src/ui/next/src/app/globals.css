@@ -1223,6 +1223,10 @@ textarea.glass-control {
   border-radius: 8px !important;
 }
 
+button,
+[role="button"],
+a.button,
+.app-button,
 button.glass-control,
 a.glass-control,
 input[type="text"],
@@ -1303,11 +1307,12 @@ html.dark .glass-panel {
   border-radius: 16px !important;
 }
 .app-shell .app-card,
-.app-shell .app-panel {
+.app-shell .app-panel,
+.app-shell .glass-card,
+.app-shell .glassmorphism:not([data-voice-assistant-surface]) {
   border-radius: 8px !important;
 }
-.app-shell .glassmorphism,
-.app-shell .glass-card {
+.app-shell .glassmorphism[data-voice-assistant-surface] {
   border-radius: 16px !important;
 }
 .glass-control {

@@ -1277,7 +1277,7 @@ async fn handle_generate_win_back(
     Json(GenerateWinBackResponse {
         subject: format!("We miss you! Here is {}", offer),
         body: format!(
-            "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team",
+            "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
             offer
         ),
     })
@@ -3013,9 +3013,9 @@ pub async fn handle_get_milestone_card(
 
     let branding = if !has_pro {
         format!(
-            r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
+            r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&amp;ref={}" target="_blank">
     <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ OmniSolo</text>
-    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OmniSolo & get 14 days of Pro free</text>
+    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OmniSolo &amp; get 14 days of Pro free</text>
   </a>"##,
             tenant_id
         )

@@ -1164,8 +1164,7 @@
 
         simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
 
-        try {
-          // Request Terminal Token
+        // Request Terminal Token
           const tokenRes = await fetch('/api/v1/payments/terminal/token', {
             method: 'POST',
             headers: {
