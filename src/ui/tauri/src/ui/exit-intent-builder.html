@@ -415,11 +415,15 @@
     inputButton.addEventListener('input', updatePreview);
     inputColor.addEventListener('input', updatePreview);
 
+    let isProActive = false;
+
     brandingToggle.addEventListener('click', (e) => {
       e.preventDefault();
-      if (!brandingToggle.checked) {
+      if (!isProActive) {
+        brandingToggle.checked = false;
         modal.style.display = 'flex';
       } else {
+        isProActive = false;
         brandingToggle.checked = false;
         updatePreview();
       }
@@ -427,9 +431,11 @@
 
     cancelBtn.addEventListener('click', () => {
       modal.style.display = 'none';
+      brandingToggle.checked = isProActive;
     });
 
     upgradeBtn.addEventListener('click', () => {
+      isProActive = true;
       brandingToggle.checked = true;
       modal.style.display = 'none';
       updatePreview();

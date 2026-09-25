@@ -205,7 +205,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           }
           const refreshedData = await unifiedRes.json();
           unifiedData = initialData
-            ? { ...initialData, items: refreshedData.items || [] }
+            ? {
+                ...initialData,
+                ...refreshedData,
+                items: refreshedData.items || initialData.items || [],
+                priority_tasks:
+                  refreshedData.priority_tasks && refreshedData.priority_tasks.length > 0
+                    ? refreshedData.priority_tasks
+                    : initialData.priority_tasks,
+                triage:
+                  refreshedData.triage && refreshedData.triage.length > 0
+                    ? refreshedData.triage
+                    : initialData.triage,
+              }
             : refreshedData;
         }
 
@@ -540,7 +552,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     // Record as decided immediately to prevent polling re-adding it
     decidedIdsRef.current.add(id);
 
-    setItems((prev) => prev.filter((app) => app.id !== id));
+    if (approved) {
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
+    } else {
+      setItems((prev) => prev.filter((app) => app.id !== id));
+    }
 
     if (isOffline) {
       // Enqueue offline action

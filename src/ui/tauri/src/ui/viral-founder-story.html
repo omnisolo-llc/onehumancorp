@@ -326,6 +326,9 @@
     } catch (e) {}
 
     function updatePreview() {
+      if (founderNameInput) state.founderName = founderNameInput.value;
+      if (storyTextInput) state.storyText = storyTextInput.value;
+      if (rewardInput) state.reward = rewardInput.value;
       const origin = window.location.origin;
       const fNameEncoded = encodeURIComponent(state.founderName);
       const storyEncoded = encodeURIComponent(state.storyText);
@@ -333,19 +336,21 @@
       previewFrame.src = `${origin}/api/v1/growth/founder-story/embed?tenant=${encodeURIComponent(state.tenant)}&founder_name=${fNameEncoded}&story_text=${storyEncoded}&reward=${rewardEncoded}&theme=${encodeURIComponent(state.theme)}&hideBranding=${state.removeBranding}`;
     }
 
-    founderNameInput.addEventListener('input', (e) => {
-      state.founderName = e.target.value;
-      updatePreview();
-    });
+    ['input', 'change', 'keyup', 'blur'].forEach((evt) => {
+      founderNameInput.addEventListener(evt, (e) => {
+        state.founderName = e.target.value;
+        updatePreview();
+      });
 
-    storyTextInput.addEventListener('input', (e) => {
-      state.storyText = e.target.value;
-      updatePreview();
-    });
+      storyTextInput.addEventListener(evt, (e) => {
+        state.storyText = e.target.value;
+        updatePreview();
+      });
 
-    rewardInput.addEventListener('input', (e) => {
-      state.reward = e.target.value;
-      updatePreview();
+      rewardInput.addEventListener(evt, (e) => {
+        state.reward = e.target.value;
+        updatePreview();
+      });
     });
 
     themeLightBtn.addEventListener('click', () => {
