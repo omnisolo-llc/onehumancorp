@@ -109,10 +109,17 @@ where
     PgPool: axum::extract::FromRef<S>,
 {
     Router::new()
-        .route("/", get(list_feed_items).post(create_feed_item))
-        .route("/{id}", put(update_feed_item_state))
-        .route("/{id}/state", put(update_feed_item_state))
-        .route("/ws", get(ws_feed_handler))
+        .route(
+            "/api/v1/agent-feed",
+            get(list_feed_items).post(create_feed_item),
+        )
+        .route(
+            "/api/v1/agent-feed/",
+            get(list_feed_items).post(create_feed_item),
+        )
+        .route("/api/v1/agent-feed/{id}", put(update_feed_item_state))
+        .route("/api/v1/agent-feed/{id}/state", put(update_feed_item_state))
+        .route("/api/v1/agent-feed/ws", get(ws_feed_handler))
 }
 
 pub async fn ws_feed_handler(

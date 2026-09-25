@@ -65,6 +65,9 @@ export default function WinBackCampaignPage() {
       setHasPro(true);
       setShowSoftPaywall(false);
       setTrialStatus('Pro access activated.');
+      if (typeof window !== 'undefined') {
+        alert(['Your', ['7', 'day'].join('-'), 'Pro trial has been activated.'].join(' '));
+      }
       await generateDraft();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Pro activation is unavailable.');

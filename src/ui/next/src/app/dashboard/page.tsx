@@ -1245,6 +1245,17 @@ export default function Dashboard() {
             </a>
             </WithTooltip>
 
+            <WithTooltip id="loyalty-widget-tooltip" defaultText="Create viral loyalty stamp cards to reward returning customers.">
+            <a href="/viral-loyalty-widget.html" id="loyalty-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">☕</div>
+                <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Loyalty</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Loyalty Program</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Digital stamp card program with viral referral mechanics.</p>
+            </a>
+            </WithTooltip>
+
             <WithTooltip id="field-ops-tooltip" defaultText="Offline-first mobile route management for field service workers.">
             <Link href="/field-ops/jobs" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
