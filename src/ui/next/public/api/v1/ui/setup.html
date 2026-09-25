@@ -3505,8 +3505,11 @@
         if (document.querySelector(".container")) {
           document.querySelector(".container").scrollTo(0, 0);
         }
-        document.getElementById(stepId).classList.add("active");
-        document.getElementById(stepId).style.display = "block";
+        const targetStep = document.getElementById(stepId);
+        if (targetStep) {
+          targetStep.classList.add("active");
+          targetStep.style.display = "block";
+        }
         updateStepper(stepId);
 
         if (shouldSave) {
@@ -3517,10 +3520,11 @@
 
       document.querySelectorAll(".next-step-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
-          const currentStep = e.target.closest(".step").id;
-          const nextStepId = e.target.getAttribute("data-next");
+          const target = e.currentTarget || (e.target && e.target.closest("button")) || btn;
+          const currentStep = target.closest(".step")?.id || (e.target && e.target.closest(".step")?.id);
+          const nextStepId = target.getAttribute("data-next");
           if (validateStep(currentStep)) {
-            goToStep(nextStepId);
+            if (nextStepId) goToStep(nextStepId);
             saveCurrentState();
           }
         });
@@ -3544,9 +3548,12 @@
 
       document.querySelectorAll(".prev-step-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
-          const prevStepId = e.target.getAttribute("data-prev");
-          goToStep(prevStepId);
-          saveCurrentState();
+          const target = e.currentTarget || (e.target && e.target.closest("button")) || btn;
+          const prevStepId = target.getAttribute("data-prev");
+          if (prevStepId) {
+            goToStep(prevStepId);
+            saveCurrentState();
+          }
         });
       });
 

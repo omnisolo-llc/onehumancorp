@@ -70,6 +70,7 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/actor-model": { title: "Actor-Model Message Passing" },
   "/affiliate-badge-builder": { title: "Affiliate Badge Builder" },
   "/agent-marketplace": { title: "Agent Marketplace" },
+  "/agent/chat": { title: "Agent Chat" },
   "/agent-protocol": {
     title: "Agent Protocol UI",
     subtitle: "Standardized Agent Protocol interactions.",
