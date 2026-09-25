@@ -11,6 +11,6 @@ test.describe('Owner Feed Component Tests', () => {
     // We expect the dashboard header to be visible.
     await expect(page.locator('h1').first()).toBeVisible();
     await expect(page.locator('main')).toBeVisible();
-    await expect(page.locator('div[class*="rounded-[16px]"]')).toBeHidden();
+    await expect(page.locator('div[class*="rounded-[16px]"]').first()).toBeVisible();
   });
 });

@@ -120,6 +120,10 @@ impl ProactiveOperationsWorker {
                             }
                         }
                     }
+
+                    let cache = crate::api::agent_feed::get_agent_feed_cache();
+                    let tag = format!("agent_feed_tenant:{}", tenant_id);
+                    cache.invalidate_by_tag(&tag).await;
                 }
             }
         });
