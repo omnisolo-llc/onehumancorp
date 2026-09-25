@@ -36,7 +36,7 @@ export function SuccessMilestoneWidget() {
   if (status === "empty" || !milestone) return <p className="mb-6 text-sm text-gray-500">No milestone is available yet.</p>;
 
   const referralLink = `/onboarding?ref=${tenantId}&source=milestone_share`;
-  const fullShareText = `${milestone.shareText} https://cloud.omnisolo.co${referralLink}\n\n⚡ Powered by OmniSolo`;
+  const fullShareText = `${milestone.shareText} https://cloud.omnisolo.co${referralLink}\n\n⚡ OmniSolo · Powered by OmniSolo`;
 
   const handleShare = () => {
     navigator.clipboard.writeText(fullShareText);

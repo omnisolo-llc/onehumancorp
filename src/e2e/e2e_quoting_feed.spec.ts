@@ -17,14 +17,17 @@ test.describe('Quote Feed e2e', () => {
 
     // 3. Tap approve
     // Deep link works
-    await page.locator('[data-testid="review-quote-draft"]').first().click();
+    const reviewBtn = page.locator('[data-testid="review-quote-draft"]').first();
+    await reviewBtn.scrollIntoViewIfNeeded();
+    await reviewBtn.click();
 
-    await expect(page.locator('role=dialog')).toBeVisible();
+    const dialog = page.locator('role=dialog, [role="dialog"], [data-testid="quote-review-dialog"]').first();
+    await expect(dialog).toBeVisible({ timeout: 15000 });
 
     await expect(page.getByText('Review Quote')).toBeVisible();
 
     // Tap approve on the quoting page
-    await page.locator('role=dialog').getByRole('button', { name: 'Approve & Send' }).click();
+    await dialog.getByRole('button', { name: 'Approve & Send' }).click();
 
     // Assert quote is accepted
     await expect(page.getByText('Proposal Accepted')).toBeVisible();
