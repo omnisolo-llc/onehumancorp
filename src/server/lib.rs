@@ -4580,6 +4580,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let cache = UI_TRIAGE_CACHE
             .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
+        if query.bypass_cache.unwrap_or(false) {
+            cache.invalidate(&cache_key).await;
+        }
+
         let items_opt = cache
             .get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
                 let db = db.clone();

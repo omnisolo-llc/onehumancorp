@@ -6,7 +6,7 @@ test.describe('Expert Team', () => {
     await page.goto('/expert-team');
 
     // Check that the title exists
-    await expect(page.locator('h1')).toHaveText('Collaborative Expert Team');
+    await expect(page.locator('h1', { hasText: 'Collaborative Expert Team' }).first()).toHaveText('Collaborative Expert Team');
 
     // Fill in the task context
     await page.fill('textarea[placeholder*="Write a comprehensive business plan"]', 'Write a comprehensive business plan for a new AI startup. Chart: Required. Analysis: Deep. Chapter 1, Chapter 2, Chapter 3, Chapter 4, Chapter 5, Chapter 6, Chapter 7, Chapter 8');
