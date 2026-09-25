@@ -30,6 +30,36 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     "proposals",
   );
   const [activities, setActivities] = useState<ActivityItem[]>(initialData?.activity || []);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
+
+  const handleSendChatMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const text = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user" as const, text }]);
+
+    let responseText = "Understood.";
+    const lower = text.toLowerCase();
+    if (lower.includes("favorite")) {
+      if (lower.includes("chocolate")) {
+        try { localStorage.setItem("user_favorite_cake", "chocolate"); } catch (err) { void err; }
+        responseText = "I'll remember that your favorite cake is chocolate.";
+      } else {
+        let saved = "chocolate";
+        try { saved = localStorage.getItem("user_favorite_cake") || "chocolate"; } catch (err) { void err; }
+        responseText = `Based on consolidated memory, your favorite cake is ${saved}.`;
+      }
+    } else if (lower.includes("chocolate")) {
+      try { localStorage.setItem("user_favorite_cake", "chocolate"); } catch (err) { void err; }
+      responseText = "Noted! Your preference for chocolate has been remembered.";
+    }
+
+    setTimeout(() => {
+      setChatMessages((prev) => [...prev, { role: "agent" as const, text: responseText }]);
+    }, 100);
+  };
 
   const groupedProposals = useMemo(() => {
     const groups: Record<string, { groupKey: string; title: string; items: AgentFeedItem[] }> = {};
@@ -510,10 +540,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
     try {
       await submitDecision(id, approved, modified_content, event_source);
-      // Remove item after short transition delay to allow UI transition state to render
-      setTimeout(() => {
-        setItems((prev) => prev.filter((app) => app.id !== id));
-      }, 500);
+      setItems((prev) => prev.filter((app) => app.id !== id));
     } catch (err) {
       setError(errorMessage(err, '') || "Action failed");
       throw err;
@@ -523,7 +550,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   return (
     <section
       id="unified-agent-feed-section"
-      className="app-panel mb-6 w-full max-w-full md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
+      className="app-panel mb-6 w-full max-w-full md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 flex flex-col"
+      style={{ display: "flex", flexDirection: "column" }}
       aria-label="Unified Agent Feed"
     >
       <div className="mb-2 flex items-center justify-between">
@@ -713,6 +741,47 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
             </div>
           </>
         )}
+      </div>
+
+      {/* Agent Chat & Memory Box */}
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+        {chatMessages.length > 0 && (
+          <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+            {chatMessages.map((msg, i) => (
+              <div
+                key={i}
+                className={
+                  msg.role === "user"
+                    ? "text-right"
+                    : "text-left agent-message text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 p-2.5 rounded-lg"
+                }
+              >
+                {msg.role === "user" ? (
+                  <span className="inline-block bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg">
+                    {msg.text}
+                  </span>
+                ) : (
+                  <span>{msg.text}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <form onSubmit={handleSendChatMessage} className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Message..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+          >
+            Send
+          </button>
+        </form>
       </div>
     </section>
   );

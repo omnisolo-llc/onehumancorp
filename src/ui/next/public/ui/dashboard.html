@@ -611,6 +611,9 @@
     </script>
 </head>
   <body>
+    <nav class="nav-bar" style="width: 100%; max-width: 1200px; display: flex; justify-content: flex-end; padding: 12px 24px; box-sizing: border-box;">
+      <a href="/api/ui/help.html" class="nav-link" id="nav-help" style="text-decoration: none; color: #0066FF; font-weight: 600; font-size: 14px;">Help</a>
+    </nav>
     <!-- Omnibox Modal -->
     <div id="omnibox-overlay">
       <div id="omnibox-modal" onclick="event.stopPropagation()">
@@ -917,7 +920,7 @@
         <a href="referral-leaderboard-generator.html" id="leaderboard-link" class="btn-outline" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Generate a gamified leaderboard for your website.">Leaderboard Generator 🏆</a>
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
         <div style="margin-top: 15px;"><a href="integrations.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f; margin-bottom: 10px;">Integrations</a></div>
-        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#operations-map', title: 'Operations Map', text: 'Operations Map'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Tour</button></div>
+        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#operations-map', title: 'Operations Map', text: 'Operations Map'}])">Start Tour</button></div>
         <div style="margin-top: 15px;"><a href="/api/v1/ui/changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
       </div>
 
@@ -1872,7 +1875,7 @@
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
           window.__TAURI__.core.invoke("generate_cloud_bridge_invite").then((link) => {
-            referralLink.value = link;
+            referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           }).catch((err) => {
@@ -1891,7 +1894,7 @@
             });
             const data = await res.json();
           const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
-            referralLink.value = data.invite_link || "";
+            referralLink.value = (data.invite_link || "").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           } catch(e) {
@@ -3150,7 +3153,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = e.target;
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
-            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+            showTooltip(e, text);
         }
     });
 
@@ -3167,8 +3172,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target) {
             const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
+                const guideText = target.id === 'dashboard-walkthrough-btn' ? `${text} Start an interactive guide to learn how to use OmniSolo.` : text;
                 window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
+                    showTooltip(e.touches ? e.touches[0] : e, guideText);
                 }, 500); // 500ms long press
             }
         }
@@ -3191,7 +3197,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+                const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+                showTooltip(e, text);
             }, 500); // 500ms long press
         }
     });

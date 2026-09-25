@@ -565,6 +565,9 @@
     </style>
   </head>
   <body>
+    <nav class="nav-bar" style="width: 100%; max-width: 1200px; display: flex; justify-content: flex-end; padding: 12px 24px; box-sizing: border-box;">
+      <a href="/api/ui/help.html" class="nav-link" id="nav-help" style="text-decoration: none; color: #0066FF; font-weight: 600; font-size: 14px;">Help</a>
+    </nav>
     <!-- Omnibox Modal -->
     <div id="omnibox-overlay">
       <div id="omnibox-modal" onclick="event.stopPropagation()">
@@ -681,7 +684,7 @@
             </button>
           </div>
         </div>
-        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#operations-map', title: 'Operations Map', text: 'Operations Map'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Tour</button></div>
+        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#operations-map', title: 'Operations Map', text: 'Operations Map'}])">Start Tour</button></div>
       </div>
 
 
@@ -953,7 +956,7 @@
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
           window.__TAURI__.core.invoke("generate_cloud_invite").then((link) => {
-            referralLink.value = link;
+            referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "https://cloud.omnisolo.co/invite/fallback";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           }).catch((err) => {
@@ -970,7 +973,7 @@
                 body: JSON.stringify({ invitee_id: "pending" })
             });
             const data = await res.json();
-                  referralLink.value = data.invite_link || "https://cloud.omnisolo.co/invite/fallback";
+                  referralLink.value = (data.invite_link || "https://cloud.omnisolo.co/invite/fallback").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
           } catch(e) {
             console.error(e);
                   referralLink.value = "https://cloud.omnisolo.co/invite/fallback";
@@ -1270,7 +1273,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
-            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+            showTooltip(e, text);
         }
     });
 
@@ -1286,7 +1291,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+                const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+                showTooltip(e, text);
             }, 500); // 500ms long press
         }
     });

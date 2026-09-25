@@ -351,11 +351,11 @@
             <h2>Profile Details</h2>
             <div class="form-group">
                 <label>Business Name</label>
-                <input type="text" id="store-name" value="My Store">
+                <input type="text" id="store-name" value="My Store" oninput="this.dataset.dirty='true'; if(window.onStoreNameInput) window.onStoreNameInput(this.value)">
             </div>
             <div class="form-group">
                 <label>Bio / Tagline</label>
-                <textarea id="bio-text" rows="2">Welcome to my storefront!</textarea>
+                <textarea id="bio-text" rows="2" oninput="this.dataset.dirty='true'; if(window.onBioInput) window.onBioInput(this.value)">Welcome to my storefront!</textarea>
             </div>
             <div class="form-group">
                 <label>Theme</label>
@@ -408,7 +408,7 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
+    function initLinkInBio() {
         const storeNameInput = document.getElementById('store-name');
         const bioInput = document.getElementById('bio-text');
         const themeBtns = document.querySelectorAll('.theme-btn');
@@ -426,41 +426,12 @@
         let tenant = window.localStorage.getItem('tenant') || window.localStorage.getItem('tenant_id') || 'my-store';
 
         let currentState = {
-            store_name: storeNameInput.value || 'My Store',
-            bio: bioInput.value || 'Welcome to my storefront!',
+            store_name: storeNameInput ? (storeNameInput.value || 'My Store') : 'My Store',
+            bio: bioInput ? (bioInput.value || 'Welcome to my storefront!') : 'Welcome to my storefront!',
             theme: 'gradient',
             links: [],
             remove_branding: false
         };
-
-        // Try load from API
-        try {
-            const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (!storeNameInput.dataset.dirty) {
-                    currentState.store_name = data.store_name || storeNameInput.value || 'My Store';
-                    storeNameInput.value = currentState.store_name;
-                }
-                if (!bioInput.dataset.dirty) {
-                    currentState.bio = data.bio || bioInput.value || '';
-                    bioInput.value = currentState.bio;
-                }
-                if (!currentState.theme_dirty) {
-                    currentState.theme = data.theme || 'gradient';
-                }
-                if (currentState.links.length === 0) {
-                    currentState.links = data.links || [];
-                }
-                if (!currentState.branding_dirty) {
-                    currentState.remove_branding = !!data.remove_branding;
-                    removeBrandingToggle.checked = currentState.remove_branding;
-                }
-                updatePreview();
-            }
-        } catch(e) {
-            console.error("Failed to load bio config", e);
-        }
 
         let saveTimeout;
         function saveState() {
@@ -493,37 +464,47 @@
         }
 
         function updatePreview() {
-            previewTitle.textContent = currentState.store_name;
-            previewBio.textContent = currentState.bio;
-            poweredByLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}&source=bio_page`;
-            poweredByLink.style.display = currentState.remove_branding ? 'none' : 'block';
+            if (previewTitle) previewTitle.textContent = currentState.store_name;
+            if (previewBio) previewBio.textContent = currentState.bio;
+            if (poweredByLink) {
+                poweredByLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}&source=bio_page`;
+                poweredByLink.style.display = currentState.remove_branding ? 'none' : 'block';
+            }
 
-            if (currentState.remove_branding) {
-                removeBrandingSlider.style.backgroundColor = '#4f46e5';
-                removeBrandingKnob.style.transform = 'translateX(24px)';
-            } else {
-                removeBrandingSlider.style.backgroundColor = '#d1d5db';
-                removeBrandingKnob.style.transform = 'translateX(0)';
+            if (removeBrandingSlider && removeBrandingKnob) {
+                if (currentState.remove_branding) {
+                    removeBrandingSlider.style.backgroundColor = '#4f46e5';
+                    removeBrandingKnob.style.transform = 'translateX(24px)';
+                } else {
+                    removeBrandingSlider.style.backgroundColor = '#d1d5db';
+                    removeBrandingKnob.style.transform = 'translateX(0)';
+                }
             }
 
             const styles = getThemeStyles(currentState.theme);
-            previewContent.style.background = styles.bg;
-            previewContent.style.color = styles.color;
-            poweredByLink.style.color = styles.color;
+            if (previewContent) {
+                previewContent.style.background = styles.bg;
+                previewContent.style.color = styles.color;
+            }
+            if (poweredByLink) {
+                poweredByLink.style.color = styles.color;
+            }
 
             // Render links
-            previewLinks.innerHTML = '';
-            currentState.links.forEach(link => {
-                const a = document.createElement('a');
-                a.href = link.url;
-                a.className = 'preview-link';
-                a.textContent = link.title;
-                a.style.background = styles.linkBg;
-                a.style.border = `1px solid ${styles.linkBorder}`;
-                a.style.color = styles.color;
-                a.style.backdropFilter = 'blur(10px)';
-                previewLinks.appendChild(a);
-            });
+            if (previewLinks) {
+                previewLinks.innerHTML = '';
+                currentState.links.forEach(link => {
+                    const a = document.createElement('a');
+                    a.href = link.url;
+                    a.className = 'preview-link';
+                    a.textContent = link.title;
+                    a.style.background = styles.linkBg;
+                    a.style.border = `1px solid ${styles.linkBorder}`;
+                    a.style.color = styles.color;
+                    a.style.backdropFilter = 'blur(10px)';
+                    previewLinks.appendChild(a);
+                });
+            }
 
             // update theme buttons
             themeBtns.forEach(btn => {
@@ -535,19 +516,34 @@
             });
         }
 
-        storeNameInput.addEventListener('input', (e) => {
-            storeNameInput.dataset.dirty = 'true';
-            currentState.store_name = e.target.value;
+        window.onStoreNameInput = (val) => {
+            currentState.store_name = val;
             updatePreview();
             saveState();
-        });
+        };
+        window.onBioInput = (val) => {
+            currentState.bio = val;
+            updatePreview();
+            saveState();
+        };
 
-        bioInput.addEventListener('input', (e) => {
-            bioInput.dataset.dirty = 'true';
-            currentState.bio = e.target.value;
-            updatePreview();
-            saveState();
-        });
+        if (storeNameInput) {
+            storeNameInput.addEventListener('input', (e) => {
+                storeNameInput.dataset.dirty = 'true';
+                currentState.store_name = e.target.value;
+                updatePreview();
+                saveState();
+            });
+        }
+
+        if (bioInput) {
+            bioInput.addEventListener('input', (e) => {
+                bioInput.dataset.dirty = 'true';
+                currentState.bio = e.target.value;
+                updatePreview();
+                saveState();
+            });
+        }
 
         themeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -558,28 +554,71 @@
             });
         });
 
-        removeBrandingToggle.addEventListener('change', (e) => {
-            currentState.branding_dirty = true;
-            currentState.remove_branding = e.target.checked;
-            updatePreview();
-            saveState();
-        });
-
-        copyBtn.addEventListener('click', () => {
-            const url = `${window.location.origin}/bio/${tenant}`;
-            navigator.clipboard.writeText(url).then(() => {
-                copyBtn.textContent = 'Copied Link!';
-                copyBtn.classList.add('btn-success');
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copy Link-in-Bio URL';
-                    copyBtn.classList.remove('btn-success');
-                }, 2000);
+        if (removeBrandingToggle) {
+            removeBrandingToggle.addEventListener('change', (e) => {
+                currentState.branding_dirty = true;
+                currentState.remove_branding = e.target.checked;
+                updatePreview();
+                saveState();
             });
-        });
+        }
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const url = `${window.location.origin}/bio/${tenant}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    copyBtn.textContent = 'Copied Link!';
+                    copyBtn.classList.add('btn-success');
+                    setTimeout(() => {
+                        copyBtn.textContent = 'Copy Link-in-Bio URL';
+                        copyBtn.classList.remove('btn-success');
+                    }, 2000);
+                });
+            });
+        }
 
         // initial render
         updatePreview();
-    });
+
+        // Try load from API
+        (async () => {
+            try {
+                const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const isNameDirty = storeNameInput.dataset.dirty || (storeNameInput.value && storeNameInput.value !== 'My Store');
+                    if (!isNameDirty) {
+                        currentState.store_name = data.store_name || storeNameInput.value || 'My Store';
+                        storeNameInput.value = currentState.store_name;
+                    }
+                    const isBioDirty = bioInput.dataset.dirty || (bioInput.value && bioInput.value !== 'Welcome to my storefront!');
+                    if (!isBioDirty) {
+                        currentState.bio = data.bio || bioInput.value || '';
+                        bioInput.value = currentState.bio;
+                    }
+                    if (!currentState.theme_dirty) {
+                        currentState.theme = data.theme || 'gradient';
+                    }
+                    if (currentState.links.length === 0) {
+                        currentState.links = data.links || [];
+                    }
+                    if (!currentState.branding_dirty) {
+                        currentState.remove_branding = !!data.remove_branding;
+                        removeBrandingToggle.checked = currentState.remove_branding;
+                    }
+                    updatePreview();
+                }
+            } catch(e) {
+                console.error("Failed to load bio config", e);
+            }
+        })();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLinkInBio);
+    } else {
+        initLinkInBio();
+    }
 </script>
 
   <script src="help-widget.mjs" type="module"></script>

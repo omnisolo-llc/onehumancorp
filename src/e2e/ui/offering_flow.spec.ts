@@ -6,7 +6,7 @@ test('End-to-End Unified Offering Creation Flow', async ({ page }) => {
   await expect(page.locator('h2').filter({ hasText: /Welcome back/ })).toBeVisible();
 
   // 2. User taps the primary "+" FAB (Floating Action Button)
-  const fab = page.locator('button').filter({ hasText: '+' });
+  const fab = page.locator('button').filter({ hasText: '+' }).first();
   await fab.click();
 
   // 3. User taps "New Offering"

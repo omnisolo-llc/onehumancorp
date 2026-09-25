@@ -107,9 +107,8 @@ function formatStatus(status?: string) {
 
 
 const DEFAULT_DASHBOARD_WALKTHROUGH: Step[] = [
-  { targetId: "dashboard-title", target_id: "dashboard-title", title: "Business Analytics", content: "Business Analytics" },
-  { targetId: "operations-map", target_id: "operations-map", title: "Operations Map", content: "Operations Map" },
-  { targetId: "wrapped-summary", target_id: "wrapped-summary", title: "AI Savings", content: "Here you can see the time and effort your agents have saved you." },
+  { targetId: "dashboard-title", target_id: "dashboard-title", title: "Business Analytics", content: "Welcome to your dashboard! This is your control center." },
+  { targetId: "operations-map", target_id: "operations-map", title: "Operations Map", content: "View and manage your operations in real-time." },
 ];
 
 export default function Dashboard() {

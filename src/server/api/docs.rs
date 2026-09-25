@@ -7,6 +7,12 @@ fn docs_tenant(claims: &::server_common::Claims) -> Result<String, axum::http::S
         .ok_or(axum::http::StatusCode::UNAUTHORIZED)
 }
 
+fn optional_docs_tenant(claims: Option<&::server_common::Claims>) -> String {
+    claims
+        .and_then(::server_common::auth_utils::signed_tenant_id)
+        .unwrap_or_else(|| "default".to_string())
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct HelpArticle {
     pub category: String,
@@ -245,13 +251,8 @@ pub async fn get_walkthrough(
             "dashboard" => vec![
                 WalkthroughStep {
                     target_id: "dashboard-title".to_string(),
-                    title: "Business Analytics".to_string(),
-                    content: "Business Analytics".to_string(),
-                },
-                WalkthroughStep {
-                    target_id: "operations-map".to_string(),
-                    title: "Operations Map".to_string(),
-                    content: "Operations Map".to_string(),
+                    title: "Welcome".to_string(),
+                    content: "Welcome to your dashboard! This is your control center.".to_string(),
                 },
                 WalkthroughStep {
                     target_id: "wrapped-summary".to_string(),
@@ -739,10 +740,10 @@ static DOCS_VIDEOS_CACHE: std::sync::OnceLock<
 
 pub async fn list_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     Query(query): Query<DocsQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
-    let tenant_id = docs_tenant(&claims)?;
+    let tenant_id = optional_docs_tenant(claims.as_ref().map(|c| &c.0));
 
     let cache = DOCS_ARTICLES_CACHE
         .get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
@@ -850,10 +851,10 @@ pub async fn list_articles(
 
 pub async fn search_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     Query(query): Query<SearchQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
-    let tenant_id = docs_tenant(&claims)?;
+    let tenant_id = optional_docs_tenant(claims.as_ref().map(|c| &c.0));
 
     let q = query.q.to_lowercase();
     let cache_key = format!("docs:articles:search:{}:{}", tenant_id, q);
@@ -1910,7 +1911,7 @@ mod tests {
         let db = docs_test_db().await;
         let res = list_articles(
             axum::extract::Extension(db),
-            axum::extract::Extension(claims("default")),
+            Some(axum::extract::Extension(claims("default"))),
             axum::extract::Query(DocsQuery {
                 mobile_optimized: None,
             }),
@@ -1925,7 +1926,7 @@ mod tests {
         let db = docs_test_db().await;
         let res = search_articles(
             axum::extract::Extension(db),
-            axum::extract::Extension(claims("default")),
+            Some(axum::extract::Extension(claims("default"))),
             axum::extract::Query(SearchQuery {
                 q: "getting".to_string(),
                 mobile_optimized: None,
@@ -1941,7 +1942,7 @@ mod tests {
         let db = docs_test_db().await;
         let res = search_articles(
             axum::extract::Extension(db),
-            axum::extract::Extension(claims("default")),
+            Some(axum::extract::Extension(claims("default"))),
             axum::extract::Query(SearchQuery {
                 q: "unlikelysearchterm123".to_string(),
                 mobile_optimized: None,

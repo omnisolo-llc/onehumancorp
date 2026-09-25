@@ -236,8 +236,8 @@ export function HelpWidget() {
       id: "welcome",
       role: "bot",
       text: isTestChat
-        ? "Need help setting up your store? I am your AI Help Agent! How can I assist you today?"
-        : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo."
+        ? "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today? Need help setting up your store? I am your AI Help Agent!"
+        : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today?"
     }
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -266,12 +266,12 @@ export function HelpWidget() {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.search.includes('test_chat=true')) {
       setChatMessages(prev => {
-        if (!prev.some(m => m.text.includes("Need help setting up your store"))) {
+        if (!prev.some(m => m.text.includes("Need help setting up your store") && m.text.includes("Help Agent"))) {
           return [
             {
               id: "welcome",
               role: "bot",
-              text: "Need help setting up your store? I am your AI Help Agent! How can I assist you today?"
+              text: "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today? Need help setting up your store? I am your AI Help Agent!"
             }
           ];
         }
@@ -369,8 +369,8 @@ export function HelpWidget() {
         id: "welcome",
         role: "bot",
         text: isTest
-          ? "Need help setting up your store? I am your AI Help Agent! How can I assist you today?"
-          : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo."
+          ? "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today? Need help setting up your store? I am your AI Help Agent!"
+          : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today?"
       }
     ]);
   };

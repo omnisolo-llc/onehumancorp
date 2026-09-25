@@ -6722,7 +6722,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let limit_ledger = 50i64;
         match &db.store {
         crate::db::DbStore::Postgres => {
-            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM omnisolo_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM omnisolo_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
+            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(&db.pool)
@@ -6747,7 +6747,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM omnisolo_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM omnisolo_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") }
+            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") }
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(pool)
@@ -9758,11 +9758,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 )),
         )
         .route("/api/v1/help", axum::routing::get(crate::api::docs::list_articles)
-            .layer(legacy_db_compatibility_layer(db.clone()))
-            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+            .layer(legacy_db_compatibility_layer(db.clone())))
         .route("/api/v1/help/search", axum::routing::get(crate::api::docs::search_articles)
-            .layer(legacy_db_compatibility_layer(db.clone()))
-            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+            .layer(legacy_db_compatibility_layer(db.clone())))
         .route("/api/v1/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips", axum::routing::get(crate::api::docs::get_tooltips)
@@ -10568,6 +10566,49 @@ mod tests {
                 "{path}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_agent_feed_route_paths() {
+        use tower::ServiceExt;
+        let pool = crate::db::create_dummy_pg_pool().await;
+        let auth_store = std::sync::Arc::new(crate::auth::Store::new());
+        let app = axum::Router::new().nest(
+            "/api/v1/agent-feed",
+            crate::api::agent_feed::router()
+                .with_state(pool)
+                .route_layer(axum::middleware::from_fn_with_state(
+                    auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                )),
+        );
+
+        let res_no_slash = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/agent-feed")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res_no_slash.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        let res_query_no_slash = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/agent-feed?limit=5&offset=0")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            res_query_no_slash.status(),
+            axum::http::StatusCode::UNAUTHORIZED
+        );
     }
 
     async fn isolated_omni_postgres_pool() -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {
