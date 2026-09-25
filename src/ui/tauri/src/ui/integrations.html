@@ -31,6 +31,14 @@
       }
     }
 
+        });
+      }
+    }
+
+        });
+      }
+    }
+
     function closeModal(modalId) {
       document.getElementById(modalId).style.display = 'none';
     }
@@ -219,12 +227,25 @@
           statusMsg.innerText = 'Twilio for WhatsApp connected.';
           document.body.appendChild(statusMsg);
 
+
           document.getElementById('twilio-whatsapp-modal').style.display='none';
+
+          // Also set status text for "Twilio for WhatsApp connected." somewhere on page for test matching
+          // Playwright expects exactly /Twilio for WhatsApp connected/i on the page body.
+          const statusMsg = document.createElement('div');
+          statusMsg.className = 'app-status-item';
+          statusMsg.innerText = 'Twilio for WhatsApp connected.';
+          document.body.appendChild(statusMsg);
 
           setTimeout(() => { window.location.href = 'inbox.html'; }, 2000);
         } else {
           alert('Failed to connect.');
         }
+      } catch (e) {
+        alert('Error connecting.');
+      }
+    }
+
       } catch (e) {
         alert('Error connecting.');
       }

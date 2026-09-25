@@ -2,7 +2,7 @@
 
 
 import { errorMessage } from '@/lib/errors';
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
@@ -23,7 +23,6 @@ import type { AgentFeedItem, AgentFeedData, ActivityItem } from '@/lib/agent-fee
 
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData }) {
-  const decidedIdsRef = useRef<Set<string>>(new Set());
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -415,7 +414,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
             setItems(
               parsedCombinedItems.filter(
                 (i) =>
-                  !decidedIdsRef.current.has(i.id) &&
                   i.lifecycle_state !== "APPROVED" &&
                   i.lifecycle_state !== "DISMISSED" &&
                   i.lifecycle_state !== "PAUSED",
@@ -537,9 +535,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     modified_content?: string,
     event_source?: string,
   ): Promise<void> => {
-    // Optimistically remove card immediately from UI
-    decidedIdsRef.current.add(id);
-    setItems((prev) => prev.filter((app) => app.id !== id));
+    // Optimistically remove card immediately from UI (delay 500ms if approved to show transition)
+    if (approved) {
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
+    } else {
+      setItems((prev) => prev.filter((app) => app.id !== id));
+    }
 
     if (isOffline) {
       // Enqueue offline action

@@ -6,7 +6,7 @@ test.describe('Verification Loops', () => {
     await page.goto('/verification-loops');
 
     // Check that the title exists
-    await expect(page.locator('h1', { hasText: 'Verification Loops' }).first()).toHaveText('Verification Loops');
+    await expect(page.locator('h1')).toHaveText('Verification Loops');
 
     // Fill in the task context
     await page.fill('textarea[placeholder="e.g. Write a bash script that echoes \'ok\'."]', 'Test task');

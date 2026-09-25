@@ -2212,13 +2212,13 @@
               const amountUsd = (amountCents / 100).toFixed(2);
               const customerId = payload.customer_id || 'unknown';
 
-              return `
-                <div class="triage-item glassmorphism" data-testid="agent-feed-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 200, 83, 0.2); box-shadow: 0 4px 16px rgba(0, 200, 83, 0.1);">
+              return \`
+                <div class="triage-item glassmorphism" data-testid="agent-feed-card" id="triage-\${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 200, 83, 0.2); box-shadow: 0 4px 16px rgba(0, 200, 83, 0.1);">
                   <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 200, 83, 0.1); color: #00C853; padding: 4px 8px; border-radius: 16px; font-weight: 800; letter-spacing: 0.5px;">Finance Agent</div>
                     <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #00C853;">Action Needed</div>
                   </div>
-                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">Draft Invoice ready for ${projectName}</div>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">Draft Invoice ready for \${projectName}</div>
 
                   <div style="background: rgba(0, 200, 83, 0.05); padding: 12px; border-radius: 8px; margin-top: 12px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 200, 83, 0.1);">
                     <div style="font-weight: 600; color: #00C853; margin-bottom: 4px;">Generated Invoice</div>
@@ -2226,21 +2226,21 @@
 
                     <div style="margin-top: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #E5E7EB;">
                         <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Project</div>
-                        <div style="font-size: 13px; font-weight: 500; margin-bottom: 8px;">${projectName}</div>
+                        <div style="font-size: 13px; font-weight: 500; margin-bottom: 8px;">\${projectName}</div>
 
                         <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Milestone</div>
-                        <div style="font-size: 13px; font-weight: 500; margin-bottom: 8px;">${milestoneName}</div>
+                        <div style="font-size: 13px; font-weight: 500; margin-bottom: 8px;">\${milestoneName}</div>
 
                         <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Amount</div>
-                        <div style="font-size: 15px; font-weight: 700; color: #1D1D1F;">$${amountUsd}</div>
+                        <div style="font-size: 15px; font-weight: 700; color: #1D1D1F;">$\${amountUsd}</div>
                     </div>
                   </div>
                   <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
-                    <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
+                    <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('\${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
+                    <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('\${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
                   </div>
                 </div>
-              `;
+              \`;
             }
 
             if (item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup' || actionType === 'invoice_followup' || item.action_payload?.feature_type === 'invoice_followup' || item.payload?.feature_type === 'invoice_followup' || (item.payload && typeof item.payload === 'string' && item.payload.includes('invoice_followup'))) {
@@ -2635,7 +2635,7 @@
                   </div>
                   <div class="triage-controls" style="display: flex; gap: 8px;">
                     <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href = '/quote.html?id=' + encodeURIComponent(parsedPayload.quote_id)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" data-testid="edit-quote-draft" onclick="window.location.href = '/quote.html?id=' + encodeURIComponent(parsedPayload.quote_id)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit</button>
                   </div>
                 </div>
                 <div id="triage-edit-${item.id}" style="display: none;">
@@ -3345,7 +3345,7 @@ function initWalkthrough() {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'walkthrough-overlay'; overlay.classList.add('omnisolo-walkthrough-overlay');
-        overlay.className = 'fixed z-[90] omnisolo-walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
@@ -3953,7 +3953,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('omnisolo-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100000; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
@@ -3972,7 +3972,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px; position: relative; z-index: 10;">&times;</button>
+                        <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text || ""}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">

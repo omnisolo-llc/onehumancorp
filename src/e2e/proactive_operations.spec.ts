@@ -25,12 +25,12 @@ test.describe('Proactive Operations Task Feed', () => {
     await expect(staffingCard).toBeVisible();
 
     await checklistCard.locator('button', { hasText: 'Review Checklist' }).click();
-    await expect(checklistCard).not.toBeVisible({ timeout: 10000 });
+    await expect(checklistCard).not.toBeVisible();
 
     await supplierCard.locator('button', { hasText: 'Assign to Staff' }).click();
-    await expect(supplierCard).not.toBeVisible({ timeout: 10000 });
+    await expect(supplierCard).not.toBeVisible();
 
     await staffingCard.locator('button', { hasText: 'Draft Schedule Request' }).click();
-    await expect(staffingCard).not.toBeVisible({ timeout: 10000 });
+    await expect(staffingCard).not.toBeVisible();
   });
 });

@@ -29,7 +29,7 @@ test.describe('Department Handoff Protocol', () => {
         await page.waitForLoadState('networkidle');
 
         // 3. Assert: The task envelope is displayed correctly
-        await expect(page.locator('text=New Custom Cake Inquiry')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('text=New Custom Cake Inquiry')).toBeVisible();
         await expect(page.locator('text=Customer Service replied. Sales drafted a $150 quote. Ops confirmed delivery date.')).toBeVisible();
         await expect(page.locator('text=$150.00')).toBeVisible();
         await expect(page.locator('text=$50.00')).toBeVisible(); // 33% deposit

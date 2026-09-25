@@ -16,8 +16,7 @@ test.describe('WhatsApp Cloud API Integration', () => {
         await expect(integrationCard).toBeVisible();
 
         // Click Connect
-        const card = page.locator('div.rounded-2xl', { has: integrationCard });
-        const connectBtn = card.locator('button', { hasText: 'Connect' });
+        const connectBtn = page.locator('div').filter({ has: integrationCard }).locator('button', { hasText: 'Connect' });
         await expect(connectBtn).toBeVisible();
         await connectBtn.click();
 
