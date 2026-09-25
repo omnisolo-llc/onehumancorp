@@ -2352,7 +2352,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             <QuoteReviewModal
               isOpen={editingId === approval.id}
               onClose={() => setEditingId(null)}
-              initialPayload={approval.proposed_action || approval.context_payload}
+              initialPayload={actionPayload || approval.proposed_action || approval.context_payload}
               onApprove={(updatedPayload) => {
                 setTimeout(() => {
                   handleDecision(
