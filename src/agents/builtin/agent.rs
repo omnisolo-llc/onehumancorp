@@ -5409,7 +5409,12 @@ mod tests {
                             response_id: None,
                             previous_response_id: None,
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: None,
                     })
@@ -5428,14 +5433,24 @@ mod tests {
                     if has_error {
                         Ok(crate::types::ChatResponse {
                             message: crate::types::Message::assistant("I fixed the error"),
-                            usage: Usage::default(),
+                            usage: Usage {
+                                input_tokens: 10,
+                                output_tokens: 20,
+                                cache_creation_input_tokens: 0,
+                                cache_read_input_tokens: 0,
+                            },
                             stop_reason: "stop".to_string(),
                             response_id: None,
                         })
                     } else {
                         Ok(crate::types::ChatResponse {
                             message: crate::types::Message::assistant("I didn't see the error"),
-                            usage: Usage::default(),
+                            usage: Usage {
+                                input_tokens: 10,
+                                output_tokens: 20,
+                                cache_creation_input_tokens: 0,
+                                cache_read_input_tokens: 0,
+                            },
                             stop_reason: "stop".to_string(),
                             response_id: None,
                         })
@@ -5545,7 +5560,12 @@ mod tests {
                             response_id: None,
                             previous_response_id: None,
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: None,
                     })
@@ -5579,14 +5599,24 @@ mod tests {
                                 response_id: None,
                                 previous_response_id: None,
                             },
-                            usage: Usage::default(),
+                            usage: Usage {
+                                input_tokens: 10,
+                                output_tokens: 20,
+                                cache_creation_input_tokens: 0,
+                                cache_read_input_tokens: 0,
+                            },
                             stop_reason: "tool_calls".to_string(),
                             response_id: None,
                         })
                     } else {
                         Ok(ChatResponse {
                             message: Message::assistant("I didn't see the Pydantic error"),
-                            usage: Usage::default(),
+                            usage: Usage {
+                                input_tokens: 10,
+                                output_tokens: 20,
+                                cache_creation_input_tokens: 0,
+                                cache_read_input_tokens: 0,
+                            },
                             stop_reason: "stop".to_string(),
                             response_id: None,
                         })
@@ -5595,7 +5625,12 @@ mod tests {
                     // Turn 3: LLM sees the success message and responds to the user
                     Ok(ChatResponse {
                         message: Message::assistant("I successfully processed the item!"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: None,
                     })
@@ -5837,7 +5872,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -6039,7 +6079,12 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -6083,7 +6128,12 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -6125,7 +6175,12 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -6168,13 +6223,23 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id-2".to_string()),
                 },
@@ -6549,7 +6614,12 @@ mod tests {
                 self.requests.lock().await.push(req);
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Final response"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
                 })
@@ -6652,7 +6722,12 @@ mod tests {
             {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Final answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })
@@ -6753,21 +6828,36 @@ mod tests {
                     let plan = serde_json::json!(["Sub-topic A", "Sub-topic B"]);
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant(plan.to_string()),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
                 } else if req.system.contains("execution agent") {
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Detailed content here"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
                 } else {
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Unknown"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -6828,7 +6918,12 @@ mod tests {
                     ]);
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant(plan.to_string()),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -6836,7 +6931,12 @@ mod tests {
                     // It's the replier phase
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Final plan executed."),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -6923,7 +7023,12 @@ mod tests {
                             response_id: None,
                             previous_response_id: None,
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -6942,7 +7047,12 @@ mod tests {
                             response_id: None,
                             previous_response_id: None,
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -6966,14 +7076,24 @@ mod tests {
 
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Final answer"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
                 } else {
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Extra answer"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -7047,7 +7167,12 @@ mod tests {
                             response_id: None,
                             previous_response_id: None,
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -7068,7 +7193,12 @@ mod tests {
                             response_id: None,
                             previous_response_id: None,
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -7076,7 +7206,12 @@ mod tests {
                     // Done
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Final Answer"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -7365,7 +7500,12 @@ mod tests {
             if resps.is_empty() {
                 return Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Final answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 });
@@ -7404,7 +7544,12 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7421,7 +7566,12 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7615,7 +7765,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -7671,7 +7826,12 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7688,7 +7848,12 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7705,7 +7870,12 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7722,7 +7892,12 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7816,13 +7991,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("stop"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7861,7 +8046,12 @@ mod tests {
                 } else {
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("stop"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
@@ -7885,13 +8075,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("stop"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7950,7 +8150,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -7989,7 +8194,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -8025,7 +8235,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -8064,13 +8279,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("This contains the secret password!"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -8156,7 +8381,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -8190,7 +8420,12 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: crate::types::Message::assistant("Here is the secret data."),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -8351,13 +8586,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final Answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -8391,7 +8636,12 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: crate::types::Message::assistant("Draft answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -8408,13 +8658,23 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Better answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -8431,7 +8691,12 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -8473,7 +8738,12 @@ mod tests {
                     // First turn: model provides an output, but we set up the test so the command fails
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Final answer but fails check"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id-1".to_string()),
                     })
@@ -8493,14 +8763,24 @@ mod tests {
                     // until max_iterations, but we only need to verify the injection happened.
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Fixed answer"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id-2".to_string()),
                     })
                 } else {
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Enough"),
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id-3".to_string()),
                     })
@@ -8719,13 +8999,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -8777,7 +9067,12 @@ mod tests {
         let client2 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: crate::types::Message::assistant("Resumed answer"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -8835,13 +9130,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Task done"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -8938,13 +9243,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -9006,7 +9321,12 @@ mod tests {
             *lr = Some(req);
             Ok(crate::types::ChatResponse {
                 message: crate::types::Message::assistant("Final answer"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             })
@@ -9212,7 +9532,12 @@ mod tests {
         let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: crate::types::Message::assistant("Initial thought"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -9243,13 +9568,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -9345,13 +9680,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final answer after error"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -9393,7 +9738,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -9426,13 +9776,23 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final answer after transient"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -9483,7 +9843,12 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -9526,7 +9891,12 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: crate::types::Message::assistant("invalid json without array"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
                 },
@@ -9543,13 +9913,23 @@ mod tests {
                         response_id: Some("id2".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id2".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final Answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id3".to_string()),
                 },
@@ -9616,13 +9996,23 @@ mod tests {
                         response_id: Some("1".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("1".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Task done."),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("2".to_string()),
                 },
@@ -9708,7 +10098,12 @@ mod stream_tests {
             } else {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("default stream content"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })
@@ -9721,7 +10116,12 @@ mod stream_tests {
         let client = Arc::new(StreamMockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: crate::types::Message::assistant("Streamed response chunk 1"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -9816,7 +10216,12 @@ mod stream_tests {
                 *count += 1;
                 Ok(ChatResponse {
                     message: Message::assistant("Rewound response"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
                 })
@@ -9918,7 +10323,12 @@ mod stream_tests {
                             response_id: Some("r1".to_string()),
                             previous_response_id: None,
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("r1".to_string()),
                     })
@@ -9937,7 +10347,12 @@ mod stream_tests {
                             response_id: Some("r2".to_string()),
                             previous_response_id: Some("r1".to_string()),
                         },
-                        usage: Usage::default(),
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 20,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("r2".to_string()),
                     })
@@ -9950,7 +10365,12 @@ mod stream_tests {
                     if has_rewind_msg {
                         Ok(crate::types::ChatResponse {
                             message: crate::types::Message::assistant("Success after rewind"),
-                            usage: Usage::default(),
+                            usage: Usage {
+                                input_tokens: 10,
+                                output_tokens: 20,
+                                cache_creation_input_tokens: 0,
+                                cache_read_input_tokens: 0,
+                            },
                             stop_reason: "stop".to_string(),
                             response_id: Some("r3".to_string()),
                         })
@@ -9969,7 +10389,12 @@ mod stream_tests {
                                 response_id: Some("r2".to_string()),
                                 previous_response_id: Some("r1".to_string()),
                             },
-                            usage: Usage::default(),
+                            usage: Usage {
+                                input_tokens: 10,
+                                output_tokens: 20,
+                                cache_creation_input_tokens: 0,
+                                cache_read_input_tokens: 0,
+                            },
                             stop_reason: "tool_calls".to_string(),
                             response_id: Some("r2".to_string()),
                         })
@@ -10165,7 +10590,12 @@ async fn test_time_travel_rewind_lightweight_chaining() {
                         response_id: Some(id.clone()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some(id),
                 })
@@ -10179,7 +10609,12 @@ async fn test_time_travel_rewind_lightweight_chaining() {
                         response_id: Some(id.clone()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some(id),
                 })
@@ -10533,7 +10968,12 @@ async fn test_stripe_retry_limit() {
                     response_id: Some(format!("resp_{}", *count)),
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some(format!("resp_{}", *count)),
             })
@@ -10637,7 +11077,12 @@ async fn test_code_native_agent_integration() {
                         response_id: Some("id1".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id1".to_string()),
                 })
@@ -10656,7 +11101,12 @@ async fn test_code_native_agent_integration() {
                         response_id: Some("id2".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id2".to_string()),
                 })
@@ -10666,7 +11116,12 @@ async fn test_code_native_agent_integration() {
                     message: Message::assistant(
                         "I have successfully passed state using native execution",
                     ),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id3".to_string()),
                 })
@@ -10734,7 +11189,12 @@ async fn test_progressive_skills_mechanic() {
             *self.system_prompt.lock().unwrap() = req.system;
             Ok(ChatResponse {
                 message: Message::assistant("Got it"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("id".to_string()),
             })
@@ -10805,7 +11265,12 @@ mod guardrail_tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("default"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id".to_string()),
                 })
@@ -10884,7 +11349,12 @@ mod guardrail_tests {
         let llm = Arc::new(TestLlmClient {
             responses: Mutex::new(vec![ChatResponse {
                 message: Message::assistant("Here are the secret launch codes"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: None,
             }]),
@@ -10936,7 +11406,12 @@ mod guardrail_tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "tool_calls".to_string(),
                 response_id: None,
             }]),
@@ -11138,7 +11613,12 @@ mod sona_pattern_tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: None,
                 })
@@ -11201,7 +11681,12 @@ mod e2e_verification_tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("Done"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 })
@@ -11216,7 +11701,12 @@ mod e2e_verification_tests {
                 // 1. Initial agent response (bad answer)
                 ChatResponse {
                     message: Message::assistant("Bad initial answer."),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 },
@@ -11242,14 +11732,24 @@ mod e2e_verification_tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: None,
                 },
                 // 3. Agent retry response (corrected answer)
                 ChatResponse {
                     message: Message::assistant("Corrected answer."),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 },
@@ -11275,7 +11775,12 @@ mod e2e_verification_tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: None,
                 },
@@ -11314,7 +11819,12 @@ mod e2e_verification_tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("done"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 })
@@ -11342,19 +11852,34 @@ mod e2e_verification_tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: msg1,
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: None,
                 },
                 ChatResponse {
                     message: msg2,
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: None,
                 },
                 ChatResponse {
                     message: Message::assistant("Final Answer"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 },
@@ -11448,7 +11973,12 @@ mod fail_fast_tests {
                         response_id: Some("1".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                 })
             } else {
                 // After tools are executed, return text
@@ -11456,7 +11986,12 @@ mod fail_fast_tests {
                     response_id: Some("2".to_string()),
                     stop_reason: "stop".to_string(),
                     message: Message::assistant("All done"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                 })
             }
         }
@@ -11692,7 +12227,12 @@ async fn test_agent_loop_llm_recoverable() {
                 });
                 Ok(ChatResponse {
                     message: msg,
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id1".to_string()),
                 })
@@ -11706,7 +12246,12 @@ async fn test_agent_loop_llm_recoverable() {
                 });
                 Ok(ChatResponse {
                     message: msg,
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id2".to_string()),
                 })
@@ -11714,7 +12259,12 @@ async fn test_agent_loop_llm_recoverable() {
                 // Third call: final answer
                 Ok(ChatResponse {
                     message: Message::assistant("Done"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id3".to_string()),
                 })

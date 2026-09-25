@@ -196,7 +196,12 @@ mod tests {
 
             Ok(ChatResponse {
                 message: crate::types::Message::assistant(response_text),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("id".to_string()),
             })

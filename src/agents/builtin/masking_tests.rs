@@ -18,7 +18,7 @@ impl LlmClient for MockLlm {
         if resps.is_empty() {
             Ok(ChatResponse {
                 message: Message::assistant("Done"),
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "stop".to_string(),
                 response_id: Some("id".to_string()),
             })
@@ -58,7 +58,7 @@ async fn test_recency_aware_masking() {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("id1".to_string()),
             },
@@ -71,7 +71,7 @@ async fn test_recency_aware_masking() {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "stop".to_string(),
                 response_id: Some("id2".to_string()),
             },
@@ -108,7 +108,7 @@ impl LlmClient for RecordingMockLlm {
         if resps.is_empty() {
             Ok(ChatResponse {
                 message: Message::assistant("Done"),
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "stop".to_string(),
                 response_id: Some("id".to_string()),
             })
@@ -149,7 +149,7 @@ async fn test_masking_logic_depth() {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("r1".to_string()),
             },
@@ -162,13 +162,13 @@ async fn test_masking_logic_depth() {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("r2".to_string()),
             },
             ChatResponse {
                 message: Message::assistant("Final"),
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "stop".to_string(),
                 response_id: Some("r3".to_string()),
             },

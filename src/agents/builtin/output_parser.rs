@@ -424,7 +424,12 @@ mod tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("default"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })
@@ -446,7 +451,12 @@ mod tests {
     fn create_text_resp(content: &str) -> ChatResponse {
         ChatResponse {
             message: Message::assistant(content),
-            usage: Usage::default(),
+            usage: Usage {
+                input_tokens: 10,
+                output_tokens: 20,
+                cache_creation_input_tokens: 0,
+                cache_read_input_tokens: 0,
+            },
             stop_reason: "stop".to_string(),
             response_id: Some("mock-id".to_string()),
         }
@@ -466,7 +476,12 @@ mod tests {
                 response_id: Some("mock-id".to_string()),
                 previous_response_id: None,
             },
-            usage: Usage::default(),
+            usage: Usage {
+                input_tokens: 10,
+                output_tokens: 20,
+                cache_creation_input_tokens: 0,
+                cache_read_input_tokens: 0,
+            },
             stop_reason: "tool_calls".to_string(),
             response_id: Some("mock-id".to_string()),
         }
@@ -865,7 +880,12 @@ mod retry_tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("default"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })
@@ -898,7 +918,12 @@ mod retry_tests {
                 response_id: Some("mock-id".to_string()),
                 previous_response_id: None,
             },
-            usage: Usage::default(),
+            usage: Usage {
+                input_tokens: 10,
+                output_tokens: 20,
+                cache_creation_input_tokens: 0,
+                cache_read_input_tokens: 0,
+            },
             stop_reason: "tool_calls".to_string(),
             response_id: Some("mock-id".to_string()),
         }
@@ -1384,13 +1409,23 @@ mod strict_output_tests {
                     response_id: Some("1".to_string()),
                     stop_reason: "stop".to_string(),
                     message: msg_markdown,
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                 },
                 ChatResponse {
                     response_id: Some("2".to_string()),
                     stop_reason: "stop".to_string(),
                     message: msg_tool_call,
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                 },
             ]),
             call_count: Mutex::new(0),

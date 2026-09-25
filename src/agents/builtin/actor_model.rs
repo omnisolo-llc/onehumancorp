@@ -472,14 +472,24 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id-1".to_string()),
                 })
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant(&self.response_text),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id-2".to_string()),
                 })

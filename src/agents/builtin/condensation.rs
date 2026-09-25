@@ -102,7 +102,7 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 response_id: None,
                 stop_reason: "stop".to_string(),
             })

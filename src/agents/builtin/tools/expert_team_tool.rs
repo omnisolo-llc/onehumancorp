@@ -146,7 +146,12 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })
@@ -207,7 +212,12 @@ mod tests {
                 // Return a very short response to intentionally fail the ">=20k words" or similar quality gate
                 Ok(ChatResponse {
                     message: Message::assistant("Too short"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })

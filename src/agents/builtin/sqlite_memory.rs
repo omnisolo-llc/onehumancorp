@@ -605,7 +605,12 @@ mod tests {
             ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant("Summarized cross-session recall"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 })
@@ -650,7 +655,12 @@ mod tests {
             ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant("Summarized session context regarding plans"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 })
@@ -720,7 +730,12 @@ mod tests {
             ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant(""),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 })
@@ -908,7 +923,12 @@ mod tests {
                     message: Message::assistant(
                         "Summarized cross-session insights regarding apples",
                     ),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 })

@@ -347,14 +347,24 @@ mod tests {
             if *count == 1 {
                 Ok(ChatResponse {
                     message: Message::assistant(r#"["Feat1", "Feat2"]"#),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
                 })
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("Feature implemented"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id2".to_string()),
                 })
@@ -450,7 +460,12 @@ mod tests {
             if *count == 1 {
                 Ok(ChatResponse {
                     message: Message::assistant(r#"["Feature A"]"#),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
                 })
@@ -460,7 +475,12 @@ mod tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("Feature implemented successfully after retry"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("id3".to_string()),
                 })
@@ -518,7 +538,12 @@ mod tests {
                 message: Message::assistant(
                     "```json\n[\"Markdown Feature 1\", \"Markdown Feature 2\"]\n```",
                 ),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("id-md".to_string()),
             })

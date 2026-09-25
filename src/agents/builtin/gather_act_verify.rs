@@ -562,7 +562,7 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some(format!("resp_{}", count)),
                 })
@@ -607,7 +607,7 @@ mod tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("default output"),
-                    usage: Usage::default(),
+                    usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })
@@ -620,19 +620,19 @@ mod tests {
         let responses = vec![
             ChatResponse {
                 message: Message::assistant("DONE GATHERING"),
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "stop".to_string(),
                 response_id: Some("1".to_string()),
             },
             ChatResponse {
                 message: Message::assistant("DONE ACTING"),
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "stop".to_string(),
                 response_id: Some("2".to_string()),
             },
             ChatResponse {
                 message: Message::assistant("TASK COMPLETE"),
-                usage: Usage::default(),
+                usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                 stop_reason: "stop".to_string(),
                 response_id: Some("3".to_string()),
             },
@@ -694,13 +694,13 @@ mod tests {
                         response_id: Some("mock-1".to_string()),
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-1".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("TASK COMPLETE"),
-                    usage: Usage::default(),
+                    usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-2".to_string()),
                 }
@@ -752,7 +752,7 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "tool_calls".to_string(),
                     response_id: None,
                 },
@@ -765,7 +765,7 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: Usage::default(),
+                    usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "tool_calls".to_string(),
                     response_id: None,
                 }
@@ -832,7 +832,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
                     message: Message::assistant("I will now destroy everything."),
-                    usage: Usage::default(),
+                    usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: None,
                 }
@@ -933,13 +933,13 @@ mod tests {
                                 name: "mutating_fail".to_string(),
                                 arguments: serde_json::json!({}),
                             }]),
-                        usage: Usage::default(),
+                        usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                         stop_reason: "tool_calls".to_string(),
                     })
                 } else {
                     Ok(ChatResponse {
                         message: omnisolo_builtin_agent_core::types::Message::assistant("I am done"),
-                        usage: Usage::default(),
+                        usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                         stop_reason: "stop".to_string(),
                     })
                 }
@@ -1082,7 +1082,7 @@ mod tests {
                                     arguments: serde_json::json!({}),
                                 }
                             ]),
-                        usage: Usage::default(),
+                        usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                         stop_reason: "tool_calls".to_string(),
                     })
                 } else if *count == 2 {
@@ -1093,13 +1093,13 @@ mod tests {
                     assert!(last_msg.content.contains("[ABORTED]"));
                     Ok(ChatResponse {
                         message: omnisolo_builtin_agent_core::types::Message::assistant("I see the rollback"),
-                        usage: Usage::default(),
+                        usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                         stop_reason: "stop".to_string(),
                     })
                 } else {
                     Ok(ChatResponse {
                         message: omnisolo_builtin_agent_core::types::Message::assistant("I am done"),
-                        usage: Usage::default(),
+                        usage: Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                         stop_reason: "stop".to_string(),
                     })
                 }

@@ -1143,7 +1143,12 @@ mod tests {
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("default output"),
-                    usage: Usage::default(),
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 20,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                    },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 })
@@ -1156,7 +1161,12 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message::assistant("async success"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -1173,7 +1183,12 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message::assistant("sync success"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -1190,7 +1205,12 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message::assistant("stream success"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -1224,7 +1244,12 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message::assistant("success"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -1260,7 +1285,12 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message::assistant("rpc success"),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),

@@ -124,7 +124,12 @@ mod tests {
             let last_user = req.messages.last().unwrap().content.clone();
             Ok(ChatResponse {
                 message: Message::assistant(format!("Mocked: {}", last_user)),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
                 stop_reason: "stop".to_string(),
                 response_id: Some("id1".to_string()),
             })
