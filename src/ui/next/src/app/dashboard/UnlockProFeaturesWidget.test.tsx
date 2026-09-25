@@ -31,7 +31,7 @@ describe('UnlockProFeaturesWidget', () => {
     render(<UnlockProFeaturesWidget />);
 
     expect(await screen.findByText(/Referral Progress/i)).toBeDefined();
-    expect(screen.getByText(/1 \/ 3 Invites/i)).toBeDefined();
+    expect(await screen.findByText(/1 \/ 3 Invites/i)).toBeDefined();
   });
 
   it('copies share link to clipboard and updates button state', async () => {

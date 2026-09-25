@@ -17,7 +17,28 @@ interface QuoteReviewModalProps {
 }
 
 export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }: QuoteReviewModalProps) {
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const parsedPayload: QuotePayload = React.useMemo(() => {
+    if (!initialPayload) return {} as QuotePayload;
+    if (typeof initialPayload === "string") {
+      try {
+        return JSON.parse(initialPayload);
+      } catch {
+        return {} as QuotePayload;
+      }
+    }
+    return initialPayload;
+  }, [initialPayload]);
+
+  const [lineItems, setLineItems] = useState<LineItem[]>(() => {
+    const p = typeof initialPayload === "string" ? (() => { try { return JSON.parse(initialPayload); } catch { return {}; } })() : (initialPayload || {});
+    return p.line_items || [
+      {
+        description: p.scope || p.service || "Service",
+        unit_price_cents: Math.round((p.suggested_price || p.price || 0) * 100),
+        quantity: 1,
+      }
+    ];
+  });
   const [requireDeposit, setRequireDeposit] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [proposedSlots, setProposedSlots] = useState<ProposedSlot[]>([]);
@@ -25,22 +46,22 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
   const [accepted, setAccepted] = useState(false);
 
   useEffect(() => {
-    if (initialPayload) {
+    if (parsedPayload && Object.keys(parsedPayload).length > 0) {
       setAccepted(false);
-      const items = initialPayload.line_items || [
+      const items = parsedPayload.line_items || [
         {
-          description: initialPayload.scope || initialPayload.service || "Service",
-          unit_price_cents: Math.round((initialPayload.suggested_price || initialPayload.price || 0) * 100),
+          description: parsedPayload.scope || parsedPayload.service || "Service",
+          unit_price_cents: Math.round((parsedPayload.suggested_price || parsedPayload.price || 0) * 100),
           quantity: 1,
         }
       ];
       setLineItems(items);
-      if (initialPayload.proposed_slots && initialPayload.proposed_slots.length > 0) {
-        setProposedSlots(initialPayload.proposed_slots);
-        setSelectedSlot(initialPayload.proposed_slots[0].start_time);
+      if (parsedPayload.proposed_slots && parsedPayload.proposed_slots.length > 0) {
+        setProposedSlots(parsedPayload.proposed_slots);
+        setSelectedSlot(parsedPayload.proposed_slots[0].start_time);
       }
     }
-  }, [initialPayload]);
+  }, [parsedPayload]);
 
   if (!isOpen) return null;
 
@@ -55,7 +76,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
 
   const handleApproveClick = () => {
     const updatedPayload = {
-      ...initialPayload,
+      ...parsedPayload,
       line_items: lineItems,
       suggested_price: totalCents / 100,
       price: totalCents / 100,
@@ -68,11 +89,10 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%] animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%] animate-in fade-in duration-200" role="dialog" aria-modal="true" data-testid="quote-review-dialog">
       <div
         className="w-full max-w-lg bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-t-[24px] sm:rounded-[24px] shadow-2xl border border-white/40 dark:border-white/10 flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
-        role="dialog"
-        aria-modal="true"
+        role="document"
       >
         <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between">
           <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Review Quote</h2>
