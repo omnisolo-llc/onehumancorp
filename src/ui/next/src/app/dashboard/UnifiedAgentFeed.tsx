@@ -537,9 +537,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     modified_content?: string,
     event_source?: string,
   ): Promise<void> => {
-    // Optimistically remove card immediately from UI
+    // Record as decided immediately to prevent polling re-adding it
     decidedIdsRef.current.add(id);
-    setItems((prev) => prev.filter((app) => app.id !== id));
+
+    if (approved) {
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
+    } else {
+      setItems((prev) => prev.filter((app) => app.id !== id));
+    }
 
     if (isOffline) {
       // Enqueue offline action

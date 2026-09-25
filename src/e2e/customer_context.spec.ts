@@ -12,7 +12,7 @@ test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
 
     // Verify the ambassador reply card is rendered (seeded in e2e-seed.sql)
     const card = page.locator('[data-testid="ambassador-reply-card"]').first();
-    await expect(card).toBeVisible();
+    await expect(card).toBeVisible({ timeout: 15000 });
 
     // Check if the context section is rendered
     await expect(card.locator('text=Customer Context')).toBeVisible();

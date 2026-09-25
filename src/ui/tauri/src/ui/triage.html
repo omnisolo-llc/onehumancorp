@@ -659,6 +659,7 @@
         }
 
         const listEl = document.getElementById("triage-list");
+        const detailEl = document.getElementById("triage-detail");
         if (!items || items.length === 0) {
           listEl.innerHTML = `
             <div data-testid="triage-feed-empty" class="triage-card app-list-item" style="text-align: center; padding: 48px 24px; color: #6b7280; box-shadow: none; border: 1px dashed rgba(0, 0, 0, 0.2); background: transparent;">

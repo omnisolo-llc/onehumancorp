@@ -6,7 +6,7 @@ export function QuickActionFAB() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-6 right-24 z-50 flex flex-col items-end gap-3">
       {isOpen && (
         <div className="flex flex-col gap-2 mb-2 animate-in slide-in-from-bottom-5">
           <Link href="/offering/new" className="px-4 py-2 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm text-gray-900 dark:text-gray-100 rounded-full shadow-lg font-semibold whitespace-nowrap">
