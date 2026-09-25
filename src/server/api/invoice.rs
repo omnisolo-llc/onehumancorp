@@ -170,23 +170,35 @@ impl InvoiceService for InvoiceServiceImpl {
         let mut stripe_invoice_id = String::new();
 
         if total_cents > 0 {
-            let db = crate::db::DB { pool: self.hub.pool.clone(), store: crate::db::DbStore::Postgres };
-            if let Ok(stripe_key) = crate::api::tool_integrations::stripe_key_for_tenant(&db, &req.tenant_id).await {
-                let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+            let db = crate::db::DB {
+                pool: self.hub.pool.clone(),
+                store: crate::db::DbStore::Postgres,
+            };
+            if let Ok(stripe_key) =
+                crate::api::tool_integrations::stripe_key_for_tenant(&db, &req.tenant_id).await
+            {
+                let stripe_client =
+                    crate::integrations::stripe::client::StripeClient::new(stripe_key);
                 if stripe_client.require_api_key().is_ok() {
                     use sha2::{Digest, Sha256};
-                    let operation_id = format!("invoice:{:x}", Sha256::digest(format!("{}:{}", req.tenant_id, invoice_id)));
-                    if let Ok(receipt) = stripe_client.create_checkout_session_idempotent(
-                        crate::integrations::stripe::safe_checkout::CheckoutRequest {
-                            name: &format!("Invoice for {}", req.client_name),
-                            reference: &invoice_id,
-                            amount_cents: total_cents as i64,
-                            interval: None,
-                            product: None,
-                            currency: &req.currency,
-                            operation_id: &operation_id,
-                        }
-                    ).await {
+                    let operation_id = format!(
+                        "invoice:{:x}",
+                        Sha256::digest(format!("{}:{}", req.tenant_id, invoice_id))
+                    );
+                    if let Ok(receipt) = stripe_client
+                        .create_checkout_session_idempotent(
+                            crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                                name: &format!("Invoice for {}", req.client_name),
+                                reference: &invoice_id,
+                                amount_cents: total_cents as i64,
+                                interval: None,
+                                product: None,
+                                currency: &req.currency,
+                                operation_id: &operation_id,
+                            },
+                        )
+                        .await
+                    {
                         stripe_payment_link = receipt.url;
                         stripe_invoice_id = receipt.id;
                     }
