@@ -95,7 +95,7 @@ export async function packageWeb(repository = root) {
   await mkdir(layout.destination, { recursive: true });
   await cp(layout.standalone, layout.destination, {
     recursive: true, dereference: true,
-    filter: distributablePath,
+    filter: (source) => distributablePath(source) && existsSync(source),
   });
   const app = path.join(layout.destination, 'src/ui/next');
   await cp(path.join(layout.source, '.next/static'), path.join(app, '.next/static'), {
