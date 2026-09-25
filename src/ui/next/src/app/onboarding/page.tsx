@@ -133,7 +133,7 @@ export default function OnboardingWizard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ wizardState }),
+        body: JSON.stringify(wizardState),
       });
     } catch (err) {
       console.error("Failed to sync onboarding state", err);
