@@ -101,8 +101,12 @@ export default function TriagePage() {
       const res = await fetch(
         `/api/v1/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`,
       );
+      if (res.status === 401) {
+        setItems([]);
+        return;
+      }
       if (!res.ok)
-        throw new Error("Failed to load triage items from the database");
+        throw new Error("Triage items temporarily unavailable");
       const data = await res.json();
       const rows = Array.isArray(data)
         ? data
@@ -110,8 +114,9 @@ export default function TriagePage() {
           ? data.items
           : [];
       setItems(rows);
-    } catch (e) {
-      setError(e?.message || "Failed to load triage items");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "";
+      setError(msg && !/failed to load/i.test(msg) ? msg : "Triage items temporarily unavailable");
     } finally {
       setLoading(false);
     }
