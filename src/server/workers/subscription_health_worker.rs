@@ -79,6 +79,13 @@ impl SubscriptionHealthWorker {
                 };
 
                 if let Some((job_id, tenant_id, payload)) = job {
+                    if let Some(transaction) = postgres_transaction.as_mut() {
+                        let _ = ::server_common::auth_utils::set_org_context(
+                            &mut **transaction,
+                            &tenant_id,
+                        )
+                        .await;
+                    }
                     if let (Some(subscriber_id), Some(customer_id)) = (
                         payload.get("subscriber_id").and_then(|v| v.as_str()),
                         payload.get("customer_id").and_then(|v| v.as_str()),
