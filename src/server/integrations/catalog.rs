@@ -170,6 +170,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "calendar",
             "https://graph.microsoft.com/v1.0".to_string(),
         ),
+        metadata_provider(
+            "trello",
+            "Trello",
+            "project_management",
+            "https://api.trello.com/1".to_string(),
+        ),
     ]
 }
 
