@@ -107,7 +107,7 @@ describe('CustomerReferralProgramPage', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
     render(<CustomerReferralProgramPage />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan')); await act(async () => { await new Promise(r => setTimeout(r, 100)); });
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo"/i });
 
