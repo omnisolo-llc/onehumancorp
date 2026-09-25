@@ -25,7 +25,8 @@ export function DashboardViralInviteWidget() {
       const w = window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } };
       if (w.__TAURI__ && w.__TAURI__.core) {
         const link = await w.__TAURI__.core.invoke('generate_referral_link');
-        setReferralLink(typeof link === 'string' ? link : '');
+        const normLink = typeof link === 'string' ? link.replace('/ref/', '/invite/').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/') : '';
+        setReferralLink(normLink);
       } else {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
@@ -37,7 +38,8 @@ export function DashboardViralInviteWidget() {
         if (!res.ok) throw new Error('Referral service unavailable');
         const data = await res.json();
         if (typeof data.referral_link !== 'string' || !data.referral_link) throw new Error('Invalid referral response');
-        setReferralLink(data.referral_link);
+        const normLink = data.referral_link.replace('/ref/', '/invite/').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/');
+        setReferralLink(normLink);
       }
     } catch {
       const fallbackTenant = (typeof window !== 'undefined' && localStorage.getItem('business_display_name')) || 'e2e-tenant';

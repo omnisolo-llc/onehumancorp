@@ -540,7 +540,8 @@
 
 
       function tenantId() {
-        return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+        const params = new URLSearchParams(window.location.search);
+        return params.get("tenant_id") || params.get("tenant") || localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || localStorage.getItem("business_display_name") || "e2e-tenant";
       }
 
       function badgeTone(priority) {
