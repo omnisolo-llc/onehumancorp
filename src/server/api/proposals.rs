@@ -627,7 +627,11 @@ mod tests {
             assert_eq!(topic, topic.trim());
             Ok(ChatResponse {
                 message: Message::assistant(format!("Proposal for {topic}")),
-                usage: Usage::default(),
+                usage: Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    ..Default::default()
+                },
                 stop_reason: "stop".to_string(),
                 response_id: None,
             })
