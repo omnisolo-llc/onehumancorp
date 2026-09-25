@@ -166,9 +166,33 @@ impl InvoiceService for InvoiceServiceImpl {
 
         let status = "draft".to_string();
 
-        // This operation creates a local draft, not a provider checkout session.
-        // Empty means payment has not been configured; never invent a payable URL.
-        let stripe_payment_link = String::new();
+        let mut stripe_payment_link = String::new();
+        let mut stripe_invoice_id = String::new();
+
+        if total_cents > 0 {
+            let db = crate::db::DB { pool: self.hub.pool.clone(), store: crate::db::DbStore::Postgres };
+            if let Ok(stripe_key) = crate::api::tool_integrations::stripe_key_for_tenant(&db, &req.tenant_id).await {
+                let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+                if stripe_client.require_api_key().is_ok() {
+                    use sha2::{Digest, Sha256};
+                    let operation_id = format!("invoice:{:x}", Sha256::digest(format!("{}:{}", req.tenant_id, invoice_id)));
+                    if let Ok(receipt) = stripe_client.create_checkout_session_idempotent(
+                        crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                            name: &format!("Invoice for {}", req.client_name),
+                            reference: &invoice_id,
+                            amount_cents: total_cents as i64,
+                            interval: None,
+                            product: None,
+                            currency: &req.currency,
+                            operation_id: &operation_id,
+                        }
+                    ).await {
+                        stripe_payment_link = receipt.url;
+                        stripe_invoice_id = receipt.id;
+                    }
+                }
+            }
+        }
 
         let base_currency = if req.base_currency.is_empty() {
             "USD".to_string()
@@ -187,8 +211,8 @@ impl InvoiceService for InvoiceServiceImpl {
         };
 
         sqlx::query(
-            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, base_currency, transaction_currency, exchange_rate, total_amount, stripe_payment_link, total_amount_cents, amount_paid_cents, payment_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 'draft')"
+            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, base_currency, transaction_currency, exchange_rate, total_amount, stripe_payment_link, total_amount_cents, amount_paid_cents, payment_status, stripe_invoice_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 'draft', $14)"
         )
         .bind(&invoice_id)
         .bind(&req.tenant_id)
@@ -203,6 +227,7 @@ impl InvoiceService for InvoiceServiceImpl {
         .bind(total_amount)
         .bind(&stripe_payment_link)
         .bind(total_cents)
+        .bind(&stripe_invoice_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -254,7 +279,7 @@ impl InvoiceService for InvoiceServiceImpl {
             payment_status: "draft".to_string(),
             view_count: 0,
             amount_paid_cents: 0,
-            stripe_invoice_id: "".to_string(),
+            stripe_invoice_id,
             stripe_payment_link,
             line_items: saved_items,
             created_at: chrono::Utc::now().timestamp(),

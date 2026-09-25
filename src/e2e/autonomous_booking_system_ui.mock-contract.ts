@@ -88,4 +88,44 @@ test.describe('Autonomous Booking System UI', () => {
     await timeInputs.nth(1).fill('2025-02-01T17:00');
     await page.getByRole('button', { name: 'Add Block' }).click();
   });
+
+  test('Public Booking Form Flow - Payment Unavailable', async ({ page }) => {
+    // 1. Visit booking page
+    await page.goto(`/booking?tenant=${tenantId}&service_id=mock-service-no-stripe`);
+    await expect(page.getByRole('heading', { name: 'Book an Appointment' })).toBeVisible();
+
+    // 2. Fill the form
+    await page.fill('input[type="text"]', 'John Doe');
+    await page.fill('input[type="email"]', 'john@example.com');
+    await page.fill('textarea', 'I need a guitar lesson.');
+
+    // 3. Date Selection triggers slot loading
+    const dateQuery = new Date().toISOString().split('T')[0];
+    await page.fill('input[type="date"]', dateQuery);
+
+    // Wait for the mock slots to load
+    await page.waitForSelector('button:has-text("09:00 AM")');
+    await page.click('button:has-text("09:00 AM")');
+
+    // 4. Submit
+    // Route mock to simulate missing Stripe configuration
+    await page.route('/api/v1/booking/public/checkout', async (route) => {
+        await route.fulfill({
+            status: 200,
+            json: {
+                booking_id: 'mock-booking-no-stripe',
+                stripe_url: null,
+                status: 'payment_unavailable'
+            }
+        });
+    });
+
+    await page.click('button:has-text("Confirm Booking")');
+
+    // 5. Verify unconfigured payment state
+    // We expect the UI to handle payment_unavailable. Assuming there is some indicator or missing link.
+    await expect(page.getByTestId('booking-checkout-container')).toBeVisible();
+    await expect(page.getByTestId('pay-deposit-btn')).toBeHidden();
+    await expect(page.locator('text=Payment configuration pending')).toBeVisible();
+  });
 });

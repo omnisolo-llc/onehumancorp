@@ -109,6 +109,7 @@ async fn create_checkout_session(
     let st = chrono::DateTime::parse_from_rfc3339(&payload.start_time).unwrap();
     let et = chrono::DateTime::parse_from_rfc3339(&payload.end_time).unwrap();
 
+    let mut stripe_id_opt = None;
     let mut stripe_url = None;
     if requires_deposit && deposit_cents > 0 {
         if let Ok(stripe_key) = crate::api::tool_integrations::stripe_key_for_tenant(&state.db, &tenant_id).await {
@@ -128,6 +129,7 @@ async fn create_checkout_session(
                     }
                 ).await {
                     stripe_url = Some(receipt.url);
+                    stripe_id_opt = Some(receipt.id);
                 }
             }
         }
@@ -136,8 +138,8 @@ async fn create_checkout_session(
     let res = match &state.db.store {
         DbStore::Sqlite(pool) => {
             if requires_deposit && deposit_cents > 0 {
-                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')")
-                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339())
+                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status, payment_intent_id) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)")
+                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339()).bind(&stripe_id_opt)
                     .execute(pool).await
             } else {
                 sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, 'scheduled')")
@@ -150,8 +152,8 @@ async fn create_checkout_session(
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
             let result = if requires_deposit && deposit_cents > 0 {
-                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')")
-                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(st).bind(et)
+                sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status, payment_intent_id) VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)")
+                    .bind(&booking_id).bind(&tenant_id).bind(&payload.service_id).bind(&payload.resource_id).bind(st).bind(et).bind(&stripe_id_opt)
                     .execute(&mut *tx).await
             } else {
                 sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, resource_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')")
@@ -171,6 +173,6 @@ async fn create_checkout_session(
     (StatusCode::OK, Json(serde_json::json!({
         "booking_id": booking_id,
         "stripe_url": stripe_url,
-        "status": if stripe_url.is_some() { "pending_payment" } else { "confirmed" }
+        "status": if stripe_url.is_some() { "pending_payment" } else if requires_deposit && deposit_cents > 0 { "payment_unavailable" } else { "confirmed" }
     }))).into_response()
 }
