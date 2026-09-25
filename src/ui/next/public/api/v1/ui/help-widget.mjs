@@ -474,12 +474,21 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="omnisolo-help-tab active" data-target="tab-articles">Articles</button>
             <button class="omnisolo-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="omnisolo-help-tab" data-target="tab-videos">Videos</button>
+            <button class="omnisolo-help-tab" data-target="tab-changelog">What's New</button>
             <button class="omnisolo-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
         </div>
 
         <div id="tab-articles" class="omnisolo-help-content active">
             <div style="margin-bottom: 16px;">
                 <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div class="omnisolo-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
+                    <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
+                        <h4 style="margin: 0 0 4px 0;">Tour: Set up your store</h4>
+                        <p style="margin: 0; font-size: 13px; color: #64748b;">Learn how to add products and customize your storefront.</p>
+                    </button>
+                </div>
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="omnisolo-help-articles-list">
@@ -498,6 +507,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OmniSolo Advanced API Reference</a>
                     <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
+            </div>
+        </div>
+
+        <div id="tab-changelog" class="omnisolo-help-content">
+            <div style="padding: 12px 0;">
+                <h4 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600;">Latest Updates</h4>
+                <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0;">See recent improvements and releases to OmniSolo OneHumanCorp.</p>
+                <a href="/changelog.html" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">Read full release notes &rarr;</a>
             </div>
         </div>
 
@@ -529,12 +546,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="tab-chat" class="omnisolo-help-content" style="padding-bottom: 12px;">
             <div id="omnisolo-help-chat-messages">
                 <div class="omnisolo-chat-msg agent">
-                    Need help setting up your store? I am your AI Help Agent! How can I assist you today?
+                    Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo.
                 </div>
             </div>
             <div id="omnisolo-help-chat-input-container">
-                <input type="text" id="omnisolo-help-chat-input" placeholder="Ask anything...">
-                <button id="omnisolo-help-chat-send" aria-label="Send message" disabled>Send</button>
+                <input type="text" id="ohc-help-chat-input" class="omnisolo-help-chat-input" placeholder="Ask anything...">
+                <button id="ohc-help-chat-send" class="omnisolo-help-chat-send" aria-label="Send message">Send</button>
             </div>
         </div>
     `;
@@ -581,8 +598,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat Logic
-    const chatInput = document.getElementById('omnisolo-help-chat-input');
-    const chatSend = document.getElementById('omnisolo-help-chat-send');
+    const chatInput = document.getElementById('ohc-help-chat-input') || document.getElementById('omnisolo-help-chat-input');
+    const chatSend = document.getElementById('ohc-help-chat-send') || document.getElementById('omnisolo-help-chat-send');
     const chatMessages = document.getElementById('omnisolo-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {
@@ -610,25 +627,23 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
 
-            if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
-            } else if (data.text) {
-                appendMessage(data.text, 'agent', data.link);
-            } else {
-                appendMessage(data, 'agent');
-            }
+            const linkObj = data.link || (typeof data.reply === 'object' ? data.reply?.link : null);
+            const replyText = typeof data.reply === 'string' ? data.reply : (data.reply?.text || data.text || String(data));
+            appendMessage(replyText, 'agent', linkObj);
         } catch  {
             appendMessage("I'm sorry, I'm having trouble connecting right now.", 'agent');
         }
     }
 
-    chatSend.addEventListener('click', handleSend);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !chatSend.disabled) handleSend();
-    });
-    chatInput.addEventListener('input', (e) => {
-        chatSend.disabled = e.target.value.trim() === '';
-    });
+    if (chatSend && chatInput) {
+        chatSend.addEventListener('click', handleSend);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSend();
+        });
+        chatInput.addEventListener('input', (e) => {
+            chatSend.disabled = e.target.value.trim() === '';
+        });
+    }
 
 
 });

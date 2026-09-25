@@ -39,6 +39,7 @@ pub mod invoice;
 pub mod local_seo;
 pub mod mcp_webhook;
 pub mod meta_webhook;
+pub mod perplexity;
 pub mod recovery;
 pub mod settings;
 pub mod shipping;
