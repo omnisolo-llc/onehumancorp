@@ -1164,7 +1164,8 @@
 
         simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
 
-        // Request Terminal Token
+        try {
+          // Request Terminal Token
           const tokenRes = await fetch('/api/v1/payments/terminal/token', {
             method: 'POST',
             headers: {
@@ -1617,6 +1618,7 @@ productGrid.appendChild(btn);
                   })
               });
           }
+      }
       let isAppOffline = typeof navigator !== "undefined" && !navigator.onLine;
       window.addEventListener("offline", () => { isAppOffline = true; });
       window.addEventListener("online", () => { isAppOffline = false; });

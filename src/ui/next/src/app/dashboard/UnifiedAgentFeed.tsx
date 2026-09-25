@@ -525,8 +525,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     modified_content?: string,
     event_source?: string,
   ): Promise<void> => {
-    // Optimistically remove card immediately from UI
-    setItems((prev) => prev.filter((app) => app.id !== id));
+    // Optimistically remove card immediately from UI (delay 500ms if approved to show transition)
+    if (approved) {
+      setTimeout(() => {
+        setItems((prev) => prev.filter((app) => app.id !== id));
+      }, 500);
+    } else {
+      setItems((prev) => prev.filter((app) => app.id !== id));
+    }
 
     if (isOffline) {
       // Enqueue offline action
