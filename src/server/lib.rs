@@ -4580,6 +4580,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let cache = UI_TRIAGE_CACHE
             .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
+        if query.bypass_cache.unwrap_or(false) {
+            cache.invalidate(&cache_key).await;
+        }
+
         let items_opt = cache
             .get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
                 let db = db.clone();
@@ -9602,6 +9606,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
         .nest("/api/v1/agents/pydantic", api::agents::pydantic::router())
         .nest("/api/v1/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/v1/perplexity", api::perplexity::router())
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .merge(api::agent_stream::router(hub.clone()))
@@ -9781,6 +9786,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     ::server_auth::strict_bearer_auth_middleware,
                 ),
             ),
+        )
+        .route(
+            "/api/v1/settings",
+            axum::routing::get(api::settings::global_commerce::get_settings)
+                .put(api::settings::global_commerce::update_settings)
+                .layer(legacy_db_compatibility_layer(db.clone()))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                )),
         )
         .route(
             "/api/v1/settings/global-commerce",
