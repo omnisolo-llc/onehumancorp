@@ -19,7 +19,7 @@ test.describe('Viral ROI Calculator', () => {
       await expect(generateBtn).toBeVisible();
 
       await page.locator('#service-name').fill('Pro SEO Services');
-      await page.locator('#avg-customer-value').fill('1500');
+      await page.locator('#base-investment, #avg-customer-value').first().fill('1500');
 
       await generateBtn.click();
       await expect(generateBtn).toBeDisabled();

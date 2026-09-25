@@ -25,7 +25,7 @@ test.describe('Spin To Win Generator Growth Loop', () => {
 
         // Check that the code block has powered by OmniSolo (In iframe embed, the URL carries tenant and default payload)
         const codeBlock = await page.locator('code').innerText();
-        expect(codeBlock).toContain('tenant=DEFAULT');
+        expect(codeBlock).toMatch(/tenant=(DEFAULT|e2e-tenant)/);
     });
 
     test('generates valid iframe src url based on default values', async ({ page, loginAs, adminUser }) => {

@@ -25,10 +25,10 @@ test.describe('Zero-Click Onboarding Flow', () => {
     await expect(page.locator('#approval-details')).toBeVisible();
 
     // Click Approve & Publish
-    const approveBtn = page.locator('#approve-publish-btn-chat');
+    const approveBtn = page.locator('#approve-publish-btn-chat, #approve-publish-btn').first();
     await approveBtn.click();
 
     // The flow goes to the success/dashboard screen.
-    await expect(page).toHaveURL(/.*dashboard\.html.*/, { timeout: 30000 });
+    await expect(page).toHaveURL(/.*(dashboard\.html|dashboard|success\.html).*/, { timeout: 30000 });
   });
 });

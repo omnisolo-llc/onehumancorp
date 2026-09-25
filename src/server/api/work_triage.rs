@@ -131,6 +131,10 @@ pub async fn get_daily_work_handler(
     let cache = DAILY_WORK_CACHE
         .get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
 
+    if query.bypass_cache.unwrap_or(false) {
+        cache.invalidate(&cache_key).await;
+    }
+
     let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
         let db = db.clone();
         let tenant_id = tenant_id.clone();

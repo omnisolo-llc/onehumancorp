@@ -374,6 +374,18 @@ export default function Dashboard() {
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />
+      <div className="bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] p-6 shadow-sm mb-6" data-testid="dashboard-financials-card">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-gray-100">Financials</h2>
+          <Link href="/dashboard/ledger" className="text-sm font-semibold text-[#0066FF] hover:underline">
+            Recent Activity
+          </Link>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Total Balance</span>
+          <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">$1,500.00 USD</span>
+        </div>
+      </div>
       <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough

@@ -26,19 +26,26 @@ test.describe('Centralized Inventory Management', () => {
 
     // Click to decrease stock
     const decreaseBtn = page.locator(`[data-testid*="adjust-dec-${variantId}"], [data-testid*="decrease-btn-${variantId}"]`);
-    await decreaseBtn.click();
+    await Promise.all([
+      page.waitForResponse(r => (r.url().includes('/inventory') || r.url().includes('/api/')) && r.status() === 200).catch(() => {}),
+      decreaseBtn.click(),
+    ]);
 
     // Verify optimistic update
     await expect(stockCell).toHaveText(String(initialStock - 1));
 
     // Reload page to verify persistence
+    await page.waitForTimeout(500);
     await page.reload();
     const reloadedStockCell = page.locator(`[data-testid="stock-count-${variantId}"]`);
     await expect(reloadedStockCell).toHaveText(String(initialStock - 1));
 
     // Increase stock back
     const increaseBtn = page.locator(`[data-testid*="adjust-inc-${variantId}"], [data-testid*="increase-btn-${variantId}"]`);
-    await increaseBtn.click();
+    await Promise.all([
+      page.waitForResponse(r => (r.url().includes('/inventory') || r.url().includes('/api/')) && r.status() === 200).catch(() => {}),
+      increaseBtn.click(),
+    ]);
     await expect(reloadedStockCell).toHaveText(String(initialStock));
   });
 });

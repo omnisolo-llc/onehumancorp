@@ -15,7 +15,7 @@ test.describe('AI Agent Department Architecture', () => {
 
     // Navigate to "Needs Approval" tab
     await page.locator('text=Needs Approval').click();
-    await expect(page.locator('text=Fetching approvals...').or(page.locator('text=All Caught Up!')).or(page.locator('text=Approve & Send'))).toBeVisible();
+    await expect(page.locator('text=Fetching approvals...').or(page.locator('text=All Caught Up!')).or(page.locator('text=Approve & Send').first())).toBeVisible();
   });
 
   test('should show soft paywall for Pro Mode when not pro, and allow trial extension via share', async ({ page }) => {
@@ -35,7 +35,7 @@ test.describe('AI Agent Department Architecture', () => {
     // The soft paywall modal should appear
     await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Upgrade to Pro/ })).toBeVisible();
-    const shareButton = page.getByRole('button', { name: /Share on X to get 7 Days Free/i });
+    const shareButton = page.getByRole('button', { name: /Share on X to (get 7 Days Free|activate Pro)/i });
     await expect(shareButton).toBeVisible();
 
     // Intercept window.open

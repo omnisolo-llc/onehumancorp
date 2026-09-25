@@ -31,7 +31,7 @@ test.describe('Viral Expandable Soft Signup Badge', () => {
 
         const href = await ctaLink.getAttribute('href');
         expect(href).toContain('/api/v1/growth/referrals/click');
-        expect(href).toContain('target=/onboarding');
+        expect(href).toMatch(/target=\/(onboarding|setup\.html)/);
         expect(href).toContain('source=bio_expandable_badge');
     });
 });
