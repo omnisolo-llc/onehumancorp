@@ -1244,6 +1244,10 @@ select {
   border-radius: 9999px !important;
 }
 
+.rounded-2xl {
+  border-radius: 16px !important;
+}
+
 .omnisolo-growth-card {
   background: rgba(255, 255, 255, 0.65);
 

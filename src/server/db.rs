@@ -2445,10 +2445,23 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         product_id TEXT,
-                        location TEXT NOT NULL, -- 'online' or 'in-store'
+                        variant_id TEXT,
+                        location TEXT NOT NULL DEFAULT 'in-store', -- 'online' or 'in-store'
+                        location_id TEXT,
                         quantity INT DEFAULT 0,
+                        available_count INT DEFAULT 0,
+                        committed_count INT DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inventory_transactions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        inventory_level_id TEXT,
+                        type TEXT NOT NULL,
+                        quantity_change INT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS inventory_predictions (

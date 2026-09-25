@@ -20,6 +20,8 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import { UnlockProFeaturesWidget } from "./UnlockProFeaturesWidget";
 import { AIUsageLimitWidget } from "./AIUsageLimitWidget";
+import { ViralUpgradePaywallWidget } from "../components/ViralUpgradePaywallWidget";
+import { SoftPaywallWidget } from "../components/SoftPaywallWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
@@ -364,6 +366,10 @@ export default function Dashboard() {
       </div>
 
       <AIUsageLimitWidget />
+      <div className="my-6">
+        <ViralUpgradePaywallWidget tenantId={tenantId()} />
+      </div>
+      <SoftPaywallWidget />
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
       <MorningBriefingCard tenant={tenantId()} />
@@ -652,7 +658,8 @@ export default function Dashboard() {
         </section>
 
         <section className="app-grid two">
-          <div className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
+          <WalkthroughTarget id="operations-map">
+          <div id="operations-map" className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Operations Map</div>
@@ -680,7 +687,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
+          </WalkthroughTarget>
         </section>
 
 
@@ -1225,6 +1232,17 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Request Pro activation through the OmniSolo entitlement service after sharing.</p>
             </Link>
+            </WithTooltip>
+
+            <WithTooltip id="share-to-unlock-tooltip" defaultText="Create share-to-unlock campaigns to drive viral word of mouth.">
+            <a href="share-to-unlock-generator.html" id="share-to-unlock-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔓</div>
+                <div className="text-amber-600 dark:text-amber-400 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Viral</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Share-to-Unlock Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create viral unlock campaigns that reward users for sharing.</p>
+            </a>
             </WithTooltip>
 
             <WithTooltip id="field-ops-tooltip" defaultText="Offline-first mobile route management for field service workers.">

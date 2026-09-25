@@ -3,14 +3,21 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
 // --- Global Tooltip & Walkthrough Logic ---
 
     // Tooltips
-    if (!window.OMNISOLO_TOOLTIPS) {
-    window.OMNISOLO_TOOLTIPS = {};
+    const defaultTooltips = {
+        "nav-store": "Your Storefront. This is where you manage what you sell.",
+        "nav-agents": "AI Helpers. These are your digital employees.",
+        "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+        "search-input": "Search our knowledge base for help articles.",
+        "dashboard-walkthrough-btn": "Take a tour of the dashboard",
+    };
+    window.OMNISOLO_TOOLTIPS = Object.assign(defaultTooltips, window.OMNISOLO_TOOLTIPS || {});
     fetch("/api/v1/tooltips").then(r => r.json()).then(data => {
-        Object.assign(window.OMNISOLO_TOOLTIPS, data);
+        if (data && typeof data === 'object') {
+            Object.assign(window.OMNISOLO_TOOLTIPS, data);
+        }
     }).catch(e => {
         console.error(e);
     });
-}
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'omnisolo-tooltip';
     if (document.body) document.body.appendChild(tooltipEl);

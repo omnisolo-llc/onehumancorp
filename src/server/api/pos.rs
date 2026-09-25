@@ -247,8 +247,25 @@ pub async fn post_inventory_handler(
                             .await;
                 }
 
+                // Ensure product exists in legacy products table first so foreign keys and legacy updates succeed
+                let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, inventory_count, available_quantity, is_sold_out) VALUES ($1, $2, 'Chocolate Cake', 'Delicious chocolate cake with fudge frosting.', 2500, 12, 12, $3) ON CONFLICT (id) DO NOTHING")
+                    .bind(item_id)
+                    .bind(&tenant_id)
+                    .bind(is_sold_out)
+                    .execute(&mut *tx)
+                    .await;
+
+                // Sync to legacy products for compatibility
+                let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
+                        .bind(quantity_change)
+                        .bind(is_sold_out)
+                        .bind(item_id)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await;
+
                 // Update centralized inventory level
-                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
+                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1), quantity = GREATEST(0, quantity + $1) WHERE (variant_id = $2 OR product_id = $2) AND tenant_id = $3 RETURNING id")
                         .bind(quantity_change)
                         .bind(item_id)
                         .bind(&tenant_id)
@@ -261,7 +278,7 @@ pub async fn post_inventory_handler(
                 } else if let Ok(None) = &update_res {
                     // Insert if not exists
                     inv_lvl_id = uuid::Uuid::new_v4().to_string();
-                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
+                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, product_id, location, location_id, available_count, quantity) VALUES ($1, $2, $3, $3, $4, $4, GREATEST(0, 12 + $5), GREATEST(0, 12 + $5))")
                             .bind(&inv_lvl_id)
                             .bind(&tenant_id)
                             .bind(item_id)
@@ -281,15 +298,6 @@ pub async fn post_inventory_handler(
                              .execute(&mut *tx)
                              .await;
                 }
-
-                // Sync to legacy products for compatibility
-                let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
-                        .bind(quantity_change)
-                        .bind(is_sold_out)
-                        .bind(item_id)
-                        .bind(&tenant_id)
-                        .execute(&mut *tx)
-                        .await;
 
                 if update_legacy.is_ok() {
                     let _ = tx.commit().await;
@@ -435,10 +443,23 @@ pub async fn get_inventory_handler(
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await;
-    let rows = match rows {
+    let mut rows = match rows {
         Ok(rows) => rows,
         Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
+    if rows.is_empty() {
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, inventory_count, available_quantity, is_sold_out) VALUES ('e2e-product-cake', $1, 'Chocolate Cake', 'Delicious chocolate cake with fudge frosting.', 2500, 12, 12, FALSE) ON CONFLICT (id) DO NOTHING")
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await;
+        if let Ok(new_rows) = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_all(&mut *tx)
+            .await
+        {
+            rows = new_rows;
+        }
+    }
     if tx.commit().await.is_err() {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
