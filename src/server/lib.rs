@@ -8928,6 +8928,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/v1/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
                 .route("/api/v1/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
                 .route("/api/v1/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
+                .route("/api/v1/ui/opportunities", axum::routing::get(crate::api::crm::list_opportunities_handler).with_state(db.clone()))
+                .route("/api/v1/ui/opportunities/stage", axum::routing::post(crate::api::crm::update_opportunity_stage_handler).with_state(db.clone()))
                 .route_layer(axum::middleware::from_fn_with_state(
                     http_auth_store.clone(),
                     ::server_auth::strict_bearer_auth_middleware,

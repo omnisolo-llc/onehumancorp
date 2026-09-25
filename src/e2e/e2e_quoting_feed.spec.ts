@@ -21,7 +21,7 @@ test.describe('Quote Feed e2e', () => {
     await reviewBtn.scrollIntoViewIfNeeded();
     await reviewBtn.click();
 
-    const dialog = page.locator('role=dialog, [role="dialog"], [data-testid="quote-review-dialog"]').first();
+    const dialog = page.locator('[role="dialog"], [data-testid="quote-review-dialog"]').first();
     await expect(dialog).toBeVisible({ timeout: 15000 });
 
     await expect(page.getByText('Review Quote')).toBeVisible();
