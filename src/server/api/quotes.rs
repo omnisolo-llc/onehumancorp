@@ -65,12 +65,11 @@ impl ResearcherLlmClient for AdapterLlm {
                 Usage {
                     input_tokens: 10,
                     output_tokens: 20,
-                    cache_creation_input_tokens: 0,
-                    cache_read_input_tokens: 0,
+                    ..Default::default()
                 },
             )
         } else if is_test_mode {
-            (r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string(), Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
+            (r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string(), Usage { input_tokens: 10, output_tokens: 20, ..Default::default() })
         } else {
             let observed = crate::minimax::LocalLLMClient::new()
                 .reason_with_usage(&prompt, req.max_tokens)
