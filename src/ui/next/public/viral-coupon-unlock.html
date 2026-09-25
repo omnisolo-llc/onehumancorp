@@ -399,8 +399,15 @@
       const storedTenant = localStorage.getItem('tenant');
       if (storedTenant) {
         tenant = storedTenant;
-        updatePreview();
       }
+      ['offerName', 'couponCode', 'sharesReq'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', updatePreview);
+          el.addEventListener('change', updatePreview);
+        }
+      });
+      updatePreview();
     });
 
     function updatePreview() {
@@ -408,16 +415,21 @@
       const code = document.getElementById('couponCode').value || 'LOCKED';
       const shares = document.getElementById('sharesReq').value || '3';
 
-      document.getElementById('previewTitle').innerText = title;
-      document.getElementById('previewCode').innerText = code;
+      const setT = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = val; el.innerText = val; }
+      };
 
-      document.getElementById('shareCountText').innerText = shares;
-      document.getElementById('previewShares').innerText = shares;
-      document.getElementById('previewSharesSub').innerText = shares;
-      document.getElementById('previewSharesTotal').innerText = shares;
+      setT('previewTitle', title);
+      setT('previewCode', code);
+
+      setT('shareCountText', shares);
+      setT('previewShares', shares);
+      setT('previewSharesSub', shares);
+      setT('previewSharesTotal', shares);
 
       const link = `https://omnisolo.co/unlock/${tenant.toLowerCase().replace(/\\s+/g, '-')}`;
-      document.getElementById('shareLink').innerText = link;
+      setT('shareLink', link);
     }
 
     function copyLink() {
