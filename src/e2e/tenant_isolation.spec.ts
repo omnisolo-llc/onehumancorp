@@ -49,7 +49,9 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
 
         await expect(page.getByRole('heading', { name: 'Add Product' })).toBeVisible();
         await page.getByLabel('Product Name').fill('Secret Tenant A Cake');
-        await page.getByRole('button', { name: 'Save' }).click();
+        const saveBtn = page.getByRole('button', { name: 'Save' });
+        await saveBtn.scrollIntoViewIfNeeded();
+        await saveBtn.click();
         await expect(page.getByText('Secret Tenant A Cake')).toBeVisible();
 
         // If we theoretically logged in as another tenant, this "Secret Tenant A Cake" would NOT be visible.

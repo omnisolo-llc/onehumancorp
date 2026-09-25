@@ -56,9 +56,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       responseText = "Noted! Your preference for chocolate has been remembered.";
     }
 
-    setTimeout(() => {
-      setChatMessages((prev) => [...prev, { role: "agent" as const, text: responseText }]);
-    }, 100);
+    setChatMessages((prev) => [
+      ...prev,
+      { role: "agent" as const, text: responseText },
+    ]);
   };
 
   const groupedProposals = useMemo(() => {
@@ -560,6 +561,47 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         </h2>
         <span className="text-xs text-gray-500 font-normal">Unified Agent Feed</span>
       </div>
+
+      {/* Agent Chat & Memory Box */}
+      <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-800">
+        {chatMessages.length > 0 && (
+          <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+            {chatMessages.map((msg, i) => (
+              <div
+                key={i}
+                className={
+                  msg.role === "user"
+                    ? "text-right"
+                    : "text-left agent-message text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 p-2.5 rounded-lg"
+                }
+              >
+                {msg.role === "user" ? (
+                  <span className="inline-block bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg">
+                    {msg.text}
+                  </span>
+                ) : (
+                  <span>{msg.text}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <form onSubmit={handleSendChatMessage} className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Message..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+          >
+            Send
+          </button>
+        </form>
+      </div>
       {error && (
         <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
           {error}
@@ -741,47 +783,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
             </div>
           </>
         )}
-      </div>
-
-      {/* Agent Chat & Memory Box */}
-      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-        {chatMessages.length > 0 && (
-          <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
-            {chatMessages.map((msg, i) => (
-              <div
-                key={i}
-                className={
-                  msg.role === "user"
-                    ? "text-right"
-                    : "text-left agent-message text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 p-2.5 rounded-lg"
-                }
-              >
-                {msg.role === "user" ? (
-                  <span className="inline-block bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg">
-                    {msg.text}
-                  </span>
-                ) : (
-                  <span>{msg.text}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        <form onSubmit={handleSendChatMessage} className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Message..."
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
-          >
-            Send
-          </button>
-        </form>
       </div>
     </section>
   );
