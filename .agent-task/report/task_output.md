@@ -1,0 +1,4 @@
+{
+  "issue_title": "No-work finding: Onboarding improvements blocked by correctness prerequisites",
+  "issue_description": "Role: Senior Developer Advocate & Guide (L7). Current scope overrides legacy mandates for new onboarding features. According to RESEARCH.md, OHC-03 (Intent-to-operating-business onboarding (`activation`)) depends on OHC-01 (Trace the active service journey; eliminate false booking/invoice payment success) and OHC-02 (Durable goal execution and verified departmental handoff). There is no justified current-scope gap for an onboarding feature that is not blocked by these correctness issues. Therefore, returning a no-work finding instead of forced visual refactoring. Superpowers workflow provenance: using-superpowers and brainstorming skills were loaded from revision 5bf4e78011075bcfc0dc295f0724994cd123ee71."
+}
