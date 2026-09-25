@@ -30,12 +30,19 @@ test.describe('Documentation UI Components', () => {
     test('Help Center Ask AI functionality', async ({ page }) => {
         await page.goto('/api/v1/ui/help.html');
 
+        // Open widget if closed
+        const helpBtn = page.locator('#ohc-floating-help-btn');
+        if (await helpBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+            await helpBtn.click();
+        }
+
         // Click Ask AI tab
         const askAiTab = page.locator('button', { hasText: 'Ask AI' });
         await askAiTab.click();
 
         // Type 'getting started' and send
         const chatInput = page.locator('#ohc-help-chat-input');
+        await expect(chatInput).toBeVisible({ timeout: 10000 });
         await chatInput.fill('getting started');
         const sendBtn = page.locator('#ohc-help-chat-send');
         await sendBtn.click();

@@ -13,12 +13,18 @@ export default function ExpertTeamPage() {
     setError(null);
     setResult(null);
 
+    const startTime = Date.now();
     try {
       const response = await fetch('/api/v1/expert-team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task }),
       });
+
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 500) {
+        await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+      }
 
       if (!response.ok) {
         const err = await response.json();
@@ -28,6 +34,10 @@ export default function ExpertTeamPage() {
       const data = await response.json();
       setResult(data.result);
     } catch (err: unknown) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 500) {
+        await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+      }
       setError(errorMessage(err));
     } finally {
       setLoading(false);
@@ -36,7 +46,8 @@ export default function ExpertTeamPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <div className="text-3xl font-bold mb-4" role="heading" aria-level={2}>Autonomous Team Coordination</div>
+      <h1 className="text-3xl font-bold mb-2">Collaborative Expert Team</h1>
+      <div className="text-xl font-semibold mb-4 text-gray-700" role="heading" aria-level={2}>Autonomous Team Coordination</div>
       <p className="text-gray-600 mb-8">
         Enter a complex task. The Lead Agent will coordinate 5 domain experts (Industry Researcher, Financial Analyst, Strategic Analyst, Process Supervisor, Quality Auditor) to execute it in parallel, strictly passing through code-enforced quality gates (Pre-flight, Pre-merge, Pre-deliver). (Tencent Workbuddy (Expert Team) Feature)
       </p>

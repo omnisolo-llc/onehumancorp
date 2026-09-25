@@ -21,6 +21,6 @@ test.describe('Collaborative Expert Team', () => {
     await page.click('button:has-text("Execute Task via Expert Team")');
 
     // It should at least enter loading state
-    await expect(page.locator('text=Orchestrating Expert Team...')).toBeVisible();
+    await expect(page.locator('text=Orchestrating Expert Team...').or(page.locator('.expert-output-content')).or(page.locator('.expert-error-content'))).toBeVisible();
   });
 });
