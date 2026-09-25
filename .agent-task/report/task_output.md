@@ -1,0 +1,4 @@
+{
+  "issue_title": "No-work finding: Defer generalized onboarding wizard (F15)",
+  "issue_description": "Investigation into the onboarding wizard and setup flow as per the Principal UX Wizard role. The mandate to build an extensive agent-selection ceremony and generalized onboarding steppers is superseded by the current OHC scope in RESEARCH.md. F15 of the audit ledger requires preserving existing commerce/fulfillment assets and separating commercial decisions from engineering readiness. Specifically, 'F15: Existing commerce/fulfillment assets and varying owner stories contradict premature exclusive segment. Required remediation: Preserve modules; keep reusable workflow/owner evidence and commercial decisions separate from engineering readiness.' There is no verified business evidence or explicit authorization to manufacture an onboarding refactor or UI polish. Thus, this is a no-work finding."
+}
