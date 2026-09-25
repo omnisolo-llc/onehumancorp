@@ -15,7 +15,7 @@ test.describe('Meetings Page', () => {
     await page.goto('/calendar');
     await expect(page.getByRole('heading', { name: 'Calendar & Bookings' })).toBeVisible();
 
-    const aiSchedulingToggle = page.locator('header button').first();
+    const aiSchedulingToggle = page.getByRole('switch', { name: 'AI Scheduling (Zero-Setup)' });
     await expect(aiSchedulingToggle).toBeVisible();
     await expect(aiSchedulingToggle.locator('span')).toHaveClass(/translate-x-5/);
 

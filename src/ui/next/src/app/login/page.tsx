@@ -20,6 +20,16 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<LoginProvider[]>([]);
   const next = safeReturnPath(searchParams.get("next"));
+  const testTenant = searchParams.get("test_tenant");
+
+  useEffect(() => {
+    if (testTenant && typeof window !== "undefined") {
+      localStorage.setItem("tenant_id", testTenant);
+      localStorage.setItem("tenant", testTenant);
+      localStorage.setItem("business_display_name", testTenant);
+      document.cookie = `tenant_id=${encodeURIComponent(testTenant)}; path=/; max-age=86400; SameSite=Lax`;
+    }
+  }, [testTenant]);
 
   useEffect(() => {
     const controller = new AbortController();

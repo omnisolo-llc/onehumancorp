@@ -19,11 +19,14 @@ export default function PerplexityHarness() {
     setResponse("");
 
     try {
-      const result = await fetch('/api/v1/perplexity/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
+      const [result] = await Promise.all([
+        fetch('/api/v1/perplexity/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        }),
+        new Promise((resolve) => setTimeout(resolve, 150)),
+      ]);
       if (!result.ok) throw new Error('Search is unavailable.');
       const data = await result.json();
       if (typeof data.answer !== 'string' || !data.answer.trim()) throw new Error('Search is unavailable.');

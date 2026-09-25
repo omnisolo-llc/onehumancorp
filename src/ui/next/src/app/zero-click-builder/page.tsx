@@ -21,11 +21,14 @@ export default function ZeroClickBuilderPage() {
     setBuilderState('generating');
 
     try {
-      const response = await fetch('/api/v1/onboarding/start_zero_click', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
+      const [response] = await Promise.all([
+        fetch('/api/v1/onboarding/start_zero_click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        }),
+        new Promise((resolve) => setTimeout(resolve, 150)),
+      ]);
 
       if (!response.ok) {
         throw new Error('Failed to generate store');

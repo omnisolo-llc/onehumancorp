@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS products (
     inventory_count INT DEFAULT 0,
     locked_quantity INT DEFAULT 0,
     available_quantity INT DEFAULT 0,
+    is_sold_out BOOLEAN DEFAULT false,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

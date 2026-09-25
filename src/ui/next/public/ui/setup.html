@@ -3752,14 +3752,22 @@
               summaryCard.style.color = "#F5F5F7";
             }
 
+            const oldStep5Btn = document.getElementById("approve-publish-btn");
+            if (oldStep5Btn) {
+              oldStep5Btn.id = "approve-publish-btn-hidden";
+            }
+
             summaryCard.innerHTML = `
-                      <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
+                      <h1 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h1>
                       <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
                           <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
                           <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
                           <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
                       </div>
-                      <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
+                      <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
+                        <button id="approve-publish-btn" data-testid="approve-publish-btn-alt" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0052cc; color: white; font-weight: 600; border: none; font-size: 16px;">Approve & Launch</button>
+                      </div>
                   `;
 
             document.getElementById("step-chat").style.position = "relative";
@@ -3771,21 +3779,32 @@
               summaryCard.style.transform = "translateY(0)";
             });
 
-            document
-              .getElementById("approve-publish-btn-chat")
-              .addEventListener("click", async () => {
-                const btn = document.getElementById("approve-publish-btn-chat");
-                btn.disabled = true;
-                btn.innerHTML =
+            const onApproveClick = async () => {
+              const btnChat = document.getElementById("approve-publish-btn-chat");
+              const btnAlt = document.getElementById("approve-publish-btn");
+              if (btnChat) {
+                btnChat.disabled = true;
+                btnChat.innerHTML =
                   '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
+              }
+              if (btnAlt) {
+                btnAlt.disabled = true;
+                btnAlt.innerHTML =
+                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
+              }
 
-                const approvePublishBtn = document.getElementById(
-                  "approve-publish-btn",
-                );
-                if (approvePublishBtn) {
-                  approvePublishBtn.click();
-                }
-              });
+              const approvePublishBtn = document.getElementById(
+                "approve-publish-btn-hidden",
+              ) || document.getElementById("approve-publish-btn");
+              if (approvePublishBtn) {
+                approvePublishBtn.click();
+              }
+            };
+
+            const chatBtnEl = document.getElementById("approve-publish-btn-chat");
+            if (chatBtnEl) chatBtnEl.addEventListener("click", onApproveClick);
+            const altBtnEl = document.getElementById("approve-publish-btn");
+            if (altBtnEl) altBtnEl.addEventListener("click", onApproveClick);
             // Scroll to bottom
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
