@@ -20,6 +20,10 @@ ALTER TABLE bookings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE omni_inbox_messages DISABLE ROW LEVEL SECURITY;
 ALTER TABLE service_routes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE job_locations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE task_envelopes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_work_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_actions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_feed DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
@@ -75,6 +79,17 @@ VALUES
     'e2e-leo-user',
     'leo@example.com',
     'leo@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    true,
+    'e2e-tenant',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-maya-user',
+    'maya@ohc.test',
+    'maya@ohc.test',
     '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
     ARRAY['ADMIN'],
     true,

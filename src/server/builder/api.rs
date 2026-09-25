@@ -871,7 +871,7 @@ fn synthesize_store_profile(description: &str, brand_dna: Option<&BrandDna>) -> 
                 DraftBlock {
                     block_type: "HeroBlock".to_string(),
                     content: serde_json::json!({
-                        "headline": format!("{} that feels {}", context.name, context.vibe),
+                        "headline": context.name,
                         "subtitle": format!("A mobile-first brand home for {} with clear paths to {}.", context.business_type.to_lowercase(), primary_offer.to_lowercase())
                     }),
                     sort_order: 0,

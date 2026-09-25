@@ -375,7 +375,7 @@ export default function POSTerminal() {
             {isOffline ? (
               <div className="inline-flex items-center gap-1.5 mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                {t('Offline - Syncing later')}
+                {t('Offline - Changes will sync later')}
               </div>
             ) : (
               <span className="inline-block mt-1 text-green-800 font-bold text-xs bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">{t('Online')}</span>
@@ -433,7 +433,7 @@ export default function POSTerminal() {
                <div className="text-[#0066FF] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </div>
-               <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
+               <span className="font-medium text-gray-900">{t('New Order')}</span>
              </button>
 
              <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)]">
@@ -443,6 +443,18 @@ export default function POSTerminal() {
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
+
+           {clockedIn && !isCartOpen && !showPaymentSheet && (
+             <div className="mb-8 p-4 rounded-2xl bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)] shadow-lg">
+               <StripeTerminalClient
+                 amount={5000}
+                 productId="quick_charge"
+                 cart={[]}
+                 tenantId={activeStaff?.tenant_id || "default_tenant"}
+                 onSuccess={handleCheckoutComplete}
+               />
+             </div>
+           )}
 
            {/* View Toggle */}
            <div className="flex bg-gray-200/50 backdrop-blur-[30px] rounded-xl p-1 mb-6 mx-2 mt-8">
