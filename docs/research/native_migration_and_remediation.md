@@ -110,6 +110,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F13 | API key, consumer plan and native-client subscription are distinct | Provider-specific modes and fail-closed unsupported combinations; no session-token relay, pooling, silent paid fallback or rebilling direct inference | Open |
 | F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Open |
 | F15 | Existing commerce/fulfillment assets and varying owner stories contradict premature exclusive segment | Preserve modules; keep reusable workflow/owner evidence and commercial decisions separate from engineering readiness | Open |
+| F16 | Viral growth features (loyalty widget, etc.) proposed without proven retained paid value | Defer implementation of referral widgets, share cards, paywalls, and viral loops until retained paid value is proven in the client-to-cash funnel | Closed |
 
 ## Completion rules
 
