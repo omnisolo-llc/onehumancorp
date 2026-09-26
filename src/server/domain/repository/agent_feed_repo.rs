@@ -416,7 +416,7 @@ impl AgentFeedRepository {
 
         // Fallback to agent_approvals
         let legacy_status = if new_state == "APPROVED" {
-            "APPROVED"
+            "PENDING_RECONCILIATION"
         } else if new_state == "DISMISSED" {
             "REJECTED"
         } else {
@@ -433,7 +433,7 @@ impl AgentFeedRepository {
         if rows_affected == 0 {
             // Fallback to agent_action_requests
             let request_status = if new_state == "APPROVED" {
-                "Approved"
+                "PendingReconciliation"
             } else if new_state == "DISMISSED" {
                 "Rejected"
             } else {
@@ -477,7 +477,7 @@ impl AgentFeedRepository {
 
                     if order_rows_affected == 0 {
                         let invoice_status = if new_state == "APPROVED" {
-                            "sent"
+                            "pending_reconciliation"
                         } else {
                             "cancelled"
                         };

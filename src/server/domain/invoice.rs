@@ -26,9 +26,24 @@ pub async fn handle_invoice_action(
                 let total_cents = (total_amount * 100.0).round() as i64;
                 let amount_paid_cents = amount_paid_cents_opt.unwrap_or(0) as i64;
 
-                !["paid", "refunded", "void", "cancelled", "canceled"]
-                    .contains(&payment_status.as_str())
-                    && ["open", "sent", "pending", "overdue", "draft"].contains(&status.as_str())
+                ![
+                    "paid",
+                    "refunded",
+                    "void",
+                    "cancelled",
+                    "canceled",
+                    "pending_reconciliation",
+                ]
+                .contains(&payment_status.as_str())
+                    && [
+                        "open",
+                        "sent",
+                        "pending",
+                        "overdue",
+                        "draft",
+                        "pending_reconciliation",
+                    ]
+                    .contains(&status.as_str())
                     && total_cents > amount_paid_cents
             } else {
                 false
@@ -104,15 +119,10 @@ pub async fn handle_invoice_action(
 
         tx.commit().await?;
 
-        // Simulate sending email through omnichannel dispatcher
-        tracing::info!(
-            "Omnichannel Dispatcher sent invoice reminder: {}",
-            draft_content
-        );
-
-        // Simulate delivery
+        // 3. Update to pending reconciliation
+        // We set status to pending_reconciliation rather than simulating immediate delivery (F12)
         sqlx::query(
-            "UPDATE invoice_communication_events SET status = 'delivered', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
+            "UPDATE invoice_communication_events SET status = 'pending_reconciliation', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
         )
         .bind(&id)
         .bind(tenant_id)

@@ -8,7 +8,7 @@ pub async fn sync_legacy_approval_status(
 ) -> Result<(), sqlx::Error> {
     if state == "APPROVED" || state == "REJECTED" || state == "DISMISSED" {
         let legacy_status = if state == "APPROVED" {
-            "APPROVED"
+            "PENDING_RECONCILIATION"
         } else {
             "REJECTED"
         };
@@ -23,7 +23,7 @@ pub async fn sync_legacy_approval_status(
 
         if rows_affected == 0 {
             let request_status = if state == "APPROVED" {
-                "Approved"
+                "PendingReconciliation"
             } else {
                 "Rejected"
             };
