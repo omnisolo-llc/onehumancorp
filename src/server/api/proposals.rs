@@ -630,7 +630,8 @@ mod tests {
                 usage: Usage {
                     input_tokens: 10,
                     output_tokens: 20,
-                    ..Default::default()
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
                 },
                 stop_reason: "stop".to_string(),
                 response_id: None,
