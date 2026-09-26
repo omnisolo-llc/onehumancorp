@@ -45,7 +45,7 @@ test.describe('Help Center & Documentation Features', () => {
     const tooltipTarget = page.locator('#api-docs-tooltip');
     await expect(tooltipTarget).toBeVisible();
     await tooltipTarget.hover({ force: true });
-    await expect(page.locator('text=Direct API access is only for custom integrations.')).toBeVisible();
+    await expect(page.locator('text=For advanced users only: Access the OmniSolo API to build custom integrations and connect your own software.')).toBeVisible();
 
     // 5. Verify API docs loaded (Swagger UI)
     await expect(page.locator('text=Advanced:')).toBeVisible();

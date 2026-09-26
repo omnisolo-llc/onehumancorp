@@ -83,7 +83,7 @@ test.describe('Tooltip functionality', () => {
     await tooltipTrigger.hover();
 
     // Check if the tooltip wrapper gets rendered
-    await expect(page.getByText('Direct API access is only for custom integrations.').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('For advanced users only: Access the OmniSolo API to build custom integrations and connect your own software.').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should display tooltip on dashboard hover', async ({ page, loginAs, unlimitedAdminUser }) => {

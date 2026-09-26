@@ -24,10 +24,10 @@ declare global {
 
 export const DEFAULT_TOOLTIPS: Record<string, string> = {
   "help-nav-tooltip": "Open the Help Center to find guides, videos, and contact support.",
-  "api-docs-tooltip": "Direct API access is only for custom integrations.",
+  "api-docs-tooltip": "For advanced users only: Access the OmniSolo API to build custom integrations and connect your own software.",
   "changelog-nav-tooltip": "See what's new in the latest OmniSolo updates.",
-  "dashboard-walkthrough-btn": "Take a quick tour of the dashboard.",
-  "help-advanced-toggle-tooltip": "Show advanced developer options.",
+  "dashboard-walkthrough-btn": "Take a quick, guided tour of your OmniSolo dashboard.",
+  "help-advanced-toggle-tooltip": "Show advanced options for developers and custom integrations.",
   "help-btn-tooltip-appshell": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
   "checkout-pay-tooltip": "Click to process your payment.",
   "dashboard-tooltip": "View your daily sales and overall business health.",

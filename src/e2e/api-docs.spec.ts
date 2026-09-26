@@ -17,7 +17,7 @@ test.describe('API Documentation', () => {
 
     const tooltipElement = page.locator('[role="tooltip"]');
     await expect(tooltipElement).toBeVisible();
-    await expect(tooltipElement).toContainText('Direct API access is only for custom integrations.');
+    await expect(tooltipElement).toContainText('For advanced users only: Access the OmniSolo API to build custom integrations and connect your own software.');
 
     // Verify Swagger UI container wrapper is visible
     // Target the specific wrapper classes for verification

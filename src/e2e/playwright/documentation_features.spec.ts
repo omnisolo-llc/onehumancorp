@@ -78,7 +78,7 @@ test.describe('Documentation Features CUJ', () => {
     // Check if tooltip becomes visible. We expect the global tooltip element to appear
     const globalTooltip = page.locator('.omnisolo-tooltip');
     await expect(globalTooltip).toHaveClass(/visible/);
-    await expect(globalTooltip).toContainText('Direct API access is only for custom integrations.');
+    await expect(globalTooltip).toContainText('For advanced users only: Access the OmniSolo API to build custom integrations and connect your own software.');
   });
 
   test('User can view mobile-optimized help videos in widget', async ({ page }) => {
