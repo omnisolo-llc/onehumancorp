@@ -99,7 +99,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F02 | `services/billing/service.rs:49-85` uses global snapshots for an organization response | Auth-derived tenant; reject mismatch/blank identity; tenant+agent isolation tests | Closed |
 | F03 | `pricing/budget.rs:49-84` increments before reporting over-limit | Atomic reservation before spend; settle/release/replay/restart/concurrency checks; invalid/overflow amounts fail closed | Closed |
 | F04 | Model paths disagree on usage; proposal adapter returns default usage; proxy forwards streams | Preserve actual provider counts, model/request identity and missing-usage state; no invented free usage | Open |
-| F05 | Current telemetry/cost reports are not an invoice-grade meter | Durable idempotent usage, payer/auth/rate attribution, integer subunits, tenant reads, reconciliation and no duplicate BYOK debit | Open |
+| F05 | Current telemetry/cost reports are not an invoice-grade meter | Durable idempotent usage, payer/auth/rate attribution, integer subunits, tenant reads, reconciliation and no duplicate BYOK debit | Blocked |
 | F06 | `tool_integrations.rs` returns 501/usable:false for secure connection | Verified supported-provider connection with encrypted storage, tenant binding, revoke/refresh behavior; unsupported providers remain explicitly unavailable | Verified |
 | F07 | `proposals.rs:825-845` creates fixed $5,000 scope/deposit regardless of inquiry | Input/approved-business-rule driven draft; deterministic validated amounts; no unauthorized commitments or fabricated scope | Closed |
 | F08 | `invoice.rs:45-48` and booking helpers fabricate checkout-looking URLs | Real provider session or explicit pending/unavailable state; persist provider IDs, validate money, idempotent retries | Closed |
@@ -108,7 +108,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F11 | Named full-journey tests only delegate to a smoke helper | Preserve smoke coverage; add actual mutation/state/provider-boundary acceptance tests without live credentials | Open |
 | F12 | Simulation, unknown provider outcome and approval paths can look like completion | Truthful states/receipts; exact authority, stale approval/revocation and reconciliation checks on affected paths | Open |
 | F13 | API key, consumer plan and native-client subscription are distinct | Provider-specific modes and fail-closed unsupported combinations; no session-token relay, pooling, silent paid fallback or rebilling direct inference | Open |
-| F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Closed |
+| F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Blocked / No-Work |
 | F15 | Existing commerce/fulfillment assets and varying owner stories contradict premature exclusive segment | Preserve modules; keep reusable workflow/owner evidence and commercial decisions separate from engineering readiness | Closed |
 
 ## Completion rules
