@@ -5,5 +5,5 @@ import { GET } from "./route";
 test("uses authenticated transport for help articles", async () => {
   const request = new Request("http://localhost/api/v1/help");
   await GET(request);
-  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/help");
+  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/help", { forwardQuery: true });
 });
