@@ -104,7 +104,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F07 | `proposals.rs:825-845` creates fixed $5,000 scope/deposit regardless of inquiry | Input/approved-business-rule driven draft; deterministic validated amounts; no unauthorized commitments or fabricated scope | Closed |
 | F08 | `invoice.rs:45-48` and booking helpers fabricate checkout-looking URLs | Real provider session or explicit pending/unavailable state; persist provider IDs, validate money, idempotent retries | Closed |
 | F09 | Receivables code logs a drafted reminder before implementing draft/delivery | Persist real draft; distinguish draft/sent/delivered; dedupe and stop on payment/cancel/revocation | Closed |
-| F10 | Tauri packages exported Next assets despite blanket legacy claims | Rebuild actual frontend assets; no stale checked-in export used as release proof | Open |
+| F10 | Tauri packages exported Next assets despite blanket legacy claims | Rebuild actual frontend assets; no stale checked-in export used as release proof | Closed |
 | F11 | Named full-journey tests only delegate to a smoke helper | Preserve smoke coverage; add actual mutation/state/provider-boundary acceptance tests without live credentials | Open |
 | F12 | Simulation, unknown provider outcome and approval paths can look like completion | Truthful states/receipts; exact authority, stale approval/revocation and reconciliation checks on affected paths | Open |
 | F13 | API key, consumer plan and native-client subscription are distinct | Provider-specific modes and fail-closed unsupported combinations; no session-token relay, pooling, silent paid fallback or rebilling direct inference | Open |

@@ -31,7 +31,7 @@ test.describe('Documentation UI Components', () => {
         await page.goto('/api/v1/ui/help.html');
 
         // Open widget if closed
-        const helpBtn = page.locator('#ohc-floating-help-btn');
+        const helpBtn = page.locator('#omnisolo-floating-help-btn');
         if (await helpBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
             await helpBtn.click();
         }

@@ -423,7 +423,7 @@ export function HelpWidget() {
             aria-label="Open help chat"
           >
             <span
-              id="ohc-floating-help-btn"
+              id="omnisolo-floating-help-btn"
               className="absolute inset-0 flex items-center justify-center cursor-pointer"
             >
               <svg className="w-8 h-8 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
