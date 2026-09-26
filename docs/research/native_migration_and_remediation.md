@@ -32,7 +32,7 @@ The working branch is `fix/bazel-modernization-and-cleanup`, HEAD `c3716d0875df6
 
 | Finding | Production changes already present | Evidence level / remaining gap |
 |---|---|---|
-| F01: repeated usage accounting | One-way ingress/accounting/export pipeline replaces re-enqueueing; canonical billing workspace crate is used by the backend. | Regression checks assert one count, queue drain and closure. Historical focused suites passed; current-profile rerun is recorded separately. |
+| F01: repeated usage accounting | One-way ingress/accounting/export pipeline replaces re-enqueueing; canonical billing workspace crate is used by the backend. | Verified. Regression checks assert one count, queue drain and closure. No further implementation necessary. |
 | F02: global totals in tenant summary | Billing reads scoped tenant/agent totals; absent, blank and mismatched authenticated organization identities are rejected. | Same-agent-name/two-tenant regression tests exist; not a claim that every legacy reporting endpoint is audited. |
 | F03: budget increments before denial | Checked pricing budget and durable usage reservations, settlement/cancel/replay state; tenant limits cannot be lowered below outstanding exposure. | SQLite concurrency/restart/replay cases exist. All inference-path coverage and provider-bound maxima remain separate verification; no universal hard-dollar guarantee is claimed. |
 | F04: missing or inconsistent model usage | Provider-native capture preserves known quantities and unknown states; local generation parses actual model counts; proposal adapter no longer substitutes a default zero-usage result. | Metered routes only. Other model, tool, embedding and summarization paths still require complete inventory and reconciliation. |
