@@ -10,6 +10,17 @@ pub struct CostConfig {
     pub cost_per_gb_month: f64,
     pub cost_per_compute_hour: f64,
     pub cost_per_network_gb: f64,
+    pub storage_quota_gb: i64,
+}
+
+impl CostConfig {
+    pub fn is_storage_quota_exceeded(&self, current_storage_bytes: i64) -> bool {
+        if self.storage_quota_gb <= 0 {
+            return false;
+        }
+        let current_storage_gb = (current_storage_bytes as f64) / (1024.0 * 1024.0 * 1024.0);
+        current_storage_gb >= self.storage_quota_gb as f64
+    }
 }
 
 pub struct ModelPricing {
@@ -497,6 +508,7 @@ mod tests {
             cost_per_cached_input_token: 0.0005,
             cost_per_local_embedding: 0.0001,
             discount_factor: 0.1,
+            storage_quota_gb: 5,
             ..Default::default()
         };
 
