@@ -5,7 +5,7 @@ test.describe('Global Help Widget', () => {
     await page.goto('/api/v1/ui/dashboard.html');
 
     // The floating help button should be visible
-    const helpBtn = page.locator('#ohc-floating-help-btn');
+    const helpBtn = page.locator('#omnisolo-floating-help-btn');
     await expect(helpBtn).toBeVisible();
 
     // Clicking it should open the chat widget
@@ -32,7 +32,7 @@ test.describe('Global Help Widget', () => {
     await page.goto('/api/v1/ui/pos.html');
 
     // The floating help button should be visible here too
-    const helpBtn = page.locator('#ohc-floating-help-btn');
+    const helpBtn = page.locator('#omnisolo-floating-help-btn');
     await expect(helpBtn).toBeVisible();
   });
 });

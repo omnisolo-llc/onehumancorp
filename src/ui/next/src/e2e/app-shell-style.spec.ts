@@ -401,7 +401,7 @@ test.describe('Public authentication layout', () => {
         await expect(page.locator('[data-auth-shell]')).toHaveCount(1);
         await expect(page.locator('.app-shell')).toHaveCount(0);
         await expect(page.locator([
-          '#ohc-floating-help-btn',
+          '#omnisolo-floating-help-btn',
           '#ai-chat-trigger-btn',
           '[data-voice-assistant-root]',
         ].join(','))).toHaveCount(0);

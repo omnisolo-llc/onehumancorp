@@ -7,7 +7,7 @@ test.describe('Help Chat Flow', () => {
     await page.goto('/dashboard');
 
     // Check that the floating chat button exists
-    const chatButton = page.locator('#ohc-floating-help-btn');
+    const chatButton = page.locator('#omnisolo-floating-help-btn');
     await expect(chatButton).toBeVisible();
 
     // Open chat
