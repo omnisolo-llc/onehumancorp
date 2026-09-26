@@ -18,7 +18,18 @@ vi.mock('../../components/PoweredByOmniSolo', () => ({
 describe('ZeroClickBuilderPage', () => {
   beforeEach(() => {
     // Reset fetch mock
-    global.fetch = vi.fn() as unknown as typeof fetch;
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/v1/onboarding/state') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ chatMessages: [] }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+    }) as unknown as typeof fetch;
     localStorage.clear();
     vi.stubEnv('NODE_ENV', 'test');
   });
@@ -27,8 +38,9 @@ describe('ZeroClickBuilderPage', () => {
     vi.unstubAllEnvs();
   });
 
-  it('renders the initial form', () => {
+  it('renders the initial form', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     expect(screen.getByText('Tell us about your business')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i)).toBeInTheDocument();
     const buttons = screen.getAllByRole('button');
@@ -36,8 +48,9 @@ describe('ZeroClickBuilderPage', () => {
     expect(submitBtn).toBeDisabled();
   });
 
-  it('enables the button when prompt is entered', () => {
+  it('enables the button when prompt is entered', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
     fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
 
@@ -76,6 +89,7 @@ describe('ZeroClickBuilderPage', () => {
     });
 
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
 
     const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
     fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
@@ -104,14 +118,16 @@ describe('ZeroClickBuilderPage', () => {
     expect(localStorage.getItem('user_display_name')).toBeNull();
   });
 
-  it('renders Powered by OmniSolo branding', () => {
+  it('renders Powered by OmniSolo branding', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     const texts = screen.getAllByText(/Powered by OmniSolo/i);
     expect(texts.length).toBeGreaterThan(0);
   });
 
-  it('renders the PoweredByOmniSolo component', () => {
+  it('renders the PoweredByOmniSolo component', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     const components = screen.getAllByTestId('powered-by-omnisolo');
     expect(components.length).toBeGreaterThan(0);
   });
