@@ -233,20 +233,21 @@ async fn handle_client_intake(
     let total_amount_cents = (suggested_price * 100.0) as i64;
     let deposit_cents = total_amount_cents / 3;
 
-    if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())")
+    if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, project_scope, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())")
         .bind(quote_id)
         .bind(&tenant_id)
         .bind(customer_id)
         .bind(total_amount_cents)
         .bind(deposit_cents)
+        .bind(&payload.details)
         .execute(&mut *tx)
         .await {
-            tracing::error!("Failed to insert quote: {}", e);
+            tracing::error!("Failed to insert proposal: {}", e);
             let _ = tx.rollback().await;
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
     }
 
-    if let Err(e) = sqlx::query("INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())")
+    if let Err(e) = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())")
         .bind(quote_line_item_id)
         .bind(quote_id)
         .bind(&service_name)

@@ -143,6 +143,7 @@ where
         .route("/draft", post(draft_narrative))
         .route("/intake", post(client_intake))
         .route("/draft_agent", post(draft_agent))
+        .route("/list", get(list_proposals))
         .route("/{id}", get(get_proposal))
         .route("/{id}/approve", post(approve_proposal))
         .route("/social/list", get(list_social_post_proposals))
@@ -206,6 +207,35 @@ async fn draft_narrative_with_llm(
         }),
     )
         .into_response()
+}
+
+pub async fn list_proposals(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(t) => t,
+        Err(e) => return e.into_response(),
+    };
+
+    let rows = sqlx::query_as::<_, Proposal>(
+        "SELECT * FROM proposals WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50",
+    )
+    .bind(tenant_id)
+    .fetch_all(&pool)
+    .await;
+
+    match rows {
+        Ok(proposals) => (
+            StatusCode::OK,
+            Json(serde_json::json!({ "proposals": proposals })),
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch proposals: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 async fn draft_agent(
@@ -849,6 +879,27 @@ mod tests {
         let req = Request::builder()
             .method("POST")
             .uri("/123/approve")
+            .body(Body::empty())
+            .unwrap();
+
+        let _res = app.oneshot(req).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_list_proposals_route_exists() {
+        use axum::{body::Body, http::Request};
+        use tower::ServiceExt;
+        let pool = match sqlx::PgPool::connect_lazy(
+            "postgres://postgres:postgres@localhost:5432/postgres",
+        ) {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+        let app = router().with_state(pool);
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/list")
             .body(Body::empty())
             .unwrap();
 

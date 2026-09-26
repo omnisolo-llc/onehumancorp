@@ -327,6 +327,11 @@ pub async fn handle_omnichannel_webhook(
         "message": message
     });
 
+    // Requirement: System receives an unstructured inquiry (mocked via API for now).
+    // Requirement: System automatically maps it to an existing service offering and generates a draft proposal.
+    // The proposal drafted step will be done asynchronously by an agent or queue. For now, since the acceptance criteria
+    // mentions 'Create a new backend endpoint to receive mock inquiries', the existing client_intake.rs is modified to save 'proposals'.
+
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
