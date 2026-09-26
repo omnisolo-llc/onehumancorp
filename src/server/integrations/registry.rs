@@ -65,6 +65,14 @@ pub struct IntegrationsRegistry {
             std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>,
         >,
     >,
+    google_workspace_clients: std::sync::RwLock<
+        std::collections::HashMap<
+            String,
+            std::sync::Arc<
+                crate::integrations::google_workspace::provider::GoogleWorkspaceProvider,
+            >,
+        >,
+    >,
     mailchimp_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
@@ -223,6 +231,7 @@ impl IntegrationsRegistry {
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_workspace_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -533,6 +542,18 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(
+                        creds.api_token.clone(),
+                    ),
+                ),
+            );
+        }
+
+        if integration_id == "google_workspace" {
+            let mut clients = self.google_workspace_clients.write().unwrap();
+            clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(
+                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
                         creds.api_token.clone(),
                     ),
                 ),
@@ -967,6 +988,189 @@ impl IntegrationsRegistry {
             }
         }
         Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn drive_list_files(
+        &self,
+        integration_id: &str,
+        folder_id: &str,
+        page_size: u32,
+    ) -> Result<Vec<crate::integrations::google_workspace::client::DriveFile>, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.drive_list_files(folder_id, page_size).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn drive_get_file(
+        &self,
+        integration_id: &str,
+        file_id: &str,
+    ) -> Result<crate::integrations::google_workspace::client::DriveFile, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.drive_get_file(file_id).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn drive_create_file(
+        &self,
+        integration_id: &str,
+        name: &str,
+        mime_type: &str,
+        parent_id: &str,
+        content: &[u8],
+    ) -> Result<crate::integrations::google_workspace::client::DriveFile, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c
+                .drive_create_file(name, mime_type, parent_id, content)
+                .await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn sheets_read_range(
+        &self,
+        integration_id: &str,
+        spreadsheet_id: &str,
+        range: &str,
+    ) -> Result<Vec<Vec<String>>, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sheets_read_range(spreadsheet_id, range).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn sheets_write_range(
+        &self,
+        integration_id: &str,
+        spreadsheet_id: &str,
+        range: &str,
+        values: &[Vec<String>],
+    ) -> Result<(), String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sheets_write_range(spreadsheet_id, range, values).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn sheets_create_spreadsheet(
+        &self,
+        integration_id: &str,
+        title: &str,
+    ) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sheets_create_spreadsheet(title).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn gmail_send_email(
+        &self,
+        integration_id: &str,
+        to: &str,
+        subject: &str,
+        body: &str,
+    ) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.gmail_send_email(to, subject, body).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn gmail_list_messages(
+        &self,
+        integration_id: &str,
+        query: &str,
+        max_results: u32,
+    ) -> Result<Vec<crate::integrations::google_workspace::client::GmailMessage>, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.gmail_list_messages(query, max_results).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
+    }
+
+    pub async fn gmail_get_message(
+        &self,
+        integration_id: &str,
+        message_id: &str,
+    ) -> Result<crate::integrations::google_workspace::client::GmailMessage, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.gmail_get_message(message_id).await;
+        }
+        Err("Google Workspace integration not connected".to_string())
     }
 
     pub async fn get_delivery_quote(

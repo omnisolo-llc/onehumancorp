@@ -52,7 +52,12 @@ fn decode(value: &str) -> Result<Vec<u8>, LedgerError> {
 pub fn supported(provider: &str) -> bool {
     matches!(
         provider,
-        "openai_api" | "anthropic_api" | "stripe" | "resend"
+        "openai_api"
+            | "anthropic_api"
+            | "stripe"
+            | "resend"
+            | "google_workspace"
+            | "google_calendar"
     )
 }
 

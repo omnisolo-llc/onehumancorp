@@ -1,5 +1,6 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DriveFile {
@@ -33,36 +34,116 @@ pub struct GmailHeader {
 }
 
 pub struct GoogleWorkspaceClient {
-    access_token: String,
+    credential_payload: String,
+    cached_access_token: tokio::sync::RwLock<Option<(String, std::time::Instant)>>,
     http_client: Client,
     base_url: String,
 }
 
 impl GoogleWorkspaceClient {
-    pub fn new(access_token: String) -> Self {
+    pub fn new(credential_payload: String) -> Self {
         Self {
-            access_token,
+            credential_payload,
+            cached_access_token: tokio::sync::RwLock::new(None),
             http_client: Client::new(),
             base_url: "https://www.googleapis.com".to_string(),
         }
     }
 
     #[cfg(test)]
-    fn with_base_url_for_test(access_token: String, base_url: String) -> Self {
+    fn with_base_url_for_test(credential_payload: String, base_url: String) -> Self {
         Self {
-            access_token,
+            credential_payload,
+            cached_access_token: tokio::sync::RwLock::new(None),
             http_client: Client::new(),
             base_url,
         }
     }
 
-    fn validated_access_token(&self) -> Result<&str, String> {
-        let token = self.access_token.trim();
-        if token.is_empty() {
-            Err("Google Workspace access token is required".to_string())
-        } else {
-            Ok(token)
+    #[allow(clippy::collapsible_if)]
+    async fn validated_access_token(&self) -> Result<String, String> {
+        let payload = self.credential_payload.trim();
+        if payload.is_empty() {
+            return Err("Google Workspace credential payload is required".to_string());
         }
+
+        // Try to parse as JSON containing refresh_token, client_id, client_secret
+        if payload.starts_with('{') {
+            if let Ok(parsed) = serde_json::from_str::<Value>(payload) {
+                if let (Some(client_id), Some(client_secret), Some(refresh_token)) = (
+                    parsed.get("client_id").and_then(|v| v.as_str()),
+                    parsed.get("client_secret").and_then(|v| v.as_str()),
+                    parsed.get("refresh_token").and_then(|v| v.as_str()),
+                ) {
+                    // Check cache first for unexpired token
+                    {
+                        let cache = self.cached_access_token.read().await;
+                        if let Some((token, expires_at)) = cache.as_ref() {
+                            if std::time::Instant::now() < *expires_at {
+                                return Ok(token.clone());
+                            }
+                        }
+                    }
+
+                    // Request new access token
+                    let params = [
+                        ("client_id", client_id),
+                        ("client_secret", client_secret),
+                        ("refresh_token", refresh_token),
+                        ("grant_type", "refresh_token"),
+                    ];
+
+                    let resp = self
+                        .http_client
+                        .post("https://oauth2.googleapis.com/token")
+                        .form(&params)
+                        .send()
+                        .await
+                        .map_err(|e| format!("Failed to refresh token: {}", e))?;
+
+                    if !resp.status().is_success() {
+                        let status = resp.status();
+                        let body = resp.text().await.unwrap_or_default();
+                        return Err(format!(
+                            "Failed to refresh token. Status: {}. Body: {}",
+                            status, body
+                        ));
+                    }
+
+                    let token_data: Value = resp
+                        .json()
+                        .await
+                        .map_err(|e| format!("Failed to parse token response: {}", e))?;
+                    if let Some(access_token) =
+                        token_data.get("access_token").and_then(|v| v.as_str())
+                    {
+                        let expires_in = token_data
+                            .get("expires_in")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(3600);
+                        let token_str = access_token.to_string();
+                        let mut cache = self.cached_access_token.write().await;
+                        // Cache it until 60 seconds before it actually expires to ensure safety margin
+                        let safe_duration = if expires_in > 60 {
+                            expires_in - 60
+                        } else {
+                            expires_in
+                        };
+                        *cache = Some((
+                            token_str.clone(),
+                            std::time::Instant::now()
+                                + std::time::Duration::from_secs(safe_duration),
+                        ));
+                        return Ok(token_str);
+                    } else {
+                        return Err("Token response missing access_token".to_string());
+                    }
+                }
+            }
+        }
+
+        // Fallback: assume the payload is a raw access token string
+        Ok(payload.to_string())
     }
 
     // ── Google Drive ──────────────────────────────────────────────
@@ -72,7 +153,7 @@ impl GoogleWorkspaceClient {
         folder_id: &str,
         page_size: u32,
     ) -> Result<Vec<DriveFile>, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!("{}/drive/v3/files", self.base_url.trim_end_matches('/'));
 
         let resp = self
@@ -110,7 +191,7 @@ impl GoogleWorkspaceClient {
     }
 
     pub async fn get_file(&self, file_id: &str) -> Result<DriveFile, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/drive/v3/files/{}",
             self.base_url.trim_end_matches('/'),
@@ -142,7 +223,7 @@ impl GoogleWorkspaceClient {
         parent_id: &str,
         content: &[u8],
     ) -> Result<DriveFile, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/upload/drive/v3/files",
             self.base_url.trim_end_matches('/')
@@ -206,7 +287,7 @@ impl GoogleWorkspaceClient {
         spreadsheet_id: &str,
         range: &str,
     ) -> Result<Vec<Vec<String>>, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/v4/spreadsheets/{}/values/{}",
             self.base_url
@@ -260,7 +341,7 @@ impl GoogleWorkspaceClient {
         range: &str,
         values: &[Vec<String>],
     ) -> Result<(), String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/v4/spreadsheets/{}/values/{}",
             self.base_url
@@ -292,7 +373,7 @@ impl GoogleWorkspaceClient {
     }
 
     pub async fn create_spreadsheet(&self, title: &str) -> Result<String, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/v4/spreadsheets",
             self.base_url
@@ -338,7 +419,7 @@ impl GoogleWorkspaceClient {
     // ── Gmail ─────────────────────────────────────────────────────
 
     pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<String, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/gmail/v1/users/me/messages/send",
             self.base_url.trim_end_matches('/')
@@ -390,7 +471,7 @@ impl GoogleWorkspaceClient {
         query: &str,
         max_results: u32,
     ) -> Result<Vec<GmailMessage>, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/gmail/v1/users/me/messages",
             self.base_url.trim_end_matches('/')
@@ -430,7 +511,7 @@ impl GoogleWorkspaceClient {
     }
 
     pub async fn get_message(&self, message_id: &str) -> Result<GmailMessage, String> {
-        let token = self.validated_access_token()?;
+        let token = self.validated_access_token().await?;
         let url = format!(
             "{}/gmail/v1/users/me/messages/{}",
             self.base_url.trim_end_matches('/'),
@@ -788,7 +869,7 @@ mod tests {
 
         let client = GoogleWorkspaceClient::with_base_url_for_test("   ".to_string(), base_url);
         let error = client.list_files("root", 10).await.unwrap_err();
-        assert_eq!(error, "Google Workspace access token is required");
+        assert_eq!(error, "Google Workspace credential payload is required");
     }
 
     #[tokio::test]

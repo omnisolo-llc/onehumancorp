@@ -3,6 +3,12 @@ pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     vec![
         metadata_provider(
+            "google_workspace",
+            "Google Workspace",
+            "productivity",
+            "https://www.googleapis.com".to_string(),
+        ),
+        metadata_provider(
             "taxjar",
             "TaxJar",
             "finance",
