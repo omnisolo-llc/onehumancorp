@@ -19,6 +19,7 @@ interface OnboardingChatAgentProps {
 }
 
 export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'assistant', content: "Hi there! I'm your OmniSolo setup assistant. What kind of business do you want to build or manage today?" }
   ]);
@@ -38,9 +39,41 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading, isProvisioning]);
+    fetch('/api/v1/onboarding/state')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch state');
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.chatMessages && Array.isArray(data.chatMessages) && data.chatMessages.length > 0) {
+          setMessages(data.chatMessages);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load onboarding state', err);
+      })
+      .finally(() => {
+        setIsLoaded(true);
+      });
+  }, []);
 
+  useEffect(() => {
+    if (isLoaded) {
+      scrollToBottom();
+    }
+  }, [messages, isLoading, isProvisioning, isLoaded]);
+
+  const saveStateToBackend = async (chatMessagesToSave: ChatMessage[]) => {
+    try {
+      await fetch('/api/v1/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: -2, chatMessages: chatMessagesToSave }),
+      });
+    } catch (err) {
+      console.error('Failed to save chat state', err);
+    }
+  };
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -51,6 +84,9 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+
+    // Save user message to backend
+    saveStateToBackend(newMessages);
 
     try {
       const response = await fetch('/api/v1/onboarding/chat', {
@@ -64,7 +100,10 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
       const data = await response.json();
 
       if (data.is_complete) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+        const updatedMessages: ChatMessage[] = [...newMessages, { role: 'assistant', content: data.reply }];
+        setMessages(updatedMessages);
+        saveStateToBackend(updatedMessages);
+
         setIsLoading(false);
         setIsProvisioning(true);
         // Map the intake data to the expected format and provision
@@ -79,12 +118,16 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         }
       } else {
         setIsLoading(false);
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+        const updatedMessages: ChatMessage[] = [...newMessages, { role: 'assistant', content: data.reply }];
+        setMessages(updatedMessages);
+        saveStateToBackend(updatedMessages);
       }
     } catch (error) {
       console.error("Provisioning error:", error);
       setIsLoading(false);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }]);
+      const updatedMessages: ChatMessage[] = [...newMessages, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }];
+      setMessages(updatedMessages);
+      saveStateToBackend(updatedMessages);
     }
   };
 
@@ -150,6 +193,14 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     "I am an online music tutor",
     "I manage 15 long-term apartment rentals"
   ];
+
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] w-full max-w-2xl mx-auto">
+        <div className="w-8 h-8 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-[50vh] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl rounded-[16px] w-full max-w-2xl mx-auto">
