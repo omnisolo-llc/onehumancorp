@@ -110,6 +110,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F13 | API key, consumer plan and native-client subscription are distinct | Provider-specific modes and fail-closed unsupported combinations; no session-token relay, pooling, silent paid fallback or rebilling direct inference | Open |
 | F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Blocked / No-Work |
 | F15 | Existing commerce/fulfillment assets and varying owner stories contradict premature exclusive segment | Preserve modules; keep reusable workflow/owner evidence and commercial decisions separate from engineering readiness | Closed |
+| OHC-09 | Measurable retention/acquisition experiment (`growth`) | Blocked (No-Work). Missing retention data and actual owner economics. Wait for OHC-03 to OHC-08 to accumulate actual metrics. | Closed |
 
 ## Completion rules
 
