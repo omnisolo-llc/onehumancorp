@@ -204,7 +204,9 @@ pub async fn connect_integration_handler(
 
         // For Google Workspace, perform live credential verification.
         if validated.integration_id == "google_workspace" {
-            let client = ::server_integrations_google_workspace::client::GoogleWorkspaceClient::new(secret.to_string());
+            let client = ::server_integrations_google_workspace::client::GoogleWorkspaceClient::new(
+                secret.to_string(),
+            );
             // Attempt to list files as a simple read-only verification
             match client.list_files("root", 1).await {
                 Ok(_) => {
@@ -550,7 +552,11 @@ mod tests {
             base_url: None,
         };
         assert!(validate_connect_request("google_workspace", req).is_ok());
-        assert!(provider_credentials_present("google_workspace", None, Some("oauth-token")));
+        assert!(provider_credentials_present(
+            "google_workspace",
+            None,
+            Some("oauth-token")
+        ));
     }
 
     #[test]
