@@ -1,3 +1,4 @@
 pub mod chaos_bench;
 pub mod latency_bench;
 pub mod ml_resilience_test;
+pub mod cost_bench;
