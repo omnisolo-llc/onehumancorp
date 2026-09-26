@@ -3658,6 +3658,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         message_triage_worker.start();
     }
 
+    // Start Draft Quote Worker
+    let draft_quote_worker = std::sync::Arc::new(
+        crate::workers::draft_quote_worker::DraftQuoteWorker::new(db.clone()),
+    );
+    if legacy_sqlx_background_enabled {
+        draft_quote_worker.start();
+    }
+
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker =
         Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
