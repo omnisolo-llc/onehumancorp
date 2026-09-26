@@ -2283,7 +2283,9 @@ impl HubService for MyHubService {
             budget_limit
         };
 
-        let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+        // Dynamically set billing mode for BYOK scenarios based on active tenant config, placeholder to OhcFunded for now.
+        let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit)
+            .with_billing_mode(::server_pricing::budget::BillingMode::OhcFunded);
         let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
         let response = ::server_omnisolo::orchestration::CostDashboardResponse {

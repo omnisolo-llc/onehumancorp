@@ -1,5 +1,11 @@
 use std::sync::{Arc, Mutex};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BillingMode {
+    OhcFunded,
+    Byok,
+}
+
 #[derive(Debug)]
 pub struct BudgetState {
     pub total_allocated: i64,
@@ -13,6 +19,7 @@ pub struct BudgetManager {
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
     pub alert_threshold_percent: f64,
+    pub default_billing_mode: BillingMode,
 }
 
 #[derive(Debug)]
@@ -22,6 +29,7 @@ pub struct BudgetReservation {
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     pub tenant_id: Option<String>,
     pub is_settled: bool,
+    pub billing_mode: BillingMode,
 }
 
 impl BudgetReservation {
@@ -35,14 +43,24 @@ impl BudgetReservation {
         self.is_settled = true;
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            store.llm_cost_counter.add(
-                self.amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
-            store.mission_cost_cents.add(
-                self.amount_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-            );
+            match self.billing_mode {
+                BillingMode::OhcFunded => {
+                    store.llm_cost_counter.add(
+                        self.amount_cents as u64,
+                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                    );
+                    store.mission_cost_cents.add(
+                        self.amount_cents as u64,
+                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                    );
+                }
+                BillingMode::Byok => {
+                    store.byok_cost_counter.add(
+                        self.amount_cents as u64,
+                        &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                    );
+                }
+            }
         }
         Ok(())
     }
@@ -77,11 +95,17 @@ impl BudgetManager {
             telemetry_store: None,
             tenant_id: None,
             alert_threshold_percent: 80.0,
+            default_billing_mode: BillingMode::OhcFunded,
         }
     }
 
     pub fn with_alert_threshold(mut self, threshold: f64) -> Self {
         self.alert_threshold_percent = threshold;
+        self
+    }
+
+    pub fn with_billing_mode(mut self, mode: BillingMode) -> Self {
+        self.default_billing_mode = mode;
         self
     }
 
@@ -122,6 +146,7 @@ impl BudgetManager {
                 telemetry_store: self.telemetry_store.clone(),
                 tenant_id: self.tenant_id.clone(),
                 is_settled: false,
+                billing_mode: self.default_billing_mode,
             });
         }
 
@@ -144,6 +169,7 @@ impl BudgetManager {
                     telemetry_store: self.telemetry_store.clone(),
                     tenant_id: self.tenant_id.clone(),
                     is_settled: false,
+                    billing_mode: self.default_billing_mode,
                 })
             }
             _ => Err("budget limit exceeded".to_string()),
@@ -401,6 +427,21 @@ mod tests {
         manager.telemetry_store = Some(store);
         assert!(manager.record_spend(10.0).unwrap());
         assert_eq!(manager.get_remaining(), 40.0);
+    }
+
+    #[test]
+    fn test_budget_manager_with_billing_mode_byok() {
+        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
+        let manager = BudgetManager::new(50.0)
+            .with_billing_mode(BillingMode::Byok)
+            .with_telemetry("tenant-123".to_string(), store.clone());
+
+        manager.record_spend_cents(1000).unwrap();
+
+        // Cost should be recorded to BYOK but we cannot easily inspect it directly due to OpenTelemetry design,
+        // however we ensure no panics and standard logic passes.
+        assert_eq!(manager.get_remaining_cents(), 4000);
+        assert_eq!(manager.default_billing_mode, BillingMode::Byok);
     }
 
     #[test]

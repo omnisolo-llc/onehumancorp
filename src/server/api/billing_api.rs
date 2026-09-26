@@ -855,7 +855,9 @@ pub async fn cost_dashboard_handler(
         budget_limit
     };
 
-    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+    // Dynamically check the billing mode for the tenant. For now assume OHC_Funded, but expose BYOK capability
+    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit)
+        .with_billing_mode(::server_pricing::budget::BillingMode::OhcFunded);
     let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
     let department_tier_usage =
