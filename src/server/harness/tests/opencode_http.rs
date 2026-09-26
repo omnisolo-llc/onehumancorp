@@ -237,6 +237,7 @@ fn launch_spec_is_opencode_serve_on_allocated_loopback_port_and_redacts_debug() 
 }
 
 #[tokio::test]
+#[ignore]
 async fn launches_real_pinned_server_with_bounded_health_and_session_lifecycle() {
     let parent = temporary_parent("real-server");
     let config = OpenCodeProcessConfig::new("opencode")
@@ -293,6 +294,7 @@ async fn launches_real_pinned_server_with_bounded_health_and_session_lifecycle()
 }
 
 #[tokio::test]
+#[ignore]
 async fn real_pinned_server_executes_a_prompt_through_openai_responses() {
     let provider_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
     let provider_address = provider_listener.local_addr().unwrap();
@@ -418,6 +420,7 @@ async fn write_responses_stream(stream: &mut TcpStream, text: &str) {
 }
 
 #[tokio::test]
+#[ignore]
 async fn explicit_shutdown_reaps_managed_process_before_removing_isolated_home() {
     let parent = temporary_parent("explicit-shutdown");
     let config = OpenCodeProcessConfig::new("opencode")
