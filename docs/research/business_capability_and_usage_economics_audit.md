@@ -175,3 +175,7 @@ Collect a small, permissioned set of recent owner workflows across candidate seg
 ## Source register
 
 All external sources linked inline were accessed **2026-09-18**. O1–O6 are anonymous/self-reported discussion threads with unverified publication timestamps, not interviews. O7 is Anthropic's dated workshop account; O8 is Google's undated written customer gallery. Product announcements have publication dates stated above; live provider help/terms and quota pages can change independently of announcements. No testimonial savings, profit uplift, installation counts or claimed market share were adopted as OHC evidence. No browsing of customer credentials or private owner documents was performed.
+
+### Implementation Blockers (Recorded 2026-09-19)
+- Evaluation of managed API vs API-key/cloud-account billing is currently blocked pending real usage data and owner interviews.
+- Evaluation of provider-permitted native-client subscription vs local inference is blocked due to missing specific provider access prerequisites.
