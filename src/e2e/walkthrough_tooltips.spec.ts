@@ -105,7 +105,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     // Check tooltips registry is available
     const tooltips = await page.evaluate(() => window['OMNISOLO_TOOLTIPS']);
     expect(tooltips).toBeDefined();
-    expect(tooltips['dashboard-walkthrough-btn']).toBe('Take a tour of the dashboard');
+    expect(tooltips['dashboard-walkthrough-btn']).toBe('Take a quick, guided tour of your OmniSolo dashboard.');
   });
 
   test('Help Center elements are visible', async ({ page }) => {
