@@ -218,7 +218,37 @@ async fn draft_agent(
         Err(status) => return status.into_response(),
     };
     let llm = Arc::new(AdapterLlm {});
-    let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
+
+    // Fetch pricing rules to ground the LLM
+    let rules_rows = sqlx::query("SELECT name, base_price_cents FROM pricing_rules WHERE tenant_id = $1 AND is_active = TRUE")
+        .bind(&tenant_id)
+        .fetch_all(&pool)
+        .await;
+
+    let mut rules_context = String::new();
+    if let Ok(rows) = rules_rows {
+        if !rows.is_empty() {
+            rules_context.push_str(
+                " Use the following pricing rules as constraints:
+",
+            );
+            for row in rows {
+                use sqlx::Row;
+                let name: String = row.try_get("name").unwrap_or_default();
+                let base_price_cents: i64 = row.try_get("base_price_cents").unwrap_or(0);
+                rules_context.push_str(&format!(
+                    "- Service: {}, Base Price (cents): {}
+",
+                    name, base_price_cents
+                ));
+            }
+        }
+    }
+
+    let system_prompt = format!(
+        "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean).{}Return ONLY the raw JSON array.",
+        rules_context
+    );
 
     let req = ChatRequest {
         model: "default-model".to_string(),
