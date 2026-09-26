@@ -1,7 +1,6 @@
 "use client";
 
 import { CheckCircle2, RefreshCw } from "lucide-react";
-import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 type Quote = Readonly<{
@@ -42,8 +41,9 @@ function formatMoney(cents: number | null) {
     .format((cents ?? 0) / 100);
 }
 
-export default function InteractiveQuotePage() {
-  const params = useParams();
+
+
+export default function InteractiveQuotePage({ params }: { params: { id: string } }) {
   const rawId = params.id;
   const quoteId = typeof rawId === "string" && QUOTE_ID.test(rawId) ? rawId : null;
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
