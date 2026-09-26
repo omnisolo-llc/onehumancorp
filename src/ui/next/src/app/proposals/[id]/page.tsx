@@ -29,7 +29,7 @@ interface ProposalResponse {
 }
 
 export default function ProposalReviewPage() {
-  const unwrappedParams = React.use(useParams() as any) as any;
+  const unwrappedParams = useParams() as { id?: string };
   const id = unwrappedParams.id as string;
   const router = useRouter();
   const [data, setData] = useState<ProposalResponse | null>(null);
