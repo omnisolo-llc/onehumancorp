@@ -24,6 +24,7 @@ export interface OnboardingState {
   error: string;
   startResult: OnboardingResult | null;
   instantImageUrl: string;
+  skipped: boolean;
   setStep: (step: number) => void;
   setChatStep: (step: number) => void;
   setBio: (bio: string) => void;
@@ -45,6 +46,7 @@ export interface OnboardingState {
   setError: (error: string) => void;
   setStartResult: (result: OnboardingResult) => void;
   setInstantImageUrl: (url: string) => void;
+  setSkipped: (skipped: boolean) => void;
   updateState: (updates: Partial<OnboardingState>) => void;
 }
 
@@ -72,6 +74,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       error: '',
       startResult: null,
       instantImageUrl: '',
+      skipped: false,
       setStep: (step) => set({ step }),
       setChatStep: (chatStep) => set({ chatStep }),
       setBio: (bio) => set({ bio }),
@@ -93,6 +96,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
       setInstantImageUrl: (instantImageUrl) => set({ instantImageUrl }),
+      setSkipped: (skipped) => set({ skipped }),
       updateState: (updates) => set((state) => ({ ...state, ...updates })),
     }),
     {

@@ -42,6 +42,7 @@ export default function OnboardingWizard() {
     error,
     startResult,
     instantImageUrl,
+    skipped,
     updateState,
   } = useOnboardingStore();
 
@@ -255,6 +256,8 @@ export default function OnboardingWizard() {
             updateState({ aiAutoRespond: data.aiAutoRespond });
           if (data.instantImageUrl !== undefined)
             updateState({ instantImageUrl: data.instantImageUrl });
+          if (data.skipped !== undefined)
+            updateState({ skipped: data.skipped });
           initialStateLoaded.current = true;
         }
       })
@@ -264,6 +267,12 @@ export default function OnboardingWizard() {
         setIsLoaded(true);
       });
   }, []);
+
+  useEffect(() => {
+    if (isLoaded && skipped) {
+      router.push("/dashboard");
+    }
+  }, [isLoaded, skipped, router]);
 
   // Sync state to backend
   useEffect(() => {
