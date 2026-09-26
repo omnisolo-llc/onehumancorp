@@ -47,6 +47,7 @@ The working branch is `fix/bazel-modernization-and-cleanup`, HEAD `c3716d0875df6
 | F13: BYOK versus subscriptions | API proxy rejects unsupported subscription-relay modes; verified tenant OpenAI keys bind to the provider origin and do not fall back to another payer after revocation. | Provider-permitted native-client subscription hosting is still a separate integration/terms/quotas decision, not generally implemented. |
 | F14: economics/owner outcomes | Workload usage records and build/resource timing available; research keeps costs, owner correction time and actual outcome evidence separate. | No representative customer-serving cost, owner interviews, willingness-to-pay result or paid-retention result has been measured in this work. |
 | F15: premature exclusive segment | Existing commerce, fulfillment and service modules preserved; earlier exclusive agency segment and fixed-price targets remain suspended. | Customer selection requires owner evidence, not a green build or competitor feature list. |
+| OHC-09: Measurable retention/acquisition experiment | Blocked/no-work outcome; depends on OHC-04–08. | Core client-to-cash funnel remains unverified. |
 
 ### Additional defects found during this pass
 
