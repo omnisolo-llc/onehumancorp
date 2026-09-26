@@ -52,7 +52,7 @@ describe('ZeroClickBuilderPage', () => {
     render(<ZeroClickBuilderPage />);
     await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
-    fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
+    fireEvent.change(input, { target: { value: 'I sell custom sneakers in New York.' } });
 
     const buttons = screen.getAllByRole('button');
     const submitBtn = buttons[buttons.length - 1];
