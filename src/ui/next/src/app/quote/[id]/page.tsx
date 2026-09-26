@@ -45,8 +45,8 @@ function formatMoney(cents: number | null) {
 import React from 'react';
 
 export default function InteractiveQuotePage() {
-  const unwrappedParams = React.use(useParams() as any) as any;
-  const rawId = unwrappedParams.id;
+  const unwrappedParams = useParams() as unknown as { id: string };
+  const rawId = unwrappedParams?.id;
 
   const quoteId = typeof rawId === "string" && QUOTE_ID.test(rawId) ? rawId : null;
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
