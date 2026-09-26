@@ -65,6 +65,14 @@ pub struct IntegrationsRegistry {
             std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>,
         >,
     >,
+    google_workspace_clients: std::sync::RwLock<
+        std::collections::HashMap<
+            String,
+            std::sync::Arc<
+                crate::integrations::google_workspace::provider::GoogleWorkspaceProvider,
+            >,
+        >,
+    >,
     mailchimp_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
@@ -223,6 +231,7 @@ impl IntegrationsRegistry {
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_workspace_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -401,6 +410,16 @@ impl IntegrationsRegistry {
         Ok(msg)
     }
 
+    pub fn get_google_workspace_client(
+        &self,
+        integration_id: &str,
+    ) -> Option<
+        std::sync::Arc<crate::integrations::google_workspace::provider::GoogleWorkspaceProvider>,
+    > {
+        let clients = self.google_workspace_clients.read().unwrap();
+        clients.get(integration_id).cloned()
+    }
+
     // Integration methods
     pub fn instances(&self) -> Vec<::server_omnisolo::orchestration::IntegrationInstance> {
         let insts = self.instances.read().unwrap();
@@ -513,6 +532,17 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::calendly::provider::CalendlyProvider::new(
+                        creds.api_token.clone(),
+                    ),
+                ),
+            );
+        }
+        if integration_id == "google_workspace" {
+            let mut clients = self.google_workspace_clients.write().unwrap();
+            clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(
+                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
                         creds.api_token.clone(),
                     ),
                 ),
@@ -1582,5 +1612,30 @@ mod tests {
             .send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1")
             .unwrap();
         assert_eq!(msg.content, "Hello World");
+    }
+
+    #[tokio::test]
+    async fn test_google_workspace_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
+            integration_id: "google_workspace".to_string(),
+            base_url: "https://www.googleapis.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_workspace_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry
+            .connect("google_workspace", "https://www.googleapis.com", creds)
+            .unwrap();
+
+        let client = registry
+            .get_google_workspace_client("google_workspace")
+            .unwrap();
+        assert_eq!(
+            client.to_integration_provider().metadata.name,
+            "Google Workspace"
+        );
     }
 }
