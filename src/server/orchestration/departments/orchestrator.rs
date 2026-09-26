@@ -1177,6 +1177,8 @@ impl DepartmentOrchestrator {
                 ],
             );
 
+            let mut side_effect_error: Option<String> = None;
+
             if approved {
                 let payload_to_use = edited_payload.as_ref().or(original_payload.as_ref());
 
@@ -1623,6 +1625,75 @@ impl DepartmentOrchestrator {
                                 }
                         }
                     }
+                }
+
+            }
+
+            if let Some(err) = side_effect_error {
+                // If side effects failed, we should rollback the feed item state (which requires another DB query)
+                // However, since we cannot un-charge or easily revert provider actions, we return an error to let the caller know
+                // the approval did not fully succeed and is pending reconciliation.
+                // We'll update the feed item to RECONCILIATION_REQUIRED
+                if let DbStore::Postgres = &self.db.store {
+                    let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = 'RECONCILIATION_REQUIRED' WHERE id = $1 AND tenant_id = $2")
+                        .bind(request_id)
+                        .bind(tenant_id)
+                        .execute(&self.db.pool)
+                        .await;
+                } else if let DbStore::Sqlite(pool) = &self.db.store {
+                    let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = 'RECONCILIATION_REQUIRED' WHERE id = ? AND tenant_id = ?")
+                        .bind(request_id)
+                        .bind(tenant_id)
+                        .execute(pool)
+                        .await;
+                }
+                return Err(err);
+            }
+
+            let mut side_effect_error: Option<String> = None;
+
+            if approved {
+                let payload_to_use = edited_payload.as_ref().or(original_payload.as_ref());
+
+                if let DbStore::Postgres = &self.db.store {
+                    let _ = if let Some(ref ep) = edited_payload {
+                        sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2, proposed_action = $3 WHERE id = $4 AND tenant_id = $5")
+                            .bind(new_status)
+                            .bind(now)
+                            .bind(ep)
+                            .bind(request_id)
+                            .bind(tenant_id)
+                            .execute(&self.db.pool)
+                            .await
+                    } else {
+                        sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
+                            .bind(new_status)
+                            .bind(now)
+                            .bind(request_id)
+                            .bind(tenant_id)
+                            .execute(&self.db.pool)
+                            .await
+                    };
+                } else if let DbStore::Sqlite(pool) = &self.db.store {
+                    let _ = if let Some(ref ep) = edited_payload {
+                        let ep_str = serde_json::to_string(ep).unwrap_or_default();
+                        sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ?, proposed_action = ? WHERE id = ? AND tenant_id = ?")
+                            .bind(new_status)
+                            .bind(now)
+                            .bind(ep_str)
+                            .bind(request_id)
+                            .bind(tenant_id)
+                            .execute(pool)
+                            .await
+                    } else {
+                        sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ? WHERE id = ? AND tenant_id = ?")
+                            .bind(new_status)
+                            .bind(now)
+                            .bind(request_id)
+                            .bind(tenant_id)
+                            .execute(pool)
+                            .await
+                    };
                 }
 
                 // If this is a stockout restock and price approval, execute the price change and dispatch a job
