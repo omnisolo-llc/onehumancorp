@@ -21,6 +21,12 @@ pub struct IntegrationsRegistry {
     >,
     issues: RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
+    pub trello_clients: std::sync::RwLock<
+        std::collections::HashMap<
+            String,
+            std::sync::Arc<crate::integrations::trello::provider::TrelloProvider>,
+        >,
+    >,
     twilio_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
@@ -208,6 +214,7 @@ impl IntegrationsRegistry {
             pull_requests: RwLock::new(std::collections::HashMap::new()),
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
+            trello_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(
                 std::collections::HashMap::new(),
@@ -439,6 +446,16 @@ impl IntegrationsRegistry {
                 from_phone: creds.from_phone.clone(),
             },
         );
+        if integration_id == "trello" {
+            let mut clients = self.trello_clients.write().unwrap();
+            clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(crate::integrations::trello::provider::TrelloProvider::new(
+                    creds.api_token.clone(),
+                    creds.bot_token.clone(),
+                )),
+            );
+        }
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(

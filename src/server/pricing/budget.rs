@@ -181,10 +181,10 @@ impl BudgetManager {
     }
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
-        let current = self.state.lock().unwrap().total_allocated;
         if self.total_limit_cents <= 0 {
             return false;
         }
+        let current = self.state.lock().unwrap().total_allocated;
         let limit_threshold_cents = ((self.total_limit_cents as f64)
             * (self.alert_threshold_percent / 100.0))
             .round() as i64;
