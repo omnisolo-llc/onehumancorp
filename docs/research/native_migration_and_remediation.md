@@ -110,6 +110,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F13 | API key, consumer plan and native-client subscription are distinct | Provider-specific modes and fail-closed unsupported combinations; no session-token relay, pooling, silent paid fallback or rebilling direct inference | Open |
 | F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Blocked / no-work outcome due to missing prerequisites and owner economic/metric data. |
 | F15 | Existing commerce/fulfillment assets and varying owner stories contradict premature exclusive segment | Preserve modules; keep reusable workflow/owner evidence and commercial decisions separate from engineering readiness | Closed |
+| W01 | Evaluate Setup Process & Optimizations | Blocked no-work finding: The entry point itself is functional and no specific bug or new feature request was provided in the prompt beyond auditing and optimizing the wizard experience. | Blocked |
 
 ## Completion rules
 
