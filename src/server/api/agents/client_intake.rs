@@ -122,42 +122,27 @@ async fn handle_client_intake(
 ) -> impl IntoResponse {
     let tenant_id = query.tenant.unwrap_or_else(|| "default".to_string());
 
-    let mut suggested_price = 1500.00;
+    let mut suggested_price = None;
     let mut service_name = "Custom Project Scope".to_string();
+    let mut scope = format!("{} with custom requirements.", service_name);
     let mut drafted_message = format!(
-        "Hi there! Based on your request for '{}', I've put together a drafted proposal. The estimated scope will cost around $1500.00, including standard services.",
+        "Hi there! Based on your request for '{}', I've put together a drafted proposal.",
         payload.details
     );
 
-    let llm = Arc::new(LocalLlm);
-    let planner = Arc::new(PlannerAgent::new(llm.clone(), "default".to_string()));
-    if let Ok(plan) = planner.plan_research(&payload.details).await {
-        let heuristics_res = sqlx::query(
-            "SELECT service_category, base_rate_cents FROM pricing_heuristics WHERE tenant_id = $1",
-        )
-        .bind(&tenant_id)
-        .fetch_all(&state.orchestrator.db().pool)
-        .await;
-        if let Ok(heuristics) = heuristics_res {
-            use sqlx::Row;
-            let plan_lower = plan.join(" ").to_lowercase();
-            for h in heuristics {
-                let category: String = h.get("service_category");
-                let rate_cents: i64 = h.get("base_rate_cents");
-                if plan_lower.contains(&category.to_lowercase())
-                    || payload
-                        .details
-                        .to_lowercase()
-                        .contains(&category.to_lowercase())
-                {
-                    service_name = category;
-                    suggested_price = (rate_cents as f64) / 100.0;
-                    break;
-                }
-            }
+    let payload_val = serde_json::json!({
+        "message": payload.details
+    });
+
+    let planner = crate::orchestration::departments::sales_agent::RuntimeSalesQuoteIntentPlanner::from_env();
+    use crate::orchestration::departments::sales_agent::SalesQuoteIntentPlanner;
+    if let Ok(Some(intent)) = planner.plan_quote_intent(&tenant_id, &payload_val).await {
+        service_name = intent.service_name;
+        suggested_price = intent.suggested_price;
+        if let Some(s) = intent.scope {
+            scope = s;
         }
 
-        // Use the LLM actually to generate the message
         let llm_request = ChatRequest {
             model: "default".to_string(),
             messages: vec![Message::user(format!(
@@ -170,13 +155,16 @@ async fn handle_client_intake(
             tools: vec![],
         };
 
+        let llm = Arc::new(LocalLlm);
         if let Ok(response) = llm.chat(llm_request).await {
             drafted_message = response.message.content;
-            if !drafted_message.contains(&format!("{:.2}", suggested_price)) {
-                drafted_message = format!(
-                    "{} The estimated scope will cost around ${:.2}.",
-                    drafted_message, suggested_price
-                );
+            if let Some(price) = suggested_price {
+                if !drafted_message.contains(&format!("{:.2}", price)) {
+                    drafted_message = format!(
+                        "{} The estimated scope will cost around ${:.2}.",
+                        drafted_message, price
+                    );
+                }
             }
         }
     }
@@ -230,7 +218,7 @@ async fn handle_client_intake(
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
     }
 
-    let total_amount_cents = (suggested_price * 100.0) as i64;
+    let total_amount_cents = suggested_price.map(|p| (p * 100.0) as i64).unwrap_or(0);
     let deposit_cents = total_amount_cents / 3;
 
     if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())")
@@ -277,7 +265,7 @@ async fn handle_client_intake(
         "client_name": payload.name,
         "client_email": payload.email,
         "suggested_price": suggested_price,
-        "scope": format!("{} with custom requirements.", service_name),
+        "scope": scope,
         "suggested_time": "Next Week",
         "generated_response": drafted_message,
         "service": service_name,

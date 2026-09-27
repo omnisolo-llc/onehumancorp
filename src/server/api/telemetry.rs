@@ -214,6 +214,39 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .unwrap_or("");
                 ::server_telemetry::record_swarm_task_completed(mission_id);
             }
+            "owner_outcome" => {
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
+                if !is_telemetry_enabled {
+                    continue;
+                }
+                let tenant_id = item
+                    .labels
+                    .get("tenant_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("");
+                let outcome_type = item
+                    .labels
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .unwrap_or("");
+
+                tracing::info!(
+                    "💰 Miser telemetry: Recording owner outcome for tenant: {}, type: {}, value: {}",
+                    tenant_id,
+                    outcome_type,
+                    item.value
+                );
+
+                let pool = crate::db::get_pool();
+                let redacted_labels = ::server_telemetry::redact_interface_pii(item.labels.clone());
+                let _ = ::server_telemetry::buffer_metric(
+                    &pool,
+                    "ohc_owner_outcome_total",
+                    "counter",
+                    item.value,
+                    redacted_labels,
+                ).await;
+            }
             _ => {
                 let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
