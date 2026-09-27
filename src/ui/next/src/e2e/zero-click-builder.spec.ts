@@ -11,14 +11,14 @@ test.describe('Zero Click Builder Mobile Onboarding', () => {
     await expect(page.getByText('Zero-Click Business Generator')).toBeVisible();
 
     // The single text area where the prompt is typed
-    const promptInput = page.locator('#prompt');
+    const promptInput = page.locator('#instant-bio');
     await expect(promptInput).toBeVisible();
 
     // 2. Type natural language prompt
     await promptInput.fill('I am a home baker in Austin selling custom vegan cakes and cupcakes.');
 
-    // 3. Find "Generate Store" button
-    const generateBtn = page.getByRole('button', { name: /Generate Store/i });
+    // 3. Find "Generate Storefront" button
+    const generateBtn = page.getByRole('button', { name: /Generate Storefront/i });
     await expect(generateBtn).toBeEnabled();
 
     // Testing end-to-end flow with real backend
