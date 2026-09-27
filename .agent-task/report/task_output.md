@@ -1,4 +1,4 @@
-issue_title: ""
+issue_title: "✍️ Scribe: [blocked no-work finding: F14]"
 issue_description: |
   **Title:** Add Contextual Tooltips & Help Center Navigation
 
@@ -28,8 +28,8 @@ issue_description: |
   **Implementation Prompt:** ""
   **Priority:** ""
   **Estimated Scope:** ""
-issue_priority: ""
-issue_category: ""
-issue_type: ""
-issue_label: ""
+issue_priority: "P2"
+issue_category: "research"
+issue_type: "task"
+issue_label: ["agent-report"]
 assignees: []
