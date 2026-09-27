@@ -1,0 +1,6 @@
+[
+  {
+    "title": "🛡️ Sentry: [blocked no-work finding: Evaluate compute and AI API usage charging]",
+    "description": "Loaded Superpowers skills:\n- superpowers:using-superpowers\n\nGit revision: f465222936f3b4e1627e51b4c3bd64f901423b63\n\nTests run:\n- cargo test -p omnisolo --lib sip::tests::test_delegate_mission_tc2_agents_md\n\nVerified trace limitations:\n- make test-e2e (timed out)\n- make test-backend (timed out)\n\nchecks, and outcomes as final evidence"
+  }
+]

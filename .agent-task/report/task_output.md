@@ -1,0 +1,7 @@
+issue_title: ""
+issue_description: "Missing API credentials and proper billing metrics integration for proper deployment to evaluate charging for compute and AI API usage. Since the requirements and context are already satisfied and we don't have enough information to fulfill the objective without fabricating evidence, we will create the task report \`.agent-task/report/task_output.md\` with a blocked/no-work finding."
+issue_priority: ""
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
