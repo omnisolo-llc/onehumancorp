@@ -482,7 +482,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_policy_validation() {
-        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = crate::db::create_sqlite_pool_for_test().await;
 
         let schema = r#"
             CREATE TABLE ohc_job_queue (
