@@ -1,7 +1,0 @@
-issue_title: "F14"
-issue_description: "F14 requires measured representative serving costs or owner outcomes. Currently blocked as workload/cost instrumentation and repeatable benchmark/export are incomplete. Real costs and competitive advantage require actual telemetry evidence from production usage, which is not available."
-issue_priority: ""
-issue_category: ""
-issue_type: "blocked"
-issue_label: ""
-assignees: ""
