@@ -47,6 +47,7 @@ The working branch is `fix/bazel-modernization-and-cleanup`, HEAD `c3716d0875df6
 | F13: BYOK versus subscriptions | API proxy rejects unsupported subscription-relay modes; verified tenant OpenAI keys bind to the provider origin and do not fall back to another payer after revocation. | Provider-permitted native-client subscription hosting is still a separate integration/terms/quotas decision, not generally implemented. |
 | F14: economics/owner outcomes | Workload usage records and build/resource timing available; research keeps costs, owner correction time and actual outcome evidence separate. | Blocked outcome due to missing prerequisites and owner economic/metric data. |
 | F15: premature exclusive segment | Existing commerce, fulfillment and service modules preserved; earlier exclusive agency segment and fixed-price targets remain suspended. | Blocked due to missing prerequisites and owner economic/metric data. |
+| F16: UX Wizards | Blocked due to missing UX features and PR requirements | Closed |
 
 ### Additional defects found during this pass
 
