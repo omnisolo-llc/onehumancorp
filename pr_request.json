@@ -1,0 +1,4 @@
+{
+  "title": "🤖 Implementer: [blocked no-work finding: F11]",
+  "description": "This PR records a blocked no-work finding for F11.\n\n**Skill Provenance and Final Evidence**\n- Loaded skills: using-superpowers\n- Exact git revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d\n- Tests run:\n  - `make lint-node`\n  - `make test-node`\n  - `cargo check --locked --workspace --exclude app --all-targets`\n- Trace limitations: Attempting to run `npm run test:e2e` repeatedly timed out (first after 401.13 seconds, then `make build-e2e && npm run test:e2e` timed out after 401.35 seconds).\n- checks, and outcomes as final evidence: tests ran to failure (timeout), blocking F11 E2E tests validations."
+}
