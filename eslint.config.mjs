@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/coverage/**', '**/playwright-report/**', '**/test-results/**',
       '**/bazel-*/**', '**/next_out/**', '**/gen/**', '**/.cache/**',
       'site/**',
+      '**/.scratch/**',
       '**/*.tsbuildinfo', '**/next-env.d.ts',
     ],
   },
