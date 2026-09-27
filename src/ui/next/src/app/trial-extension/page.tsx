@@ -50,7 +50,7 @@ export default function TrialExtensionPage() {
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center">
-        <div className="w-full glassmorphism rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-white/10 p-8 md:p-12 text-center max-w-2xl relative">
+        <div className="w-full glassmorphism rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-white/10 p-8 md:p-12 mb-24 text-center max-w-2xl relative">
 
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
 

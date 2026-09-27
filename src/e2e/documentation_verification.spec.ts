@@ -9,7 +9,7 @@ test.describe('Documentation UI Verification', () => {
     await expect(page.locator('h1')).toContainText('In-App Help Center');
 
     // Open floating widget
-    const helpBtn = page.locator('#omnisolo-floating-help-btn');
+    const helpBtn = page.locator('#omnisolo-floating-help-btn').first();
     await helpBtn.waitFor({ state: 'visible' });
     await helpBtn.click();
 
