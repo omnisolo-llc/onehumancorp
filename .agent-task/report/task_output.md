@@ -1,0 +1,7 @@
+issue_title: "F14: No measured representative serving costs or owner outcomes"
+issue_description: "This task is blocked. F14 is recorded in docs/research/native_migration_and_remediation.md as 'No measured representative serving costs or owner outcomes' requiring 'Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence'. Without actual usage workload distributions, real deployment cost measurements, and explicit live owner evidence or verified interviews, we cannot legitimately establish the cost foundations required by the 'Principal Cost Engineer & Miser' role constraints. Fabricating these records is strictly prohibited by the operating contract. Therefore, the issue remains blocked until true live operational workload evidence and owner validation inputs become available."
+issue_priority: ""
+issue_category: ""
+issue_type: "blocked"
+issue_label: ""
+assignees: ""
