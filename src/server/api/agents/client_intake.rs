@@ -44,7 +44,7 @@ where
         .with_state(state)
 }
 
-use omnisolo_builtin_agent::gpt_researcher::{PlannerAgent, ResearcherLlmClient};
+use omnisolo_builtin_agent::gpt_researcher::ResearcherLlmClient;
 use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 
 // Let's use the real LLM here to match the inquiry against the pricing heuristics instead of basic keywords.
