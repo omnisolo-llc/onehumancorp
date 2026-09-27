@@ -1,0 +1,7 @@
+issue_title: "Implement finding F04: missing or inconsistent model usage"
+issue_description: "Model paths disagree on usage; proposal adapter returns default usage; proxy forwards streams. Finding is blocked because metered routes only. Other model, tool, embedding and summarization paths still require complete inventory and reconciliation."
+issue_priority: ""
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
