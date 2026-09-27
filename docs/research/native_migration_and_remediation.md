@@ -114,3 +114,5 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 ## Completion rules
 
 An item becomes implemented only after its production path is changed. A new library with no caller is not completion. An item becomes verified only after the declared tests actually run. Static checks, unit tests, boundary doubles, provider sandbox verification and live owner evidence are different levels. External account approval, code signing, live-provider cost reconciliation and owner interviews remain external verification requirements unless actually performed. No item is silently dropped; partial work and blockers remain visible here.
+
+*Note: The In-App Help Center documentation feature is blocked as a no-work finding due to the current scope override.*
