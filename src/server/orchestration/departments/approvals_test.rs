@@ -68,4 +68,146 @@ mod tests {
             .await;
         assert!(pending_after.iter().find(|p| p.id == request_id).is_none());
     }
+
+    #[tokio::test]
+    async fn test_stale_approval_returns_error() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: DbStore::Sqlite(pool.clone()),
+        });
+
+        // Initialize schema for test
+        sqlx::query(
+            "CREATE TABLE agent_feed_items (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                event_source TEXT,
+                context_payload TEXT,
+                proposed_action TEXT,
+                lifecycle_state TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = DepartmentOrchestrator::new(db.clone(), mesh);
+
+        let tenant_id = "test-tenant-stale";
+        let request_id = "stale-req-123";
+
+        // Insert an item that is ALREADY approved
+        sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'finance', '{}', '{}', 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            .bind(request_id)
+            .bind(tenant_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Attempting to approve it again should yield "Stale or revoked approval"
+        let res = orchestrator
+            .decide_approval(request_id, tenant_id, true, None)
+            .await;
+
+        assert_eq!(res.unwrap_err(), "Stale or revoked approval");
+    }
+
+    #[tokio::test]
+    async fn test_invoice_simulation_records_reconciliation() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: DbStore::Sqlite(pool.clone()),
+        });
+
+        sqlx::query(
+            "CREATE TABLE agent_feed_items (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                event_source TEXT,
+                context_payload TEXT,
+                proposed_action TEXT,
+                lifecycle_state TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE invoices (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                customer_id TEXT,
+                status TEXT,
+                due_date TEXT,
+                currency TEXT,
+                total_amount REAL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = DepartmentOrchestrator::new(db.clone(), mesh);
+
+        let tenant_id = "test-tenant-invoice";
+        let request_id = "inv-req-123";
+
+        // Provide an invoice payload. Without a valid STRIPE_SECRET_KEY,
+        // Stripe integration will fail and should result in reconciliation_required.
+        let payload = serde_json::json!({
+            "feature_type": "invoice_draft",
+            "project_name": "Test",
+            "milestone_name": "Test",
+            "amount_cents": 1000,
+            "customer_id": "cus_sim_123"
+        });
+
+        sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'finance', '{}', ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            .bind(request_id)
+            .bind(tenant_id)
+            .bind(payload.to_string())
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let res = orchestrator
+            .decide_approval(request_id, tenant_id, true, None)
+            .await;
+
+        assert!(res.is_ok());
+
+        // Check invoices table
+        use sqlx::Row;
+        let invoice_row = sqlx::query("SELECT status FROM invoices WHERE tenant_id = ?")
+            .bind(tenant_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let status: String = invoice_row.get("status");
+        assert_eq!(status, "reconciliation_required");
+    }
 }
