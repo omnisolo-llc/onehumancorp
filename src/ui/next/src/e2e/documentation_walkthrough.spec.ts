@@ -5,7 +5,7 @@ test.describe("Documentation Walkthrough E2E", () => {
     await page.goto("/dashboard");
 
     // Open the Help Center floating widget
-    const helpButton = page.locator('#omnisolo-floating-help-btn');
+    const helpButton = page.locator('#omnisolo-floating-help-btn').first();
     await expect(helpButton).toBeVisible();
     await helpButton.scrollIntoViewIfNeeded();
     await helpButton.click({ force: true });

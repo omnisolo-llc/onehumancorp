@@ -6,7 +6,7 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open the help widget
-    const helpButton = page.getByRole('button', { name: 'Open help chat' });
+    const helpButton = page.getByRole('button', { name: 'Open help chat' }).first();
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
@@ -44,7 +44,7 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open help widget
-    const helpButton = page.getByRole('button', { name: 'Open help chat' });
+    const helpButton = page.getByRole('button', { name: 'Open help chat' }).first();
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 

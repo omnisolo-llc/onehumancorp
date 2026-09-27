@@ -32,12 +32,12 @@ test.describe('In-App Help & Documentation Features', () => {
     // We will check the help widget.
 
     // Open help widget
-    const helpBtn = page.getByRole('button', { name: 'Help', exact: true });
+    const helpBtn = page.getByRole('button', { name: 'Help', exact: true }).first();
     await helpBtn.waitFor({ state: 'visible' });
     await helpBtn.click();
 
     // Widget should be open
-    await expect(page.getByRole('button', { name: 'Help', exact: true }).or(page.getByText('Interactive Tours')).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Help', exact: true }).first().or(page.getByText('Interactive Tours')).first()).toBeVisible();
 
     // Switch to Ask AI tab
     await page.getByRole('button', { name: 'Ask AI' }).click();

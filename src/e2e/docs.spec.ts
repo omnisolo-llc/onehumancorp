@@ -17,7 +17,7 @@ test.describe('Documentation & Help Features', () => {
     await page.goto('/');
 
     // Help widget button
-    const helpBtn = page.getByRole('button', { name: 'Help', exact: true });
+    const helpBtn = page.getByRole('button', { name: 'Help', exact: true }).first();
     await expect(helpBtn).toBeVisible();
     await helpBtn.click();
 
