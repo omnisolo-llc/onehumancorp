@@ -17,6 +17,8 @@ pub struct SalesAgent {
 pub struct QuoteIntent {
     pub original_message: String,
     pub service_name: String,
+    pub suggested_price: Option<f64>,
+    pub scope: Option<String>,
     pub preferred_start_time: Option<String>,
     pub preferred_end_time: Option<String>,
 }
@@ -89,7 +91,7 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
 
         let payload_json = serde_json::to_string(payload).map_err(|e| e.to_string())?;
         let prompt = format!(
-            "You are the OmniSolo sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, original_message, preferred_start_time, and preferred_end_time. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. preferred_start_time and preferred_end_time are optional ISO8601 strings if the customer mentioned specific times. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
+            "You are the OmniSolo sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, original_message, preferred_start_time, preferred_end_time, suggested_price, and scope. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. suggested_price must be a number if explicitly stated, otherwise null. scope must describe the inquiry's scope as expressed, without adding commitments. preferred_start_time and preferred_end_time are optional ISO8601 strings if the customer mentioned specific times. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
         );
 
         let mut attempts = 0;
@@ -221,6 +223,13 @@ pub fn extract_quote_intent(payload: &serde_json::Value) -> Option<QuoteIntent> 
                 .and_then(|v| v.as_str())
                 .map(str::trim)
                 .filter(|name| !name.is_empty())?;
+            let suggested_price = llm_intent
+                .get("suggested_price")
+                .and_then(|v| v.as_f64());
+            let scope = llm_intent
+                .get("scope")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let preferred_start_time = llm_intent
                 .get("preferred_start_time")
                 .and_then(|v| v.as_str())
@@ -232,6 +241,8 @@ pub fn extract_quote_intent(payload: &serde_json::Value) -> Option<QuoteIntent> 
             return Some(QuoteIntent {
                 original_message: original_message.to_string(),
                 service_name: service_name.to_string(),
+                suggested_price,
+                scope,
                 preferred_start_time,
                 preferred_end_time,
             });
@@ -282,6 +293,13 @@ pub fn parse_quote_intent_plan(
         .filter(|message| !message.is_empty())
         .unwrap_or(fallback_original_message);
 
+    let suggested_price = value
+        .get("suggested_price")
+        .and_then(|v| v.as_f64());
+    let scope = value
+        .get("scope")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
     let preferred_start_time = value
         .get("preferred_start_time")
         .and_then(|v| v.as_str())
@@ -294,6 +312,8 @@ pub fn parse_quote_intent_plan(
     Ok(Some(QuoteIntent {
         original_message: original_message.to_string(),
         service_name: service_name.to_string(),
+        suggested_price,
+        scope,
         preferred_start_time,
         preferred_end_time,
     }))
