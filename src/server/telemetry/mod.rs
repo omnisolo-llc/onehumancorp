@@ -2250,3 +2250,6 @@ mod pii_pattern_tests {
         assert!(!is_pii_value_pattern("1234"));
     }
 }
+pub mod workload_instrumentation;
+#[cfg(test)]
+mod workload_instrumentation_tests;
