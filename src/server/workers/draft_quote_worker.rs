@@ -204,20 +204,24 @@ impl DraftQuoteWorker {
                 return Ok(true);
             }
 
-            let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-            if let Err(_e) =
-                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
-            {
-                if matches!(&self.db.store, crate::db::DbStore::Postgres) {
+            let mut pg_tx_opt = None;
+            let mut sqlite_tx_opt = None;
+
+            if matches!(&self.db.store, crate::db::DbStore::Postgres) {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                if let Err(_e) =
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+                {
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
-                } else {
-                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                        .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut *tx).await;
+                    let _ = tx.commit().await;
+                    return Ok(true);
                 }
-                return Ok(true);
+                pg_tx_opt = Some(tx);
+            } else if let crate::db::DbStore::Sqlite(pool) = &self.db.store {
+                let tx = pool.begin().await.map_err(|e| e.to_string())?;
+                sqlite_tx_opt = Some(tx);
             }
 
             // Load OHC-03 Policy
@@ -227,7 +231,7 @@ impl DraftQuoteWorker {
                         "SELECT settings->>'ohc_03_policy' FROM tenants WHERE id = $1",
                     )
                     .bind(&tenant_id)
-                    .fetch_optional(&mut *tx)
+                    .fetch_optional(&mut **pg_tx_opt.as_mut().unwrap())
                     .await
                     .unwrap_or(None)
                 } else {
@@ -235,7 +239,7 @@ impl DraftQuoteWorker {
                     "SELECT json_extract(settings, '$.ohc_03_policy') FROM tenants WHERE id = ?"
                 )
                 .bind(&tenant_id)
-                .fetch_optional(&mut *tx)
+                .fetch_optional(&mut **sqlite_tx_opt.as_mut().unwrap())
                 .await
                 .unwrap_or(None)
                 };
@@ -247,11 +251,17 @@ impl DraftQuoteWorker {
                     if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **pg_tx_opt.as_mut().unwrap()).await;
                     } else {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **sqlite_tx_opt.as_mut().unwrap()).await;
+                    }
+                    if let Some(tx) = pg_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
+                    if let Some(tx) = sqlite_tx_opt.take() {
+                        let _ = tx.commit().await;
                     }
                     return Ok(true);
                 }
@@ -271,7 +281,7 @@ impl DraftQuoteWorker {
                     "SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1",
                 )
                 .bind(&tenant_id)
-                .fetch_all(&mut *tx)
+                .fetch_all(&mut **pg_tx_opt.as_mut().unwrap())
                 .await
                 .unwrap_or_default()
             } else {
@@ -279,7 +289,7 @@ impl DraftQuoteWorker {
                     "SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = ?",
                 )
                 .bind(&tenant_id)
-                .fetch_all(&mut *tx)
+                .fetch_all(&mut **sqlite_tx_opt.as_mut().unwrap())
                 .await
                 .unwrap_or_default()
             };
@@ -315,11 +325,17 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
                     if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **pg_tx_opt.as_mut().unwrap()).await;
                     } else {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **sqlite_tx_opt.as_mut().unwrap()).await;
+                    }
+                    if let Some(tx) = pg_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
+                    if let Some(tx) = sqlite_tx_opt.take() {
+                        let _ = tx.commit().await;
                     }
                     return Ok(true);
                 }
@@ -335,11 +351,17 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
                     if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **pg_tx_opt.as_mut().unwrap()).await;
                     } else {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **sqlite_tx_opt.as_mut().unwrap()).await;
+                    }
+                    if let Some(tx) = pg_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
+                    if let Some(tx) = sqlite_tx_opt.take() {
+                        let _ = tx.commit().await;
                     }
                     return Ok(true);
                 }
@@ -373,33 +395,39 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
             let required_deposit_cents = total_amount_cents / 3;
 
             // Update quote status
-            let quote_update = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
+            let quote_update_is_err = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                 sqlx::query("UPDATE quotes SET status = 'DRAFT', total_amount_cents = $1, required_deposit_cents = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4")
                     .bind(total_amount_cents)
                     .bind(required_deposit_cents)
                     .bind(quote_id)
                     .bind(&tenant_id)
-                    .execute(&mut *tx)
-                    .await
+                    .execute(&mut **pg_tx_opt.as_mut().unwrap())
+                    .await.is_err()
             } else {
                 sqlx::query("UPDATE quotes SET status = 'DRAFT', total_amount_cents = ?, required_deposit_cents = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
                     .bind(total_amount_cents)
                     .bind(required_deposit_cents)
                     .bind(quote_id)
                     .bind(&tenant_id)
-                    .execute(&mut *tx)
-                    .await
+                    .execute(&mut **sqlite_tx_opt.as_mut().unwrap())
+                    .await.is_err()
             };
 
-            if quote_update.is_err() {
+            if quote_update_is_err {
                 if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **pg_tx_opt.as_mut().unwrap()).await;
                 } else {
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&mut **sqlite_tx_opt.as_mut().unwrap()).await;
+                }
+                if let Some(tx) = pg_tx_opt.take() {
+                    let _ = tx.commit().await;
+                }
+                if let Some(tx) = sqlite_tx_opt.take() {
+                    let _ = tx.commit().await;
                 }
                 return Ok(true);
             }
@@ -407,7 +435,7 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
             // Insert line items
             for item in line_items {
                 let id = Uuid::new_v4();
-                let res = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
+                let res_is_err = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                     sqlx::query("INSERT INTO quote_line_items (id, tenant_id, quote_id, description, unit_price_cents, quantity, is_optional, service_item_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                         .bind(id.to_string())
                         .bind(&tenant_id)
@@ -417,8 +445,8 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
                         .bind(item.quantity)
                         .bind(item.is_optional)
                         .bind(item.service_item_id.map(|u| u.to_string()))
-                        .execute(&mut *tx)
-                        .await
+                        .execute(&mut **pg_tx_opt.as_mut().unwrap())
+                        .await.is_err()
                 } else {
                     sqlx::query("INSERT INTO quote_line_items (id, tenant_id, quote_id, description, unit_price_cents, quantity, is_optional, service_item_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                         .bind(id.to_string())
@@ -429,42 +457,56 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
                         .bind(item.quantity)
                         .bind(item.is_optional)
                         .bind(item.service_item_id.map(|u| u.to_string()))
-                        .execute(&mut *tx)
-                        .await
+                        .execute(&mut **sqlite_tx_opt.as_mut().unwrap())
+                        .await.is_err()
                 };
-                if res.is_err() {
+                if res_is_err {
                     if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                             .bind(&job_id)
-                            .execute(&self.db.pool).await;
+                            .execute(&mut **pg_tx_opt.as_mut().unwrap()).await;
                     } else {
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
-                            .execute(&self.db.pool).await;
+                            .execute(&mut **sqlite_tx_opt.as_mut().unwrap()).await;
+                    }
+                    if let Some(tx) = pg_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
+                    if let Some(tx) = sqlite_tx_opt.take() {
+                        let _ = tx.commit().await;
                     }
                     return Ok(true);
                 }
             }
 
-            if tx.commit().await.is_ok() {
+            let commit_ok = if let Some(tx) = pg_tx_opt.take() {
+                tx.commit().await.is_ok()
+            } else if let Some(tx) = sqlite_tx_opt.take() {
+                tx.commit().await.is_ok()
+            } else {
+                false
+            };
+
+            if commit_ok {
                 if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id)
                         .execute(&self.db.pool).await;
-                } else {
+                } else if let crate::db::DbStore::Sqlite(pool) = &self.db.store {
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(pool).await;
                 }
             } else {
                 if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id)
                         .execute(&self.db.pool).await;
-                } else {
+                } else if let crate::db::DbStore::Sqlite(pool) = &self.db.store {
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(&self.db.pool).await;
+                        .execute(pool).await;
                 }
             }
 
@@ -567,7 +609,10 @@ mod tests {
             .bind(payload.to_string())
             .execute(&pool).await.unwrap();
 
-        let processed = worker.poll().await.unwrap();
+        let processed = tokio::time::timeout(std::time::Duration::from_secs(5), worker.poll())
+            .await
+            .expect("poll timed out, indicating connection deadlock")
+            .unwrap();
         assert!(processed);
 
         let status: String = sqlx::query_scalar("SELECT status FROM ohc_job_queue WHERE id = ?")
@@ -607,7 +652,10 @@ mod tests {
             .await
             .unwrap();
 
-        let processed = worker.poll().await.unwrap();
+        let processed = tokio::time::timeout(std::time::Duration::from_secs(5), worker.poll())
+            .await
+            .expect("poll timed out, indicating connection deadlock")
+            .unwrap();
         assert!(processed);
 
         let fail_status: String =
