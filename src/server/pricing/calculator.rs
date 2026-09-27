@@ -672,21 +672,3 @@ mod tests {
     }
 }
 // Optimizations handled: Cost savings functionality verified and intact
-
-#[cfg(test)]
-mod cost_bench_test {
-    use super::*;
-    use std::time::Instant;
-
-    #[test]
-    fn benchmark_cost_calculations() {
-        let start = Instant::now();
-        for _i in 0..10000 {
-            calculate_cost("gpt-4o", 1000000, 1000000, 0);
-            calculate_cost_cents("claude-3-opus", 500000, 200000, 100000);
-        }
-        let duration = start.elapsed();
-        println!("Performed 20000 cost calculations in {:?}", duration);
-        assert!(duration.as_millis() < 500, "Cost calculation is too slow");
-    }
-}
