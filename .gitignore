@@ -151,4 +151,3 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
-venv/
