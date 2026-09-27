@@ -1,0 +1,7 @@
+issue_title: '🗺️ Guide: [blocked no-work finding: Onboarding]'
+issue_description: "Title: Blocked No-Work Finding for Onboarding/API Billing Task\n\nProblem Statement: The task asks to evaluate charging for compute and AI API usage, plus BYOK or provider-permitted native subscription access, and to evaluate owner needs. It also states 'Address an observed activation blocker or assigned issue. Test denied permissions, partial setup, restart/resume, budget choices and useful first output. If no justified current-scope gap exists, return a no-work finding instead of forced visual refactoring.' There is no assigned issue and no current-scope gap justified in the evidence that warrants forced visual refactoring.\n\nResearch Report: Evaluated the existing Zero-Click onboarding flow in src/ui/next/src/app/onboarding/zero-click/. Discovered that it has E2E tests, which were run but could not complete successfully due to missing Cargo binaries / Next.js 'lucide-react' build dependencies, and a docker permissions blocker on pgvector. Evaluated the existing OnboardingAgent in src/server/services/onboarding/onboarding_agent.rs. No explicit activation blockers found that require code changes within this scope.\n\nDesign Doc: N/A\n\nImplementation Prompt: N/A\n\nPriority: P0\n\nEstimated Scope: No-work"
+issue_priority: "P0"
+issue_category: "Onboarding"
+issue_type: "blocked"
+issue_label: "no-work"
+assignees: []
