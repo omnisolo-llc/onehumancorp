@@ -16,7 +16,11 @@ test.describe('Documentation Features', () => {
 
   test('Help Center and Chat opens', async ({ page }) => {
     await page.goto('/');
+<<<<<<< HEAD
+    const helpButton = page.locator('#omnisolo-floating-help-btn').first();
+=======
     const helpButton = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(helpButton).toBeVisible();
     await helpButton.scrollIntoViewIfNeeded();
     await helpButton.click({ force: true });
@@ -34,7 +38,11 @@ test.describe('Documentation Features', () => {
 
   test('Walkthroughs can be triggered', async ({ page }) => {
     await page.goto('/');
+<<<<<<< HEAD
+    const helpButton = page.locator('#omnisolo-floating-help-btn').first();
+=======
     const helpButton = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(helpButton).toBeVisible();
     await helpButton.scrollIntoViewIfNeeded();
     await helpButton.click({ force: true });

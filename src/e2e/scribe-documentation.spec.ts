@@ -31,7 +31,11 @@ test.describe('Documentation UI Components', () => {
         await page.goto('/api/v1/ui/help.html');
 
         // Open widget if closed
+<<<<<<< HEAD
+        const helpBtn = page.locator('#omnisolo-floating-help-btn').first();
+=======
         const helpBtn = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
         if (await helpBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
             await helpBtn.click();
         }

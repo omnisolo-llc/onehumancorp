@@ -10,7 +10,11 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
 
     // Check if HelpChat component is accessible
     // Check if Videos tab works in dashboard widget
+<<<<<<< HEAD
+    const widgetBtn = page.locator('#omnisolo-floating-help-btn').first();
+=======
     const widgetBtn = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(widgetBtn).toBeVisible();
     await widgetBtn.dispatchEvent('click');
 

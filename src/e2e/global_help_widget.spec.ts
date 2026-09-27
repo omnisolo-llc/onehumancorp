@@ -5,7 +5,11 @@ test.describe('Global Help Widget', () => {
     await page.goto('/api/v1/ui/dashboard.html');
 
     // The floating help button should be visible
+<<<<<<< HEAD
+    const helpBtn = page.locator('#omnisolo-floating-help-btn').first();
+=======
     const helpBtn = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(helpBtn).toBeVisible();
 
     // Clicking it should open the chat widget
@@ -32,7 +36,11 @@ test.describe('Global Help Widget', () => {
     await page.goto('/api/v1/ui/pos.html');
 
     // The floating help button should be visible here too
+<<<<<<< HEAD
+    const helpBtn = page.locator('#omnisolo-floating-help-btn').first();
+=======
     const helpBtn = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(helpBtn).toBeVisible();
   });
 });

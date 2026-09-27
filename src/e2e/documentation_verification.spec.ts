@@ -9,7 +9,11 @@ test.describe('Documentation UI Verification', () => {
     await expect(page.locator('h1')).toContainText('In-App Help Center');
 
     // Open floating widget
+<<<<<<< HEAD
+    const helpBtn = page.locator('#omnisolo-floating-help-btn').first();
+=======
     const helpBtn = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await helpBtn.waitFor({ state: 'visible' });
     await helpBtn.click();
 

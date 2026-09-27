@@ -123,7 +123,11 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(results).toBeVisible();
 
     // The chat widget should also be there
+<<<<<<< HEAD
+    const chatBtn = page.locator('#omnisolo-floating-help-btn').first().first();
+=======
     const chatBtn = page.locator('#omnisolo-floating-help-btn').first();
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(chatBtn).toBeVisible();
     await chatBtn.click({ force: true });
 

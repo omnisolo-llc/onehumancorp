@@ -6,7 +6,11 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open the help widget
+<<<<<<< HEAD
+    const helpButton = page.getByRole('button', { name: 'Open help chat' }).first();
+=======
     const helpButton = page.getByRole('button', { name: 'Open help chat' });
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
@@ -44,7 +48,11 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open help widget
+<<<<<<< HEAD
+    const helpButton = page.getByRole('button', { name: 'Open help chat' }).first();
+=======
     const helpButton = page.getByRole('button', { name: 'Open help chat' });
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 

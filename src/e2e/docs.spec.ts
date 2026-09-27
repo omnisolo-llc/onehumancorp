@@ -17,7 +17,11 @@ test.describe('Documentation & Help Features', () => {
     await page.goto('/');
 
     // Help widget button
+<<<<<<< HEAD
+    const helpBtn = page.getByRole('button', { name: 'Help', exact: true }).first();
+=======
     const helpBtn = page.getByRole('button', { name: 'Help', exact: true });
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(helpBtn).toBeVisible();
     await helpBtn.click();
 

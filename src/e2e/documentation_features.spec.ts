@@ -7,7 +7,11 @@ test.describe('Help Chat Flow', () => {
     await page.goto('/dashboard');
 
     // Check that the floating chat button exists
+<<<<<<< HEAD
+    const chatButton = page.locator('#omnisolo-floating-help-btn').first();
+=======
     const chatButton = page.locator('#omnisolo-floating-help-btn');
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
     await expect(chatButton).toBeVisible();
 
     // Open chat

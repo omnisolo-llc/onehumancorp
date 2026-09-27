@@ -210,7 +210,11 @@ export function HelpChat() {
         {!isOpen && (
           <WalkthroughTarget id="ai-chat-trigger">
             <button
+<<<<<<< HEAD
+
+=======
               id="omnisolo-floating-help-btn"
+>>>>>>> 7b2282170 (🗺️ Guide: [blocked no-work finding: F14: economics/owner outcomes] (#38156))
               onClick={() => setIsOpen(true)}
               className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
               aria-label="Open help chat"
