@@ -46,7 +46,7 @@ The working branch is `fix/bazel-modernization-and-cleanup`, HEAD `c3716d0875df6
 | F12: false completion/authority | Invoice-context and job-generation stubs no longer invent completed invoices; generic status changes cannot manufacture payment/delivery. Walk-up route is mounted, validates input/tenant and no longer succeeds after storage/model failure. Legacy voice no longer constructs tenant identity headers. | These are specific fixes, not certification of all simulation/approval paths. Unsupported workflows remain explicitly unavailable. |
 | F13: BYOK versus subscriptions | API proxy rejects unsupported subscription-relay modes; verified tenant OpenAI keys bind to the provider origin and do not fall back to another payer after revocation. | Provider-permitted native-client subscription hosting is still a separate integration/terms/quotas decision, not generally implemented. |
 | F14: economics/owner outcomes | Workload usage records and build/resource timing available; research keeps costs, owner correction time and actual outcome evidence separate. | Blocked / no-work outcome due to missing prerequisites and owner economic/metric data. |
-| F15: premature exclusive segment | Existing commerce, fulfillment and service modules preserved; earlier exclusive agency segment and fixed-price targets remain suspended. | Blocked / No-Work due to missing prerequisites and owner economic/metric data. |
+| F15: premature exclusive segment | Existing commerce, fulfillment and service modules preserved; earlier exclusive agency segment and fixed-price targets remain suspended. | Blocked due to missing prerequisites and owner economic/metric data. |
 
 ### Additional defects found during this pass
 
@@ -105,7 +105,7 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F08 | `invoice.rs:45-48` and booking helpers fabricate checkout-looking URLs | Real provider session or explicit pending/unavailable state; persist provider IDs, validate money, idempotent retries | Closed |
 | F09 | Receivables code logs a drafted reminder before implementing draft/delivery | Persist real draft; distinguish draft/sent/delivered; dedupe and stop on payment/cancel/revocation | Closed |
 | F10 | Tauri packages exported Next assets despite blanket legacy claims | Rebuild actual frontend assets; no stale checked-in export used as release proof | Closed |
-| F11 | Named full-journey tests only delegate to a smoke helper | Preserve smoke coverage; add actual mutation/state/provider-boundary acceptance tests without live credentials | Blocked / No-Work |
+| F11 | Named full-journey tests only delegate to a smoke helper | Preserve smoke coverage; add actual mutation/state/provider-boundary acceptance tests without live credentials | Blocked |
 | F12 | Simulation, unknown provider outcome and approval paths can look like completion | Truthful states/receipts; exact authority, stale approval/revocation and reconciliation checks on affected paths | Open |
 | F13 | API key, consumer plan and native-client subscription are distinct | Provider-specific modes and fail-closed unsupported combinations; no session-token relay, pooling, silent paid fallback or rebilling direct inference | Open |
 | F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Verified blocked / no-work outcome due to missing prerequisites and owner economic/metric data. |
