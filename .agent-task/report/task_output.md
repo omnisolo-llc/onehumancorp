@@ -1,0 +1,7 @@
+issue_title: ""
+issue_description: "Role: 🛡️ Sentry\nGit Revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d\nTarget: F12\n\nBlocked Finding: Attempted to run tests, but `make test-e2e` timed out after ~401 seconds. Executed: `make test` (failed), `make test-rust` (timed out), `make test-backend` (timed out), `make test-node` (passed unit tests, failed e2e with docker permissions initially and timing out thereafter). `cargo test --locked -p server_pricing` passed, and `cargo test --locked -p server_services_billing` passed. Due to timeouts, full journey and database boundary tests cannot be validated."
+issue_priority: ""
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
