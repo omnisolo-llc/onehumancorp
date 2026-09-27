@@ -57,12 +57,12 @@ impl SalesIntentBackend {
     }
 }
 
-struct RuntimeSalesQuoteIntentPlanner {
+pub struct RuntimeSalesQuoteIntentPlanner {
     backend: SalesIntentBackend,
 }
 
 impl RuntimeSalesQuoteIntentPlanner {
-    fn from_env() -> Self {
+    pub fn from_env() -> Self {
         Self {
             backend: SalesIntentBackend::from_env(),
         }
@@ -942,6 +942,8 @@ mod tests {
             intent: Some(QuoteIntent {
                 original_message: "The drain backed up after closing".to_string(),
                 service_name: "Drain Cleaning".to_string(),
+                scope: None,
+                suggested_price: None,
                 preferred_start_time: None,
                 preferred_end_time: None,
             }),
