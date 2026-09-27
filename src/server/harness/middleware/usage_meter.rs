@@ -35,7 +35,10 @@ impl UsageMeterSettings {
             Err(_) => return Err("Invalid usage payer configuration".into()),
         };
         let payer=match mode.as_str() {
-            "managed_api"=>PayerMode::ManagedApi, "byok_api"=>PayerMode::ByokApi,
+            "managed_api"=>PayerMode::ManagedApi,
+            "byok_api"=>PayerMode::ByokApi,
+            "native_subscription" => return Err("API proxy accepts managed_api or byok_api only; native_subscription sessions cannot be relayed".into()),
+            "local" => return Err("API proxy accepts managed_api or byok_api only; local mode is not an API proxy target".into()),
             _=>return Err("API proxy accepts managed_api or byok_api only; subscription sessions cannot be relayed".into()),
         };
         let database_url = std::env::var("OMNISOLO_USAGE_DATABASE_URL")
