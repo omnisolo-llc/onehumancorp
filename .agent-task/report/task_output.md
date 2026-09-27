@@ -1,0 +1,7 @@
+issue_title: ""
+issue_description: "Title: [Blocked] Infrastructure Triage\nProblem Statement: The task directs me to act as Principal SRE, Triage & Infrastructure Lead (L7) and to execute infrastructure code and clean backlog vision, but no specific bug or explicit feature instruction or failing tests were provided. Furthermore, the 'Final OHC scope' specifically says: 'New epics need an explicit evidence-backed decision; assigned concrete defect work may continue... State the customer/workflow, stable target/issue, evidence and expected owner result. Implement only the current bounded slice or report a justified no-work/blocked outcome.'\n\nResearch Report: I audited the current code and documentation. `make test` and `make lint` failed due to missing npm dependencies inside the UI and E2E modules. I resolved those via `npm install` inside those folders. Running tests again successfully built the UI code (and is in the process of running other tests). Since no concrete defect or infrastructure epic was explicitly assigned in this task, and new work must be bounded by explicit evidence and an existing issue, I cannot proceed to make changes to infrastructure or code randomly. Therefore, this task is explicitly blocked.\n\nDesign Doc: N/A\n\nImplementation Prompt: N/A\n\nPriority: N/A\n\nEstimated Scope: N/A"
+issue_priority: ""
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
