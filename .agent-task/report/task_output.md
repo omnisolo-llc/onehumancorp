@@ -1,0 +1,7 @@
+issue_title: 'F14: economics/owner outcomes'
+issue_description: 'Blocked due to missing required economic and usage data, according to the audit ledger. The current state is considered a blocked no-work finding.'
+issue_priority: ''
+issue_category: ''
+issue_type: 'blocked'
+issue_label: ''
+assignees: ''
