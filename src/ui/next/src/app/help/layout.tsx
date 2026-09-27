@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import React from "react";
+import { TooltipProvider } from "../../components/TooltipRegistry";
 
 export const metadata: Metadata = {
   title: "Help Center | OmniSolo OneHumanCorp",
@@ -11,5 +12,9 @@ export default function HelpLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="help-layout">{children}</div>;
+  return (
+    <TooltipProvider>
+      <div className="help-layout">{children}</div>
+    </TooltipProvider>
+  );
 }
