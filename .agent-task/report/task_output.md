@@ -1,4 +1,4 @@
-issue_title: ""
+issue_title: "F12 Blocked No-Work Finding"
 issue_description: |
   Title: F12 Blocked No-Work Finding
   Problem Statement: The target F12 (false completion/authority) was investigated based on the remediation ledger.
@@ -19,8 +19,8 @@ issue_description: |
   Implementation Prompt: N/A
   Priority: Low
   Estimated Scope: None
-issue_priority: ""
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: ""
+issue_priority: "P2"
+issue_category: "research"
+issue_type: "task"
+issue_label: ["agent-report"]
+assignees: []
