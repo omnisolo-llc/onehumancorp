@@ -62,7 +62,7 @@ impl UpstreamFixture {
                             let model = body
                                 .get("model")
                                 .and_then(Value::as_str)
-                                .unwrap_or("gpt-5.6-luna");
+                                .unwrap_or("gpt-6-luna");
                             json!({
                                 "id":"resp_facade_1",
                                 "object":"response",
@@ -167,14 +167,14 @@ fn parse_request(request: &[u8]) -> (String, String, Value) {
 #[tokio::test]
 async fn facade_forwards_model_and_upstream_authorization_without_exposing_the_key() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     let response = reqwest::Client::new()
         .post(format!("{}/responses", facade.route().base_url()))
         .bearer_auth(facade.route().token())
         .json(&json!({
-            "model":"gpt-5.6-luna",
+            "model":"gpt-6-luna",
             "input":"hello",
             "stream":false
         }))
@@ -197,14 +197,14 @@ async fn facade_forwards_model_and_upstream_authorization_without_exposing_the_k
 #[tokio::test]
 async fn facade_rejects_wrong_token_model_method_and_unallowlisted_route() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     let client = reqwest::Client::new();
     let wrong_token = client
         .post(format!("{}/responses", facade.route().base_url()))
         .bearer_auth("wrong-token")
-        .json(&json!({"model":"gpt-5.6-luna","input":"hello"}))
+        .json(&json!({"model":"gpt-6-luna","input":"hello"}))
         .send()
         .await
         .unwrap();
@@ -249,7 +249,7 @@ fn config_debug_does_not_expose_unvalidated_url_credentials() {
     let config = ProviderFacadeConfig::new(
         "https://username:password-canary@example.com/v1?token=query-canary",
         UPSTREAM_SECRET,
-        selection("gpt-5.6-luna"),
+        selection("gpt-6-luna"),
     );
     let debug = format!("{config:?}");
     assert!(!debug.contains("password-canary"));
@@ -259,26 +259,26 @@ fn config_debug_does_not_expose_unvalidated_url_credentials() {
 #[tokio::test]
 async fn facade_rejects_reasoning_override_for_both_request_dialects() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     let client = reqwest::Client::new();
     for (path, body) in [
         (
             "responses",
-            json!({"model":"gpt-5.6-luna", "reasoning":{"effort":"low"}}),
+            json!({"model":"gpt-6-luna", "reasoning":{"effort":"low"}}),
         ),
         (
             "chat/completions",
-            json!({"model":"gpt-5.6-luna", "reasoning_effort":"low"}),
+            json!({"model":"gpt-6-luna", "reasoning_effort":"low"}),
         ),
         (
             "responses",
-            json!({"model":"gpt-5.6-luna", "reasoning_effort":"low"}),
+            json!({"model":"gpt-6-luna", "reasoning_effort":"low"}),
         ),
         (
             "chat/completions",
-            json!({"model":"gpt-5.6-luna", "reasoning":{"effort":"low"}}),
+            json!({"model":"gpt-6-luna", "reasoning":{"effort":"low"}}),
         ),
     ] {
         let response = client
@@ -309,7 +309,7 @@ async fn facade_does_not_follow_upstream_redirects() {
     let facade = ProviderFacade::start(
         format!("http://{address}/v1"),
         UPSTREAM_SECRET,
-        selection("gpt-5.6-luna"),
+        selection("gpt-6-luna"),
     )
     .await
     .unwrap();
@@ -344,7 +344,7 @@ async fn assert_revocation_aborts_upstream(streaming: bool, drop_facade: bool) {
     let facade = ProviderFacade::start(
         format!("http://{address}/v1"),
         UPSTREAM_SECRET,
-        selection("gpt-5.6-luna"),
+        selection("gpt-6-luna"),
     )
     .await
     .unwrap();
@@ -353,7 +353,7 @@ async fn assert_revocation_aborts_upstream(streaming: bool, drop_facade: bool) {
         if let Ok(response) = reqwest::Client::new()
             .post(format!("{}/responses", route.base_url()))
             .bearer_auth(route.token())
-            .json(&json!({"model":"gpt-5.6-luna"}))
+            .json(&json!({"model":"gpt-6-luna"}))
             .send()
             .await
         {
@@ -402,14 +402,14 @@ async fn drop_aborts_upstream_stream() {
 #[tokio::test]
 async fn facade_injects_bound_reasoning_when_child_omits_it() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     for path in ["responses", "chat/completions"] {
         let response = reqwest::Client::new()
             .post(format!("{}/{path}", facade.route().base_url()))
             .bearer_auth(facade.route().token())
-            .json(&json!({"model":"gpt-5.6-luna"}))
+            .json(&json!({"model":"gpt-6-luna"}))
             .send()
             .await
             .unwrap();
