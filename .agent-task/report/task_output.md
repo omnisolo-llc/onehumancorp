@@ -1,4 +1,4 @@
-issue_title: 🎥 Lens Audit: [blocked no-work finding: F11]
+issue_title: "🎥 Lens Audit: [blocked no-work finding: F11]"
 issue_description: |
   # Audit Report
 
