@@ -225,7 +225,17 @@ impl AgentFeedRepository {
             UNION ALL
             SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
+            SELECT
+                a.id, a.tenant_id, COALESCE(a.agent_type, a.department_type, 'operations') as event_source,
+                jsonb_build_object('description', COALESCE(a.description, 'Action Request: ' || a.action_type)) as context_payload,
+                CASE
+                    WHEN p.id IS NOT NULL THEN jsonb_set(jsonb_set(jsonb_set(COALESCE(a.payload, '{}'::jsonb), '{execution_status}', to_jsonb(p.execution_status)), '{provider_receipt_id}', to_jsonb(p.provider_receipt_id)), '{failure_reason}', to_jsonb(p.failure_reason))
+                    ELSE a.payload
+                END as proposed_action,
+                CASE WHEN UPPER(a.status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(a.status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(a.status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(a.status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(a.status) END as lifecycle_state, a.created_at, a.updated_at
+            FROM agent_action_requests a
+            LEFT JOIN provider_action_executions p ON a.id = p.action_request_id AND a.tenant_id = p.tenant_id
+            WHERE a.tenant_id = $1 AND UPPER(a.status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL
@@ -240,7 +250,17 @@ impl AgentFeedRepository {
             UNION ALL
             SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
+            SELECT
+                a.id, a.tenant_id, COALESCE(a.agent_type, a.department_type, 'operations') as event_source,
+                json_object('description', COALESCE(a.description, 'Action Request: ' || a.action_type)) as context_payload,
+                CASE
+                    WHEN p.id IS NOT NULL THEN json_patch(COALESCE(a.payload, '{}'), json_object('execution_status', p.execution_status, 'provider_receipt_id', p.provider_receipt_id, 'failure_reason', p.failure_reason))
+                    ELSE a.payload
+                END as proposed_action,
+                CASE WHEN UPPER(a.status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(a.status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(a.status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(a.status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(a.status) END as lifecycle_state, a.created_at, a.updated_at
+            FROM agent_action_requests a
+            LEFT JOIN provider_action_executions p ON a.id = p.action_request_id AND a.tenant_id = p.tenant_id
+            WHERE a.tenant_id = ? AND UPPER(a.status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL

@@ -129,6 +129,20 @@ pub struct Customer360 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderActionExecution {
+    pub id: String,
+    pub tenant_id: String,
+    pub action_request_id: String,
+    pub idempotency_key: String,
+    pub provider_name: String,
+    pub execution_status: String,
+    pub provider_receipt_id: Option<String>,
+    pub failure_reason: Option<String>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoyaltyLedger {
     pub id: String,
     pub tenant_id: String,

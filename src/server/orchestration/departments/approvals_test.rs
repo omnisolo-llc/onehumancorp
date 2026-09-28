@@ -100,6 +100,25 @@ mod tests {
         .await
         .unwrap();
 
+        sqlx::query(
+            "CREATE TABLE provider_action_executions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                action_request_id TEXT NOT NULL,
+                idempotency_key TEXT NOT NULL,
+                provider_name TEXT NOT NULL,
+                execution_status TEXT NOT NULL DEFAULT 'pending_execution',
+                provider_receipt_id TEXT,
+                failure_reason TEXT,
+                created_at TEXT,
+                updated_at TEXT,
+                UNIQUE(tenant_id, idempotency_key)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
         let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
         let orchestrator = DepartmentOrchestrator::new(db.clone(), mesh);
