@@ -4,3 +4,4 @@ pub mod routing;
 pub mod safe_checkout;
 
 pub mod terminal;
+pub mod issuing;
