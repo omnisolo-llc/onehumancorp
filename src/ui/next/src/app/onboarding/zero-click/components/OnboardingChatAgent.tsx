@@ -26,7 +26,14 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) {
+      setError(null);
+    }
+  }, [input]);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -122,9 +129,10 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         setMessages(updatedMessages);
         saveStateToBackend(updatedMessages);
       }
-    } catch (error) {
-      console.error("Provisioning error:", error);
+    } catch (err) {
+      console.error("Chat API error:", err);
       setIsLoading(false);
+      setError("Failed to communicate with setup agent");
       const updatedMessages: ChatMessage[] = [...newMessages, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }];
       setMessages(updatedMessages);
       saveStateToBackend(updatedMessages);
@@ -180,9 +188,10 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         }, 1500);
       }
 
-    } catch (error) {
-      console.error("Provisioning error:", error);
+    } catch (err) {
+      console.error("Provisioning error:", err);
       setIsProvisioning(false);
+      setError("Network request failed");
       setMessages(prev => [...prev, { role: 'assistant', content: "I have the details, but failed to create the account. Please try again later." }]);
     }
   };
@@ -203,7 +212,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-[50vh] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl rounded-[16px] w-full max-w-2xl mx-auto">
+    <div className="flex flex-col min-h-[50vh] glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl rounded-[16px] w-full max-w-2xl mx-auto">
       {/* Header */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex items-center gap-3 bg-transparent">
         <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xl">
@@ -255,6 +264,11 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       {/* Input Area */}
       <div className="p-4 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-transparent">
+        {error && (
+          <div id="instant-error" className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-[8px] text-sm">
+            {error}
+          </div>
+        )}
         {messages.length === 1 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {predefinedChips.map((chip, idx) => (
@@ -281,18 +295,20 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading || isProvisioning}
             placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
-            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-[8px] py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="glass-control w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-[8px] py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <button
             id="generate-storefront-btn"
             data-testid="generate-storefront-btn"
             type="submit"
             disabled={!input.trim() || isLoading || isProvisioning}
-            className="absolute right-1 top-1.5 w-10 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-[8px] transition-colors"
+            className="absolute right-1 top-1.5 w-auto px-4 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-[8px] transition-colors"
           >
-            <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-            </svg>
+            {error ? "Generate My Workspace" : (
+              <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              </svg>
+            )}
           </button>
         </form>
       </div>
