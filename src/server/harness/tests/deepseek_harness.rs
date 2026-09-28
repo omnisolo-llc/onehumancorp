@@ -60,7 +60,7 @@ fn request() -> HarnessSessionRequest {
     );
     request.resolved_model = Some(ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(ReasoningEffort::Max),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: Some(400_000),
@@ -96,7 +96,7 @@ fn initialize_prefers_resolved_route_without_credentials_or_reasoning_fields() {
     assert_eq!(initialize.method, "initialize");
     assert_eq!(initialize.params["cwd"], "/workspace/project");
     assert_eq!(initialize.params["provider"], "openai-compatible");
-    assert_eq!(initialize.params["model"], "gpt-5.6-luna");
+    assert_eq!(initialize.params["model"], "gpt-6-luna");
     assert_eq!(initialize.params["maxTokens"], 128_000);
     assert!(initialize.params.get("reasoningEffort").is_none());
     assert!(initialize.params.get("apiKey").is_none());
