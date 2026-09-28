@@ -25,7 +25,7 @@ fn attempt_request() -> HarnessSessionRequest {
 fn resolved_model(reasoning_effort: Option<ReasoningEffort>) -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort,
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: None,
@@ -202,7 +202,7 @@ fn codex_typed_model_selection_wins_and_uses_exact_v2_request_shapes() {
             "params": {
                 "approvalPolicy": "never",
                 "ephemeral": false,
-                "model": "gpt-5.6-luna",
+                "model": "gpt-6-luna",
                 "modelProvider": "omnisolo",
                 "sandbox": "read-only"
             }
@@ -227,7 +227,7 @@ fn codex_typed_model_selection_wins_and_uses_exact_v2_request_shapes() {
                 "approvalPolicy": "never",
                 "effort": "max",
                 "input": [{"type": "text", "text": "typed prompt"}],
-                "model": "gpt-5.6-luna",
+                "model": "gpt-6-luna",
                 "sandboxPolicy": {"type": "readOnly"},
                 "threadId": "thread-1"
             }
