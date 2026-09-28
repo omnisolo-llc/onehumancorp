@@ -134,7 +134,8 @@ async fn handle_client_intake(
         "message": payload.details
     });
 
-    let planner = crate::orchestration::departments::sales_agent::RuntimeSalesQuoteIntentPlanner::from_env();
+    let planner =
+        crate::orchestration::departments::sales_agent::RuntimeSalesQuoteIntentPlanner::from_env();
     use crate::orchestration::departments::sales_agent::SalesQuoteIntentPlanner;
     if let Ok(Some(intent)) = planner.plan_quote_intent(&tenant_id, &payload_val).await {
         service_name = intent.service_name;
@@ -158,13 +159,13 @@ async fn handle_client_intake(
         let llm = Arc::new(LocalLlm);
         if let Ok(response) = llm.chat(llm_request).await {
             drafted_message = response.message.content;
-            if let Some(price) = suggested_price {
-                if !drafted_message.contains(&format!("{:.2}", price)) {
-                    drafted_message = format!(
-                        "{} The estimated scope will cost around ${:.2}.",
-                        drafted_message, price
-                    );
-                }
+            if let Some(price) = suggested_price
+                && !drafted_message.contains(&format!("{:.2}", price))
+            {
+                drafted_message = format!(
+                    "{} The estimated scope will cost around ${:.2}.",
+                    drafted_message, price
+                );
             }
         }
     }

@@ -6785,9 +6785,11 @@ dependencies = [
  "server_integrations_stripe",
  "server_omnisolo",
  "server_pricing",
+ "sqlx",
  "tokio",
  "tonic 0.12.3",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

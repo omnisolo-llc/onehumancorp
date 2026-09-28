@@ -434,9 +434,11 @@ mod tests {
             unsafe {
                 std::env::set_var("OMNISOLO_USAGE_PAYER", mode);
             }
-            let error = UsageMeterSettings::from_environment("t", "t", "a", "p", "m")
-                .unwrap_err();
-            assert!(error.contains("API proxy accepts managed_api or byok_api only") || error.contains("Invalid usage payer configuration"));
+            let error = UsageMeterSettings::from_environment("t", "t", "a", "p", "m").unwrap_err();
+            assert!(
+                error.contains("API proxy accepts managed_api or byok_api only")
+                    || error.contains("Invalid usage payer configuration")
+            );
         }
         unsafe {
             std::env::remove_var("OMNISOLO_USAGE_PAYER");
