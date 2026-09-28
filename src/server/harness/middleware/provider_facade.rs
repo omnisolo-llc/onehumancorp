@@ -396,8 +396,8 @@ async fn forward(
             Ok(vault) => vault,
             Err(_) => {
                 return error_response(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Connection vault unavailable",
+                    StatusCode::FORBIDDEN,
+                    "Tenant API connection is absent or revoked",
                 );
             }
         };
