@@ -260,11 +260,18 @@ impl UsageCapture {
     }
 }
 fn extract(value: &Value, id: &mut Option<String>, counts: &mut Option<TokenCounts>) {
-    let value = value.get("response").unwrap_or(value);
-    if let Some(provider_id) = value.get("id").and_then(Value::as_str) {
+    let response_value = value.get("response").unwrap_or(value);
+    let provider_id = response_value
+        .get("id")
+        .or_else(|| response_value.get("message").and_then(|m| m.get("id")))
+        .and_then(Value::as_str);
+    if let Some(provider_id) = provider_id {
         *id = Some(provider_id.to_owned());
     }
-    let Some(usage) = value.get("usage") else {
+    let usage = response_value
+        .get("usage")
+        .or_else(|| response_value.get("message").and_then(|m| m.get("usage")));
+    let Some(usage) = usage else {
         return;
     };
     // A later malformed usage object invalidates any earlier partial snapshot.
@@ -272,8 +279,8 @@ fn extract(value: &Value, id: &mut Option<String>, counts: &mut Option<TokenCoun
     if usage.is_null() {
         return;
     }
-    *counts = None;
     if !usage.is_object() {
+        *counts = None;
         return;
     }
     let input = usage
@@ -288,20 +295,34 @@ fn extract(value: &Value, id: &mut Option<String>, counts: &mut Option<TokenCoun
         .pointer("/input_tokens_details/cached_tokens")
         .or_else(|| usage.pointer("/prompt_tokens_details/cached_tokens"));
     let cached = match cached {
-        None => Some(0),
+        None => None,
         Some(v) => v.as_i64(),
     };
-    if let (Some(input), Some(output), Some(cached_input)) = (input, output, cached)
-        && input >= 0
-        && output >= 0
-        && cached_input >= 0
-        && cached_input <= input
+
+    let mut current = counts.clone().unwrap_or(TokenCounts {
+        input: 0,
+        output: 0,
+        cached_input: 0,
+    });
+
+    if let Some(i) = input {
+        current.input = i;
+    }
+    if let Some(o) = output {
+        current.output = o;
+    }
+    if let Some(c) = cached {
+        current.cached_input = c;
+    }
+
+    if current.input >= 0
+        && current.output >= 0
+        && current.cached_input >= 0
+        && current.cached_input <= current.input
     {
-        *counts = Some(TokenCounts {
-            input,
-            output,
-            cached_input,
-        });
+        *counts = Some(current);
+    } else {
+        *counts = None;
     }
 }
 #[cfg(test)]
