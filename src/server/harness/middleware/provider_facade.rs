@@ -363,16 +363,18 @@ async fn forward(
         .as_ref()
         .filter(|meter| meter.scope.payer == super::usage_ledger::PayerMode::ByokApi)
     {
-        // This supported BYOK route uses a verified OpenAI API key. Never relay
+        // This supported BYOK route uses a verified provider API key. Never relay
         // a consumer login or send customer credentials to an arbitrary base URL.
         if state.upstream_base_url.scheme() != "https"
-            || state.upstream_base_url.host_str() != Some("api.openai.com")
+            || (state.upstream_base_url.host_str() != Some("api.openai.com") && state.upstream_base_url.host_str() != Some("api.anthropic.com"))
         {
             return error_response(
                 StatusCode::FORBIDDEN,
                 "The BYOK credential is bound to its verified provider origin",
             );
         }
+        let provider_id = if state.upstream_base_url.host_str() == Some("api.anthropic.com") { "anthropic_api" } else { "openai_api" };
+
         let vault = match super::connection_vault::ConnectionVault::from_environment(
             meter.ledger.clone(),
         ) {
@@ -384,7 +386,7 @@ async fn forward(
                 );
             }
         };
-        match vault.read_key(&meter.scope.tenant_id, "openai_api").await {
+        match vault.read_key(&meter.scope.tenant_id, provider_id).await {
             Ok(key) => key.to_string(),
             Err(_) => {
                 return error_response(
