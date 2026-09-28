@@ -245,7 +245,8 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     "counter",
                     item.value,
                     redacted_labels,
-                ).await;
+                )
+                .await;
             }
             _ => {
                 let is_telemetry_enabled = ::server_config::is_telemetry_enabled();

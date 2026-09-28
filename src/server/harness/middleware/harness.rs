@@ -258,7 +258,10 @@ fn redacted_environment(environment: &BTreeMap<String, String>) -> BTreeMap<Stri
 }
 
 fn debug_safe_environment_key(key: &str) -> bool {
-    matches!(key, "PATH" | "RUST_LOG" | "OPENAI_MODEL" | "OPENAI_REASONING_EFFORT")
+    matches!(
+        key,
+        "PATH" | "RUST_LOG" | "OPENAI_MODEL" | "OPENAI_REASONING_EFFORT"
+    )
 }
 
 impl ProcessHarnessSpec {
