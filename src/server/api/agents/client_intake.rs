@@ -78,7 +78,7 @@ impl ResearcherLlmClient for LocalLlm {
                     let response_text = crate::minimax::MinimaxClient::new(api_key)
                         .reason(&prompt)
                         .await?;
-                    (response_text, Usage::default())
+                    (response_text, Usage { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
                 }
                 _ => {
                     let observed = crate::minimax::LocalLLMClient::new()
