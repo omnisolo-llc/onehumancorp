@@ -557,11 +557,14 @@ async fn timeout_returns_a_structured_provider_error() {
 #[tokio::test]
 async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
     use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    use server_harness::middleware::usage_ledger::{PayerMode, UsageLedger, UsageScope};
     use server_harness::middleware::usage_meter::UsageMeterSettings;
-    use server_harness::middleware::usage_ledger::{UsageLedger, UsageScope, PayerMode};
 
     let upstream = UpstreamFixture::start().await;
-    let db_path = format!("sqlite:file:facade_byok_{}?mode=memory&cache=shared", uuid::Uuid::new_v4());
+    let db_path = format!(
+        "sqlite:file:facade_byok_{}?mode=memory&cache=shared",
+        uuid::Uuid::new_v4()
+    );
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&db_path)
@@ -574,7 +577,11 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
         .await
         .unwrap();
 
-    let mut config = ProviderFacadeConfig::new("https://api.openai.com", UPSTREAM_SECRET, selection("model-a"));
+    let mut config = ProviderFacadeConfig::new(
+        "https://api.openai.com",
+        UPSTREAM_SECRET,
+        selection("model-a"),
+    );
     config.metering = Some(UsageMeterSettings {
         database_url: db_path.clone(), // This uses the same shared in-memory db
         scope: UsageScope {
@@ -590,7 +597,10 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
     });
 
     unsafe {
-        std::env::set_var("OMNISOLO_CONNECTION_KEYS", r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#);
+        std::env::set_var(
+            "OMNISOLO_CONNECTION_KEYS",
+            r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#,
+        );
         std::env::set_var("OMNISOLO_CONNECTION_ACTIVE_KEY", "v1");
     }
 
@@ -604,9 +614,15 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    let status = response.status();
     let error: Value = response.json().await.unwrap();
-    assert!(error["error"]["message"].as_str().unwrap().contains("Tenant API connection is absent or revoked"));
+    assert_eq!(status, reqwest::StatusCode::FORBIDDEN, "Error was: {:?}", error);
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Tenant API connection is absent or revoked")
+    );
 
     unsafe {
         std::env::remove_var("OMNISOLO_CONNECTION_KEYS");
@@ -619,12 +635,15 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
 #[tokio::test]
 async fn facade_rejects_byok_api_if_origin_is_unsupported() {
     use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    use server_harness::middleware::usage_ledger::{PayerMode, UsageLedger, UsageScope};
     use server_harness::middleware::usage_meter::UsageMeterSettings;
-    use server_harness::middleware::usage_ledger::{UsageLedger, UsageScope, PayerMode};
 
     let upstream = UpstreamFixture::start().await; // Note: uses 127.0.0.1, not api.openai.com
 
-    let db_path = format!("sqlite:file:facade_byok_{}?mode=memory&cache=shared", uuid::Uuid::new_v4());
+    let db_path = format!(
+        "sqlite:file:facade_byok_{}?mode=memory&cache=shared",
+        uuid::Uuid::new_v4()
+    );
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&db_path)
@@ -637,7 +656,8 @@ async fn facade_rejects_byok_api_if_origin_is_unsupported() {
         .await
         .unwrap();
 
-    let mut config = ProviderFacadeConfig::new(upstream.url(), UPSTREAM_SECRET, selection("model-a"));
+    let mut config =
+        ProviderFacadeConfig::new(upstream.url(), UPSTREAM_SECRET, selection("model-a"));
     config.metering = Some(UsageMeterSettings {
         database_url: db_path.clone(), // This uses the same shared in-memory db
         scope: UsageScope {
@@ -653,7 +673,10 @@ async fn facade_rejects_byok_api_if_origin_is_unsupported() {
     });
 
     unsafe {
-        std::env::set_var("OMNISOLO_CONNECTION_KEYS", r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#);
+        std::env::set_var(
+            "OMNISOLO_CONNECTION_KEYS",
+            r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#,
+        );
         std::env::set_var("OMNISOLO_CONNECTION_ACTIVE_KEY", "v1");
     }
 
@@ -669,12 +692,73 @@ async fn facade_rejects_byok_api_if_origin_is_unsupported() {
 
     assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
     let error: Value = response.json().await.unwrap();
-    assert!(error["error"]["message"].as_str().unwrap().contains("The BYOK credential is bound to its verified provider origin"));
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("The BYOK credential is bound to its verified provider origin")
+    );
 
     unsafe {
         std::env::remove_var("OMNISOLO_CONNECTION_KEYS");
         std::env::remove_var("OMNISOLO_CONNECTION_ACTIVE_KEY");
     }
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
+}
+
+#[tokio::test]
+async fn facade_rejects_native_subscription_proxying() {
+    use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    use server_harness::middleware::usage_ledger::{PayerMode, UsageLedger, UsageScope};
+    use server_harness::middleware::usage_meter::UsageMeterSettings;
+
+    let upstream = UpstreamFixture::start().await;
+
+    let db_path = format!(
+        "sqlite:file:facade_subscription_{}?mode=memory&cache=shared",
+        uuid::Uuid::new_v4()
+    );
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_path)
+        .await
+        .unwrap();
+    let ledger = UsageLedger::Sqlite(pool);
+    ledger.initialize().await.unwrap();
+    ledger.set_limit("tenant-a", 1_000_000).await.unwrap();
+
+    let mut config =
+        ProviderFacadeConfig::new(upstream.url(), UPSTREAM_SECRET, selection("model-a"));
+    config.metering = Some(UsageMeterSettings {
+        database_url: db_path.clone(),
+        max_request_micros: 50_000,
+        scope: UsageScope {
+            tenant_id: "tenant-a".into(),
+            task_id: "task".into(),
+            attempt_id: "attempt".into(),
+            provider: "openai_api".into(),
+            model: "model-a".into(),
+            payer: PayerMode::NativeSubscription,
+            rate_card: None,
+        },
+    });
+
+    let facade = ProviderFacade::start_with_config(config).await.unwrap();
+    let response = reqwest::Client::new()
+        .post(format!("{}/chat/completions", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .json(&json!({"model": "model-a"}))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    let text = response.text().await.unwrap();
+    assert!(text.contains(
+        "Provider-permitted native-client subscription hosting is not supported for proxying"
+    ));
+
     facade.shutdown().await.unwrap();
     upstream.shutdown().await;
 }
