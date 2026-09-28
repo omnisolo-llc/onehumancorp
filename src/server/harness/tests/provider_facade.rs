@@ -602,6 +602,7 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
             r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#,
         );
         std::env::set_var("OMNISOLO_CONNECTION_ACTIVE_KEY", "v1");
+        std::env::set_var("OMNISOLO_CONNECTION_DATABASE_URL", db_path.clone());
     }
 
     let facade = ProviderFacade::start_with_config(config).await.unwrap();
@@ -627,6 +628,7 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
     unsafe {
         std::env::remove_var("OMNISOLO_CONNECTION_KEYS");
         std::env::remove_var("OMNISOLO_CONNECTION_ACTIVE_KEY");
+        std::env::remove_var("OMNISOLO_CONNECTION_DATABASE_URL");
     }
     facade.shutdown().await.unwrap();
     upstream.shutdown().await;
