@@ -16,8 +16,8 @@ issue_description: |
   ## Verified trace limitations:
   The workspace has several 'Powered by OmniSolo' branding embeds in features like `work-intake-widget`, `viral-streak-widget`, `viral-give-get-widget`, etc., but none are specifically assigned to be removed or implemented as the "current evidence-backed bottleneck". Attempting to simply remove branding or arbitrarily alter "viral widgets" violates the strict instruction: *do not invent viral widgets, paywalls, a fixed buyer segment or a conversion target.* Therefore, proceeding to submit a no-work finding report using the exact requested framework.
 
-issue_priority: P0
-issue_category: Growth
-issue_type: Blocked No-Work Finding
-issue_label: ohc:lane:growth
+issue_priority: "P0"
+issue_category: "Growth"
+issue_type: "Blocked No-Work Finding"
+issue_label: "ohc:lane:growth"
 assignees: []
