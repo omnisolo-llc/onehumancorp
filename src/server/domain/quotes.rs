@@ -116,22 +116,30 @@ pub async fn handle_quote_action(
         let mut stripe_payment_link = payload
             .get("stripe_payment_link")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .unwrap_or_default();
+            .map(|s| s.to_string());
 
         // Fallback to fake url if external integration fails to prevent silently erroring
         if payload.get("stripe_payment_link").is_none() {
+            let amount_cents = (price * 100.0).round() as i64;
             match stripe_client
-                .create_checkout_session(scope, client_id, price, None, None, None)
+                .create_checkout_session_idempotent(server_integrations_stripe::safe_checkout::CheckoutRequest {
+                    name: scope,
+                    reference: client_id,
+                    amount_cents,
+                    interval: None,
+                    product: None,
+                    currency: "usd",
+                    operation_id: &invoice_id,
+                })
                 .await
             {
-                Ok(link) => {
-                    stripe_payment_link = link;
+                Ok(receipt) => {
+                    stripe_payment_link = Some(receipt.url);
                 }
                 Err(err) => {
                     tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
-                    // Still proceed with saving the invoice but log heavily
-                    // Without hard-failing since our e2e expects it to proceed.
+                    // Set explicitly to None if checkout fails instead of faking success
+                    stripe_payment_link = None;
                 }
             }
         }
@@ -178,7 +186,7 @@ pub async fn handle_quote_action(
         }
 
         tracing::info!(
-            "Dispatched SMS/WhatsApp with quote and payment link {} to customer {}",
+            "Dispatched SMS/WhatsApp with quote and payment link {:?} to customer {}",
             stripe_payment_link,
             client_id
         );
