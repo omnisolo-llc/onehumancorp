@@ -609,6 +609,10 @@
         return { icon: '🤖', bg: 'rgba(142, 142, 147, 0.1)', color: '#8E8E93' };
       }
     </script>
+<script type="module">
+import { renderWalkthroughStep } from "./safe-help-content.mjs";
+window.renderWalkthroughStep = renderWalkthroughStep;
+</script>
 </head>
   <body>
     <nav class="nav-bar" style="width: 100%; max-width: 1200px; display: flex; justify-content: flex-end; padding: 12px 24px; box-sizing: border-box;">
@@ -3448,21 +3452,10 @@ function initWalkthrough() {
             // Find target
             const target = (step.targetId && (document.getElementById(step.targetId) || document.querySelector(step.targetId))) || (step.selector && document.querySelector(step.selector));
 
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text || ""}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
+            const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
                 } else {
@@ -4046,28 +4039,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
 
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px; position: relative; z-index: 10;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text || ""}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                    </div>
-                `;
-
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
-                };
+                const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
 
                 if (target) {
                     target.classList.add('walkthrough-highlight');
