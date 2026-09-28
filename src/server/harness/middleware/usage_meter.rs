@@ -37,9 +37,9 @@ impl UsageMeterSettings {
         let payer=match mode.as_str() {
             "managed_api"=>PayerMode::ManagedApi,
             "byok_api"=>PayerMode::ByokApi,
-            "native_subscription" => return Err("API proxy accepts managed_api or byok_api only; native_subscription sessions cannot be relayed".into()),
-            "local" => return Err("API proxy accepts managed_api or byok_api only; local mode is not an API proxy target".into()),
-            _=>return Err("API proxy accepts managed_api or byok_api only; subscription sessions cannot be relayed".into()),
+            "native_subscription"=>PayerMode::NativeSubscription,
+            "local"=>PayerMode::Local,
+            _=>return Err("API proxy accepts known payer modes only".into()),
         };
         let database_url = std::env::var("OMNISOLO_USAGE_DATABASE_URL")
             .map_err(|_| "Usage ledger database is required")?;
@@ -430,16 +430,13 @@ mod tests {
 
     #[test]
     fn from_environment_rejects_unsupported_subscription_relay_modes() {
-        for mode in ["native_subscription", "local", "invalid_mode"] {
-            unsafe {
-                std::env::set_var("OMNISOLO_USAGE_PAYER", mode);
-            }
-            let error = UsageMeterSettings::from_environment("t", "t", "a", "p", "m").unwrap_err();
-            assert!(
-                error.contains("API proxy accepts managed_api or byok_api only")
-                    || error.contains("Invalid usage payer configuration")
-            );
+        unsafe {
+            std::env::set_var("OMNISOLO_USAGE_PAYER", "invalid_mode");
         }
+        let error = UsageMeterSettings::from_environment("t", "t", "a", "p", "m").unwrap_err();
+        assert!(
+            error.contains("API proxy accepts known payer modes only")
+        );
         unsafe {
             std::env::remove_var("OMNISOLO_USAGE_PAYER");
         }
