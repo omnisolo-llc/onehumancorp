@@ -23,7 +23,11 @@ impl PerplexityLlmClient for E2EPerplexityLlm {
 
         Ok(ChatResponse {
             message: Message::assistant(&content),
-            usage: Usage::default(),
+            usage: Usage {
+                input_tokens: 0,
+                output_tokens: 0,
+                ..Default::default()
+            },
             stop_reason: "stop".to_string(),
             response_id: Some("mock-id".to_string()),
         })
