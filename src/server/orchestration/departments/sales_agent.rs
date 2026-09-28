@@ -223,9 +223,7 @@ pub fn extract_quote_intent(payload: &serde_json::Value) -> Option<QuoteIntent> 
                 .and_then(|v| v.as_str())
                 .map(str::trim)
                 .filter(|name| !name.is_empty())?;
-            let suggested_price = llm_intent
-                .get("suggested_price")
-                .and_then(|v| v.as_f64());
+            let suggested_price = llm_intent.get("suggested_price").and_then(|v| v.as_f64());
             let scope = llm_intent
                 .get("scope")
                 .and_then(|v| v.as_str())
@@ -293,9 +291,7 @@ pub fn parse_quote_intent_plan(
         .filter(|message| !message.is_empty())
         .unwrap_or(fallback_original_message);
 
-    let suggested_price = value
-        .get("suggested_price")
-        .and_then(|v| v.as_f64());
+    let suggested_price = value.get("suggested_price").and_then(|v| v.as_f64());
     let scope = value
         .get("scope")
         .and_then(|v| v.as_str())

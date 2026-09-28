@@ -358,6 +358,16 @@ async fn forward(
     path: &str,
     body: Option<Bytes>,
 ) -> Response {
+    if let Some(meter) = state.meter.as_ref() {
+        if meter.scope.payer == super::usage_ledger::PayerMode::NativeSubscription {
+            return error_response(
+                StatusCode::FORBIDDEN,
+                "Provider-permitted native-client subscription hosting is not supported for proxying. \
+                 Session-token relay, pooling, silent paid fallback, and rebilling direct inference are disabled.",
+            );
+        }
+    }
+
     let upstream_api_key = if let Some(meter) = state
         .meter
         .as_ref()

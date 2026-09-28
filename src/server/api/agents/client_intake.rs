@@ -134,7 +134,8 @@ async fn handle_client_intake(
         "message": payload.details
     });
 
-    let planner = crate::orchestration::departments::sales_agent::RuntimeSalesQuoteIntentPlanner::from_env();
+    let planner =
+        crate::orchestration::departments::sales_agent::RuntimeSalesQuoteIntentPlanner::from_env();
     use crate::orchestration::departments::sales_agent::SalesQuoteIntentPlanner;
     if let Ok(Some(intent)) = planner.plan_quote_intent(&tenant_id, &payload_val).await {
         service_name = intent.service_name;
