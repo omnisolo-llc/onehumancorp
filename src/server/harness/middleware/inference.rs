@@ -1179,7 +1179,7 @@ mod tests {
     fn provider_response_requires_a_completed_terminal_status() {
         let selection = ResolvedModelSelection {
             provider_route: "openai-compatible".to_owned(),
-            model_id: "gpt-5.6-luna".to_owned(),
+            model_id: "gpt-6-luna".to_owned(),
             reasoning_effort: Some(ReasoningEffort::Max),
             api_dialect: ModelApiDialect::OpenAiResponses,
             context_window: None,
@@ -1192,7 +1192,7 @@ mod tests {
         let payload = serde_json::json!({
             "id": "resp_failed",
             "status": "failed",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-6-luna",
             "output": [{"content": [{"type": "output_text", "text": "partial"}]}],
             "usage": {"input_tokens": 1, "output_tokens": 1}
         });
