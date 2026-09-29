@@ -2946,6 +2946,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             if (errEl) errEl.style.display = "none";
             inputs.domain_name.classList.remove("invalid-input");
           } else if (errEl) {
+             errEl.style.display = "block";
+             inputs.domain_name.classList.add("invalid-input");
              if (val.length < 3) {
                  errEl.innerText = "Domain name must be at least 3 characters long.";
              } else if (!/^[a-z0-9-]+$/.test(val)) {
