@@ -340,8 +340,31 @@ async fn json_proxy(
     if let Err(message) = bind_output_limit(&mut payload, path, state.max_output_tokens) {
         return error_response(StatusCode::BAD_REQUEST, message);
     }
+    if let Err(message) = bind_stream_options(&mut payload, path) {
+        return error_response(StatusCode::BAD_REQUEST, message);
+    }
     let body = Bytes::from(serde_json::to_vec(&payload).expect("JSON value serializes"));
     forward(state, reqwest::Method::POST, path, Some(body)).await
+}
+
+fn bind_stream_options(payload: &mut Value, path: &str) -> Result<(), &'static str> {
+    if path != "chat/completions" {
+        return Ok(());
+    }
+    let object = payload
+        .as_object_mut()
+        .ok_or("request body must be an object")?;
+    if let Some(stream) = object.get("stream").and_then(Value::as_bool) {
+        if stream {
+            let options = object.entry("stream_options").or_insert_with(|| serde_json::json!({}));
+            if let Some(options_obj) = options.as_object_mut() {
+                options_obj.insert("include_usage".to_owned(), Value::Bool(true));
+            } else {
+                return Err("stream_options must be an object");
+            }
+        }
+    }
+    Ok(())
 }
 
 fn authorized(headers: &HeaderMap, token: &str) -> bool {
