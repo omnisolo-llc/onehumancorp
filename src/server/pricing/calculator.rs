@@ -431,10 +431,16 @@ pub fn calculate_projected_monthly_cost(
     days_elapsed: u32,
     total_days: u32,
 ) -> f64 {
-    if days_elapsed == 0 || current_cost < 0.0 {
+    if current_cost < 0.0 {
         return 0.0;
     }
+    if days_elapsed == 0 || total_days == 0 {
+        return current_cost;
+    }
     let projected = (current_cost / days_elapsed as f64) * total_days as f64;
+    if projected < current_cost {
+        return current_cost;
+    }
     (projected * 10000.0).round() / 10000.0
 }
 
@@ -631,20 +637,20 @@ mod tests {
     #[test]
     fn test_calculate_projected_monthly_cost() {
         assert_eq!(calculate_projected_monthly_cost(10.0, 5, 30), 60.0);
-        assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);
+        assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
-        assert_eq!(calculate_projected_monthly_cost(10.0, 5, 0), 0.0);
+        assert_eq!(calculate_projected_monthly_cost(10.0, 5, 0), 10.0);
         assert_eq!(calculate_projected_monthly_cost(-10.0, 5, 30), 0.0);
     }
 
     #[test]
     fn test_calculate_projected_monthly_cost_cents() {
         assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 30), 6000);
-        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 0, 30), 0);
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 0, 30), 1000);
         assert_eq!(calculate_projected_monthly_cost_cents(10.0, 30, 30), 1000);
         assert_eq!(calculate_projected_monthly_cost_cents(15.5, 10, 31), 4805);
-        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 0), 0);
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 0), 1000);
     }
 
     #[test]
