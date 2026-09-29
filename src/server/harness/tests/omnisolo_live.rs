@@ -17,7 +17,7 @@ const SECRET_CANARY: &str = "omnisolo-provider-secret-canary";
 fn selection() -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(ReasoningEffort::Max),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: None,
@@ -90,7 +90,7 @@ async fn responses_transport_routes_model_and_effort_without_persisting_the_key(
                 .contains(&format!("authorization: bearer {SECRET_CANARY}"))
         );
         let body: Value = serde_json::from_slice(&request[headers_end + 4..]).unwrap();
-        assert_eq!(body["model"], "gpt-5.6-luna");
+        assert_eq!(body["model"], "gpt-6-luna");
         assert_eq!(body["reasoning"]["effort"], "max");
         assert_eq!(body["input"], "Return the transport marker only");
         assert_eq!(body["max_output_tokens"], 128_000);
@@ -99,7 +99,7 @@ async fn responses_transport_routes_model_and_effort_without_persisting_the_key(
         let response = json!({
             "id": "resp_transport_1",
             "status": "completed",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-6-luna",
             "output": [{
                 "type": "message",
                 "role": "assistant",
@@ -138,7 +138,7 @@ async fn responses_transport_routes_model_and_effort_without_persisting_the_key(
         .await
         .unwrap();
     assert_eq!(result.response_id, "resp_transport_1");
-    assert_eq!(result.model, "gpt-5.6-luna");
+    assert_eq!(result.model, "gpt-6-luna");
     assert_eq!(result.text, "omnisolo-transport-ok");
     assert_eq!(result.usage.input_tokens, 7);
     assert_eq!(result.usage.output_tokens, 4);
@@ -185,7 +185,7 @@ async fn omnisolo_bridge_executes_provider_inference_and_preserves_binding_prove
         let response = serde_json::to_vec(&json!({
             "id": "resp_bridge_1",
             "status": "completed",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-6-luna",
             "output": [{
                 "type": "message",
                 "role": "assistant",
@@ -241,7 +241,7 @@ async fn omnisolo_bridge_executes_provider_inference_and_preserves_binding_prove
         .find(|event| event.event_type == "inference.model_binding")
         .unwrap();
     assert!(binding.durable);
-    assert_eq!(binding.payload["model_id"], "gpt-5.6-luna");
+    assert_eq!(binding.payload["model_id"], "gpt-6-luna");
     assert_eq!(binding.payload["binding_revision"], "binding-v1");
     assert_eq!(binding.payload["binding_digest"], "sha256:test-binding");
     assert!(
