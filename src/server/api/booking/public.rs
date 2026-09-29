@@ -104,11 +104,42 @@ async fn create_checkout_session(
         }
     };
 
-    // 2. Either create booking directly or generate a Stripe Checkout Session
     let booking_id = uuid::Uuid::new_v4().to_string();
     let st = chrono::DateTime::parse_from_rfc3339(&payload.start_time).unwrap();
     let et = chrono::DateTime::parse_from_rfc3339(&payload.end_time).unwrap();
 
+    // 2. Prevent concurrent overlaps with an atomic check.
+    if let Some(r_id) = &payload.resource_id {
+        let is_conflict = match &state.db.store {
+            DbStore::Sqlite(pool) => {
+                let overlap: i64 = sqlx::query_scalar(
+                    "SELECT COUNT(*) FROM bookings WHERE tenant_id = ? AND resource_id = ? AND status IN ('pending', 'scheduled') AND start_time < ? AND end_time > ?"
+                )
+                .bind(&tenant_id).bind(r_id)
+                .bind(&et.to_rfc3339()).bind(&st.to_rfc3339())
+                .fetch_one(pool).await.unwrap_or(0);
+                overlap > 0
+            }
+            DbStore::Postgres(pool) => {
+                let mut tx = pool.begin().await.unwrap();
+                let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+                let overlap: i64 = sqlx::query_scalar(
+                    "SELECT COUNT(*) FROM bookings WHERE tenant_id = $1 AND resource_id = $2 AND status IN ('pending', 'scheduled') AND start_time < $3 AND end_time > $4"
+                )
+                .bind(&tenant_id).bind(r_id)
+                .bind(et).bind(st)
+                .fetch_one(&mut *tx).await.unwrap_or(0);
+                let _ = tx.commit().await;
+                overlap > 0
+            }
+        };
+
+        if is_conflict {
+            return (StatusCode::CONFLICT, Json(serde_json::json!({"error": "time slot is no longer available"}))).into_response();
+        }
+    }
+
+    // 3. Either create booking directly or generate a Stripe Checkout Session
     let mut stripe_url = None;
     if requires_deposit && deposit_cents > 0 {
         if let Ok(stripe_key) = crate::api::tool_integrations::stripe_key_for_tenant(&state.db, &tenant_id).await {
