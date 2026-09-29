@@ -118,6 +118,7 @@ impl ResearcherLlmClient for LocalLlm {
 async fn handle_client_intake(
     State(state): State<ClientIntakeState>,
     Query(query): Query<TenantQuery>,
+    axum::extract::Extension(auditor): axum::extract::Extension<std::sync::Arc<crate::services::billing::auditor::CostAuditor>>,
     Form(payload): Form<ClientIntakeRequest>,
 ) -> impl IntoResponse {
     let tenant_id = query.tenant.unwrap_or_else(|| "default".to_string());
@@ -158,6 +159,17 @@ async fn handle_client_intake(
 
         let llm = Arc::new(LocalLlm);
         if let Ok(response) = llm.chat(llm_request).await {
+            let cost = auditor.record_event(crate::services::billing::auditor::AuditEvent {
+                agent_id: "client_intake".to_string(),
+                tenant_id: tenant_id.clone(),
+                input_tokens: response.usage.input_tokens as i64,
+                output_tokens: response.usage.output_tokens as i64,
+                cached_input_tokens: response.usage.cache_read_input_tokens as i64,
+                local_embedding_tokens: 0,
+            });
+            if cost == 0.0 {
+                tracing::warn!("CostAuditor failed to record event or event resulted in 0 cost.");
+            }
             drafted_message = response.message.content;
             if let Some(price) = suggested_price {
                 if !drafted_message.contains(&format!("{:.2}", price)) {

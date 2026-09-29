@@ -152,14 +152,16 @@ where
 async fn draft_narrative(
     Extension(llm): Extension<Arc<dyn ResearcherLlmClient>>,
     Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Extension(auditor): axum::extract::Extension<std::sync::Arc<crate::services::billing::auditor::CostAuditor>>,
     Json(payload): Json<NarrativeDraftRequest>,
 ) -> axum::response::Response {
-    draft_narrative_with_llm(llm.as_ref(), &claims, payload).await
+    draft_narrative_with_llm(llm.as_ref(), &claims, auditor.as_ref(), payload).await
 }
 
 async fn draft_narrative_with_llm(
     llm: &dyn ResearcherLlmClient,
     claims: &::server_common::Claims,
+    auditor: &crate::services::billing::auditor::CostAuditor,
     payload: NarrativeDraftRequest,
 ) -> axum::response::Response {
     if claims
@@ -193,6 +195,20 @@ async fn draft_narrative_with_llm(
             return StatusCode::BAD_GATEWAY.into_response();
         }
     };
+
+    let tenant_id = claims.organization_id.clone().unwrap_or_default();
+    let cost = auditor.record_event(crate::services::billing::auditor::AuditEvent {
+        agent_id: "proposal_narrative".to_string(),
+        tenant_id,
+        input_tokens: response.usage.input_tokens as i64,
+        output_tokens: response.usage.output_tokens as i64,
+        cached_input_tokens: response.usage.cache_read_input_tokens as i64,
+        local_embedding_tokens: 0,
+    });
+    if cost == 0.0 {
+        tracing::warn!("CostAuditor failed to record event or event resulted in 0 cost.");
+    }
+
     let proposal = response.message.content.trim();
     if proposal.is_empty() {
         tracing::error!("Narrative proposal model returned an empty response");
@@ -211,6 +227,7 @@ async fn draft_narrative_with_llm(
 async fn draft_agent(
     State(pool): State<PgPool>,
     Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Extension(auditor): axum::extract::Extension<std::sync::Arc<crate::services::billing::auditor::CostAuditor>>,
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match authenticated_tenant(&claims) {
@@ -236,6 +253,19 @@ async fn draft_agent(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
+
+    let cost = auditor.record_event(crate::services::billing::auditor::AuditEvent {
+        agent_id: "draft_agent".to_string(),
+        tenant_id: tenant_id.clone(),
+        input_tokens: res.usage.input_tokens as i64,
+        output_tokens: res.usage.output_tokens as i64,
+        cached_input_tokens: res.usage.cache_read_input_tokens as i64,
+        local_embedding_tokens: 0,
+    });
+    if cost == 0.0 {
+        tracing::warn!("CostAuditor failed to record event or event resulted in 0 cost.");
+    }
+
 
     let json_str = res.message.content.trim();
     let json_str = json_str.strip_prefix("```json").unwrap_or(json_str);
