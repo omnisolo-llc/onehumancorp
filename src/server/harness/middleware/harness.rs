@@ -5625,7 +5625,7 @@ mod tests {
         for (key, value) in [
             ("PATH", "/usr/local/bin:/usr/bin"),
             ("RUST_LOG", "server_harness=debug"),
-            ("OPENAI_MODEL", "gpt-6-luna"),
+            ("OPENAI_MODEL", "gpt-5.6-luna"),
             ("OPENAI_REASONING_EFFORT", "max"),
         ] {
             let debug = format!(
