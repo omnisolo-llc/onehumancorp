@@ -1211,6 +1211,52 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
+
+        "proposals-payments" => Some(HelpArticleDetail {
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            content_html: r#"
+      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
+        Sending a proposal and getting paid should be easy and safe. OmniSolo makes sure your quotes are accurate and your payment links work.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Accurate Proposals</h2>
+      <p class="text-gray-700 mb-4">
+        OmniSolo builds quotes based on exactly what your customer asks for and the rules you set. We check the math for you.
+      </p>
+      <ul class="list-disc pl-6 mb-4 text-gray-700 space-y-2">
+        <li>If any prices are missing, the app marks them as <code>NEEDS_PRICING</code> so you can fill them in.</li>
+        <li>The app will not guess prices for you.</li>
+        <li>Optional items are left out of the total until the customer selects them.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Secure Payment Links</h2>
+      <p class="text-gray-700 mb-4">
+        When you make an invoice, OmniSolo connects directly to your payment provider (like Stripe) to create a real, secure checkout link. If there is a problem connecting to your provider, the app will let you know so you never send a broken link.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Drafts vs. Sent Reminders</h2>
+      <p class="text-gray-700 mb-4">
+        OmniSolo saves your drafts so you can review them. Once an invoice is paid or canceled, old drafts are removed automatically. This way, you won't ask a customer to pay twice by mistake.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">You Are in Control</h2>
+      <p class="text-gray-700 mb-4">
+        Your AI team only takes actions you approve. You set the rules and limits, and you can stop or change them at any time.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">How to Send a Proposal</h2>
+      <ol class="list-decimal pl-6 mb-4 text-gray-700 space-y-2">
+        <li>Open a Lead or Inquiry in the OmniSolo app.</li>
+        <li>Click <strong>Generate Proposal</strong>. Review the items. If any say <code>NEEDS_PRICING</code>, add the correct prices.</li>
+        <li>Approve the proposal to lock in the final price.</li>
+        <li>Click <strong>Create Invoice</strong>. OmniSolo will securely connect to your payment provider to make a checkout link.</li>
+        <li>The email or SMS draft will go to your outbox for one last check before you send it.</li>
+      </ol>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost</h2>
+      <p class="text-gray-700 mb-4">
+        These features are included in your regular subscription. We do not add any hidden markup fees to your customer's invoice. Standard fees from your payment provider still apply.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">What If Something Goes Wrong?</h2>
+      <p class="text-gray-700 mb-4">
+        If your payment provider disconnects and cannot make a link, the invoice will say "Draft/Pending Provider". Just try again later. The app will safely try again without charging anyone twice.
+      </p>
+            "#.to_string()
+        }),
         "setup-accounts-authority" => Some(HelpArticleDetail {
             title: "Setup, Connected Accounts, and Standing Authority".to_string(),
             content_html: r#"
