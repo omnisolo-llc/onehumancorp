@@ -3661,6 +3661,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Draft Quote Worker
+    let inquiry_intake_worker = std::sync::Arc::new(crate::workers::inquiry_intake_worker::InquiryIntakeWorker::new(db.clone()));
+    if legacy_sqlx_background_enabled {
+        inquiry_intake_worker.start();
+    }
+
     let draft_quote_worker = std::sync::Arc::new(
         crate::workers::draft_quote_worker::DraftQuoteWorker::new(db.clone()),
     );
@@ -9759,6 +9764,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
+        .nest("/api/v1/inquiries", api::inquiries::router().with_state(db.pool.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/field-service-routing", api::field_service_routing::router(db.clone(), hub.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))

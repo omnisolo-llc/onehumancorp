@@ -50,6 +50,7 @@ pub mod inbox;
 pub mod integrations_settings;
 pub mod payment_ledger;
 pub mod quotes;
+pub mod inquiries;
 pub mod sync_gateway;
 
 pub mod agent_metrics;
