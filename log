@@ -1,0 +1,63 @@
+npm run test:contracts
+
+> mono@0.4.47 test:contracts
+> node scripts/native-contracts.mjs
+
+
+Contract: .github/scripts/check_checkout_paths_test.py
+
+Contract: .github/scripts/check_repo_hygiene_test.sh
+repo hygiene test: ok
+
+Contract: .github/scripts/check_repo_hygiene.sh
+repo hygiene: ok
+
+Contract: deploy/tests/deploy_artifacts_test.sh
+deployment artifact checks passed
+
+Contract: deploy/tests/e2e_ci_execution_contract_test.sh deploy/tests/kind_e2e_test.sh deploy/tests/docker_compose_e2e_test.sh deploy/helm/omnisolo/templates/backend-deployment.yaml deploy/helm/omnisolo/values.yaml deploy/docker/server-init/bootstrap-admin.sh deploy/docker-compose.yml
+
+Contract: deploy/tests/operational_api_contract_test.sh deploy/scripts/omnisolo-agent-wizard.sh deploy/scripts/omnisolo-seed-data.sh
+
+Contract: deploy/tests/tls_certificates_test.sh deploy/tests/support/generate_test_tls.sh
+Hostname localhost does match certificate
+/tmp/tmp.8CsJzt2242/server.crt: OK
+
+Contract: scripts/api_versioning_docs_test.sh
+TAP version 13
+# Subtest: current OmniSolo API documentation uses the /api/v1 namespace
+ok 1 - current OmniSolo API documentation uses the /api/v1 namespace
+  ---
+  duration_ms: 16.246626
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 97.130935
+
+Contract: src/server/production_feature_contract_test.sh
+
+Contract: src/server/catalog_auth_contract_test.sh
+
+Contract: src/server/pii_leakage_check.sh src/server
+PASS: No obvious PII leakage found in tracing logs.
+
+Contract: src/server/migrations/sqlx_migration_contract_test.sh
+
+Contract: src/server/migrations/inbox_schema_contract_test.sh
+
+Contract: src/server/persistence/backend_neutrality_test.sh
+Persistence neutrality: 7 Rust files checked
+
+Contract: .github/scripts/check_postgres_security_ci_test.py
+
+Contract: .github/scripts/check_postgres_security_ci.py
+postgres security CI contract: ok
+
+Native contracts: 14/16 passed; 2 failed.
