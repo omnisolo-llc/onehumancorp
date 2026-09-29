@@ -1,4 +1,0 @@
-{
-  "issue_title": "🧙‍♀️ Wizard: [no-work finding]",
-  "issue_description": "Onboarding Wizard codebase review and evidence check. Based on the `business_capability_and_usage_economics_audit.md` and current code state, the Onboarding Stepper and Instant Build UI features (OHC-03 / UX Wizard) are fully implemented and their UI interaction passes 100% of the unit test assertions (`src/ui/next/src/app/onboarding/page.test.tsx` 31 tests passed). The UI is already compliant with the OHC Premium Design Standards (glassmorphism tokens exist in `page.tsx`). No regression or bug was found that requires immediate remediation in this lane. There is no active defect ticket assigned for the wizard frontend. Therefore, no further action is required at this moment without breaking changes or duplicating effort. Skill provenance: using-superpowers (8ca22dba9a94f28898bbce59f2537ff4d87c747d)."
-}
