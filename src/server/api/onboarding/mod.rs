@@ -365,6 +365,7 @@ pub struct ZeroClickGenerateResponse {
     pub organization_id: String,
     pub user_id: String,
     pub message: String,
+    pub business_name: String,
 }
 
 async fn start_zero_click(
@@ -461,6 +462,7 @@ async fn start_zero_click(
         organization_id: start_res.organization_id,
         user_id: start_res.user_id,
         message: "Storefront generated successfully".to_string(),
+        business_name: intake_data.business_name.clone(),
     }))
 }
 
@@ -799,10 +801,12 @@ mod additional_tests {
             organization_id: "org_123".to_string(),
             user_id: "user_456".to_string(),
             message: "Success".to_string(),
+            business_name: "Test Business".to_string(),
         };
         let json = serde_json::to_string(&resp).unwrap();
         assert!(json.contains("org_123"));
         assert!(json.contains("user_456"));
         assert!(json.contains("Success"));
+        assert!(json.contains("Test Business"));
     }
 }
