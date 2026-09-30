@@ -524,7 +524,6 @@ impl StripeClient {
 mod issuing_tests {
     use super::*;
 
-
     #[tokio::test]
     async fn test_issuing_webhook_approve() {
         let _client = StripeClient::new("sk_test_mock".into()); // Will fail actual network request, but we can mock/verify logic

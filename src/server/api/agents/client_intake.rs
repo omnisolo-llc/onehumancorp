@@ -78,7 +78,15 @@ impl ResearcherLlmClient for LocalLlm {
                     let response_text = crate::minimax::MinimaxClient::new(api_key)
                         .reason(&prompt)
                         .await?;
-                    (response_text, Usage { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
+                    (
+                        response_text,
+                        Usage {
+                            input_tokens: 0,
+                            output_tokens: 0,
+                            cache_creation_input_tokens: 0,
+                            cache_read_input_tokens: 0,
+                        },
+                    )
                 }
                 _ => {
                     let observed = crate::minimax::LocalLLMClient::new()
@@ -118,7 +126,9 @@ impl ResearcherLlmClient for LocalLlm {
 async fn handle_client_intake(
     State(state): State<ClientIntakeState>,
     Query(query): Query<TenantQuery>,
-    axum::extract::Extension(auditor): axum::extract::Extension<std::sync::Arc<crate::services::billing::auditor::CostAuditor>>,
+    axum::extract::Extension(auditor): axum::extract::Extension<
+        std::sync::Arc<crate::services::billing::auditor::CostAuditor>,
+    >,
     Form(payload): Form<ClientIntakeRequest>,
 ) -> impl IntoResponse {
     let tenant_id = query.tenant.unwrap_or_else(|| "default".to_string());

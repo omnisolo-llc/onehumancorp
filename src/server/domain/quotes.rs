@@ -122,15 +122,17 @@ pub async fn handle_quote_action(
         if payload.get("stripe_payment_link").is_none() {
             let amount_cents = (price * 100.0).round() as i64;
             match stripe_client
-                .create_checkout_session_idempotent(server_integrations_stripe::safe_checkout::CheckoutRequest {
-                    name: scope,
-                    reference: client_id,
-                    amount_cents,
-                    interval: None,
-                    product: None,
-                    currency: "usd",
-                    operation_id: &invoice_id,
-                })
+                .create_checkout_session_idempotent(
+                    server_integrations_stripe::safe_checkout::CheckoutRequest {
+                        name: scope,
+                        reference: client_id,
+                        amount_cents,
+                        interval: None,
+                        product: None,
+                        currency: "usd",
+                        operation_id: &invoice_id,
+                    },
+                )
                 .await
             {
                 Ok(receipt) => {

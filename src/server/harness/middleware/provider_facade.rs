@@ -356,7 +356,9 @@ fn bind_stream_options(payload: &mut Value, path: &str) -> Result<(), &'static s
         .ok_or("request body must be an object")?;
     if let Some(stream) = object.get("stream").and_then(Value::as_bool) {
         if stream {
-            let options = object.entry("stream_options").or_insert_with(|| serde_json::json!({}));
+            let options = object
+                .entry("stream_options")
+                .or_insert_with(|| serde_json::json!({}));
             if let Some(options_obj) = options.as_object_mut() {
                 options_obj.insert("include_usage".to_owned(), Value::Bool(true));
             } else {

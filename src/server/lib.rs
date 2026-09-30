@@ -3661,7 +3661,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Draft Quote Worker
-    let inquiry_intake_worker = std::sync::Arc::new(crate::workers::inquiry_intake_worker::InquiryIntakeWorker::new(db.clone()));
+    let inquiry_intake_worker = std::sync::Arc::new(
+        crate::workers::inquiry_intake_worker::InquiryIntakeWorker::new(db.clone()),
+    );
     if legacy_sqlx_background_enabled {
         inquiry_intake_worker.start();
     }

@@ -617,7 +617,12 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
 
     let status = response.status();
     let error: Value = response.json().await.unwrap();
-    assert_eq!(status, reqwest::StatusCode::FORBIDDEN, "Error was: {:?}", error);
+    assert_eq!(
+        status,
+        reqwest::StatusCode::FORBIDDEN,
+        "Error was: {:?}",
+        error
+    );
     assert!(
         error["error"]["message"]
             .as_str()

@@ -73,10 +73,7 @@ fn portable_model_and_selected_base_url_translate_to_openhands_llm_config() {
             {"name":"terminal"}, {"name":"file_editor"}, {"name":"task_tracker"}
         ])
     );
-    assert_eq!(
-        prepared.body["agent"]["llm"]["model"],
-        "openai/gpt-6-luna"
-    );
+    assert_eq!(prepared.body["agent"]["llm"]["model"], "openai/gpt-6-luna");
     assert_eq!(
         prepared.body["agent"]["llm"]["base_url"],
         "https://llmapi.omnisolo.co/v1"

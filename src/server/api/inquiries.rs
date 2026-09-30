@@ -107,7 +107,13 @@ async fn create_inquiry(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    (StatusCode::CREATED, Json(CreateInquiryResponse { id: inquiry_id.to_string() })).into_response()
+    (
+        StatusCode::CREATED,
+        Json(CreateInquiryResponse {
+            id: inquiry_id.to_string(),
+        }),
+    )
+        .into_response()
 }
 
 #[cfg(test)]

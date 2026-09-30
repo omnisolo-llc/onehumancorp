@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use serde::Deserialize;
-use uuid::Uuid;
 use crate::db::DB;
 use omnisolo_builtin_agent::gpt_researcher::ResearcherLlmClient;
 use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use serde::Deserialize;
+use std::sync::Arc;
+use uuid::Uuid;
 
 // We reuse a similar adapter structure as draft_quote_worker
 struct AdapterLlm {}
@@ -34,18 +34,37 @@ impl ResearcherLlmClient for AdapterLlm {
         let forced_response: Option<String> = None;
 
         let (response_text, usage) = if let Some(response) = forced_response {
-            (response, Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
+            (
+                response,
+                Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
+            )
         } else if is_test_mode {
-            (r#"{"in_scope": true, "reason": "test fallback"}"#.to_string(), Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
+            (
+                r#"{"in_scope": true, "reason": "test fallback"}"#.to_string(),
+                Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
+            )
         } else {
             let client = crate::minimax::LocalLLMClient::new();
             let observed = client.reason_with_usage(&prompt, req.max_tokens).await?;
             let counts = observed
                 .counts
                 .ok_or("Local provider omitted usage; intake accounting requires reconciliation")?;
-            let input_tokens = i32::try_from(counts.input).map_err(|_| "Local input usage exceeds supported range")?;
-            let output_tokens = i32::try_from(counts.output).map_err(|_| "Local output usage exceeds supported range")?;
-            let cache_read_input_tokens = i32::try_from(counts.cached_input).map_err(|_| "Local cache usage exceeds supported range")?;
+            let input_tokens = i32::try_from(counts.input)
+                .map_err(|_| "Local input usage exceeds supported range")?;
+            let output_tokens = i32::try_from(counts.output)
+                .map_err(|_| "Local output usage exceeds supported range")?;
+            let cache_read_input_tokens = i32::try_from(counts.cached_input)
+                .map_err(|_| "Local cache usage exceeds supported range")?;
             (
                 observed.text,
                 Usage {
@@ -203,17 +222,24 @@ impl InquiryIntakeWorker {
             }
 
             // Load OHC-03 Policy
-            let policy_json: Option<String> = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
-                sqlx::query_scalar("SELECT settings->>'ohc_03_policy' FROM tenants WHERE id = $1")
+            let policy_json: Option<String> =
+                if matches!(&self.db.store, crate::db::DbStore::Postgres) {
+                    sqlx::query_scalar(
+                        "SELECT settings->>'ohc_03_policy' FROM tenants WHERE id = $1",
+                    )
                     .bind(&tenant_id)
                     .fetch_optional(&mut **pg_tx_opt.as_mut().unwrap())
-                    .await.unwrap_or(None)
-            } else {
-                sqlx::query_scalar("SELECT json_extract(settings, '$.ohc_03_policy') FROM tenants WHERE id = ?")
-                    .bind(&tenant_id)
-                    .fetch_optional(&mut **sqlite_tx_opt.as_mut().unwrap())
-                    .await.unwrap_or(None)
-            };
+                    .await
+                    .unwrap_or(None)
+                } else {
+                    sqlx::query_scalar(
+                    "SELECT json_extract(settings, '$.ohc_03_policy') FROM tenants WHERE id = ?",
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&mut **sqlite_tx_opt.as_mut().unwrap())
+                .await
+                .unwrap_or(None)
+                };
 
             let policy_text = match policy_json {
                 Some(text) if !text.trim().is_empty() => text,
@@ -228,8 +254,12 @@ impl InquiryIntakeWorker {
                         .bind(&job_id)
                         .execute(&mut **sqlite_tx_opt.as_mut().unwrap()).await;
                     }
-                    if let Some(tx) = pg_tx_opt.take() { let _ = tx.commit().await; }
-                    if let Some(tx) = sqlite_tx_opt.take() { let _ = tx.commit().await; }
+                    if let Some(tx) = pg_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
+                    if let Some(tx) = sqlite_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
                     return Ok(true);
                 }
             };
@@ -242,18 +272,25 @@ impl InquiryIntakeWorker {
             }
 
             let services = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
-                sqlx::query_as::<_, Service>("SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1")
-                    .bind(&tenant_id)
-                    .fetch_all(&mut **pg_tx_opt.as_mut().unwrap())
-                    .await.unwrap_or_default()
+                sqlx::query_as::<_, Service>(
+                    "SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1",
+                )
+                .bind(&tenant_id)
+                .fetch_all(&mut **pg_tx_opt.as_mut().unwrap())
+                .await
+                .unwrap_or_default()
             } else {
-                sqlx::query_as::<_, Service>("SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = ?")
-                    .bind(&tenant_id)
-                    .fetch_all(&mut **sqlite_tx_opt.as_mut().unwrap())
-                    .await.unwrap_or_default()
+                sqlx::query_as::<_, Service>(
+                    "SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = ?",
+                )
+                .bind(&tenant_id)
+                .fetch_all(&mut **sqlite_tx_opt.as_mut().unwrap())
+                .await
+                .unwrap_or_default()
             };
 
-            let catalog_json = serde_json::to_string(&services).unwrap_or_else(|_| "[]".to_string());
+            let catalog_json =
+                serde_json::to_string(&services).unwrap_or_else(|_| "[]".to_string());
 
             let system_prompt = format!(
                 "You are an expert lead qualification AI. You must adhere to the following business policy when evaluating leads:
@@ -300,8 +337,12 @@ Respond with a JSON object containing exactly one boolean field: 'in_scope'. Set
                         .bind(&job_id)
                         .execute(&mut **sqlite_tx_opt.as_mut().unwrap()).await;
                     }
-                    if let Some(tx) = pg_tx_opt.take() { let _ = tx.commit().await; }
-                    if let Some(tx) = sqlite_tx_opt.take() { let _ = tx.commit().await; }
+                    if let Some(tx) = pg_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
+                    if let Some(tx) = sqlite_tx_opt.take() {
+                        let _ = tx.commit().await;
+                    }
                     return Ok(true);
                 }
             };
@@ -376,8 +417,12 @@ Respond with a JSON object containing exactly one boolean field: 'in_scope'. Set
                 }
             }
 
-            if let Some(tx) = pg_tx_opt.take() { let _ = tx.commit().await; }
-            if let Some(tx) = sqlite_tx_opt.take() { let _ = tx.commit().await; }
+            if let Some(tx) = pg_tx_opt.take() {
+                let _ = tx.commit().await;
+            }
+            if let Some(tx) = sqlite_tx_opt.take() {
+                let _ = tx.commit().await;
+            }
 
             Ok(true)
         } else {
