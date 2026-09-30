@@ -59,13 +59,25 @@ function getIndexedDB(): Promise<IDBDatabase> {
 }
 
 export async function enqueueAction(action: OfflineAction): Promise<void> {
-  if (typeof window === "undefined") return;
+  return enqueueActions([action]);
+}
+
+/** Persist a sale's intents atomically; acceptance means the transaction committed. */
+export async function enqueueActions(actions: OfflineAction[]): Promise<void> {
+  if (actions.length === 0) return;
+  if (typeof window === "undefined") throw new Error("Offline storage requires a browser");
   try {
     const db = await getPowerSyncDB();
-    await db.execute(
-      'INSERT OR REPLACE INTO local_pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
-      [action.id, action.type, JSON.stringify(action.payload), action.timestamp]
-    );
+    const write = async (target: Pick<typeof db, 'execute'>) => {
+      for (const action of actions) {
+        await target.execute(
+          'INSERT OR REPLACE INTO local_pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
+          [action.id, action.type, JSON.stringify(action.payload), action.timestamp],
+        );
+      }
+    };
+    if (actions.length === 1) await write(db);
+    else await db.writeTransaction(write);
     return;
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
@@ -73,22 +85,31 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
     }
   }
 
-  // Fallback
-  if (!window.indexedDB) return;
-  try {
-    const db = await getIndexedDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
+  if (!window.indexedDB) throw new Error("Offline storage unavailable: IndexedDB is not supported");
+  const db = await getIndexedDB();
+  await new Promise<void>((resolve, reject) => {
+    let transaction: IDBTransaction;
+    let failure: unknown;
+    try {
+      transaction = db.transaction([STORE_NAME], "readwrite");
+      transaction.oncomplete = () => { db.close(); resolve(); };
+      transaction.onabort = () => {
+        db.close();
+        reject(failure ?? transaction.error ?? new Error("Offline storage transaction aborted"));
+      };
+      transaction.onerror = () => { failure ??= transaction.error; };
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(action);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  } catch (err) {
-    if (process.env.NODE_ENV !== 'test') {
-      console.error("Failed to enqueue action to fallback IndexedDB", err);
+      try {
+        for (const action of actions) store.put(action);
+      } catch (error) {
+        failure = error;
+        transaction.abort();
+      }
+    } catch (error) {
+      db.close();
+      reject(error);
     }
-  }
+  });
 }
 
 export async function getActions(): Promise<OfflineAction[]> {

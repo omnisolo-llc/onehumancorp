@@ -34,6 +34,8 @@ export default function POSTerminal() {
   const [cart, setCart] = useState<import("@/lib/business-records").CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutComplete, setCheckoutComplete] = useState(false);
+  const [checkoutQueued, setCheckoutQueued] = useState(false);
+  const [checkoutAmount, setCheckoutAmount] = useState(0);
   const [customerEmail, setCustomerEmail] = useState('');
   const [receiptSent] = useState(false);
   const [reserving, setReserving] = useState(false);
@@ -234,7 +236,9 @@ export default function POSTerminal() {
     });
   };
 
-  const handleCheckoutComplete = () => {
+  const handleCheckoutComplete = (amount: number) => {
+    setCheckoutQueued(false);
+    setCheckoutAmount(amount);
     setCheckoutComplete(true);
     setIsCartOpen(false);
     setShowPaymentSheet(false);
@@ -242,6 +246,15 @@ export default function POSTerminal() {
   };
 
 
+
+  const handleCheckoutQueued = (amount: number) => {
+    setCheckoutQueued(true);
+    setCheckoutAmount(amount);
+    setCheckoutComplete(true);
+    setIsCartOpen(false);
+    setShowPaymentSheet(false);
+    setChargeAmount('0');
+  };
 
   const handleOptimisticReserve = (productId: string) => {
     setInventory(prev => prev.map(p => {
@@ -444,7 +457,7 @@ export default function POSTerminal() {
              </button>
            </div>
 
-           {clockedIn && !isCartOpen && !showPaymentSheet && (
+           {clockedIn && !isCartOpen && !showPaymentSheet && !checkoutComplete && (
              <div className="mb-8 p-4 rounded-2xl bg-[rgba(255,255,255,0.65)] backdrop-blur-[32px] saturate-[200%] border border-[rgba(255,255,255,0.4)] shadow-lg">
                <StripeTerminalClient
                  amount={5000}
@@ -452,6 +465,7 @@ export default function POSTerminal() {
                  cart={[]}
                  tenantId={activeStaff?.tenant_id || "default_tenant"}
                  onSuccess={handleCheckoutComplete}
+                    onQueued={handleCheckoutQueued}
                />
              </div>
            )}
@@ -607,6 +621,7 @@ export default function POSTerminal() {
                     onOptimisticReserve={() => { if (posMode !== 'quick_charge') cart.forEach(item => handleOptimisticReserve(item.product.id)) }}
                     onOptimisticRollback={() => { if (posMode !== 'quick_charge') cart.forEach(item => handleOptimisticRollback(item.product.id)) }}
                     onSuccess={handleCheckoutComplete}
+                    onQueued={handleCheckoutQueued}
                  />
                </div>
              </div>
@@ -619,8 +634,8 @@ export default function POSTerminal() {
                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                  </div>
-                 <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
-                 <p className="text-gray-500 mb-8">The total of ${(cartTotal / 100).toFixed(2)} was charged.</p>
+                 <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">{checkoutQueued ? 'Sale queued offline' : 'Payment Successful!'}</h2>
+                 <p className="text-gray-500 mb-8">{checkoutQueued ? `The $${(checkoutAmount / 100).toFixed(2)} sale is saved on this device and still needs to sync.` : `The total of $${(checkoutAmount / 100).toFixed(2)} was charged.`}</p>
 
                  {!receiptSent ? (
                    <div className="text-left">

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise action-owned setup and bounded dependency caches without installing tools."""
 import json
+from itertools import combinations
 import os
 from pathlib import Path
 import re
@@ -50,6 +51,43 @@ class NativeCacheTests(unittest.TestCase):
                     completed = subprocess.run(['bash', '--noprofile', '--norc', '-c', step['run']],
                         env=env, capture_output=True, text=True, timeout=10)
                     self.assertNotEqual(completed.returncode, 0)
+
+    def test_complete_ci_graph_uses_at_most_eight_concurrent_runners(self):
+        jobs = self.ci['jobs']
+
+        def ancestors(name):
+            needs = jobs[name].get('needs', [])
+            if isinstance(needs, str):
+                needs = [needs]
+            return set(needs).union(*(ancestors(need) for need in needs))
+
+        predecessors = {name: ancestors(name) for name in jobs}
+        weights = {}
+        for name, job in jobs.items():
+            strategy = job.get('strategy', {})
+            matrix = strategy.get('matrix', {})
+            self.assertLessEqual(len(matrix), 1, 'extend runner accounting for multidimensional matrices')
+            copies = len(next(iter(matrix.values()))) if matrix else 1
+            weights[name] = min(copies, strategy.get('max-parallel', copies))
+
+        peak = 0
+        for size in range(1, len(jobs) + 1):
+            for concurrent in combinations(jobs, size):
+                if any(a in predecessors[b] or b in predecessors[a]
+                       for a, b in combinations(concurrent, 2)):
+                    continue
+                peak = max(peak, sum(weights[name] for name in concurrent))
+        self.assertLessEqual(peak, 8, f'CI can occupy {peak} runners concurrently')
+
+    def test_browser_shards_keep_running_after_independent_quality_failure(self):
+        job = self.ci['jobs']['native-e2e']
+        self.assertEqual(job['strategy']['matrix']['shard'], list(range(1, 13)))
+        self.assertIn('!cancelled()', job['if'])
+        self.assertIn("needs.native-build.result == 'success'", job['if'])
+        self.assertIn("needs.native-web.result == 'success'", job['if'])
+        for name in ('dependency-audit', 'native-node', 'postgres-security'):
+            self.assertIn(name, job['needs'])
+            self.assertNotIn(f'needs.{name}.result', job['if'])
 
     def test_action_pins_and_cargo_dependency_boundary(self):
         rust = next(step for step in self.steps if step.get('uses', '').startswith('dtolnay/rust-toolchain@'))

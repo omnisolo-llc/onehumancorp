@@ -64,7 +64,7 @@ test.describe("Documentation Features Flow", () => {
 
     // Verify empty state text
     await expect(page.locator("text=No results found matching")).toBeVisible();
-    await expect(page.locator('text="NonexistentQuery1234"')).toBeVisible();
+    await expect(page.getByText(/No results found matching/)).toContainText('NonexistentQuery1234');
   });
 
   test("User can open the AI Help Chat widget", async ({ page }) => {

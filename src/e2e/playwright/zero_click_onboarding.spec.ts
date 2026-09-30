@@ -8,6 +8,8 @@ test.describe('Zero-Click Onboarding Flow', () => {
     await page.goto('/setup.html');
     await expect(page).toHaveTitle(/OmniSolo|OmniSolo/);
 
+    await page.getByRole('button', { name: 'Generate My Workspace', exact: true }).click();
+
     // Initial Screen
     await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });
 
@@ -17,16 +19,10 @@ test.describe('Zero-Click Onboarding Flow', () => {
     // Type into the input
     await page.locator('#instant-bio').fill('I am a baker in Austin selling custom cakes');
 
-    // Click the submit button
+    // The instant path provisions directly; conversational review is covered separately.
+    const generated = page.waitForResponse(response => response.url().endsWith('/api/v1/growth/zero-click-builder/generate') && response.request().method() === 'POST');
     await page.locator('#generate-storefront-btn').click();
-
-    // Wait for the approval details screen
-    await expect(page.locator('h1', { hasText: 'Ready to Launch' }).first()).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('#approval-details')).toBeVisible();
-
-    // Click Approve & Publish
-    const approveBtn = page.locator('#approve-publish-btn-chat, #approve-publish-btn').first();
-    await approveBtn.click();
+    expect((await generated).status()).toBe(200);
 
     // The flow goes to the success/dashboard screen.
     await expect(page).toHaveURL(/.*(dashboard\.html|dashboard|success\.html).*/, { timeout: 30000 });

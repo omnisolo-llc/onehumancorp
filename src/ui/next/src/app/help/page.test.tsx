@@ -7,6 +7,7 @@ vi.mock("next/link", () => ({
 }));
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import HelpCenterPage from "./page";
+import { AppShell } from "../components/AppShell";
 import { TooltipProvider } from "../../components/TooltipRegistry";
 import userEvent from "@testing-library/user-event";
 
@@ -92,6 +93,17 @@ describe("HelpCenterPage", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("keeps one page-level heading when rendered inside the product shell", async () => {
+    render(
+      <TooltipProvider>
+        <AppShell title="In-App Help Center"><HelpCenterPage /></AppShell>
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("Getting Started");
+    expect(screen.getAllByRole("heading", { level: 1, name: "In-App Help Center" })).toHaveLength(1);
   });
 
   it("renders articles loaded from API", async () => {

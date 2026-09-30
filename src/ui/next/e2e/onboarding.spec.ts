@@ -37,6 +37,10 @@ test.describe('Onboarding Flow E2E', () => {
     // The intake API is mocked or local, but we just click Generate.
     await page.click('text=Next');
 
+    await expect(page.getByText('Who is your target audience?')).toBeVisible();
+    await page.getByPlaceholder('e.g. Local families, Tech startups').fill('Local families');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
     // It should progress to Step 2: Review Details
     await expect(page.getByText('Review Details')).toBeVisible();
 
@@ -57,13 +61,9 @@ test.describe('Onboarding Flow E2E', () => {
     await page.click('text=Custom Domain');
     await page.click('text=Free Subdomain'); // toggle back to test it
 
-    // Admin Account fields
-    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Admin');
-    await page.fill('input[placeholder="you@example.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="••••••••"]', 'securepassword123');
-
-    // Select an AI Agent
-    await page.click('text=Sales Agent');
+    // Setup uses the signed-in owner; it does not create replacement credentials.
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
+    await page.getByText('Sales Assistant', { exact: true }).click();
 
     // Launch store
     await page.click('text=Launch Store');
@@ -76,7 +76,7 @@ test.describe('Onboarding Flow E2E', () => {
     await expect(page.getByText("You're Live!", { exact: true })).toBeVisible({ timeout: 15000 });
 
     // Ensure final dashboard links exist
-    await expect(page.getByText('Go to Dashboard')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open Assistant' })).toBeVisible();
     await expect(page.getByText('Preview Storefront')).toBeVisible();
   });
 });

@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// we just use the raw test instead of the fixture that requires login to /dashboard
-test.describe('Tauri Onboarding Admin Setup', () => {
-  test('Requires admin name on step-admin', async ({ page }) => {
+test.describe('Legacy authenticated onboarding team review', () => {
+  test('Uses the signed-in account without collecting replacement credentials', async ({ page }) => {
     // Navigate to the onboarding route directly
-    await page.goto(`file://${process.cwd()}/src/ui/tauri/src/ui/setup.html`);
+    await page.goto('/setup.html');
 
     // We expect the setup to redirect or load the initial step
     await page.waitForSelector('#step-initial .next-step-btn');
@@ -18,18 +17,7 @@ test.describe('Tauri Onboarding Admin Setup', () => {
     // Step Categories
     await page.waitForSelector('#step-categories:not([style*="display: none"])');
 
-    // evaluate business categories dropdown to have a value, test environment may mock it
-    await page.evaluate(() => {
-        const sel = document.getElementById('business-categories') as HTMLSelectElement;
-        if (sel) {
-            const opt = document.createElement('option');
-            opt.value = 'Baking';
-            opt.text = 'Baking';
-            sel.appendChild(opt);
-            sel.value = 'Baking';
-        }
-    });
-    // await page.selectOption('#business-categories', 'Baking');
+    await page.locator('#business-categories').selectOption('Handyman');
     await page.click('#step-categories .next-step-btn');
 
     // Step Name
@@ -40,40 +28,21 @@ test.describe('Tauri Onboarding Admin Setup', () => {
     // Step Assistant
     await page.waitForSelector('#step-assistant:not([style*="display: none"])');
     await page.getByTestId('team-operations').click();
-    await page.evaluate(() => {
-        const sel = document.getElementById('assistant-tone') as HTMLSelectElement;
-        if (sel) {
-            const opt = document.createElement('option');
-            opt.value = 'Friendly';
-            opt.text = 'Friendly';
-            sel.appendChild(opt);
-            sel.value = 'Friendly';
-        }
-    });
+    await page.locator('#assistant-tone').selectOption('Friendly');
     await page.click('#step-assistant .next-step-btn');
 
-    // Step Admin
-    await page.waitForSelector('#step-admin:not([style*="display: none"])');
+    // Existing step IDs stay stable for saved business drafts.
+    const teamReview = page.locator('#step-admin');
+    await expect(teamReview).toBeVisible();
+    await expect(teamReview.getByRole('heading', { name: 'Review your team' })).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
+    await teamReview.locator('.next-step-btn').click();
+    await expect(page.locator('#step-offer')).toBeVisible();
 
-    // Try to proceed without filling out the admin name
-    await page.click('#step-admin .next-step-btn');
-
-    // Verify admin-name error appears
-    const isErrorVisible = await page.evaluate(() => {
-        const err = document.getElementById('admin-name-error');
-        return err && window.getComputedStyle(err).display === 'block';
+    const credentialFields = await page.evaluate(() => {
+      const draft = JSON.parse(localStorage.getItem('onboardingState') || '{}');
+      return ['admin_name', 'admin_email', 'admin_password'].filter(field => Object.hasOwn(draft, field));
     });
-    expect(isErrorVisible).toBe(true);
-
-    // Fill in the admin name
-    await page.fill('#admin-name', 'Test Admin');
-    await page.click('#step-admin .next-step-btn');
-
-    // Verify error is gone
-    const isErrorStillVisible = await page.evaluate(() => {
-        const err = document.getElementById('admin-name-error');
-        return err && window.getComputedStyle(err).display === 'block';
-    });
-    expect(isErrorStillVisible).toBe(false);
+    expect(credentialFields).toEqual([]);
   });
 });

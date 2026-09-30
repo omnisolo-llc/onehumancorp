@@ -1,3 +1,4 @@
+import { createGrowthOwner } from './growth_owner';
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
@@ -7,11 +8,11 @@ test('viral_ai_lead_magnet_builder_smoke', async ({ page, request, loginAs, admi
 });
 
 test.describe('Viral AI Lead Magnet Builder Loop', () => {
-  test('should display the lead magnet builder and handle soft paywall share bypass', async ({ page, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
+  test('should display the lead magnet builder and handle soft paywall share bypass', async ({ page, baseURL }) => {
+    await createGrowthOwner(page, baseURL);
 
-    // Navigate to dashboard
-    await page.goto('/dashboard');
+    // The standalone builder is linked from the standalone dashboard.
+    await page.goto('/dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // 1. Verify the AI Lead Magnet Builder link is visible

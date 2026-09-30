@@ -664,7 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       function openAISupport() {
-        const helpBtn = document.getElementById('omnisolo-floating-help-btn');
+        const helpBtn = document.getElementById('ohc-floating-help-btn');
         if (helpBtn) {
           helpBtn.click();
 
@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatTab) chatTab.click();
 
             requestAnimationFrame(() => {
-              const chatInput = document.getElementById('omnisolo-help-chat-input');
+              const chatInput = document.getElementById('ohc-help-chat-input');
               if (chatInput) chatInput.focus();
             });
           });
@@ -1012,7 +1012,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
-        #omnisolo-floating-help-btn {
+        #ohc-floating-help-btn {
             position: fixed;
             bottom: 24px;
             right: 24px;
@@ -1031,10 +1031,10 @@ document.addEventListener('DOMContentLoaded', () => {
             justify-content: center;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #omnisolo-floating-help-btn:hover {
+        #ohc-floating-help-btn:hover {
             transform: scale(1.05);
         }
-        #omnisolo-floating-help-btn svg {
+        #ohc-floating-help-btn svg {
             width: 28px;
             height: 28px;
             fill: currentColor;

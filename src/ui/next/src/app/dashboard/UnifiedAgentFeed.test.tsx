@@ -69,3 +69,50 @@ describe("UnifiedAgentFeed activity surfaces", () => {
     expect(webSocketMock).not.toHaveBeenCalled();
   });
 });
+
+afterEach(() => vi.unstubAllGlobals());
+
+const pendingItem = {
+  id: 'decision-1', tenant_id: 'tenant-1', event_source: 'operations',
+  context_payload: { description: 'Review owner proposal' }, proposed_action: { message: 'Prepare the requested work' },
+  lifecycle_state: 'PENDING_APPROVAL', created_at: '2026-09-30T00:00:00Z', updated_at: '2026-09-30T00:00:00Z',
+};
+
+it.each(['triage', 'task', 'order'])('forwards the owner-edited %s draft to the durable action endpoint', async (event_source) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ success: true })));
+  render(<UnifiedAgentFeed initialData={{ items: [{ ...pendingItem, event_source }] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  const [url, options] = vi.mocked(fetch).mock.calls[0];
+  expect(url).toBe('/api/v1/triage/action');
+  expect(JSON.parse(String(options?.body))).toEqual({ triage_item_id: 'decision-1', approved: true, edited_payload: 'Owner-reviewed draft' });
+});
+
+it('keeps the approval transition visible until the successful decision has been acknowledged', async () => {
+  let acknowledge!: (response: Response) => void;
+  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { acknowledge = resolve; })));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const card = await screen.findByTestId('triage-card-decision-1');
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Approve proposal' }));
+  expect(card).toBeVisible();
+  expect(card).toHaveClass('border-green-500', 'scale-95');
+  await act(async () => acknowledge(new Response('{}', { status: 200 })));
+  expect(card).toBeVisible();
+  await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).toBeNull());
+});
+
+it('retains the proposal and reports a failed decision instead of silently hiding it', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 500 })));
+  const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+    await screen.findByTestId('triage-card-decision-1');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Approve proposal' }));
+    expect(await screen.findByText('Failed to submit decision')).toBeVisible();
+    expect(screen.getByTestId('triage-card-decision-1')).toBeVisible();
+    expect(screen.getByTestId('triage-card-decision-1')).not.toHaveClass('border-green-500');
+  } finally { errorLog.mockRestore(); }
+});

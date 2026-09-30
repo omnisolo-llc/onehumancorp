@@ -38,7 +38,9 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
     await page.getByLabel('Title').fill('Edited Task');
     await page.getByRole('button', { name: 'Save Changes' }).click();
 
-    await expect(page.locator('text=Edited Task')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#task-list').getByText('Edited Task', { exact: true })).toBeVisible({ timeout: 10000 });
+    await page.reload();
+    await expect(page.locator('#task-list').getByText('Edited Task', { exact: true })).toBeVisible();
   });
 
   // Test 4: Delete Task (Database Delete Action)
@@ -54,6 +56,9 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
 
     // UI should reflect successful removal
     await expect(page.locator('text=Delete Me Task')).not.toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Loading tasks...', { exact: true })).not.toBeVisible();
+    await expect(page.locator('#task-list').getByText('Delete Me Task', { exact: true })).toHaveCount(0);
   });
 
   // Test 5: Verify task list rendering
@@ -64,6 +69,7 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
         await page.getByRole('button', { name: 'New Task' }).click();
         await page.getByLabel('Title').fill(`Task Stress ${i}`);
         await page.getByRole('button', { name: 'Save' }).click();
+        await expect(page.locator('#task-list').getByText(`Task Stress ${i}`, { exact: true })).toBeVisible();
     }
 
     await page.goto('/'); // force reload

@@ -21,23 +21,15 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await chatInput.fill('I run a mobile dog grooming service in Austin');
     await chatInput.press('Enter');
 
-    // The app should automatically transition to provisioning state or approval
-    const approvalHeading = page.locator('h1', { hasText: 'Ready to Launch' }).first();
-    const successHeading = page.getByRole('heading', { name: /You're Live!/ });
-
-    // In chat flow we may skip straight or show approval, wait for one
-    await expect(async () => {
-      const isApproval = await approvalHeading.isVisible();
-      const isSuccess = await successHeading.isVisible();
-      expect(isApproval || isSuccess).toBeTruthy();
-    }).toPass({ timeout: 45000 });
-
-    if (await approvalHeading.isVisible()) {
-        await page.locator('#approve-publish-btn').click();
-    }
-
-    // Since this uses the real backend, the UI will eventually redirect to /dashboard
-    await expect(successHeading).toBeVisible({ timeout: 60000 });
+    // Review the prepared profile before explicitly launching it.
+    const approval = page.locator('#step-approval');
+    await expect(approval.getByRole('heading', { name: 'Ready to Launch' })).toBeVisible({ timeout: 45000 });
+    await expect(approval.locator('#approval-details')).not.toBeEmpty();
+    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start') && response.request().method() === 'POST');
+    await approval.getByRole('button', { name: 'Approve & Publish' }).click();
+    expect((await launch).status()).toBe(200);
+    await expect(page).toHaveURL(/\/dashboard(?:\.html)?$/, { timeout: 60000 });
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {

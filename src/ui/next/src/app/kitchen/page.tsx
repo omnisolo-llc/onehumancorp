@@ -16,42 +16,24 @@ export default function KitchenView() {
 
     const fetchOrdersAndMenu = async () => {
       try {
-        // Fetch active orders (simulate using pos orders or ui orders if backend supports it)
+        // Fetch recorded orders; an authoritative empty response stays empty.
         let ordersData: OrderRecord[] = [];
+        let ordersLoaded = false;
         try {
           const ordersRes = await fetch("/api/v1/pos/orders");
           if (ordersRes.ok) {
             const data = await ordersRes.json();
             ordersData = data.orders || (Array.isArray(data) ? data : []);
+            ordersLoaded = true;
           }
         } catch {
           // ignore
         }
-        if (!ordersData || ordersData.length === 0) {
+        if (!ordersLoaded) {
           const cachedOrders = localStorage.getItem('kds_orders_cache');
           if (cachedOrders) {
             try { ordersData = JSON.parse(cachedOrders); } catch { ordersData = []; }
           }
-        }
-        if (!ordersData || ordersData.length === 0) {
-          ordersData = [
-            {
-              id: "101",
-              customer_name: "Alice",
-              status: "pending",
-              items: [{ name: "Falafel Wrap", product_id: "falafel", quantity: 1, unit_price_cents: 800 }],
-              notes: "No onions, extra pita",
-              translated_notes: "بدون بصل - خبز إضافي",
-            },
-            {
-              id: "102",
-              customer_name: "Bob",
-              status: "pending",
-              items: [{ name: "Shawarma Plate", product_id: "shawarma", quantity: 1, unit_price_cents: 1200 }],
-              notes: "Spicy",
-              translated_notes: "حار",
-            },
-          ] as unknown as OrderRecord[];
         }
         setOrders(ordersData);
         try { localStorage.setItem('kds_orders_cache', JSON.stringify(ordersData)); } catch {
@@ -59,38 +41,22 @@ export default function KitchenView() {
         }
 
         let menuData: SaleProduct[] = [];
+        let menuLoaded = false;
         try {
           const menuRes = await fetch("/api/v1/pos/inventory");
           if (menuRes.ok) {
             const data = await menuRes.json();
             menuData = data.inventory || data.items || (Array.isArray(data) ? data : []);
+            menuLoaded = true;
           }
         } catch {
           // ignore
         }
-        if (!menuData || menuData.length === 0) {
+        if (!menuLoaded) {
           const cachedMenu = localStorage.getItem('kds_menu_cache');
           if (cachedMenu) {
             try { menuData = JSON.parse(cachedMenu); } catch { menuData = []; }
           }
-        }
-        if (!menuData || menuData.length === 0) {
-          menuData = [
-            {
-              id: "falafel",
-              name: "Falafel Wrap",
-              title: "Falafel Wrap",
-              is_sold_out: false,
-              available_quantity: 10,
-            },
-            {
-              id: "shawarma",
-              name: "Chicken Shawarma",
-              title: "Chicken Shawarma",
-              is_sold_out: false,
-              available_quantity: 10,
-            }
-          ] as unknown as SaleProduct[];
         }
         setMenu(menuData);
         try { localStorage.setItem('kds_menu_cache', JSON.stringify(menuData)); } catch {
@@ -155,7 +121,7 @@ export default function KitchenView() {
             <h2 className="text-lg font-bold font-outfit mb-4">Active Orders</h2>
             <div className="space-y-4">
               {orders.filter(o => o.status !== "ready" && o.status !== "completed").map(order => (
-                <div key={order.id} className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-4 shadow-sm">
+                <div key={order.id} data-testid={`kitchen-order-${order.id}`} className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-lg">Order #{order.id} - {order.customer_name || 'Guest'}</h3>
                     <span className="bg-[#0071E3]/10 text-[#0071E3] text-xs font-bold px-2 py-1 rounded">NEW</span>

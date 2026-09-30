@@ -1740,6 +1740,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         ></div>
 
         <div class="btn-group">
+          <p id="approval-error" role="alert" style="color: #FF3B30"></p>
           <button id="approve-publish-btn" data-testid="approve-publish-btn">
             Approve & Publish
           </button>
@@ -2103,118 +2104,10 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         </div>
       </div>
 
-      <!-- Step 5: Admin Setup -->
+      <!-- Step 5: Team Review (existing signed-in account) -->
       <div class="step" id="step-admin">
-        <h1>Admin Credentials</h1>
-        <p>Set up your login details.</p>
-
-        <input
-          type="text"
-          id="admin-name"
-          data-testid="admin-name"
-          class="glassmorphism"
-          placeholder="Your Name (e.g. Maya)"
-          inputmode="text"
-          autocomplete="name"
-          enterkeyhint="next"
-        />
-        <div id="admin-name-error" class="error-msg" aria-live="polite">
-          Please enter your name.
-        </div>
-
-        <input
-          type="email"
-          id="admin-email"
-          data-testid="admin-email"
-          class="glassmorphism"
-          placeholder="admin@mybusiness.com"
-          inputmode="email"
-          autocomplete="email"
-          enterkeyhint="next"
-        />
-        <div id="email-error" class="error-msg" aria-live="polite">
-          Please enter a valid email address.
-        </div>
-
-        <div
-          style="
-            position: relative;
-            width: 100%;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-          "
-        >
-          <input
-            type="password"
-            id="admin-password"
-            data-testid="admin-password"
-            class="glassmorphism"
-            placeholder="Password (min 8 chars)"
-            autocomplete="new-password"
-            enterkeyhint="next"
-            style="padding-right: 44px !important; margin-bottom: 0; flex: 1"
-          />
-          <button
-            type="button"
-            id="toggle-password-visibility"
-            aria-label="Toggle password visibility"
-            title="Toggle password visibility"
-            style="
-              position: absolute;
-              right: 0;
-              height: 100%;
-              width: 44px;
-              background: none;
-              border: none;
-              cursor: pointer;
-              padding: 0;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: #555;
-              box-shadow: none;
-              min-width: auto !important;
-              min-height: auto !important;
-              z-index: 10;
-            "
-          >
-            <svg
-              id="eye-icon-show"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-            <svg
-              id="eye-icon-hide"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="display: none"
-            >
-              <path
-                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
-              ></path>
-              <line x1="1" y1="1" x2="23" y2="23"></line>
-            </svg>
-          </button>
-        </div>
-        <div id="password-error" class="error-msg" aria-live="polite">
-          Password must be at least 8 characters and contain a number.
-        </div>
+        <h1>Review your team</h1>
+        <p>Your business workspace uses your signed-in account.</p>
 
         <div
           style="
@@ -2727,9 +2620,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         tagline: document.getElementById("business-tagline"),
         assistant_name: document.getElementById("assistant-name"),
         assistant_tone: document.getElementById("assistant-tone"),
-        admin_name: document.getElementById("admin-name"),
-        admin_email: document.getElementById("admin-email"),
-        admin_password: document.getElementById("admin-password"),
         first_offer: document.getElementById("first-offer"),
         location: document.getElementById("location-input"),
         target_audience: document.getElementById("target-audience"),
@@ -2745,9 +2635,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         name: document.getElementById("name-error"),
         assistant_name: document.getElementById("assistant-name-error"),
         assistant_tone: document.getElementById("tone-error"),
-        admin_name: document.getElementById("admin-name-error"),
-        admin_email: document.getElementById("email-error"),
-        admin_password: document.getElementById("password-error"),
         first_offer: document.getElementById("offer-error"),
         location: document.getElementById("location-error"),
         target_audience: document.getElementById("target-audience-error"),
@@ -2840,8 +2727,34 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         });
       });
 
+      // Authenticated business setup must never restore or persist login details.
+      function businessDraft(value) {
+        const draft = value && typeof value === "object" && !Array.isArray(value)
+          ? { ...value }
+          : {};
+        delete draft.admin_name;
+        delete draft.admin_email;
+        delete draft.admin_password;
+        return draft;
+      }
+
       // Load existing state
       async function loadState() {
+        const stored = localStorage.getItem("onboardingState");
+        if (stored) {
+          try {
+            const parsed = businessDraft(JSON.parse(stored));
+            state = { ...state, ...parsed };
+            if (parsed.businessName && !parsed.business_name) {
+              state.business_name = parsed.businessName;
+            }
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+          } catch {
+            // Remove only the unusable draft; leave unrelated browser state intact.
+            localStorage.removeItem("onboardingState");
+          }
+        }
+
         const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
         const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
@@ -2874,17 +2787,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           }
         }
 
-        // Merge from localStorage as fallback
-        const stored = localStorage.getItem("onboardingState");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          state = { ...state, ...parsed };
-          if (parsed.businessName && !parsed.business_name) {
-            state.business_name = parsed.businessName;
-          }
-        }
-
-        // Merge backend state, taking priority
+        // Merge backend business state, taking priority, without legacy login fields.
+        loadedState = businessDraft(loadedState);
         if (loadedState && Object.keys(loadedState).length > 0) {
           state = { ...state, ...loadedState };
           if (loadedState.businessName && !loadedState.business_name) {
@@ -2961,23 +2865,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         });
       }
 
-      inputs.admin_email.addEventListener("input", () => {
-        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())) {
-          errors.admin_email.style.display = "none";
-          inputs.admin_email.classList.remove("invalid-input");
-        }
-      });
-
-      inputs.admin_password.addEventListener("input", () => {
-        if (
-          inputs.admin_password.value.trim().length >= 8 &&
-          /\d/.test(inputs.admin_password.value)
-        ) {
-          errors.admin_password.style.display = "none";
-          inputs.admin_password.classList.remove("invalid-input");
-        }
-      });
-
       inputs.assistant_name.addEventListener("input", () => {
         if (inputs.assistant_name.value.trim().length > 0) {
           errors.assistant_name.style.display = "none";
@@ -3019,9 +2906,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           inputs.assistant_name.value = state.assistant_name;
         if (state.assistant_tone)
           inputs.assistant_tone.value = state.assistant_tone;
-        if (state.admin_email) inputs.admin_email.value = state.admin_email;
-        if (state.admin_password)
-          inputs.admin_password.value = state.admin_password;
         if (state.first_offer) inputs.first_offer.value = state.first_offer;
         if (state.location) inputs.location.value = state.location;
         if (state.target_audience) inputs.target_audience.value = state.target_audience;
@@ -3104,7 +2988,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         state.tagline = inputs.tagline.value;
         state.assistant_name = inputs.assistant_name.value;
         state.assistant_tone = inputs.assistant_tone.value;
-        state.admin_name = inputs.admin_name.value;
         state.first_offer = inputs.first_offer.value;
         state.location = inputs.location.value;
         state.target_audience = inputs.target_audience.value;
@@ -3259,53 +3142,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             inputs.assistant_tone.classList.remove("invalid-input");
             state.assistant_tone = inputs.assistant_tone.value;
           }
-        } else if (stepId === "step-admin") {
-          const nameVal = inputs.admin_name.value.trim();
-          const emailVal = inputs.admin_email.value.trim();
-          const passVal = inputs.admin_password.value.trim();
-          let stepValid = true;
-
-          if (nameVal === "") {
-            errors.admin_name.style.display = "block";
-            inputs.admin_name.classList.add("invalid-input");
-            stepValid = false;
-          } else {
-            errors.admin_name.style.display = "none";
-            inputs.admin_name.classList.remove("invalid-input");
-          }
-
-          if (emailVal === "" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-            errors.admin_email.style.display = "block";
-            errors.admin_email.innerText =
-              emailVal === ""
-                ? "Admin Email is required."
-                : "Please enter a valid email address.";
-            inputs.admin_email.classList.add("invalid-input");
-            stepValid = false;
-          } else {
-            errors.admin_email.style.display = "none";
-            inputs.admin_email.classList.remove("invalid-input");
-          }
-
-          if (passVal === "" || passVal.length < 8 || !/\d/.test(passVal)) {
-            errors.admin_password.style.display = "block";
-            errors.admin_password.innerText =
-              passVal === ""
-                ? "Password is required."
-                : "Password must be at least 8 characters and contain a number.";
-            inputs.admin_password.classList.add("invalid-input");
-            stepValid = false;
-          } else {
-            errors.admin_password.style.display = "none";
-            inputs.admin_password.classList.remove("invalid-input");
-          }
-
-          if (stepValid) {
-            state.admin_email = emailVal;
-            state.admin_password = passVal;
-          } else {
-            isValid = false;
-          }
         } else if (stepId === "step-offer") {
           if (inputs.first_offer.value.trim() === "") {
             errors.first_offer.innerText = "Please tell us what you sell.";
@@ -3382,23 +3218,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         }
 
         return isValid;
-      }
-
-      const togglePasswordBtn = document.getElementById(
-        "toggle-password-visibility",
-      );
-      if (togglePasswordBtn) {
-        togglePasswordBtn.addEventListener("click", () => {
-          const type =
-            inputs.admin_password.getAttribute("type") === "password"
-              ? "text"
-              : "password";
-          inputs.admin_password.setAttribute("type", type);
-          document.getElementById("eye-icon-show").style.display =
-            type === "password" ? "block" : "none";
-          document.getElementById("eye-icon-hide").style.display =
-            type === "password" ? "none" : "block";
-        });
       }
 
       function updateAssistantTeam() {
@@ -3764,9 +3583,6 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               company_description: chatHistory.map((m) => m.content).join(" "),
               selling_categories: intakeData.categories || ["physical"],
               payment_pref: "online",
-              admin_email: "admin@mybusiness.com",
-              admin_name: "Admin",
-              admin_password: "password123",
               website_template: "auto",
               first_product_name:
                 intakeData.initial_products?.[0]?.name || "First Product",
@@ -3783,96 +3599,18 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             };
 
             window.pendingOnboardingReq = req;
-            let productsHtml = "";
-            if (req.initial_products && req.initial_products.length > 0) {
-              productsHtml = req.initial_products
-                .map((p) => `<li>${p.name} - ${p.price}</li>`)
-                .join("");
-            } else {
-              productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
+            const details = document.getElementById("approval-details");
+            details.replaceChildren();
+            for (const [label, value] of [
+              ["Business Name", req.company_name],
+              ["Type", req.business_type],
+              ["Products/Services", (req.initial_products.length ? req.initial_products : [{ name: req.first_product_name, price: req.first_product_price }]).map((product) => `${product.name} - ${product.price}`).join(", ")],
+            ]) {
+              const line = document.createElement("p");
+              line.textContent = `${label}: ${value}`;
+              details.appendChild(line);
             }
-
-            const summaryCard = document.createElement("div");
-            summaryCard.className = "glassmorphism";
-            summaryCard.style.cssText =
-              "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 16px 16px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);";
-
-            if (
-              window.matchMedia &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-            ) {
-              summaryCard.style.background = "rgba(22, 22, 26, 0.85)";
-              summaryCard.style.borderTop =
-                "1px solid rgba(255, 255, 255, 0.1)";
-              summaryCard.style.color = "#F5F5F7";
-            }
-
-            const oldStep5Btn = document.getElementById("approve-publish-btn");
-            if (oldStep5Btn) {
-              oldStep5Btn.id = "approve-publish-btn-hidden";
-            }
-
-            summaryCard.innerHTML = `
-                      <h1 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h1>
-                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
-                      </div>
-                      <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
-                        <button id="approve-publish-btn" data-testid="approve-publish-btn-alt" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0052cc; color: white; font-weight: 600; border: none; font-size: 16px;">Approve & Launch</button>
-                      </div>
-                  `;
-
-            document.getElementById("step-chat").style.position = "relative";
-            document.getElementById("step-chat").style.overflow = "hidden";
-            document.getElementById("step-chat").appendChild(summaryCard);
-
-            // Trigger slide up
-            requestAnimationFrame(() => {
-              summaryCard.style.transform = "translateY(0)";
-            });
-
-            const onApproveClick = async () => {
-              const btnChat = document.getElementById("approve-publish-btn-chat");
-              const btnAlt = document.getElementById("approve-publish-btn");
-              if (btnChat) {
-                btnChat.disabled = true;
-                btnChat.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
-              }
-              if (btnAlt) {
-                btnAlt.disabled = true;
-                btnAlt.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
-              }
-
-              const approvePublishBtn = document.getElementById(
-                "approve-publish-btn-hidden",
-              ) || document.getElementById("approve-publish-btn");
-              if (approvePublishBtn) {
-                approvePublishBtn.click();
-              }
-            };
-
-            const chatBtnEl = document.getElementById("approve-publish-btn-chat");
-            if (chatBtnEl) chatBtnEl.addEventListener("click", onApproveClick);
-            const altBtnEl = document.getElementById("approve-publish-btn");
-            if (altBtnEl) altBtnEl.addEventListener("click", onApproveClick);
-            // Scroll to bottom
-            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-            // Zero-click onboarding
             goToStep("step-approval");
-            const approvePublishBtnChat = document.getElementById(
-              "approve-publish-btn-chat",
-            );
-            if (approvePublishBtnChat) {
-              setTimeout(() => {
-                approvePublishBtnChat.click();
-              }, 100);
-            }
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -3886,8 +3624,9 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         approvePublishBtn.addEventListener("click", async () => {
           if (!window.pendingOnboardingReq) return;
           const req = window.pendingOnboardingReq;
-
           approvePublishBtn.disabled = true;
+          const approvalError = document.getElementById("approval-error");
+          if (approvalError) approvalError.textContent = "";
           approvePublishBtn.innerHTML =
             '<div class="spinner"></div>Publishing...';
 
@@ -3948,7 +3687,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             const userIdStr =
               localStorage.getItem("user_id") || "e2e-admin-user";
 
-            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+            const startRes = await fetch(`${backendUrl}/api/v1/onboarding/start`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -3957,13 +3696,10 @@ window.renderWalkthroughStep = renderWalkthroughStep;
                 company_description: req.company_description,
                 selling_categories: req.selling_categories,
                 payment_pref: req.payment_pref,
-                admin_email: req.admin_email,
                 website_template: req.website_template,
                 first_product_name: state.first_offer || req.first_product_name,
                 first_product_price: req.first_product_price,
                 domain_choice: req.domain_choice,
-                admin_name: req.admin_name,
-                admin_password: req.admin_password,
                 price_type: req.price_type,
                 location: state.location || req.location,
                 target_audience: state.target_audience || req.target_audience,
@@ -3983,14 +3719,15 @@ window.renderWalkthroughStep = renderWalkthroughStep;
 
               window.location.href = "dashboard.html";
             } else {
-              localStorage.removeItem("onboardingState");
-              localStorage.setItem("has_onboarded", "true");
-              goToStep("step-success");
+              const failure = await startRes.json().catch(() => ({}));
+              throw new Error(failure.error || failure.message || "Failed to launch store");
             }
           } catch (e) {
-            localStorage.removeItem("onboardingState");
-            localStorage.setItem("has_onboarded", "true");
-            goToStep("step-success");
+            goToStep("step-approval");
+            if (approvalError) approvalError.textContent = e.message || "Failed to launch store";
+          } finally {
+            approvePublishBtn.disabled = false;
+            approvePublishBtn.textContent = "Approve & Publish";
           }
         });
       }
@@ -4198,20 +3935,17 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               business_type:
                 state.work_context || state.work_context || "Local Service",
               company_name: state.business_name,
-              company_description: state.tagline || "",
+              company_description: state.tagline || state.first_offer || state.business_name,
               selling_categories: state.categories ? [state.categories] : [],
               payment_pref: "online",
-              admin_email: state.admin_email || "admin@mybusiness.com",
-              admin_name: state.assistant_name || "Admin",
-              admin_password: state.admin_password || "password123",
               website_template: state.template_selection || "Modern",
               first_product_name: state.first_offer || "First Offer",
               first_product_price: "0.00",
               domain_choice:
                 state.domain || generateSubdomain(state.business_name),
               price_type: "fixed",
-              location: "Local",
-              target_audience: "General",
+              location: state.location || "Local",
+              target_audience: state.target_audience || "General",
               ai_agents: selectedAgents,
               ai_auto_respond: autoRespondChecked,
             };
@@ -4259,7 +3993,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
                 ["1420", "3000", "8081"].includes(window.location.port)
                   ? "http://127.0.0.1:18789"
                   : "";
-              fetch(`${backendUrl}/api/onboarding/start`, {
+              fetch(`${backendUrl}/api/v1/onboarding/start`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",

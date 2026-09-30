@@ -25,9 +25,8 @@ test.describe('Onboarding UI Audit', () => {
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.locator('#step-assistant .next-step-btn').click();
 
-    await page.locator('#admin-name').fill('Admin');
-    await page.locator('#admin-email').fill('nora@example.com');
-    await page.locator('#admin-password').fill('securepassword123');
+    await expect(page.locator('#step-admin')).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.locator('#step-admin .next-step-btn').click();
 
     await page.locator('#first-offer').fill("Logo Design");

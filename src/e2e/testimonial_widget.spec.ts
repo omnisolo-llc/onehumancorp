@@ -18,7 +18,8 @@ test.describe('Testimonial Widget Generator E2E', () => {
 
         // Verify soft paywall appears when checking without Pro
         const removeBrandingCheckbox = page.getByLabel('Remove "OmniSolo" Badge');
-        await removeBrandingCheckbox.check();
+        // A denied Pro toggle opens the paywall and must remain unchecked.
+        await removeBrandingCheckbox.click();
 
         const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Remove Branding' });
         await expect(paywallHeading).toBeVisible();

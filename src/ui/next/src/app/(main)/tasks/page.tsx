@@ -10,10 +10,10 @@ interface Task {
 }
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: "1", title: "Restock front shelf", status: "Pending" },
-    { id: "2", title: "Wipe down counters", status: "Pending" },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // New task modal state
@@ -27,16 +27,21 @@ export default function TasksPage() {
   const [editError, setEditError] = useState("");
 
   useEffect(() => {
-    fetch("/api/v1/tasks")
-      .then((res) => (res.ok ? res.json() : null))
+    const controller = new AbortController();
+    fetch("/api/v1/staff/tasks", { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("Tasks unavailable");
+        return res.json();
+      })
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setTasks(data);
-        }
+        if (!Array.isArray(data.tasks)) throw new Error("Invalid task list");
+        if (!controller.signal.aborted) setTasks(data.tasks);
       })
       .catch(() => {
-        // keep fallback tasks
-      });
+        if (!controller.signal.aborted) setError("Could not load tasks. Please reload to try again.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   const handleOpenNew = () => {
@@ -45,20 +50,30 @@ export default function TasksPage() {
     setIsNewModalOpen(true);
   };
 
-  const handleSaveNew = () => {
+  const handleSaveNew = async () => {
+    if (saving) return;
     if (!newTitle.trim()) {
       setNewError("Title is required");
       return;
     }
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: newTitle.trim(),
-      status: "Pending",
-    };
-    setTasks((prev) => [newTask, ...prev]);
-    setIsNewModalOpen(false);
-    setNewTitle("");
+    const title = newTitle.trim();
+    setSaving(true);
     setNewError("");
+    try {
+      const response = await fetch("/api/v1/staff/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, staff_id: "", description: "", priority: "normal" }),
+      });
+      if (!response.ok) throw new Error("Task save failed");
+      const data = await response.json();
+      if (typeof data.id !== "string" || !data.id) throw new Error("Invalid task ID");
+      setTasks((prev) => [{ id: data.id, title, status: "pending" }, ...prev]);
+      setIsNewModalOpen(false);
+      setNewTitle("");
+    } catch {
+      setNewError("Could not save task. Please try again.");
+    } finally { setSaving(false); }
   };
 
   const handleOpenEdit = () => {
@@ -68,25 +83,46 @@ export default function TasksPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
+    if (saving) return;
     if (!editTitle.trim()) {
       setEditError("Title is required");
       return;
     }
     if (!selectedTask) return;
-    setTasks((prev) =>
-      prev.map((t) => (t.id === selectedTask.id ? { ...t, title: editTitle.trim() } : t))
-    );
-    setSelectedTask((prev) => (prev ? { ...prev, title: editTitle.trim() } : null));
-    setIsEditModalOpen(false);
-    setEditTitle("");
+    const id = selectedTask.id;
+    const title = editTitle.trim();
+    setSaving(true);
     setEditError("");
+    try {
+      const response = await fetch(`/api/v1/staff/tasks/${encodeURIComponent(id)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (!response.ok) throw new Error("Task edit failed");
+      setTasks((prev) => prev.map((task) => task.id === id ? { ...task, title } : task));
+      setSelectedTask((prev) => prev?.id === id ? { ...prev, title } : prev);
+      setIsEditModalOpen(false);
+      setEditTitle("");
+    } catch {
+      setEditError("Could not save task. Please try again.");
+    } finally { setSaving(false); }
   };
 
-  const handleDelete = () => {
-    if (!selectedTask) return;
-    setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
-    setSelectedTask(null);
+  const handleDelete = async () => {
+    if (!selectedTask || saving) return;
+    const id = selectedTask.id;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/v1/staff/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Task delete failed");
+      setTasks((prev) => prev.filter((task) => task.id !== id));
+      setSelectedTask(null);
+    } catch {
+      setError("Could not delete task. Please try again.");
+    } finally { setSaving(false); }
   };
 
   return (
@@ -99,11 +135,16 @@ export default function TasksPage() {
           <h1 className="text-3xl font-bold font-outfit text-gray-900">Tasks</h1>
           <button
             onClick={handleOpenNew}
+            disabled={loading || saving}
             className="app-button primary px-5 py-2.5 rounded-xl font-semibold shadow-sm"
           >
             New Task
           </button>
         </div>
+
+        {error && <p role="alert" className="text-red-600 mb-4">{error}</p>}
+        {loading && <p role="status">Loading tasks...</p>}
+        {!loading && !error && tasks.length === 0 && <p>No tasks yet.</p>}
 
         {selectedTask && (
           <div className="mb-6 p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-center justify-between">
@@ -114,12 +155,14 @@ export default function TasksPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleOpenEdit}
+                disabled={saving}
                 className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Edit
               </button>
               <button
                 onClick={handleDelete}
+                disabled={saving}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-sm"
               >
                 Delete
@@ -172,13 +215,14 @@ export default function TasksPage() {
                   placeholder="Enter task title"
                 />
                 {newError && (
-                  <p className="mt-2 text-sm text-red-600 font-medium">Title is required</p>
+                  <p role="alert" className="mt-2 text-sm text-red-600 font-medium">{newError}</p>
                 )}
               </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsNewModalOpen(false)}
+                  disabled={saving}
                   className="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100 font-medium"
                 >
                   Cancel
@@ -186,6 +230,7 @@ export default function TasksPage() {
                 <button
                   type="button"
                   onClick={handleSaveNew}
+                  disabled={saving}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-sm"
                 >
                   Save
@@ -217,13 +262,14 @@ export default function TasksPage() {
                   placeholder="Enter task title"
                 />
                 {editError && (
-                  <p className="mt-2 text-sm text-red-600 font-medium">Title is required</p>
+                  <p role="alert" className="mt-2 text-sm text-red-600 font-medium">{editError}</p>
                 )}
               </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
+                  disabled={saving}
                   className="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100 font-medium"
                 >
                   Cancel
@@ -231,6 +277,7 @@ export default function TasksPage() {
                 <button
                   type="button"
                   onClick={handleSaveEdit}
+                  disabled={saving}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-sm"
                 >
                   Save Changes

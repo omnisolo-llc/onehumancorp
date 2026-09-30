@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding flows', () => {
   test('Zero-Click Onboarding flow interactive steps', async ({ page }) => {
     // 1. Start at the zero-click onboarding page
-    await page.goto('http://localhost:3000/onboarding/zero-click');
+    await page.goto('/onboarding/zero-click');
     await expect(page).toHaveTitle(/OmniSolo/);
 
     // 2. Verify initial rendering and text

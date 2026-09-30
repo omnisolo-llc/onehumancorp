@@ -24,6 +24,7 @@ import type { AgentFeedItem, AgentFeedData, ActivityItem } from '@/lib/agent-fee
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData }) {
   const decidedIdsRef = useRef<Set<string>>(new Set());
+  const pendingDecisionIdsRef = useRef<Set<string>>(new Set());
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -424,15 +425,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
               proposed_action: safeParsePayload(item.proposed_action),
             }));
 
-            setItems(
-              parsedCombinedItems.filter(
+            setItems((previous) => [
+              ...previous.filter((item) => pendingDecisionIdsRef.current.has(item.id)),
+              ...parsedCombinedItems.filter(
                 (i) =>
                   !decidedIdsRef.current.has(i.id) &&
+                  !pendingDecisionIdsRef.current.has(i.id) &&
                   i.lifecycle_state !== "APPROVED" &&
                   i.lifecycle_state !== "DISMISSED" &&
                   i.lifecycle_state !== "PAUSED",
               ),
-            );
+            ]);
 
             // Map items for activity feed as well
             const mappedActivities = combinedItems
@@ -518,7 +521,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ triage_item_id: id, approved }),
+          body: JSON.stringify({ triage_item_id: id, approved, edited_payload: modified_content }),
         },
       );
       if (!res.ok) {
@@ -548,27 +551,34 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     approved: boolean,
     modified_content?: string,
     event_source?: string,
-  ): Promise<void> => {
-    decidedIdsRef.current.add(id);
-    setItems((prev) => prev.filter((app) => app.id !== id));
-
-    if (isOffline) {
-      // Enqueue offline action
-      await enqueueAction({
-        id: crypto.randomUUID(),
-        type: "approve_agent_feed",
-        payload: { id, approved, modified_content, event_source },
-        timestamp: Date.now(),
-      });
-      setOfflineActionsCount((prev) => prev + 1);
-      setQueuedActionIds((prev) => new Set(prev).add(id));
-      return;
-    }
-
+  ): Promise<boolean> => {
+    if (pendingDecisionIdsRef.current.has(id)) return false;
+    pendingDecisionIdsRef.current.add(id);
+    setError("");
     try {
-      await submitDecision(id, approved, modified_content, event_source);
+      if (isOffline) {
+        await enqueueAction({
+          id: crypto.randomUUID(),
+          type: "approve_agent_feed",
+          payload: { id, approved, modified_content, event_source },
+          timestamp: Date.now(),
+        });
+        setOfflineActionsCount((prev) => prev + 1);
+        setQueuedActionIds((prev) => new Set(prev).add(id));
+      } else {
+        await submitDecision(id, approved, modified_content, event_source);
+        // Preserve the card's acknowledgement animation after the server accepts
+        // the decision. A failed request must leave the proposal available.
+        if (approved) await new Promise((resolve) => window.setTimeout(resolve, 500));
+      }
+      decidedIdsRef.current.add(id);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      return true;
     } catch (err) {
-      console.error("Action submission error:", err);
+      setError(errorMessage(err, "Failed to submit decision"));
+      return false;
+    } finally {
+      pendingDecisionIdsRef.current.delete(id);
     }
   };
 

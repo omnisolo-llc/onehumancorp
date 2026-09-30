@@ -17,11 +17,13 @@ fn pos_tenant(claims: Option<&Extension<::server_common::Claims>>) -> Option<Str
     claims.and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
 }
 
+const POS_ORDERS_SQL: &str = "SELECT o.id, CAST(o.total_amount AS DOUBLE PRECISION) AS total_amount, o.status, o.created_at, o.notes, o.translated_notes, COALESCE(c.name, 'Walk-in') AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 20";
+
 async fn fetch_pos_orders(tenant_id: &str) -> Result<Vec<Value>, sqlx::Error> {
     let pool = crate::db::get_pool();
     let mut tx = pool.begin().await?;
     ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-    let rows = sqlx::query("SELECT id, CAST(total_amount AS DOUBLE PRECISION) AS total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
+    let rows = sqlx::query(POS_ORDERS_SQL)
         .bind(tenant_id)
         .fetch_all(&mut *tx)
         .await?;
@@ -39,7 +41,7 @@ async fn fetch_pos_orders(tenant_id: &str) -> Result<Vec<Value>, sqlx::Error> {
             "status": row.try_get::<String, _>("status").unwrap_or_else(|_| "completed".to_string()),
             "created_at": created_at_str,
             "items": [],
-            "customer_name": "Walk-in",
+            "customer_name": row.try_get::<String, _>("customer_name").unwrap_or_else(|_| "Walk-in".to_string()),
         });
         if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
             order_json["notes"] = json!(notes);
@@ -484,6 +486,40 @@ pub async fn get_inventory_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn pos_orders_keep_customer_identity_and_notes_tenant_scoped() {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql(
+            "CREATE TABLE orders (id TEXT, tenant_id TEXT, customer_id TEXT, total_amount REAL, status TEXT, created_at TEXT, notes TEXT, translated_notes TEXT);
+             CREATE TABLE customers (id TEXT, tenant_id TEXT, name TEXT);
+             INSERT INTO customers VALUES ('shared', 'owner', 'Alice'), ('shared', 'other', 'Private customer');
+             INSERT INTO orders VALUES
+               ('alice-order', 'owner', 'shared', 8, 'pending', '2026-09-30', 'No onions', 'بدون بصل'),
+               ('walk-in', 'owner', 'missing', 12, 'pending', '2026-09-30', NULL, NULL),
+               ('private-order', 'other', 'shared', 20, 'pending', '2026-09-30', NULL, NULL);",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let rows = sqlx::query(POS_ORDERS_SQL)
+            .bind("owner")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 2);
+        let alice = rows
+            .iter()
+            .find(|row| row.get::<String, _>("id") == "alice-order")
+            .unwrap();
+        assert_eq!(alice.get::<String, _>("customer_name"), "Alice");
+        assert_eq!(alice.get::<String, _>("translated_notes"), "بدون بصل");
+        let walk_in = rows
+            .iter()
+            .find(|row| row.get::<String, _>("id") == "walk-in")
+            .unwrap();
+        assert_eq!(walk_in.get::<String, _>("customer_name"), "Walk-in");
+    }
 
     #[tokio::test]
     async fn test_inventory_adjustment_struct() {

@@ -13,7 +13,7 @@ test.describe('Viral Standalone Bridge', () => {
 
     // Wait for navigation
     // We should be on dashboard.html
-await expect(page).toHaveURL(/.*dashboard(\.html)?/);
+    await expect(page).toHaveURL(/.*dashboard(\.html)?/);
 
     // Verify standalone mode badge
     await expect(page.getByText('Standalone Mode (Zero Data Leakage)')).toBeVisible();
@@ -42,28 +42,25 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     await copyBtn.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
-    // Verify the clipboard content includes the link and the "OmniSolo" branding
-    // Playwright evaluates clipboard via API in headed mode or context config but we can check visual drift here
-    // since the original test skips clipboard API evaluation due to permissions in headless mode sometimes.
-    const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
-    if (clipboardText) {
-      expect(clipboardText).toContain('Join my team on OmniSolo!');
-      expect(clipboardText).toMatch(/https:\/\/(cloud\.)?omnisolo(\.network|\.co)\/invite\//);
-      expect(clipboardText).toContain('⚡ OmniSolo');
-    }
+    const inviteLink = await linkInput.inputValue();
+    const expectedShareText = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${inviteLink}\n\n⚡ OmniSolo`;
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboardText).toBe(expectedShareText);
 
     // Verify WhatsApp Share opens new tab with the correct URL
     const whatsappBtn = page.getByRole('button', { name: 'Share on WhatsApp' });
-    const [popup] = await Promise.all([
+    const shareRequest = page.context().waitForEvent('request', request =>
+      new URL(request.url()).hostname === 'wa.me');
+    const [popup, request] = await Promise.all([
       page.waitForEvent('popup'),
+      shareRequest,
       whatsappBtn.click()
     ]);
 
-    // Check URL contains wa.me and the encoded viral loop text
-    const popupUrl = popup.url();
-    // wa.me gets expanded to api.whatsapp.com by the browser often
-    expect(popupUrl).toMatch(/wa\.me|api\.whatsapp\.com/);
-    expect(popupUrl).toContain('Powered+by+OmniSolo');
-      expect(popupUrl).toContain(encodeURIComponent('https://cloud.omnisolo.co/invite/'));
+    // Validate the app's original share intent before WhatsApp rewrites its URL.
+    const shareUrl = new URL(request.url());
+    expect(shareUrl.protocol).toBe('https:');
+    expect(shareUrl.searchParams.get('text')).toBe(expectedShareText);
+    await popup.close();
   });
 });

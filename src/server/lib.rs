@@ -119,6 +119,9 @@ static UI_OMNI_INBOX_CACHE: std::sync::OnceLock<
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<
     ::server_utils::cache::HybridCache<serde_json::Value>,
 > = std::sync::OnceLock::new();
+static UI_AGENT_FEED_CACHE: std::sync::OnceLock<
+    ::server_utils::cache::HybridCache<Vec<serde_json::Value>>,
+> = std::sync::OnceLock::new();
 static UI_UNIFIED_FEED_CACHE: std::sync::OnceLock<
     ::server_utils::cache::HybridCache<serde_json::Value>,
 > = std::sync::OnceLock::new();
@@ -151,6 +154,142 @@ pub fn get_redis_client() -> Option<redis::Client> {
     REDIS_CLIENT
         .get_or_init(crate::redis_pool::get_redis_client)
         .clone()
+}
+
+/// Invalidate every cached representation after a durable agent-feed mutation.
+/// A tenant tag covers mobile and field-projection variants without clearing
+/// another tenant's feed.
+pub(crate) async fn invalidate_agent_feed_caches(tenant_id: &str) {
+    crate::api::agent_feed::get_agent_feed_cache()
+        .invalidate_by_tag(&format!("agent_feed_tenant:{tenant_id}"))
+        .await;
+    let tag = format!("ui_feed_tenant:{tenant_id}");
+    if let Some(cache) = UI_AGENT_FEED_CACHE.get() {
+        cache.invalidate_by_tag(&tag).await;
+    }
+    if let Some(cache) = UI_UNIFIED_FEED_CACHE.get() {
+        cache.invalidate_by_tag(&tag).await;
+    }
+    if let Some(cache) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
+        cache.invalidate_by_tag(&tag).await;
+    }
+}
+
+fn edit_daily_work_actions(
+    actions: Option<serde_json::Value>,
+    edited_payload: Option<&str>,
+) -> Result<Option<serde_json::Value>, &'static str> {
+    let Some(edited) = edited_payload else {
+        return Ok(actions);
+    };
+    let mut actions = actions.unwrap_or(serde_json::Value::Null);
+    if actions.is_null() {
+        actions = serde_json::json!({});
+    }
+    let (action, array_action) = match &mut actions {
+        serde_json::Value::Object(action) => (action, false),
+        serde_json::Value::Array(actions) => {
+            // DailyWorkCard displays the first action. Keep its metadata and
+            // every later action intact when applying the owner's text edit.
+            let Some(serde_json::Value::Object(action)) = actions.first_mut() else {
+                return Err("daily-work draft has no editable action");
+            };
+            (action, true)
+        }
+        _ => return Err("daily-work draft has an unsupported shape"),
+    };
+    let has_draft_reply = action.contains_key("draft_reply");
+    let has_message = action.contains_key("message");
+    if has_draft_reply || (!array_action && !has_message) {
+        action.insert("draft_reply".to_string(), serde_json::json!(edited));
+    }
+    if has_message || (array_action && !has_draft_reply) {
+        action.insert("message".to_string(), serde_json::json!(edited));
+    }
+    Ok(Some(actions))
+}
+
+/// Daily-work approval records an owner's decision and draft, not delivery.
+/// Returns false for IDs belonging to another source (or another tenant), so
+/// the existing triage dispatcher can handle its own item types.
+async fn apply_daily_work_triage_action(
+    db: &crate::db::DB,
+    tenant_id: &str,
+    item_id: &str,
+    approved: bool,
+    edited_payload: Option<&str>,
+) -> Result<bool, sqlx::Error> {
+    let status = if approved { "APPROVED" } else { "DISMISSED" };
+    let rows_affected = match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+            let Some(actions) = sqlx::query_scalar::<_, Option<sqlx::types::Json<serde_json::Value>>>(
+                "SELECT suggested_actions FROM daily_work_items WHERE id = $1 AND tenant_id = $2 FOR UPDATE",
+            )
+            .bind(item_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await? else {
+                return Ok(false);
+            };
+            let actions = edit_daily_work_actions(actions.map(|value| value.0), edited_payload)
+                .map_err(|error| sqlx::Error::Protocol(error.to_string()))?;
+            let result = sqlx::query(
+                "UPDATE daily_work_items SET status = $1, suggested_actions = $2, updated_at = NOW() WHERE id = $3 AND tenant_id = $4",
+            )
+            .bind(status)
+            .bind(actions.map(sqlx::types::Json))
+            .bind(item_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+            tx.commit().await?;
+            result.rows_affected()
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let mut tx = pool.begin().await?;
+            let Some(actions) = sqlx::query_scalar::<_, Option<String>>(
+                "SELECT suggested_actions FROM daily_work_items WHERE id = ? AND tenant_id = ?",
+            )
+            .bind(item_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await?
+            else {
+                return Ok(false);
+            };
+            let actions = actions
+                .map(|value| serde_json::from_str(&value))
+                .transpose()
+                .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+            let actions = edit_daily_work_actions(actions, edited_payload)
+                .map_err(|error| sqlx::Error::Protocol(error.to_string()))?;
+            let result = sqlx::query(
+                "UPDATE daily_work_items SET status = ?, suggested_actions = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?",
+            )
+            .bind(status)
+            .bind(actions.map(|value| value.to_string()))
+            .bind(item_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+            tx.commit().await?;
+            result.rows_affected()
+        }
+    };
+    if rows_affected > 0 {
+        crate::api::work_triage::invalidate_daily_work_cache(tenant_id).await;
+        if let Some(cache) = UI_TRIAGE_CACHE.get() {
+            for mobile in [false, true] {
+                cache
+                    .invalidate(&format!("ui_triage:{tenant_id}:mobile:{mobile}"))
+                    .await;
+            }
+        }
+        invalidate_agent_feed_caches(tenant_id).await;
+    }
+    Ok(rows_affected > 0)
 }
 
 async fn protected_bearer_auth_middleware(
@@ -890,6 +1029,281 @@ async fn load_ui_omni_inbox_from_db(
                     }).collect())
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod feed_backend_regression_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn reservation_feed_invalidation_evicts_all_tenant_variants_only() {
+        let tenant = format!("reservation-cache-{}", uuid::Uuid::new_v4());
+        let other = format!("reservation-cache-other-{}", uuid::Uuid::new_v4());
+        let ttl = std::time::Duration::from_secs(60);
+        let feed =
+            UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        let unified =
+            UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        let agents = UI_UNIFIED_AGENT_FEED_CACHE
+            .get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        for owner in [&tenant, &other] {
+            let tag = format!("ui_feed_tenant:{owner}");
+            for mobile in [false, true] {
+                let key = format!("ui_agent_feed:{owner}:mobile:{mobile}");
+                feed.get_or_fetch_with_tags_swr(&key, vec![tag.clone()], ttl, || async {
+                    Some(vec![serde_json::json!({"id": "prewarmed"})])
+                })
+                .await
+                .unwrap();
+                for fields in ["", "agent_feed", "agent_feed.id,pending_approvals"] {
+                    for (cache, prefix) in [
+                        (unified, "ui_dashboard_unified"),
+                        (agents, "ui_unified_agent_feed"),
+                    ] {
+                        let key = format!("{prefix}:{owner}:mobile:{mobile}:fields:{fields}");
+                        cache
+                            .get_or_fetch_with_tags_swr(&key, vec![tag.clone()], ttl, || async {
+                                Some(serde_json::json!({"agent_feed": [{"id": "prewarmed"}]}))
+                            })
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
+        }
+        invalidate_agent_feed_caches(&tenant).await;
+        for owner in [&tenant, &other] {
+            let remains = owner == &other;
+            for mobile in [false, true] {
+                assert_eq!(
+                    feed.get(&format!("ui_agent_feed:{owner}:mobile:{mobile}"))
+                        .await
+                        .is_some(),
+                    remains
+                );
+                for fields in ["", "agent_feed", "agent_feed.id,pending_approvals"] {
+                    for (cache, prefix) in [
+                        (unified, "ui_dashboard_unified"),
+                        (agents, "ui_unified_agent_feed"),
+                    ] {
+                        assert_eq!(
+                            cache
+                                .get(&format!("{prefix}:{owner}:mobile:{mobile}:fields:{fields}"))
+                                .await
+                                .is_some(),
+                            remains
+                        );
+                    }
+                }
+            }
+        }
+        invalidate_agent_feed_caches(&other).await;
+    }
+
+    async fn daily_work_test_db() -> crate::db::DB {
+        let sqlite = crate::db::create_sqlite_pool_for_test().await;
+        sqlx::query("CREATE TABLE daily_work_items (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, suggested_actions TEXT, status TEXT NOT NULL CHECK (status IN ('PENDING', 'APPROVED', 'DISMISSED')), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&sqlite).await.unwrap();
+        for (id, tenant) in [("work-a", "tenant-a"), ("work-b", "tenant-b")] {
+            sqlx::query("INSERT INTO daily_work_items (id, tenant_id, suggested_actions, status) VALUES (?, ?, ?, 'PENDING')")
+                .bind(id).bind(tenant)
+                .bind(r#"{"draft_reply":"original draft","message_id":"message-1"}"#)
+                .execute(&sqlite).await.unwrap();
+        }
+        crate::db::DB {
+            pool: crate::db::create_dummy_pg_pool().await,
+            store: crate::db::DbStore::Sqlite(sqlite),
+        }
+    }
+
+    async fn saved_daily_work(db: &crate::db::DB, id: &str) -> (String, serde_json::Value) {
+        let crate::db::DbStore::Sqlite(pool) = &db.store else {
+            panic!("sqlite fixture required")
+        };
+        let (status, actions): (String, String) =
+            sqlx::query_as("SELECT status, suggested_actions FROM daily_work_items WHERE id = ?")
+                .bind(id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+        (status, serde_json::from_str(&actions).unwrap())
+    }
+
+    #[tokio::test]
+    async fn daily_work_triage_approval_persists_edited_draft_without_claiming_delivery() {
+        let db = daily_work_test_db().await;
+        assert!(
+            apply_daily_work_triage_action(
+                &db,
+                "tenant-a",
+                "work-a",
+                true,
+                Some("Edited \"reply\"\nReady for review")
+            )
+            .await
+            .unwrap()
+        );
+        let (status, actions) = saved_daily_work(&db, "work-a").await;
+        assert_eq!(status, "APPROVED");
+        assert_eq!(actions["draft_reply"], "Edited \"reply\"\nReady for review");
+        assert_eq!(actions["message_id"], "message-1");
+        assert_eq!(saved_daily_work(&db, "work-b").await.0, "PENDING");
+    }
+
+    #[tokio::test]
+    async fn daily_work_triage_dismissal_preserves_unedited_draft() {
+        let db = daily_work_test_db().await;
+        assert!(
+            apply_daily_work_triage_action(&db, "tenant-a", "work-a", false, None)
+                .await
+                .unwrap()
+        );
+        let (status, actions) = saved_daily_work(&db, "work-a").await;
+        assert_eq!(status, "DISMISSED");
+        assert_eq!(
+            actions,
+            serde_json::json!({"draft_reply": "original draft", "message_id": "message-1"})
+        );
+    }
+
+    #[tokio::test]
+    async fn daily_work_triage_cannot_update_another_tenant() {
+        let db = daily_work_test_db().await;
+        assert!(
+            !apply_daily_work_triage_action(&db, "tenant-a", "work-b", true, Some("tampered"))
+                .await
+                .unwrap()
+        );
+        assert!(
+            !apply_daily_work_triage_action(&db, "tenant-a", "missing", true, None)
+                .await
+                .unwrap()
+        );
+        assert_eq!(
+            saved_daily_work(&db, "work-b").await,
+            (
+                "PENDING".to_string(),
+                serde_json::json!({"draft_reply": "original draft", "message_id": "message-1"})
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn daily_work_triage_edit_preserves_array_actions_and_metadata() {
+        let db = daily_work_test_db().await;
+        let crate::db::DbStore::Sqlite(pool) = &db.store else {
+            panic!("sqlite fixture required")
+        };
+        let original = serde_json::json!([
+            {"action_type": "Draft Reply", "message": "original", "metadata": {"channel": "email"}},
+            {"action_type": "Other", "message": "leave unchanged"}
+        ]);
+        sqlx::query("UPDATE daily_work_items SET suggested_actions = ? WHERE id = 'work-a'")
+            .bind(original.to_string())
+            .execute(pool)
+            .await
+            .unwrap();
+        assert!(
+            apply_daily_work_triage_action(&db, "tenant-a", "work-a", true, Some("edited reply"))
+                .await
+                .unwrap()
+        );
+        assert_eq!(
+            saved_daily_work(&db, "work-a").await,
+            (
+                "APPROVED".to_string(),
+                serde_json::json!([
+                    {"action_type": "Draft Reply", "message": "edited reply", "metadata": {"channel": "email"}},
+                    {"action_type": "Other", "message": "leave unchanged"}
+                ])
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn daily_work_triage_edit_initializes_sql_and_json_null_drafts() {
+        let db = daily_work_test_db().await;
+        let crate::db::DbStore::Sqlite(pool) = &db.store else {
+            panic!("sqlite fixture required")
+        };
+        for original in [None, Some("null")] {
+            sqlx::query("UPDATE daily_work_items SET suggested_actions = ?, status = 'PENDING' WHERE id = 'work-a'")
+                .bind(original).execute(pool).await.unwrap();
+            assert!(
+                apply_daily_work_triage_action(&db, "tenant-a", "work-a", true, Some("new reply"))
+                    .await
+                    .unwrap()
+            );
+            assert_eq!(
+                saved_daily_work(&db, "work-a").await,
+                (
+                    "APPROVED".to_string(),
+                    serde_json::json!({"draft_reply": "new reply"})
+                )
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn daily_work_triage_rejects_edits_without_a_supported_action_shape() {
+        let db = daily_work_test_db().await;
+        let crate::db::DbStore::Sqlite(pool) = &db.store else {
+            panic!("sqlite fixture required")
+        };
+        for original in [
+            serde_json::json!([]),
+            serde_json::json!([false]),
+            serde_json::json!(123),
+        ] {
+            sqlx::query("UPDATE daily_work_items SET suggested_actions = ? WHERE id = 'work-a'")
+                .bind(original.to_string())
+                .execute(pool)
+                .await
+                .unwrap();
+            assert!(
+                apply_daily_work_triage_action(
+                    &db,
+                    "tenant-a",
+                    "work-a",
+                    true,
+                    Some("unsaved reply")
+                )
+                .await
+                .is_err()
+            );
+            assert_eq!(
+                saved_daily_work(&db, "work-a").await,
+                ("PENDING".to_string(), original)
+            );
+        }
+    }
+
+    #[test]
+    fn daily_work_draft_edit_preserves_an_array_draft_reply_field() {
+        let original = serde_json::json!([{"draft_reply": "original", "message": "original", "action_type": "Draft Reply"}]);
+        assert_eq!(
+            edit_daily_work_actions(Some(original), Some("edited")).unwrap(),
+            Some(serde_json::json!([
+                {"draft_reply": "edited", "message": "edited", "action_type": "Draft Reply"}
+            ]))
+        );
+    }
+
+    #[tokio::test]
+    async fn daily_work_triage_database_failure_does_not_report_success() {
+        let db = daily_work_test_db().await;
+        let crate::db::DbStore::Sqlite(pool) = &db.store else {
+            panic!("sqlite fixture required")
+        };
+        sqlx::query("CREATE TRIGGER reject_decision BEFORE UPDATE ON daily_work_items BEGIN SELECT RAISE(ABORT, 'decision storage unavailable'); END")
+            .execute(pool).await.unwrap();
+        assert!(
+            apply_daily_work_triage_action(&db, "tenant-a", "work-a", true, Some("unsaved"))
+                .await
+                .is_err()
+        );
+        assert_eq!(saved_daily_work(&db, "work-a").await.0, "PENDING");
     }
 }
 
@@ -5276,6 +5690,28 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
             return axum::http::StatusCode::UNAUTHORIZED.into_response();
         };
+        match apply_daily_work_triage_action(
+            &db,
+            &tenant_id,
+            &payload.triage_item_id,
+            payload.approved,
+            payload.edited_payload.as_deref(),
+        )
+        .await
+        {
+            Ok(true) => {
+                return (
+                    axum::http::StatusCode::OK,
+                    axum::Json(serde_json::json!({"status": "success"})),
+                )
+                    .into_response();
+            }
+            Ok(false) => {}
+            Err(error) => {
+                tracing::error!("Failed to persist daily-work triage decision: {error}");
+                return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        }
         match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = match db.pool.begin().await {
@@ -7751,8 +8187,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         ::server_utils::cache::HybridCache::new(get_redis_client())
                     });
                     cache
-                        .get_or_fetch_with_swr(
+                        .get_or_fetch_with_tags_swr(
                             &f_key_clone,
+                            vec![format!("ui_feed_tenant:{}", t_clone)],
                             std::time::Duration::from_secs(10),
                             move || async move {
                                 load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized)
@@ -7828,13 +8265,18 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         });
 
         let mut final_result = cache
-            .get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
-                let db_bg = db.clone();
-                let t_bg = tenant_id.clone();
-                move || async move {
-                    Some(fetch_unified_feed_data(&db_bg, &t_bg, mobile_optimized).await)
-                }
-            })
+            .get_or_fetch_with_tags_swr(
+                &cache_key,
+                vec![format!("ui_feed_tenant:{}", tenant_id)],
+                std::time::Duration::from_secs(10),
+                {
+                    let db_bg = db.clone();
+                    let t_bg = tenant_id.clone();
+                    move || async move {
+                        Some(fetch_unified_feed_data(&db_bg, &t_bg, mobile_optimized).await)
+                    }
+                },
+            )
             .await
             .unwrap_or_else(|| serde_json::json!({}));
 
@@ -7955,8 +8397,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         ::server_utils::cache::HybridCache::new(get_redis_client())
                     });
                     let res = cache
-                        .get_or_fetch_with_swr(
+                        .get_or_fetch_with_tags_swr(
                             &f_key_clone,
+                            vec![format!("ui_feed_tenant:{}", t_clone)],
                             std::time::Duration::from_secs(10),
                             move || async move {
                                 load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized)
@@ -8005,17 +8448,27 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
         let fields_str = fields.map(|s| s.to_string());
         let items_opt = cache
-            .get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
-                let db = db.clone();
-                let t = tenant_id.clone();
-                let f_bg = fields_str.clone();
-                move || async move {
-                    Some(
-                        fetch_unified_agent_feed_data(&db, &t, mobile_optimized, f_bg.as_deref())
+            .get_or_fetch_with_tags_swr(
+                &cache_key,
+                vec![format!("ui_feed_tenant:{}", tenant_id)],
+                std::time::Duration::from_secs(10),
+                {
+                    let db = db.clone();
+                    let t = tenant_id.clone();
+                    let f_bg = fields_str.clone();
+                    move || async move {
+                        Some(
+                            fetch_unified_agent_feed_data(
+                                &db,
+                                &t,
+                                mobile_optimized,
+                                f_bg.as_deref(),
+                            )
                             .await,
-                    )
-                }
-            })
+                        )
+                    }
+                },
+            )
             .await;
 
         let mut result = items_opt.unwrap_or_else(|| serde_json::json!({}));
@@ -8027,9 +8480,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ::server_utils::cache::HybridCache<Vec<serde_json::Value>>,
     > = std::sync::OnceLock::new();
     static UI_AGENT_APPROVALS_CACHE: std::sync::OnceLock<
-        ::server_utils::cache::HybridCache<Vec<serde_json::Value>>,
-    > = std::sync::OnceLock::new();
-    static UI_AGENT_FEED_CACHE: std::sync::OnceLock<
         ::server_utils::cache::HybridCache<Vec<serde_json::Value>>,
     > = std::sync::OnceLock::new();
     static UI_INVOICES_CACHE: std::sync::OnceLock<
