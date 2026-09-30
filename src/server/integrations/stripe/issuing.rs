@@ -26,13 +26,22 @@ pub struct MerchantData {
 }
 
 impl StripeClient {
-    pub async fn create_issuing_card(&self, spending_limit_cents: i64) -> Result<VirtualCard, String> {
+    pub async fn create_issuing_card(
+        &self,
+        spending_limit_cents: i64,
+    ) -> Result<VirtualCard, String> {
         let auth_header = format!("Bearer {}", self.api_key);
         let form_data = [
             ("type", "virtual"),
             ("currency", "usd"),
-            ("spending_controls[spending_limits][0][amount]", &spending_limit_cents.to_string()),
-            ("spending_controls[spending_limits][0][interval]", "per_authorization"),
+            (
+                "spending_controls[spending_limits][0][amount]",
+                &spending_limit_cents.to_string(),
+            ),
+            (
+                "spending_controls[spending_limits][0][interval]",
+                "per_authorization",
+            ),
         ];
 
         let req = reqwest::Client::new()
@@ -51,12 +60,20 @@ impl StripeClient {
         Ok(card)
     }
 
-    pub async fn handle_issuing_webhook(&self, payload: &str, _sig: &str, _secret: &str, budget_cents: i64) -> Result<bool, String> {
+    pub async fn handle_issuing_webhook(
+        &self,
+        payload: &str,
+        _sig: &str,
+        _secret: &str,
+        budget_cents: i64,
+    ) -> Result<bool, String> {
         // In a real app we'd verify the signature here.
         let event: serde_json::Value = serde_json::from_str(payload).map_err(|e| e.to_string())?;
 
         if event["type"] == "issuing_authorization.request" {
-            let auth: AuthorizationRequest = serde_json::from_value(event["data"]["object"].clone()).map_err(|e| e.to_string())?;
+            let auth: AuthorizationRequest =
+                serde_json::from_value(event["data"]["object"].clone())
+                    .map_err(|e| e.to_string())?;
 
             // Check budget policy
             if auth.amount <= budget_cents {
@@ -76,7 +93,10 @@ impl StripeClient {
     pub async fn approve_issuing_authorization(&self, auth_id: &str) -> Result<(), String> {
         let auth_header = format!("Bearer {}", self.api_key);
         let req = reqwest::Client::new()
-            .post(&format!("https://api.stripe.com/v1/issuing/authorizations/{}/approve", auth_id))
+            .post(&format!(
+                "https://api.stripe.com/v1/issuing/authorizations/{}/approve",
+                auth_id
+            ))
             .header("Authorization", auth_header);
 
         let res = req.send().await.map_err(|e| e.to_string())?;
@@ -92,7 +112,10 @@ impl StripeClient {
     pub async fn decline_issuing_authorization(&self, auth_id: &str) -> Result<(), String> {
         let auth_header = format!("Bearer {}", self.api_key);
         let req = reqwest::Client::new()
-            .post(&format!("https://api.stripe.com/v1/issuing/authorizations/{}/decline", auth_id))
+            .post(&format!(
+                "https://api.stripe.com/v1/issuing/authorizations/{}/decline",
+                auth_id
+            ))
             .header("Authorization", auth_header);
 
         let res = req.send().await.map_err(|e| e.to_string())?;
