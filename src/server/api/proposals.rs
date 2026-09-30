@@ -152,7 +152,9 @@ where
 async fn draft_narrative(
     Extension(llm): Extension<Arc<dyn ResearcherLlmClient>>,
     Extension(claims): Extension<::server_common::Claims>,
-    axum::extract::Extension(auditor): axum::extract::Extension<std::sync::Arc<crate::services::billing::auditor::CostAuditor>>,
+    axum::extract::Extension(auditor): axum::extract::Extension<
+        std::sync::Arc<crate::services::billing::auditor::CostAuditor>,
+    >,
     Json(payload): Json<NarrativeDraftRequest>,
 ) -> axum::response::Response {
     draft_narrative_with_llm(llm.as_ref(), &claims, auditor.as_ref(), payload).await
@@ -227,7 +229,9 @@ async fn draft_narrative_with_llm(
 async fn draft_agent(
     State(pool): State<PgPool>,
     Extension(claims): Extension<::server_common::Claims>,
-    axum::extract::Extension(auditor): axum::extract::Extension<std::sync::Arc<crate::services::billing::auditor::CostAuditor>>,
+    axum::extract::Extension(auditor): axum::extract::Extension<
+        std::sync::Arc<crate::services::billing::auditor::CostAuditor>,
+    >,
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match authenticated_tenant(&claims) {
@@ -265,7 +269,6 @@ async fn draft_agent(
     if cost == 0.0 {
         tracing::warn!("CostAuditor failed to record event or event resulted in 0 cost.");
     }
-
 
     let json_str = res.message.content.trim();
     let json_str = json_str.strip_prefix("```json").unwrap_or(json_str);
