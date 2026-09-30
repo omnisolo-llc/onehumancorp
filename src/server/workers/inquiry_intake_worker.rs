@@ -311,7 +311,7 @@ Respond with a JSON object containing exactly one boolean field: 'in_scope'. Set
                 let quote_id = Uuid::new_v4();
 
                 let is_err = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
-                    let mut tx = pg_tx_opt.as_mut().unwrap();
+                    let tx = pg_tx_opt.as_mut().unwrap();
                     let r1 = sqlx::query("UPDATE inquiries SET status = 'QUOTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
                         .bind(inquiry_id).bind(&tenant_id).execute(&mut **tx).await;
                     let r2 = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, 'DRAFTING', 0, 0)")
@@ -330,7 +330,7 @@ Respond with a JSON object containing exactly one boolean field: 'in_scope'. Set
 
                     r1.is_err() || r2.is_err() || r3.is_err() || r4.is_err()
                 } else {
-                    let mut tx = sqlite_tx_opt.as_mut().unwrap();
+                    let tx = sqlite_tx_opt.as_mut().unwrap();
                     let r1 = sqlx::query("UPDATE inquiries SET status = 'QUOTED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
                         .bind(inquiry_id).bind(&tenant_id).execute(&mut **tx).await;
                     let r2 = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents) VALUES (?, ?, 'DRAFTING', 0, 0)")
@@ -356,14 +356,14 @@ Respond with a JSON object containing exactly one boolean field: 'in_scope'. Set
             } else {
                 // Out of scope, mark inquiry as closed
                 let is_err = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
-                    let mut tx = pg_tx_opt.as_mut().unwrap();
+                    let tx = pg_tx_opt.as_mut().unwrap();
                     let r1 = sqlx::query("UPDATE inquiries SET status = 'CLOSED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
                         .bind(inquiry_id).bind(&tenant_id).execute(&mut **tx).await;
                     let r2 = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&job_id).execute(&mut **tx).await;
                     r1.is_err() || r2.is_err()
                 } else {
-                    let mut tx = sqlite_tx_opt.as_mut().unwrap();
+                    let tx = sqlite_tx_opt.as_mut().unwrap();
                     let r1 = sqlx::query("UPDATE inquiries SET status = 'CLOSED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
                         .bind(inquiry_id).bind(&tenant_id).execute(&mut **tx).await;
                     let r2 = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")

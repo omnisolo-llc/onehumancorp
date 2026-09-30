@@ -112,12 +112,6 @@ async fn create_inquiry(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use ::server_common::Claims;
-    use axum::http::Request;
-    use axum::body::Body;
-    use tower::ServiceExt;
-    use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
     async fn test_create_inquiry() {
