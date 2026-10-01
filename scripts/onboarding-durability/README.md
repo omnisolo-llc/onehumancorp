@@ -36,3 +36,5 @@ unauthenticated legacy fallback. Onboarding requests may send paired
 `x-ohc-expected-user`/`x-ohc-expected-tenant` preconditions. If either is supplied,
 both must be singular and exactly match the authenticated principal, otherwise
 HTTP409 `session_identity_changed` is returned before any handler effects.
+
+The three direct catalog regression cases use `catalog_test_adapter.rs` to wrap the real catalog conversion and transactional save methods. This adapter exists only in the focused test crate; production no longer carries an unused test helper. The existing invalid-money, exact-cents and variant-rollback assertions are unchanged.

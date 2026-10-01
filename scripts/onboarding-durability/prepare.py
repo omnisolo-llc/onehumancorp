@@ -20,7 +20,7 @@ def block(name):
     raise ValueError(name)
 # Match longer type first: avoid IntakeProduct prefix choosing IntakeProductVariant.
 types='\n'.join('#[derive(Clone,serde::Serialize,serde::Deserialize)]\n'+block('pub struct '+n+' {') for n in ['IntakeProduct','IntakeProductVariant','IntakeData','ChatMessage','ChatResponse'])
-methods=['pub async fn start_onboarding_for_identity','async fn start_onboarding_internal','async fn create_product','async fn generate_initial_products','pub async fn save_onboarding_state','pub async fn save_onboarding_system_state','async fn save_onboarding_state_internal','pub async fn prepare_onboarding_for_identity','pub async fn prepared_state','pub async fn launch_preparation','async fn invalidate_onboarding_cache','fn catalog_product','fn default_catalog','pub async fn get_onboarding_state']
+methods=['pub async fn start_onboarding_for_identity','async fn start_onboarding_internal','async fn generate_initial_products','pub async fn save_onboarding_state','pub async fn save_onboarding_system_state','async fn save_onboarding_state_internal','pub async fn prepare_onboarding_for_identity','pub async fn prepared_state','pub async fn launch_preparation','async fn invalidate_onboarding_cache','fn catalog_product','fn default_catalog','pub async fn get_onboarding_state']
 head='''#![allow(dead_code)]
 extern crate self as omnisolo_builtin_agent;
 pub mod mesh{pub mod transport{pub trait MeshTransport:Send+Sync{} #[derive(Default)] pub struct InProcessTransport; impl InProcessTransport{pub fn new()->Self{Self}} impl MeshTransport for InProcessTransport{}}}
@@ -63,8 +63,9 @@ use tower::ServiceExt;
 async fn app_with_user()->(Router,Arc<Store>,User){let a=crate::tests::setup().await;let (_,store)=crate::tests::mounted(&a);let app=server_auth::http::router(store.clone()).unwrap();(app,store,crate::tests::auth_user("ADMIN"))}
 """ + auth_tests + "\n}\n"
 
+generated += '\n#[cfg(test)]\ninclude!("catalog_test_adapter.rs");\n'
 (HERE/'generated.rs').write_text(generated)
 
-inputs=[ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/auth/http.rs',ROOT/'src/server/api/onboarding/mod.rs',ROOT/'src/server/services/onboarding/onboarding_agent.rs',ROOT/'src/server/services/onboarding/preparation.rs',ROOT/'src/server/services/onboarding/mod.rs',ROOT/'src/server/migrations/235_onboarding_preparation_receipt.sql',HERE/'test.rs',HERE/'prepare.py',HERE/'Cargo.toml']
+inputs=[ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/auth/http.rs',ROOT/'src/server/api/onboarding/mod.rs',ROOT/'src/server/services/onboarding/onboarding_agent.rs',ROOT/'src/server/services/onboarding/preparation.rs',ROOT/'src/server/services/onboarding/mod.rs',ROOT/'src/server/migrations/235_onboarding_preparation_receipt.sql',HERE/'test.rs',HERE/'catalog_test_adapter.rs',HERE/'prepare.py',HERE/'Cargo.toml']
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},indent=2)+'\n')
-print('Prepared exact-source onboarding harness')
+print('Prepared exact production onboarding methods with a test-only catalog adapter')
