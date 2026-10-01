@@ -1,1 +1,1 @@
-Finding: F07 (fabricated proposal terms) is marked as Closed in the remediation ledger. The file src/server/api/proposals.rs does not contain the $5,000 hardcoded value. No further actionable work was found.
+Finding: F05 (telemetry not invoice-grade) is marked as Blocked in the remediation ledger. The user's request was to implement the finding, but no actionable code changes can be made since the required schema and definitions do not exist. Therefore, we will submit a blocked no-work finding on the current branch.
