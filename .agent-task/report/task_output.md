@@ -1,4 +1,4 @@
-issue_title: ""
+issue_title: "OHC-02 Durable Goal Execution and Handoffs"
 issue_description: |
   # Research Report: OHC-02 Durable Goal Execution and Handoffs
 
@@ -12,8 +12,8 @@ issue_description: |
   ## Superpowers Workflow Evidence
   - **Source Repository Revision Hash**: 8ca22dba9a94f28898bbce59f2537ff4d87c747d
   - **Loaded Skills**: `skills/using-superpowers/SKILL.md`
-issue_priority: ""
-issue_category: ""
-issue_type: ""
-issue_label: ""
+issue_priority: "P2"
+issue_category: "research"
+issue_type: "task"
+issue_label: ["agent-report"]
 assignees: []
