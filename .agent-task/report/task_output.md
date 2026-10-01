@@ -1,0 +1,3 @@
+issue_title: "Implement Custom Rust Omnichannel Chat to Replace Chatwoot"
+issue_description: "The issue requested implementing a native Rust omnichannel chat backend to replace Chatwoot. However, according to the project documentation (\`docs/superpowers/plans/2026-07-13-chatwoot-removal.md\` and \`docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md\`), Chatwoot was already removed in favor of the native omnichannel design. The removal was tracked under \`Project 1: Chatwoot removal\` and confirmed on 2026-07-13. The codebase shows no traces of Chatwoot integration in the application data path. Loaded Superpowers revision: (skills/using-superpowers/SKILL.md)"
+outcome: "no_work"
