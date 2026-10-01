@@ -728,6 +728,51 @@ jobs:
       - name: Run PostgreSQL tenant-isolation suite
         run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"
 
+      - name: Verify focused gate discovery and failure guards
+        if: ${{ !cancelled() }}
+        run: |
+          sudo apt-get install -y --no-install-recommends python3-yaml
+          python3 -m unittest scripts/test_focused_ci_gate.py
+      # These source-bound gates use only disposable databases and loopback
+      # provider fixtures. Each runs even if an independent earlier check fails.
+      - name: Verify durable onboarding and session recovery
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SYNC_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_onboarding_durability_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_onboarding_durability_test
+          python3 scripts/focused_ci_gate.py onboarding-durability
+      - name: Verify quote acceptance receipts and replay
+        if: ${{ !cancelled() }}
+        env:
+          OHC_QUOTE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_quote_acceptance_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_quote_acceptance_test
+          python3 scripts/focused_ci_gate.py quote-acceptance
+      - name: Verify concurrent onboarding draft persistence
+        if: ${{ !cancelled() }}
+        env:
+          OHC_DRAFT_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_onboarding_draft_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_onboarding_draft_test
+          python3 scripts/focused_ci_gate.py onboarding-draft-merge
+      - name: Verify active Stripe webhook ingress offline
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py stripe-webhook-security
+      - name: Retain focused gate execution and source evidence
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: focused-backend-gate-results
+          path: target/focused-ci-results
+          if-no-files-found: error
+          retention-days: 7
+
   ci-required:
     name: CI Required
     needs:
