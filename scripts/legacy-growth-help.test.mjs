@@ -57,7 +57,9 @@ for (const root of fullRoots) {
       assert.ok(launcher);
       assert.equal(dom.window.getComputedStyle(launcher).position, 'fixed');
       dom.window.openAISupport();
-      await new Promise(resolve => dom.window.setTimeout(resolve, 50));
+      // Chat selection and focus run on successive rendering frames. A fixed
+      // timer can fire between them when the first frame is delayed.
+      await new Promise(resolve => dom.window.requestAnimationFrame(() => dom.window.requestAnimationFrame(resolve)));
       assert.equal(document.querySelector('#ohc-floating-help-widget, #omnisolo-floating-help-widget').style.display, 'flex');
       assert.equal(document.getElementById('tab-chat').classList.contains('active'), true);
       assert.equal(document.activeElement, document.getElementById('ohc-help-chat-input'));
