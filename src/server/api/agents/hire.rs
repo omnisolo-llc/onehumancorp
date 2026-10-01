@@ -234,18 +234,8 @@ pub struct MarketplaceQuery {
 
 pub async fn list_marketplace_agents(Query(query): Query<MarketplaceQuery>) -> impl IntoResponse {
     let marketplace_url = std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_default();
-    let provider: Box<dyn omnisolo_builtin_agent::tools::marketplace::MarketplaceProvider> =
-        if marketplace_url.is_empty() || marketplace_url.contains("example.com") {
-            Box::new(
-                omnisolo_builtin_agent::tools::marketplace::test_utils::MockMarketplaceProvider,
-            )
-        } else {
-            Box::new(
-                omnisolo_builtin_agent::tools::marketplace::HttpMarketplaceProvider::new(
-                    &marketplace_url,
-                ),
-            )
-        };
+    let provider =
+        omnisolo_builtin_agent::tools::marketplace::configured_provider(&marketplace_url);
     let marketplace = omnisolo_builtin_agent::tools::marketplace::MarketplaceClient::new(provider);
 
     let q = query.q.unwrap_or_default();
@@ -257,8 +247,8 @@ pub async fn list_marketplace_agents(Query(query): Query<MarketplaceQuery>) -> i
             (StatusCode::OK, Json(json_agents)).into_response()
         }
         Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!([])),
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({ "error": "Marketplace registry is unavailable" })),
         )
             .into_response(),
     }
