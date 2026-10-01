@@ -1,9 +1,12 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
+issue_title: "Implement Custom Rust Omnichannel Chat System"
 issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+  The requested issue ("Implement Custom Rust Omnichannel Chat System") describes implementing core tables (inbox, conversation, message) and APIs for a native omnichannel chat.
+  Upon auditing the codebase, it is clear that this system has already been implemented:
+  - Tables such as `chat_inboxes` and `chat_channels` are implemented in `src/server/migrations/1009_native_omnichannel_chat.sql` with multi-tenant isolation via RLS policies.
+  - The models are defined in `src/server/services/chat/models.rs` using SQLx.
+  - The service layer CRUD operations are defined in `src/server/services/chat/service.rs`.
+  - Real-time websocket broadcasts and unified inbox features are implemented via `src/server/api/unified_ws.rs` and `src/server/api/unified_inbox_webhook.rs`.
+
+  The acceptance criteria outlined in the issue are already satisfied by existing code in the repository. As per instructions, "If the problem or default behavior described by the issue is obsolete... If the issue is already complete or requires unavailable authorization/evidence, return an explicit no_work or blocked outcome."
+  Superpowers skill provenance: None loaded
+outcome: blocked
