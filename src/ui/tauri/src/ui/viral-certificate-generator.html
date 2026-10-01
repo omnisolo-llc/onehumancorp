@@ -194,39 +194,40 @@
         <div class="glassmorphism">
             <div class="form-group">
                 <label for="tenant">Tenant / Business ID</label>
-                <input type="text" id="tenant" value="e2e-tenant">
+                <input type="text" id="tenant" disabled value="e2e-tenant">
             </div>
 
             <div class="form-group">
                 <label for="cert-title">Certificate Title</label>
-                <input type="text" id="cert-title" value="Certificate of Completion">
+                <input type="text" id="cert-title" disabled value="Certificate of Completion">
             </div>
 
             <div class="form-group">
                 <label for="recipient">Recipient Name</label>
-                <input type="text" id="recipient" value="Jane Doe">
+                <input type="text" id="recipient" disabled value="Jane Doe">
             </div>
 
             <div class="form-group">
                 <label for="course-name">Course/Item Name</label>
-                <input type="text" id="course-name" value="Advanced Baking Masterclass">
+                <input type="text" id="course-name" disabled value="Advanced Baking Masterclass">
             </div>
 
             <div class="form-group">
                 <label for="theme">Theme</label>
-                <select id="theme">
+                <select id="theme" disabled>
                     <option value="light">Light</option>
                     <option value="dark">Dark</option>
                     <option value="gold">Gold Premium</option>
                 </select>
             </div>
 
-            <button id="generate-btn">Generate Widget</button>
+            <button id="generate-btn" disabled>Generate Widget</button>
+            <p id="certificate-storage-notice" role="status" hidden></p>
 
             <div class="result-area" id="result-area">
                 <label>Embed Code (Copy and paste into your website)</label>
                 <div class="code-block" id="embed-code"></div>
-                <button class="copy-btn" id="copy-btn">Copy Code</button>
+                <button class="copy-btn" id="copy-btn" disabled>Copy Code</button>
             </div>
         </div>
 
@@ -295,11 +296,20 @@
     });
 
     // Initial tenant populate if available
-    const savedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
-    if (savedTenant) {
-        document.getElementById('tenant').value = savedTenant;
-        updatePreview();
+    try {
+        const savedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+        if (savedTenant) document.getElementById('tenant').value = savedTenant;
+    } catch {
+        const notice = document.getElementById('certificate-storage-notice');
+        notice.textContent = 'Saved business settings are unavailable. Check the business ID entered in this preview.';
+        notice.hidden = false;
     }
+    // Apply restored field values before accepting edits. Linked stylesheets
+    // can delay this script after the form is already visible.
+    updatePreview();
+    [...inputs, 'generate-btn', 'copy-btn'].forEach(id => {
+        document.getElementById(id).disabled = false;
+    });
   </script>
 </body>
 </html>
