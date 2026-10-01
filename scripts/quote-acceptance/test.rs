@@ -328,6 +328,41 @@ async fn unknown_provider_outcome_is_durable_and_never_automatically_retried() {
     f.finish().await;
 }
 #[tokio::test]
+async fn owner_put_cannot_fabricate_acceptance_without_an_invoice_receipt() {
+    let f = Fixture::new().await;
+    for status in ["ACCEPTED", "accepted", "AcCePtEd"] {
+        let (response, body) = request(
+            f.app("tenant-a"),
+            format!("/quotes/{}", f.id),
+            "PUT",
+            serde_json::json!({"status":status}),
+        )
+        .await;
+        assert_eq!(
+            response,
+            StatusCode::CONFLICT,
+            "{status} must use the acceptance endpoint"
+        );
+        assert_eq!(body["reason"], "acceptance_endpoint_required");
+        let row: (String, Option<serde_json::Value>) =
+            sqlx::query_as("SELECT status,acceptance_receipt FROM quotes WHERE id=$1")
+                .bind(&f.id)
+                .fetch_one(&f.pool)
+                .await
+                .unwrap();
+        assert_eq!(row.0, "SENT");
+        assert!(row.1.is_none());
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM invoices")
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+        assert_eq!(PROVIDER_CALLS.load(Ordering::SeqCst), 0);
+    }
+    f.finish().await;
+}
+
+#[tokio::test]
 async fn accepted_edits_and_alternate_approval_cannot_reopen_frozen_terms() {
     let f = Fixture::new().await;
     let (status, _) = f.accept().await;

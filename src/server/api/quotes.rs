@@ -543,6 +543,13 @@ async fn update_quote(
     if let Err(error) = quote_acceptance::ensure_editable(&mut tx, &current_quote).await {
         return error.response();
     }
+    if payload
+        .status
+        .as_deref()
+        .is_some_and(|status| status.eq_ignore_ascii_case("ACCEPTED"))
+    {
+        return quote_acceptance::Error::Conflict("acceptance_endpoint_required").response();
+    }
     if let Err(status) =
         validate_line_item_references(&mut tx, &authority, &payload.line_items).await
     {
