@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "Architecture & Implementation Plan: Native Rust Omnichannel Chat System"
+issue_description: "Loaded Superpowers revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md). The 'Native Rust Omnichannel Chat System' is already heavily implemented using 'omni_inbox_messages' and 'unified_threads' schemas in the codebase (e.g., in src/server/lib.rs, src/server/api/omni_inbox_webhook.rs). Acceptance Criteria satisfied: PostgreSQL schemas for inboxes/channels/contacts/conversations/messages are fulfilled via 'unified_threads' and 'omni_inbox_messages'. WebSockets handler exists in omnichannel endpoints. Acceptance Criteria unmet/unverified: strict multi-tenancy using 'account_id' (instead 'tenant_id' is used) and Playwright E2E tests simulating Carlos receiving/replying exactly via 'chat_messages' do not exist in the requested format. Refactoring to the requested 'chat_inboxes' schema would overwrite and break deeply integrated AI department, triage, and orchestration logic. Thus, no safe, well-scoped implementation follows from the repository state."
