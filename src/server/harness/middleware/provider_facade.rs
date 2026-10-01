@@ -358,47 +358,48 @@ async fn forward(
     path: &str,
     body: Option<Bytes>,
 ) -> Response {
-    let upstream_api_key = if let Some(meter) = state
-        .meter
-        .as_ref()
-        .filter(|meter| meter.scope.payer == super::usage_ledger::PayerMode::ByokApi)
-    {
-        // This supported BYOK route uses a verified provider API key. Never relay
-        // a consumer login or send customer credentials to an arbitrary base URL.
-        if state.upstream_base_url.scheme() != "https"
-            || (state.upstream_base_url.host_str() != Some("api.openai.com")
-                && state.upstream_base_url.host_str() != Some("api.anthropic.com"))
-        {
-            return error_response(
-                StatusCode::FORBIDDEN,
-                "The BYOK credential is bound to its verified provider origin",
-            );
-        }
-        let provider_id = if state.upstream_base_url.host_str() == Some("api.anthropic.com") {
-            "anthropic_api"
-        } else {
-            "openai_api"
-        };
-
-        let vault = match super::connection_vault::ConnectionVault::from_environment(
-            meter.ledger.clone(),
-        ) {
-            Ok(vault) => vault,
-            Err(_) => {
-                return error_response(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Connection vault unavailable",
-                );
-            }
-        };
-        match vault.read_key(&meter.scope.tenant_id, provider_id).await {
-            Ok(key) => key.to_string(),
-            Err(_) => {
+    let upstream_api_key = if let Some(meter) = state.meter.as_ref() {
+        if meter.scope.payer == super::usage_ledger::PayerMode::ByokApi {
+            // This supported BYOK route uses a verified provider API key. Never relay
+            // a consumer login or send customer credentials to an arbitrary base URL.
+            if state.upstream_base_url.scheme() != "https"
+                || (state.upstream_base_url.host_str() != Some("api.openai.com")
+                    && state.upstream_base_url.host_str() != Some("api.anthropic.com"))
+            {
                 return error_response(
                     StatusCode::FORBIDDEN,
-                    "Tenant API connection is absent or revoked",
+                    "The BYOK credential is bound to its verified provider origin",
                 );
             }
+            let provider_id = if state.upstream_base_url.host_str() == Some("api.anthropic.com") {
+                "anthropic_api"
+            } else {
+                "openai_api"
+            };
+
+            let vault = match super::connection_vault::ConnectionVault::from_environment(
+                meter.ledger.clone(),
+            ) {
+                Ok(vault) => vault,
+                Err(_) => {
+                    // For local development or missing ENVs, fallback to 403 like it used to
+                    return error_response(
+                        StatusCode::FORBIDDEN,
+                        "Tenant API connection is absent or revoked",
+                    );
+                }
+            };
+            match vault.read_key(&meter.scope.tenant_id, provider_id).await {
+                Ok(key) => key.to_string(),
+                Err(_) => {
+                    return error_response(
+                        StatusCode::FORBIDDEN,
+                        "Tenant API connection is absent or revoked",
+                    );
+                }
+            }
+        } else {
+            state.upstream_api_key.clone()
         }
     } else {
         state.upstream_api_key.clone()
