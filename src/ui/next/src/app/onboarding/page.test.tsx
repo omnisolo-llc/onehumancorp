@@ -1183,7 +1183,7 @@ describe("OnboardingWizard", () => {
 
     expect(startRequestPayload).toBeDefined();
     expect(startRequestPayload).toHaveProperty('initial_products', [
-      { name: "Custom AI Product", price: "99" },
+      { name: "Custom AI Product", price: "99", description: "", variants: [] },
     ]);
   });
 

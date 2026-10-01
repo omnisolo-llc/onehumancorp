@@ -15,6 +15,34 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 function text(value: unknown): value is string { return typeof value === 'string' && value.trim().length > 0; }
+function priceText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  throw new Error('The reviewed product price is invalid');
+}
+function optionalId(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (!text(value)) throw new Error('The reviewed product identity is invalid');
+  return value;
+}
+/** Intake optional fields are nullable; the preparation API accepts concrete fields. */
+export function normalizeReviewedProducts(value: unknown) {
+  if (!Array.isArray(value)) throw new Error('The reviewed product draft is invalid');
+  return value.map(item => {
+    const product = record(item);
+    if (!text(product.name) || (product.description != null && typeof product.description !== 'string')
+      || (product.variants != null && !Array.isArray(product.variants))) throw new Error('The reviewed product draft is invalid');
+    return {
+      ...(product.product_id == null ? {} : { product_id: optionalId(product.product_id) }), name: product.name, price: priceText(product.price),
+      description: typeof product.description === 'string' ? product.description : '',
+      variants: ((product.variants ?? []) as unknown[]).map(item => {
+        const variant = record(item);
+        if (!text(variant.name)) throw new Error('The reviewed product variant is invalid');
+        return { ...(variant.variant_id == null ? {} : { variant_id: optionalId(variant.variant_id) }), name: variant.name, price_modifier: priceText(variant.price_modifier) };
+      }),
+    };
+  });
+}
 export function readPreparation(value: unknown): Preparation {
   const data = record(value);
   if (!text(data.preparation_id) || !text(data.organization_id) || !text(data.user_id) || !text(data.primary_product_id) || !['prepared', 'launched'].includes(String(data.status)) || !Array.isArray(data.catalog)) throw new Error('Setup preparation could not be verified');

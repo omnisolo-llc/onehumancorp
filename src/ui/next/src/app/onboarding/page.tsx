@@ -8,7 +8,7 @@ import { sendOnboardingDraft } from './draftWrites';
 import { onboardingDraftWriteProblem } from './draftWriteGate';
 import { useOnboardingStore, initializeOnboardingDraft, onboardingStorageFailed, onboardingDraftPending, markOnboardingDraftFromServer, subscribeOnboardingPersistence } from "./store";
 import { fetchForOnboardingOwner, hasHeldOnboardingDraft, readOwnedOnboardingItem, writeOwnedOnboardingItem, subscribeOnboardingInvalidation, onboardingOwner, captureOnboardingRestoreSnapshot, assertOnboardingRestoreSnapshot, type DraftOwner } from "./draftSession";
-import { canonicalRequest, observedWebsite, readDraftAcknowledgement, readLaunchResult, readPreparation, readPreparedResult, resultForPreparation, type Preparation } from "./contracts";
+import { canonicalRequest, normalizeReviewedProducts, observedWebsite, readDraftAcknowledgement, readLaunchResult, readPreparation, readPreparedResult, resultForPreparation, type Preparation } from "./contracts";
 import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
 
@@ -553,13 +553,9 @@ export default function OnboardingWizard() {
   const draftRequest = () => {
     const { businessType, businessName, businessDescription, whatYouSell, categories, websiteTemplate, firstProductName, firstProductPrice, domainChoice, location, targetAudience, aiAgents, aiAutoRespond } = useOnboardingStore.getState();
     const initial: unknown = JSON.parse(readOwnedOnboardingItem('products') || '[]');
-    if (!Array.isArray(initial)) throw new Error('The reviewed product draft is invalid');
-    const initialProducts = initial.map((item, index) => {
-      if (!item || typeof item !== 'object') throw new Error('The reviewed product draft is invalid');
-      const product = item as Record<string, unknown>;
-      const normalized = { ...product, ...(typeof product.price === 'number' ? { price: String(product.price) } : {}) };
-      return (prepared.current ? product.product_id === prepared.current.primary_product_id : index === 0) && firstProductName ? { ...normalized, name: firstProductName, price: firstProductPrice } : normalized;
-    });
+    const initialProducts = normalizeReviewedProducts(initial).map((product, index) =>
+      (prepared.current ? product.product_id === prepared.current.primary_product_id : index === 0) && firstProductName
+        ? { ...product, name: firstProductName, price: firstProductPrice } : product);
     return {
       business_type: businessType, company_name: businessName, company_description: businessDescription || whatYouSell,
       selling_categories: categories, payment_pref: 'online', website_template: websiteTemplate,

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { openOnboardingSession, fetchForOnboardingOwner, subscribeOnboardingInvalidation, type DraftOwner } from '../../draftSession';
-import { readPreparation, readPreparedResult, resultForPreparation } from '../../contracts';
+import { normalizeReviewedProducts, readPreparation, readPreparedResult, resultForPreparation } from '../../contracts';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -13,7 +13,7 @@ interface IntakeData {
   categories: string[];
   location?: string;
   target_audience?: string;
-  initial_products: { name: string; price: string; description?: string; variants?: string[] }[];
+  initial_products: { name: string; price: string | number; description?: string | null; variants?: { name: string; price_modifier: string | number }[] | null }[];
 }
 
 interface OnboardingChatAgentProps {
@@ -155,7 +155,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         company_description: review.prompt, selling_categories: intake.categories || [], payment_pref: 'online',
         website_template: 'Modern', first_product_name: first.name, first_product_price: String(first.price),
         domain_choice: 'subdomain', price_type: 'fixed', location: intake.location || '', target_audience: intake.target_audience || '',
-        initial_products: intake.initial_products.map(product => ({ ...product, price: String(product.price), description: product.description || '', variants: product.variants || [] })), ai_agents: [], ai_auto_respond: false,
+        initial_products: normalizeReviewedProducts(intake.initial_products), ai_agents: [], ai_auto_respond: false,
       };
       const response = await fetchForOnboardingOwner('/api/v1/onboarding/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, viewOwner);
       if (!response.ok) throw new Error('Setup preparation could not be confirmed. Check its status before retrying.');

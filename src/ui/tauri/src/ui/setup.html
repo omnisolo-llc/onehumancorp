@@ -3544,6 +3544,21 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       const chatMessagesEl = document.getElementById("chat-messages");
       let chatHistory = [];
 
+      function reviewedProducts(products) {
+        const priceText = value => {
+          if (typeof value === 'string') return value;
+          if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+          throw new Error('The reviewed product price is invalid');
+        };
+        if (!Array.isArray(products)) throw new Error('The reviewed product draft is invalid');
+        return products.map(product => {
+          if (!product || typeof product.name !== 'string' || !product.name.trim() || (product.description != null && typeof product.description !== 'string') || (product.variants != null && !Array.isArray(product.variants))) throw new Error('The reviewed product draft is invalid');
+          return { name: product.name, price: priceText(product.price), description: product.description ?? '', variants: (product.variants ?? []).map(variant => {
+            if (!variant || typeof variant.name !== 'string' || !variant.name.trim()) throw new Error('The reviewed product variant is invalid');
+            return { name: variant.name, price_modifier: priceText(variant.price_modifier) };
+          }) };
+        });
+      }
       async function sendChatMessage() {
         if (!legacyReady) return;
         const text = chatInputEl.value.trim();
@@ -3648,7 +3663,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               price_type: "fixed",
               location: intakeData.location || "Local",
               target_audience: intakeData.target_audience || "General",
-              initial_products: intakeData.initial_products.map(product => ({ ...product, price: String(product.price) })),
+              initial_products: reviewedProducts(intakeData.initial_products),
               ai_agents: selectedAgents,
               ai_auto_respond: autoRespondChecked,
             };

@@ -122,6 +122,34 @@ for (const path of paths) {
   });
 }
 
+for (const path of paths) {
+  test(`${path} projects nullable intake fields into the actual strict preparation request`, async () => {
+    let submitted;
+    const dom = await setup(path, async (url, options) => {
+      if (url.endsWith('/start')) { submitted = JSON.parse(options.body); return new Promise(() => {}); }
+      if (url.endsWith('/chat')) return Response.json({ is_complete: true, reply: 'Ready to review', intake_data: {
+        business_name: 'Owner studio', business_type: 'Service', initial_products: [
+          { name: 'First service', price: '25.00', description: null, variants: null },
+          { name: 'Second service', price: 15, description: 'Reviewed details', variants: [{ name: 'Extended', price_modifier: 5, model_note: 'not an API field' }], model_note: 'not an API field' },
+        ],
+      } });
+      return Response.json({});
+    });
+    try {
+      dom.window.goToStep('step-chat');
+      dom.window.document.getElementById('chat-input').value = 'I provide owner services';
+      dom.window.document.getElementById('chat-send-btn').click();
+      await waitUntil(() => dom.window.pendingOnboardingReq);
+      dom.window.document.getElementById('approve-publish-btn').click();
+      await waitUntil(() => submitted);
+      assert.deepEqual(submitted.initial_products, [
+        { name: 'First service', price: '25.00', description: '', variants: [] },
+        { name: 'Second service', price: '15', description: 'Reviewed details', variants: [{ name: 'Extended', price_modifier: '5' }] },
+      ]);
+    } finally { dom.window.close(); }
+  });
+}
+
 const legacyCredentialFields = ['admin_name', 'admin_email', 'admin_password'];
 const legacyCredentials = Object.fromEntries(legacyCredentialFields.map(field => [field, `obsolete-${field}`]));
 
