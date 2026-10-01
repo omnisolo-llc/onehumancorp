@@ -1,5 +1,6 @@
 import { E2E_ADMIN_USER, expect, test } from "../../../../e2e/fixtures";
 import { discoverApplicationRoutes } from "./production_route_inventory";
+import { recordSmokeHttpResponse, isVerifiedVoicePolicyDiagnostic } from "../../../../e2e/support/hosted_voice_policy";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "http://127.0.0.1:3000";
 const adminEmail = process.env.OMNISOLO_ADMIN_EMAIL ?? process.env.OHC_ADMIN_EMAIL ?? E2E_ADMIN_USER.email;
@@ -32,11 +33,12 @@ test("all application pages render through the real authenticated service", asyn
   const failures: string[] = [];
   const httpFailures: string[] = [];
   const requestFailures: string[] = [];
-  const consoleErrors: string[] = [];
+  const consoleErrors: { text: string; url: string }[] = [];
+  const verifiedPolicyUrls = new Set<string>();
+  const policyChecks: Promise<void>[] = [];
   const websocketFailures: string[] = [];
   page.on("response", (response) => {
-    if (response.status() >= 500) failures.push(`${response.status()} ${response.url()}`);
-    else if (response.status() >= 400 && !response.url().includes("e2e-route-record")) httpFailures.push(`${response.status()} ${response.url()}`);
+    recordSmokeHttpResponse(response, baseUrl, { failures, httpFailures, verifiedPolicyUrls, policyChecks });
   });
   page.on("requestfailed", (request) => {
     const failure = request.failure()?.errorText ?? "request failed";
@@ -54,7 +56,7 @@ test("all application pages render through the real authenticated service", asyn
       const text = message.text();
       if (text.includes("Failed to load resource: the server responded with a status of 404")) return;
       if (text.includes("Failed to fetch") || text.includes("ERR_ABORTED") || text.includes("aborted")) return;
-      consoleErrors.push(text);
+      consoleErrors.push({ text, url: message.location().url });
     }
   });
   page.on("websocket", (websocket) => {
@@ -77,6 +79,11 @@ test("all application pages render through the real authenticated service", asyn
       if (response.status() >= 400) {
         routeFailures.push(`${response.status()} ${route}`);
       }
+      if (route === '/settings') {
+        await expect(page.getByText('Voice settings are unavailable in this deployment. No provider action can be started.', { exact: true })).toBeVisible();
+        await expect(page.getByRole('checkbox', { name: 'Enable AI Voice Receptionist', exact: true })).toBeDisabled();
+        await expect(page.getByRole('button', { name: 'Get Number', exact: true })).toHaveCount(0);
+      }
       const body = await page.locator("body").innerText();
       if (/Generated Offering|AI description|mock data|fake data/i.test(body)) {
         contentFailures.push(`${route} contains fabricated data`);
@@ -89,12 +96,14 @@ test("all application pages render through the real authenticated service", asyn
     }
   }
 
+  await Promise.all(policyChecks);
+  expect([...verifiedPolicyUrls], "the hosted voice boundary was verified from its actual response").toEqual([new URL("/api/v1/settings/voice", baseUrl).href]);
   expect(routeFailures, "application page failures during the page crawl").toEqual([]);
   expect(contentFailures, "fabricated data or legacy branding during the page crawl").toEqual([]);
   expect(httpFailures, "unexpected HTTP 4xx responses during the page crawl").toEqual([]);
   expect(failures, "server-side 5xx responses during the page crawl").toEqual([]);
   expect(requestFailures, "failed browser requests during the page crawl").toEqual([]);
-  expect(consoleErrors, "browser console errors during the page crawl").toEqual([]);
+  expect(consoleErrors.filter(({ text, url }) => !isVerifiedVoicePolicyDiagnostic(text, url, verifiedPolicyUrls)), "browser console errors during the page crawl").toEqual([]);
   expect(websocketFailures, "failed WebSocket upgrades during the page crawl").toEqual([]);
 });
 

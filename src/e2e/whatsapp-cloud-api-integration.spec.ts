@@ -27,10 +27,13 @@ test.describe('WhatsApp Cloud API availability', () => {
 
     // The actual authenticated route also refuses to manufacture a verified
     // connection. An empty request carries no provider credential.
-    const response = await page.request.post('/api/v1/integrations/whatsapp_cloud_api/connect', {
-      headers: { origin: new URL(page.url()).origin }, data: {},
+    const response = await page.evaluate(async () => {
+      const reply = await fetch('/api/v1/integrations/whatsapp_cloud_api/connect', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+      });
+      return { status: reply.status, body: await reply.json() };
     });
-    expect(response.status()).toBe(501);
-    expect(await response.json()).toMatchObject({ success: false, status: 'pending_verification', usable: false });
+    expect(response.status).toBe(501);
+    expect(response.body).toMatchObject({ success: false, status: 'pending_verification', usable: false });
   });
 });

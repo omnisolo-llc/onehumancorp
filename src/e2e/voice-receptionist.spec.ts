@@ -16,7 +16,7 @@ test.describe('Voice Receptionist deployment availability', () => {
     const settingsResponse = await response;
     expect(settingsResponse.status()).toBe(403);
     expect(await settingsResponse.json()).toMatchObject({ success: false, error: 'hosted_global_provisioning_unavailable', provisioning_available: false });
-    await expect(page).toHaveTitle(/Settings/);
+    await expect(page).toHaveTitle(/OmniSolo OneHumanCorp/);
     await expect(page.getByText('Autonomous Voice Receptionist', { exact: true })).toBeVisible();
     await expect(page.getByText('Voice settings are unavailable in this deployment. No provider action can be started.', { exact: true })).toBeVisible();
     await expect(page.getByRole('checkbox', { name: 'Enable AI Voice Receptionist', exact: true })).toBeDisabled();
