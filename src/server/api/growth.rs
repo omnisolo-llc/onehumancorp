@@ -6788,7 +6788,7 @@ pub async fn handle_birthday_club_embed(
   <div class="widget-container" data-tenant="{safe_tenant}">
     <div class="icon">🎂</div>
     <h2>Join our Birthday Club</h2>
-    <p>Sign up to receive a special gift of {safe_discount}% off on your birthday!</p>
+    <p>Configured birthday offer: {safe_discount}% off. Send a request for this offer.</p>
 
     <div class="input-group">
       <input type="text" placeholder="Your name" id="name" required />
@@ -6797,43 +6797,60 @@ pub async fn handle_birthday_club_embed(
       <button id="join-btn">Join the Club</button>
     </div>
 
-    <div id="success-message" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
-      Thanks for joining! We'll send you something special.
+    <div id="capture-status" role="alert" style="display: none; margin-bottom: 16px;"></div>
+    <div id="success-message" role="status" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
+      Your request was accepted.
     </div>
 
     {branding_html}
   </div>
 
   <script>
-    document.getElementById('join-btn').addEventListener('click', function() {{
+    document.getElementById('join-btn').addEventListener('click', async function() {{
+      const btn = this;
+      if (btn.disabled) return;
       const name = document.getElementById('name').value;
       const email = document.getElementById('email').value;
       const birthday = document.getElementById('birthday').value;
-
       if (!email) return;
 
-      const btn = this;
+      const status = document.getElementById('capture-status');
+      status.textContent = '';
+      status.style.display = 'none';
       btn.disabled = true;
-      btn.textContent = 'Joining...';
+      btn.textContent = 'Submitting request...';
 
-      fetch('/api/v1/growth/birthday-club/capture', {{
-        method: 'POST',
-        headers: {{ 'Content-Type': 'application/json' }},
-        body: JSON.stringify({{
-          tenant_id: document.querySelector('.widget-container').getAttribute('data-tenant'),
-          name: name,
-          email: email,
-          birthday: birthday
-        }})
-      }}).then(() => {{
+      try {{
+        const response = await fetch('/api/v1/growth/birthday-club/capture', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
+            tenant_id: document.querySelector('.widget-container').getAttribute('data-tenant'),
+            name: name,
+            email: email,
+            birthday: birthday
+          }})
+        }});
+        if ([400, 401, 403, 422].includes(response.status)) {{
+          status.textContent = 'Request not accepted. Check the information before trying again.';
+          status.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Join the Club';
+          return;
+        }}
+        if (response.status !== 200) throw new Error('Capture was not acknowledged');
+        const result = await response.json();
+        if (result?.success !== true || result.error != null) throw new Error('Capture was not acknowledged');
         document.querySelector('.input-group').style.display = 'none';
         document.getElementById('success-message').style.display = 'block';
-        alert('Joined successfully!');
-      }}).catch(err => {{
-        console.error(err);
-        btn.disabled = false;
-        btn.textContent = 'Join the Club';
-      }});
+        btn.textContent = 'Request accepted';
+      }} catch {{
+        // A missing acknowledgement does not prove the request was rejected.
+        // Preserve the form and do not dispatch another potentially duplicate capture.
+        status.textContent = 'Your request could not be confirmed. Keep this information and check whether it was accepted before submitting again.';
+        status.style.display = 'block';
+        btn.textContent = 'Confirmation unavailable';
+      }}
     }});
   </script>
 </body>

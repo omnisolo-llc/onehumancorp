@@ -61,7 +61,7 @@ generated += f"const PG_REFERRALS_DDL: &str = {json.dumps(referral_ddl)};\n"
 generated += f"const SQLITE_TENANTS_DDL: &str = {json.dumps(sqlite_ddl)};\n"
 generated += '#[cfg(test)]\n#[path = "test.rs"]\nmod tests;\n'
 (HERE / "generated.rs").write_text(generated)
-inputs = [SOURCE, migration, db, referral_migration, ROOT / "Cargo.lock", HERE / "prepare.py", HERE / "test.rs", HERE / "Cargo.toml", HERE / "check_referral_html.py", HERE / "check_referral_urls.py"]
+inputs = [SOURCE, migration, db, referral_migration, ROOT / "Cargo.lock", HERE / "prepare.py", HERE / "test.rs", HERE / "Cargo.toml", HERE / "check_referral_html.py", HERE / "check_referral_urls.py", HERE / "check_birthday_capture.py", HERE / "birthday_capture_runner.cjs"]
 manifest = {
     "inputs": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},
     "exact_production_items": slices,

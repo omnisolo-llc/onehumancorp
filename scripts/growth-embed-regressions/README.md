@@ -36,3 +36,12 @@ text and script-looking text. The URL and attribution links must round-trip the
 raw tenant; no tenant data may enter JavaScript. This is parser/listener coverage,
 not a real-browser exploit or external referral request. PostgreSQL also verifies
 raw tenant identity remains separate from an HTML-encoded lookalike's Pro plan.
+
+Birthday capture feedback is exercised with the actual rendered JavaScript and
+real loopback HTTP status/body responses (including a dropped connection).
+DOM nodes are a local test fixture, not a browser; no production capture API or
+provider is called. Only HTTP 200 with an unambiguous success acknowledgement may
+show that the request was accepted. Explicit client rejections retain editable
+inputs; unknown outcomes retain the form and prevent automatic or repeated
+submission in that document. This does not certify club membership, persisted
+CRM delivery, gifts, or reconciliation after the page is reloaded.

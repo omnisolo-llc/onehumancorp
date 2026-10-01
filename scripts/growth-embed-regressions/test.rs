@@ -608,3 +608,41 @@ async fn post_purchase_input_and_branding_url_preserve_raw_tenant() {
 async fn birthday_branding_url_preserves_raw_tenant_and_capture_attribute() {
     assert_referral_url_round_trip(Embed::BirthdayClub, "birthday-club").await;
 }
+
+#[tokio::test]
+async fn birthday_capture_ui_requires_actual_http_acknowledgement() {
+    use std::{
+        io::Write,
+        process::{Command, Stdio},
+    };
+    let pool = setup().await;
+    let tenant = "Synthetic O'Brien & café";
+    let html = render(&pool, Embed::BirthdayClub, Some(tenant), Some("true")).await;
+    let mut child = Command::new("python3")
+        .arg(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/check_birthday_capture.py"
+        ))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(
+            serde_json::to_string(&serde_json::json!({"html":html,"tenant":tenant}))
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "birthday capture outcome was not truthful: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+}
