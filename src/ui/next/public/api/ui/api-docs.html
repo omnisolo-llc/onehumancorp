@@ -200,7 +200,7 @@
 
       <div id="api-docs-content" style="display: block;">
         <div class="header">
-            <h1 data-testid="api-docs-title"><span  data-tooltip="Direct API access is only for custom integrations." id="api-docs-tooltip" class="badge cursor-help inline-block relative" style="cursor: help;">Advanced:</span> OmniSolo Advanced API Reference</h1>
+            <h1 data-testid="api-docs-title"><span  data-tooltip="Direct API access is only for custom integrations." id="api-docs-tooltip" tabindex="0" class="badge cursor-help inline-block relative" style="cursor: help;">Advanced:</span> OmniSolo Advanced API Reference</h1>
             <p class="subtitle">Integrate your custom checkout or external tools directly with OmniSolo.</p>
             <p>This section is for developers directly integrating with our APIs.</p>
         </div>
@@ -289,6 +289,24 @@ function initOmniSoloTooltips() {
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'omnisolo-tooltip';
+    tooltipEl.id = 'omnisolo-legacy-tooltip';
+    tooltipEl.setAttribute('role', 'tooltip');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+    let tooltipTarget = null;
+    const clearTooltipDescription = () => {
+        if (!tooltipTarget) return;
+        const ids = (tooltipTarget.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== tooltipEl.id);
+        if (ids.length) tooltipTarget.setAttribute('aria-describedby', ids.join(' '));
+        else tooltipTarget.removeAttribute('aria-describedby');
+        tooltipTarget = null;
+    };
+    const describeTooltipTarget = target => {
+        if (tooltipTarget !== target) clearTooltipDescription();
+        tooltipTarget = target;
+        const ids = new Set((target.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+        ids.add(tooltipEl.id);
+        target.setAttribute('aria-describedby', [...ids].join(' '));
+    };
     document.body.appendChild(tooltipEl);
 
     let hideTimeout;
@@ -316,14 +334,34 @@ function initOmniSoloTooltips() {
 
         tooltipEl.style.top = `${top}px`;
         tooltipEl.style.left = `${left}px`;
+        describeTooltipTarget(e.target.closest?.('[data-tooltip], [data-tooltip-id]') || e.target);
+        tooltipEl.setAttribute('aria-hidden', 'false');
         tooltipEl.classList.add('visible');
     }
 
-    function hideTooltip() {
-        hideTimeout = setTimeout(() => {
+    function hideTooltip(immediate = false) {
+        clearTimeout(hideTimeout);
+        const dismiss = () => {
             tooltipEl.classList.remove('visible');
-        }, 100); // slight delay to prevent flicker
+            tooltipEl.setAttribute('aria-hidden', 'true');
+            clearTooltipDescription();
+        };
+        if (immediate) dismiss();
+        else hideTimeout = setTimeout(dismiss, 100);
     }
+
+    document.addEventListener('focusin', e => {
+        const target = e.target.closest?.('[data-tooltip], [data-tooltip-id]');
+        if (!target) return;
+        const id = target.getAttribute('data-tooltip-id') || target.id;
+        showTooltip(e, window.OMNISOLO_TOOLTIPS?.[id] || target.getAttribute('data-tooltip'));
+    });
+    document.addEventListener('focusout', e => {
+        if (e.target.closest?.('[data-tooltip], [data-tooltip-id]')) hideTooltip(true);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') hideTooltip(true);
+    });
 
     // Desktop hover
     document.addEventListener('mouseover', (e) => {
@@ -529,7 +567,7 @@ initWalkthrough();
 </script>
 
 
-  <script src="help-widget.mjs" type="module"></script>
+  <script src="/help-widget.mjs" type="module"></script>
 </body>
 </html>
 

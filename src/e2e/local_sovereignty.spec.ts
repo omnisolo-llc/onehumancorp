@@ -56,17 +56,35 @@ test.describe('Hosted telemetry authority boundary', () => {
   for (const enabled of [true, false]) {
     test(`rejects hosted tenant telemetry ${enabled ? 'opt-in' : 'opt-out'} without changing state`, async ({ page }) => {
       const before = await readPolicy(page);
-      const response = await page.request.post(telemetryUrl, {
-        data: { product_telemetry_enabled: enabled },
-      });
-      expect(response.status()).toBe(403);
-      expect(await response.json()).toMatchObject({
+      // A browser mutation supplies the same-origin metadata required by CSRF
+      // middleware, so this reaches the hosted operator policy under test.
+      const response = await page.evaluate(async ({ url, enabled }) => {
+        const response = await fetch(url, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_telemetry_enabled: enabled }),
+        });
+        return { status: response.status, body: await response.json() };
+      }, { url: telemetryUrl, enabled });
+      expect(response.status).toBe(403);
+      expect(response.body).toMatchObject({
         success: false, error: 'hosted_global_control_unavailable', ...before,
       });
       expect(await readPolicy(page)).toEqual(before);
       await expectDisplayedPolicy(page, before);
     });
   }
+
+  test('rejects a mutation without trusted browser origin before changing policy', async ({ page }) => {
+    const before = await readPolicy(page);
+    const response = await page.request.post(telemetryUrl, {
+      data: { product_telemetry_enabled: !before.product_telemetry_enabled },
+    });
+    expect(response.status()).toBe(403);
+    expect(await response.json()).toEqual({ error: 'forbidden' });
+    expect(await readPolicy(page)).toEqual(before);
+    await expectDisplayedPolicy(page, before);
+  });
 
   test('reloads the authoritative read-only setting without issuing a write', async ({ page }) => {
     const before = await readPolicy(page);

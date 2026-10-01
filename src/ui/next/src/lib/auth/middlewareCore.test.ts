@@ -85,6 +85,19 @@ describe("middleware request description", () => {
 });
 
 describe("protected-by-default auth middleware", () => {
+  it.each([true, false])("telemetry write %s reaches operator policy only with a trusted browser origin", async enabled => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    const body = JSON.stringify({ product_telemetry_enabled: enabled });
+    const rejected = await evaluateAuthMiddleware(request('/api/v1/settings/telemetry', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body,
+    }, session), deps);
+    expect(rejected).toMatchObject({ kind: 'response', status: 403, body: JSON.stringify({ error: 'forbidden' }) });
+    const browser = await evaluateAuthMiddleware(request('/api/v1/settings/telemetry', {
+      method: 'POST', headers: { 'content-type': 'application/json', origin: config.canonicalOrigin, 'sec-fetch-site': 'same-origin' }, body,
+    }, session), deps);
+    expect(browser).toMatchObject({ kind: 'next' });
+  });
   it("allows only exact reviewed public invocations without a session", async () => {
     const deps = await dependencies();
     await expect(evaluateAuthMiddleware(request("/login"), deps)).resolves.toMatchObject({ kind: "next" });
