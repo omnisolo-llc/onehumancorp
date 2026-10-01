@@ -1,4 +1,4 @@
-issue_title: ""
+issue_title: "Growth Engineering: No-Work Finding for Viral Features"
 issue_description: |
   **Findings:**
   - As Principal Growth Engineer & Nova (L7), the mission involves evaluating growth loops (referrals, paywalls, social sharing) to improve customer acquisition and retention gaps.
@@ -10,8 +10,8 @@ issue_description: |
   **Provenance:**
   - Loaded Superpowers skills: `using-superpowers`, `brainstorming`, `writing-plans`, `executing-plans`, `finishing-a-development-branch`, `systematic-debugging`
   - Superpowers source repository revision hash: `8ca22dba9a94f28898bbce59f2537ff4d87c747d`
-issue_priority: ""
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: ""
+issue_priority: "P2"
+issue_category: "research"
+issue_type: "task"
+issue_label: ["agent-report"]
+assignees: []
