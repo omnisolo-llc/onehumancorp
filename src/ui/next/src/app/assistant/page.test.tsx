@@ -345,3 +345,50 @@ test('shows resource error instead of connector demo records', async () => {
   expect(screen.queryByText('GitHub')).toBeNull();
   expect(screen.queryByText('Slack')).toBeNull();
 });
+
+test('an absent tenant tour has an explicit unavailable state', async () => {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (url, init) => String(url).includes('/walkthrough/assistant') ? Response.json([]) : original(url, init));
+  renderAssistantPage();
+  await screen.findByRole('heading', { name: 'Agent Assistant' });
+  const start = screen.getByRole('button', { name: 'Start Tour' });
+  await waitFor(() => expect(start).toBeDisabled());
+  expect(document.getElementById(start.getAttribute('aria-describedby')!)).toHaveTextContent(/No tour is configured/i);
+});
+
+test('a configured tour starts only on actual rendered targets', async () => {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (url, init) => String(url).includes('/walkthrough/assistant')
+    ? Response.json([{ target_id: 'omnisolo-help-input-area', title: 'Write the task', content: 'Describe the result you need.' }]) : original(url, init));
+  renderAssistantPage();
+  await screen.findByRole('heading', { name: 'Agent Assistant' });
+  fireEvent.click(screen.getByRole('button', { name: 'Start Tour' }));
+  expect(await screen.findByText(/No tour steps are available in this section/i)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'New Task' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Start Tour' }));
+  expect(await screen.findByText('Describe the result you need.')).toBeVisible();
+});
+
+test('a rejected tour lookup reports loading failure rather than absent configuration', async () => {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (url, init) => String(url).includes('/walkthrough/assistant')
+    ? Response.json({ error: 'forbidden' }, { status: 403 }) : original(url, init));
+  renderAssistantPage();
+  const notice = await screen.findByText('The configured tour could not be loaded.');
+  expect(notice).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Start Tour' })).toBeDisabled();
+  expect(screen.queryByText('No tour is configured for this page.')).not.toBeInTheDocument();
+});
+
+test.each([
+  { label: 'non-array envelope', payload: {} },
+  { label: 'invalid target', payload: [{ target_id: 42, title: 'Invalid', content: 'Invalid' }] },
+  { label: 'mixed valid and invalid steps', payload: [{ target_id: 'omnisolo-help-input-area', title: 'Valid', content: 'Valid' }, null] },
+])('malformed successful tour $label is unavailable rather than absent', async ({ payload }) => {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (url, init) => String(url).includes('/walkthrough/assistant') ? Response.json(payload) : original(url, init));
+  renderAssistantPage();
+  expect(await screen.findByText('The configured tour could not be loaded.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Start Tour' })).toBeDisabled();
+  expect(screen.queryByText('No tour is configured for this page.')).not.toBeInTheDocument();
+});

@@ -1,5 +1,5 @@
 'use client';
-import React,{ useCallback,useEffect,useMemo,useState } from 'react';
+import React,{ useCallback,useEffect,useMemo,useState,useId } from 'react';
 import Link from 'next/link';
 import { AgentMetrics } from './components/AgentMetrics';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
@@ -88,6 +88,7 @@ function StatusPill({ children }: { children: React.ReactNode }) {
 }
 export default function AgentsPage() {
   const [panel, setPanel] = useState<Panel>('browse');
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selected, setSelected] = useState<ExpertCatalogItem>(experts[0]);
   const [mode, setMode] = useState<Mode>('Ask');
   const [model, setModel] = useState('MiniMax-M3');
@@ -296,7 +297,7 @@ export default function AgentsPage() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setPanel(id as Panel)}
+                onClick={() => { setPanel(id as Panel); if (id === 'operations') setSelectedDepartment(null); }}
                 aria-pressed={panel === id}
                 className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all border outline-none ${
                   panel === id
@@ -311,9 +312,9 @@ export default function AgentsPage() {
           </nav>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-250/70 dark:border-zinc-800/70 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
             <span className="font-bold text-zinc-900 dark:text-white">Operational team:</span>
-            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Manager</span></button>
-            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Ambassador</span></button>
-            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Promoter</span></button>
+            <button type="button" onClick={() => { setPanel('operations'); setSelectedDepartment('operations'); }} aria-pressed={panel === 'operations' && selectedDepartment === 'operations'} className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Manager</span></button>
+            <button type="button" onClick={() => { setPanel('operations'); setSelectedDepartment('customer_success'); }} aria-pressed={panel === 'operations' && selectedDepartment === 'customer_success'} className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Ambassador</span></button>
+            <button type="button" onClick={() => { setPanel('operations'); setSelectedDepartment('marketing'); }} aria-pressed={panel === 'operations' && selectedDepartment === 'marketing'} className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Promoter</span></button>
           </div>
         </div>
       </header>
@@ -376,7 +377,7 @@ export default function AgentsPage() {
           {panel === 'explore' && <ExplorePanel summon={summon} />}
           {panel === 'remote' && <RemotePanel />}
           {panel === 'data' && <DataPanel />}
-          {panel === 'operations' && <><OperationsPanel /><AgentMetrics /></>}
+          {panel === 'operations' && <><OperationsPanel selectedId={selectedDepartment} showAll={() => setSelectedDepartment(null)} /><AgentMetrics /></>}
           {panel === 'workflows' && <WorkflowsPanel workflows={workflows} setWorkflows={setWorkflows} />}
           {panel === 'feed' && <FeedPanel feed={feed} />}
           {panel === 'approvals' && <ApprovalsPanel approvals={approvals} decideApproval={decideApproval} />}
@@ -762,6 +763,8 @@ function ComposerPanel({
             <button
               type="button"
               title="Voice Input"
+              disabled
+              aria-describedby="task-media-unavailable"
               className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
             >
               🎙️
@@ -769,6 +772,8 @@ function ComposerPanel({
             <button
               type="button"
               title="Refine Prompt"
+              disabled
+              aria-describedby="task-media-unavailable"
               className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors animate-pulse"
             >
               ✨
@@ -777,6 +782,7 @@ function ComposerPanel({
         </div>
       </div>
 
+      <p id="task-media-unavailable" className="mt-3 text-xs text-zinc-500">Voice input, prompt refinement, and screenshot capture are not available in this task composer.</p>
       <div className="mt-4 grid gap-3">
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
@@ -836,7 +842,7 @@ function ComposerPanel({
           />
         </label>
         <div className="grid grid-cols-3 gap-2">
-          <button type="button" className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+          <button type="button" disabled aria-describedby="task-media-unavailable" className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
             Screenshot
           </button>
           <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
@@ -918,6 +924,7 @@ function ResultsPanel({
   setResultTab: (tab: string) => void;
   compact?: boolean;
 }) {
+  const unavailableId = useId();
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <SectionHeader
@@ -947,9 +954,10 @@ function ResultsPanel({
             : `${selected.name} output will appear here after a task starts.`}
         </p>
       </div>
+      <p id={unavailableId} className="mt-3 text-xs text-zinc-500">Result sharing, file downloads, workspace copies, and archiving are not available in this workflow view.</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {['Share result', 'Download file', 'Copy to workspace', 'Archive task', 'Unarchive'].map((action) => (
-          <button key={action} type="button" className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-700">
+          <button key={action} type="button" disabled aria-describedby={unavailableId} className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-700">
             {action}
           </button>
         ))}
@@ -1245,20 +1253,22 @@ function DataPanel() {
     </section>
   );
 }
-function OperationsPanel() {
+function OperationsPanel({ selectedId, showAll }: { selectedId: string | null; showAll: () => void }) {
+  const visibleDepartments = selectedId ? departments.filter(department => department.id === selectedId) : departments;
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section aria-label="Department details" className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <SectionHeader title="AI Departments" detail="Operational agents stay visible for backwards-compatible business management." />
+      {selectedId && <button type="button" onClick={showAll} className="mb-3 text-sm underline">Show all departments</button>}
       <div className="grid gap-3 md:grid-cols-2">
-        {departments.map((department) => (
-          <button key={department.id} className="text-left rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
+        {visibleDepartments.map((department) => (
+          <article key={department.id} className="text-left rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
             <div className="flex items-center justify-between gap-3 mb-2">
               <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{department.name}</h3>
               <StatusPill>{department.status}</StatusPill>
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-455 mb-2">{department.role}</p>
             <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">{department.description}</p>
-          </button>
+          </article>
         ))}
       </div>
     </section>

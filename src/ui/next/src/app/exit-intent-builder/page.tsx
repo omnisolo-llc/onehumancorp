@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { useState,useRef } from "react";
 import Head from "next/head";
 import { useProPlan } from '../components/useProPlan';
@@ -21,7 +22,6 @@ export default function ExitIntentBuilder() {
   const [themeColor, setThemeColor] = useState("#2563eb");
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const { hasPro } = useProPlan();
 
   const previewRef = useRef<HTMLDivElement>(null);
@@ -88,15 +88,8 @@ export default function ExitIntentBuilder() {
 </script>
 `.trim();
 
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedCode);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy!", err);
-    }
-  };
+  const clipboard = useClipboardFeedback(generatedCode);
+  const handleCopyCode = () => { void clipboard.copy(generatedCode); };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 flex flex-col items-center justify-center font-sans">
@@ -241,10 +234,12 @@ export default function ExitIntentBuilder() {
               </h2>
               <button
                 onClick={handleCopyCode}
+                    disabled={clipboard.state === 'pending'}
                 className="text-[#0071E3] text-sm font-medium hover:text-blue-800 transition-colors"
               >
-                {isCopied ? "Copied!" : "Copy to Clipboard"}
+                {clipboard.state === 'copied' ? "Copied!" : "Copy to Clipboard"}
               </button>
+                  {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
             </div>
             <pre className="bg-gray-900 text-gray-100 p-4 rounded-xl text-xs overflow-x-auto overflow-y-auto max-h-48 custom-scrollbar">
               <code>{generatedCode}</code>

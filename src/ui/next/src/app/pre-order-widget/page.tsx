@@ -171,9 +171,10 @@ export default function PreOrderWidgetPage() {
                   placeholder="Enter your email"
                   className={`flex-1 px-4 py-2 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700 text-white'}`}
                 />
-                <button className="px-6 py-2 bg-[#0071E3] text-white rounded-lg font-medium hover:bg-blue-700">
+                <button disabled aria-describedby="preorder-preview-unavailable" className="px-6 py-2 bg-[#0071E3] text-white rounded-lg font-medium hover:bg-blue-700">
                   Join
                 </button>
+                <p id="preorder-preview-unavailable">Preview only. This form does not submit a waitlist entry.</p>
               </div>
 
               <p className={`text-xs mt-4 ${theme === 'light' ? 'text-gray-500' : 'text-gray-500'}`}>

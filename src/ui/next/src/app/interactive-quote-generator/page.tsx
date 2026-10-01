@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -11,7 +12,7 @@ export default function InteractiveQuoteGeneratorPage() {
   const [unitName, setUnitName] = useState('Guests');
   const [pricePerUnit, setPricePerUnit] = useState(5);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [copied, setCopied] = useState(false);
+
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -24,11 +25,8 @@ export default function InteractiveQuoteGeneratorPage() {
   const iframeCode = `<iframe src="${generatedLink}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>
 <div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color:#6b7280;text-decoration:none;font-weight:600;font-family:sans-serif;">⚡ Powered by OmniSolo</a></div>`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(iframeCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(iframeCode);
+  const handleCopy = () => { void clipboard.copy(iframeCode); };
 
   const getThemeStyles = () => {
     return theme === 'light'
@@ -105,13 +103,13 @@ export default function InteractiveQuoteGeneratorPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                             <div className="flex gap-4">
                                 <button
-                                    onClick={() => setTheme('light')}
+                                    onClick={() => setTheme('light')} aria-pressed={theme === 'light'}
                                     className={`flex-1 py-2 px-4 rounded-xl border ${theme === 'light' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-semibold' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'} transition-all`}
                                 >
                                     Light
                                 </button>
                                 <button
-                                    onClick={() => setTheme('dark')}
+                                    onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}
                                     className={`flex-1 py-2 px-4 rounded-xl border ${theme === 'dark' ? 'border-gray-800 bg-gray-900 text-white font-semibold' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'} transition-all`}
                                 >
                                     Dark
@@ -133,10 +131,12 @@ export default function InteractiveQuoteGeneratorPage() {
                     </div>
                     <button
                         onClick={handleCopy}
+                disabled={clipboard.state === 'pending'}
                         className="mt-4 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2 shadow-md"
                     >
-                        {copied ? 'Code Copied!' : 'Copy Embed Code'}
+                        {clipboard.state === 'copied' ? 'Code Copied!' : 'Copy Embed Code'}
                     </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                 </div>
             </div>
 

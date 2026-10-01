@@ -209,7 +209,7 @@ export default function NewServicePage() {
       <div><label htmlFor="service-title" className="block text-sm font-medium mb-1">Service Title</label>
         <input id="service-title" type="text" value={fields.title} onChange={event => change('title', event.target.value)} disabled={disabled} className="w-full border rounded p-2 text-black" placeholder="e.g. Weekly Music Tutoring" required /></div>
       <div><div className="flex justify-between items-center mb-1"><label htmlFor="service-description" className="text-sm font-medium">Description</label>
-        <button onClick={() => change('description', fields.title.trim())} disabled={disabled || !fields.title.trim()} className="text-xs text-purple-700">Copy title</button></div>
+        <button onClick={() => change('description', fields.title.trim())} disabled={disabled || !fields.title.trim() || fields.description === fields.title.trim()} className="text-xs text-purple-700">Copy title</button></div>
         <textarea id="service-description" value={fields.description} onChange={event => change('description', event.target.value)} disabled={disabled} className="w-full border rounded p-2 text-black h-24" placeholder="Describe the service..." /></div>
       <div><label htmlFor="service-price" className="block text-sm font-medium mb-1">Price</label>
         <div className="relative"><span className="absolute left-3 top-2">$</span><input id="service-price" type="text" inputMode="decimal" value={fields.price} onChange={event => change('price', event.target.value)} disabled={disabled} className="w-full border rounded p-2 pl-8 text-black" placeholder="0.00" /></div>

@@ -81,6 +81,9 @@ describe('Acknowledged service creation', () => {
     fireEvent.change(screen.getByLabelText('Service Title'), { target: { value: 'Garden consultation' } });
     await user.click(screen.getByRole('button', { name: 'Copy title' }));
     expect(screen.getByLabelText('Description')).toHaveValue('Garden consultation');
+    expect(screen.getByRole('button', { name: 'Copy title' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Different details' } });
+    expect(screen.getByRole('button', { name: 'Copy title' })).toBeEnabled();
     expect(mutations()).toHaveLength(0);
   });
   it('keeps a definite validation rejection editable and does not claim success', async () => {

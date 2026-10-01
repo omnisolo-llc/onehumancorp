@@ -175,6 +175,13 @@ export default function AssistantPage() {
 
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
+  const [activeTourSteps, setActiveTourSteps] = useState<Step[]>([]);
+  const [tourNotice, setTourNotice] = useState('Loading the configured tour…');
+  const startTour = () => {
+    const available = walkthroughSteps.filter(step => document.getElementById(step.targetId || step.target_id || ''));
+    if (!available.length) { setTourNotice('No tour steps are available in this section. Open the relevant section and try again.'); return; }
+    setTourNotice(''); setActiveTourSteps(available); setIsWalkthroughOpen(true);
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -186,15 +193,24 @@ export default function AssistantPage() {
     }
 
     fetch("/api/v1/walkthrough/assistant")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setWalkthroughSteps(data);
-        }
+      .then((res) => { if (!res.ok) throw new Error('Tour lookup failed'); return res.json(); })
+      .then((data: unknown) => {
+        if (!Array.isArray(data)) throw new Error('Invalid tour response');
+        const steps: Step[] = data.filter((step: unknown): step is Step => {
+          if (!step || typeof step !== 'object') return false;
+          const item = step as Record<string, unknown>;
+          const target = item.targetId || item.target_id;
+          return typeof target === 'string' && !!target.trim()
+            && typeof item.title === 'string' && !!item.title.trim()
+            && typeof item.content === 'string' && !!item.content.trim();
+        });
+        if (steps.length !== data.length) throw new Error('Invalid tour step');
+        setWalkthroughSteps(steps);
+        setTourNotice(steps.length ? '' : 'No tour is configured for this page.');
       })
-      .catch((err) => {
-        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
-        console.error("Walkthrough fetch failed:", err);
+      .catch(() => {
+        setWalkthroughSteps([]);
+        setTourNotice('The configured tour could not be loaded.');
       });
 
     let mounted = true;
@@ -436,18 +452,21 @@ export default function AssistantPage() {
       actions={[{ label: 'Expert Center', href: '/agents' }]}
     >
       <InteractiveWalkthrough
-        steps={walkthroughSteps}
+        steps={activeTourSteps}
         isOpen={isWalkthroughOpen}
         onClose={() => setIsWalkthroughOpen(false)}
       />
       <div className="mb-4 flex flex-wrap gap-2 px-6 pt-4">
          <button
            type="button"
-           onClick={() => setIsWalkthroughOpen(true)}
+           onClick={startTour}
+           disabled={!walkthroughSteps.length}
+           aria-describedby={tourNotice ? 'assistant-tour-status' : undefined}
            className="app-button min-h-[44px]"
          >
            Start Tour
          </button>
+         {tourNotice && <p id="assistant-tour-status" role="status">{tourNotice}</p>}
       </div>
 
       <div className={styles.shell} data-testid="assistant-shell">

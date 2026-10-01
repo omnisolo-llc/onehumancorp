@@ -28,6 +28,7 @@ beforeEach(() => {
   eventSources.length = 0;
   global.fetch = mockFetch;
   vi.stubGlobal('WebSocket', MockWebSocket);
+  vi.stubGlobal('EventSource', class { addEventListener() {} close() {} });
   mockFetch.mockImplementation((url: string) => {
     if (url.includes('/api/v1/agents/workflows')) {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
@@ -331,4 +332,43 @@ test('closes the paywall only after the trial API confirms activation', async ()
   });
   expect(openSpy).toHaveBeenCalled();
   vi.unstubAllGlobals();
+});
+
+test('operational department shortcuts expose their selection in the existing team panel', async () => {
+  await act(async () => { render(<TooltipProvider><AgentsPage /></TooltipProvider>); });
+  const manager = screen.getByRole('button', { name: 'The Manager' });
+  const ambassador = screen.getByRole('button', { name: 'The Ambassador' });
+  fireEvent.click(manager);
+  expect(screen.getByRole('button', { name: 'My Team' })).toHaveAttribute('aria-pressed', 'true');
+  expect(manager).toHaveAttribute('aria-pressed', 'true');
+  expect(ambassador).toHaveAttribute('aria-pressed', 'false');
+  const details = screen.getByRole('region', { name: 'Department details' });
+  expect(within(details).getByRole('heading', { name: 'The Manager' })).toBeVisible();
+  expect(within(details).queryByRole('heading', { name: 'The Ambassador' })).not.toBeInTheDocument();
+  fireEvent.click(ambassador);
+  expect(manager).toHaveAttribute('aria-pressed', 'false');
+  expect(ambassador).toHaveAttribute('aria-pressed', 'true');
+  expect(within(details).getByRole('heading', { name: 'The Ambassador' })).toBeVisible();
+  expect(within(details).queryByRole('heading', { name: 'The Manager' })).not.toBeInTheDocument();
+  fireEvent.click(within(details).getByRole('button', { name: 'Show all departments' }));
+  expect(within(details).getByRole('heading', { name: 'The Manager' })).toBeVisible();
+  expect(ambassador).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('unsupported task media and result actions explain their unavailable state', async () => {
+  await act(async () => { render(<TooltipProvider><AgentsPage /></TooltipProvider>); });
+  for (const name of ['Voice Input', 'Refine Prompt', 'Screenshot']) {
+    const button = name === 'Screenshot' ? screen.getByRole('button', { name }) : screen.getByTitle(name);
+    expect(button).toBeDisabled();
+    const reason = document.getElementById(button.getAttribute('aria-describedby')!);
+    expect(reason).toBeVisible();
+    expect(reason).toHaveTextContent(/not available|not configured/i);
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'Results' }));
+  for (const name of ['Share result', 'Download file', 'Copy to workspace', 'Archive task', 'Unarchive']) {
+    for (const button of screen.getAllByRole('button', { name })) {
+      expect(button).toBeDisabled();
+      expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(/not available/i);
+    }
+  }
 });

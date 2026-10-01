@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
@@ -9,11 +10,13 @@ export default function InteractivePollGeneratorPage() {
   const router = useRouter();
   const [question, setQuestion] = useState('What flavor should we make next?');
   const [options, setOptions] = useState(['Chocolate', 'Vanilla', 'Strawberry']);
+  const [previewChoice, setPreviewChoice] = useState<number | null>(null);
+  useEffect(() => { setPreviewChoice(null); }, [options]);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [requireEmail, setRequireEmail] = useState(false);
   const [tenant, setTenant] = useState('my-store');
   const [showModal, setShowModal] = useState(false);
-  const [copied, setCopied] = useState(false);
+
   const [removeBranding, setRemoveBranding] = useState(false);
   const { hasPro } = useProPlan();
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
@@ -62,11 +65,8 @@ export default function InteractivePollGeneratorPage() {
     setShowModal(true);
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(embedCode);
+  const handleCopy = () => { void clipboard.copy(embedCode); };
 
   const handleRemoveBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!hasPro && e.target.checked) {
@@ -226,7 +226,7 @@ export default function InteractivePollGeneratorPage() {
 
               <div className="space-y-3 mb-6">
                 {options.map((opt, i) => (
-                  <button key={i} className={`w-full text-left px-4 py-3 rounded-xl border ${theme === 'dark' ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} transition-colors flex items-center justify-between group`}>
+                  <button key={i} onClick={() => setPreviewChoice(i)} aria-pressed={previewChoice === i} className={`w-full text-left px-4 py-3 rounded-xl border ${theme === 'dark' ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} transition-colors flex items-center justify-between group`}>
                     <span className="font-medium">{opt || `Option ${i + 1}`}</span>
                     <div className={`w-4 h-4 rounded-full border-2 ${theme === 'dark' ? 'border-gray-600 group-hover:border-blue-400' : 'border-gray-300 group-hover:border-blue-500'} flex items-center justify-center`}></div>
                   </button>
@@ -244,9 +244,10 @@ export default function InteractivePollGeneratorPage() {
                 </div>
               )}
 
-              <button className="w-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-medium py-2.5 rounded-xl transition-colors text-sm">
+              <button disabled aria-describedby="poll-preview-unavailable" className="w-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-medium py-2.5 rounded-xl transition-colors text-sm">
                 Vote Now
               </button>
+              <p id="poll-preview-unavailable">Preview only. Select an option to try the layout; votes are not submitted here.</p>
             </div>
 
             {!removeBranding && (
@@ -281,10 +282,12 @@ export default function InteractivePollGeneratorPage() {
               </pre>
               <button
                 onClick={handleCopy}
+                disabled={clipboard.state === 'pending'}
                 className="absolute top-3 right-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                {copied ? 'Copied!' : 'Copy Code'}
+                {clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
               </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
             </div>
 
             <div className="mt-6 flex justify-end">

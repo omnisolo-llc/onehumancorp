@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
@@ -13,7 +14,7 @@ export default function ReferralWidgetBuilderPage() {
   const [showModal, setShowModal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallStatus, setPaywallStatus] = useState('');
-  const [copied, setCopied] = useState(false);
+
   const [linkCopyStatus, setLinkCopyStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
   const copySequence = useRef(0);
   const copyPending = useRef(false);
@@ -100,11 +101,8 @@ export default function ReferralWidgetBuilderPage() {
 
   const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co'}/api/v1/growth/customer-referral/embed?tenant=${tenant}&theme=${theme}&give=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&get=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&hide_branding=${removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`;
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(embedCode);
+  const handleCopyCode = () => { void clipboard.copy(embedCode); };
 
   return (
     <div className="min-h-screen bg-gray-50 font-inter text-gray-900 pb-20">
@@ -158,14 +156,14 @@ export default function ReferralWidgetBuilderPage() {
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   type="button"
-                  onClick={() => setTheme('light')}
+                  onClick={() => setTheme('light')} aria-pressed={theme === 'light'}
                   className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
                 >
                   Light
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTheme('dark')}
+                  onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}
                   className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
                 >
                   Dark
@@ -268,10 +266,12 @@ export default function ReferralWidgetBuilderPage() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={handleCopyCode}
+                disabled={clipboard.state === 'pending'}
                 className="flex-1 py-3 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium rounded-xl transition-colors"
               >
-                {copied ? 'Copied!' : 'Copy Code'}
+                {clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
               </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
               <button
                 onClick={() => setShowModal(false)}
                 className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white font-medium rounded-xl hover:bg-gray-200"

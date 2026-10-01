@@ -7,7 +7,7 @@ export default function OperationsPage() {
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
         <header className="mb-8">
           <h1 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Today</h1>
-          <p className="text-[#86868B] dark:text-[#A1A1A6] text-lg mt-2 font-inter">Your daily schedule and operations overview.</p>
+          <p className="text-[#86868B] dark:text-[#A1A1A6] text-lg mt-2 font-inter">Sample schedule preview. These appointments are examples, not your live business records.</p>
         </header>
 
         <section className="glassmorphism p-6 border border-white/40 dark:border-white/10 shadow-sm relative overflow-hidden">
@@ -52,7 +52,8 @@ export default function OperationsPage() {
                     </div>
                     <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
                         <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium rounded-full self-start sm:self-end">Deposit Required</span>
-                        <button className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">Message Client</button>
+                        <button disabled aria-describedby="operations-message-unavailable" className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">Message Client</button>
+                        <p id="operations-message-unavailable" className="text-xs text-gray-500">Messaging is unavailable for sample appointments.</p>
                     </div>
                 </div>
 

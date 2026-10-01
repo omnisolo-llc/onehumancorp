@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { Card, CardContent } from "@/components/ui/card";
 import { errorMessage } from "@/lib/errors";
 
@@ -8,7 +9,11 @@ export default function GrowthReferralWidget() {
   const [loading, setLoading] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const inviteCopy = useClipboardFeedback(referralLink);
+  const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'default-team') : 'default-team';
+  const encodedTenant = encodeURIComponent(tenantId);
+  const embedCode = `<iframe src="https://omnisolo.co/api/v1/growth/storefront/embed?tenant=${encodedTenant}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color:#6b7280;text-decoration:none;">⚡ OmniSolo</a></div>`;
+  const embedCopy = useClipboardFeedback(embedCode);
 
   const generateLink = async () => {
     setLoading(true);
@@ -41,13 +46,7 @@ export default function GrowthReferralWidget() {
     }
   };
 
-  const handleCopy = () => {
-    if (referralLink) {
-      navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  const handleCopy = () => { void inviteCopy.copy(referralLink); };
 
   const handleWhatsApp = () => {
     if (referralLink) {
@@ -106,10 +105,12 @@ export default function GrowthReferralWidget() {
                     />
                     <button
                       onClick={handleCopy}
+                      disabled={inviteCopy.state === 'pending'}
                       className="px-4 py-2 bg-gray-100 min-h-[44px] hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md transition-colors"
                     >
-                      {copied ? 'Copied!' : 'Copy'}
+                      {inviteCopy.state === 'copied' ? 'Copied!' : 'Copy'}
                     </button>
+                    {inviteCopy.message && <p role={inviteCopy.state === 'error' ? 'alert' : 'status'}>{inviteCopy.message}</p>}
                   </div>
                   <button
                     onClick={handleWhatsApp}
@@ -150,15 +151,13 @@ export default function GrowthReferralWidget() {
 
             <div className="w-full md:w-auto">
               <button
-                onClick={() => {
-                  const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'default-team') : 'default-team';
-                  navigator.clipboard.writeText(`<iframe src="https://omnisolo.co/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ OmniSolo</a></div>`);
-                  alert('Embed code copied to clipboard!');
-                }}
+                onClick={() => { void embedCopy.copy(embedCode); }}
+                disabled={embedCopy.state === 'pending'}
                 className="w-full app-button min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white border-none py-3 px-6 text-sm rounded-md"
               >
                 Copy Embed Code
               </button>
+              {embedCopy.message && <p role={embedCopy.state === 'error' ? 'alert' : 'status'}>{embedCopy.message}</p>}
             </div>
           </div>
         </CardContent>

@@ -558,7 +558,7 @@ export default function AIWorkspacePage() {
           {(['overview', 'tasks', 'calendar', 'notes', 'automation', 'assistant'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setActiveTab(tab)} aria-pressed={activeTab === tab}
               className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all capitalize ${
                 activeTab === tab
                   ? 'bg-blue-600 text-white shadow-md'
@@ -741,7 +741,7 @@ export default function AIWorkspacePage() {
                     >
                       {timerActive ? 'Pause Session' : 'Start Focus'}
                     </button>
-                    <button
+                    <button disabled={!timerActive && timerSeconds === 1500}
                       onClick={() => {
                         setTimerActive(false);
                         setTimerSeconds(1500);

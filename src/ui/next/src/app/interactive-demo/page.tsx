@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cloudUrl } from '../../lib/branding';
@@ -77,12 +78,15 @@ export default function InteractiveDemoPage() {
   <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: #111827;">${escapeHtmlText(demoTitle)}</h3>
   <p style="margin-top: 0; margin-bottom: 16px; font-size: 14px; color: #4b5563;">${escapeHtmlText(demoDescription)}</p>
   <div style="background: #f3f4f6; border-radius: 8px; padding: 32px; text-align: center; border: 1px dashed #d1d5db;">
-    <button style="background: #0071e3; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Start Interactive Demo</button>
+    <button disabled aria-describedby="demo-content-unavailable" style="background: #0071e3; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Start Interactive Demo</button>
+    <p id="demo-content-unavailable">Preview only. No interactive demo steps have been configured.</p>
   </div>
 ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
     <a href="${escapeHtmlAttribute(`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OmniSolo</a>
   </div>`}
 </div>`;
+
+  const clipboard = useClipboardFeedback(embedCode);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-12 font-inter">
@@ -153,11 +157,13 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                   <p className="text-sm text-gray-600">Copy and paste this HTML into your website's code.</p>
                 </div>
                 <button
-                  onClick={() => navigator.clipboard.writeText(embedCode)}
+                  onClick={() => { void clipboard.copy(embedCode); }}
+                  disabled={clipboard.state === 'pending'}
                   className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors"
                 >
-                  Copy
+                  {clipboard.state === 'copied' ? 'Copied!' : 'Copy'}
                 </button>
+                {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
               </div>
               <textarea
                 aria-label="Embed code"
@@ -179,9 +185,10 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                   <p className="text-sm text-gray-600 mb-6">{demoDescription}</p>
 
                   <div className="bg-gray-100 border border-gray-200 border-dashed rounded-lg p-8 flex justify-center items-center">
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm">
+                    <button disabled aria-describedby="demo-content-unavailable" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm">
                       Start Interactive Demo
                     </button>
+                    <p id="demo-content-unavailable">Preview only. No interactive demo steps have been configured.</p>
                   </div>
 
                   {!removeBranding && (

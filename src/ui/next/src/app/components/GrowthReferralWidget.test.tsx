@@ -78,6 +78,6 @@ describe('GrowthReferralWidget', () => {
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://cloud.omnisolo.co/invite/123');
-    expect(screen.getByText('Copied!')).toBeInTheDocument();
+    expect(await screen.findByText('Copied!')).toBeInTheDocument();
   });
 });
