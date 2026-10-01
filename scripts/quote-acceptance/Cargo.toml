@@ -1,0 +1,24 @@
+[package]
+name = "ohc-quote-acceptance-regressions"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "serde"] }
+server_common = { path = "../../src/server/common" }
+async-trait = "0.1"
+server_integrations_stripe = { path = "../../src/server/integrations/stripe" }
+tower = { version = "0.5", features = ["util"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false
