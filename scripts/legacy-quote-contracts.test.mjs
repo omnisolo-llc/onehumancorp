@@ -45,6 +45,19 @@ for (const file of files) {
       assert.deepEqual(x.errors, []);
     } finally { x.dom.window.close(); }
   });
+  test(`${file}: edit dialog and backdrop cover the floating referral badge`, async () => {
+    const x = await load(file, { owner: true });
+    try {
+      x.doc.getElementById('btn-edit-quote').click();
+      const sheet = x.doc.getElementById('edit-quote-sheet');
+      const overlay = x.doc.getElementById('edit-sheet-overlay');
+      const badge = x.doc.getElementById('viral-badge');
+      const stack = element => Number(x.dom.window.getComputedStyle(element).zIndex);
+      assert.equal(sheet.style.display, 'block');
+      assert.ok(stack(sheet) > stack(overlay), 'the edit form must be above its backdrop');
+      assert.ok(stack(overlay) > stack(badge), 'the referral must not intercept modal editing');
+    } finally { x.dom.window.close(); }
+  });
   test(`${file}: accepted reload never posts acceptance again`, async () => {
     const x = await load(file, { status: 'ACCEPTED' });
     try {

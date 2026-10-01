@@ -18,7 +18,7 @@ export async function createOwnerQuote(
     [customerId, tenantId, 'Quote flow customer', `quote-${customerId}@example.test`],
   );
   const response = await page.request.post('/api/v1/quotes', {
-    headers: { Origin: new URL(page.url()).origin },
+    headers: { Origin: new URL(page.url()).origin, 'sec-fetch-site': 'same-origin' },
     data: {
       customer_id: customerId,
       service_id: options.serviceId,
