@@ -1,0 +1,3 @@
+issue_title: "F14: economics/owner outcomes"
+issue_description: "Prerequisite evidence missing: F14 is marked as a blocked / no-work outcome due to missing prerequisites and owner economic/metric data. No measured representative serving costs or owner outcomes are available to act on. Need workload/cost instrumentation and repeatable benchmark/export before proceeding. The required Superpowers skill (brainstorming) was loaded but execution is blocked. Superpowers skill provenance: 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md, skills/brainstorming/SKILL.md)."
+outcome: blocked
