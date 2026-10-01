@@ -506,7 +506,7 @@
       const setNotice = message => { if (!disposed) actionStatus.textContent = message; };
       const refreshButtons = () => {
         const accepted = quoteData.status === 'ACCEPTED';
-        btnPayCard.disabled = !loaded || mutationPending || acceptanceAttempted || quoteData.status === 'ACCEPTED';
+        btnPayCard.disabled = !loaded || !quoteData.updatedAt || mutationPending || acceptanceAttempted || quoteData.status === 'ACCEPTED';
         btnApproveSend.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
         btnEditQuote.disabled = !loaded || mutationPending || accepted;
         btnSaveEdits.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
@@ -523,15 +523,23 @@
             && !url.username && !url.password && (!url.port || url.port === '443') ? url.href : null;
         } catch { return null; }
       };
-      const showAccepted = receipt => {
+      const isReceiptForQuote = receipt => receipt?.success === true && receipt.error == null
+        && receipt.status === 'accepted' && receipt.quote_id === quoteId && validId(receipt.invoice_id)
+        && typeof receipt.invoice_status === 'string' && receipt.invoice_status.length <= 128
+        && typeof receipt.payment_status === 'string' && receipt.payment_status.length <= 128
+        && ['pending', 'available', 'not_configured', 'reconciliation'].includes(receipt.checkout_status);
+      const showAccepted = candidate => {
+        const receipt = isReceiptForQuote(candidate) ? candidate : null;
         quoteData.status = 'ACCEPTED';
-        statusEl.textContent = 'Accepted — payment pending';
+        const paymentPending = receipt && ['draft', 'open'].includes(receipt.invoice_status.toLowerCase())
+          && ['unverified', 'unpaid', 'pending'].includes(receipt.payment_status.toLowerCase());
+        statusEl.textContent = paymentPending ? 'Accepted — payment pending' : 'Quote accepted';
         btnPayCard.textContent = 'Quote accepted';
         acceptPanel.hidden = false;
-        invoiceReference.textContent = validId(receipt?.invoice_id)
-          ? `Invoice reference: ${receipt.invoice_id}. Payment is not confirmed.`
+        invoiceReference.textContent = receipt
+          ? `Invoice reference: ${receipt.invoice_id}. Recorded invoice status: ${receipt.invoice_status}. Recorded payment status: ${receipt.payment_status}. Acceptance alone does not prove payment.`
           : 'Invoice reference is not available on this page. Payment is not confirmed.';
-        const link = validId(receipt?.invoice_id) ? paymentUrl(receipt.stripe_payment_link) : null;
+        const link = receipt?.checkout_status === 'available' && paymentPending ? paymentUrl(receipt.stripe_payment_link) : null;
         continuePayment.hidden = !link;
         if (link) continuePayment.href = link; else continuePayment.removeAttribute('href');
         referralCard.hidden = !quoteData.tenantId;
@@ -711,14 +719,14 @@
       } else {
         btnPayCard.style.display = 'block'; btnPayDeposit.hidden = true;
         btnPayCard.addEventListener('click', async () => {
-          if (disposed || !loaded || mutationPending || acceptanceAttempted || quoteData.status === 'ACCEPTED') return;
+          if (disposed || !loaded || !quoteData.updatedAt || mutationPending || acceptanceAttempted || quoteData.status === 'ACCEPTED') return;
           acceptanceAttempted = true; mutationPending = true; refreshButtons(); btnPayCard.textContent = 'Accepting quote...';
           try {
             const res = await fetch(`/api/v1/quotes/${quoteId}/accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(quoteData.updatedAt ? { expected_updated_at: quoteData.updatedAt } : {}) });
             const result = await res.json();
             if (disposed) return;
-            if (!res.ok || result.success !== true || result.error != null || !validId(result.invoice_id)) throw new Error('Unconfirmed acceptance');
-            showAccepted(result); setNotice('Quote accepted. Payment and booking are not confirmed.');
+            if (!res.ok || !isReceiptForQuote(result)) throw new Error('Unconfirmed acceptance');
+            showAccepted(result); setNotice('Quote acceptance is recorded. Review the invoice status above; acceptance alone does not confirm payment or booking.');
           } catch { setNotice('Could not confirm quote acceptance. Reconcile by reloading the quote before any further action.'); }
           finally { if (!disposed) { mutationPending = false; refreshButtons(); } }
         });

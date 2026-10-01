@@ -6,10 +6,11 @@ import { JSDOM, VirtualConsole } from 'jsdom';
 const files = ['src/ui/tauri/src/ui/quote.html', 'src/ui/next/public/quote.html', 'src/ui/next/public/ui/quote.html'];
 const quoteId = 'be72a36d-1dfd-46c0-b52d-29147bbbaacf';
 const invoiceId = '026e3349-c238-486b-a276-cdcfd810f984';
+const receipt = extra => ({ success: true, status: 'accepted', quote_id: quoteId, invoice_id: invoiceId, invoice_status: 'Draft', payment_status: 'unverified', stripe_payment_link: '', checkout_status: 'not_configured', ...extra });
 const tick = () => new Promise(resolve => setTimeout(resolve, 15));
 async function load(file, options = {}) {
   const requests = [], alerts = [], errors = [];
-  const state = { id: quoteId, tenant_id: 'verified-tenant', status: options.status ?? 'SENT', total_amount_cents: 5000, required_deposit_cents: 1000 };
+  const state = { id: quoteId, tenant_id: 'verified-tenant', status: options.status ?? 'SENT', updated_at: options.noVersion ? null : '2026-10-01T03:00:00Z', total_amount_cents: 5000, required_deposit_cents: 1000 };
   const console = new VirtualConsole(); console.on('jsdomError', error => errors.push(error.message));
   const html = await readFile(new URL(`../${file}`, import.meta.url), 'utf8');
   const dom = new JSDOM(html, { url: `https://workspace.example/quote.html?id=${quoteId}&tenant=forged-tenant${options.owner ? '&mode=owner' : ''}`, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: console, beforeParse(window) {
@@ -19,10 +20,10 @@ async function load(file, options = {}) {
       if (url === `/api/v1/quotes/${quoteId}/accept`) {
         if (options.accept) return options.accept();
         state.status = 'ACCEPTED';
-        return Response.json({ success: true, invoice_id: invoiceId, stripe_payment_link: options.paymentLink ?? '' });
+        return Response.json(receipt({ stripe_payment_link: options.paymentLink ?? '', checkout_status: options.paymentLink ? 'available' : 'not_configured' }));
       }
       if (url === `/api/v1/quotes/${quoteId}` && init.method === 'PUT') return options.save?.() ?? Response.json({ success: true });
-      if (url === `/api/v1/quotes/${quoteId}`) return Response.json({ quote: state, line_items: [{ description: options.description ?? 'Reviewed service', unit_price_cents: options.linePrice ?? 5000, quantity: 1 }] });
+      if (url === `/api/v1/quotes/${quoteId}`) return Response.json({ quote: state, acceptance: state.status === 'ACCEPTED' ? options.loadedReceipt ?? receipt() : undefined, line_items: [{ description: options.description ?? 'Reviewed service', unit_price_cents: options.linePrice ?? 5000, quantity: 1 }] });
       return Response.json([]);
     };
   } });
@@ -34,6 +35,7 @@ for (const file of files) {
     const x = await load(file);
     try {
       x.doc.getElementById('btn-pay-card').click(); await tick();
+      assert.deepEqual(JSON.parse(x.requests.find(r => r.url.endsWith('/accept')).init.body), { expected_updated_at: '2026-10-01T03:00:00Z' });
       assert.equal(x.doc.getElementById('quote-status').textContent, 'Accepted — payment pending');
       assert.match(x.doc.getElementById('quote-acceptance').textContent, new RegExp(invoiceId));
       assert.equal(x.doc.getElementById('continue-payment').hidden, true);
@@ -62,6 +64,34 @@ for (const file of files) {
       x.doc.getElementById('btn-save-edits').dispatchEvent(new x.dom.window.Event('click'));
       await tick();
       assert.equal(x.requests.filter(r => r.init.method === 'PUT').length, 0);
+    } finally { x.dom.window.close(); }
+  });
+  test(`${file}: paid invoice replay preserves recorded state without inviting payment again`, async () => {
+    const x = await load(file, { status: 'ACCEPTED', loadedReceipt: receipt({ invoice_status: 'Paid', payment_status: 'paid', checkout_status: 'available', stripe_payment_link: 'https://checkout.stripe.com/c/pay/cs_test_fixture' }) });
+    try {
+      assert.equal(x.doc.getElementById('quote-status').textContent, 'Quote accepted');
+      assert.match(x.doc.getElementById('quote-invoice-reference').textContent, /invoice status: Paid/);
+      assert.match(x.doc.getElementById('quote-invoice-reference').textContent, /payment status: paid/);
+      assert.equal(x.doc.getElementById('continue-payment').hidden, true);
+      assert.equal(x.requests.filter(r => r.url.endsWith('/accept')).length, 0);
+    } finally { x.dom.window.close(); }
+  });
+  test(`${file}: missing observed version cannot submit first acceptance`, async () => {
+    const x = await load(file, { noVersion: true });
+    try {
+      assert.equal(x.doc.getElementById('btn-pay-card').disabled, true);
+      x.doc.getElementById('btn-pay-card').dispatchEvent(new x.dom.window.Event('click'));
+      await tick();
+      assert.equal(x.requests.filter(r => r.url.endsWith('/accept')).length, 0);
+    } finally { x.dom.window.close(); }
+  });
+  test(`${file}: a receipt for another quote cannot acknowledge this quote`, async () => {
+    const x = await load(file, { accept: () => Response.json(receipt({ quote_id: invoiceId })) });
+    try {
+      x.doc.getElementById('btn-pay-card').click(); await tick();
+      assert.equal(x.doc.getElementById('quote-acceptance').hidden, true);
+      assert.equal(x.doc.getElementById('continue-payment').hidden, true);
+      assert.equal(x.doc.getElementById('btn-pay-card').disabled, true);
     } finally { x.dom.window.close(); }
   });
   test(`${file}: unknown acceptance cannot become paid or be repeated`, async () => {
@@ -112,7 +142,7 @@ for (const file of files) {
       assert.equal(x.doc.getElementById('continue-payment').hidden, true);
       assert.equal(x.doc.getElementById('continue-payment').getAttribute('href'), null);
     } finally { x.dom.window.close(); }
-    const y = await load(file, { accept: () => Response.json({ success: true, error: 'contradiction', invoice_id: invoiceId }) });
+    const y = await load(file, { accept: () => Response.json(receipt({ error: 'contradiction' })) });
     try {
       y.doc.getElementById('btn-pay-card').click(); await tick();
       assert.equal(y.doc.getElementById('quote-acceptance').hidden, true);
@@ -125,7 +155,7 @@ for (const file of files) {
     try {
       x.doc.getElementById('btn-pay-card').click();
       x.dom.window.dispatchEvent(new x.dom.window.Event('pagehide'));
-      finish(Response.json({ success: true, invoice_id: invoiceId, stripe_payment_link: '' })); await tick();
+      finish(Response.json(receipt())); await tick();
       assert.equal(x.doc.getElementById('quote-acceptance').hidden, true);
       assert.equal(x.doc.querySelector('[data-testid="referral-success-card"]').hidden, true);
     } finally { x.dom.window.close(); }
