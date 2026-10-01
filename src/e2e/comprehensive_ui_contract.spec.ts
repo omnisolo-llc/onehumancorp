@@ -1,10 +1,11 @@
 import { expect, test } from './fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { BrowserContext, Page } from '@playwright/test';
-import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
+import type { Page } from '@playwright/test';
+import { hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
+import { createAuditNavigation } from './support/ui_audit_navigation';
 
 const appRoot = path.resolve(__dirname, '../ui/next/src/app');
 const ignoredRouteSegments = new Set(['api']);
@@ -135,29 +136,14 @@ async function visibleText(page: Page) {
   return page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
 }
 
-const isolatedAuditSessions = new WeakSet<BrowserContext>();
-
-async function gotoReady(page: Page, route: string) {
-  // This crawler exercises Log out too. Never revoke the server-issued JWT in
-  // the suite's shared storage state, and renew after a previous audited logout.
-  const needsLogin = !isolatedAuditSessions.has(page.context())
-    || (await page.request.get('/api/v1/agent-feed?limit=1')).status() === 401;
-  if (needsLogin) {
-    const origin = new URL(process.env.BASE_URL || 'http://127.0.0.1:18789').origin;
-    await authenticateRequest(page.request, {
-      username: E2E_ADMIN_USER.email,
-      password: E2E_ADMIN_USER.password,
-      organizationId: E2E_ADMIN_USER.organizationId,
-    }, origin);
-    isolatedAuditSessions.add(page.context());
-  }
-  // Wait through document-load redirects before describing controls. Otherwise
-  // share-card's redirect replaces a tagged shell underneath the click locator.
-  await page.goto(new URL(route, process.env.BASE_URL || 'http://127.0.0.1:18789').href, { waitUntil: 'load' });
-  await page.waitForLoadState('networkidle', { timeout: 100 }).catch(() => undefined);
-  await page.waitForTimeout(100);
-  await page.evaluate(fillEmptyAuditControls);
-}
+const auditBaseURL = process.env.BASE_URL || 'http://127.0.0.1:18789';
+const gotoReady = createAuditNavigation(auditBaseURL, async (page) => {
+  await authenticateRequest(page.request, {
+    username: E2E_ADMIN_USER.email,
+    password: E2E_ADMIN_USER.password,
+    organizationId: E2E_ADMIN_USER.organizationId,
+  }, new URL(auditBaseURL).origin);
+});
 
 async function tagClickTargets(page: Page) {
   return page.locator(clickableSelector).evaluateAll((elements) => {

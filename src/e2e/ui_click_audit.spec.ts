@@ -2,6 +2,7 @@ import { test, expect } from './fixtures';
 import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 
 import { createServer } from 'node:http';
+import { createAuditNavigation } from './support/ui_audit_navigation';
 
 // These verify the crawler's observation boundary using real browser behavior,
 // not mocked requests or substituted product responses.
@@ -242,4 +243,72 @@ test('rejects a same-URL document replacement before any click', async ({ page }
   await expect(resolveAuditTarget(page, 'same-key', retag)).rejects.toThrow('document changed');
   expect(page.url()).toBe(url);
   expect(await page.locator('body').getAttribute('data-clicked')).toBeNull();
+});
+
+
+test('reuses a verified audit session and renews only read navigation after real logout or401', async ({ page }) => {
+  let logins = 0;
+  let session = 0;
+  let logoutEffects = 0;
+  let unexpectedProbes = 0;
+  const server = createServer((request, response) => {
+    if (request.url === '/fixture-login' && request.method === 'POST') {
+      session = ++logins;
+      response.writeHead(200, { 'set-cookie': `audit_nav_session=${session}; Path=/; SameSite=Lax` });
+      response.end('authenticated');
+    } else if (request.url === '/api/v1/auth/logout' && request.method === 'POST') {
+      logoutEffects += 1;
+      session = 0;
+      response.writeHead(200, { 'set-cookie': 'audit_nav_session=; Path=/; Max-Age=0' });
+      response.end('logged out');
+    } else if (request.url?.startsWith('/api/v1/agent-feed')) {
+      unexpectedProbes += 1;
+      response.writeHead(500);
+      response.end('A separate API probe is not navigation evidence');
+    } else if (request.url === '/denied') {
+      response.writeHead(401);
+      response.end('unavailable');
+    } else if (request.url === '/login') {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end('<h1>Login required</h1>');
+    } else if (!session || !request.headers.cookie?.split(';').some(value => value.trim() === `audit_nav_session=${session}`)) {
+      response.writeHead(302, { location: '/login' });
+      response.end();
+    } else {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end(`<h1>Private audit fixture</h1><button onclick="fetch('/api/v1/auth/logout',{method:'POST'}).then(()=>document.querySelector('output').textContent='Logged out')">Log out</button><output></output>`);
+    }
+  });
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing local fixture address');
+    const origin = `http://127.0.0.1:${address.port}`;
+    const navigate = createAuditNavigation(origin, async (target) => {
+      const result = await target.request.post(`${origin}/fixture-login`);
+      expect(result.ok()).toBe(true);
+    });
+    await navigate(page, '/private');
+    await replaceAuditDocument(page);
+    await navigate(page, '/private');
+    expect(logins).toBe(1);
+    await page.getByRole('button', { name: 'Log out' }).click();
+    await expect(page.locator('output')).toHaveText('Logged out');
+    await replaceAuditDocument(page);
+    await navigate(page, '/private');
+    expect(logins).toBe(2);
+    expect(logoutEffects).toBe(1);
+    session = 0;
+    await replaceAuditDocument(page);
+    await navigate(page, '/private');
+    expect(logins).toBe(3);
+    await expect(page.getByRole('heading', { name: 'Private audit fixture' })).toBeVisible();
+    await expect(navigate(page, '/denied')).rejects.toThrow('authentication remained unavailable');
+    expect(logins).toBe(4);
+    expect(logoutEffects).toBe(1);
+    expect(unexpectedProbes).toBe(0);
+  } finally {
+    await replaceAuditDocument(page);
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
 });
