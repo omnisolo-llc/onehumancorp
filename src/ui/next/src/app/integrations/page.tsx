@@ -253,8 +253,11 @@ export default function Integrations() {
           })
         });
 
-        if (!res.ok || !isConfirmedUsableConnection(await res.json())) {
-          setStatusMessage("Failed to connect WhatsApp Cloud API.");
+        const result = await res.json();
+        if (!res.ok || !isConfirmedUsableConnection(result)) {
+          setStatusMessage(result?.status === 'pending_verification'
+            ? 'Secure provider verification is unavailable. No WhatsApp connection was established.'
+            : "WhatsApp Cloud API connection could not be confirmed.");
           return;
         }
         setIntegrations(prev => prev.map(integration =>
@@ -265,16 +268,18 @@ export default function Integrations() {
         router.push('/inbox');
       };
 
-      if (typeof window !== "undefined" && window.FB) {
+      if (typeof window !== "undefined" && typeof window.FB?.login === 'function') {
         window.FB.login((response) => {
           if (response.authResponse) {
-            doBackendConnect(response.authResponse.accessToken);
+            void doBackendConnect(response.authResponse.accessToken).catch(() => {
+              setStatusMessage('WhatsApp Cloud API connection could not be confirmed.');
+            });
           } else {
             setStatusMessage("WhatsApp Cloud API connection cancelled.");
           }
         }, { scope: 'whatsapp_business_management,whatsapp_business_messaging' });
       } else {
-        await doBackendConnect("offline_fallback_token");
+        setStatusMessage('WhatsApp connection is unavailable because Meta sign-in is not configured.');
       }
     } catch  {
       setStatusMessage("Failed to connect WhatsApp Cloud API.");
@@ -381,7 +386,7 @@ export default function Integrations() {
               </p>
 
               <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
-                Notice: Offline fallback mode enabled when Facebook Meta SDK is unreachable.
+        Meta sign-in must be available, and the server must verify the provider connection before it is usable.
               </div>
 
               <button

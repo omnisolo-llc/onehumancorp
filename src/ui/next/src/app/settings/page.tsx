@@ -65,6 +65,9 @@ export default function SettingsPage() {
     voice_receptionist_persona: "Friendly",
     voice_receptionist_instructions: "",
   });
+  const voiceProvisionBusy = useRef(false);
+  const [voiceProvisionState, setVoiceProvisionState] = useState<'idle' | 'pending' | 'unconfirmed'>('idle');
+  const [voiceProvisionMessage, setVoiceProvisionMessage] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [agentName, setAgentName] = useState("Agent One");
@@ -388,16 +391,29 @@ export default function SettingsPage() {
   };
 
   const handleProvisionVoiceNumber = async () => {
+    if (voiceProvisionBusy.current) return;
+    voiceProvisionBusy.current = true;
+    setVoiceProvisionState('pending');
+    setVoiceProvisionMessage('Requesting a phone number…');
     try {
       const res = await fetch("/api/v1/settings/voice/provision", {
         method: "POST",
       });
-      if (res.ok) {
-        const data = await res.json();
-        handleVoiceSettingChange('voice_receptionist_number', data.number);
+      const data = await res.json();
+      if (res.status === 200 && data?.success === true && data.error == null && typeof data.number === 'string' && /^\+[1-9]\d{1,14}$/.test(data.number)) {
+        // The provisioning endpoint already persists its acknowledged number.
+        setVoiceSettings(previous => ({ ...previous, voice_receptionist_number: data.number }));
+        setVoiceProvisionMessage('Phone number provisioning was acknowledged.');
+        voiceProvisionBusy.current = false;
+        setVoiceProvisionState('idle');
+      } else {
+        setVoiceProvisionMessage('The phone number could not be provisioned or confirmed. Check the provider before trying again.');
+        setVoiceProvisionState('unconfirmed');
       }
     } catch (e) {
       console.error("Failed to provision voice number", e);
+      setVoiceProvisionMessage('The phone number could not be provisioned or confirmed. Check the provider before trying again.');
+      setVoiceProvisionState('unconfirmed');
     }
   };
 
@@ -676,11 +692,12 @@ export default function SettingsPage() {
                             className="w-full rounded-xl border border-gray-200 bg-gray-55 px-4 py-2.5 text-sm text-gray-500 outline-none"
                           />
                           {!voiceSettings.voice_receptionist_number && (
-                            <button onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
+                            <button disabled={voiceProvisionState !== 'idle'} onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
                               Get Number
                             </button>
                           )}
                         </div>
+                        {voiceProvisionMessage && <p role={voiceProvisionState === 'unconfirmed' ? 'alert' : 'status'}>{voiceProvisionMessage}</p>}
                       </div>
                     </div>
                   </div>
