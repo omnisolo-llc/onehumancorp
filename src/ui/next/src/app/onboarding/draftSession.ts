@@ -67,6 +67,21 @@ export async function fetchForOnboardingOwner(url: string, options: RequestInit,
   }
   return authenticatedOnboardingFetch(url, options, expected, before);
 }
+/** Existing business mutations share session authority, not draft-write queuing. */
+export async function fetchForOwnedBusinessAction(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
+  if (!['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/publish_draft'].includes(url)) throw new Error('Invalid business action destination');
+  if ((options.method ?? 'GET').toUpperCase() !== 'POST') throw new Error('Owned business actions require POST');
+  if (!expected || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. Please reopen setup.');
+  const before = epoch;
+  return authenticatedOnboardingFetch(url, { ...options, credentials: 'same-origin', cache: 'no-store', redirect: 'error' }, expected, before, () => {
+    const result: unknown = onDispatch?.();
+    if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+      void Promise.resolve(result).catch(() => undefined);
+      throw new Error('Dispatch markers must be saved synchronously');
+    }
+    if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This action was not sent.');
+  });
+}
 async function authenticatedOnboardingFetch(url: string, options: RequestInit, expected: DraftOwner, before: number, dispatched?: () => void): Promise<Response> {
   let verified: DraftOwner;
   try { verified = await readQueueOwner(); }
