@@ -1,4 +1,4 @@
-issue_title: ""
+issue_title: "Performance Baseline and Billing Audit Findings"
 issue_description: |
   **Superpowers Workflow Provenance:**
   - Revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d
@@ -12,8 +12,8 @@ issue_description: |
 
   **Conclusion:**
   [no-work finding] due to missing baseline metrics and hard budget reservation prerequisites. No concrete code changes are required at this stage.
-issue_priority: ""
-issue_category: ""
-issue_type: ""
-issue_label: ""
+issue_priority: P2
+issue_category: research
+issue_type: task
+issue_label: [agent-report]
 assignees: []
