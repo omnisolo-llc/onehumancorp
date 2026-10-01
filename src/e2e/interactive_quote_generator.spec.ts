@@ -7,7 +7,7 @@ test('interactive_quote_generator_loop', async ({ page, request, loginAs, adminU
 });
 
 test.describe('Interactive Quote Generator Growth Loop', () => {
-    test('dashboard links to Interactive Quote Generator, which generates an embed with a viral footer', async ({ page, loginAs, adminUser }) => {
+    test('dashboard links to Interactive Quote Generator, which generates an embed with a viral footer', async ({ page, context, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
         // Look for the "Interactive Quote Generator" link in the Dashboard Growth & Virality section
         await page.goto('/dashboard');
@@ -18,10 +18,15 @@ test.describe('Interactive Quote Generator Growth Loop', () => {
         // Verify page content
         await expect(page.locator('h1', { hasText: 'Interactive Quote Generator' }).first()).toBeVisible();
 
-        // Check for the embed generation button
+        // Exercise the browser clipboard with explicit permissions for this test origin.
+        await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+        const embedCode = await page.locator('textarea[readonly]').inputValue();
+        await page.bringToFront();
+        await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
         await page.locator('button', { hasText: 'Copy Embed Code' }).click();
 
-        await expect(page.locator('text=Copied!')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Code Copied!', exact: true })).toBeVisible();
+        await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(embedCode);
 
         // Now test the quote calculator endpoint
         await page.goto('/quote-calculator?tenant=test-tenant&service=Custom+Cake+Design&basePrice=50&unitName=Guests&pricePerUnit=5&theme=light');

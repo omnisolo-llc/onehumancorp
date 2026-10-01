@@ -430,6 +430,17 @@ test.describe('comprehensive UI contract', () => {
             Array.from((element as HTMLInputElement).labels || []).map((labelElement) => labelElement.textContent || '').join(' ').trim() ||
             (element.textContent || '').trim();
 
+          let hiddenAncestor: string | null = null;
+          if (rect.width < 1 || rect.height < 1) {
+            for (let ancestor: Element | null = element; ancestor; ancestor = ancestor.parentElement) {
+              const ancestorStyle = window.getComputedStyle(ancestor);
+              if (ancestor.hasAttribute('hidden') || ancestorStyle.display === 'none' || ancestorStyle.visibility === 'hidden') {
+                hiddenAncestor = `${ancestor.tagName.toLowerCase()}#${ancestor.id} ${ancestor.getAttribute('class') || ''}`.slice(0, 240);
+                break;
+              }
+            }
+          }
+
           return {
             index,
             tag,
@@ -439,6 +450,11 @@ test.describe('comprehensive UI contract', () => {
             height: rect.height,
             pointerEvents: style.pointerEvents,
             disabled: element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true',
+            id: element.id.slice(0, 120),
+            classes: (element.getAttribute('class') || '').slice(0, 240),
+            display: style.display,
+            visibility: style.visibility,
+            hiddenAncestor,
           };
         }),
       );
@@ -446,7 +462,9 @@ test.describe('comprehensive UI contract', () => {
 
       for (const result of results) {
         const target = `${route}: ${result.tag}${result.type ? `[type=${result.type}]` : ''} #${result.index + 1}`;
-        if (result.width < 1 || result.height < 1) failures.push(`${target} has no rendered hit area`);
+        if (result.width < 1 || result.height < 1) {
+          failures.push(`${target} has no rendered hit area: ${JSON.stringify({ label: result.label.slice(0, 200), id: result.id, classes: result.classes, width: result.width, height: result.height, display: result.display, visibility: result.visibility, hiddenAncestor: result.hiddenAncestor })}`);
+        }
         if (!result.disabled && result.pointerEvents === 'none') failures.push(`${target} has pointer-events disabled`);
         if (!result.disabled && !result.label) failures.push(`${target} has no accessible label/text/placeholder/title`);
       }
