@@ -305,6 +305,16 @@ pub async fn webhook_security_middleware(
     req: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
+    let is_stripe = req.uri().path() == "/api/v1/webhooks/stripe";
+    let req = if is_stripe {
+        super::stripe_webhook_security::verify_request(
+            req,
+            super::stripe_webhook_security::Endpoint::Billing,
+        )
+        .await?
+    } else {
+        req
+    };
     let (parts, body) = req.into_parts();
 
     let bytes = match axum::body::to_bytes(body, usize::MAX).await {
@@ -317,10 +327,16 @@ pub async fn webhook_security_middleware(
         .headers
         .get("X-Signature")
         .or_else(|| parts.headers.get("Stripe-Signature"));
-    let mut valid_signature = false;
-    let mut timestamp_valid = false;
+    let mut valid_signature = is_stripe;
+    let mut timestamp_valid = is_stripe;
+    if is_stripe {
+        // JSON validation happens only after raw-byte authentication, and before
+        // any dedup claim or dispatch. Never acknowledge a malformed event here.
+        serde_json::from_slice::<StripeEvent>(&bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    }
 
-    if let Some(sig) = sig_header
+    if !is_stripe
+        && let Some(sig) = sig_header
         && let Ok(sig_str) = sig.to_str()
     {
         valid_signature = true; // In a real implementation this would perform HMAC verification

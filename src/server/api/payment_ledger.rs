@@ -36,6 +36,7 @@ pub struct PaymentIntentResponse {
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
+    #[serde(rename = "type", alias = "type_field")]
     pub type_field: String, // e.g. "payment_intent.succeeded"
     pub data: WebhookData,
 }
@@ -506,7 +507,13 @@ pub async fn get_user_usage(
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/intent", post(create_payment_intent))
-        .route("/webhook", post(stripe_webhook))
+        .route(
+            "/webhook",
+            post(stripe_webhook).route_layer(axum::middleware::from_fn_with_state(
+                super::stripe_webhook_security::Endpoint::Ledger,
+                super::stripe_webhook_security::require_verified_stripe,
+            )),
+        )
         .route("/balance", get(get_balance))
         .route("/safe-to-spend", get(get_safe_to_spend))
         .route("/receipt", post(process_receipt))
