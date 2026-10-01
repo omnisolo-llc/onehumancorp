@@ -1,0 +1,2 @@
+issue_title: "🔗 Link: [blocked no-work finding: Twilio SMS Integration]"
+issue_description: "The requested Twilio SMS integration is already fully implemented. The \`server_integrations_twilio\` crate provides the Twilio client for sending SMS and WhatsApp messages, as well as provisioning numbers. The \`IntegrationsRegistry\` maps Twilio properly. A settings panel for merchants to manage the integration is also implemented in the frontend. All tests pass successfully, and no further code changes are required."
