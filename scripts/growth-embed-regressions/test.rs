@@ -552,3 +552,59 @@ async fn branding_binds_raw_tenant_identity_not_an_html_encoded_lookalike() {
         );
     }
 }
+
+async fn assert_referral_url_round_trip(embed: Embed, kind: &str) {
+    use std::{
+        io::Write,
+        process::{Command, Stdio},
+    };
+    let pool = setup().await;
+    for tenant in [
+        "tenant & other",
+        "O'Brien",
+        "\"double\" ?#fragment",
+        "é雪😀",
+        "</script><script>marker</script>",
+        "&#x27;",
+        "tenant-a",
+        "",
+    ] {
+        let html = render(&pool, embed, Some(tenant), Some("true")).await;
+        let mut child = Command::new("python3")
+            .arg(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/check_referral_urls.py"
+            ))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(
+                serde_json::to_string(
+                    &serde_json::json!({"html":html,"tenant":tenant,"kind":kind}),
+                )
+                .unwrap()
+                .as_bytes(),
+            )
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "wrong referral URL for {tenant:?}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+#[tokio::test]
+async fn post_purchase_input_and_branding_url_preserve_raw_tenant() {
+    assert_referral_url_round_trip(Embed::PostPurchase, "post-purchase").await;
+}
+#[tokio::test]
+async fn birthday_branding_url_preserves_raw_tenant_and_capture_attribute() {
+    assert_referral_url_round_trip(Embed::BirthdayClub, "birthday-club").await;
+}

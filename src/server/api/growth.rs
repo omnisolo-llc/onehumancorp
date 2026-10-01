@@ -1634,7 +1634,10 @@ async fn handle_post_purchase_embed(
     };
 
     let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
-    let tenant = escape_html(raw_tenant);
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let discount = escape_html(query.discount.as_deref().unwrap_or("15pct"));
 
     let discount_display = if discount.ends_with("pct") {
@@ -1682,8 +1685,8 @@ async fn handle_post_purchase_embed(
         "".to_string()
     } else {
         format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
-            tenant
+            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="{}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
+            referral_url
         )
     };
 
@@ -1737,7 +1740,7 @@ async fn handle_post_purchase_embed(
     <h3>Share and Get {discount_display} OFF</h3>
     <p>Share your link with friends. They get {discount_display} off their first order, and you get {discount_display} off your next!</p>
     <div class="input-group">
-        <input type="text" readonly value="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" id="ref-link" />
+        <input type="text" readonly value="{referral_url}" id="ref-link" />
         <button onclick="copyLink(this)">Copy Link</button>
     </div>
     {branding}
@@ -1758,7 +1761,7 @@ async fn handle_post_purchase_embed(
         border_color = border_color,
         discount_display = discount_display,
         branding = branding,
-        tenant = tenant
+        referral_url = referral_url
     );
 
     axum::response::Html(html)
@@ -6671,6 +6674,10 @@ pub async fn handle_birthday_club_embed(
 
     let safe_tenant = escape_html(tenant);
     let safe_discount = escape_html(discount);
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=birthday_club",
+        urlencoding::encode(tenant)
+    ));
 
     let mut has_pro = false;
     if hide_branding {
@@ -6694,9 +6701,9 @@ pub async fn handle_birthday_club_embed(
     } else {
         format!(
             r#"<div style="margin-top: 16px; font-size: 12px; text-align: center;">
-                <a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=birthday_club" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a>
+                <a href="{}" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a>
             </div>"#,
-            safe_tenant, muted_color
+            referral_url, muted_color
         )
     };
 
