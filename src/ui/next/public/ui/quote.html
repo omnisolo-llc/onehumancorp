@@ -404,11 +404,22 @@
       </div>
     </div>
 
+    <p id="quote-action-status" role="status" aria-live="polite"></p>
+    <section id="quote-acceptance" hidden>
+      <h2>Quote accepted</h2>
+      <p>Acceptance does not confirm payment or reserve a booking.</p>
+      <p id="quote-invoice-reference"></p>
+      <a id="continue-payment" hidden target="_blank" rel="noopener noreferrer">Continue to payment</a>
+    </section>
+    <section data-testid="referral-success-card" hidden>
+      <h2>Start Your AI Business</h2>
+      <a id="accepted-referral-link">Get OmniSolo Free</a>
+    </section>
     <div id="action-buttons" style="margin-bottom: 100px;">
       <button class="btn btn-primary" id="btn-edit-quote" aria-haspopup="dialog" style="display: none; background-color: #f5f5f7; color: #1d1d1f; border: 1px solid #d2d2d7; margin-bottom: 12px;">Edit Quote</button>
-      <button class="btn btn-primary" id="btn-approve-send" data-testid="modal-approve-btn" style="display: none;">Approve & Send to Customer</button>
-      <button class="btn btn-apple-pay" id="btn-pay-deposit" style="display: none;">Pay Deposit with Pay</button>
-      <button class="btn btn-primary" id="btn-pay-card" style="display: none; background-color: #333;">Pay with Card</button>
+      <button class="btn btn-primary" id="btn-approve-send" data-testid="modal-approve-btn" style="display: none;">Approve quote</button>
+      <button class="btn btn-apple-pay" id="btn-pay-deposit" style="display: none;" disabled>Payment requires a separate checkout</button>
+      <button class="btn btn-primary" id="btn-pay-card" style="display: none; background-color: #333;">Accept quote</button>
     </div>
 
   </div>
@@ -480,14 +491,63 @@
       const editTotalAmount = document.getElementById('edit-total-amount');
       const editRequiredDeposit = document.getElementById('edit-required-deposit');
 
-      let quoteData = {
-        totalCents: 0,
-        depositPercent: 25,
-        requiredDepositCents: 0,
-        currency: 'USD',
-        tenantId: urlParams.get('tenant') || '',
-        lineItems: []
+      let quoteData = { totalCents: 0, depositPercent: 25, requiredDepositCents: 0,
+        tenantId: '', status: '', updatedAt: null, lineItems: [] };
+      let loaded = false, acceptanceAttempted = false, mutationPending = false, mutationUnconfirmed = false, disposed = false;
+      const validId = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+      const statusEl = document.getElementById('quote-status');
+      const actionStatus = document.getElementById('quote-action-status');
+      const acceptPanel = document.getElementById('quote-acceptance');
+      const invoiceReference = document.getElementById('quote-invoice-reference');
+      const continuePayment = document.getElementById('continue-payment');
+      const referralCard = document.querySelector('[data-testid="referral-success-card"]');
+      window.addEventListener('pagehide', () => { disposed = true; }, { once: true });
+      window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
+      const setNotice = message => { if (!disposed) actionStatus.textContent = message; };
+      const refreshButtons = () => {
+        const accepted = quoteData.status === 'ACCEPTED';
+        btnPayCard.disabled = !loaded || mutationPending || acceptanceAttempted || quoteData.status === 'ACCEPTED';
+        btnApproveSend.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
+        btnEditQuote.disabled = !loaded || mutationPending || accepted;
+        btnSaveEdits.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
+        btnCloseEdit.disabled = mutationPending;
+        btnAddLineItem.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
+        depositSlider.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
+        for (const input of editQuoteSheet.querySelectorAll('input')) input.readOnly = mutationPending || mutationUnconfirmed || accepted;
+        for (const button of editQuoteSheet.querySelectorAll('.btn-remove-item')) button.disabled = mutationPending || mutationUnconfirmed || accepted;
       };
+      const paymentUrl = value => {
+        try {
+          const url = new URL(value);
+          return url.protocol === 'https:' && ['checkout.stripe.com', 'buy.stripe.com'].includes(url.hostname)
+            && !url.username && !url.password && (!url.port || url.port === '443') ? url.href : null;
+        } catch { return null; }
+      };
+      const showAccepted = receipt => {
+        quoteData.status = 'ACCEPTED';
+        statusEl.textContent = 'Accepted — payment pending';
+        btnPayCard.textContent = 'Quote accepted';
+        acceptPanel.hidden = false;
+        invoiceReference.textContent = validId(receipt?.invoice_id)
+          ? `Invoice reference: ${receipt.invoice_id}. Payment is not confirmed.`
+          : 'Invoice reference is not available on this page. Payment is not confirmed.';
+        const link = validId(receipt?.invoice_id) ? paymentUrl(receipt.stripe_payment_link) : null;
+        continuePayment.hidden = !link;
+        if (link) continuePayment.href = link; else continuePayment.removeAttribute('href');
+        referralCard.hidden = !quoteData.tenantId;
+        if (quoteData.tenantId) document.getElementById('accepted-referral-link').href = `/setup.html?ref=${encodeURIComponent(quoteData.tenantId)}&source=quote_accepted`;
+        refreshButtons();
+      };
+      const minorUnits = value => {
+        if (!/^-?\d+(?:\.\d{1,2})?$/.test(String(value))) throw new Error('Use an amount with at most two decimal places.');
+        const negative = String(value).startsWith('-');
+        const [whole, fraction = ''] = String(value).replace(/^-/, '').split('.');
+        const cents = (Number(whole) * 100 + Number(fraction.padEnd(2, '0'))) * (negative ? -1 : 1);
+        if (!Number.isSafeInteger(cents)) throw new Error('Amount is outside the supported range.');
+        return cents;
+      };
+      const savePayload = () => ({ total_amount: quoteData.totalCents,
+        required_deposit: quoteData.requiredDepositCents, line_items: quoteData.lineItems });
 
       // Format currency
       const formatCurrency = (cents) => {
@@ -498,54 +558,41 @@
       };
 
       const loadQuote = async () => {
-
-        quoteIdDisplay.innerText = quoteId || '';
-
+        loaded = false; refreshButtons(); quoteIdDisplay.textContent = quoteId || '';
+        if (!validId(quoteId)) { setNotice('A valid quote reference is required.'); return; }
         try {
           const res = await fetch(`/api/v1/quotes/${quoteId}`);
-          if (res.ok) {
-            const data = await res.json();
-            let html = '';
-            let total = 0;
-            if (data.line_items && data.line_items.length > 0) {
-                quoteData.lineItems = data.line_items;
-                data.line_items.forEach(item => {
-                  total += item.unit_price_cents * item.quantity;
-                  html += `
-                      <div class="line-item">
-                      <span class="line-item-desc">${item.description}</span>
-                      <span class="line-item-price">${formatCurrency(item.unit_price_cents * item.quantity)}</span>
-                      </div>
-                  `;
-                });
-            } else {
-                html = '<div class="line-item"><span class="line-item-desc">No items</span></div>';
-            }
-
-            if (data.quote && data.quote.total_amount_cents) {
-               quoteData.totalCents = data.quote.total_amount_cents;
-            } else {
-               quoteData.totalCents = total;
-            }
-
-            if (data.quote && data.quote.required_deposit_cents) {
-               quoteData.requiredDepositCents = data.quote.required_deposit_cents;
-               if (quoteData.totalCents > 0) {
-                 quoteData.depositPercent = Math.round((quoteData.requiredDepositCents / quoteData.totalCents) * 100);
-               }
-            }
-
-            lineItemsContainer.innerHTML = html;
-          } else {
-             lineItemsContainer.innerHTML = '<div class="line-item"><span class="line-item-desc">Failed to load quote</span></div>';
+          const data = await res.json();
+          if (disposed) return;
+          if (!res.ok || !data.quote || data.quote.id !== quoteId || !Array.isArray(data.line_items)) throw new Error('Quote could not be loaded.');
+          quoteData.status = data.quote.status;
+          quoteData.updatedAt = typeof data.quote.updated_at === 'string' ? data.quote.updated_at : null;
+          quoteData.tenantId = typeof data.quote.tenant_id === 'string' ? data.quote.tenant_id : '';
+          quoteData.lineItems = data.line_items;
+          lineItemsContainer.replaceChildren();
+          let total = 0;
+          for (const item of data.line_items) {
+            const amount = item.unit_price_cents * item.quantity;
+            if (!Number.isSafeInteger(amount)) throw new Error('Quote contains an invalid amount.');
+            total += amount;
+            const row = document.createElement('div'); row.className = 'line-item';
+            const label = document.createElement('span'); label.className = 'line-item-desc'; label.textContent = item.description;
+            const price = document.createElement('span'); price.className = 'line-item-price'; price.textContent = formatCurrency(amount);
+            row.append(label, price); lineItemsContainer.append(row);
           }
-        } catch (e) {
-          console.error(e);
-          lineItemsContainer.innerHTML = '<div class="line-item"><span class="line-item-desc">Error loading quote</span></div>';
-        }
-
-        updateTotals();
-        renderCalendar();
+          quoteData.totalCents = data.quote.total_amount_cents ?? total;
+          quoteData.requiredDepositCents = data.quote.required_deposit_cents ?? 0;
+          if (!Number.isSafeInteger(quoteData.totalCents)
+              || !Number.isSafeInteger(quoteData.requiredDepositCents)) throw new Error('Quote contains an invalid amount.');
+          quoteData.depositPercent = quoteData.totalCents ? Math.round(quoteData.requiredDepositCents / quoteData.totalCents * 100) : 0;
+          loaded = true;
+          if (quoteData.status === 'ACCEPTED') showAccepted(data.acceptance);
+          else statusEl.textContent = viewMode === 'owner' ? 'Quote — review before sharing' : 'Quote — review before accepting';
+          const badge = document.getElementById('viral-badge'); badge.style.display = quoteData.tenantId ? 'block' : 'none';
+          if (quoteData.tenantId) document.getElementById('viral-badge-link').href = `/setup.html?ref=${encodeURIComponent(quoteData.tenantId)}&source=quote_viewer`;
+          updateTotals(); renderCalendar();
+        } catch { setNotice('Quote could not be loaded. No action was confirmed.'); }
+        finally { if (!disposed) refreshButtons(); }
       };
 
       const updateTotals = () => {
@@ -564,11 +611,15 @@
               const div = document.createElement('div');
               div.style.display = 'flex';
               div.style.gap = '8px';
-              div.innerHTML = `
-                  <input type="text" value="${item.description}" class="edit-desc" data-index="${index}" style="flex: 2; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);">
-                  <input type="number" value="${item.unit_price_cents / 100}" class="edit-price" data-index="${index}" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);">
-                  <button class="btn-remove-item" data-index="${index}" style="background: none; border: none; color: red; font-size: 20px; cursor: pointer;">&times;</button>
-              `;
+              const description = document.createElement('input'); description.type = 'text'; description.value = item.description;
+              description.className = 'edit-desc'; description.dataset.index = String(index);
+              description.style.cssText = 'flex:2;padding:12px;border-radius:8px;border:1px solid var(--border-color);background:var(--card-bg);color:var(--text-main)';
+              const price = document.createElement('input'); price.type = 'number'; price.value = String(item.unit_price_cents / 100);
+              price.className = 'edit-price'; price.dataset.index = String(index); price.step = '0.01';
+              price.style.cssText = 'flex:1;padding:12px;border-radius:8px;border:1px solid var(--border-color);background:var(--card-bg);color:var(--text-main)';
+              const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn-remove-item';
+              remove.dataset.index = String(index); remove.textContent = '×'; remove.setAttribute('aria-label', 'Remove line item');
+              div.append(description, price, remove);
               editLineItemsContainer.appendChild(div);
           });
 
@@ -581,7 +632,7 @@
           document.querySelectorAll('.edit-price').forEach(input => {
               input.addEventListener('change', (e) => {
                   const idx = e.target.getAttribute('data-index');
-                  quoteData.lineItems[idx].unit_price_cents = Math.round(parseFloat(e.target.value) * 100);
+                  try { quoteData.lineItems[idx].unit_price_cents = minorUnits(e.target.value); } catch (error) { setNotice(error.message); }
               });
           });
           document.querySelectorAll('.btn-remove-item').forEach(btn => {
@@ -599,14 +650,17 @@
       });
 
       const openEditSheet = () => {
+          if (disposed || !loaded || mutationPending || quoteData.status === 'ACCEPTED') return;
           renderEditLineItems();
           editTotalAmount.value = quoteData.totalCents / 100;
           editRequiredDeposit.value = quoteData.requiredDepositCents / 100;
           editQuoteSheet.style.display = 'block';
           editSheetOverlay.style.display = 'block';
+          refreshButtons();
       };
 
       const closeEditSheet = () => {
+          if (mutationPending) return;
           editQuoteSheet.style.display = 'none';
           editSheetOverlay.style.display = 'none';
       };
@@ -615,105 +669,61 @@
       editSheetOverlay.addEventListener('click', closeEditSheet);
 
       btnSaveEdits.addEventListener('click', async () => {
-          quoteData.totalCents = Math.round(parseFloat(editTotalAmount.value) * 100);
-          quoteData.requiredDepositCents = Math.round(parseFloat(editRequiredDeposit.value) * 100);
-
-          btnSaveEdits.innerText = 'Saving...';
-          try {
-              const res = await fetch(`/api/v1/quotes/${quoteId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      total_amount: quoteData.totalCents,
-                      required_deposit: quoteData.requiredDepositCents,
-                      line_items: quoteData.lineItems
-                  })
-              });
-              if (res.ok) {
-                  await loadQuote();
-                  closeEditSheet();
-              } else {
-                  alert('Failed to save edits.');
-              }
-          } catch (e) {
-              alert('Error saving edits.');
-          } finally {
-              btnSaveEdits.innerText = 'Save Changes';
-          }
+        if (disposed || !loaded || mutationPending || mutationUnconfirmed || quoteData.status === 'ACCEPTED') return;
+        try {
+          quoteData.totalCents = minorUnits(editTotalAmount.value);
+          quoteData.requiredDepositCents = minorUnits(editRequiredDeposit.value);
+          for (const input of editLineItemsContainer.querySelectorAll('.edit-price')) quoteData.lineItems[Number(input.dataset.index)].unit_price_cents = minorUnits(input.value);
+        } catch (error) { setNotice(error.message); return; }
+        mutationPending = true; refreshButtons(); btnSaveEdits.textContent = 'Saving...';
+        try {
+          const res = await fetch(`/api/v1/quotes/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(savePayload()) });
+          const result = await res.json();
+          if (disposed) return;
+          if (!res.ok || result.success !== true || result.error != null) throw new Error('Unconfirmed save');
+          await loadQuote(); if (loaded) { mutationPending = false; closeEditSheet(); setNotice('Quote changes saved.'); }
+        } catch { mutationUnconfirmed = true; setNotice('Could not confirm saved changes. Reload the quote before retrying.'); }
+        finally { if (!disposed) { mutationPending = false; btnSaveEdits.textContent = 'Save Changes'; refreshButtons(); } }
       });
 
-      // UI setup based on mode
       if (viewMode === 'owner') {
-        ownerSliderContainer.classList.add('visible');
-        btnApproveSend.style.display = 'block';
-        btnEditQuote.style.display = 'block';
-        document.getElementById('quote-status').innerText = 'Draft - Review';
-
-        depositSlider.addEventListener('input', (e) => {
-          quoteData.depositPercent = parseInt(e.target.value);
-          quoteData.requiredDepositCents = Math.round(quoteData.totalCents * (quoteData.depositPercent / 100));
-          depositPercentDisplay.innerText = quoteData.depositPercent + '%';
+        ownerSliderContainer.classList.add('visible'); btnApproveSend.style.display = 'block'; btnEditQuote.style.display = 'block';
+        depositSlider.addEventListener('input', e => {
+          if (disposed || !loaded || mutationPending || mutationUnconfirmed || quoteData.status === 'ACCEPTED') return;
+          quoteData.depositPercent = Number(e.target.value);
+          quoteData.requiredDepositCents = Math.round(quoteData.totalCents * quoteData.depositPercent / 100);
           updateTotals();
         });
-
         btnEditQuote.addEventListener('click', openEditSheet);
-
         btnApproveSend.addEventListener('click', async () => {
-          btnApproveSend.innerText = 'Sending...';
+          if (disposed || !loaded || mutationPending || mutationUnconfirmed || quoteData.status === 'ACCEPTED') return;
+          mutationPending = true; refreshButtons(); btnApproveSend.textContent = 'Saving approval...';
           try {
-              await fetch(`/api/v1/quotes/${quoteId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      status: 'SENT',
-                      total_amount: quoteData.totalCents,
-                      required_deposit: quoteData.requiredDepositCents,
-                      line_items: quoteData.lineItems
-                  })
-              });
-              alert('Quote sent to customer via SMS/WhatsApp!');
-              window.location.href = '/dashboard';
-          } catch (e) {
-              alert('Failed to send quote');
-              btnApproveSend.innerText = 'Approve & Send to Customer';
-          }
+            const res = await fetch(`/api/v1/quotes/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...savePayload(), status: 'SENT' }) });
+            const result = await res.json();
+            if (disposed) return;
+            if (!res.ok || result.success !== true || result.error != null) throw new Error('Unconfirmed approval');
+            await loadQuote();
+            setNotice('Quote approval saved. Message delivery to the customer is not confirmed.');
+          } catch { mutationUnconfirmed = true; setNotice('Could not confirm quote approval. Message delivery is not confirmed.'); }
+          finally { if (!disposed) { mutationPending = false; btnApproveSend.textContent = 'Approve quote'; refreshButtons(); } }
         });
-
       } else {
-        // Customer View
-        btnPayDeposit.style.display = 'flex';
-        btnPayCard.style.display = 'block';
-        document.getElementById('quote-status').innerText = 'Action Required';
-
-        // Show viral badge
-        const viralBadge = document.getElementById('viral-badge');
-        const viralLink = document.getElementById('viral-badge-link');
-        const tenantId = urlParams.get('tenant') || 'e2e-tenant';
-
-        viralBadge.style.display = 'block';
-        viralLink.href = `/setup.html?ref=${encodeURIComponent(tenantId)}&source=quote_viewer`;
-
-        const handlePayment = async () => {
-          btnPayCard.innerText = 'Processing...';
+        btnPayCard.style.display = 'block'; btnPayDeposit.hidden = true;
+        btnPayCard.addEventListener('click', async () => {
+          if (disposed || !loaded || mutationPending || acceptanceAttempted || quoteData.status === 'ACCEPTED') return;
+          acceptanceAttempted = true; mutationPending = true; refreshButtons(); btnPayCard.textContent = 'Accepting quote...';
           try {
-            const res = await fetch(`/api/v1/quotes/${quoteId}/accept`, {
-                method: 'POST'
-            });
-            if (res.ok) {
-                window.location.href = 'success.html?type=booking_deposit';
-            } else {
-                alert('Failed to accept quote.');
-                btnPayCard.innerText = 'Pay with Card';
-            }
-          } catch (e) {
-            alert('Failed to initiate checkout.');
-            btnPayCard.innerText = 'Pay with Card';
-          }
-        };
-
-        btnPayDeposit.addEventListener('click', handlePayment);
-        btnPayCard.addEventListener('click', handlePayment);
+            const res = await fetch(`/api/v1/quotes/${quoteId}/accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(quoteData.updatedAt ? { expected_updated_at: quoteData.updatedAt } : {}) });
+            const result = await res.json();
+            if (disposed) return;
+            if (!res.ok || result.success !== true || result.error != null || !validId(result.invoice_id)) throw new Error('Unconfirmed acceptance');
+            showAccepted(result); setNotice('Quote accepted. Payment and booking are not confirmed.');
+          } catch { setNotice('Could not confirm quote acceptance. Reconcile by reloading the quote before any further action.'); }
+          finally { if (!disposed) { mutationPending = false; refreshButtons(); } }
+        });
       }
+      refreshButtons();
 
       // Render Calendar
       const renderCalendar = () => {
@@ -760,7 +770,7 @@
         });
       };
 
-      loadQuote();
+      void loadQuote();
     });
   </script>
 
