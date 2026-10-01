@@ -41,13 +41,17 @@ export function fillEmptyAuditControls() {
   }
 }
 
-import type { Dialog, Download, ElementHandle, FileChooser, Page, Request } from '@playwright/test';
+import type { Dialog, Download, ElementHandle, FileChooser, JSHandle, Page, Request } from '@playwright/test';
 
 // Hover help is preparation for a click, not evidence that the click worked.
 // Strip only semantically identified tooltips, not status messages or dialogs.
 export function auditDocumentSignature() {
   const body = document.body.cloneNode(true) as HTMLElement;
   body.querySelectorAll('[role="tooltip"], .omnisolo-tooltip').forEach((tooltip) => tooltip.remove());
+  body.querySelectorAll('[data-ui-audit-click-index], [data-ui-audit-click-key]').forEach((element) => {
+    element.removeAttribute('data-ui-audit-click-index');
+    element.removeAttribute('data-ui-audit-click-key');
+  });
   const checksum = (value: string) => {
     let hash = 0;
     for (let index = 0; index < value.length; index += 1) hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
@@ -175,4 +179,79 @@ export async function replaceAuditDocument(page: Page): Promise<Page> {
   // including delayed callbacks, while preserving one page/video per route.
   await page.goto('about:blank', { waitUntil: 'load' });
   return page;
+}
+
+export async function resolveAuditTarget(
+  page: Page,
+  key: string,
+  retag: () => Promise<Array<{ key: string; index: number; label: string }>>,
+  timeout = 5000,
+): Promise<ElementHandle<HTMLElement | SVGElement>> {
+  const deadline = Date.now() + timeout;
+  const url = page.url();
+  let expired = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const failure = () => new Error(`Audit target could not be stably resolved before any click: ${key}`);
+  const expiry = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => { expired = true; reject(failure()); }, timeout);
+  });
+  // Reacquisition is read-only. Once observation starts, even a detached target
+  // remains a failure; this function never repeats a clicked business action.
+  const locate = async () => {
+    let documentHandle: JSHandle<Document> | undefined;
+    let selected: ElementHandle<HTMLElement | SVGElement> | undefined;
+    try {
+      documentHandle = await page.evaluateHandle(() => document);
+      const sameDocument = () => page.evaluate((original) => original === document, documentHandle!).catch(() => false);
+      while (!expired && Date.now() < deadline) {
+        if (page.url() !== url || !(await sameDocument())) throw new Error(`Audit document changed before inspecting ${key}`);
+        const candidate = (await retag()).find((item) => item.key === key);
+        if (expired) break;
+        if (candidate) {
+          const handles = await page.locator(`[data-ui-audit-click-index="${candidate.index}"]`).elementHandles();
+          if (expired) {
+            await Promise.all(handles.map((handle) => handle.dispose()));
+            break;
+          }
+          if (handles.length === 1) {
+            const target = handles[0] as ElementHandle<HTMLElement | SVGElement>;
+            let retained = false;
+            try {
+              await target.waitForElementState('stable', { timeout: Math.max(1, deadline - Date.now()) });
+              const observedKey = await target.getAttribute('data-ui-audit-click-key');
+              const connected = await target.evaluate((element) => element.isConnected);
+              const identicalDocument = await sameDocument();
+              if (!expired && Date.now() < deadline && page.url() === url && identicalDocument && observedKey === key && connected) {
+                retained = true;
+                selected = target;
+                return target;
+              }
+            } catch {
+              // Hydration may replace the node before any user action. Re-tag the
+              // current DOM within the same bounded lookup budget.
+            } finally {
+              if (!retained) await target.dispose();
+            }
+          } else {
+            await Promise.all(handles.map((handle) => handle.dispose()));
+          }
+        }
+        const remaining = deadline - Date.now();
+        if (!expired && remaining > 0) await page.waitForTimeout(Math.min(50, remaining));
+      }
+      throw failure();
+    } finally {
+      if (documentHandle) {
+        try { await documentHandle.dispose(); } catch { /* A destroyed realm already releases its handles. */ }
+      }
+      if (expired && selected) {
+        try { await selected.dispose(); } catch { /* Never hand back a late target. */ }
+      }
+    }
+  };
+  try {
+    return await Promise.race([locate(), expiry]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }

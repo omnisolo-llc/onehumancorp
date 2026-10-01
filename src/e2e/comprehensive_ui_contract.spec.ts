@@ -2,7 +2,7 @@ import { expect, test } from './fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserContext, Page } from '@playwright/test';
-import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument } from './support/ui_click_audit';
+import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
 
@@ -172,8 +172,10 @@ async function tagClickTargets(page: Page) {
       const identity = JSON.stringify([element.tagName, element.id, label]);
       const occurrence = counts.get(identity) || 0;
       counts.set(identity, occurrence + 1);
+      const key = `${identity}:${occurrence}`;
       element.setAttribute('data-ui-audit-click-index', String(index));
-      return { index, label, key: `${identity}:${occurrence}` };
+      element.setAttribute('data-ui-audit-click-key', key);
+      return { index, label, key };
     });
   });
 }
@@ -241,11 +243,7 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string) {
       if (Date.now() - startedAt > 90_000) {
         throw new Error(`${route}: click target enumeration did not converge after ${audited.size} targets; next=${candidate.label}. No remaining coverage was silently skipped.`);
       }
-      const locator = page.locator(`[data-ui-audit-click-index="${candidate.index}"]`);
-      // Resolve a bounded handle so a late React remount cannot wait forever on
-      // an attribute that existed only in a replaced DOM subtree.
-      const target = await locator.elementHandle({ timeout: 5000 });
-      if (!target) throw new Error(`Audit target disappeared before inspection: ${candidate.label}`);
+      const target = await resolveAuditTarget(page, candidate.key, () => tagClickTargets(page));
       audited.add(candidate.key);
       try {
         const observed = await observeClickEffects(page, target);

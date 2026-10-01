@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument } from './support/ui_click_audit';
+import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 
 import { createServer } from 'node:http';
 
@@ -199,4 +199,47 @@ test('committed blank retirement cancels delayed fetch even after an immediate D
     await isolated.close();
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
+});
+
+
+test('retags a remounted control before performing exactly one real click', async ({ page }) => {
+  const markup = `<button id="target" onclick="document.querySelector('output').textContent=String(Number(document.querySelector('output').textContent)+1)">Save fixture</button><output>0</output>`;
+  await page.setContent(markup);
+  let scans = 0;
+  const retag = async () => {
+    const targets = await page.locator('#target').evaluateAll((elements) => elements.map((element, index) => {
+      element.setAttribute('data-ui-audit-click-index', String(index));
+      element.setAttribute('data-ui-audit-click-key', 'same-fixture-control');
+      return { key: 'same-fixture-control', index, label: 'Save fixture' };
+    }));
+    if (scans++ === 0) await page.setContent(markup);
+    return targets;
+  };
+  const target = await resolveAuditTarget(page, 'same-fixture-control', retag);
+  await expect(page.locator('output')).toHaveText('0');
+  const effect = await observeClickEffects(page, target);
+  expect(hasMeaningfulClickEffect(effect)).toBe(true);
+  await expect(page.locator('output')).toHaveText('1');
+});
+
+
+test('does not count removing audit markers as visible click feedback', async ({ page }) => {
+  await page.setContent(`<button data-ui-audit-click-index="1" data-ui-audit-click-key="fixture" onclick="this.removeAttribute('data-ui-audit-click-index');this.removeAttribute('data-ui-audit-click-key')">Marker-only action</button>`);
+  const effect = await observeClickEffects(page, (await page.getByRole('button').elementHandle())!);
+  expect(hasMeaningfulClickEffect(effect)).toBe(false);
+});
+
+
+test('rejects a same-URL document replacement before any click', async ({ page }) => {
+  const markup = `<button data-ui-audit-click-index="0" data-ui-audit-click-key="same-key" onclick="document.body.dataset.clicked='yes'">Same control</button>`;
+  await page.goto(`data:text/html,${encodeURIComponent(markup)}`);
+  const url = page.url();
+  let replaced = false;
+  const retag = async () => {
+    if (!replaced) { replaced = true; await page.reload(); }
+    return [{ key: 'same-key', index: 0, label: 'Same control' }];
+  };
+  await expect(resolveAuditTarget(page, 'same-key', retag)).rejects.toThrow('document changed');
+  expect(page.url()).toBe(url);
+  expect(await page.locator('body').getAttribute('data-clicked')).toBeNull();
 });
