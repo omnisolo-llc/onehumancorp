@@ -171,7 +171,8 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
 // Retire the old document before another route audit starts. A delayed checkout
 // navigation from that document must not replace the next document under test.
 export async function replaceAuditDocument(page: Page): Promise<Page> {
-  const context = page.context();
-  await page.close();
-  return context.newPage();
+  // A committed full-document navigation destroys the old JavaScript realm,
+  // including delayed callbacks, while preserving one page/video per route.
+  await page.goto('about:blank', { waitUntil: 'load' });
+  return page;
 }

@@ -229,8 +229,8 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string) {
   const failures: string[] = [];
   const audited = new Set<string>();
   const startedAt = Date.now();
-  // Each restored document gets a fresh page. Closing the previous document
-  // prevents delayed checkout/logout callbacks from redirecting the next audit.
+  // Restore with a committed blank document between clicks, retaining one
+  // page/video for the route and destroying delayed callbacks from the old realm.
   let page = await sourcePage.context().newPage();
   try {
     await gotoReady(page, route);

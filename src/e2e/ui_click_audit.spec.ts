@@ -140,7 +140,8 @@ test('retiring a clicked document prevents its delayed navigation from replacing
     isolated=await replaceAuditDocument(isolated);
     await isolated.setContent('<h1>Next audit document</h1>');
     await isolated.waitForTimeout(250);
-    expect(old.isClosed()).toBe(true);
+    expect(isolated).toBe(old);
+    expect(old.isClosed()).toBe(false);
     expect(isolated.url()).not.toContain('late-checkout');
     await expect(isolated.getByRole('heading',{name:'Next audit document'})).toBeVisible();
   } finally { await isolated.close(); }
@@ -163,4 +164,39 @@ test('observes an actual input prompt without entering data or claiming completi
   expect(hasMeaningfulClickEffect(effect)).toBe(true);
   expect(effect.requestSeen).toBe(false);
   expect(await page.locator('body').getAttribute('data-value')).toBeNull();
+});
+
+
+test('committed blank retirement cancels delayed fetch even after an immediate DOM change', async ({ page }) => {
+  let lateRequests = 0;
+  const server = createServer((request, response) => {
+    if (request.url === '/late') {
+      lateRequests += 1;
+      response.end('observed');
+      return;
+    }
+    response.writeHead(200, { 'content-type': 'text/html' });
+    response.end(`<button onclick="document.querySelector('output').textContent='Pending';setTimeout(()=>fetch('/late'),500)">Delayed action</button><output></output>`);
+  });
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  const isolated = await page.context().newPage();
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing local fixture address');
+    const origin = `http://127.0.0.1:${address.port}`;
+    await isolated.goto(origin);
+    await isolated.getByRole('button').click();
+    await expect.poll(() => lateRequests).toBe(1);
+    await isolated.goto(origin);
+    await isolated.getByRole('button').click();
+    await expect(isolated.locator('output')).toHaveText('Pending');
+    expect(await replaceAuditDocument(isolated)).toBe(isolated);
+    await isolated.setContent('<h1>Next isolated document</h1>');
+    await isolated.waitForTimeout(650);
+    expect(lateRequests).toBe(1);
+    await expect(isolated.getByRole('heading', { name: 'Next isolated document' })).toBeVisible();
+  } finally {
+    await isolated.close();
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
 });
