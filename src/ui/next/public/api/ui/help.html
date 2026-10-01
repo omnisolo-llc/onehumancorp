@@ -263,10 +263,15 @@
         inset: 0;
         background: rgba(0,0,0,0.8);
         backdrop-filter: blur(40px) saturate(220%);
-        z-index: 1000;
+        /* Above the Help widget (99990) and walkthrough chrome. */
+        z-index: 100010;
         align-items: center;
         justify-content: center;
         padding: 20px;
+      }
+      .video-focus-boundary {
+        position: absolute; width: 1px; height: 1px;
+        overflow: hidden; clip-path: inset(50%);
       }
       .modal-content {
         background: #000;
@@ -464,10 +469,11 @@
     </div>
 
     <!-- Video Modal -->
-    <div id="video-modal">
+    <div id="video-modal" role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
+      <span tabindex="0" class="video-focus-boundary" data-video-focus-boundary="start"></span>
       <div class="modal-content glassmorphism">
         <button class="modal-close" id="close-video" aria-label="Close video">Close video</button>
-        <video id="video-player" controls>
+        <video tabindex="0" id="video-player" controls>
           Your browser does not support the video tag.
         </video>
         <div class="modal-info">
@@ -475,6 +481,7 @@
           <p class="modal-duration" id="video-modal-duration"></p>
         </div>
       </div>
+      <span tabindex="0" class="video-focus-boundary" data-video-focus-boundary="end"></span>
     </div>
 
     <script>
@@ -616,6 +623,20 @@ document.addEventListener('DOMContentLoaded', () => {
           if (url.username || url.password || (url.protocol !== 'https:' && !(url.protocol === 'http:' && url.origin === window.location.origin))) return null;
           return url.href;
         } catch { return null; }
+      }
+      function resolvedHelpArticleUrl(value) {
+        const href = safeHelpUrl(value);
+        if (!href) return null;
+        const url = new URL(href);
+        if (url.origin === window.location.origin && url.pathname === '/help' && url.searchParams.has('article')) {
+          const article = url.searchParams.get('article');
+          if (!article || !/^[A-Za-z0-9_-]+$/.test(article)) return null;
+          const currentArticle = article === 'my-store-1' ? 'add-products'
+            : article === 'payments-1' ? 'accept-payments' : article;
+          url.pathname = `/help/${currentArticle}`;
+          url.search = ''; url.hash = '';
+        }
+        return url.href;
       }
       function helpArticles(value) {
         return Array.isArray(value) ? value.filter(article => article && typeof article.title === 'string' && typeof article.desc === 'string' && typeof article.link === 'string') : [];
@@ -817,21 +838,58 @@ document.addEventListener('DOMContentLoaded', () => {
           renderContent(e.target.value);
       });
 
-      // Video Modal logic
+      // Keep the video above the floating Help panel and return the owner to
+      // the control that opened it. Reopening never loses the original scroll.
+      let videoTrigger = null;
+      let previousBodyOverflow = '';
+      let videoIsOpen = false;
       window.openVideo = function(url, title, duration) {
           const safeUrl = safeHelpUrl(url);
           if (!safeUrl) return;
+          if (!videoIsOpen) {
+              videoTrigger = document.activeElement;
+              previousBodyOverflow = document.body.style.overflow;
+          }
+          videoIsOpen = true;
           videoPlayer.src = safeUrl;
           videoModalTitle.innerText = title;
           videoModalDuration.innerText = duration;
           videoModal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+          closeVideoBtn.focus();
           videoPlayer.play().catch(e => console.warn("Auto-play prevented", e));
       };
 
-      closeVideoBtn.addEventListener('click', () => {
+      function dismissVideoDialog() {
+          if (!videoIsOpen) return;
+          videoIsOpen = false;
           videoPlayer.pause();
           videoPlayer.src = "";
           videoModal.style.display = 'none';
+          document.body.style.overflow = previousBodyOverflow;
+          if (videoTrigger && videoTrigger.isConnected && typeof videoTrigger.focus === 'function') {
+              videoTrigger.focus();
+          }
+          videoTrigger = null;
+      }
+      closeVideoBtn.addEventListener('click', dismissVideoDialog);
+      videoModal.addEventListener('click', event => {
+          if (event.target === videoModal) dismissVideoDialog();
+      });
+      videoModal.addEventListener('keydown', event => {
+          if (!videoIsOpen) return;
+          if (event.key === 'Escape') {
+              event.preventDefault();
+              dismissVideoDialog();
+          }
+      });
+      // Boundary focus wraps the dialog without canceling Tab events retargeted
+      // from the browser's native video controls to the video element.
+      videoModal.querySelector('[data-video-focus-boundary="start"]').addEventListener('focus', () => {
+          if (videoIsOpen) videoPlayer.focus();
+      });
+      videoModal.querySelector('[data-video-focus-boundary="end"]').addEventListener('focus', () => {
+          if (videoIsOpen) closeVideoBtn.focus();
       });
 
       fetchData();
@@ -979,7 +1037,7 @@ function initWalkthrough() {
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    <button id="wt-next" aria-label="${currentStep === steps.length - 1 ? 'Finish' : 'Next Step'}" title="${currentStep === steps.length - 1 ? 'Finish' : 'Next Step'}" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                 </div>
             `;
 
@@ -1396,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const msg = document.createElement('div');
         msg.className = `omnisolo-chat-msg ${sender}`;
         msg.textContent = typeof text === 'string' ? text : 'Help response unavailable.';
-        const href = safeHelpUrl(link && link.url);
+        const href = resolvedHelpArticleUrl(link && link.url);
         if (href && typeof link.title === 'string') {
             const anchor = document.createElement('a');
             anchor.href = href; anchor.textContent = link.title; anchor.rel = 'noopener noreferrer';
@@ -1425,7 +1483,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link || data.link);
+                // String.prototype.link is a function, not the response's article link.
+                const reply = typeof data.reply === 'object' ? data.reply : { text: data.reply };
+                appendMessage(reply.text, 'agent', reply.link || data.link);
             } else if (data.text) {
                 appendMessage(data.text, 'agent', data.link);
             } else {
@@ -1571,7 +1631,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                         ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        <button id="wt-next" aria-label="${currentStep === steps.length - 1 ? 'Finish' : 'Next Step'}" title="${currentStep === steps.length - 1 ? 'Finish' : 'Next Step'}" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 

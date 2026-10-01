@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { JSDOM, VirtualConsole } from 'jsdom';
+import { renderWalkthroughStep } from '../src/ui/tauri/src/ui/safe-help-content.mjs';
 const roots = ['src/ui/tauri/src/ui', 'src/ui/next/public', 'src/ui/next/public/ui', 'src/ui/next/public/api/ui', 'src/ui/next/public/api/v1/ui'];
 const tick = () => new Promise(resolve => setTimeout(resolve, 15));
 async function load(root, fetchOverride) {
@@ -10,6 +11,8 @@ async function load(root, fetchOverride) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', error => errors.push(error));
   const dom = new JSDOM(html, { url: 'https://workspace.example/api/v1/ui/help.html', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole, beforeParse(window) {
+    // JSDOM does not load modules; use the genuine module named by Tauri HTML.
+    if (root === 'src/ui/tauri/src/ui') window.renderWalkthroughStep = renderWalkthroughStep;
     window.HTMLMediaElement.prototype.play = async () => {};
     window.HTMLMediaElement.prototype.pause = () => {};
     window.fetch = fetchOverride ?? (async url => ({ ok: true, json: async () => url.includes('/videos') ? [{ id: 1, title: 'Recorded tutorial', duration: '1:00', video_url: 'https://cdn.example/tutorial.mp4' }] : url.includes('/help') ? [{ title: 'Recorded article', desc: 'Article summary', category: 'Guides', link: '/help/recorded' }] : {} }));
@@ -55,6 +58,94 @@ for (const root of roots) {
       assert.equal(doc.getElementById('video-modal').style.display, 'flex');
       doc.getElementById('close-video').click();
       assert.equal(doc.getElementById('video-modal').style.display, 'none');
+    } finally { dom.window.close(); assert.deepEqual(dom.testErrors, []); }
+  });
+  test(`${root}: video dialog stays above Help and restores keyboard focus and scroll`, async () => {
+    const dom = await load(root);
+    try {
+      const doc = dom.window.document;
+      const launcher = doc.getElementById('ohc-floating-help-btn');
+      launcher.click();
+      const widget = doc.getElementById('ohc-floating-help-widget');
+      widget.querySelector('[data-target="tab-videos"]').click(); await tick();
+      const trigger = widget.querySelector('#video-list button');
+      doc.body.style.overflow = 'auto';
+      trigger.focus(); trigger.click();
+      const modal = doc.getElementById('video-modal');
+      const close = doc.getElementById('close-video');
+      const player = doc.getElementById('video-player');
+      assert.ok(Number(dom.window.getComputedStyle(modal).zIndex) > Number(dom.window.getComputedStyle(widget).zIndex));
+      assert.ok(Number(dom.window.getComputedStyle(modal).zIndex) > Number(dom.window.getComputedStyle(launcher).zIndex));
+      assert.equal(modal.getAttribute('role'), 'dialog');
+      assert.equal(modal.getAttribute('aria-modal'), 'true');
+      assert.equal(doc.activeElement, close);
+      assert.equal(doc.body.style.overflow, 'hidden');
+      player.focus();
+      const nativeTab = new dom.window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+      player.dispatchEvent(nativeTab);
+      assert.equal(nativeTab.defaultPrevented, false, 'Leave native media-controls Tab navigation to the browser');
+      const start = modal.querySelector('[data-video-focus-boundary="start"]');
+      const end = modal.querySelector('[data-video-focus-boundary="end"]');
+      assert.ok(start); assert.ok(end);
+      end.focus(); assert.equal(doc.activeElement, close);
+      start.focus(); assert.equal(doc.activeElement, player);
+      player.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      assert.equal(modal.style.display, 'none');
+      assert.equal(doc.activeElement, trigger);
+      assert.equal(doc.body.style.overflow, 'auto');
+      trigger.click();
+      close.click();
+      assert.equal(modal.style.display, 'none');
+      assert.equal(doc.body.style.overflow, 'auto');
+      trigger.click();
+      modal.click();
+      assert.equal(modal.style.display, 'none');
+      assert.equal(doc.activeElement, trigger);
+    } finally { dom.window.close(); assert.deepEqual(dom.testErrors, []); }
+  });
+  test(`${root}: the final walkthrough control exposes and completes Finish`, async () => {
+    const dom = await load(root);
+    try {
+      const doc = dom.window.document;
+      doc.getElementById('ohc-floating-help-btn').click();
+      const widget = doc.getElementById('ohc-floating-help-widget');
+      widget.querySelector('[data-target="tab-tours"]').click();
+      widget.querySelector('.omnisolo-tour-card').click();
+      const bubble = doc.getElementById('walkthrough-bubble');
+      assert.ok(bubble);
+      const finish = bubble.querySelector('#wt-next');
+      assert.equal(finish.textContent, 'Finish');
+      assert.equal(finish.getAttribute('aria-label') || finish.textContent, 'Finish');
+      finish.click();
+      assert.equal(doc.getElementById('walkthrough-bubble'), null);
+      assert.equal(doc.getElementById('walkthrough-overlay'), null);
+    } finally { dom.window.close(); assert.deepEqual(dom.testErrors, []); }
+  });
+  test(`${root}: actual chat links resolve legacy article IDs to maintained documents`, async () => {
+    let responseLink = '';
+    const dom = await load(root, async url => ({ ok: true, json: async () => url.includes('/chat') ? { reply: 'Recorded article response', link: { title: 'Open document', url: responseLink } } : [] }));
+    try {
+      const doc = dom.window.document;
+      doc.getElementById('ohc-floating-help-btn').click();
+      const widget = doc.getElementById('ohc-floating-help-widget');
+      widget.querySelector('[data-target="tab-chat"]').click();
+      for (const [url, path] of [
+        ['/help?article=my-store-1', '/help/add-products'],
+        ['/help?article=payments-1', '/help/accept-payments'],
+        ['/help?article=marketing-tools', '/help/marketing-tools'],
+        ['/help?article=../settings', null],
+      ]) {
+        responseLink = url;
+        const input = widget.querySelector('#ohc-help-chat-input');
+        input.value = 'How do I add a product?'; input.dispatchEvent(new dom.window.Event('input'));
+        widget.querySelector('#ohc-help-chat-send').click(); await tick();
+        const message = widget.querySelector('#ohc-help-chat-messages, #omnisolo-help-chat-messages').lastElementChild;
+        assert.match(message.textContent, /Recorded article response/);
+        const link = message.querySelector('a');
+        if (path) {
+          assert.ok(link); assert.equal(link.href, `https://workspace.example${path}`);
+        } else assert.equal(link, null);
+      }
     } finally { dom.window.close(); assert.deepEqual(dom.testErrors, []); }
   });
   test(`${root}: late search results cannot replace a cleared search`, async () => {

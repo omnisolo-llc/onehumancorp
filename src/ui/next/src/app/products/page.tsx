@@ -129,10 +129,10 @@ export default function ProductsPage() {
   return (
     <AppShell
       title="Products"
-      subtitle="Review imported catalog items before publishing them to your storefront."
+      subtitle="Manage your saved catalog products."
       statusItems={[
         { label: "Catalog", value: String(importedProducts.length), tone: "good" },
-        { label: "Source", value: "Imported", tone: "good" },
+        { label: "Source", value: "Catalog", tone: "good" },
       ]}
       actions={[]}
     >
@@ -141,8 +141,8 @@ export default function ProductsPage() {
       <section className="app-panel">
         <div className="app-panel-header flex items-center justify-between">
           <div>
-            <div className="app-panel-title">Imported Products</div>
-            <div className="app-list-subtitle">Catalog rows staged from the migration workflow.</div>
+            <div className="app-panel-title">Catalog Products</div>
+            <div className="app-list-subtitle">Products saved in your workspace catalog.</div>
           </div>
           <button
             onClick={() => openEditor(null)}

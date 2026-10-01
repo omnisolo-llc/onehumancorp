@@ -21,6 +21,16 @@ describe('Group Buy Widget Page', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
+  it('marks unconfigured editor-preview actions unavailable with a visible reason', () => {
+    render(<Page />);
+    for(const name of ['Join Group Buy', 'Share with friends']) {
+      const button=screen.getByRole('button',{name});
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription('Joining and sharing are unavailable in this editor preview.');
+    }
+    expect(screen.getByText('Joining and sharing are unavailable in this editor preview.')).toBeVisible();
+  });
+
   it('renders the builder with default values', async () => {
     render(<Page />);
 

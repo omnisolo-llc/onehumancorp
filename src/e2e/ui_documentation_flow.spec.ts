@@ -1,5 +1,21 @@
 import { test, expect } from './fixtures';
 
+function articleDestination(responseLink: string, currentUrl: string) {
+  const current = new URL(currentUrl);
+  const link = new URL(responseLink, current);
+  expect(link.origin).toBe(current.origin);
+  const id = link.pathname === '/help'
+    ? link.searchParams.get('article')
+    : link.pathname.match(/^\/help\/([A-Za-z0-9_-]+)$/)?.[1];
+  expect(id).toMatch(/^[A-Za-z0-9_-]+$/);
+  if (!id) throw new Error('The actual Help response must name an article');
+  // The server still emits these legacy chat IDs; its document API uses
+  // add-products and accept-payments. The test below reads that actual API.
+  const currentId = id === 'my-store-1' ? 'add-products'
+    : id === 'payments-1' ? 'accept-payments' : id;
+  return { id: currentId, href: `/help/${currentId}` };
+}
+
 test.describe('Documentation Features Flow', () => {
   test('User can navigate the Help Center and view an article', async ({ page }) => {
     await page.goto('/help');
@@ -72,10 +88,10 @@ test.describe('Documentation Features Flow', () => {
     const answer = await response.json();
     expect(typeof answer.reply).toBe('string');
     expect(answer.reply.length).toBeGreaterThan(0);
-    expect(answer.link.url).toMatch(/^\/help\//);
+    const article = articleDestination(answer.link.url, page.url());
     await expect(widget.getByText(question, { exact: true })).toBeVisible();
     await expect(widget.getByText(answer.reply, { exact: true })).toBeVisible();
-    await expect(widget.getByRole('link', { name: answer.link.title, exact: true })).toHaveAttribute('href', answer.link.url);
+    await expect(widget.getByRole('link', { name: answer.link.title, exact: true })).toHaveAttribute('href', article.href);
     await expect(input).toHaveValue('');
     await expect(send).toBeDisabled();
 
@@ -84,6 +100,32 @@ test.describe('Documentation Features Flow', () => {
     await expect(widget.getByText(answer.reply, { exact: true })).not.toBeVisible();
     await widget.getByRole('button', { name: 'Close Help Widget', exact: true }).click();
     await expect(widget).not.toBeVisible();
+  });
+
+  test('The actual Help reply article link opens its acknowledged document', async ({ page }) => {
+    await page.goto('/help');
+    await page.getByRole('button', { name: 'Open help chat', exact: true }).click();
+    const widget = page.locator('#ai-chat-interface');
+    await widget.getByRole('button', { name: 'Ask AI (Ask anything)', exact: true }).click();
+    await widget.getByPlaceholder('Ask anything...', { exact: true }).fill('How do I add a product?');
+    const replyPromise = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/chat' && response.request().method() === 'POST');
+    await widget.getByRole('button', { name: 'Send message', exact: true }).click();
+    const reply = await replyPromise;
+    expect(reply.status()).toBe(200);
+    const answer = await reply.json();
+    const destination = articleDestination(answer.link.url, page.url());
+    const documentResponse = await page.request.get(`/api/v1/help/${destination.id}`);
+    expect(documentResponse.status()).toBe(200);
+    const document = await documentResponse.json() as { title: string; contentHtml: string };
+    expect(document.title.length).toBeGreaterThan(0);
+    expect(document.contentHtml.length).toBeGreaterThan(0);
+    const article = widget.getByRole('link', { name: answer.link.title, exact: true });
+    await expect(article).toHaveAttribute('href', destination.href);
+    await article.click();
+    await expect(page).toHaveURL(new RegExp(`${destination.href}$`));
+    await expect(page.getByRole('heading', { name: document.title, exact: true })).toBeVisible();
+    await expect(page.locator('.prose')).toContainText(/\S/);
   });
 
   test('User can access the Changelog', async ({ page }) => {

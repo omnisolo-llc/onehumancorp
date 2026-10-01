@@ -95,6 +95,7 @@ export default function ReferralFabBuilder() {
                     <button
                       key={c}
                       onClick={() => setThemeColor(c)}
+                      aria-pressed={themeColor === c}
                       className={`w-10 h-10 rounded-full border-2 ${themeColor === c ? 'border-gray-900' : 'border-transparent'}`}
                       style={{ backgroundColor: c }}
                       aria-label={`Select color ${c}`}

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ProductsPage from './page';
 
-vi.mock('../components/AppShell', () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
+vi.mock('../components/AppShell', () => ({ AppShell: ({ children, subtitle, statusItems }: { children: React.ReactNode; subtitle?: string; statusItems?: Array<{ label: string; value: string }> }) => <main><p>{subtitle}</p>{statusItems?.map(item => <p key={item.label}>{item.label}: {item.value}</p>)}{children}</main> }));
 const product = { id: 'real-product-id', title: 'Owner cake', description: 'Fresh vegan cake', item_type: 'Product', price_cents: 5000 };
 afterEach(() => vi.unstubAllGlobals());
 
@@ -114,7 +114,7 @@ describe('ProductsPage', () => {
 
   it('renders correctly', () => {
     render(<ProductsPage />);
-    expect(screen.getByText('Imported Products')).toBeDefined();
+    expect(screen.getByText('Catalog Products')).toBeDefined();
 
   });
 
@@ -165,4 +165,16 @@ it('does not invite a duplicate create when save succeeds but list refresh fails
   expect(await screen.findByRole('alert')).toHaveTextContent('Failed to load products');
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(transport.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(1);
+});
+
+
+it('describes persisted catalog rows without claiming a migration imported them', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json([product])));
+  render(<ProductsPage />);
+  expect(await screen.findByText(product.title)).toBeVisible();
+  expect(screen.queryByText('Imported Products')).toBeNull();
+  expect(screen.getByText('Catalog Products')).toBeVisible();
+  expect(screen.getByText('Source: Catalog')).toBeVisible();
+  expect(screen.getByText('Manage your saved catalog products.')).toBeVisible();
+  expect(screen.queryByText(/staged from the migration/)).toBeNull();
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 export default function ReferralWidgetBuilderPage() {
@@ -14,6 +14,34 @@ export default function ReferralWidgetBuilderPage() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallStatus, setPaywallStatus] = useState('');
   const [copied, setCopied] = useState(false);
+  const [linkCopyStatus, setLinkCopyStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
+  const copySequence = useRef(0);
+  const copyPending = useRef(false);
+  const referralLink = `https://cloud.omnisolo.co/setup.html?ref=${tenant}&promo=ref123`;
+
+  useEffect(() => {
+    copySequence.current += 1;
+    copyPending.current = false;
+    setLinkCopyStatus('idle');
+    return () => { copySequence.current += 1; copyPending.current = false; };
+  }, [referralLink]);
+
+  const handleCopyLink = async () => {
+    if (copyPending.current) return;
+    const sequence = ++copySequence.current;
+    copyPending.current = true;
+    setLinkCopyStatus('copying');
+    try {
+      if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(referralLink);
+      if (sequence === copySequence.current) setLinkCopyStatus('copied');
+    } catch {
+      if (sequence === copySequence.current) setLinkCopyStatus('error');
+    } finally {
+      if (sequence === copySequence.current) copyPending.current = false;
+    }
+  };
+
 
   useEffect(() => {
     try {
@@ -188,13 +216,15 @@ export default function ReferralWidgetBuilderPage() {
                     type="text"
                     readOnly
                     aria-label="Referral link preview"
-                    value={`https://cloud.omnisolo.co/setup.html?ref=${tenant}&promo=ref123`}
+                    value={referralLink}
                     className="flex-1 bg-transparent border-none text-xs text-gray-600 dark:text-gray-300 px-2 focus:outline-none"
                   />
-                  <button className="bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold py-2 px-4 rounded-md shadow-sm">
-                    Copy Link
+                  <button onClick={handleCopyLink} disabled={linkCopyStatus === 'copying'} className="bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold py-2 px-4 rounded-md shadow-sm">
+                    {linkCopyStatus === 'copying' ? 'Copying…' : 'Copy Link'}
                   </button>
                 </div>
+                {linkCopyStatus === 'copied' && <p role="status">Link copied</p>}
+                {linkCopyStatus === 'error' && <p role="alert">Could not copy the link. Select the link and copy it manually.</p>}
 
                 {!removeBranding && (
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-center">

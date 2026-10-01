@@ -130,6 +130,7 @@ export default function EmailSignatureGeneratorPage() {
                             <button
                                 key={color}
                                 onClick={() => setThemeColor(color)}
+                                aria-pressed={themeColor === color}
                                 className={`w-8 h-8 rounded-full border-2 transition-transform ${themeColor === color ? 'border-gray-400 scale-110' : 'border-transparent hover:scale-105'}`}
                                 style={{ backgroundColor: color }}
                                 aria-label={`Select color ${color}`}

@@ -58,6 +58,24 @@ function isSafeLink(url: unknown): url is string {
   );
 }
 
+function resolvedHelpLink(value: unknown): string | undefined {
+  if (!isSafeLink(value)) return undefined;
+  // The mounted chat API still returns this legacy query form. The maintained
+  // Help Center does not display query-selected articles; use its detail route.
+  if (value.startsWith('/help?')) {
+    const query = new URLSearchParams(value.slice('/help?'.length));
+    if (query.has('article')) {
+      const article = query.get('article');
+      if (!article || !/^[A-Za-z0-9_-]+$/.test(article)) return undefined;
+      // These two chat-era IDs predate the mounted article API's identifiers.
+      const currentArticle = article === 'my-store-1' ? 'add-products'
+        : article === 'payments-1' ? 'accept-payments' : article;
+      return `/help/${currentArticle}`;
+    }
+  }
+  return value;
+}
+
 function normalizeArticles(data: unknown): HelpArticle[] {
   if (!Array.isArray(data)) return [];
   return data.flatMap((item) => {
@@ -94,7 +112,7 @@ function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
   const link = isRecord(data.link) ? data.link : undefined;
   return {
     text: data.reply,
-    linkUrl: isSafeLink(link?.url) ? link.url : undefined,
+    linkUrl: resolvedHelpLink(link?.url),
     linkTitle: typeof link?.title === "string" && link.title.trim() ? link.title : undefined
   };
 }

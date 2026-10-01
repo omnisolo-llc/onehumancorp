@@ -1,7 +1,8 @@
 import { expect, test } from './fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Page } from '@playwright/test';
+import type { BrowserContext, Page } from '@playwright/test';
+import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument } from './support/ui_click_audit';
 import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
 
@@ -134,42 +135,12 @@ async function visibleText(page: Page) {
   return page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
 }
 
-async function pageSignature(page: Page) {
-  return page.evaluate(() => {
-    const body = document.body;
-    const text = body?.textContent || '';
-    const html = body?.innerHTML || '';
-    const elementCount = document.querySelectorAll('*').length;
-    const checksum = (value: string) => {
-      let hash = 0;
-      for (let index = 0; index < value.length; index += 1) {
-        hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
-      }
-      return hash;
-    };
-    return `${location.href}|${checksum(text)}|${checksum(html)}|${elementCount}`;
-  }).catch(() => page.url());
-}
-
-async function waitForClickEffect(page: Page, beforeUrl: string, beforeSignature: string) {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    await page.waitForTimeout(50);
-    const afterUrl = page.url();
-    const afterSignature = await pageSignature(page);
-    if (afterUrl !== beforeUrl || afterSignature !== beforeSignature) {
-      return { afterUrl, afterSignature, changed: true };
-    }
-  }
-
-  return { afterUrl: page.url(), afterSignature: await pageSignature(page), changed: false };
-}
-
-const isolatedAuditSessions = new WeakSet<Page>();
+const isolatedAuditSessions = new WeakSet<BrowserContext>();
 
 async function gotoReady(page: Page, route: string) {
   // This crawler exercises Log out too. Never revoke the server-issued JWT in
   // the suite's shared storage state, and renew after a previous audited logout.
-  const needsLogin = !isolatedAuditSessions.has(page)
+  const needsLogin = !isolatedAuditSessions.has(page.context())
     || (await page.request.get('/api/v1/agent-feed?limit=1')).status() === 401;
   if (needsLogin) {
     const origin = new URL(process.env.BASE_URL || 'http://127.0.0.1:18789').origin;
@@ -178,53 +149,33 @@ async function gotoReady(page: Page, route: string) {
       password: E2E_ADMIN_USER.password,
       organizationId: E2E_ADMIN_USER.organizationId,
     }, origin);
-    isolatedAuditSessions.add(page);
+    isolatedAuditSessions.add(page.context());
   }
-  await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
+  // Wait through document-load redirects before describing controls. Otherwise
+  // share-card's redirect replaces a tagged shell underneath the click locator.
+  await page.goto(new URL(route, process.env.BASE_URL || 'http://127.0.0.1:18789').href, { waitUntil: 'load' });
   await page.waitForLoadState('networkidle', { timeout: 100 }).catch(() => undefined);
   await page.waitForTimeout(100);
-  await page.evaluate(() => {
-    const controls = Array.from(document.querySelectorAll('input, textarea')) as Array<HTMLInputElement | HTMLTextAreaElement>;
-    for (const control of controls) {
-      const style = window.getComputedStyle(control);
-      const rect = control.getBoundingClientRect();
-      if (style.visibility === 'hidden' || style.display === 'none' || rect.width === 0 || rect.height === 0) continue;
-      if (control.disabled || control.readOnly || control.value) continue;
-      if (control instanceof HTMLInputElement) {
-        if (['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(control.type)) continue;
-        control.value = control.type === 'url' ? 'https://omnisolo.co' : control.type === 'number' ? '1' : 'Audit value';
-      } else {
-        control.value = 'Audit value';
-      }
-      control.dispatchEvent(new Event('input', { bubbles: true }));
-      control.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  }).catch(() => undefined);
+  await page.evaluate(fillEmptyAuditControls);
 }
 
 async function tagClickTargets(page: Page) {
   return page.locator(clickableSelector).evaluateAll((elements) => {
-    const visibleTargets = elements.filter((element) => {
+    const counts = new Map<string, number>();
+    return elements.filter((element) => {
       const style = window.getComputedStyle(element);
-      if (element.closest('[aria-hidden="true"]')) return false;
-      if (element.closest('nextjs-portal')) return false;
-      return style.pointerEvents !== 'none' && style.opacity !== '0';
-    });
-    visibleTargets.forEach((element, index) => {
+      return !element.closest('[aria-hidden="true"], nextjs-portal')
+        && style.pointerEvents !== 'none' && style.opacity !== '0';
+    }).map((element, index) => {
+      const label = element.getAttribute('aria-label') || (element.textContent || '').trim().replace(/\s+/g, ' ')
+        || element.getAttribute('title') || element.id || element.tagName;
+      const identity = JSON.stringify([element.tagName, element.id, label]);
+      const occurrence = counts.get(identity) || 0;
+      counts.set(identity, occurrence + 1);
       element.setAttribute('data-ui-audit-click-index', String(index));
+      return { index, label, key: `${identity}:${occurrence}` };
     });
-    return visibleTargets.length;
   });
-}
-
-async function describeTaggedTarget(page: Page, index: number) {
-  return page.locator(`[data-ui-audit-click-index="${index}"]`).evaluate((element, fallbackIndex) => {
-    const aria = element.getAttribute('aria-label');
-    const text = (element.textContent || '').trim().replace(/\s+/g, ' ');
-    const id = element.id ? `#${element.id}` : '';
-    const role = element.getAttribute('role');
-    return aria || text || role || `${element.tagName.toLowerCase()}${id} #${Number(fallbackIndex) + 1}`;
-  }, index).catch(() => `click target #${index + 1}`);
 }
 
 async function auditInteractivePurposeForRoute(page: Page, route: string) {
@@ -274,71 +225,44 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
   return { auditedElements: results.length, failures };
 }
 
-async function auditClickEffectsForRoute(page: Page, route: string) {
-  await gotoReady(page, route);
+async function auditClickEffectsForRoute(sourcePage: Page, route: string) {
   const failures: string[] = [];
-  let auditedTargets = 0;
-  const targetCount = await tagClickTargets(page);
-  auditedTargets += targetCount;
-
-  for (let index = 0; index < targetCount; index += 1) {
-    let target = page.locator(`[data-ui-audit-click-index="${index}"]`);
-    if (await target.count() === 0) {
+  const audited = new Set<string>();
+  const startedAt = Date.now();
+  // Each restored document gets a fresh page. Closing the previous document
+  // prevents delayed checkout/logout callbacks from redirecting the next audit.
+  let page = await sourcePage.context().newPage();
+  try {
+    await gotoReady(page, route);
+    while (true) {
+      const candidates = await tagClickTargets(page);
+      const candidate = candidates.find((target) => !audited.has(target.key));
+      if (!candidate) break;
+      if (Date.now() - startedAt > 90_000) {
+        throw new Error(`${route}: click target enumeration did not converge after ${audited.size} targets; next=${candidate.label}. No remaining coverage was silently skipped.`);
+      }
+      const locator = page.locator(`[data-ui-audit-click-index="${candidate.index}"]`);
+      // Resolve a bounded handle so a late React remount cannot wait forever on
+      // an attribute that existed only in a replaced DOM subtree.
+      const target = await locator.elementHandle({ timeout: 5000 });
+      if (!target) throw new Error(`Audit target disappeared before inspection: ${candidate.label}`);
+      audited.add(candidate.key);
+      try {
+        const observed = await observeClickEffects(page, target);
+        if (!hasMeaningfulClickEffect(observed)) {
+          if (observed.dialogSeen) failures.push(`${route}: "${candidate.label}" only opened a browser dialog`);
+          failures.push(`${route}: "${candidate.label}" produced no observable user effect`);
+        }
+      } catch (error) {
+        failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
+      }
+      page = await replaceAuditDocument(page);
       await gotoReady(page, route);
-      await tagClickTargets(page);
-      target = page.locator(`[data-ui-audit-click-index="${index}"]`);
     }
-
-    if (await target.count() === 0) {
-      break;
-    }
-
-    const isCurrentSelection = await target.evaluate((element) =>
-      element.getAttribute('aria-pressed') === 'true' ||
-      element.getAttribute('aria-current') === 'page' ||
-      element.getAttribute('aria-selected') === 'true',
-    ).catch(() => false);
-    if (isCurrentSelection) continue;
-
-    const label = await describeTaggedTarget(page, index);
-    const beforeUrl = page.url();
-    const beforeSignature = await pageSignature(page);
-    let dialogSeen = false;
-    let requestSeen = false;
-
-    const dialogPromise = page.waitForEvent('dialog', { timeout: 75 })
-      .then(async (dialog) => {
-        dialogSeen = true;
-        await dialog.dismiss().catch(() => undefined);
-      })
-      .catch(() => undefined);
-    const requestPromise = page.waitForEvent('request', { timeout: 75 })
-      .then(() => { requestSeen = true; })
-      .catch(() => undefined);
-
-    await target.evaluate((element) => {
-      (element as HTMLElement).click();
-    }, undefined, { timeout: 5000 }).catch((error) => {
-      failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
-    });
-    await Promise.all([dialogPromise, requestPromise]);
-
-    const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
-    const realEffect = requestSeen || effect.changed;
-
-    if (dialogSeen && !realEffect) {
-      failures.push(`${route}: "${label}" only opened a browser dialog`);
-    }
-    if (!realEffect) {
-      failures.push(`${route}: "${label}" produced no navigation, network request, or DOM change`);
-    }
-    if (effect.afterUrl !== beforeUrl || effect.changed) {
-      await gotoReady(page, route);
-      await tagClickTargets(page);
-    }
+    return { auditedTargets: audited.size, failures };
+  } finally {
+    await page.close().catch(() => undefined);
   }
-
-  return { auditedTargets, failures };
 }
 
 const generatedContractRoutes = discoverAppRoutes();
@@ -512,66 +436,9 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await gotoReady(page, route);
-      const targetCount = await tagClickTargets(page);
-      auditedTargets += targetCount;
-
-      for (let index = 0; index < targetCount; index += 1) {
-        let target = page.locator(`[data-ui-audit-click-index="${index}"]`);
-        if (await target.count() === 0) {
-          await gotoReady(page, route);
-          await tagClickTargets(page);
-          target = page.locator(`[data-ui-audit-click-index="${index}"]`);
-        }
-
-        if (await target.count() === 0) {
-          break;
-        }
-
-        const isCurrentSelection = await target.evaluate((element) =>
-          element.getAttribute('aria-pressed') === 'true' ||
-          element.getAttribute('aria-current') === 'page' ||
-          element.getAttribute('aria-selected') === 'true',
-        ).catch(() => false);
-        if (isCurrentSelection) continue;
-
-        const label = await describeTaggedTarget(page, index);
-        const beforeUrl = page.url();
-        const beforeSignature = await pageSignature(page);
-        let dialogSeen = false;
-        let requestSeen = false;
-
-        const dialogPromise = page.waitForEvent('dialog', { timeout: 75 })
-          .then(async (dialog) => {
-            dialogSeen = true;
-            await dialog.dismiss().catch(() => undefined);
-          })
-          .catch(() => undefined);
-        const requestPromise = page.waitForEvent('request', { timeout: 75 })
-          .then(() => { requestSeen = true; })
-          .catch(() => undefined);
-
-        await target.evaluate((element) => {
-          (element as HTMLElement).click();
-        }, undefined, { timeout: 5000 }).catch((error) => {
-          failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
-        });
-        await Promise.all([dialogPromise, requestPromise]);
-
-        const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
-        const realEffect = requestSeen || effect.changed;
-
-        if (dialogSeen && !realEffect) {
-          failures.push(`${route}: "${label}" only opened a browser dialog`);
-        }
-        if (!realEffect) {
-          failures.push(`${route}: "${label}" produced no navigation, network request, or DOM change`);
-        }
-        if (effect.afterUrl !== beforeUrl || effect.changed) {
-          await gotoReady(page, route);
-          await tagClickTargets(page);
-        }
-      }
+      const audit = await auditClickEffectsForRoute(page, route);
+      auditedTargets += audit.auditedTargets;
+      failures.push(...audit.failures);
     }
 
     console.info(`Audited ${auditedTargets} visible enabled click targets.`);

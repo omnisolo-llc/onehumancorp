@@ -568,6 +568,28 @@ describe('HelpWidget', () => {
     expect(screen.queryByText('Read the full article →')).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['/help?article=my-store-1', '/help/add-products'],
+    ['/help?article=payments-1', '/help/accept-payments'],
+    ['/help?article=marketing-tools', '/help/marketing-tools'],
+    ['/help?article=../settings', null],
+  ])('routes legacy Help article response %s to an existing article page', async (url, expected) => {
+    vi.mocked(fetch).mockImplementation(request => Promise.resolve(Response.json(
+      String(request).includes('/api/v1/chat')
+        ? { reply: 'Recorded Help answer', link: { url, title: 'Open article' } }
+        : [],
+    )));
+    const user = userEvent.setup();
+    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByRole('button', { name: 'Ask AI (Ask anything)' }));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'How do I add a product?');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Recorded Help answer')).toBeVisible();
+    if (expected) expect(screen.getByRole('link', { name: 'Open article' })).toHaveAttribute('href', expected);
+    else expect(screen.queryByRole('link', { name: 'Open article' })).not.toBeInTheDocument();
+  });
+
   it('sends Operations questions to the actual Help API instead of inventing a department handoff', async () => {
     const user = userEvent.setup();
     render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);

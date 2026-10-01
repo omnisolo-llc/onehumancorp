@@ -482,7 +482,10 @@ async fn forced_rls_scopes_effects_receipts_and_pool_reuse() {
     .await
     .unwrap();
     let role = format!("sync_role_{}", uuid::Uuid::new_v4().simple());
-    sqlx::raw_sql(&format!("CREATE ROLE {role} LOGIN NOSUPERUSER NOBYPASSRLS; GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT ALL ON ALL TABLES IN SCHEMA {schema} TO {role};")).execute(&admin).await.unwrap();
+    // Disposable test credentials must also work on CI's password-authenticated
+    // PostgreSQL host. Never depend on the local cluster using trust auth.
+    let password = uuid::Uuid::new_v4().simple().to_string();
+    sqlx::raw_sql(&format!("CREATE ROLE {role} LOGIN PASSWORD '{password}' NOSUPERUSER NOBYPASSRLS; GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT ALL ON ALL TABLES IN SCHEMA {schema} TO {role};")).execute(&admin).await.unwrap();
     for table in [
         "sync_events",
         "products",
@@ -506,7 +509,7 @@ async fn forced_rls_scopes_effects_receipts_and_pool_reuse() {
                 Ok(())
             })
         })
-        .connect_with(options.username(&role))
+        .connect_with(options.username(&role).password(&password))
         .await
         .unwrap();
     let own = event(

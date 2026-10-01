@@ -1633,7 +1633,8 @@ async fn handle_post_purchase_embed(
             .replace("'", "&#x27;")
     };
 
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    let tenant = escape_html(raw_tenant);
     let discount = escape_html(query.discount.as_deref().unwrap_or("15pct"));
 
     let discount_display = if discount.ends_with("pct") {
@@ -1664,9 +1665,9 @@ async fn handle_post_purchase_embed(
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&tenant)
+        .bind(raw_tenant)
         .fetch_optional(&state.pool)
         .await;
 
@@ -1775,7 +1776,12 @@ async fn handle_customer_referral_embed(
             .replace("\'", "&#x27;")
     };
 
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    // Identity stays raw for DB reads; only the output URL/attribute is encoded.
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let give = escape_html(query.give.as_deref().unwrap_or("10"));
     let get = escape_html(query.get.as_deref().unwrap_or("10"));
     let bg_color = if query.theme.as_deref() == Some("dark") {
@@ -1797,9 +1803,9 @@ async fn handle_customer_referral_embed(
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&tenant)
+        .bind(raw_tenant)
         .fetch_optional(&state.pool)
         .await;
 
@@ -1814,8 +1820,8 @@ async fn handle_customer_referral_embed(
         "".to_string()
     } else {
         format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
-            tenant
+            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="{}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
+            referral_url
         )
     };
 
@@ -1883,9 +1889,14 @@ async fn handle_customer_referral_embed(
         <div class="icon">🎁</div>
         <h2>Give ${give}, Get ${get}</h2>
         <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
-        <button class="button" onclick="window.open('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
+        <button class="button" id="referral-share" data-referral-url="{referral_url}">Share your link</button>
         {branding}
     </div>
+    <script>
+        document.getElementById('referral-share').addEventListener('click', function() {{
+            window.open(this.dataset.referralUrl, '_blank');
+        }});
+    </script>
 </body>
 </html>"#
     );
@@ -2115,7 +2126,12 @@ async fn handle_viral_goal_tracker(
             .replace("\'", "&#x27;")
     };
 
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    // Identity stays raw for DB reads; only the output URL/attribute is encoded.
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let target = escape_html(query.target.as_deref().unwrap_or("10"));
     let reward = escape_html(query.reward.as_deref().unwrap_or("Reward"));
     let bg_color = if query.theme.as_deref() == Some("dark") {
@@ -2133,18 +2149,12 @@ async fn handle_viral_goal_tracker(
     } else {
         "#666666"
     };
-    let progress_bg = if query.theme.as_deref() == Some("dark") {
-        "rgba(255,255,255,0.1)"
-    } else {
-        "rgba(0,0,0,0.1)"
-    };
-
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&tenant)
+        .bind(raw_tenant)
         .fetch_optional(&state.pool)
         .await;
 
@@ -2161,18 +2171,9 @@ async fn handle_viral_goal_tracker(
         r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ OmniSolo</div>"#.to_string()
     };
 
-    // Calculate current progress based on real DB values.
-    // As an embed, we could pass customer_id if known, but for a general embed,
-    // we'll just show the user's progress if logged in, otherwise just a static display or "0".
-    // For simplicity, let's just make it look like a real widget with some progress.
-    let current_referrals = 4; // Mock value. In a real app we'd fetch this from the referrals table.
-    let target_num: i32 = query
-        .target
-        .as_deref()
-        .unwrap_or("10")
-        .parse()
-        .unwrap_or(10);
-    let progress_pct = (current_referrals as f32 / target_num as f32 * 100.0).min(100.0);
+    // A tenant identifies the widget's business, not its viewer or a referral
+    // record. Tenant-wide conversions cannot establish this visitor's progress
+    // or reward eligibility. Keep that missing tracking capability explicit.
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -2212,24 +2213,14 @@ async fn handle_viral_goal_tracker(
             font-size: 14px;
             color: {secondary_text};
         }}
-        .progress-bar-container {{
-            height: 8px;
-            background: {progress_bg};
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 12px;
-        }}
-        .progress-bar {{
-            height: 100%;
-            background: #0066FF;
-            width: {progress_pct}%;
-            border-radius: 4px;
-        }}
         .progress-text {{
             display: flex;
             justify-content: space-between;
             font-size: 13px;
             color: {secondary_text};
+            margin-bottom: 24px;
+        }}
+        .tracking-unavailable {{
             margin-bottom: 24px;
         }}
         .btn {{
@@ -2251,22 +2242,25 @@ async fn handle_viral_goal_tracker(
 <body>
     <div class="widget">
         <div class="header">
-            <h3>Unlock: {reward}</h3>
-            <p>Invite friends to unlock your reward!</p>
+            <h3>Configured reward: {reward}</h3>
+            <p>Referral goal configuration</p>
         </div>
 
-        <div class="progress-bar-container">
-            <div class="progress-bar"></div>
-        </div>
-        <div class="progress-text">
-            <span>{current_referrals} referrals completed</span>
+        <div class="progress-text" role="status">
+            <span>Referral progress unavailable</span>
             <span>{target} target</span>
         </div>
+        <p class="tracking-unavailable">This widget is not linked to a referral record. Completed referrals and reward eligibility cannot be verified here.</p>
 
-        <button class="btn" onclick="window.open('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share to reach goal</button>
+        <button class="btn" id="referral-share" data-referral-url="{referral_url}">Open referral link</button>
 
         {branding}
     </div>
+    <script>
+        document.getElementById('referral-share').addEventListener('click', function() {{
+            window.open(this.dataset.referralUrl, '_blank');
+        }});
+    </script>
 </body>
 </html>"#
     );
@@ -5454,7 +5448,13 @@ pub async fn handle_viral_widget_embed(
     Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<ViralWidgetEmbedQuery>,
 ) -> impl IntoResponse {
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    let tenant = escape_html(raw_tenant);
+    // Identity stays raw for DB reads; only the output URL/attribute is encoded.
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let title = escape_html(query.title.as_deref().unwrap_or("Viral Widget"));
     let theme = query.theme.as_deref().unwrap_or("light");
     let show_branding = query.branding.unwrap_or(true);
@@ -5550,7 +5550,7 @@ pub async fn handle_viral_widget_embed(
     <div class="card">
         <h2>{title}</h2>
         <p>This is a viral widget for {tenant}. Share it with your friends!</p>
-        <button onclick="window.open('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share Now</button>
+        <button id="referral-share" data-referral-url="{referral_url}">Share Now</button>
 "#,
         bg_color = bg_color,
         border_color = border_color,
@@ -5562,7 +5562,7 @@ pub async fn handle_viral_widget_embed(
     if show_branding {
         html.push_str(&format!(
             r#"        <div class="branding">
-            <a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_widget" target="_blank">⚡ OmniSolo</a>
+            <a href="{referral_url}&amp;source=viral_widget" target="_blank">⚡ OmniSolo</a>
         </div>"#
         ));
     }
@@ -5570,6 +5570,11 @@ pub async fn handle_viral_widget_embed(
     html.push_str(
         r#"
     </div>
+    <script>
+        document.getElementById('referral-share').addEventListener('click', function() {
+            window.open(this.dataset.referralUrl, '_blank');
+        });
+    </script>
 </body>
 </html>"#,
     );
@@ -6671,9 +6676,9 @@ pub async fn handle_birthday_club_embed(
     if hide_branding {
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&safe_tenant)
+        .bind(tenant)
         .fetch_optional(&state.pool)
         .await;
 

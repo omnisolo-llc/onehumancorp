@@ -24,7 +24,7 @@ test.describe('Help Center & Documentation Features', () => {
     // 6. Verify video modal opens and can be closed
     const closeButton = page.locator('button[aria-label="Close video"]');
     await expect(closeButton.first()).toBeVisible();
-    await closeButton.first().evaluate((b) => (b as HTMLElement).click());
+    await closeButton.first().click();
     await expect(closeButton.first()).not.toBeVisible();
   });
 
@@ -111,16 +111,17 @@ test.describe('Help Center & Documentation Features', () => {
     await helpButton.first().click();
 
     // Switch to What's New tab
-    const whatsNewTab = page.locator('button:has-text("New")');
+    const widget = page.locator('#ohc-floating-help-widget');
+    const whatsNewTab = widget.getByRole('button', { name: 'New', exact: true });
     await expect(whatsNewTab).toBeVisible();
-    await whatsNewTab.evaluate((b) => (b as HTMLElement).click());
+    await whatsNewTab.click();
 
     // Click the Read full release notes link
     const releaseNotesLink = page.locator('a:has-text("Read full release notes")');
     await expect(releaseNotesLink).toBeVisible();
 
     // Click and navigate
-    await releaseNotesLink.evaluate((b) => (b as HTMLElement).click());
+    await releaseNotesLink.click();
     await expect(page).toHaveURL(/\/changelog\.html/);
     await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
   });

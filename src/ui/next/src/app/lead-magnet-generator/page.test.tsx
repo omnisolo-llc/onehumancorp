@@ -19,6 +19,16 @@ describe('LeadMagnetGeneratorPage', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
+  it('marks unconfigured editor-preview actions unavailable with a visible reason', () => {
+    render(<TooltipProvider><LeadMagnetGeneratorPage /></TooltipProvider>);
+    for(const name of ['Download Now']) {
+      const button=screen.getByRole('button',{name});
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription('No downloadable resource is configured in this preview.');
+    }
+    expect(screen.getByText('No downloadable resource is configured in this preview.')).toBeVisible();
+  });
+
   it('renders the configurator with default values', () => {
     render(
       <TooltipProvider>

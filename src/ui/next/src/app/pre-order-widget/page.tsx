@@ -103,12 +103,14 @@ export default function PreOrderWidgetPage() {
               <div className="flex space-x-4">
                 <button
                   onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
                   className={`px-4 py-2 rounded-lg border ${theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white dark:bg-black/20 dark:border-white/10'}`}
                 >
                   Light
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
                   className={`px-4 py-2 rounded-lg border ${theme === 'dark' ? 'bg-blue-900 border-blue-700 text-blue-100' : 'bg-white dark:bg-black/20 dark:border-white/10 text-black dark:text-white'}`}
                 >
                   Dark

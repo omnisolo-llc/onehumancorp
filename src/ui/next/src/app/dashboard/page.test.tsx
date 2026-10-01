@@ -1,5 +1,5 @@
 import { TooltipProvider } from '../../components/TooltipRegistry';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import Dashboard from './page';
 import { expect, test, vi } from 'vitest';
 
@@ -109,4 +109,29 @@ test('does not request dashboard APIs that have no server contract', async () =>
   expect(requestedUrls).not.toContain('/api/v1/ledger/accounts');
   expect(requestedUrls).not.toContain('/api/v1/user/usage');
   expect(requestedUrls).not.toContain('/api/v1/mesh/v2/collective?action=getNearby');
+}, 30000);
+
+
+test('reports unavailable migration instead of inventing a completed import', async () => {
+  const requests: string[] = [];
+  global.fetch = vi.fn((url: string) => {
+    requests.push(url);
+    return Promise.resolve(Response.json({}, { status: 200 }));
+  });
+  vi.useFakeTimers();
+  try {
+    await act(async () => { render(<TooltipProvider><Dashboard /></TooltipProvider>); });
+    fireEvent.click(screen.getByRole('button', { name: 'Migrate Existing Store' }));
+    const start = screen.queryByRole('button', { name: 'Start Migration' });
+    if (start) fireEvent.click(start);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(screen.queryByText('Migration Complete!')).toBeNull();
+    expect(screen.getByText(/Automatic store migration is not available yet/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Start Migration' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Open product catalog' })).toHaveAttribute('href', '/products');
+    expect(requests.filter(url => /migration|myshopify/i.test(url))).toEqual([]);
+  } finally {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  }
 }, 30000);

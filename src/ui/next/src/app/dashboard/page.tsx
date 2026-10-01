@@ -132,8 +132,6 @@ export default function Dashboard() {
   const [initialTriage, setInitialTriage] = useState<TriageItem[]>([]);
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
-  const [migrationUrl, setMigrationUrl] = useState("");
-  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
   const [actionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
@@ -508,62 +506,16 @@ export default function Dashboard() {
       </section>
 
       {showMigration && (
-        <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6">
+        <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6" aria-labelledby="store-migration-title">
           <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Store Migration</div>
-              <div className="app-list-subtitle">Import products and storefront details from an existing shop URL.</div>
-            </div>
+            <h2 id="store-migration-title" className="app-panel-title">Store Migration</h2>
           </div>
           <div className="app-panel-body">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <label className="flex-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                Existing store URL
-                <input
-                  name="migration_url"
-                  value={migrationUrl}
-                  onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
-                  placeholder="mayas-cakes.myshopify.com"
-                />
-              </label>
-              {migrationStatus === "idle" && (
-                <button
-                  type="button"
-                  className="app-button primary min-h-[44px]"
-                  onClick={() => {
-                    setMigrationStatus("running");
-                    setTimeout(() => setMigrationStatus("complete"), 800);
-                  }}
-                >
-                  Start Migration
-                </button>
-              )}
-              {migrationStatus === "running" && (
-                <div className="flex items-center gap-2 p-3 bg-white/80 dark:bg-black/40 rounded-lg border border-white/50 backdrop-blur-[30px]">
-                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    Our AI is carefully moving your products and storefront data...
-                  </span>
-                </div>
-              )}
-              {migrationStatus === "complete" && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                    Migration Complete!
-                  </span>
-                  <button
-                    type="button"
-                    className="app-button primary min-h-[44px]"
-                    onClick={() => router.push("/products")}
-                  >
-                    Review & Publish
-                  </button>
-                </div>
-              )}
-            </div>
-            {migrationStatus === "idle" && (
-              <p className="mt-4 app-list-subtitle">Import catalog items, images, and pricing seamlessly into your OmniSolo workspace.</p>
-            )}
+            <p role="status" className="app-list-subtitle mb-3">
+              Automatic store migration is not available yet. No import has been started.
+            </p>
+            <p className="app-list-subtitle mb-3">You can add and edit products in your catalog.</p>
+            <Link href="/products" className="app-button primary min-h-[44px]">Open product catalog</Link>
           </div>
         </section>
       )}
