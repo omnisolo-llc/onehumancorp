@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "Implement Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_description: "The issue requests implementing a native Rust omnichannel chat system to replace an external Chatwoot service. However, the repository already completed the Chatwoot migration in a previous release, as documented in docs/reports/production_agent_optimization_report.md and docs/superpowers/plans/2026-07-13-chatwoot-removal.md, where all Chatwoot residue was removed. The native chat inbox and channel components are already present in src/server/services/chat/ and the real-time WebSocket backend is partially supported by unified_ws.rs. The task is blocked because there is a lack of required evidence for further channel expansion or rewriting an already existing native chat module without explicit owner validation or evidence-backed issues for expanding channels. Superpowers skill provenance: Loaded Superpowers revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md, skills/brainstorming/SKILL.md, skills/writing-plans/SKILL.md)"
