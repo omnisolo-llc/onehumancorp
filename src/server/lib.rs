@@ -1590,6 +1590,9 @@ use crate::orchestration::mesh::TeammateMesh;
 pub mod rpc_error;
 
 pub mod services {
+    // Exercise the existing dormant campaign service without mounting it.
+    #[cfg(test)]
+    pub mod campaign;
     // Compile the canonical workspace crate once; preserve the public path.
     pub use ::server_services_billing as billing;
     pub mod chat;
