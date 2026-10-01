@@ -1,0 +1,3 @@
+issue_title: "F14: No measured representative serving costs or owner outcomes"
+issue_description: "Source date: 2026-09-18-usage-audit. No measured representative serving costs exist in the current source or external evidence. No owner economic or metric data is available. No workload distribution or reconciled provider invoices have been supplied to establish a baseline cost model or validate willingness to pay. Superpowers skill provenance: loaded revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md, skills/brainstorming/SKILL.md, skills/brainstorming/visual-companion.md)."
+outcome: blocked
