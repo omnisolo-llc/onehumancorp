@@ -97,6 +97,9 @@ def prerequisites(root, source):
         raise ValueError('The pinned OpenCode 1.18.15 executable is required')
     env = child_environment(source)
     env['PATH'] = str(binary.parent) + os.pathsep + env.get('PATH', '')
+    # A false standalone flag alone still falls back to standalone when the
+    # application has no database source, disabling Redis before subscription.
+    env['OMNISOLO_DATABASE_URL'] = pg
     env.update(OHC_TEST_PG_URL=pg, OHC_CAMPAIGN_TEST_DATABASE_URL=pg, OMNISOLO_HARNESS_POSTGRES_URL=pg,
                OMNISOLO_HARNESS_MYSQL_URL=mysql, OHC_TEST_REDIS_URL=redis,
                REDIS_URL=redis, OPENHARNESS_PINNED_SDK_SOURCE=str(sdk))

@@ -15,6 +15,33 @@ spec.loader.exec_module(gate)
 
 
 class ExactIgnoredGate(unittest.TestCase):
+    def test_application_mode_uses_only_the_validated_disposable_database(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            sdk = root / 'target/ignored-prerequisites/openharness'
+            (sdk / 'src/harness').mkdir(parents=True)
+            (sdk / 'src/harness/__init__.py').write_text('')
+            pg = 'postgres://fixture:fixture@127.0.0.1:15432/ohc_ignored_postgres'
+            source = {
+                'PATH': '/bin', 'OHC_IGNORED_SERVICE_ISOLATION': '1',
+                'OHC_IGNORED_POSTGRES_URL': pg,
+                'OHC_IGNORED_MYSQL_URL': 'mysql://fixture:fixture@127.0.0.1:13306/ohc_ignored_mysql',
+                'OHC_IGNORED_REDIS_URL': 'redis://127.0.0.1:16379',
+                'OPENHARNESS_PINNED_SDK_SOURCE': str(sdk),
+                'DATABASE_URL': 'postgres://unrelated.example:5432/production',
+                'OMNISOLO_DATABASE_URL': 'postgres://unrelated.example:5432/production',
+                'DATABASE_URL_FILE': '/unrelated/database-secret',
+                'OMNISOLO_STANDALONE_MODE': 'true',
+            }
+            with patch.object(gate.subprocess, 'check_output',
+                              side_effect=[gate.SDK_REVISION + '\n', '', '1.18.15\n']):
+                env = gate.prerequisites(root, source)
+            self.assertEqual(env.get('OMNISOLO_DATABASE_URL'), pg)
+            self.assertEqual(env['OMNISOLO_STANDALONE_MODE'], 'false')
+            self.assertEqual(env['REDIS_URL'], source['OHC_IGNORED_REDIS_URL'])
+            self.assertNotIn('DATABASE_URL', env)
+            self.assertNotIn('DATABASE_URL_FILE', env)
+
     @unittest.skipUnless(os.name == 'posix', 'owned process groups require POSIX')
     def test_timeout_retains_output_and_stops_owned_descendants(self):
         with tempfile.TemporaryDirectory() as temp:
