@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Page } from '@playwright/test';
-import { replaceAuditDocument, resolveAuditTarget, auditDocumentSignature } from '../../../../e2e/support/ui_click_audit';
+import { replaceAuditDocument, resolveAuditTarget, auditDocumentSignature, hasFragmentTarget } from '../../../../e2e/support/ui_click_audit';
 
 function documentPage(overrides: Record<string, unknown>): Page {
   return {
@@ -113,4 +113,24 @@ it('does not count the crawler own marker changes as a user effect', () => {
     control.textContent = 'Actual visible feedback';
     expect(auditDocumentSignature()).not.toBe(before);
   } finally { document.body.innerHTML = original; }
+});
+
+
+describe('fragment destinations', () => {
+  it('recognizes an actual section, encoded ID or named anchor in this document', () => {
+    document.body.innerHTML = '<section id="cost-breakdown-section">Costs</section><h2 id="雪 section">Details</h2><a name="legacy-destination"></a>';
+    try {
+      expect(hasFragmentTarget('#cost-breakdown-section')).toBe(true);
+      expect(hasFragmentTarget('#%E9%9B%AA%20section')).toBe(true);
+      expect(hasFragmentTarget('#legacy-destination')).toBe(true);
+    } finally { document.body.innerHTML = ''; }
+  });
+  it('keeps empty, missing, malformed and unrelated names invalid', () => {
+    document.body.innerHTML = '<input name="not-an-anchor"><section id="present">Present</section>';
+    try {
+      for (const href of ['#', '#missing', '#%E0%A4', '#not-an-anchor', '/elsewhere#present']) {
+        expect(hasFragmentTarget(href)).toBe(false);
+      }
+    } finally { document.body.innerHTML = ''; }
+  });
 });

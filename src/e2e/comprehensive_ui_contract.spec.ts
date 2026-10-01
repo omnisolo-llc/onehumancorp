@@ -2,7 +2,7 @@ import { expect, test } from './fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
-import { hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
+import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
 import { createAuditNavigation } from './support/ui_audit_navigation';
@@ -201,7 +201,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
     }
     if (result.tag === 'a') {
       if (!result.href.trim()) failures.push(`${target} has no href`);
-      if (result.href === '#' || result.href.startsWith('#')) failures.push(`${target} uses a placeholder hash href`);
+      if (result.href.startsWith('#') && !await page.evaluate(hasFragmentTarget, result.href)) failures.push(`${target} uses a missing or placeholder fragment href`);
       if (result.href.startsWith('javascript:')) failures.push(`${target} uses a javascript: href`);
       if (isFakeOmniSoloUrl(result.href)) failures.push(`${target} uses fake OmniSolo destination ${result.href}`);
     }
@@ -377,8 +377,8 @@ test.describe('comprehensive UI contract', () => {
           failures.push(`${target} has an empty href`);
           continue;
         }
-        if (link.href === '#' || link.href.startsWith('#')) {
-          failures.push(`${target} uses a placeholder hash href`);
+        if (link.href.startsWith('#')) {
+          if (!await page.evaluate(hasFragmentTarget, link.href)) failures.push(`${target} uses a missing or placeholder fragment href`);
           continue;
         }
         if (link.href.startsWith('javascript:')) {

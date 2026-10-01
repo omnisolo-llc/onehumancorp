@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { fillEmptyAuditControls, hasMeaningfulClickEffect, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
+import { fillEmptyAuditControls, hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 
 import { createServer } from 'node:http';
 import { createAuditNavigation } from './support/ui_audit_navigation';
@@ -311,4 +311,17 @@ test('reuses a verified audit session and renews only read navigation after real
     await replaceAuditDocument(page);
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
+});
+
+
+test('accepts a real in-document destination while rejecting placeholder and missing fragments', async ({ page }) => {
+  const markup = '<a href="#cost-breakdown-section">View Detailed Costs</a><div style="height:1200px"></div><section id="cost-breakdown-section"><h2>Cost Breakdown</h2></section>';
+  await page.goto(`data:text/html,${encodeURIComponent(markup)}`);
+  expect(await page.evaluate(hasFragmentTarget, '#cost-breakdown-section')).toBe(true);
+  for (const fragment of ['#', '#missing', '#%E0%A4']) {
+    expect(await page.evaluate(hasFragmentTarget, fragment)).toBe(false);
+  }
+  await page.getByRole('link', { name: 'View Detailed Costs' }).click();
+  expect(await page.evaluate(() => location.hash)).toBe('#cost-breakdown-section');
+  await expect(page.getByRole('heading', { name: 'Cost Breakdown' })).toBeInViewport();
 });

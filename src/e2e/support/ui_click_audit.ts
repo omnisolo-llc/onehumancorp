@@ -255,3 +255,12 @@ export async function resolveAuditTarget(
     if (timer !== undefined) clearTimeout(timer);
   }
 }
+
+// Browser-realm fragment validation used by the purpose/link contracts.
+export function hasFragmentTarget(href: string): boolean {
+  if (!href.startsWith('#') || href.length === 1) return false;
+  let name: string;
+  try { name = decodeURIComponent(href.slice(1)); } catch { return false; }
+  return document.getElementById(name) !== null
+    || Array.from(document.getElementsByName(name)).some(element => element.tagName === 'A');
+}
