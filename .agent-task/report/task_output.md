@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Accounting and Billing Integration: QuickBooks Online & Xero"
+issue_description: "Missing provider sandbox access. Superpowers skill provenance: 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md, skills/brainstorming/SKILL.md). The mission asks to complete integration with QuickBooks Online and Xero. The problem statement notes that QuickBooks and Xero require OAuth 2.0 and expects to implement pushing paid invoices asynchronously to connected accounting platforms. However, there are no sandbox credentials or tools provided for the integrations, and live test mode credentials cannot be obtained via the trace. This task is thus blocked on business evidence."
