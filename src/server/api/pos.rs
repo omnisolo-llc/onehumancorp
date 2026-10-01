@@ -17,7 +17,7 @@ fn pos_tenant(claims: Option<&Extension<::server_common::Claims>>) -> Option<Str
     claims.and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
 }
 
-const POS_ORDERS_SQL: &str = "SELECT o.id, CAST(o.total_amount AS DOUBLE PRECISION) AS total_amount, o.status, o.created_at, o.notes, o.translated_notes, COALESCE(c.name, 'Walk-in') AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 20";
+const POS_ORDERS_SQL: &str = "SELECT o.id, CAST(o.total_amount AS DOUBLE PRECISION) AS total_amount, o.status, o.created_at, o.updated_at, o.notes, o.translated_notes, COALESCE(c.name, 'Walk-in') AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 20";
 
 async fn fetch_pos_orders(tenant_id: &str) -> Result<Vec<Value>, sqlx::Error> {
     let pool = crate::db::get_pool();
@@ -40,6 +40,7 @@ async fn fetch_pos_orders(tenant_id: &str) -> Result<Vec<Value>, sqlx::Error> {
             "total_amount": row.try_get::<f64, _>("total_amount").unwrap_or(0.0),
             "status": row.try_get::<String, _>("status").unwrap_or_else(|_| "completed".to_string()),
             "created_at": created_at_str,
+            "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").ok().map(|value| value.to_rfc3339()),
             "items": [],
             "customer_name": row.try_get::<String, _>("customer_name").unwrap_or_else(|_| "Walk-in".to_string()),
         });
@@ -441,7 +442,7 @@ pub async fn get_inventory_handler(
     {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    let rows = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency, is_sold_out, updated_at FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await;
@@ -454,7 +455,7 @@ pub async fn get_inventory_handler(
             .bind(&tenant_id)
             .execute(&mut *tx)
             .await;
-        if let Ok(new_rows) = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
+        if let Ok(new_rows) = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency, is_sold_out, updated_at FROM products WHERE tenant_id = $1")
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
             .await
@@ -474,6 +475,8 @@ pub async fn get_inventory_handler(
             "price_cents": row.get::<i64, _>("price_cents"),
             "currency": row.get::<String, _>("currency"),
             "stock": row.get::<i32, _>("inventory_count"),
+            "is_sold_out": row.try_get::<Option<bool>, _>("is_sold_out").unwrap_or(None),
+            "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").ok().map(|value| value.to_rfc3339()),
             "is_subscribable": row.try_get::<bool, _>("is_subscribable").unwrap_or(false),
             "subscription_discount_percent": row.try_get::<i32, _>("subscription_discount_percent").unwrap_or(0),
             "subscription_frequency": row.try_get::<String, _>("subscription_frequency").unwrap_or_default(),
@@ -491,13 +494,13 @@ mod tests {
     async fn pos_orders_keep_customer_identity_and_notes_tenant_scoped() {
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::raw_sql(
-            "CREATE TABLE orders (id TEXT, tenant_id TEXT, customer_id TEXT, total_amount REAL, status TEXT, created_at TEXT, notes TEXT, translated_notes TEXT);
+            "CREATE TABLE orders (id TEXT, tenant_id TEXT, customer_id TEXT, total_amount REAL, status TEXT, created_at TEXT, updated_at TEXT, notes TEXT, translated_notes TEXT);
              CREATE TABLE customers (id TEXT, tenant_id TEXT, name TEXT);
              INSERT INTO customers VALUES ('shared', 'owner', 'Alice'), ('shared', 'other', 'Private customer');
              INSERT INTO orders VALUES
-               ('alice-order', 'owner', 'shared', 8, 'pending', '2026-09-30', 'No onions', 'بدون بصل'),
-               ('walk-in', 'owner', 'missing', 12, 'pending', '2026-09-30', NULL, NULL),
-               ('private-order', 'other', 'shared', 20, 'pending', '2026-09-30', NULL, NULL);",
+               ('alice-order', 'owner', 'shared', 8, 'pending', '2026-09-30', '2026-09-30T01:02:03Z', 'No onions', 'بدون بصل'),
+               ('walk-in', 'owner', 'missing', 12, 'pending', '2026-09-30', '2026-09-30T01:02:04Z', NULL, NULL),
+               ('private-order', 'other', 'shared', 20, 'pending', '2026-09-30', '2026-09-30T01:02:05Z', NULL, NULL);",
         )
         .execute(&pool)
         .await
@@ -513,6 +516,7 @@ mod tests {
             .find(|row| row.get::<String, _>("id") == "alice-order")
             .unwrap();
         assert_eq!(alice.get::<String, _>("customer_name"), "Alice");
+        assert_eq!(alice.get::<String, _>("updated_at"), "2026-09-30T01:02:03Z");
         assert_eq!(alice.get::<String, _>("translated_notes"), "بدون بصل");
         let walk_in = rows
             .iter()

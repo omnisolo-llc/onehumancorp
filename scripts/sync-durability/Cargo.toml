@@ -16,6 +16,7 @@ tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
 server_auth = { path = "../../src/server/auth" }
 server_common = { path = "../../src/server/common" }
+server_utils = { path = "../../src/server/utils" }
 server_omnisolo = { path = "../../src/server/omnisolo" }
 async-trait = "0.1"
 tower = { version = "0.5", features = ["util"] }

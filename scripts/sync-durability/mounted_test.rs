@@ -218,3 +218,111 @@ async fn mounted_terminal_rejects_forged_headers_without_verified_extension() {
         StatusCode::UNAUTHORIZED
     );
 }
+
+#[tokio::test]
+async fn pos_reads_reject_forged_tenant_headers_without_verified_claims() {
+    let app = crate::pos_read::router(std::sync::Arc::new(crate::Hub));
+    for route in ["/api/v1/pos/orders", "/api/v1/pos/inventory"] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::get(route)
+                    .header("x-tenant-id", "tenant-a")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires OHC_SYNC_TEST_DATABASE_URL"]
+async fn authenticated_pos_reads_supply_exact_observed_state_for_durable_sync() {
+    let (pool, store) = fixture().await;
+    sqlx::raw_sql("CREATE TABLE users(id TEXT,tenant_id TEXT,username TEXT,email TEXT,password_hash TEXT,roles TEXT[],active BOOL,oidc_subject TEXT,created_at TIMESTAMPTZ,updated_at TIMESTAMPTZ);CREATE TABLE customers(id TEXT,tenant_id TEXT,name TEXT);
+    ALTER TABLE products ADD COLUMN title TEXT,ADD COLUMN description TEXT,ADD COLUMN price_cents BIGINT DEFAULT 100,ADD COLUMN currency TEXT DEFAULT 'USD',ADD COLUMN is_subscribable BOOL DEFAULT false,ADD COLUMN subscription_discount_percent INTEGER DEFAULT 0,ADD COLUMN subscription_frequency TEXT;
+    ALTER TABLE orders ADD COLUMN created_at TIMESTAMPTZ DEFAULT now(),ADD COLUMN translated_notes TEXT;
+    INSERT INTO users VALUES('owner','tenant-a','owner','owner@example.test','',ARRAY['ADMIN'],true,NULL,now(),now());
+    INSERT INTO customers VALUES('same','tenant-a','Owned customer'),('same','tenant-b','Private customer');
+    INSERT INTO products(id,tenant_id,title,is_sold_out,updated_at) VALUES('p','tenant-a','Owned',true,'2026-10-01T01:02:03.123456Z'),('foreign','tenant-b','Private',false,'2026-10-01T01:02:03.987654Z'),('unknown','tenant-a','Unknown token',false,NULL);
+    INSERT INTO orders(id,tenant_id,customer_id,total_amount,status,updated_at) VALUES('o','tenant-a','same',1,'pending','2026-10-01T01:02:03.654321Z'),('foreign-o','tenant-b','same',2,'pending',now());").execute(&pool).await.unwrap();
+    crate::db::set_pool(pool.clone());
+    let token = store.issue_token(&user(Some("tenant-a"))).unwrap();
+    let store = std::sync::Arc::new(store);
+    let app = crate::pos_read::router(std::sync::Arc::new(crate::Hub)).layer(
+        axum::middleware::from_fn_with_state(store, server_auth::strict_bearer_auth_middleware),
+    );
+    async fn get(app: &Router, route: &str, token: &str) -> serde_json::Value {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::get(route)
+                    .header("authorization", format!("Bearer {token}"))
+                    .header("x-tenant-id", "tenant-b")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        serde_json::from_slice(
+            &axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap(),
+        )
+        .unwrap()
+    }
+    let inventory = get(&app, "/api/v1/pos/inventory", &token).await;
+    let products = inventory["inventory"].as_array().unwrap();
+    assert_eq!(products.len(), 2);
+    let product = products.iter().find(|p| p["id"] == "p").unwrap();
+    assert_eq!(
+        product["is_sold_out"], true,
+        "stored sold-out state must reach the queue producer"
+    );
+    assert_eq!(product["updated_at"], "2026-10-01T01:02:03.123456+00:00");
+    let unknown = products.iter().find(|p| p["id"] == "unknown").unwrap();
+    assert!(
+        unknown["updated_at"].is_null(),
+        "missing token cannot be manufactured"
+    );
+    let order_response = get(&app, "/api/v1/pos/orders", &token).await;
+    let orders = order_response["orders"].as_array().unwrap();
+    assert_eq!(orders.len(), 1);
+    assert_eq!(orders[0]["customer_name"], "Owned customer");
+    assert_eq!(orders[0]["status"], "pending");
+    assert_eq!(orders[0]["updated_at"], "2026-10-01T01:02:03.654321+00:00");
+    let events = serde_json::json!({"events":[
+      {"id":"pos-product","entity_type":"product","entity_id":"p","action_type":"ToggleSoldOut","base_version":0,"payload":{"is_sold_out":false,"expected_is_sold_out":product["is_sold_out"],"expected_updated_at":product["updated_at"]}},
+      {"id":"pos-order","entity_type":"order","entity_id":"o","action_type":"UpdateStatus","base_version":0,"payload":{"status":"ready","expected_status":orders[0]["status"],"expected_updated_at":orders[0]["updated_at"]}}
+    ]});
+    let response = request(
+        &router(pool.clone()),
+        "/api/v1/sync/events",
+        Some(&token),
+        events,
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let outcome: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        outcome["applied_count"], 2,
+        "both actions must use the actual observed row tokens: {outcome}"
+    );
+    assert!(
+        outcome["outcomes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["status"] == "acknowledged")
+    );
+    let foreign:(bool,String)=sqlx::query_as("SELECT p.is_sold_out,o.status FROM products p,orders o WHERE p.id='foreign' AND o.id='foreign-o'").fetch_one(&pool).await.unwrap();
+    assert_eq!(foreign, (false, "pending".to_owned()));
+}

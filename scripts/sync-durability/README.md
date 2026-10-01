@@ -54,3 +54,21 @@ terminal, amount, currency and parsed payload. The current non-cryptographic
 is excluded from semantic identity, and the original stored signature is never
 rewritten. No cryptographic device attestation is claimed. Non-USD offline card
 transactions are held because the existing downstream worker only supports USD.
+
+
+## POS read-to-sync preconditions
+
+The gate also extracts the complete POS order reader and inventory GET handler,
+their signed-tenant helper, and the original SQLite order-query regression. Its
+HTTP fixture uses the actual strict bearer middleware and PostgreSQL user store.
+It reads microsecond row timestamps and stored sold-out state through the real
+GET responses, then uses those exact fields to obtain committed product/order
+sync acknowledgements while a forged tenant header cannot select another tenant.
+A missing timestamp remains null; no version or row token is invented.
+
+The POS orders path uses the actual in-process HybridCache with no Redis client.
+The database-selection adapter supplies the disposable PostgreSQL pool; the
+unchanged MySQL branch is compiled but is not exercised. This does not certify
+MySQL or SQLite HTTP execution, the full outer router, or the Kitchen browser
+journey. All pre-existing sync tests remain selected by run.sh and the existing
+mandatory PostgreSQL CI step.
