@@ -401,7 +401,8 @@ export default function Dashboard() {
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-sm text-gray-500 dark:text-gray-400">Total Balance</span>
-          <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">$1,500.00 USD</span>
+          <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">Balance unavailable</span>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Recorded activity does not establish an available balance across accounts or currencies.</p>
         </div>
       </div>
       <AIFeaturePaywallWidget />

@@ -13,7 +13,7 @@ export default function AgentChatPage() {
     {
       id: "intro",
       sender: "assistant",
-      text: "Hello! I am your AI Accountant. How can I help you with your ledger or finances today?",
+      text: "Review recorded entries using the ledger statement. This page does not verify balances or payment settlement.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -28,9 +28,9 @@ export default function AgentChatPage() {
       text: trimmed,
     };
 
-    let reply = "I can assist you with your ledger questions. Feel free to ask about your balance.";
+    let reply = "You can review recorded activity in the ledger statement. Automated accounting answers are unavailable on this page.";
     if (trimmed.toLowerCase().includes("balance")) {
-      reply = "Your current verified ledger balance is 1500.00 USD across all active operating accounts.";
+      reply = "A verified balance is unavailable here. Review individual entries by currency in the ledger statement; they do not establish a spendable total.";
     }
 
     const assistantMsg: ChatMessage = {
@@ -50,9 +50,10 @@ export default function AgentChatPage() {
           Agent Accountant Chat
         </h1>
         <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-          Online
+          Read-only
         </span>
       </div>
+      <a href="/dashboard/ledger" className="mb-4 text-sm font-semibold text-blue-600 underline">View ledger statement</a>
 
       <div className="flex-1 overflow-y-auto space-y-4 pr-2">
         {messages.map((msg) => (

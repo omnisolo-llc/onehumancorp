@@ -209,7 +209,7 @@ pub async fn get_entries(
     if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
         let rows = sqlx::query(
             "SELECT e.entry_id, e.tx_id, e.account_id, e.amount, e.direction,
-                    COALESCE(t.currency, 'USD') AS currency,
+                    t.currency,
                     DATE_FORMAT(e.created_at, '%Y-%m-%dT%H:%i:%sZ') AS created_at
              FROM ledger_entries e
              LEFT JOIN ledger_transactions t ON t.tenant_id = e.tenant_id AND t.tx_id = e.tx_id
@@ -220,23 +220,31 @@ pub async fn get_entries(
         .await;
         return match rows {
             Ok(rows) => {
-                let entries = rows
+                let entries: Result<Vec<LedgerEntryResponse>, sqlx::Error> = rows
                     .into_iter()
-                    .filter_map(|row| {
-                        let direction: String = row.try_get("direction").ok()?;
-                        Some(LedgerEntryResponse {
-                            id: row.try_get("entry_id").ok()?,
-                            transaction_id: row.try_get("tx_id").ok()?,
-                            account_id: row.try_get("account_id").ok()?,
-                            amount: row.try_get("amount").ok()?,
-                            currency: row.try_get("currency").ok()?,
+                    .map(|row| {
+                        let direction: String = row.try_get("direction")?;
+                        Ok(LedgerEntryResponse {
+                            id: row.try_get("entry_id")?,
+                            transaction_id: row.try_get("tx_id")?,
+                            account_id: row.try_get("account_id")?,
+                            amount: row.try_get("amount")?,
+                            currency: row.try_get("currency")?,
                             entry_type: direction.to_lowercase(),
                             direction: direction.to_lowercase(),
-                            created_at: row.try_get("created_at").ok()?,
+                            created_at: row.try_get("created_at")?,
                         })
                     })
                     .collect();
-                (StatusCode::OK, Json(LedgerEntriesResponse { entries })).into_response()
+                match entries {
+                    Ok(entries) => {
+                        (StatusCode::OK, Json(LedgerEntriesResponse { entries })).into_response()
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to decode ledger entries: {error}");
+                        StatusCode::SERVICE_UNAVAILABLE.into_response()
+                    }
+                }
             }
             Err(error) => {
                 tracing::error!("Failed to read MySQL ledger entries: {error}");
@@ -245,36 +253,51 @@ pub async fn get_entries(
         };
     }
 
-    let rows = sqlx::query(
-        "SELECT e.entry_id, e.tx_id, e.account_id, e.amount, e.direction,
-                COALESCE(t.currency, 'USD') AS currency,
+    let rows = async {
+        let mut tx = crate::db::get_pool().begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+        let rows = sqlx::query(
+            "SELECT e.entry_id, e.tx_id, e.account_id, e.amount, e.direction,
+                t.currency,
                 to_char(e.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS created_at
          FROM ledger_entries e
          LEFT JOIN ledger_transactions t ON t.tenant_id = e.tenant_id AND t.tx_id = e.tx_id
          WHERE e.tenant_id = $1 ORDER BY e.created_at DESC",
-    )
-    .bind(&tenant_id)
-    .fetch_all(&crate::db::get_pool())
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok::<_, sqlx::Error>(rows)
+    }
     .await;
     match rows {
         Ok(rows) => {
-            let entries = rows
+            let entries: Result<Vec<LedgerEntryResponse>, sqlx::Error> = rows
                 .into_iter()
-                .filter_map(|row| {
-                    let direction: String = row.try_get("direction").ok()?;
-                    Some(LedgerEntryResponse {
-                        id: row.try_get("entry_id").ok()?,
-                        transaction_id: row.try_get("tx_id").ok()?,
-                        account_id: row.try_get("account_id").ok()?,
-                        amount: row.try_get("amount").ok()?,
-                        currency: row.try_get("currency").ok()?,
+                .map(|row| {
+                    let direction: String = row.try_get("direction")?;
+                    Ok(LedgerEntryResponse {
+                        id: row.try_get("entry_id")?,
+                        transaction_id: row.try_get("tx_id")?,
+                        account_id: row.try_get("account_id")?,
+                        amount: row.try_get("amount")?,
+                        currency: row.try_get("currency")?,
                         entry_type: direction.to_lowercase(),
                         direction: direction.to_lowercase(),
-                        created_at: row.try_get("created_at").ok()?,
+                        created_at: row.try_get("created_at")?,
                     })
                 })
                 .collect();
-            (StatusCode::OK, Json(LedgerEntriesResponse { entries })).into_response()
+            match entries {
+                Ok(entries) => {
+                    (StatusCode::OK, Json(LedgerEntriesResponse { entries })).into_response()
+                }
+                Err(error) => {
+                    tracing::error!("Failed to decode ledger entries: {error}");
+                    StatusCode::SERVICE_UNAVAILABLE.into_response()
+                }
+            }
         }
         Err(error) => {
             tracing::error!("Failed to read PostgreSQL ledger entries: {error}");

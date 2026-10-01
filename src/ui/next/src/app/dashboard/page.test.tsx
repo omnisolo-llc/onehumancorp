@@ -1,5 +1,5 @@
 import { TooltipProvider } from '../../components/TooltipRegistry';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import Dashboard from './page';
 import { expect, test, vi } from 'vitest';
 
@@ -109,6 +109,15 @@ test('does not request dashboard APIs that have no server contract', async () =>
   expect(requestedUrls).not.toContain('/api/v1/ledger/accounts');
   expect(requestedUrls).not.toContain('/api/v1/user/usage');
   expect(requestedUrls).not.toContain('/api/v1/mesh/v2/collective?action=getNearby');
+}, 30000);
+
+test('financial summary never invents an available balance', async () => {
+  global.fetch = vi.fn(async () => Response.json({}));
+  await act(async () => { render(<TooltipProvider><Dashboard /></TooltipProvider>); });
+  const card = within(screen.getByTestId('dashboard-financials-card'));
+  expect(card.queryByText('$1,500.00 USD')).toBeNull();
+  expect(card.getByText('Balance unavailable')).toBeVisible();
+  expect(card.getByRole('link', { name: 'Recent Activity' })).toHaveAttribute('href', '/dashboard/ledger');
 }, 30000);
 
 
