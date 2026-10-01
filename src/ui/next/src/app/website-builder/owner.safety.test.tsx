@@ -147,3 +147,46 @@ it('preserves a local website draft when the remote restore is unavailable',asyn
  vi.mocked(fetch).mockImplementation(async url=>String(url).endsWith('/session-identity')?Response.json({...owner,expiresAt:Date.now()+60_000}):Response.json({error:'unavailable'},{status:500}));
  render(<WebsiteBuilderPage/>);expect(await screen.findByDisplayValue('Local latest')).toBeVisible();
 });
+
+it('uses the shared product surface for the website setup canvas',async()=>{
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');expect(document.getElementById('setup-screen')).toHaveClass('app-panel');
+});
+it('provides a shared surface while verifying the builder session',async()=>{
+ vi.mocked(fetch).mockImplementation(()=>new Promise(()=>{}));render(<WebsiteBuilderPage/>);expect(screen.getByRole('status')).toHaveClass('app-panel');
+});
+it('copies only the displayed real site link and reports the completed clipboard operation',async()=>{
+ const writeText=vi.fn(async()=>{});const browserNavigator=navigator;vi.stubGlobal('navigator',new Proxy(browserNavigator,{get(target,key){return key==='clipboard'?{writeText}:Reflect.get(target,key,target);}}));
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'live',liveUrl:'https://example.com/recorded-site'}));
+ fireEvent.click(screen.getByRole('button',{name:/Copy/}));await waitFor(()=>expect(writeText).toHaveBeenCalledWith('https://example.com/recorded-site'));
+ expect(await screen.findByText('Link copied.')).toBeVisible();
+});
+it('does not offer a working Copy control when no site URL was acknowledged',async()=>{
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'live',liveUrl:''}));
+ expect(screen.getByRole('button',{name:/Copy/})).toBeDisabled();
+});
+it('shows clipboard denial without claiming a copied link',async()=>{
+ const writeText=vi.fn(async()=>{throw new Error('denied');});const browserNavigator=navigator;vi.stubGlobal('navigator',new Proxy(browserNavigator,{get(target,key){return key==='clipboard'?{writeText}:Reflect.get(target,key,target);}}));
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'live',liveUrl:'https://example.com/recorded-site'}));
+ fireEvent.click(screen.getByRole('button',{name:/Copy/}));expect(await screen.findByText(/could not copy/i)).toBeVisible();expect(screen.queryByText('Link copied.')).toBeNull();
+});
+it('does not offer to copy an executable or invented relative site URL',async()=>{
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');
+ for(const liveUrl of ['javascript:alert(1)','/bio/myshop']){act(()=>useWebsiteBuilderStore.setState({status:'live',liveUrl}));expect(screen.getByRole('button',{name:/Copy/})).toBeDisabled();}
+});
+it('keeps the latest same-URL clipboard result when duplicate requests finish out of order',async()=>{
+ const calls:Array<{resolve:()=>void;reject:(error:Error)=>void}>=[];const writeText=vi.fn(()=>new Promise<void>((resolve,reject)=>calls.push({resolve,reject})));const browserNavigator=navigator;vi.stubGlobal('navigator',new Proxy(browserNavigator,{get(target,key){return key==='clipboard'?{writeText}:Reflect.get(target,key,target);}}));
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'live',liveUrl:'https://example.com/recorded-site'}));
+ fireEvent.click(screen.getByRole('button',{name:/Copy/}));fireEvent.click(screen.getByRole('button',{name:/Copy/}));expect(calls).toHaveLength(2);
+ await act(async()=>calls[1].resolve());expect(screen.getByText('Link copied.')).toBeVisible();await act(async()=>calls[0].reject(new Error('older denied')));
+ expect(screen.getByText('Link copied.')).toBeVisible();expect(screen.queryByText(/Could not copy/)).toBeNull();
+});
+it('does not apply clipboard feedback after the displayed URL changes',async()=>{
+ let resolve!:()=>void;const writeText=vi.fn(()=>new Promise<void>(done=>{resolve=done;}));const browserNavigator=navigator;vi.stubGlobal('navigator',new Proxy(browserNavigator,{get(target,key){return key==='clipboard'?{writeText}:Reflect.get(target,key,target);}}));
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'live',liveUrl:'https://example.com/first'}));fireEvent.click(screen.getByRole('button',{name:/Copy/}));
+ act(()=>useWebsiteBuilderStore.setState({liveUrl:'https://example.com/second'}));await act(async()=>resolve());expect(screen.queryByText('Link copied.')).toBeNull();expect(screen.getByText('https://example.com/second')).toBeVisible();
+});
+it('does not revive clipboard feedback after the builder unmounts and reopens',async()=>{
+ let resolve!:()=>void;const writeText=vi.fn(()=>new Promise<void>(done=>{resolve=done;}));const browserNavigator=navigator;vi.stubGlobal('navigator',new Proxy(browserNavigator,{get(target,key){return key==='clipboard'?{writeText}:Reflect.get(target,key,target);}}));
+ const first=render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'live',liveUrl:'https://example.com/first'}));fireEvent.click(screen.getByRole('button',{name:/Copy/}));first.unmount();
+ render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');await act(async()=>resolve());expect(screen.queryByText('Link copied.')).toBeNull();expect(writeText).toHaveBeenCalledOnce();
+});

@@ -43,3 +43,9 @@ it('does not revive a protected preparation from a held response body after page
  await act(async()=>close());
  expect(screen.queryByText('Old private catalog: 1.00')).toBeNull();expect(screen.queryByRole('button',{name:/Launch My Store/i})).toBeNull();
 });
+
+it('gives the icon-only chat submit button a stable accessible purpose',async()=>{
+ render(<Page/>);await screen.findByPlaceholderText(/e.g. I am a home baker/);
+ const send=screen.getByRole('button',{name:'Send message'});expect(send).toBeDisabled();
+ fireEvent.change(screen.getByPlaceholderText(/e.g. I am a home baker/),{target:{value:'Describe my studio'}});expect(send).toBeEnabled();
+});

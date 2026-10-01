@@ -4,6 +4,13 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
     // Navigate to the setup route
     await page.goto('/setup.html');
+    const identityResponse = await page.request.get('/api/v1/auth/session-identity');
+    expect(identityResponse.status()).toBe(200);
+    const identity = await identityResponse.json();
+    expect(typeof identity.userId).toBe('string');
+    expect(identity.userId.length).toBeGreaterThan(0);
+    expect(typeof identity.tenantId).toBe('string');
+    expect(identity.tenantId.length).toBeGreaterThan(0);
 
     // Make sure we're on a mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
@@ -25,9 +32,28 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const approval = page.locator('#step-approval');
     await expect(approval.getByRole('heading', { name: 'Ready to Launch' })).toBeVisible({ timeout: 45000 });
     await expect(approval.locator('#approval-details')).not.toBeEmpty();
-    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start') && response.request().method() === 'POST');
-    await approval.getByRole('button', { name: 'Approve & Publish' }).click();
-    expect((await launch).status()).toBe(200);
+    const preparation = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start') && response.request().method() === 'POST');
+    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/launch') && response.request().method() === 'POST');
+    await approval.getByRole('button', { name: 'Approve & Complete Setup' }).click();
+    const preparedResponse = await preparation;
+    expect(preparedResponse.status()).toBe(200);
+    const prepared = await preparedResponse.json();
+    expect(prepared.success).toBe(true);
+    expect(typeof prepared.preparation_id).toBe('string');
+    expect(prepared.preparation_id.length).toBeGreaterThan(0);
+    expect(typeof prepared.organization_id).toBe('string');
+    expect(prepared.organization_id.length).toBeGreaterThan(0);
+    expect(typeof prepared.user_id).toBe('string');
+    expect(prepared.user_id.length).toBeGreaterThan(0);
+    expect(prepared.organization_id).toBe(identity.tenantId);
+    expect(prepared.user_id).toBe(identity.userId);
+    const launchedResponse = await launch;
+    expect(launchedResponse.status()).toBe(200);
+    const launched = await launchedResponse.json();
+    expect(launched).toMatchObject({ success: true, status: 'launched', preparation_id: prepared.preparation_id, organization_id: prepared.organization_id, user_id: prepared.user_id });
+    const stateResponse = await page.request.get('/api/v1/onboarding/state');
+    expect(stateResponse.status()).toBe(200);
+    expect((await stateResponse.json()).preparation).toMatchObject({ preparation_id: prepared.preparation_id, status: 'launched', organization_id: prepared.organization_id, user_id: prepared.user_id });
     await expect(page).toHaveURL(/\/dashboard(?:\.html)?$/, { timeout: 60000 });
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 

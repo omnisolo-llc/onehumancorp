@@ -199,3 +199,10 @@ it.each([false,true])('holds a local-only second-tab revision changed during rem
  await act(async()=>resolve(Response.json({step:1,businessName:'Older remote A'})));
  expect(localStorage.getItem(key)).toBe(newer);expect(await screen.findByRole('alert')).toHaveTextContent(/draft changed in another view/i);expect(screen.queryByDisplayValue('Cached A')).toBeNull();
 });
+
+it('connects reviewed product fields to stable accessible labels',async()=>{
+ render(<Page/>);await screen.findByPlaceholderText(/Maya's Custom Cakes/);
+ act(()=>useOnboardingStore.getState().updateState({step:2,firstProductName:'Reviewed service',firstProductPrice:'45.00'}));
+ expect(screen.getByRole('textbox',{name:/^First Product$/})).toHaveValue('Reviewed service');
+ expect(screen.getByRole('textbox',{name:/^Price$/})).toHaveValue('45.00');
+});

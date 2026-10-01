@@ -39,6 +39,7 @@ export default function WebsiteBuilderPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
   const [sessionError, setSessionError] = useState('');
   const [heldLegacy, setHeldLegacy] = useState(false);
@@ -47,6 +48,7 @@ export default function WebsiteBuilderPage() {
   const [viewScope, setViewScope] = useState<BuilderScope | null>(null);
   const operationEpoch = useRef(0);
   const draftEpoch = useRef(0);
+  const copyAttempt = useRef(0);
   const lastSavedDetails = useRef<string | null>(null);
   const savedWriteVersion = useRef<string | null>(null);
   const savingDraft = useRef(false);
@@ -75,6 +77,20 @@ export default function WebsiteBuilderPage() {
       setSaveMessage('Setup details saved. Layout drafts remain on this device.');
     });
     if (!response.ok) throw new Error('Setup details were not saved. Your local draft remains held.');
+  };
+  const copyTarget = (() => {
+    try { const url = new URL(liveUrl); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : null; }
+    catch { return null; }
+  })();
+  useEffect(() => { copyAttempt.current += 1; setCopyMessage(''); }, [liveUrl]);
+  const copySiteLink = async () => {
+    const current = viewScope; const target = copyTarget; const original = liveUrl;
+    if (!builderScopeActive(current) || !target) return;
+    const attempt = ++copyAttempt.current;
+    const active = () => attempt === copyAttempt.current && builderScopeActive(current) && useWebsiteBuilderStore.getState().liveUrl === original;
+    setCopyMessage('');
+    try { await navigator.clipboard.writeText(target); if (active()) setCopyMessage('Link copied.'); }
+    catch { if (active()) setCopyMessage('Could not copy the link. You can select and copy the displayed URL.'); }
   };
   const handleSaveDraft = async () => {
     if (savingDraft.current) return;
@@ -125,13 +141,13 @@ export default function WebsiteBuilderPage() {
       } catch (error) { if (!disposed && version === loadVersion) setSessionError(error instanceof Error ? error.message : 'Verify your session before using the builder.'); }
     };
     const unsubscribe = subscribeOnboardingInvalidation(restart => {
-      loadVersion += 1; operationEpoch.current += 1; draftEpoch.current += 1; releaseEditor(); scope.current = null; setViewScope(null); savingDraft.current = false; actionBusy.current = false;
+      loadVersion += 1; operationEpoch.current += 1; draftEpoch.current += 1; copyAttempt.current += 1; releaseEditor(); scope.current = null; setViewScope(null); savingDraft.current = false; actionBusy.current = false;
       lastSavedDetails.current = null; savedWriteVersion.current = null;
-      setSelectedBlockIndex(null); setDraggedIndex(null); setSaveMessage(''); setSaving(false); setIsLoaded(false);
+      setSelectedBlockIndex(null); setDraggedIndex(null); setSaveMessage(''); setCopyMessage(''); setSaving(false); setIsLoaded(false);
       if (restart) void load(); else setSessionError('Your session could not be verified. Your saved draft remains held.');
     });
     void load();
-    return () => { disposed = true; loadVersion += 1; operationEpoch.current += 1; draftEpoch.current += 1; releaseEditor(); unsubscribe(); };
+    return () => { disposed = true; loadVersion += 1; operationEpoch.current += 1; draftEpoch.current += 1; copyAttempt.current += 1; releaseEditor(); unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -211,8 +227,8 @@ export default function WebsiteBuilderPage() {
     finally { if (active()) actionBusy.current = false; }
   };
 
-  if (sessionError) return <div role="alert">{sessionError}</div>;
-  if (!isLoaded) return <div role="status">Verifying your builder session…</div>;
+  if (sessionError) return <div className="app-panel p-4" role="alert">{sessionError}</div>;
+  if (!isLoaded) return <div className="app-panel p-4" role="status">Verifying your builder session…</div>;
 
   if (status === "idle") {
     const handleBack = () => {
@@ -238,7 +254,7 @@ export default function WebsiteBuilderPage() {
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
 
-        <div id="setup-screen" className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden translucent-glass-light dark:translucent-glass-dark">
+        <div id="setup-screen" className="app-panel w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden translucent-glass-light dark:translucent-glass-dark">
 
           <div className="px-8 pb-8 pt-8 flex flex-col flex-1 justify-start overflow-y-auto relative">
             {wizardStep !== 0 && (
@@ -562,7 +578,7 @@ export default function WebsiteBuilderPage() {
   if (status === "generating") {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden justify-center items-center translucent-glass-light dark:translucent-glass-dark">
+        <div className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden justify-center items-center translucent-glass-light dark:translucent-glass-dark">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0066FF] mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
         </div>
@@ -573,7 +589,7 @@ export default function WebsiteBuilderPage() {
   if (status === "live") {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden text-center p-8 justify-center translucent-glass-light dark:translucent-glass-dark">
+        <div className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden text-center p-8 justify-center translucent-glass-light dark:translucent-glass-dark">
           <div className="w-16 h-16 bg-[#34C759]/10 text-[#34C759] rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
@@ -582,10 +598,11 @@ export default function WebsiteBuilderPage() {
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">You're set up! Here's what to do next:</p>
 
           <div className="w-full translucent-glass-light dark:translucent-glass-dark p-3 mb-6 flex items-center justify-between">
-            <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]">Copy</button>
+            <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{copyTarget || 'A site URL is not available yet.'}</span>
+            <button type="button" disabled={!copyTarget} onClick={() => { void copySiteLink(); }} className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50">Copy</button>
           </div>
 
+          {copyMessage && <p role="status">{copyMessage}</p>}
           <button
             className="w-full bg-[#0066FF] text-white font-bold p-4 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-[#005bb5] rounded-[8px]"
             onClick={() => router.push('/dashboard')}
@@ -599,7 +616,7 @@ export default function WebsiteBuilderPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden translucent-glass-light dark:translucent-glass-dark">
+      <div className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden translucent-glass-light dark:translucent-glass-dark">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-[30px] saturate-[210%] text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>

@@ -15,7 +15,7 @@ test.describe('Onboarding flows', () => {
     await input.fill('I sell custom sneakers in New York.');
 
     // 4. Submit the form
-    const submitBtn = page.getByTestId('generate-storefront-btn'); // Fallback regex in case button name differs
+    const submitBtn = page.getByRole('button', { name: 'Send message', exact: true });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 

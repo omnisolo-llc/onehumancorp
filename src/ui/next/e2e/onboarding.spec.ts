@@ -33,8 +33,7 @@ test.describe('Onboarding Flow E2E', () => {
     await expect(page.getByText('Where are you located?')).toBeVisible();
     await page.fill('input[placeholder="e.g. Portland, OR"]', 'San Francisco, CA');
 
-    // We expect a short loading process while it talks to the "backend" intake API
-    // The intake API is mocked or local, but we just click Generate.
+    // The real intake endpoint prepares the review after the entered details.
     await page.click('text=Next');
 
     await expect(page.getByText('Who is your target audience?')).toBeVisible();
@@ -48,8 +47,8 @@ test.describe('Onboarding Flow E2E', () => {
     await expect(page.locator('input[type="text"]').first()).toBeVisible();
 
     // Ensure First Product is filled before continuing
-    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Vegan Birthday Cake');
-    await page.fill('input[placeholder="e.g. 50.00"]', '45.00');
+    await page.getByRole('textbox', { name: 'First Product', exact: true }).fill('Vegan Birthday Cake');
+    await page.getByRole('textbox', { name: 'Price', exact: true }).fill('45.00');
 
     // Click Continue
     await page.click('text=Continue');

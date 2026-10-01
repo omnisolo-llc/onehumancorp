@@ -1674,12 +1674,13 @@ export default function OnboardingWizard() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                    <label htmlFor="review-first-product-name" className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                       First Product
                     </label>
                     <input
                       type="text"
                       autoCapitalize="words"
+                      id="review-first-product-name"
                       value={firstProductName}
                       onChange={(e) =>
                         updateState({ firstProductName: e.target.value })
@@ -1688,12 +1689,13 @@ export default function OnboardingWizard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                    <label htmlFor="review-first-product-price" className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                       Price
                     </label>
                     <input
                       type="text"
                       inputMode="decimal"
+                      id="review-first-product-price"
                       value={firstProductPrice}
                       onChange={(e) => {
                         updateState({ firstProductPrice: e.target.value });

@@ -279,6 +279,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
           <button
             id="generate-storefront-btn"
             data-testid="generate-storefront-btn"
+            aria-label="Send message"
             type="submit"
             disabled={!input.trim() || isLoading || isProvisioning}
             className="absolute right-1 top-1.5 w-auto px-4 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-[8px] transition-colors"
