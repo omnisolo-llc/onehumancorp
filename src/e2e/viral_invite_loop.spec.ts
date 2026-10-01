@@ -15,7 +15,7 @@ test.describe('Viral Invite Loop on Team Page', () => {
 
     // Check if the growth component is visible
     await expect(page.getByRole('heading', { name: 'Grow Your Team' })).toBeVisible();
-    await expect(page.getByText(/Bridge your local sovereignty with cloud-native collaboration/)).toBeVisible();
+    await expect(page.getByText('Create an invitation link for your verified account. Creating a link does not send it or confirm that anyone has joined.')).toBeVisible();
 
     // Click the invite button
     const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/growth/cloud-bridge/invite' && response.request().method() === 'POST');
