@@ -2546,6 +2546,16 @@
       </div>
     </div>
     <script>
+      // Successful OIDC returns invalidate older views before restoring this draft.
+      // This one-use marker is an invalidation signal, never session authority.
+      const authCompletion = new URL(window.location.href);
+      if (authCompletion.searchParams.get('ohc_auth_complete') === '1') {
+        authCompletion.searchParams.delete('ohc_auth_complete');
+        window.history.replaceState(window.history.state, '', authCompletion.pathname + authCompletion.search + authCompletion.hash);
+        try { localStorage.setItem('omnisolo_queue_identity_epoch_v2', crypto.randomUUID()); } catch { /* This document still revalidates its session. */ }
+        window.dispatchEvent(new Event('omnisolo_auth_changed'));
+      }
+
       const container = document.getElementById("form-container") || document.getElementById("setup-screen");
 
       function applyPersona(persona, event) {

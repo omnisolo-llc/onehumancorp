@@ -221,3 +221,20 @@ for(const path of paths)for(const pending of [false,true]){
   }finally{dom.window.close();}
  });
 }
+
+for(const path of paths){
+ test(`${path} consumes a successful OIDC handoff and invalidates other views once`,async()=>{
+  let signals=0;
+  const {dom}=await setup(path,{url:'https://workspace.example/setup.html?ohc_auth_complete=1&tab=review#summary',prepare(window){window.localStorage.setItem('omnisolo_queue_identity_epoch_v2','prior-login');window.addEventListener('omnisolo_auth_changed',()=>signals++);}});
+  try{
+   assert.notEqual(dom.window.localStorage.getItem('omnisolo_queue_identity_epoch_v2'),'prior-login');
+   assert.equal(signals,1);
+   assert.equal(dom.window.location.pathname+dom.window.location.search+dom.window.location.hash,'/setup.html?tab=review#summary');
+  }finally{dom.window.close();}
+ });
+ test(`${path} ordinary setup hydration does not broadcast an account change`,async()=>{
+  let signals=0;
+  const {dom}=await setup(path,{prepare(window){window.localStorage.setItem('omnisolo_queue_identity_epoch_v2','same-login');window.addEventListener('omnisolo_auth_changed',()=>signals++);}});
+  try{assert.equal(signals,0);assert.equal(dom.window.localStorage.getItem('omnisolo_queue_identity_epoch_v2'),'same-login');}finally{dom.window.close();}
+ });
+}
