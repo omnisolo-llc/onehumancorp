@@ -1,9 +1,9 @@
 outcome: no_work
-issue_title: "Architecture: Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Architecture: Native Rust Omnichannel Chat System (Omnichannel Replacement)"
 issue_description: |
   Superpowers skill provenance: None loaded
 
-  The request asks to implement the native Rust omnichannel chat system to replace Chatwoot, including the `chat_inboxes`, `chat_channels`, `chat_contacts`, `chat_conversations`, and `chat_messages` tables with RLS enabled, as well as a gRPC/REST API and frontend components for the unified inbox list and conversation view, and E2E Playwright tests demonstrating an owner reading a drafted AI reply and approving it.
+  The request asks to implement the native Rust omnichannel chat system to replace the legacy system, including the `chat_inboxes`, `chat_channels`, `chat_contacts`, `chat_conversations`, and `chat_messages` tables with RLS enabled, as well as a gRPC/REST API and frontend components for the unified inbox list and conversation view, and E2E Playwright tests demonstrating an owner reading a drafted AI reply and approving it.
 
   Upon investigating the codebase, I verified that this feature is already complete:
   - The PostgreSQL schema with RLS is already implemented in `src/server/migrations/1009_native_omnichannel_chat.sql` and `src/server/migrations/1001_create_omni_inbox_messages_and_quotes_fix.sql`.
