@@ -37,9 +37,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isConfirmedUsableConnection(value: unknown): boolean {
-  if (!isRecord(value) || value.success !== true) return false;
-  if (value.status === "connected" && value.usable === true) return true;
-  return isRecord(value.integration) && value.integration.status === "connected" && value.integration.usable === true;
+  if (!isRecord(value) || value.success !== true || value.error != null) return false;
+  if (value.status !== undefined && value.status !== "connected") return false;
+  if (value.usable !== undefined && value.usable !== true) return false;
+  if (value.integration !== undefined && (!isRecord(value.integration) || (value.integration.success !== undefined && value.integration.success !== true) || value.integration.error != null || value.integration.status !== "connected" || value.integration.usable !== true)) return false;
+  return value.status === "connected" && value.usable === true || isRecord(value.integration);
 }
 
 export default function Integrations() {
@@ -52,11 +54,11 @@ export default function Integrations() {
     async function loadIntegrations() {
       try {
         const res = await fetch("/api/v1/integrations");
-        if (res.ok) {
+        if (res.status === 200) {
           const data = await res.json();
-          if (data && data.success && Array.isArray(data.integrations)) {
+          if (data && data.success === true && data.error == null && Array.isArray(data.integrations)) {
             const connectedIds = data.integrations
-              .filter((i: unknown) => isRecord(i) && typeof i.id === "string" && i.status === "connected" && i.usable === true)
+              .filter((i: unknown) => isRecord(i) && i.error == null && typeof i.id === "string" && i.status === "connected" && i.usable === true)
               .map((i: Record<string, unknown>) => i.id);
 
             setIntegrations(prev => prev.map(integration =>
@@ -109,43 +111,6 @@ export default function Integrations() {
       setStatusMessage("Continue with Meta to connect WhatsApp Cloud API.");
       return;
     }
-    if (id === "ayrshare") {
-      let promptVal: string | null = null;
-      try {
-        if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
-          promptVal = window.prompt("Enter your Ayrshare API key:");
-        }
-      } catch {
-        promptVal = null;
-      }
-      if (typeof promptVal === 'string') {
-        setIntegrations(prev => prev.map(integration =>
-          integration.id === 'ayrshare' ? { ...integration, status: "connected" } : integration
-        ));
-        router.push('/inbox');
-        return;
-      }
-      setStatusMessage("Ayrshare connection is unavailable until secure provider verification is configured.");
-      return;
-    }
-    if (['cal_com', 'resend', 'mercadopago', 'whereby', 'front'].includes(id)) {
-      let promptVal: string | null = null;
-      try {
-        if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
-          promptVal = window.prompt(`Enter your ${integration?.name || id} API key:`);
-        }
-      } catch {
-        promptVal = null;
-      }
-      if (typeof promptVal === 'string') {
-        setIntegrations(prev => prev.map(item =>
-          item.id === id ? { ...item, status: "connected" } : item
-        ));
-        return;
-      }
-      setStatusMessage(`${integration?.name || id} connection is unavailable until secure provider verification is configured.`);
-      return;
-    }
     if (id === 'meta') {
       setShowWhatsAppCloudApiModal(true);
       setStatusMessage("Continue with Meta to connect Facebook and Instagram.");
@@ -155,20 +120,18 @@ export default function Integrations() {
   };
 
   const saveTwilioIntegration = async () => {
-    if (process.env.NODE_ENV === 'test' && (!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean))) {
+    if (!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean)) {
       setStatusMessage('Twilio credentials and at least one channel are required.');
       return;
     }
     try {
-      if (twilioCreds.accountSid.trim() && twilioCreds.authToken.trim()) {
-        const response = await fetch('/api/v1/integrations/twilio/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bot_token: twilioCreds.accountSid.trim(), api_token: twilioCreds.authToken.trim() }),
-        });
-        if (!response.ok) throw new Error('Twilio Conversations connection is unavailable.');
-        if (!isConfirmedUsableConnection(await response.json())) throw new Error('Unconfirmed Twilio connection');
-      }
+      const response = await fetch('/api/v1/integrations/twilio/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bot_token: twilioCreds.accountSid.trim(), api_token: twilioCreds.authToken.trim() }),
+      });
+      if (response.status !== 200) throw new Error('Twilio Conversations connection is unavailable.');
+      if (!isConfirmedUsableConnection(await response.json())) throw new Error('Unconfirmed Twilio connection');
       setTwilioCreds({ accountSid: '', authToken: '' });
       setIntegrations(prev => prev.map(integration =>
         integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
@@ -197,7 +160,7 @@ export default function Integrations() {
         })
       });
 
-      if (!res.ok || !isConfirmedUsableConnection(await res.json())) {
+      if (res.status !== 200 || !isConfirmedUsableConnection(await res.json())) {
         setStatusMessage("Failed to connect Twilio for WhatsApp.");
         return;
       }
@@ -254,7 +217,7 @@ export default function Integrations() {
         });
 
         const result = await res.json();
-        if (!res.ok || !isConfirmedUsableConnection(result)) {
+        if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
           setStatusMessage(result?.status === 'pending_verification'
             ? 'Secure provider verification is unavailable. No WhatsApp connection was established.'
             : "WhatsApp Cloud API connection could not be confirmed.");
@@ -467,7 +430,7 @@ export default function Integrations() {
 
               <button
                 onClick={saveTwilioIntegration}
-                disabled={(process.env.NODE_ENV === 'test' && (!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim())) || !Object.values(twilioChannels).some(Boolean)}
+                disabled={!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean)}
                 className="w-full bg-[#0f766e] hover:bg-[#0d645d] disabled:cursor-not-allowed disabled:opacity-50 text-white py-3 rounded-xl font-bold text-sm shadow-sm transition-colors"
               >
                 Save & Connect
