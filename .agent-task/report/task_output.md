@@ -1,0 +1,2 @@
+issue_title: F05 telemetry not invoice-grade
+issue_description: The current implementation of telemetry and cost reports does not act as an invoice-grade meter. As stated in `docs/research/native_migration_and_remediation.md`, the requirement is to use "Integer micro-unit durable records bind tenant/task/attempt/provider/model/payer/rate revision; duplicate provider receipts cannot be charged twice; customer-direct usage is not debited as managed inference."
