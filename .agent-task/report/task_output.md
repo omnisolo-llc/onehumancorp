@@ -1,0 +1,3 @@
+issue_title: "🎨 Canvas: [blocked no-work finding: F14: economics/owner outcomes]"
+issue_description: "Superpowers skill provenance: Loaded Superpowers revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md). F14 is marked as a blocked / no-work outcome due to missing prerequisites and owner economic/metric data. According to docs/research/native_migration_and_remediation.md: 'F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Blocked'. No actionable UI feature implementation is possible without this evidence."
+outcome: blocked
