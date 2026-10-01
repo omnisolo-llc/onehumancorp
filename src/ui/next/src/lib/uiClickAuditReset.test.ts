@@ -134,3 +134,28 @@ describe('fragment destinations', () => {
     } finally { document.body.innerHTML = ''; }
   });
 });
+
+it('does not let delayed field-edit effects certify an inert submit click', async () => {
+  const { observeClickEffects, hasMeaningfulClickEffect } = await import('../../../../e2e/support/ui_click_audit');
+  document.body.innerHTML = '<form><input type="email"><button>Dead submit</button><output></output></form>';
+  const control = document.querySelector('input')!;
+  const button = document.querySelector('button')!;
+  const inputEffect = vi.fn();
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  document.querySelector('form')!.addEventListener('submit', event => event.preventDefault());
+  control.addEventListener('input', () => {
+    timers.push(setTimeout(() => { inputEffect(); document.querySelector('output')!.textContent = 'Autosaved input'; }, 100));
+  });
+  const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 100, height: 40 } as DOMRect);
+  const target = { evaluate: async (callback: (element: Element, argument?: unknown) => unknown, argument?: unknown) => callback(button, argument),
+    hover: vi.fn(), focus: vi.fn(), click: async () => button.click() };
+  const page = { url: () => window.location.href, evaluate: async (callback: (argument?: unknown) => unknown, argument?: unknown) => callback(argument),
+    waitForTimeout: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)), on: vi.fn(), off: vi.fn() };
+  try {
+    const effect = await observeClickEffects(page as unknown as Page, target as never);
+    expect(hasMeaningfulClickEffect(effect)).toBe(false);
+    expect(inputEffect).not.toHaveBeenCalled();
+    expect(control.value).toBe('');
+    expect(document.querySelector('output')).toHaveTextContent('');
+  } finally { timers.forEach(clearTimeout); bounds.mockRestore(); document.body.innerHTML = ''; }
+});

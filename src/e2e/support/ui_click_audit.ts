@@ -15,32 +15,6 @@ export function hasMeaningfulClickEffect(effect: ClickEffects): boolean {
     || effect.fileChooserSeen || effect.popupSeen || effect.validationSeen || effect.decisionSeen);
 }
 
-// Runs in the browser realm. Use the native setter, not React's instance value
-// tracker: dispatching after assigning control.value otherwise leaves React
-// state empty even though the DOM appears filled.
-export function fillEmptyAuditControls() {
-  for (const control of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')) {
-    const style = window.getComputedStyle(control);
-    const rect = control.getBoundingClientRect();
-    if (style.visibility === 'hidden' || style.display === 'none' || !rect.width || !rect.height
-        || control.disabled || control.readOnly || control.value) continue;
-    let value = 'Audit value';
-    if (control instanceof HTMLInputElement) {
-      if (['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(control.type)) continue;
-      const values: Record<string, string> = {
-        url: 'https://example.test', email: 'ui-audit@example.test', tel: '+15550101000',
-        number: String(Math.max(Number(control.min) || 0, 1)), date: '2026-10-01',
-        'datetime-local': '2026-10-01T12:00', time: '12:00', month: '2026-10', week: '2026-W40',
-      };
-      value = values[control.type] ?? value;
-    }
-    const prototype = control instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
-    Object.getOwnPropertyDescriptor(prototype, 'value')!.set!.call(control, value);
-    control.dispatchEvent(new Event('input', { bubbles: true }));
-    control.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-}
-
 import type { Dialog, Download, ElementHandle, FileChooser, JSHandle, Page, Request } from '@playwright/test';
 
 // Hover help is preparation for a click, not evidence that the click worked.

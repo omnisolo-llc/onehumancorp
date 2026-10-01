@@ -1,5 +1,4 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { fillEmptyAuditControls } from './ui_click_audit';
 
 // A test session is isolated from the suite's shared JWT because the crawler
 // also exercises Log out. All authentication still uses the real login endpoint.
@@ -48,7 +47,15 @@ export function createAuditNavigation(baseURL: string, authenticate: (page: Page
         if (attempt === 0) continue;
         throw new Error(`Audit authentication remained unavailable for ${destination.pathname}`);
       }
-      await page.evaluate(fillEmptyAuditControls);
+      // Initialization may replace its entire shell (including voice controls).
+      // This read-only gate runs only before discovery, never after a click.
+      const ready = await page.waitForFunction(() => !Array.from(document.querySelectorAll('[aria-busy="true"]')).some(element => {
+        const style = getComputedStyle(element);
+        const bounds = element.getBoundingClientRect();
+        return !element.closest('[hidden], [aria-hidden="true"]') && style.visibility !== 'hidden'
+          && style.display !== 'none' && bounds.width > 0 && bounds.height > 0;
+      }), undefined, { timeout: 5000 });
+      await ready.dispose();
       return;
     }
   };

@@ -634,6 +634,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       <div className="triage-tab-container mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           id="tab-proposals"
+          aria-pressed={activeTab === "proposals"}
           onClick={() => setActiveTab("proposals")}
           className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "proposals"
@@ -645,6 +646,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         </button>
         <button
           id="tab-activity"
+          aria-pressed={activeTab === "activity"}
           onClick={() => setActiveTab("activity")}
           className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "activity"

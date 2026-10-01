@@ -9,12 +9,13 @@ function fixture() {
   const request = { get: vi.fn().mockResolvedValue({ status: () => 200 }) };
   const goto = vi.fn(async (url: string) => { current = url; return { status: (): number => 200 }; });
   const fill = vi.fn();
+  const waitForFunction = vi.fn().mockResolvedValue({ dispose: vi.fn() });
   const page = { context: () => context, request, goto, url: () => current,
-    waitForLoadState: vi.fn().mockResolvedValue(undefined), waitForTimeout: vi.fn().mockResolvedValue(undefined), evaluate: fill } as unknown as Page;
+    waitForFunction, waitForLoadState: vi.fn().mockResolvedValue(undefined), waitForTimeout: vi.fn().mockResolvedValue(undefined), evaluate: fill } as unknown as Page;
   const authenticate = vi.fn().mockResolvedValue(undefined);
   const navigate = createAuditNavigation('https://fixture.test', authenticate);
   const emit = (name: string, event: unknown) => listeners.get(name)?.forEach(fn => fn(event));
-  return { page, context, request, goto, fill, authenticate, navigate, emit,
+  return { page, context, request, goto, fill, waitForFunction, authenticate, navigate, emit,
     setUrl: (url: string) => { current = url; } };
 }
 
@@ -29,7 +30,7 @@ describe('read navigation in the isolated audit session', () => {
     expect(f.authenticate).toHaveBeenCalledTimes(1);
     expect(f.request.get).not.toHaveBeenCalled();
     expect(f.goto).toHaveBeenCalledTimes(2);
-    expect(f.fill).toHaveBeenCalledTimes(2);
+    expect(f.fill).not.toHaveBeenCalled();
   });
 
   it('renews after an observed same-origin logout before another route is read', async () => {
@@ -57,7 +58,7 @@ describe('read navigation in the isolated audit session', () => {
     await f.navigate(f.page, '/dashboard');
     expect(f.authenticate).toHaveBeenCalledTimes(2);
     expect(f.goto).toHaveBeenCalledTimes(2);
-    expect(f.fill).toHaveBeenCalledTimes(1);
+    expect(f.fill).not.toHaveBeenCalled();
   });
 
   it('fails visibly after persistent denial instead of auditing an unauthenticated page', async () => {
@@ -75,7 +76,7 @@ describe('read navigation in the isolated audit session', () => {
     await f.navigate(f.page, '/dashboard');
     expect(f.authenticate).toHaveBeenCalledTimes(2);
     expect(f.goto).toHaveBeenCalledTimes(2);
-    expect(f.fill).toHaveBeenCalledTimes(1);
+    expect(f.fill).not.toHaveBeenCalled();
   });
 
   it('renews after a late logout response without trusting another-origin logout', async () => {
@@ -94,7 +95,7 @@ describe('read navigation in the isolated audit session', () => {
     await f.navigate(f.page, '/login');
     expect(f.authenticate).toHaveBeenCalledTimes(1);
     expect(f.goto).toHaveBeenCalledTimes(1);
-    expect(f.fill).toHaveBeenCalledTimes(1);
+    expect(f.fill).not.toHaveBeenCalled();
   });
 
   it('fails after a persistent login redirect and does not fill or click controls', async () => {
@@ -116,4 +117,29 @@ describe('read navigation in the isolated audit session', () => {
     expect(f.goto).toHaveBeenCalledTimes(1);
     expect(f.fill).not.toHaveBeenCalled();
   });
+});
+
+
+it('waits for visible initialization to settle before returning a page for discovery', async () => {
+  const f = fixture();
+  let release!: (handle: { dispose: () => Promise<void> }) => void;
+  f.waitForFunction.mockImplementation(() => new Promise<{ dispose: () => Promise<void> }>(resolve => { release = resolve; }));
+  const complete = vi.fn();
+  const navigating = f.navigate(f.page, '/inbox').then(complete);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  expect(complete).not.toHaveBeenCalled();
+  expect(f.goto).toHaveBeenCalledTimes(1);
+  release({ dispose: async () => undefined }); await navigating;
+  expect(complete).toHaveBeenCalledTimes(1);
+  expect(f.goto).toHaveBeenCalledTimes(1);
+  expect(f.fill).not.toHaveBeenCalled();
+});
+
+it('fails permanent initialization rather than repeating a navigation or user action', async () => {
+  const f = fixture();
+  f.waitForFunction.mockRejectedValue(new Error('initialization did not settle'));
+  await expect(f.navigate(f.page, '/inbox')).rejects.toThrow('initialization did not settle');
+  expect(f.goto).toHaveBeenCalledTimes(1);
+  expect(f.authenticate).toHaveBeenCalledTimes(1);
+  expect(f.fill).not.toHaveBeenCalled();
 });

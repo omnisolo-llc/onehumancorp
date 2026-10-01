@@ -1,10 +1,11 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import InboxPage from './page';
 
 const queryState = vi.hoisted(() => ({
   data: [] as Array<Record<string, string>>,
+  unsupported: false,
 }));
 
 vi.mock('@powersync/react', () => ({
@@ -12,7 +13,7 @@ vi.mock('@powersync/react', () => ({
 }));
 
 vi.mock('../../lib/powersync/PowerSyncProvider', () => ({
-  PowerSyncProvider: ({ children }: { children: React.ReactNode }) => children,
+  PowerSyncProvider: ({ children, unsupportedFallback }: { children: React.ReactNode; unsupportedFallback: React.ReactNode }) => queryState.unsupported ? unsupportedFallback : children,
 }));
 
 vi.mock('../components/AppShell', () => ({
@@ -21,6 +22,7 @@ vi.mock('../components/AppShell', () => ({
 
 beforeEach(() => {
   queryState.data = [];
+  queryState.unsupported = false;
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
@@ -51,4 +53,23 @@ test('renders message markup as text while preserving safe HTTPS media', () => {
     'href',
     'https://cdn.example.test/invoice.pdf',
   );
+});
+
+
+test('marks the actual pending API surface busy until the workspace is committed', async () => {
+  queryState.unsupported = true;
+  let release!: (response: Response) => void;
+  const pending = new Promise<Response>(resolve => { release = resolve; });
+  const oldFetch = global.fetch;
+  global.fetch = vi.fn(async url => String(url) === '/api/v1/ui/omni_inbox' ? pending : Response.json([]));
+  try {
+    const { container } = render(<InboxPage />);
+    const loading = screen.getByText('Loading inbox messages...').closest('[aria-busy="true"]');
+    expect(loading).not.toBeNull();
+    expect(container.querySelector('[data-testid="inbox-settled"]')).toBeNull();
+    await act(async () => { release(Response.json([])); });
+    await waitFor(() => expect(screen.getByText('No inbox messages found for this tenant.')).toBeVisible());
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(container.querySelector('[data-testid="inbox-settled"]')).not.toBeNull();
+  } finally { global.fetch = oldFetch; }
 });

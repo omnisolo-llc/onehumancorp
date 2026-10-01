@@ -557,7 +557,7 @@ function InboxLoadingState() {
       <div className="mb-2 text-xs text-gray-500">
         Loaded from `/api/v1/ui/inbox/messages`.
       </div>
-      <div className="app-panel">
+      <div className="app-panel" aria-busy="true">
         <div className="app-empty">Loading inbox messages...</div>
       </div>
     </AppShell>
