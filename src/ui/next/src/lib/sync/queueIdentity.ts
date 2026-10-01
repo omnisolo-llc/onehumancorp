@@ -5,8 +5,27 @@ let generation = 0;
 let sequence = 0;
 let lastResolved = 0;
 let latestResolvedOwner: QueueOwner | undefined;
+const readinessListeners = new Set<() => void>();
+const pendingVerifications = new Set<number>();
+let readinessExpiry: ReturnType<typeof setTimeout> | undefined;
+/** This reflects the existing cache policy; it never supplies identity or authorizes a write. */
+export function hasVerifiedOfflineQueueOwner(): boolean {
+  try { return !!verified && pendingVerifications.size === 0 && verified.expiresAt > Date.now() && verified.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY); }
+  catch { return false; }
+}
+function publishReadiness(): void {
+  clearTimeout(readinessExpiry);
+  if (readinessListeners.size && verified && verified.expiresAt > Date.now()) {
+    readinessExpiry = setTimeout(publishReadiness, Math.min(verified.expiresAt - Date.now(), 2_147_483_647));
+  }
+  for (const listener of readinessListeners) listener();
+}
+export function subscribeQueueIdentityReadiness(listener: () => void): () => void {
+  readinessListeners.add(listener); publishReadiness();
+  return () => { readinessListeners.delete(listener); if (!readinessListeners.size) clearTimeout(readinessExpiry); };
+}
 export function sameOwner(a: QueueOwner, b: QueueOwner): boolean { return a.userId === b.userId && a.tenantId === b.tenantId; }
-export function invalidateQueueOwner(): void { verified = undefined; latestResolvedOwner = undefined; generation += 1; }
+export function invalidateQueueOwner(): void { verified = undefined; latestResolvedOwner = undefined; generation += 1; pendingVerifications.clear(); publishReadiness(); }
 /** An opaque invalidation signal only. It never grants or supplies identity. */
 export function notifyQueueIdentityChange(): void {
   invalidateQueueOwner();
@@ -29,7 +48,8 @@ export async function readQueueOwner(): Promise<QueueOwner> {
   }
   const epoch = generation;
   const requestNumber = ++sequence;
-  verified = undefined;
+  pendingVerifications.add(requestNumber);
+  verified = undefined; publishReadiness();
   try {
     const response = await fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
     if (!response.ok) throw new Error('Verified queue identity unavailable');
@@ -42,11 +62,11 @@ export async function readQueueOwner(): Promise<QueueOwner> {
     } else {
       lastResolved = requestNumber;
       latestResolvedOwner = owner;
-      verified = { owner, expiresAt: data.expiresAt, storageEpoch };
+      verified = { owner, expiresAt: data.expiresAt, storageEpoch }; publishReadiness();
     }
     return { ...owner };
   } catch (error) {
-    if (epoch === generation && requestNumber >= lastResolved) { lastResolved = requestNumber; latestResolvedOwner = undefined; verified = undefined; }
+    if (epoch === generation && requestNumber >= lastResolved) { lastResolved = requestNumber; latestResolvedOwner = undefined; verified = undefined; publishReadiness(); }
     throw error;
-  }
+  } finally { pendingVerifications.delete(requestNumber); publishReadiness(); }
 }

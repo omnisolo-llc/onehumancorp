@@ -39,6 +39,7 @@ test.describe('Kitchen View - Food Cart Daily Operations', () => {
       const falafelToggle = page.locator(`[id="sold-out-toggle-${falafel}"]`);
       await expect(falafelToggle).toBeVisible();
       await expect(falafelToggle).toContainText('Mark Sold Out');
+      await expect(page.getByTestId('offline-queue-readiness')).toHaveAttribute('data-state', 'ready');
       await context.setOffline(true);
       await falafelToggle.click();
       await expect(falafelToggle).toContainText('Sold Out');

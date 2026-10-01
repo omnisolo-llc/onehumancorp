@@ -1,4 +1,5 @@
 import { expect, test } from '../../../../e2e/fixtures';
+import { db } from '../../../../e2e/db_utils';
 import { seedFeedItem } from '../../../../e2e/feed-fixtures';
 
 test.describe('Unified Agent Feed Interactive Flow', () => {
@@ -38,10 +39,11 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(card).toBeHidden({ timeout: 2000 });
   });
 
-  test('should queue actions optimistically when offline', async ({ page, context }) => {
+  test('should queue actions optimistically when offline', async ({ page, context, adminUser }) => {
     await page.goto('/dashboard');
     const card = page.getByTestId(`triage-card-${itemId}`);
     await expect(card).toBeVisible();
+    await expect(page.getByTestId('offline-queue-readiness')).toHaveAttribute('data-state', 'ready');
     await context.setOffline(true);
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
     await expect(page.getByText('You are offline. Actions will sync when online.')).toBeVisible();
@@ -51,6 +53,11 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
     expect((await synced).status()).toBe(200);
+    await expect(async () => {
+      const rows = await db.query('SELECT lifecycle_state FROM agent_feed_items WHERE id = $1 AND tenant_id = $2', [itemId, adminUser.organizationId]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].lifecycle_state).toBe('APPROVED');
+    }).toPass({ timeout: 15000 });
     await expect(page.getByText('You are offline. Actions will sync when online.')).toBeHidden();
   });
 
