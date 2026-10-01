@@ -1,60 +1,77 @@
-import { test, expect } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { test, expect } from '../fixtures';
+import { e2eDbQuery } from '../db_utils';
+import { createOwnerQuote } from './quote_fixture';
 
-test.describe('Autonomous Booking & Quoting E2E', () => {
-    test('Carlos creates a service and views AI Operations Agent triage', async ({ page }) => {
-        // Go to dashboard
-        await page.goto('/ui/dashboard.html');
-        await expect(page.locator('text=Welcome back')).toBeVisible();
+test.describe('Owner service and quote review', () => {
+  test('creates a service, reviews its persisted quote and saves pricing edits', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'Quick Actions', exact: true }).click();
+    await page.getByRole('link', { name: 'New Service' }).click();
+    await expect(page.getByRole('heading', { name: 'Add Service', exact: true })).toBeVisible();
 
-        // 1. Carlos clicks "Create Service"
-        const createServiceLink = page.locator('a[href="booking-create.html"]');
-        await expect(createServiceLink).toBeVisible();
+    const title = `Sink Repair ${randomUUID()}`;
+    await page.getByLabel('Service Title', { exact: true }).fill(title);
+    await page.getByLabel('Price', { exact: true }).fill('50');
+    await page.getByLabel('Description', { exact: true }).fill('Fix leaky sinks and replace pipes.');
+    const serviceResponsePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === '/api/v1/booking/services'
+      && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Save Service', exact: true }).click();
+    const serviceResponse = await serviceResponsePromise;
+    expect(serviceResponse.ok(), await serviceResponse.text()).toBe(true);
+    const service = await serviceResponse.json();
+    expect(service.success).toBe(true);
+    expect(service.service_id).toMatch(/^[0-9a-f-]{36}$/);
+    await expect(page.getByRole('heading', { name: 'Service Saved!', exact: true })).toBeVisible();
+    const [persistedService] = await e2eDbQuery(
+      'SELECT tenant_id, title, price_cents FROM services WHERE id = $1', [service.service_id],
+    );
+    expect(persistedService).toMatchObject({ tenant_id: adminUser.organizationId, title });
+    expect(Number(persistedService.price_cents)).toBe(5000);
+    await page.getByRole('link', { name: 'Back to dashboard', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 
-        // Pass a tenant for backend auth in UI calls
-        await page.goto('/ui/booking-create.html?tenant=carlos-handyman');
-
-        await expect(page.locator('text=Create a Service')).toBeVisible();
-
-        // Fill out the service form
-        await page.fill('#title', 'Sink Repair');
-        await page.fill('#price', '50');
-        await page.fill('#description', 'Fix leaky sinks and replace pipes.');
-
-        // Wait for potential setup before submitting to let JS initialize
-        await page.waitForTimeout(500);
-
-        // Submit the form
-        await page.click('button[type="submit"]');
-
-        // Wait for success screen
-        await expect(page.locator('text=Service Created!')).toBeVisible({ timeout: 5000 });
-
-        // Go back to the dashboard
-        await page.click('button:has-text("Go to Dashboard")');
-        await expect(page.locator('text=Bookings Dashboard')).toBeVisible();
-
-        // 2. Carlos sees the AI Operations Agent card
-        const aiAgentCard = page.locator('text=Operations Agent');
-        await expect(aiAgentCard).toBeVisible();
-
-        const aiAgentDesc = page.locator('text=Drafted 3 booking replies and scheduled 2 visits for tomorrow.');
-        await expect(aiAgentDesc).toBeVisible();
-
-        // Verify action buttons exist
-        const approveBtn = page.locator('button:has-text("Approve & Send Link")');
-        await expect(approveBtn).toBeVisible();
-
-        const editBtn = page.locator('button:has-text("Edit")');
-        await expect(editBtn).toBeVisible();
-
-        // 3. Verify that the AI quoting engine produces a quote correctly containing a line item tied to the created service_item.
-        // Check for specific verifications to ensure the new AI logic effectively parsed the quote, checking the DOM elements that appear when a quote is successfully parsed and matched with the correct ServiceItem.
-        await page.goto('/ui/quote.html?tenant=carlos-handyman');
-        // Because Carlos created a "Sink Repair" service, the draft quote should contain a line item with that name.
-        await expect(page.locator('text=Sink Repair').first()).toBeVisible({ timeout: 10000 });
-
-        // Assert the glassmorphism UI element
-        const glassmorphismElement = page.locator('.glassmorphism').first();
-        await expect(glassmorphismElement).toBeVisible();
+    // Service creation does not invoke an AI draft or schedule customer visits.
+    // Exercise the existing owner-priced quote API, then the rendered review UI.
+    // AI parsing and usage accounting retain their separate backend tests.
+    const { quoteId, customerId } = await createOwnerQuote(page, adminUser.organizationId, {
+      description: title, serviceId: service.service_id,
     });
+    await page.goto(`/ui/quote.html?id=${quoteId}&mode=owner`);
+    await expect(page.locator('#line-items-container')).toContainText(title);
+    await expect(page.locator('#quote-total')).toHaveText('$50.00');
+    await expect(page.locator('#deposit-amount')).toHaveText('$10.00');
+    await expect(page.getByRole('button', { name: 'Approve quote', exact: true })).toBeVisible();
+    await expect(page.locator('.glassmorphism').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Edit Quote', exact: true }).click();
+    await expect(page.locator('#edit-quote-sheet')).toBeVisible();
+    await page.locator('.edit-price').fill('45');
+    await page.locator('#edit-total-amount').fill('45');
+    await page.locator('#edit-required-deposit').fill('15');
+    const updatePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/v1/quotes/${quoteId}`
+      && response.request().method() === 'PUT');
+    await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
+    const updated = await updatePromise;
+    expect(updated.ok(), await updated.text()).toBe(true);
+    await expect(page.locator('#edit-quote-sheet')).toBeHidden();
+    await page.reload();
+    await expect(page.locator('#quote-total')).toHaveText('$45.00');
+    await expect(page.locator('#deposit-amount')).toHaveText('$15.00');
+    await expect(page.locator('#line-items-container')).toContainText('$45.00');
+
+    const persisted = await page.request.get(`/api/v1/quotes/${quoteId}`);
+    expect(persisted.ok()).toBe(true);
+    expect(await persisted.json()).toMatchObject({
+      quote: {
+        id: quoteId, tenant_id: adminUser.organizationId, customer_id: customerId,
+        service_id: service.service_id, status: 'DRAFT',
+        total_amount_cents: 4500, required_deposit_cents: 1500,
+      },
+      line_items: [{ description: title, unit_price_cents: 4500, quantity: 1 }],
+    });
+  });
 });

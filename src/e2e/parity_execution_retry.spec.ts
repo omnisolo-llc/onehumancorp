@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { test, expect } from '@playwright/test';
 
 test.describe('Agent Jobs DB Sync Parity CUJ', () => {
@@ -45,20 +46,25 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
 
   // Test 4: Delete Task (Database Delete Action)
   test('verify owner can delete a task and handle degradation gracefully', async ({ page }) => {
+    const title = `Delete Me Task ${randomUUID()}`;
     await page.goto('/tasks');
 
     await page.getByRole('button', { name: 'New Task' }).click();
-    await page.getByLabel('Title').fill('Delete Me Task');
+    await page.getByLabel('Title').fill(title);
     await page.getByRole('button', { name: 'Save' }).click();
 
-    await page.locator('text=Delete Me Task').click();
+    await page.locator('#task-list').getByText(title, { exact: true }).click();
+    const deletion = page.waitForResponse(response => new URL(response.url()).pathname.startsWith('/api/v1/staff/tasks/')
+      && response.request().method() === 'DELETE');
     await page.getByRole('button', { name: 'Delete' }).click();
 
-    // UI should reflect successful removal
-    await expect(page.locator('text=Delete Me Task')).not.toBeVisible();
+    const deleted = await deletion;
+    expect(deleted.ok(), await deleted.text()).toBe(true);
+    // Both the selected detail and the list row must be removed after persistence.
+    await expect(page.getByText(title, { exact: true })).toHaveCount(0);
     await page.reload();
     await expect(page.getByText('Loading tasks...', { exact: true })).not.toBeVisible();
-    await expect(page.locator('#task-list').getByText('Delete Me Task', { exact: true })).toHaveCount(0);
+    await expect(page.locator('#task-list').getByText(title, { exact: true })).toHaveCount(0);
   });
 
   // Test 5: Verify task list rendering
