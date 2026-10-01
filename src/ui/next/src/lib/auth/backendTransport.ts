@@ -281,6 +281,13 @@ export async function proxyAuthenticatedRequest(
   }
 
   const session = await readServerSession(request, dependencies);
+  // A queue owner is only a precondition, never browser-supplied authority.
+  const expectedUser = request.headers.get("x-ohc-expected-user");
+  const expectedTenant = request.headers.get("x-ohc-expected-tenant");
+  if (session !== null && (expectedUser !== null || expectedTenant !== null) &&
+      (expectedUser !== session.user.id || expectedTenant !== session.user.organizationId)) {
+    return error(409, "queued owner does not match the current session");
+  }
   const headers = requestHeaders(request, session);
   if (headers === null) return error(401, "authentication required");
   if (options.requestContentType !== undefined) {

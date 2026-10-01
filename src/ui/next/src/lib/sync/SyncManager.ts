@@ -1,6 +1,7 @@
-import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
+import { enqueueAction, getActions, getActionRoutes, claimAction, completeAction, getQueueSummary } from '../../app/utils/offlineQueue';
 import type { OfflineAction, MutationPayload } from '../../app/utils/offlineQueue';
-import { recordOrEmpty } from '../records';
+import { readQueueOwner, sameOwner } from './queueIdentity';
+import { readOutcome } from './queueRoutes';
 
 type QueuedMutation = Omit<OfflineAction, 'id' | 'timestamp'> & { id?: string; timestamp?: number | string };
 type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
@@ -16,8 +17,6 @@ type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
 export class SyncManager {
   private static instance: SyncManager;
   private syncInProgress = false;
-  private retryDelayMs = 1000;
-  private maxRetries = 5;
 
   private constructor() {
     this.connectWebSocket();
@@ -58,13 +57,15 @@ export class SyncManager {
     this.notifyListeners();
 
     if (navigator.onLine) {
-      this.sync();
+      void this.sync();
     }
   }
 
   public async enqueueMutation(mutation: QueuedMutation) {
     return this.enqueue(mutation);
   }
+
+  public async getQueueSummary() { return getQueueSummary(); }
 
   public async getQueueLength(): Promise<number> {
     const queue = await this.getQueue();
@@ -79,7 +80,6 @@ export class SyncManager {
   private notifyListeners() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('omnisolo_queue_updated'));
-      window.dispatchEvent(new Event('storage')); // trigger fallback storage listeners
     }
   }
 
@@ -127,430 +127,50 @@ export class SyncManager {
     return m;
   }
 
-  public async sync(retryCount = 0) {
+  public async sync() {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
-
-    const queue = await this.getQueue();
-    if (queue.length === 0) return;
-
+    // Acquire before the first await, including queue reads.
     this.syncInProgress = true;
-
     try {
-      // Separate POS transactions from general offline sync
-      const posTransactions = queue.filter(m => m.type === 'tap_to_pay' || m.type === 'cash_sale').map(m => {
-        let storedDeviceId = 'terminal_client';
-        if (typeof window !== 'undefined') {
-            storedDeviceId = localStorage.getItem('omnisolo_pos_device_id') || 'terminal_client';
-        }
-
-        return {
-          id: m.id,
-          client_id: storedDeviceId, // Default fallback
-          amount_cents: Math.round(m.payload?.amount_cents || m.amount || 0),
-          currency: m.currency || 'usd',
-          payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload || [{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-          timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-          device_signature: m.device_signature || `sig_offline_${storedDeviceId}_${m.id}`,
-          mutation_type: m.type,
-          terminal_id: storedDeviceId
-        };
-      });
-
-      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale').map(m => this.mapGeneralMutation(m));
-
-      // Route POS offline mutations through SyncEvents standard sync_gateway
-      const posSyncEvents = queue
-        .filter(m => m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT')
-        .map(m => {
-          if (m.type === 'UPDATE_ORDER_STATUS') {
-             return {
-                id: m.id,
-                entity_type: 'order',
-                entity_id: m.payload.order_id,
-                action_type: 'UpdateStatus',
-                payload: m.payload,
-                base_version: 1,
-                timestamp: new Date(m.timestamp || Date.now()).toISOString()
-             };
-          } else {
-             return {
-                id: m.id,
-                entity_type: 'product',
-                entity_id: m.payload.item_id,
-                action_type: 'ToggleSoldOut',
-                payload: m.payload,
-                base_version: 1,
-                timestamp: new Date(m.timestamp || Date.now()).toISOString()
-             };
-          }
-        });
-
-      let allOkFinal = true;
-
-      if (posSyncEvents.length > 0) {
-        try {
-          const resSyncEvents = await fetch('/api/v1/sync/events', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ events: posSyncEvents })
-          });
-          this.checkRateLimit(resSyncEvents);
-          if (!resSyncEvents.ok) {
-            console.error(`POS Sync Events failed with status ${resSyncEvents.status}`);
-            if (resSyncEvents.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("POS Sync Events error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      const crdtDeltas = queue.filter(m => m.type === 'CRDT_MUTATION').map(m => {
-         return {
-            id: m.id,
-            entity_id: m.payload.entity_id || 'unknown',
-            data: typeof m.payload.data === 'string' ? m.payload.data : JSON.stringify(m.payload.data || {}),
-            updated_at: new Date(m.timestamp || Date.now()).toISOString()
-         };
-      });
-
-
-
-      // Sync CRDT Deltas
-      if (crdtDeltas.length > 0) {
-        try {
-          const resCrdt = await fetch('/api/v1/sync/mcp-deltas', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ deltas: crdtDeltas })
-          });
-          this.checkRateLimit(resCrdt);
-          if (!resCrdt.ok) {
-            console.error(`CRDT Sync failed with status ${resCrdt.status}`);
-            if (resCrdt.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("CRDT Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      // Sync Quote Actions
-      const quoteUpdates = generalMutations.filter(m => m.type === 'update_quote');
-      for (const update of quoteUpdates) {
-        try {
-          const res = await fetch(`/api/v1/quotes?id=${update.quoteId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(update.payload)
-          });
-          this.checkRateLimit(res);
-          if (!res.ok) {
-            console.error(`Quote Update Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Quote Update Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      const quoteApprovals = generalMutations.filter(m => m.type === 'approve_quote');
-      for (const approval of quoteApprovals) {
-        try {
-          const res = await fetch(`/api/v1/quotes/${approval.quoteId}/approve`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          this.checkRateLimit(res);
-          if (!res.ok) {
-            console.error(`Quote Approval Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Quote Approval Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      // Sync POS transactions
-      if (posTransactions.length > 0) {
-        const sessionId = localStorage.getItem('omnisolo_active_terminal_session_id');
-        try {
-          const resPos = await fetch('/api/v1/payments/terminal/sync_offline', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              session_id: sessionId || undefined,
-              transactions: posTransactions
-            })
-          });
-          this.checkRateLimit(resPos);
-          if (!resPos.ok) {
-            console.error(`POS Terminal Sync failed with status ${resPos.status}`);
-            if (resPos.status >= 500) allOkFinal = false;
-          } else {
-            try {
-              const resPosData = await resPos.json();
-              if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
-                if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('omnisolo_sync_reconciliation', { detail: { pending_reconciliation: resPosData.pending_reconciliation } }));
-                }
-              }
-            } catch (e) {
-              console.error("Failed to parse POS Sync response", e);
+      const queue = await this.getQueue();
+      for (const action of queue) {
+        for (const plan of await getActionRoutes(action.id)) {
+          const claim = await claimAction(action.id, plan.id);
+          if (!claim) continue;
+          let outcome;
+          try {
+            // The expected-owner headers are a precondition; the sealed server
+            // session remains the authority even if login changes during fetch.
+            if (!sameOwner(claim.owner, await readQueueOwner())) {
+              outcome = { status: 'blocked' as const, reason: 'Session owner changed before send' };
+            } else {
+              const response = await fetch(claim.route.id, {
+                method: claim.route.method,
+                credentials: 'same-origin', redirect: 'error',
+                headers: { 'Content-Type': 'application/json', 'Idempotency-Key': claim.action.id,
+                  'x-ohc-expected-user': claim.owner.userId, 'x-ohc-expected-tenant': claim.owner.tenantId },
+                ...(claim.route.body === undefined ? {} : { body: JSON.stringify(claim.route.body) }),
+              });
+              let body: unknown;
+              try { body = await response.json(); } catch { body = undefined; }
+              outcome = readOutcome(claim.action.id, claim.route.id, response.status, body);
             }
+          } catch {
+            // Unknown effects, including lost responses, must never be replayed.
+            outcome = { status: 'reconciliation' as const, reason: 'Request outcome could not be verified' };
           }
-        } catch (err) {
-          console.error("POS Terminal Sync error:", err);
-          allOkFinal = false;
+          // Persist the result to the original adapter and original owner's row.
+          // A commit failure retains inflight state and stops this sync attempt.
+          await completeAction(claim, outcome.status, outcome.reason);
+          this.notifyListeners();
         }
       }
-
-      // Sync operation intents (from MutationService)
-      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
-
-      if (operationIntents.length > 0) {
-        const mappedIntents = operationIntents.map(m => ({
-          id: m.id,
-          action_type: m.type,
-          payload: m.payload,
-          timestamp: new Date(m.timestamp || Date.now()).toISOString()
-        }));
-
-        try {
-          const resIntents = await fetch('/api/v1/sync/operation-intents', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ intents: mappedIntents })
-          });
-          if (!resIntents.ok) {
-            try { this.checkRateLimit(resIntents); } catch { allOkFinal = false; }
-            console.error(`Operation Intents Sync failed with status ${resIntents.status}`);
-            if (resIntents.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Operation Intents Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      // Sync generic sync events via /sync/events
-      const syncEvents = queue.filter(m => m.type === 'sync_event');
-      const allEventsPayload = syncEvents.map(m => m.payload);
-      if (allEventsPayload.length > 0) {
-        try {
-          const resSync = await fetch('/api/v1/sync/events', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ events: allEventsPayload })
-          });
-          this.checkRateLimit(resSync);
-          if (!resSync.ok) {
-            console.error(`Sync Events Sync failed with status ${resSync.status}`);
-            if (resSync.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Sync Events Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
-      if (generalGenMutations.length > 0) {
-        try {
-          const resGen = await fetch('/api/v1/sync/offline', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ mutations: generalGenMutations })
-          });
-          this.checkRateLimit(resGen);
-          if (!resGen.ok) {
-            console.error(`General Sync failed with status ${resGen.status}`);
-            if (resGen.status >= 500) allOkFinal = false;
-          } else {
-            try {
-              const resGenData = await resGen.json();
-              if (resGenData.pending_reconciliation && resGenData.pending_reconciliation.length > 0) {
-                if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('omnisolo_sync_reconciliation', { detail: { pending_reconciliation: resGenData.pending_reconciliation } }));
-                }
-              }
-            } catch (e) {
-              console.error("Failed to parse General Sync response", e);
-            }
-          }
-        } catch (err) {
-          console.error("General Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      // Sync triage actions
-      const triageActions = generalMutations.filter(m => m.type === 'triage_action');
-      for (const action of triageActions) {
-        try {
-          const res = await fetch('/api/v1/ui/triage/action', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Idempotency-Key': action.id
-            },
-            body: JSON.stringify(action.payload)
-          });
-          if (!res.ok) {
-            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
-            console.error(`Triage Action Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Triage Action Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      // Sync advisory actions
-      const advisoryActions = generalMutations.filter(m => m.type === 'advisory_action');
-      for (const action of advisoryActions) {
-        try {
-          const res = await fetch(`/api/v1/agents/approvals/${recordOrEmpty(action.payload).id}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Idempotency-Key': action.id
-            },
-            body: JSON.stringify({ approved: recordOrEmpty(action.payload).approved })
-          });
-          if (!res.ok) {
-            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
-            console.error(`Advisory Action Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Advisory Action Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-
-      // Sync generate invoice actions
-      const invoiceActions = generalMutations.filter(m => m.type === 'generate_invoice');
-      for (const action of invoiceActions) {
-        try {
-          const res = await fetch(`/api/v1/invoices/generate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Idempotency-Key': action.id
-            },
-            body: JSON.stringify(action.payload)
-          });
-          if (!res.ok) {
-            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
-            console.error(`Generate Invoice Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Generate Invoice Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      // Sync field ops status actions
-      const fieldOpsActions = generalMutations.filter(m => m.type === 'field_ops_status');
-      for (const action of fieldOpsActions) {
-        try {
-          const res = await fetch(`/api/v1/field-ops/appointments`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Idempotency-Key': action.id
-            },
-            body: JSON.stringify(action.payload)
-          });
-          if (!res.ok) {
-            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
-            console.error(`Field Ops Status Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Field Ops Status Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-      // Sync fulfillment actions
-      const fulfillmentActions = generalMutations.filter(m => m.type === 'fulfillment_action');
-      for (const action of fulfillmentActions) {
-        try {
-          const res = await fetch(`/api/v1/fulfillment/execute/${recordOrEmpty(action.payload).id}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Idempotency-Key': action.id
-            },
-            body: JSON.stringify({ action: recordOrEmpty(action.payload).action })
-          });
-          if (!res.ok) {
-            try { this.checkRateLimit(res); } catch { allOkFinal = false; }
-            console.error(`Fulfillment Action Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOkFinal = false;
-          }
-        } catch (err) {
-          console.error("Fulfillment Action Sync error:", err);
-          allOkFinal = false;
-        }
-      }
-
-      if (allOkFinal) {
-        // Clear all successfully synced items
-        for (const item of queue) {
-           await removeAction(item.id);
-        }
-        this.notifyListeners();
-        this.retryDelayMs = 1000; // Reset delay on success
-      } else {
-        if (retryCount < this.maxRetries) {
-          const delay = this.retryDelayMs * Math.pow(2, retryCount);
-          setTimeout(() => {
-            this.syncInProgress = false;
-            this.sync(retryCount + 1);
-          }, delay);
-          return; // Don't unset syncInProgress yet
-        }
-      }
-    } catch (e) {
-      console.error('Failed to sync offline queue:', e);
-      if (retryCount < this.maxRetries) {
-        const delay = this.retryDelayMs * Math.pow(2, retryCount);
-        setTimeout(() => {
-          this.syncInProgress = false;
-          this.sync(retryCount + 1);
-        }, delay);
-        return;
-      }
-    }
-
-    this.syncInProgress = false;
-  }
-  private checkRateLimit(res: Response) {
-    if (res.status === 429) {
-      throw new Error("Rate limit exceeded");
+    } catch (error) {
+      console.error('Offline queue requires attention:', error);
+    } finally {
+      this.syncInProgress = false;
     }
   }
 }
 
 export const syncManager = SyncManager.getInstance();
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState,useEffect } from "react";
+import { useState,useEffect,useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
@@ -10,6 +10,33 @@ AuthenticationSettingsPanel,
 type AdminOidcProvider,
 type RegistrationMode,
 } from "./AuthenticationSettingsPanel";
+
+type TelemetryState = {
+  product_telemetry_enabled: boolean;
+  effective_enabled: boolean;
+  operator_enforced: boolean;
+  can_change: boolean;
+  change_block_reason?: string | null;
+};
+function telemetryStateFromResponse(value: unknown): TelemetryState {
+  if (!value || typeof value !== 'object') throw new Error('Telemetry state unavailable');
+  const data = value as Record<string, unknown>;
+  if (typeof data.product_telemetry_enabled !== 'boolean' || typeof data.effective_enabled !== 'boolean' ||
+      typeof data.operator_enforced !== 'boolean' || typeof data.can_change !== 'boolean' ||
+      data.operator_enforced && (!data.effective_enabled || data.can_change)) throw new Error('Telemetry state unavailable');
+  return {
+    product_telemetry_enabled: data.product_telemetry_enabled, effective_enabled: data.effective_enabled,
+    operator_enforced: data.operator_enforced, can_change: data.can_change,
+    change_block_reason: typeof data.change_block_reason === 'string' ? data.change_block_reason : null,
+  };
+}
+function telemetryRestriction(state: TelemetryState): string {
+  if (state.operator_enforced) return 'Telemetry is enabled by server configuration and cannot be changed here.';
+  if (state.change_block_reason === 'hosted_global_control_unavailable') return 'Telemetry is controlled by the server operator in hosted mode.';
+  if (state.change_block_reason === 'admin_required') return 'Only an administrator can change telemetry in standalone mode.';
+  if (state.change_block_reason === 'persistent_storage_unavailable') return 'Telemetry settings cannot be saved on this server.';
+  return 'Telemetry changes are not available for this session.';
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -44,7 +71,9 @@ export default function SettingsPage() {
   const [seoReports, setSeoReports] = useState<{ plain_language_summary: string }[]>([]);
   const [hitRate, setHitRate] = useState<string>("");
   const [enableLazyToolLoading, setEnableLazyToolLoading] = useState(false);
-  const [productTelemetryEnabled, setProductTelemetryEnabled] = useState(false);
+  const [telemetryState, setTelemetryState] = useState<TelemetryState | null>(null);
+  const [telemetryStatus, setTelemetryStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'unavailable'>('idle');
+  const telemetrySaving = useRef(false);
   const [twilioAccountSid, setTwilioAccountSid] = useState("");
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
   const [twilioPhoneNumber, setTwilioPhoneNumber] = useState("");
@@ -134,16 +163,11 @@ export default function SettingsPage() {
         }),
 
       fetch("/api/v1/settings/telemetry")
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data && data.product_telemetry_enabled !== undefined) {
-            setProductTelemetryEnabled(data.product_telemetry_enabled);
-          }
+        .then(async res => {
+          if (!res.ok) throw new Error('Telemetry preference unavailable');
+          setTelemetryState(telemetryStateFromResponse(await res.json()));
         })
-        .catch(e => {
-          if (isAbortError(e)) return;
-          console.error("Failed to load telemetry settings", e);
-        }),
+        .catch(() => { setTelemetryState(null); setTelemetryStatus('unavailable'); }),
 
       fetch("/api/v1/local_seo/discovery_report")
         .then(res => res.ok ? res.json() : null)
@@ -254,16 +278,31 @@ export default function SettingsPage() {
   };
 
   const handleTelemetryChange = async (checked: boolean) => {
-    setProductTelemetryEnabled(checked);
+    if (!telemetryState?.can_change || telemetrySaving.current) return;
+    telemetrySaving.current = true;
+    setTelemetryStatus('saving');
     try {
-      await fetch("/api/v1/settings/telemetry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/v1/settings/telemetry', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_telemetry_enabled: checked }),
       });
-    } catch (e) {
-      console.error("Failed to save telemetry settings", e);
-    }
+      if (!response.ok || (await response.json()).success !== true) throw new Error('Telemetry preference not saved');
+      const current = await fetch('/api/v1/settings/telemetry', { cache: 'no-store' });
+      if (!current.ok) throw new Error('Telemetry state unavailable');
+      const acknowledged = telemetryStateFromResponse(await current.json());
+      if (acknowledged.product_telemetry_enabled !== checked) throw new Error('Requested telemetry preference was not acknowledged');
+      setTelemetryState(acknowledged);
+      setTelemetryStatus('saved');
+    } catch {
+      // A lost response can follow a committed write. Re-read instead of claiming rollback.
+      try {
+        const current = await fetch('/api/v1/settings/telemetry', { cache: 'no-store' });
+        const data = current.ok ? await current.json() : null;
+        setTelemetryState(telemetryStateFromResponse(data)); setTelemetryStatus('error');
+      } catch {
+        setTelemetryState(null); setTelemetryStatus('unavailable');
+      }
+    } finally { telemetrySaving.current = false; }
   };
 
   const handleVerify = async () => {
@@ -734,11 +773,17 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 aria-label="Enable Product Telemetry (Standalone Mode)"
-                checked={productTelemetryEnabled}
+                checked={telemetryState?.effective_enabled ?? false}
+                ref={node => { if (node) node.indeterminate = telemetryState === null; }}
+                disabled={!telemetryState?.can_change || telemetryStatus === 'saving'}
                 onChange={(e) => handleTelemetryChange(e.target.checked)}
                 className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
               />
             </label>
+            {telemetryState && <p>Effective telemetry: {telemetryState.effective_enabled ? 'On' : 'Off'}</p>}
+            {telemetryState && !telemetryState.can_change && <p>{telemetryRestriction(telemetryState)}</p>}
+            {(telemetryStatus === 'error' || telemetryStatus === 'unavailable') && <p role="alert">{telemetryStatus === 'unavailable' ? 'Telemetry preference is unavailable. Reload to try again.' : 'Telemetry change could not be confirmed. The current setting was reloaded.'}</p>}
+            {(telemetryStatus === 'saving' || telemetryStatus === 'saved') && <p role="status">{telemetryStatus === 'saving' ? 'Saving telemetry preference…' : 'Telemetry preference saved.'}</p>}
           </div>
         </section>
 

@@ -71,3 +71,6 @@ pub(crate) mod walkup;
 pub mod work_triage;
 mod ws_batch;
 pub(crate) mod ws_compression;
+
+pub(crate) mod sync_transaction;
+pub mod telemetry_settings;

@@ -4,7 +4,8 @@
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo, useRef } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
-import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
+import { enqueueAction, getActions } from "../utils/offlineQueue";
+import { SyncManager } from "../../lib/sync/SyncManager";
 import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
 import "./InstagramDMCard";
 import { AgentActionCard } from "../../components/feed/AgentActionCard";
@@ -148,29 +149,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
     const handleOnline = async () => {
       setIsOffline(false);
-      // Sync queued offline actions
-      try {
-        const actions = await getActions();
-        for (const action of actions) {
-          if (action.type === "approve_agent_feed") {
-            await submitDecision(
-              action.payload.id,
-              action.payload.approved,
-              action.payload.modified_content,
-              action.payload.event_source,
-            );
-            await removeAction(action.id);
-            setOfflineActionsCount((prev) => Math.max(0, prev - 1));
-            setQueuedActionIds((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(action.payload.id);
-              return newSet;
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to sync offline actions", err);
-      }
+      await SyncManager.getInstance().sync();
+      await updateOfflineCount();
     };
 
     const handleOffline = () => {

@@ -116,3 +116,19 @@ it('retains the proposal and reports a failed decision instead of silently hidin
     expect(screen.getByTestId('triage-card-decision-1')).not.toHaveClass('border-green-500');
   } finally { errorLog.mockRestore(); }
 });
+
+const durableSync = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ sync: durableSync }) } }));
+it('delegates reconnection to the durable queue instead of sending queued approvals a second way', async () => {
+  const queue = await import('../utils/offlineQueue');
+  vi.mocked(queue.getActions).mockResolvedValue([{ id: 'queued-decision', type: 'approve_agent_feed', timestamp: 1, payload: { id: 'decision-1', approved: true, event_source: 'operations' } }]);
+  const fetchMock = vi.fn(async () => Response.json({ success: true }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await screen.findByTestId('triage-card-decision-1');
+  await act(async () => { window.dispatchEvent(new Event('online')); });
+  expect(durableSync).toHaveBeenCalledOnce();
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(queue.removeAction).not.toHaveBeenCalled();
+  vi.mocked(queue.getActions).mockResolvedValue([]);
+});

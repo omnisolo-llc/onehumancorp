@@ -7900,7 +7900,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             UNION ALL
             SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
+            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL
@@ -7914,7 +7914,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             UNION ALL
             SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
             UNION ALL
-            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED')
+            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
             UNION ALL
             SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
             UNION ALL
@@ -9321,28 +9321,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/v1/settings/telemetry", axum::routing::get({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
-                let settings = settings_store.get();
-                axum::response::Json(serde_json::json!({
-                    "product_telemetry_enabled": settings.product_telemetry_enabled,
-                }))
-            }
-        }))
-        .route("/api/v1/settings/telemetry", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let enabled = req.get("product_telemetry_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
-
-                if let Err(e) = settings_store.set_product_telemetry(enabled) {
-                    ::server_telemetry::record_error_signal("[bug] Failed to save telemetry settings");
-                    tracing::error!("Failed to save telemetry settings: {}", e);
-                    return axum::response::Json(serde_json::json!({ "success": false }));
-                }
-                axum::response::Json(serde_json::json!({ "success": true }))
-            }
-        }))
+        .merge(api::telemetry_settings::router(settings_store.clone()))
         .route("/api/v1/settings/voice", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {

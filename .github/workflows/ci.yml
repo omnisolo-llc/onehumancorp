@@ -189,6 +189,7 @@ jobs:
       - name: Install native system libraries
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
       - uses: ./.github/actions/setup-native
+        id: rust-setup
         with:
           role: backend-test
           node-scope: harness
@@ -201,6 +202,7 @@ jobs:
       - name: Lint the complete headless Rust workspace before linking tests
         run: make lint-backend
       - name: Test complete headless Cargo workspace
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         run: make test-backend
 
   native-node:
@@ -686,6 +688,43 @@ jobs:
           WHERE rolname = current_user;
           SQL
 
+      - name: Verify durable sync receipts and mounted handlers in PostgreSQL
+        env:
+          OHC_SYNC_TEST_DATABASE_URL: postgres://postgres@127.0.0.1:5432/ohc_sync_durability_test
+          PGPASSWORD: postgres
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_sync_durability_test
+          bash scripts/sync-durability/run.sh
+      - name: Verify portable catalog edits in PostgreSQL and SQLite
+        env:
+          OHC_CATALOG_TEST_DATABASE_URL: postgres://postgres@127.0.0.1:5432/ohc_catalog_edit_test
+          PGPASSWORD: postgres
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_catalog_edit_test
+          cargo test --locked --manifest-path scripts/catalog-edit/Cargo.toml -- --include-ignored
+      - name: Verify optional quote tax configuration in PostgreSQL
+        env:
+          OHC_QUOTE_TEST_DATABASE_URL: postgres://postgres@127.0.0.1:5432/ohc_quote_lookup_test
+          PGPASSWORD: postgres
+          TAXJAR_API_KEY: local-regression-taxjar-key
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_quote_lookup_test
+          cargo test --locked --manifest-path scripts/quote-taxjar/Cargo.toml -- --include-ignored
+      - name: Verify asynchronous product SEO snapshots in PostgreSQL
+        env:
+          SEO_SNAPSHOT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_seo_snapshot_test
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_seo_snapshot_test
+          python3 scripts/product_seo_snapshot_regression.py
+      - name: Verify canonical agent-feed queries in PostgreSQL
+        env:
+          FEED_QUERY_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_feed_query_test
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_feed_query_test
+          python3 scripts/agent_feed_query_regression.py --postgres
       - name: Run PostgreSQL tenant-isolation suite
         run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"
 

@@ -199,5 +199,54 @@ class NativeCacheTests(unittest.TestCase):
         self.assertNotIn('if', build, 'cache hits must never skip source compilation')
 
 
+    def test_rust_tests_run_after_lint_failure_and_pg_feed_queries_are_real(self):
+        steps = self.ci['jobs']['native-test']['steps']
+        setup = next(step for step in steps if step.get('uses') == './.github/actions/setup-native')
+        self.assertEqual(setup.get('id'), 'rust-setup')
+        test = next(step for step in steps if step.get('run') == 'make test-backend')
+        self.assertEqual(test.get('if'), "${{ !cancelled() && steps.rust-setup.outcome == 'success' }}")
+        self.assertFalse(test.get('continue-on-error', False))
+        postgres = self.ci['jobs']['postgres-security']['steps']
+        feed = next((step for step in postgres if 'agent_feed_query_regression.py --postgres' in step.get('run', '')), None)
+        self.assertIsNotNone(feed, 'mirrored approvals need production PostgreSQL query coverage')
+        self.assertIn('ohc_feed_query_test', feed['run'])
+        self.assertIn('FEED_QUERY_TEST_DATABASE_URL', feed.get('env', {}))
+        self.assertFalse(feed.get('continue-on-error', False))
+
+
+    def test_postgres_runs_product_seo_snapshot_regression(self):
+        steps = self.ci['jobs']['postgres-security']['steps']
+        seo = next((step for step in steps if 'product_seo_snapshot_regression.py' in step.get('run', '')), None)
+        self.assertIsNotNone(seo, 'asynchronous SEO snapshots need a real PostgreSQL stale-write check')
+        self.assertIn('ohc_seo_snapshot_test', seo['run'])
+        self.assertIn('SEO_SNAPSHOT_TEST_DATABASE_URL', seo.get('env', {}))
+        self.assertFalse(seo.get('continue-on-error', False))
+
+
+    def test_postgres_runs_optional_quote_configuration_regression(self):
+        steps = self.ci['jobs']['postgres-security']['steps']
+        quote = next((step for step in steps if 'scripts/quote-taxjar/Cargo.toml' in step.get('run', '')), None)
+        self.assertIsNotNone(quote, 'missing tax schema and hosted credential isolation need PostgreSQL coverage')
+        self.assertIn('--locked', quote['run'])
+        self.assertIn('--include-ignored', quote['run'])
+        self.assertIn('OHC_QUOTE_TEST_DATABASE_URL', quote.get('env', {}))
+        self.assertEqual(quote['env']['TAXJAR_API_KEY'], 'local-regression-taxjar-key')
+        self.assertFalse(quote.get('continue-on-error', False))
+
+
+    def test_postgres_runs_durable_sync_and_catalog_regressions(self):
+        steps = self.ci['jobs']['postgres-security']['steps']
+        sync = next((step for step in steps if 'scripts/sync-durability/run.sh' in step.get('run', '')), None)
+        self.assertIsNotNone(sync, 'durable receipt and business mutation checks must run against PostgreSQL')
+        self.assertIn('OHC_SYNC_TEST_DATABASE_URL', sync.get('env', {}))
+        self.assertFalse(sync.get('continue-on-error', False))
+        catalog = next((step for step in steps if 'scripts/catalog-edit/Cargo.toml' in step.get('run', '')), None)
+        self.assertIsNotNone(catalog, 'real catalog edits need PostgreSQL and SQLite coverage')
+        self.assertIn('--locked', catalog['run'])
+        self.assertIn('--include-ignored', catalog['run'])
+        self.assertIn('OHC_CATALOG_TEST_DATABASE_URL', catalog.get('env', {}))
+        self.assertFalse(catalog.get('continue-on-error', False))
+
+
 if __name__ == '__main__':
     unittest.main()

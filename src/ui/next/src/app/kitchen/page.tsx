@@ -1,7 +1,7 @@
 "use client";
 import type { OrderRecord, SaleProduct } from '@/lib/business-records';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AppShell } from "../components/AppShell";
 import { SyncManager } from "../../lib/sync/SyncManager";
 
@@ -9,6 +9,8 @@ export default function KitchenView() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [menu, setMenu] = useState<SaleProduct[]>([]);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const pending = useRef(new Set<string>());
 
   useEffect(() => {
     // Ensure SyncManager is initialized so it listens to websocket
@@ -70,7 +72,8 @@ export default function KitchenView() {
     fetchOrdersAndMenu();
 
     const updateCount = async () => {
-      setOfflineQueueCount(await SyncManager.getInstance().getQueueLength());
+      try { setOfflineQueueCount(await SyncManager.getInstance().getQueueLength()); }
+      catch { setQueueError('The offline queue could not be read.'); }
     };
 
     updateCount();
@@ -82,28 +85,31 @@ export default function KitchenView() {
   }, []);
 
   const handleToggleSoldOut = async (itemId: string, currentStatus: boolean) => {
-    // Optimistic UI update
-    setMenu(menu.map(m => m.id === itemId ? { ...m, is_sold_out: !currentStatus } : m));
-
-    // Add to sync queue for eventual consistency
-    await SyncManager.getInstance().enqueue({
-      id: `e2e-product-${itemId}`,
-      type: "TOGGLE_SOLD_OUT",
-      payload: { item_id: itemId, is_sold_out: !currentStatus },
-      timestamp: Date.now()
-    });
+    const key = `product:${itemId}`;
+    const original = menu.find(item => item.id === itemId);
+    if (pending.current.has(key)) return;
+    pending.current.add(key); setQueueError(null);
+    setMenu(current => current.map(item => item.id === itemId ? { ...item, is_sold_out: !currentStatus } : item));
+    try {
+      await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: "TOGGLE_SOLD_OUT", payload: { item_id: itemId, is_sold_out: !currentStatus, expected_is_sold_out: currentStatus, ...(original?.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original?.base_version !== undefined || original?.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: Date.now() });
+    } catch {
+      setMenu(current => current.map(item => item.id === itemId ? { ...item, is_sold_out: currentStatus } : item));
+      setQueueError('This change could not be saved. Check your connection and local storage.');
+    } finally { pending.current.delete(key); }
   };
 
   const handleMarkReady = async (orderId: string) => {
-    // Optimistic UI update
-    setOrders(orders.map(o => o.id === orderId ? { ...o, status: "ready" } : o));
-
-    await SyncManager.getInstance().enqueue({
-      id: `order-ready-${orderId}`,
-      type: "UPDATE_ORDER_STATUS",
-      payload: { order_id: orderId, status: "ready" },
-      timestamp: Date.now()
-    });
+    const key = `order:${orderId}`;
+    const original = orders.find(order => order.id === orderId);
+    if (!original || pending.current.has(key)) return;
+    pending.current.add(key); setQueueError(null);
+    setOrders(current => current.map(order => order.id === orderId ? { ...order, status: "ready" } : order));
+    try {
+      await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: "UPDATE_ORDER_STATUS", payload: { order_id: orderId, status: "ready", expected_status: original.status, ...(original.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original.base_version !== undefined || original.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: Date.now() });
+    } catch {
+      setOrders(current => current.map(order => order.id === orderId ? { ...order, status: original.status } : order));
+      setQueueError('This change could not be saved. Check your connection and local storage.');
+    } finally { pending.current.delete(key); }
   };
 
   return (
@@ -116,6 +122,7 @@ export default function KitchenView() {
           </div>
         </header>
 
+        {queueError && <p role="alert">{queueError}</p>}
         <main className="p-4 flex flex-col md:flex-row gap-6">
           <section className="flex-1">
             <h2 className="text-lg font-bold font-outfit mb-4">Active Orders</h2>

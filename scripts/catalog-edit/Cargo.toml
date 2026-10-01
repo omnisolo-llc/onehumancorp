@@ -1,0 +1,17 @@
+[package]
+name = "ohc-catalog-edit-regressions"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-native-tls", "chrono", "uuid", "macros"] }
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+server_common = { path = "../../src/server/common" }
+[lib]
+path = "probe.rs"

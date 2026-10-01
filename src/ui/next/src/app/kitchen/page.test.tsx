@@ -24,15 +24,24 @@ it.each([false, true])('keeps an authoritative empty kitchen empty without inven
 it('renders recorded translations and queues the real order and menu identities', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
     url.endsWith('/orders') ? { orders: [{ id: 'order-1', customer_name: 'Alice', status: 'pending', notes: 'No onions', translated_notes: 'بدون بصل' }] }
-      : { inventory: [{ id: 'menu-1', name: 'Falafel Wrap', stock: 10 }] },
+      : { inventory: [{ id: 'menu-1', name: 'Falafel Wrap', stock: 10, is_sold_out: false }] },
   ), { status: 200 })));
   render(<KitchenView />);
   expect(await screen.findByText('بدون بصل')).toBeVisible();
   const soldOut = await screen.findByRole('button', { name: 'Mark Sold Out' });
   fireEvent.click(soldOut);
   expect(soldOut).toHaveTextContent('Sold Out');
-  expect(sync.enqueue).toHaveBeenCalledWith(expect.objectContaining({ type: 'TOGGLE_SOLD_OUT', payload: { item_id: 'menu-1', is_sold_out: true } }));
+  expect(sync.enqueue).toHaveBeenCalledWith(expect.objectContaining({ type: 'TOGGLE_SOLD_OUT', payload: { item_id: 'menu-1', is_sold_out: true, expected_is_sold_out: false } }));
   fireEvent.click(screen.getByRole('button', { name: 'Mark Ready & Notify' }));
   await waitFor(() => expect(screen.getByText('No active orders')).toBeVisible());
-  expect(sync.enqueue).toHaveBeenCalledWith(expect.objectContaining({ type: 'UPDATE_ORDER_STATUS', payload: { order_id: 'order-1', status: 'ready' } }));
+  expect(sync.enqueue).toHaveBeenCalledWith(expect.objectContaining({ type: 'UPDATE_ORDER_STATUS', payload: { order_id: 'order-1', status: 'ready', expected_status: 'pending' } }));
+});
+
+it('restores an optimistic order change when durable enqueue fails', async () => {
+  sync.enqueue.mockRejectedValueOnce(new Error('Storage unavailable'));
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => Response.json(url.endsWith('/orders') ? { orders: [{ id: 'order-1', customer_name: 'Alice', status: 'pending' }] } : { inventory: [] })));
+  render(<KitchenView />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Mark Ready & Notify' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('could not be saved');
+  expect(screen.getByRole('button', { name: 'Mark Ready & Notify' })).toBeVisible();
 });

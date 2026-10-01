@@ -7,6 +7,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Node build/discovery tests are owned by test:scripts (part of make test).
 // Keep this runner focused on checks Cargo and Node test discovery cannot find.
 const checks = [
+  ['python3', 'scripts/agent_feed_query_regression.py'],
+  ['python3', 'scripts/catalog-edit/source_contract_test.py'],
+  ['python3', 'scripts/sync-durability/source_contract_test.py'],
   ['python3', '.github/scripts/check_checkout_paths_test.py'],
   ['bash', '.github/scripts/check_repo_hygiene_test.sh'],
   ['bash', '.github/scripts/check_repo_hygiene.sh'],

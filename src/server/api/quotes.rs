@@ -13,6 +13,9 @@ use crate::domain::repository::models::{Quote, QuoteLineItem};
 use omnisolo_builtin_agent::gpt_researcher::ResearcherLlmClient;
 use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 
+#[path = "quote_taxjar.rs"]
+mod quote_taxjar;
+
 const QUOTE_COLUMNS: &str = "id::text AS id, tenant_id, customer_id::text AS customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at";
 const QUOTE_LINE_ITEM_COLUMNS: &str = "id::text AS id, quote_id::text AS quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id";
 
@@ -314,20 +317,21 @@ async fn create_quote(
 
     let mut line_items = payload.line_items;
 
-    // Check if TaxJar integration is connected for this tenant in the DB
-    let api_key_res: Result<(String,), _> = sqlx::query_as(
-        "SELECT api_token FROM integrations WHERE tenant_id = $1 AND provider_id = 'taxjar'",
+    let api_key = match quote_taxjar::load_quote_taxjar_key(
+        &mut tx,
+        authority.tenant_id(),
+        crate::is_standalone_runtime(),
     )
-    .bind(authority.tenant_id())
-    .fetch_one(&mut *tx)
-    .await;
-
-    let api_key = match api_key_res {
-        Ok((token,)) => token,
-        Err(_) => std::env::var("TAXJAR_API_KEY").unwrap_or_default(),
+    .await
+    {
+        Ok(key) => key,
+        Err(error) => {
+            tracing::error!(%error, "Failed to read tenant tax configuration");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
     };
 
-    if !api_key.is_empty() {
+    if let Some(api_key) = api_key {
         let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
         let total_pre_tax = line_items
             .iter()

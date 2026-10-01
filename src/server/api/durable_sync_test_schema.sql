@@ -1,0 +1,15 @@
+CREATE TABLE tenants(id TEXT PRIMARY KEY);
+CREATE TABLE sync_events (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,action_type TEXT NOT NULL,payload TEXT NOT NULL);
+CREATE TABLE sync_conflict_queue (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,event_id TEXT NOT NULL,entity_id TEXT NOT NULL,entity_type TEXT NOT NULL,base_version BIGINT,current_version BIGINT,payload JSONB);
+CREATE TABLE department_tasks (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,department TEXT,event_type TEXT,payload JSONB,status TEXT);
+CREATE TABLE operation_intents (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,action_type TEXT,payload JSONB,status TEXT);
+CREATE TABLE applied_client_mutations (client_mutation_id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL);
+CREATE TABLE products (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,is_sold_out BOOLEAN NOT NULL DEFAULT false,inventory_count INTEGER NOT NULL DEFAULT 10,available_quantity INTEGER NOT NULL DEFAULT 10,price NUMERIC DEFAULT 1,updated_at TIMESTAMPTZ DEFAULT '2026-01-01T00:00:00Z');
+CREATE TABLE orders (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,customer_id TEXT,total_amount NUMERIC,status TEXT,notes TEXT,updated_at TIMESTAMPTZ DEFAULT '2026-01-01T00:00:00Z');
+CREATE TABLE appointments (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,status TEXT,notes TEXT,updated_at TIMESTAMPTZ DEFAULT '2026-01-01T00:00:00Z');
+CREATE TABLE inventory_levels (variant_id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,available_count INTEGER);
+CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,job_type TEXT,payload JSONB);
+CREATE TABLE pos_offline_transactions (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,client_id TEXT,amount_cents BIGINT,currency TEXT,payload JSONB,status TEXT,_sync_status TEXT);
+CREATE TABLE pos_terminal_sessions (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,device_id TEXT,status TEXT,started_at TIMESTAMPTZ,last_synced_at TIMESTAMPTZ,offline_changes_count INTEGER,sync_status TEXT,pending_reconciliation JSONB,UNIQUE(tenant_id,device_id));
+CREATE TABLE order_items (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,order_id TEXT,product_id TEXT,quantity INTEGER,price NUMERIC);
+CREATE TABLE agent_action_requests (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,source TEXT,agent_type TEXT,action_type TEXT,payload JSONB,status TEXT);

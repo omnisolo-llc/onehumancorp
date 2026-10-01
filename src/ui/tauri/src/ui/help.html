@@ -607,6 +607,27 @@ document.addEventListener('DOMContentLoaded', () => {
     <script>
       let allArticles = [];
       let allVideos = [];
+      let helpSearchVersion = 0;
+      function helpText(value) {
+        const span = document.createElement('span');
+        span.textContent = typeof value === 'string' ? value : '';
+        return span.innerHTML;
+      }
+      function safeHelpUrl(value) {
+        if (typeof value !== 'string' || !value.trim() || value.length > 4096) return null;
+        try {
+          const url = new URL(value, window.location.href);
+          if (url.username || url.password || (url.protocol !== 'https:' && !(url.protocol === 'http:' && url.origin === window.location.origin))) return null;
+          return url.href;
+        } catch { return null; }
+      }
+      function helpArticles(value) {
+        return Array.isArray(value) ? value.filter(article => article && typeof article.title === 'string' && typeof article.desc === 'string' && typeof article.link === 'string') : [];
+      }
+      function helpVideos(value) {
+        return Array.isArray(value) ? value.filter(video => video && typeof video.title === 'string' && typeof video.duration === 'string' && safeHelpUrl(video.video_url)) : [];
+      }
+
 
       const searchInput = document.getElementById('search-input');
       const resultsContainer = document.getElementById('results');
@@ -626,16 +647,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.__TAURI__.core.invoke('get_help_articles', {}),
                 window.__TAURI__.core.invoke('get_help_videos', {})
              ]);
-             allArticles = articlesRes || [];
-             allVideos = videosRes || [];
+             allArticles = helpArticles(articlesRes);
+             allVideos = helpVideos(videosRes);
           } else {
              // Fallback for playwright test environment
              const [articlesRes, videosRes] = await Promise.all([
                  fetch('/api/v1/help').then(r => r.json()).catch(() => []),
                  fetch('/api/v1/videos').then(r => r.json()).catch(() => [])
              ]);
-             allArticles = articlesRes || [];
-             allVideos = videosRes || [];
+             allArticles = helpArticles(articlesRes);
+             allVideos = helpVideos(videosRes);
 
 
           }
@@ -681,6 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       async function renderContent(query) {
+        const version = ++helpSearchVersion;
         const lowerQuery = query.toLowerCase().trim();
 
         let filteredArticles = allArticles;
@@ -697,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const searchRes = await fetch('/api/v1/help/search?q=' + encodeURIComponent(lowerQuery));
                     if (searchRes.ok) {
-                        filteredArticles = await searchRes.json();
+                        filteredArticles = helpArticles(await searchRes.json());
                     } else {
                          filteredArticles = allArticles.filter(a =>
                             a.title.toLowerCase().includes(lowerQuery) ||
@@ -721,10 +743,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (version !== helpSearchVersion) return;
         if (filteredArticles.length === 0 && filteredVideos.length === 0) {
             resultsContainer.innerHTML = `
               <div class="empty-state">
-                 <p style="margin:0; font-size: 16px;">No results found matching <strong>"${query}"</strong></p>
+                 <p style="margin:0; font-size: 16px;">No results found matching <strong>"${helpText(query)}"</strong></p>
                  <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p>
                  <button id="ask-ai-tooltip" style="margin-top: 15px; padding: 10px 20px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="openAISupport()">Ask AI Support Agent</button>
               </div>
@@ -739,17 +762,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const categories = [...new Set(filteredArticles.map(a => a.category || 'General'))];
 
             categories.forEach(category => {
-                html += `<h3 class="section-title" style="margin-top: 0; color: #1d1d1f;">${category}</h3><div class="grid">`;
+                html += `<h3 class="section-title" style="margin-top: 0; color: #1d1d1f;">${helpText(category)}</h3><div class="grid">`;
 
                 const catArticles = filteredArticles.filter(a => (a.category || 'General') === category);
                 catArticles.forEach(article => {
                     // Extract article ID from link for Tauri routing
                     const articleId = article.link.split('/').pop();
-                    const href = articleId === 'api-docs' ? 'api-docs.html' : `help_article.html?id=${articleId}`;
+                    const href = articleId === 'api-docs' ? 'api-docs.html' : `help_article.html?id=${encodeURIComponent(articleId)}`;
                     html += `
                       <a href="${href}" class="card glassmorphism glassmorphism">
-                        <h4>${article.title}</h4>
-                        <p>${article.desc}</p>
+                        <h4>${helpText(article.title)}</h4>
+                        <p>${helpText(article.desc)}</p>
                       </a>
                     `;
                 });
@@ -760,18 +783,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Videos
         if (filteredVideos.length > 0) {
             html += `<h2 class="section-title">Video Guides</h2><div class="videos-grid">`;
-            filteredVideos.forEach(v => {
-                html += `
-                  <div class="video-card" onclick="openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}')">
-                    <div class="play-btn">
-                      <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                    </div>
-                    <div class="video-info">
-                      <p class="video-title">${v.title}</p>
-                      <p class="video-duration">${v.duration}</p>
-                    </div>
-                  </div>
-                `;
+            filteredVideos.forEach((video, index) => {
+                html += `<button type="button" class="video-card" data-help-video="${index}">
+                  <div class="play-btn" aria-hidden="true">▶</div>
+                  <div class="video-info"><p class="video-title">${helpText(video.title)}</p><p class="video-duration">${helpText(video.duration)}</p></div>
+                </button>`;
             });
             html += `</div>`;
         }
@@ -795,6 +811,10 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         resultsContainer.innerHTML = html;
+        resultsContainer.querySelectorAll('[data-help-video]').forEach(button => {
+          const video = filteredVideos[Number(button.dataset.helpVideo)];
+          button.addEventListener('click', () => window.openVideo(video.video_url, video.title, video.duration));
+        });
       }
 
       searchInput.addEventListener('input', (e) => {
@@ -803,7 +823,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Video Modal logic
       window.openVideo = function(url, title, duration) {
-          videoPlayer.src = url;
+          const safeUrl = safeHelpUrl(url);
+          if (!safeUrl) return;
+          videoPlayer.src = safeUrl;
           videoModalTitle.innerText = title;
           videoModalDuration.innerText = duration;
           videoModal.style.display = 'flex';
@@ -1039,7 +1061,7 @@ document.addEventListener('DOMContentLoaded', () => {
             height: 28px;
             fill: currentColor;
         }
-        #ai-chat-interface {
+        #ai-chat-interface, #omnisolo-floating-help-widget, #ohc-floating-help-widget {
             position: fixed;
             bottom: 96px;
             right: 24px;
@@ -1059,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: 1px solid rgba(0,0,0,0.05);
         }
         @media (max-width: 480px) {
-            #ai-chat-interface {
+            #ai-chat-interface, #omnisolo-floating-help-widget, #ohc-floating-help-widget {
                 bottom: 0;
                 right: 0;
                 width: 100vw;
@@ -1223,7 +1245,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the widget
     const widget = document.createElement('div');
-    widget.id = 'omnisolo-floating-help-widget';
+    widget.id = 'ohc-floating-help-widget';
+    widget.className = 'omnisolo-floating-help-widget';
     widget.innerHTML = `
         <div id="omnisolo-floating-help-header">
             <h3>Ask AI Help</h3>
@@ -1235,6 +1258,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="omnisolo-help-tab active" data-target="tab-articles">Articles</button>
             <button class="omnisolo-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="omnisolo-help-tab" data-target="tab-videos">Videos</button>
+            <button class="omnisolo-help-tab" data-target="tab-changelog">New</button>
             <button class="omnisolo-help-tab" id="tab-btn-chat" data-target="tab-chat" aria-label="Ask AI (Ask anything)">Ask AI</button>
         </div>
 
@@ -1279,6 +1303,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-videos" class="omnisolo-help-content">
             <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
+        </div>
+
+        <div id="tab-changelog" class="omnisolo-help-content">
+            <h4>What's New</h4>
+            <p>Read the recorded changes and current release notes.</p>
+            <a href="changelog.html">Read full release notes</a>
         </div>
 
         <div id="tab-chat" class="omnisolo-help-content glassmorphism" style="padding-bottom: 12px;">
@@ -1326,11 +1356,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!data || data.length === 0) {
                         vl.innerHTML = `<div class="glassmorphism" style="padding: 24px; text-align: center;"><p style="margin:0; font-size: 14px; color: #64748b;">No video tutorials available yet.</p></div>`;
                     } else {
-                        data.forEach(v => {
-                            vl.innerHTML += `<div class="glassmorphism" style="border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="alert('Playing video: ' + v.title)">` +
-                                `<h4 style="margin: 0 0 4px 0; font-size: 14px; color: #1d1d1f;">${v.title}</h4>` +
-                                `<span style="font-size: 12px; color: #86868b;">${v.duration}</span>` +
-                                `</div>`;
+                        helpVideos(data).forEach(video => {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'glassmorphism';
+                            button.style.cssText = 'border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:12px;min-height:44px;text-align:left;cursor:pointer;';
+                            const heading = document.createElement('h4');
+                            heading.textContent = video.title;
+                            const duration = document.createElement('span');
+                            duration.textContent = video.duration;
+                            button.append(heading, duration);
+                            button.addEventListener('click', () => window.openVideo(video.video_url, video.title, video.duration));
+                            vl.appendChild(button);
                         });
                     }
                 }).catch(e => {
@@ -1351,9 +1388,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendMessage(text, sender, link = null) {
         const msg = document.createElement('div');
         msg.className = `omnisolo-chat-msg ${sender}`;
-        msg.innerHTML = text;
-        if (link && link.url && link.title) {
-            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+        msg.textContent = typeof text === 'string' ? text : 'Help response unavailable.';
+        const href = safeHelpUrl(link && link.url);
+        if (href && typeof link.title === 'string') {
+            const anchor = document.createElement('a');
+            anchor.href = href; anchor.textContent = link.title; anchor.rel = 'noopener noreferrer';
+            msg.appendChild(anchor);
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1374,10 +1414,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ message: text })
             });
+            if (!res.ok) throw new Error('Help request failed');
             const data = await res.json();
 
             if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
+                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link || data.link);
             } else if (data.text) {
                 appendMessage(data.text, 'agent', data.link);
             } else {
