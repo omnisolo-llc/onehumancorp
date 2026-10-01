@@ -26,7 +26,7 @@ test.describe('Owner service and quote review', () => {
     expect(service.service_id).toMatch(/^[0-9a-f-]{36}$/);
     await expect(page.getByRole('heading', { name: 'Service Saved!', exact: true })).toBeVisible();
     const [persistedService] = await e2eDbQuery(
-      'SELECT tenant_id, title, price_cents FROM services WHERE id = $1', [service.service_id],
+      'SELECT tenant_id, name AS title, (price * 100)::BIGINT AS price_cents FROM services WHERE id = $1', [service.service_id],
     );
     expect(persistedService).toMatchObject({ tenant_id: adminUser.organizationId, title });
     expect(Number(persistedService.price_cents)).toBe(5000);

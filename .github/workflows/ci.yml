@@ -884,6 +884,14 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_builder_publication_test
           python3 scripts/focused_ci_gate.py builder-publication
+      - name: Verify canonical service creation and committed receipts
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SERVICE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_service_creation_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_service_creation_test
+          python3 scripts/focused_ci_gate.py service-creation
       - name: Retain focused gate execution and source evidence
         uses: actions/upload-artifact@v6
         if: always()

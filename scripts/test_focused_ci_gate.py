@@ -12,6 +12,13 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_service_creation_gate_keeps_canonical_pg_and_original_sqlite_cases(self):
+        minimum, database = gate.GATES['service-creation']
+        self.assertGreaterEqual(minimum, 6)
+        self.assertEqual(database, 'OHC_SERVICE_TEST_DATABASE_URL')
+        runner = Path(__file__).resolve().parents[1]/'scripts/service-creation/run.sh'
+        self.assertTrue(runner.is_file())
+
     def test_agent_workflow_gate_keeps_its_full_offline_inventory(self):
         minimum, database = gate.GATES['agent-workflow-contract']
         self.assertGreaterEqual(minimum, 9)
