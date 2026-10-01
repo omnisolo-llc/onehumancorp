@@ -56,6 +56,14 @@ pub struct PurchaseLabelResponse {
     pub carrier: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShippoTrackingStatus {
+    pub tracking_number: String,
+    pub carrier: String,
+    pub status: String,
+    pub status_details: String,
+}
+
 pub struct ShippoClient {
     pub api_key: String,
     http_client: reqwest::Client,
@@ -242,6 +250,70 @@ impl ShippoClient {
             label_url,
             tracking_number: tracking_number.to_string(),
             carrier: carrier.to_string(),
+        })
+    }
+
+    pub async fn fetch_tracking(
+        &self,
+        carrier: &str,
+        tracking_number: &str,
+    ) -> Result<ShippoTrackingStatus, String> {
+        self.validate_credentials()?;
+        if carrier.trim().is_empty() {
+            return Err("Carrier is required".to_string());
+        }
+        if tracking_number.trim().is_empty() {
+            return Err("Tracking number is required".to_string());
+        }
+
+        let resp = self
+            .http_client
+            .get(format!(
+                "{}/tracks/{}/{}",
+                Self::api_base(),
+                carrier,
+                tracking_number
+            ))
+            .header(
+                "Authorization",
+                format!("ShippoToken {}", self.api_key.trim()),
+            )
+            .header("Content-Type", "application/json")
+            .header("SHIPPO-API-VERSION", "2018-02-08")
+            .send()
+            .await
+            .map_err(|e| format!("Shippo tracking request failed: {e}"))?;
+
+        let status = resp.status();
+        let body: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Shippo tracking response was not JSON: {e}"))?;
+
+        if !status.is_success() {
+            return Err(format!("Shippo tracking API error {status}: {body}"));
+        }
+
+        let tracking_status = body
+            .get("tracking_status")
+            .and_then(|v| v.as_object())
+            .ok_or_else(|| "Shippo tracking response missing tracking_status".to_string())?;
+
+        let status_val = tracking_status
+            .get("status")
+            .and_then(|v| v.as_str())
+            .unwrap_or("UNKNOWN");
+
+        let status_details = tracking_status
+            .get("status_details")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        Ok(ShippoTrackingStatus {
+            tracking_number: tracking_number.to_string(),
+            carrier: carrier.to_string(),
+            status: status_val.to_string(),
+            status_details: status_details.to_string(),
         })
     }
 }

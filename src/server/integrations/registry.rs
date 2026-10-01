@@ -939,6 +939,26 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn fetch_tracking(
+        &self,
+        integration_id: &str,
+        carrier: &str,
+        tracking_number: &str,
+    ) -> Result<crate::integrations::shippo::client::ShippoTrackingStatus, String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.fetch_tracking(carrier, tracking_number).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn send_whatsapp(
         &self,
         integration_id: &str,
