@@ -21,3 +21,7 @@ issue_category: Research
 issue_type: Blocked No-Work Finding
 issue_label: blocked
 assignees: []
+
+**Test execution constraints:**
+- Intermittent concurrency failures in `server_harness` provider facade tests resolve when run single-threaded.
+- Verified test command: `cargo test -p server_harness --test provider_facade -- --test-threads=1`
