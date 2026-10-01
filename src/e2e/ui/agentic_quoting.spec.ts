@@ -38,7 +38,7 @@ test.describe('Quote review on mobile', () => {
     expect(BigInt(terms.required_deposit_cents)).toBe(BigInt(5000));
 
     await page.goto(`/ui/quote.html?id=${quoteId}&mode=customer`);
-    await expect(page.locator('#quote-status')).toHaveText('Action Required');
+    await expect(page.locator('#quote-status')).toHaveText('Quote — review before accepting');
     const accepted = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/quotes/${quoteId}/accept` && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Accept quote', exact: true }).click();
     const acceptance = await accepted;
