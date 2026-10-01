@@ -41,12 +41,25 @@ test.describe('Dashboard Core', () => {
 
   test('opens and dismisses dashboard quick actions', async ({ page }) => {
     await page.goto('/dashboard');
-    const toggle = page.getByRole('button', { name: 'Quick Actions', exact: true });
-    await expect(page.getByRole('link', { name: '📦 New Product', exact: true })).toHaveCount(0);
-    await toggle.click();
-    await expect(page.getByRole('link', { name: '📦 New Product', exact: true })).toHaveAttribute('href', '/products/new');
-    await expect(page.getByRole('link', { name: /Snap Receipt/ })).toBeVisible();
-    await toggle.click();
-    await expect(page.getByRole('link', { name: '📦 New Product', exact: true })).toHaveCount(0);
+    for (const width of [375, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      const toggle = page.getByRole('button', { name: 'Quick Actions', exact: true });
+      await expect(toggle).toBeInViewport();
+      // Both genuine controls stay usable; increasing z-index would merely
+      // transfer the obstruction to Help rather than repair the layout.
+      const help = page.getByRole('button', { name: 'Help', exact: true });
+      await expect(help).toBeVisible();
+      const actionBox = await toggle.boundingBox();
+      const helpBox = await help.boundingBox();
+      expect(actionBox).not.toBeNull();
+      expect(helpBox).not.toBeNull();
+      expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(helpBox!.y);
+      await expect(page.getByRole('link', { name: '📦 New Product', exact: true })).toHaveCount(0);
+      await toggle.click();
+      await expect(page.getByRole('link', { name: '📦 New Product', exact: true })).toHaveAttribute('href', '/products/new');
+      await expect(page.getByRole('link', { name: /Snap Receipt/ })).toBeVisible();
+      await toggle.click();
+      await expect(page.getByRole('link', { name: '📦 New Product', exact: true })).toHaveCount(0);
+    }
   });
 });

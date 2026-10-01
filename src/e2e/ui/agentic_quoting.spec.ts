@@ -32,7 +32,10 @@ test.describe('Quote review on mobile', () => {
     expect(await approval.json()).toMatchObject({ success: true });
     await expect(page.getByText('Quote approval saved. Message delivery to the customer is not confirmed.')).toBeVisible();
     const [terms] = await e2eDbQuery('SELECT status,total_amount_cents,required_deposit_cents FROM quotes WHERE id=$1 AND tenant_id=$2', [quoteId, adminUser.organizationId]);
-    expect(terms).toMatchObject({ status: 'SENT', total_amount_cents: 20000, required_deposit_cents: 5000 });
+    expect(terms).toMatchObject({ status: 'SENT' });
+    // PostgreSQL BIGINT values retain exact decimal strings in the fixture API.
+    expect(BigInt(terms.total_amount_cents)).toBe(BigInt(20000));
+    expect(BigInt(terms.required_deposit_cents)).toBe(BigInt(5000));
 
     await page.goto(`/ui/quote.html?id=${quoteId}&mode=customer`);
     await expect(page.locator('#quote-status')).toHaveText('Action Required');
@@ -49,6 +52,7 @@ test.describe('Quote review on mobile', () => {
     await expect(page).toHaveURL(new RegExp(`/ui/quote\\.html\\?id=${quoteId}`));
     await expect(page.locator('body')).not.toContainText('Deposit Paid!');
     const [invoice] = await e2eDbQuery('SELECT status,payment_status,total_amount_cents,stripe_invoice_id,stripe_payment_link FROM invoices WHERE id=$1 AND quote_id=$2 AND tenant_id=$3', [receipt.invoice_id, quoteId, adminUser.organizationId]);
-    expect(invoice).toMatchObject({ status: 'Draft', payment_status: 'unverified', total_amount_cents: 20000, stripe_invoice_id: null, stripe_payment_link: null });
+    expect(invoice).toMatchObject({ status: 'Draft', payment_status: 'unverified', stripe_invoice_id: null, stripe_payment_link: null });
+    expect(BigInt(invoice.total_amount_cents)).toBe(BigInt(20000));
   });
 });
