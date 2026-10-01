@@ -1,9 +1,5 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
+outcome: blocked
+issue_title: "Scout: Tool Integration Research - Stripe"
 issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+  The requested Stripe integration is already partially implemented (F06 connection flow is verified, and F08 checkouts use real provider sessions). However, implementing full payment event reconciliation via webhooks (updating internal records to 'paid') is explicitly listed as outstanding under F08 and blocked under F12 (Simulation, unknown provider outcome and approval paths can look like completion) and F14/F15 due to missing owner economic/metric data and prerequisites. Thus, no safe, well-scoped implementation follows from the repository state.
+  Superpowers skill provenance: Loaded Superpowers revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md)
