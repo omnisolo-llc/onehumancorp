@@ -1,0 +1,2 @@
+issue_title: "F05 telemetry not invoice-grade"
+issue_description: "The issue F05 regarding telemetry not being invoice-grade is blocked. The required definition of payer/auth/rate attribution payloads is missing, and the necessary external APIs for provider invoice reconciliation cannot be accessed without authorization. The current architecture also lacks unique attempt/provider request IDs for deduplication. Therefore, no application code changes can be made at this time."
