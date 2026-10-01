@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "Scout Tool Integration Research - Stripe"
+issue_description: "Superpowers skill provenance: None loaded. The issue requested tool integration research for Stripe. Stripe integration is already present in the codebase. The acceptance criteria for generating payment links for quotes and invoices are satisfied. However, according to docs/research/native_migration_and_remediation.md, full provider sandbox replay/payment event reconciliation, persisted provider receipts across every workflow and all business transitions remain outstanding. Marking quotes as paid via webhooks remains unverified. No additional implementation can be done at this time because these prerequisites are blocked."
