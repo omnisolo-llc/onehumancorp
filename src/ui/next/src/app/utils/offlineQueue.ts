@@ -63,12 +63,14 @@ function checkOtherRows(rows: StoredQueueRow[]): void {
   if (rows.some(row => envelope(row))) throw new Error('Conflicting queue adapters require reconciliation');
 }
 
-export async function enqueueAction(action: OfflineAction): Promise<void> { return enqueueActions([action]); }
-export async function enqueueActions(actions: OfflineAction[]): Promise<void> {
+export async function enqueueAction(action: OfflineAction, expectedOwner?: QueueOwner): Promise<void> { return enqueueActions([action], expectedOwner); }
+export async function enqueueActions(actions: OfflineAction[], expectedOwner?: QueueOwner): Promise<void> {
   if (!actions.length) return;
+  const intendedOwner = expectedOwner ? { ...expectedOwner } : undefined;
   // Clone before the first await: the caller cannot change a queued financial action.
   const immutable = clone(actions).map(action => { const context = captureRouteContext(action); return { action, context, plans: planRoutes(action, context) }; });
   const owner = await readQueueOwner();
+  if (intendedOwner && !sameOwner(owner, intendedOwner)) throw new Error('Queued action owner does not match the current view.');
   const adapter = await selectedQueueAdapter();
   const other = await readOtherAdapter(adapter);
   checkOtherRows(other.rows);

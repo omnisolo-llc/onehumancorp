@@ -67,6 +67,13 @@ export async function fetchForOnboardingOwner(url: string, options: RequestInit,
   }
   return authenticatedOnboardingFetch(url, options, expected, before);
 }
+/** Read only the maintained POS snapshots through the same sealed owner boundary. */
+export async function fetchForOwnedBusinessRead(url: string, expected: DraftOwner | null): Promise<Response> {
+  if (!['/api/v1/pos/orders', '/api/v1/pos/inventory'].includes(url)) throw new Error('Invalid business read destination');
+  const intended = expected ? { ...expected } : null;
+  if (!intended || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. Please reopen this view.');
+  return authenticatedOnboardingFetch(url, { method: 'GET' }, intended, epoch);
+}
 /** Existing business mutations share session authority, not draft-write queuing. */
 export async function fetchForOwnedBusinessAction(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
   if (!['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/publish_draft'].includes(url)) throw new Error('Invalid business action destination');

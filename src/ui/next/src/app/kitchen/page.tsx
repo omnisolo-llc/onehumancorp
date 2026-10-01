@@ -4,6 +4,51 @@ import type { OrderRecord, SaleProduct } from '@/lib/business-records';
 import React, { useState, useEffect, useRef } from "react";
 import { AppShell } from "../components/AppShell";
 import { SyncManager } from "../../lib/sync/SyncManager";
+import { sameOwner } from '../../lib/sync/queueIdentity';
+import { openOnboardingSession, onboardingOwner, onboardingSessionEpoch, subscribeOnboardingInvalidation, fetchForOwnedBusinessRead, readOwnedOnboardingItem, writeOwnedOnboardingItem, type DraftOwner } from '../onboarding/draftSession';
+
+type KitchenScope = { owner: DraftOwner; epoch: number };
+function currentScope(scope: KitchenScope | null): scope is KitchenScope {
+  const owner = onboardingOwner();
+  return !!scope && !!owner && scope.epoch === onboardingSessionEpoch() && sameOwner(scope.owner, owner);
+}
+function assertScope(scope: KitchenScope): void {
+  if (!currentScope(scope)) throw new Error('Your session changed. Reopen Kitchen to verify its saved data.');
+}
+function records<T extends OrderRecord | SaleProduct>(value: unknown): T[] {
+  if (!Array.isArray(value) || value.some(row => {
+    if (!row || typeof row !== 'object' || Array.isArray(row) || typeof row.id !== 'string' || !row.id) return true;
+    for (const key of ['status','customer_name','notes','translated_notes','name','title','updated_at']) if (row[key] != null && typeof row[key] !== 'string') return true;
+    if (row.is_sold_out != null && typeof row.is_sold_out !== 'boolean') return true;
+    if (row.items != null && (!Array.isArray(row.items) || row.items.some((item: unknown) => !item || typeof item !== 'object' || Array.isArray(item) || ['name','product_id'].some(key => (item as Record<string, unknown>)[key] != null && typeof (item as Record<string, unknown>)[key] !== 'string')))) return true;
+    return false;
+  })) throw new Error('Saved kitchen data could not be read. Its original copy remains held.');
+  return value as T[];
+}
+async function loadSnapshot<T extends OrderRecord | SaleProduct>(scope: KitchenScope, kind: 'orders' | 'inventory', active: () => boolean): Promise<{ value: T[] | null; notice?: string }> {
+  const key = 'kitchen-' + kind + '-v1';
+  const assertActive = () => { assertScope(scope); if (!active()) throw new Error('This kitchen view is no longer active.'); };
+  try {
+    const response = await fetchForOwnedBusinessRead('/api/v1/pos/' + kind, scope.owner);
+    assertActive();
+    if (!response.ok || response.status !== 200) throw new Error('Kitchen data unavailable');
+    const body = await response.json();
+    assertActive();
+    if (body?.success === false || body?.error != null) throw new Error('Kitchen data unavailable');
+    const value = records<T>(Array.isArray(body) ? body : kind === 'orders' ? body?.orders : body?.inventory ?? body?.items);
+    try { writeOwnedOnboardingItem(key, JSON.stringify({ format: 1, records: value })); }
+    catch { return { value, notice: 'Fresh kitchen data is shown, but this device could not save its cache.' }; }
+    return { value };
+  } catch {
+    assertActive();
+    const saved = readOwnedOnboardingItem(key);
+    if (saved === null) return { value: null, notice: `Kitchen ${kind} could not be loaded. No saved data is available for this account.` };
+    let parsed: { format?: unknown; records?: unknown };
+    try { parsed = JSON.parse(saved); } catch { throw new Error('Saved kitchen data could not be read. Its original copy remains held.'); }
+    if (parsed?.format !== 1) throw new Error('Saved kitchen data could not be read. Its original copy remains held.');
+    return { value: records<T>(parsed.records), notice: `Showing saved ${kind} for this account while fresh kitchen data is unavailable.` };
+  }
+}
 
 export default function KitchenView() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -11,107 +56,95 @@ export default function KitchenView() {
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [queueError, setQueueError] = useState<string | null>(null);
   const pending = useRef(new Set<string>());
+  const scope = useRef<KitchenScope | null>(null);
+  const [viewScope, setViewScope] = useState<KitchenScope | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [sessionError, setSessionError] = useState('');
+  const [cacheNotice, setCacheNotice] = useState('');
+  const [ordersKnown, setOrdersKnown] = useState(false);
+  const [menuKnown, setMenuKnown] = useState(false);
+  const generation = useRef(0);
 
   useEffect(() => {
-    // Ensure SyncManager is initialized so it listens to websocket
-    SyncManager.getInstance();
-
-    const fetchOrdersAndMenu = async () => {
+    let disposed = false;
+    let countVersion = 0;
+    const updateCount = async () => {
+      const current = scope.current; const version = ++countVersion;
+      if (!currentScope(current)) return;
       try {
-        // Fetch recorded orders; an authoritative empty response stays empty.
-        let ordersData: OrderRecord[] = [];
-        let ordersLoaded = false;
-        try {
-          const ordersRes = await fetch("/api/v1/pos/orders");
-          if (ordersRes.ok) {
-            const data = await ordersRes.json();
-            ordersData = data.orders || (Array.isArray(data) ? data : []);
-            ordersLoaded = true;
-          }
-        } catch {
-          // ignore
-        }
-        if (!ordersLoaded) {
-          const cachedOrders = localStorage.getItem('kds_orders_cache');
-          if (cachedOrders) {
-            try { ordersData = JSON.parse(cachedOrders); } catch { ordersData = []; }
-          }
-        }
-        setOrders(ordersData);
-        try { localStorage.setItem('kds_orders_cache', JSON.stringify(ordersData)); } catch {
-          // ignore cache errors
-        }
-
-        let menuData: SaleProduct[] = [];
-        let menuLoaded = false;
-        try {
-          const menuRes = await fetch("/api/v1/pos/inventory");
-          if (menuRes.ok) {
-            const data = await menuRes.json();
-            menuData = data.inventory || data.items || (Array.isArray(data) ? data : []);
-            menuLoaded = true;
-          }
-        } catch {
-          // ignore
-        }
-        if (!menuLoaded) {
-          const cachedMenu = localStorage.getItem('kds_menu_cache');
-          if (cachedMenu) {
-            try { menuData = JSON.parse(cachedMenu); } catch { menuData = []; }
-          }
-        }
-        setMenu(menuData);
-        try { localStorage.setItem('kds_menu_cache', JSON.stringify(menuData)); } catch {
-          // ignore cache errors
-        }
-      } catch (err) {
-        console.error("Failed to fetch kitchen data", err);
+        const count = await SyncManager.getInstance().getQueueLength();
+        if (!disposed && currentScope(current) && version === countVersion) setOfflineQueueCount(count);
+      } catch { if (!disposed && currentScope(current) && version === countVersion) setQueueError('The offline queue could not be read. Saved actions remain held.'); }
+    };
+    const load = async () => {
+      const version = ++generation.current;
+      setLoaded(false); setSessionError(''); setCacheNotice('');
+      const active = () => !disposed && version === generation.current;
+      try {
+        const owner = await openOnboardingSession();
+        if (!active()) return;
+        const verified = { owner, epoch: onboardingSessionEpoch() };
+        scope.current = verified; setViewScope(verified);
+        const [nextOrders, nextMenu] = await Promise.all([loadSnapshot<OrderRecord>(verified, 'orders', active), loadSnapshot<SaleProduct>(verified, 'inventory', active)]);
+        if (!active() || !currentScope(verified)) return;
+        setOrders(nextOrders.value ?? []); setMenu(nextMenu.value ?? []);
+        setOrdersKnown(nextOrders.value !== null); setMenuKnown(nextMenu.value !== null);
+        const held = ['kds_orders_cache','kds_menu_cache'].some(key => localStorage.getItem(key) !== null);
+        setCacheNotice([...new Set([held ? 'Older kitchen data remains held because its owner is unknown.' : '', nextOrders.notice, nextMenu.notice].filter(Boolean))].join(' '));
+        setLoaded(true); void updateCount();
+      } catch (error) {
+        if (active()) setSessionError(error instanceof Error ? error.message : 'Kitchen data is unavailable. Your saved copies remain held.');
       }
     };
-
-    fetchOrdersAndMenu();
-
-    const updateCount = async () => {
-      try { setOfflineQueueCount(await SyncManager.getInstance().getQueueLength()); }
-      catch { setQueueError('The offline queue could not be read.'); }
+    const invalidate = (restart: boolean) => {
+      generation.current += 1; countVersion += 1; scope.current = null; setViewScope(null); pending.current.clear();
+      setOrders([]); setMenu([]); setOrdersKnown(false); setMenuKnown(false); setOfflineQueueCount(0); setQueueError(null); setCacheNotice(''); setLoaded(false);
+      if (restart) void load(); else setSessionError('Your session could not be verified. Saved kitchen data remains held.');
     };
-
-    updateCount();
-    window.addEventListener("omnisolo_queue_updated", updateCount);
-
-    return () => {
-      window.removeEventListener("omnisolo_queue_updated", updateCount);
-    };
+    const unsubscribe = subscribeOnboardingInvalidation(invalidate);
+    window.addEventListener('omnisolo_queue_updated', updateCount);
+    void load();
+    return () => { disposed = true; generation.current += 1; countVersion += 1; scope.current = null; unsubscribe(); window.removeEventListener('omnisolo_queue_updated', updateCount); };
   }, []);
 
   const handleToggleSoldOut = async (itemId: string, currentStatus: boolean) => {
+    const current = viewScope; const version = generation.current;
+    if (!currentScope(current)) return;
+    const active = () => version === generation.current && currentScope(current);
     const key = `product:${itemId}`;
     const original = menu.find(item => item.id === itemId);
     if (pending.current.has(key)) return;
     pending.current.add(key); setQueueError(null);
     setMenu(current => current.map(item => item.id === itemId ? { ...item, is_sold_out: !currentStatus } : item));
     try {
-      await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: "TOGGLE_SOLD_OUT", payload: { item_id: itemId, is_sold_out: !currentStatus, expected_is_sold_out: currentStatus, ...(original?.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original?.base_version !== undefined || original?.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: Date.now() });
+      await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: "TOGGLE_SOLD_OUT", payload: { item_id: itemId, is_sold_out: !currentStatus, expected_is_sold_out: currentStatus, ...(original?.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original?.base_version !== undefined || original?.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: Date.now() }, current.owner);
     } catch {
+      if (!active()) return;
       setMenu(current => current.map(item => item.id === itemId ? { ...item, is_sold_out: currentStatus } : item));
       setQueueError('This change could not be saved. Check your connection and local storage.');
-    } finally { pending.current.delete(key); }
+    } finally { if (active()) pending.current.delete(key); }
   };
 
   const handleMarkReady = async (orderId: string) => {
+    const current = viewScope; const version = generation.current;
+    if (!currentScope(current)) return;
+    const active = () => version === generation.current && currentScope(current);
     const key = `order:${orderId}`;
     const original = orders.find(order => order.id === orderId);
     if (!original || pending.current.has(key)) return;
     pending.current.add(key); setQueueError(null);
     setOrders(current => current.map(order => order.id === orderId ? { ...order, status: "ready" } : order));
     try {
-      await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: "UPDATE_ORDER_STATUS", payload: { order_id: orderId, status: "ready", expected_status: original.status, ...(original.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original.base_version !== undefined || original.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: Date.now() });
+      await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: "UPDATE_ORDER_STATUS", payload: { order_id: orderId, status: "ready", expected_status: original.status, ...(original.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original.base_version !== undefined || original.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: Date.now() }, current.owner);
     } catch {
+      if (!active()) return;
       setOrders(current => current.map(order => order.id === orderId ? { ...order, status: original.status } : order));
       setQueueError('This change could not be saved. Check your connection and local storage.');
-    } finally { pending.current.delete(key); }
+    } finally { if (active()) pending.current.delete(key); }
   };
 
+  if (sessionError) return <AppShell title="Kitchen Command Center"><div role="alert" className="app-panel p-4">{sessionError}</div></AppShell>;
+  if (!loaded) return <AppShell title="Kitchen Command Center"><div role="status" className="app-panel p-4">Verifying your kitchen session…</div></AppShell>;
   return (
     <AppShell title="Kitchen Command Center">
       <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-inter">
@@ -123,9 +156,11 @@ export default function KitchenView() {
         </header>
 
         {queueError && <p role="alert">{queueError}</p>}
+        {cacheNotice && <p role="status">{cacheNotice}</p>}
         <main className="p-4 flex flex-col md:flex-row gap-6">
           <section className="flex-1">
             <h2 className="text-lg font-bold font-outfit mb-4">Active Orders</h2>
+            {!ordersKnown && <p>Orders are unavailable.</p>}
             <div className="space-y-4">
               {orders.filter(o => o.status !== "ready" && o.status !== "completed").map(order => (
                 <div key={order.id} data-testid={`kitchen-order-${order.id}`} className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-4 shadow-sm">
@@ -158,7 +193,7 @@ export default function KitchenView() {
                   </button>
                 </div>
               ))}
-              {orders.filter(o => o.status !== "ready" && o.status !== "completed").length === 0 && (
+              {ordersKnown && orders.filter(o => o.status !== "ready" && o.status !== "completed").length === 0 && (
                 <div className="text-center py-8 text-gray-500 italic">No active orders</div>
               )}
             </div>
@@ -166,6 +201,7 @@ export default function KitchenView() {
 
           <section className="w-full md:w-80">
             <h2 className="text-lg font-bold font-outfit mb-4">Daily Menu</h2>
+            {!menuKnown && <p>Menu data is unavailable.</p>}
             <div className="space-y-3">
               {menu.map(item => {
                 const soldOut = item.is_sold_out || item.available_quantity === 0;

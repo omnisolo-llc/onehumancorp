@@ -1,6 +1,6 @@
 import { enqueueAction, getActions, getActionRoutes, claimAction, completeAction, getQueueSummary } from '../../app/utils/offlineQueue';
 import type { OfflineAction, MutationPayload } from '../../app/utils/offlineQueue';
-import { readQueueOwner, sameOwner } from './queueIdentity';
+import { readQueueOwner, sameOwner, type QueueOwner } from './queueIdentity';
 import { readOutcome } from './queueRoutes';
 
 type QueuedMutation = Omit<OfflineAction, 'id' | 'timestamp'> & { id?: string; timestamp?: number | string };
@@ -41,7 +41,7 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  public async enqueue(mutation: QueuedMutation) {
+  public async enqueue(mutation: QueuedMutation, expectedOwner?: QueueOwner) {
     if (typeof window === 'undefined') return;
 
     if (!mutation.id) {
@@ -53,7 +53,9 @@ export class SyncManager {
 
     const timestamp = typeof mutation.timestamp === 'string' ? Date.parse(mutation.timestamp) : mutation.timestamp;
     if (!Number.isFinite(timestamp)) throw new Error('Offline mutation timestamp must be valid');
-    await enqueueAction({ ...mutation, id: mutation.id, timestamp });
+    const action = { ...mutation, id: mutation.id, timestamp };
+    if (expectedOwner) await enqueueAction(action, expectedOwner);
+    else await enqueueAction(action);
     this.notifyListeners();
 
     if (navigator.onLine) {
@@ -61,8 +63,8 @@ export class SyncManager {
     }
   }
 
-  public async enqueueMutation(mutation: QueuedMutation) {
-    return this.enqueue(mutation);
+  public async enqueueMutation(mutation: QueuedMutation, expectedOwner?: QueueOwner) {
+    return expectedOwner ? this.enqueue(mutation, expectedOwner) : this.enqueue(mutation);
   }
 
   public async getQueueSummary() { return getQueueSummary(); }

@@ -148,3 +148,24 @@ it('round-trips omitted optional financial fields when validating the frozen pla
   expect(await getActions()).toEqual([cash]);
   expect(await claimAction(cash.id, '/api/v1/payments/terminal/sync_offline')).not.toBeNull();
 });
+
+it('refuses to append a prior view action after the verified account changes', async () => {
+  vi.mocked(readQueueOwner).mockResolvedValue({ userId: 'b', tenantId: 'other' });
+  const storageReads = vi.mocked(getPowerSyncDB).mock.calls.length;
+  await expect(enqueueAction(action, owner)).rejects.toThrow('owner does not match');
+  expect(rows.size).toBe(0);
+  expect(getPowerSyncDB).toHaveBeenCalledTimes(storageReads);
+});
+it('freezes the intended view owner before awaiting identity verification', async () => {
+  const intended = { ...owner };
+  const storageReads = vi.mocked(getPowerSyncDB).mock.calls.length;
+  let finish!: (value: typeof owner) => void;
+  vi.mocked(readQueueOwner).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  const saving = enqueueAction(action, intended);
+  intended.userId = 'b'; intended.tenantId = 'other';
+  const rejected = expect(saving).rejects.toThrow('owner does not match');
+  finish({ userId: 'b', tenantId: 'other' });
+  await rejected;
+  expect(rows.size).toBe(0);
+  expect(getPowerSyncDB).toHaveBeenCalledTimes(storageReads);
+});

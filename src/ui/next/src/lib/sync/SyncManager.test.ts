@@ -85,3 +85,9 @@ describe('durable sync outcomes', () => {
     expect(enqueueAction).toHaveBeenCalledOnce();
   });
 });
+
+it('forwards the expected view owner through the enqueueMutation alias', async () => {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  await SyncManager.getInstance().enqueueMutation({ id: 'owned', type: 'triage_action', timestamp: 1 }, owner);
+  expect(enqueueAction).toHaveBeenCalledWith({ id: 'owned', type: 'triage_action', timestamp: 1 }, owner);
+});
