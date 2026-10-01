@@ -855,6 +855,11 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_onboarding_draft_test
           python3 scripts/focused_ci_gate.py onboarding-draft-merge
+      - name: Verify agent workflow tenant isolation and requested tasks offline
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py agent-workflow-contract
       - name: Verify active Stripe webhook ingress offline
         if: ${{ !cancelled() }}
         env:

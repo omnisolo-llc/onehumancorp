@@ -69,6 +69,8 @@ fn current_help_link(link: &str) -> String {
 #[derive(Clone, serde::Serialize)]
 pub struct WorkflowRecord {
     pub id: String,
+    pub tenant_id: String,
+    pub actor_id: String,
     pub name: String,
     pub workflow: String,
     pub task: String,
@@ -1491,18 +1493,66 @@ pub fn dispatch_workflow(record: WorkflowRecord) {
     });
 }
 
-async fn list_workflows_handler() -> axum::Json<serde_json::Value> {
-    let workflows = get_workflow_registry()
-        .read()
-        .map(|records| records.clone())
-        .unwrap_or_default();
-    axum::Json(serde_json::json!({ "workflows": workflows }))
+async fn list_workflows_handler(
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
+) -> impl axum::response::IntoResponse {
+    use axum::http::StatusCode;
+    let Some(tenant_id) = claims
+        .as_ref()
+        .and_then(|claims| ::server_common::auth_utils::signed_tenant_id(&claims.0))
+    else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({ "error": "Authentication required" })),
+        );
+    };
+    let Ok(records) = get_workflow_registry().read() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            axum::Json(serde_json::json!({ "error": "Workflow records unavailable" })),
+        );
+    };
+    let workflows: Vec<_> = records
+        .iter()
+        .filter(|record| record.tenant_id == tenant_id)
+        .cloned()
+        .collect();
+    (
+        StatusCode::OK,
+        axum::Json(serde_json::json!({ "workflows": workflows })),
+    )
 }
 
 async fn create_workflow_handler(
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::Json(payload): axum::Json<CreateWorkflowRequest>,
 ) -> impl axum::response::IntoResponse {
     use axum::http::StatusCode;
+
+    let Some(claims) = claims else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({ "error": "Authentication required" })),
+        );
+    };
+    let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims.0) else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({ "error": "Authentication required" })),
+        );
+    };
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            axum::Json(
+                serde_json::json!({ "error": "An owner or administrator must start workflows" }),
+            ),
+        );
+    }
 
     let name = payload.name.trim();
     let task = payload.task.trim();
@@ -1522,6 +1572,8 @@ async fn create_workflow_handler(
     let agent_task = workflow_agent_task(workflow, task);
     let record = WorkflowRecord {
         id: uuid::Uuid::new_v4().to_string(),
+        tenant_id,
+        actor_id: claims.sub.clone(),
         name: name.to_string(),
         workflow: workflow.to_string(),
         task: task.to_string(),
@@ -1536,7 +1588,13 @@ async fn create_workflow_handler(
         error: None,
     };
 
-    if let Ok(mut workflows) = get_workflow_registry().write() {
+    {
+        let Ok(mut workflows) = get_workflow_registry().write() else {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                axum::Json(serde_json::json!({ "error": "Workflow records unavailable" })),
+            );
+        };
         workflows.insert(0, record.clone());
     }
     dispatch_workflow(record.clone());

@@ -12,6 +12,13 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_agent_workflow_gate_keeps_its_full_offline_inventory(self):
+        minimum, database = gate.GATES['agent-workflow-contract']
+        self.assertGreaterEqual(minimum, 9)
+        self.assertIsNone(database)
+        runner = Path(__file__).resolve().parents[1]/'scripts/agent-workflow-contract/run.sh'
+        self.assertTrue(runner.is_file())
+
     def test_counts_real_passes_and_permits_empty_doctest_target(self):
         self.assertEqual(gate.validate_results('test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0s', 25), 25)
 

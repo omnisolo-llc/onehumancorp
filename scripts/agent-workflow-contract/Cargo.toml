@@ -1,0 +1,23 @@
+[package]
+name = "ohc-agent-workflow-contract-regressions"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", features = ["postgres", "mysql", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+server_auth = { path = "../../src/server/auth" }
+server_common = { path = "../../src/server/common" }
+server_omnisolo = { path = "../../src/server/omnisolo" }
+tower = { version = "0.5", features = ["util"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

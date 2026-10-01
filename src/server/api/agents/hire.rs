@@ -17,6 +17,8 @@ pub struct HireAgentRequest {
     pub provider_type: String,
     #[serde(default)]
     pub model: String,
+    #[serde(default)]
+    pub task: Option<String>,
 }
 
 #[derive(Serialize, Debug)]
@@ -48,7 +50,7 @@ async fn hire_handler(
     let tenant_id = match req
         .extensions()
         .get::<::server_common::Claims>()
-        .and_then(|claims| claims.organization_id.clone())
+        .and_then(::server_common::auth_utils::signed_tenant_id)
     {
         Some(organization_id) => organization_id,
         None => {
@@ -65,6 +67,29 @@ async fn hire_handler(
                 .into_response();
         }
     };
+
+    let claims = req
+        .extensions()
+        .get::<::server_common::Claims>()
+        .expect("validated signed tenant");
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(HireAgentResponse {
+                id: String::new(),
+                status: "error".into(),
+                agent_id: String::new(),
+                workflow_id: String::new(),
+                message: "An owner or administrator must start agent work".into(),
+            }),
+        )
+            .into_response();
+    }
+    let actor_id = claims.sub.clone();
 
     let (parts, body) = req.into_parts();
     let req2 = axum::extract::Request::from_parts(parts, body);
@@ -87,6 +112,24 @@ async fn hire_handler(
             }
         };
 
+    if payload
+        .task
+        .as_deref()
+        .is_some_and(|task| task.trim().is_empty())
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(HireAgentResponse {
+                id: String::new(),
+                status: "error".into(),
+                agent_id: String::new(),
+                workflow_id: String::new(),
+                message: "A supplied task must not be empty".into(),
+            }),
+        )
+            .into_response();
+    }
+
     let now = chrono::Utc::now().timestamp();
     let agent_id = format!("agent-{}-{}", now, uuid::Uuid::new_v4().simple());
     let provider_type = if payload.provider_type.is_empty() {
@@ -99,12 +142,11 @@ async fn hire_handler(
         id: agent_id.clone(),
         name: payload.name.clone(),
         role: payload.role.clone(),
-        organization_id: tenant_id,
+        organization_id: tenant_id.clone(),
         status: "RUNNING".to_string(),
         provider_type,
     };
 
-    hub.register_agent(agent).await;
     let model = if payload.model.trim().is_empty() {
         std::env::var("OMNISOLO_LLM_MODEL")
             .or_else(|_| std::env::var("MINIMAX_MODEL"))
@@ -112,17 +154,19 @@ async fn hire_handler(
     } else {
         payload.model.clone()
     };
-    let workflow_task = format!(
+    let workflow_task = payload.task.clone().unwrap_or_else(|| format!(
         "A newly hired OmniSolo agent named '{}' with role '{}' should start improving the business now. \
          Run a practical business operating swarm for this company, identify the highest leverage work, \
          and assign concrete next actions to specialist agents. Use model {}.",
         payload.name, payload.role, model
-    );
+    ));
     let workflow_id = uuid::Uuid::new_v4().to_string();
     let binary = crate::workflow_agent_binary();
     let agent_task = crate::workflow_agent_task("ohc_business_swarm", &workflow_task);
     let record = crate::WorkflowRecord {
         id: workflow_id.clone(),
+        tenant_id,
+        actor_id,
         name: format!("{} business swarm", payload.name),
         workflow: "ohc_business_swarm".to_string(),
         task: workflow_task,
@@ -136,9 +180,23 @@ async fn hire_handler(
         output: None,
         error: None,
     };
-    if let Ok(mut workflows) = crate::get_workflow_registry().write() {
+    {
+        let Ok(mut workflows) = crate::get_workflow_registry().write() else {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(HireAgentResponse {
+                    id: String::new(),
+                    status: "error".into(),
+                    agent_id: String::new(),
+                    workflow_id: String::new(),
+                    message: "Workflow records unavailable".into(),
+                }),
+            )
+                .into_response();
+        };
         workflows.insert(0, record.clone());
     }
+    hub.register_agent(agent).await;
     crate::dispatch_workflow(record);
 
     let response = HireAgentResponse {
@@ -146,17 +204,27 @@ async fn hire_handler(
         status: "running".to_string(),
         agent_id,
         workflow_id,
-        message: format!(
-            "Hired {} as {} and started a real MiniMax business swarm",
-            payload.name, payload.role
-        ),
+        message: format!("Accepted work for {} as {}", payload.name, payload.role),
     };
 
     (StatusCode::CREATED, Json(response)).into_response()
 }
 
-async fn list_agents_handler(State(hub): State<Arc<Hub>>) -> impl IntoResponse {
-    (StatusCode::OK, Json((*hub.get_agents().await).clone())).into_response()
+async fn list_agents_handler(
+    State(hub): State<Arc<Hub>>,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
+) -> impl IntoResponse {
+    let Some(tenant_id) = claims
+        .as_ref()
+        .and_then(|claims| ::server_common::auth_utils::signed_tenant_id(&claims.0))
+    else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    (
+        StatusCode::OK,
+        Json(hub.get_agents_by_org(&tenant_id).await),
+    )
+        .into_response()
 }
 
 #[derive(Deserialize, Debug)]
