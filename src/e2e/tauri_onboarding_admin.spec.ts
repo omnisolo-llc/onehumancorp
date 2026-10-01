@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './onboarding_fixtures';
 
 test.describe('Legacy authenticated onboarding team review', () => {
   test('Uses the signed-in account without collecting replacement credentials', async ({ page }) => {

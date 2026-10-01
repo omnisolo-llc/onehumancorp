@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../onboarding_fixtures';
 
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
@@ -103,7 +103,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await expect(imageContainer).toBeVisible();
   });
 
-  test('Conversational Setup maintains history after reload', async ({ page }) => {
+  test('Conversational Setup maintains history after reload', async ({ page, onboardingOwner }) => {
     await page.goto('/setup.html');
 
     // Start conversational flow
@@ -121,8 +121,12 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const userMessages = page.locator('.chat-message.user');
     await expect(userMessages).toHaveCount(1);
 
-    // Ensure draft save occurs
-    await page.waitForTimeout(1000);
+    // Wait for this verified owner's actual durable local snapshot, not a delay.
+    await expect.poll(() => page.evaluate(({ userId, tenantId }) => {
+      const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([userId, tenantId])) + ':legacy-draft';
+      const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      return saved.state?.chat_history?.some((message: {role: string; content: string}) => message.role === 'user' && message.content === 'This is a test message to ensure history persistence.') ?? false;
+    }, onboardingOwner)).toBe(true);
 
     // Reload page
     await page.reload();

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../e2e/onboarding_fixtures';
 
 test.describe('Onboarding Flow E2E', () => {
   test('Complete setup from scratch with explicit approval', async ({ page }) => {

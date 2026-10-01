@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../onboarding_fixtures';
 
 test.describe('Onboarding Navigation and Aesthetics', () => {
 

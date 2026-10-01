@@ -1,9 +1,9 @@
-import { test, expect } from './fixtures';
+import { test, expect } from './onboarding_fixtures';
 
 test.describe('Zero Click Builder Viral Growth Loop', () => {
-  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page, loginAs, adminUser }) => {
+  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page }) => {
     // Navigate to the new growth feature
-    await loginAs(page, adminUser);
+    // The fixture authenticates a fresh test-owned tenant.
 
 
     await page.goto('/onboarding/zero-click');
