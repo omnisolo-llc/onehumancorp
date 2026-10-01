@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "🔍 Scout: Tool Integration Research - Stripe"
+issue_description: "The issue requests implementing a Stripe Payment Links integration for quotes and invoices. However, after exploring the codebase, it is clear that OmniSolo already has an established Stripe integration (`src/server/integrations/stripe/client.rs`) which includes both `create_payment_link` and `create_checkout_session`. The quoting and invoice logic (`src/server/api/quotes.rs`, `src/server/api/audio_command.rs`, `src/server/domain/booking.rs`, etc.) already generates Stripe checkout sessions and payment links when quotes are sent or invoices are generated, tracking them via the `stripe_payment_link` column in the database. Furthermore, a webhook listener (`src/server/api/billing_webhook.rs`) is fully implemented to process `checkout.session.completed`, `payment_intent.succeeded`, and invoice payment events to mark records as paid. Since all requested capabilities are already present and fully functional on the latest master branch, no further implementation is needed. Superpowers skill provenance: None loaded"
