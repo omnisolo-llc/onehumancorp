@@ -32,12 +32,15 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // Submit the form
     await generateBtn.click();
 
-    // Wait for the loading state to complete and the result to appear
-    await expect(page.locator('h2', { hasText: 'Your business is live!' })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Approve.*Prepare Workspace/ }).click();
+    // Wait for the committed preparation
+    await expect(page.locator('h2', { hasText: 'Your workspace is prepared' })).toBeVisible({ timeout: 15000 });
 
-    // Launch Store (acts as "Approve & Go Live")
+    // Explicit approval completes local setup
     await page.getByText('🚀 Launch My Store').click();
 
+    await expect(page.getByText('Setup complete')).toBeVisible();
+    await page.getByRole('button', { name: /Go to dashboard/i }).click();
     // Check navigation to dashboard
     await expect(page).toHaveURL(/.*dashboard/, { timeout: 15000 });
   });

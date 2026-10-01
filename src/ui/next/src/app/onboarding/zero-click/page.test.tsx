@@ -82,7 +82,7 @@ describe('ZeroClickBuilderPage', () => {
       if (url === '/api/v1/onboarding/start') {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ organization_id: 'org_123', user_id: 'user_123' }),
+          json: async () => ({ success: true, preparation_id: 'prep-1', status: 'prepared', organization_id: 'org_123', user_id: 'user_123', preparation: { preparation_id: 'prep-1', status: 'prepared', organization_id: 'org_123', user_id: 'user_123', primary_product_id: 'product-1', reviewed_request: {}, catalog: [{product_id:'product-1',name:'Sneakers',price:'100',description:'',variants:[]}] } }),
         });
       }
       return Promise.resolve({ ok: false, json: async () => ({}) });
@@ -98,12 +98,13 @@ describe('ZeroClickBuilderPage', () => {
     const submitBtn = buttons[buttons.length - 1];
     fireEvent.click(submitBtn);
 
-    // Wait for the result to appear
+    fireEvent.click(await screen.findByRole('button', { name: /Approve.*Prepare/i }));
+    // Wait for the acknowledged preparation to appear
     await waitFor(() => {
-      expect(screen.getByText('Your business is live!')).toBeInTheDocument();
+      expect(screen.getByText('Your workspace is prepared')).toBeInTheDocument();
     }, { timeout: 3000 });
 
-    expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
+    expect(screen.getByTitle('Storefront Preview')).toBeInTheDocument();
     const launch = screen.getByRole('button', { name: /Launch My Store/i });
     expect(launch).toBeInTheDocument();
     const startCall = vi.mocked(global.fetch).mock.calls.find(([url]) => url === '/api/v1/onboarding/start');
@@ -112,7 +113,10 @@ describe('ZeroClickBuilderPage', () => {
     expect(startBody.admin_email).toBeUndefined();
     expect(startBody.admin_password).toBeUndefined();
 
+    expect(localStorage.getItem('has_onboarded')).toBeNull();
     fireEvent.click(launch);
+    await screen.findByRole('alert');
+    expect(localStorage.getItem('has_onboarded')).toBeNull();
     expect(localStorage.getItem('business_display_name')).toBeNull();
     expect(localStorage.getItem('business_display_name')).toBeNull();
     expect(localStorage.getItem('user_display_name')).toBeNull();

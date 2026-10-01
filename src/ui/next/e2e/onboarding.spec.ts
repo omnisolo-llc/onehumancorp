@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Flow E2E', () => {
-  test('Complete setup from scratch to live', async ({ page }) => {
+  test('Complete setup from scratch with explicit approval', async ({ page }) => {
     // Navigate to the business setup start screen
     await page.goto('/business-setup');
     await expect(page.getByText('Your business, live in minutes.')).toBeVisible();
@@ -44,7 +44,7 @@ test.describe('Onboarding Flow E2E', () => {
     // It should progress to Step 2: Review Details
     await expect(page.getByText('Review Details')).toBeVisible();
 
-    // Verify some pre-filled fields from intake fallback or success
+    // Verify some pre-filled fields from the intake response
     await expect(page.locator('input[type="text"]').first()).toBeVisible();
 
     // Ensure First Product is filled before continuing
@@ -66,14 +66,14 @@ test.describe('Onboarding Flow E2E', () => {
     await page.getByText('Sales Assistant', { exact: true }).click();
 
     // Launch store
-    await page.click('text=Launch Store');
+    await page.getByRole('button', { name: 'Approve & Complete Setup' }).click();
 
     // Should see loading spinner / Step 4
-    await expect(page.getByText('Building Your Business...')).toBeVisible();
+    // A quick local response may complete before an intermediate spinner is observed.
 
     // Eventually transition to Step 5 (Live)
     // The delay might take a few seconds
-    await expect(page.getByText("You're Live!", { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup complete", { exact: true })).toBeVisible({ timeout: 15000 });
 
     // Ensure final dashboard links exist
     await expect(page.getByRole('link', { name: 'Open Assistant' })).toBeVisible();

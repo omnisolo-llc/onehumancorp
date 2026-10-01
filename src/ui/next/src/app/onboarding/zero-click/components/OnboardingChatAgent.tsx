@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { readPreparation, readPreparedResult, resultForPreparation } from '../../contracts';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -27,6 +28,11 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [review, setReview] = useState<{ intake: IntakeData; prompt: string } | null>(null);
+  const busy = useRef(false);
+  const epoch = useRef(0);
+  const unknownPreparation = useRef(false);
+  useEffect(() => () => { epoch.current += 1; busy.current = false; }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,12 +52,15 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   };
 
   useEffect(() => {
+    let cancelled = false;
     fetch('/api/v1/onboarding/state')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch state');
         return res.json();
       })
       .then((data) => {
+        if (cancelled) return;
+        if (data?.preparation) { onComplete(resultForPreparation(readPreparation(data.preparation))); return; }
         if (data?.chatMessages && Array.isArray(data.chatMessages) && data.chatMessages.length > 0) {
           setMessages(data.chatMessages);
         }
@@ -60,8 +69,9 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         console.error('Failed to load onboarding state', err);
       })
       .finally(() => {
-        setIsLoaded(true);
+        if (!cancelled) setIsLoaded(true);
       });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -83,116 +93,66 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   };
 
   const handleSend = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!input.trim() || isLoading || isProvisioning) return;
-
-    const userMessage: ChatMessage = { role: 'user', content: input.trim() };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput('');
-    setIsLoading(true);
-
-    // Save user message to backend
-    saveStateToBackend(newMessages);
-
+    e?.preventDefault();
+    if (!input.trim() || busy.current) return;
+    busy.current = true;
+    const version = ++epoch.current;
+    const active = () => version === epoch.current;
+    const newMessages: ChatMessage[] = [...messages, { role: 'user', content: input.trim() }];
+    setMessages(newMessages); setInput(''); setIsLoading(true); setReview(null); setError(null);
+    void saveStateToBackend(newMessages);
     try {
-      const response = await fetch('/api/v1/onboarding/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
-      });
-
+      const response = await fetch('/api/v1/onboarding/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: newMessages }) });
       if (!response.ok) throw new Error('Failed to communicate with setup agent');
-
       const data = await response.json();
-
+      if (!active()) return;
+      if (typeof data.reply !== 'string') throw new Error('The setup reply is incomplete');
+      const updated: ChatMessage[] = [...newMessages, { role: 'assistant', content: data.reply }];
+      setMessages(updated); void saveStateToBackend(updated);
       if (data.is_complete) {
-        const updatedMessages: ChatMessage[] = [...newMessages, { role: 'assistant', content: data.reply }];
-        setMessages(updatedMessages);
-        saveStateToBackend(updatedMessages);
-
-        setIsLoading(false);
-        setIsProvisioning(true);
-        // Map the intake data to the expected format and provision
-        if (data.intake_data) {
-           await handleProvisioning(data.intake_data, newMessages.filter(m => m.role === 'user').map(m => m.content).join(" "));
-        } else {
-           // Fallback if no intake data returned
-           setTimeout(() => {
-             setIsProvisioning(false);
-             onComplete({});
-           }, 1500);
-        }
-      } else {
-        setIsLoading(false);
-        const updatedMessages: ChatMessage[] = [...newMessages, { role: 'assistant', content: data.reply }];
-        setMessages(updatedMessages);
-        saveStateToBackend(updatedMessages);
+        const intake = data.intake_data;
+        if (!intake?.business_name || !Array.isArray(intake.initial_products) || !intake.initial_products.length || intake.initial_products.some((product: IntakeData['initial_products'][number]) => !product.name || product.price == null)) throw new Error('The setup draft is incomplete. Please add your business and product details.');
+        setReview({ intake, prompt: newMessages.filter(message => message.role === 'user').map(message => message.content).join(' ') });
       }
-    } catch (err) {
-      console.error("Chat API error:", err);
-      setIsLoading(false);
-      setError("Failed to communicate with setup agent");
-      const updatedMessages: ChatMessage[] = [...newMessages, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }];
-      setMessages(updatedMessages);
-      saveStateToBackend(updatedMessages);
+    } catch (cause) {
+      if (active()) setError(cause instanceof Error ? cause.message : 'Failed to communicate with setup agent');
+    } finally {
+      if (active()) { busy.current = false; setIsLoading(false); }
     }
   };
 
-  const handleProvisioning = async (intakeData: IntakeData, fullPrompt: string) => {
-
+  const handleProvisioning = async () => {
+    if (!review || busy.current) return;
+    busy.current = true;
+    const version = ++epoch.current;
+    const active = () => version === epoch.current;
+    setIsProvisioning(true); setError(null);
     try {
-      const firstProduct = intakeData.initial_products?.[0] || { name: 'Standard Service', price: '10.00' };
-
-      const payload = {
-        business_type: intakeData.business_type || 'Service Business',
-        company_name: intakeData.business_name || 'My New Business',
-        company_description: fullPrompt,
-        selling_categories: intakeData.categories || [],
-        payment_pref: 'online',
-        website_template: 'Modern',
-        first_product_name: firstProduct.name,
-        first_product_price: firstProduct.price,
-        domain_choice: 'subdomain',
-        price_type: 'fixed',
-        location: intakeData.location || 'Online',
-        target_audience: intakeData.target_audience || 'Everyone',
-        initial_products: intakeData.initial_products.map((p) => ({
-          name: p.name,
-          price: p.price,
-          description: p.description || '',
-          variants: p.variants || []
-        })),
-        ai_agents: [],
-        ai_auto_respond: false
-      };
-
-      const res = await fetch('/api/v1/onboarding/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error('Provisioning failed');
-
-      const provisionedData = await res.json();
-
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(provisionedData);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(provisionedData);
-        }, 1500);
+      if (unknownPreparation.current) {
+        const response = await fetch('/api/v1/onboarding/state');
+        if (!response.ok) throw new Error('Could not check the previous setup. Reload before retrying.');
+        const state = await response.json();
+        if (!active()) return;
+        if (state.preparation) { onComplete(resultForPreparation(readPreparation(state.preparation))); return; }
+        unknownPreparation.current = false;
       }
-
-    } catch (err) {
-      console.error("Provisioning error:", err);
-      setIsProvisioning(false);
-      setError("Network request failed");
-      setMessages(prev => [...prev, { role: 'assistant', content: "I have the details, but failed to create the account. Please try again later." }]);
+      const intake = review.intake;
+      const first = intake.initial_products[0];
+      const payload = {
+        business_type: intake.business_type || 'Service Business', company_name: intake.business_name,
+        company_description: review.prompt, selling_categories: intake.categories || [], payment_pref: 'online',
+        website_template: 'Modern', first_product_name: first.name, first_product_price: String(first.price),
+        domain_choice: 'subdomain', price_type: 'fixed', location: intake.location || '', target_audience: intake.target_audience || '',
+        initial_products: intake.initial_products.map(product => ({ ...product, price: String(product.price), description: product.description || '', variants: product.variants || [] })), ai_agents: [], ai_auto_respond: false,
+      };
+      const response = await fetch('/api/v1/onboarding/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!response.ok) throw new Error('Setup preparation could not be confirmed. Check its status before retrying.');
+      const result = readPreparedResult(await response.json());
+      if (active()) onComplete(result);
+    } catch (cause) {
+      if (active()) { unknownPreparation.current = true; setError(cause instanceof Error ? cause.message : 'Setup preparation could not be confirmed'); }
+    } finally {
+      if (active()) { busy.current = false; setIsProvisioning(false); }
     }
   };
 
@@ -256,12 +216,18 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         <div className="absolute inset-0 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[10px] flex flex-col items-center justify-center rounded-[16px]">
           <div className="w-16 h-16 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin mb-6"></div>
           <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 animate-pulse">
-            Building Your Business...
+            Preparing your workspace...
           </h3>
-          <p className="text-sm text-gray-500 font-medium">Provisioning workspace, products, and agents.</p>
+          <p className="text-sm text-gray-500 font-medium">Saving your reviewed workspace and catalog.</p>
         </div>
       )}
 
+      {review && <section aria-label="Review setup" className="p-4">
+        <h3>Review {review.intake.business_name}</h3>
+        <ul>{review.intake.initial_products.map((product, index) => <li key={index}>{product.name}: {product.price}</li>)}</ul>
+        <p>You can send another message to revise these details before preparing your workspace.</p>
+        <button type="button" disabled={isProvisioning} onClick={handleProvisioning}>Approve &amp; Prepare Workspace</button>
+      </section>}
       {/* Input Area */}
       <div className="p-4 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-transparent">
         {error && (

@@ -36,6 +36,10 @@ export interface GeneratedBlock {
 }
 
 export interface OnboardingResult {
+  success?: boolean;
+  user_id?: string;
+  preparation_id?: string;
+  preparation?: unknown;
   organization_id?: string;
   website_url?: string;
   storefront_url?: string;

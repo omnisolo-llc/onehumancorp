@@ -15,16 +15,17 @@ test.describe('Onboarding flows', () => {
     await input.fill('I sell custom sneakers in New York.');
 
     // 4. Submit the form
-    const submitBtn = page.getByRole('button', { name: /Send|Generate/i }); // Fallback regex in case button name differs
+    const submitBtn = page.getByTestId('generate-storefront-btn'); // Fallback regex in case button name differs
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    // 5. Verify the transition state (loading or result)
-    // Wait for the resulting "Your business is live!" or equivalent transition
-    await expect(page.locator('text=Your business is live!')).toBeVisible({ timeout: 15000 });
-
-    // 6. Verify final actions
-    await expect(page.getByRole('button', { name: /Launch My Store/i })).toBeVisible();
+    // Chat prepares a review. Saving and completion require separate owner actions.
+    await page.getByRole('button', { name: /Approve.*Prepare Workspace/ }).click();
+    await expect(page.getByText('Your workspace is prepared')).toBeVisible();
+    await expect(page.getByText('Setup complete')).toHaveCount(0);
+    await page.getByRole('button', { name: /Launch My Store/i }).click();
+    await expect(page.getByText('Setup complete')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('button', { name: /Go to dashboard/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Share on X/i })).toBeVisible();
   });
 });

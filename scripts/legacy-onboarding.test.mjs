@@ -10,7 +10,7 @@ const paths = [
 
 async function setup(path, fetch, options = {}) {
   const html = await readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-  const dom = new JSDOM(html, { url: 'https://workspace.example/setup.html', runScripts: 'outside-only', pretendToBeVisual: true });
+  const dom = new JSDOM(html, { url: options.url || 'https://workspace.example/setup.html', runScripts: 'outside-only', pretendToBeVisual: true });
   dom.window.fetch = fetch;
   dom.window.localStorage.setItem('onboardingState', JSON.stringify(options.stored ?? { work_context: 'Agency', business_name: 'Nora Studio', first_offer: 'Logo Design', location: 'Portland, OR', target_audience: 'Local founders', categories: 'Design', assistant_name: 'Nora' }));
   options.prepare?.(dom.window);
@@ -22,6 +22,43 @@ async function setup(path, fetch, options = {}) {
   dom.window.eval(main.textContent);
   await new Promise(resolve => setTimeout(resolve, 0));
   return dom;
+}
+
+for (const path of paths) {
+  test(`${path} does not invent a completed business draft when chat fails`, async () => {
+    let submitted = 0;
+    const dom = await setup(path, async url => {
+      if (url.endsWith('/start')) submitted += 1;
+      if (url.endsWith('/chat')) return { ok: false, status: 503, json: async () => ({ error: 'Unavailable' }) };
+      return { ok: true, json: async () => ({}) };
+    });
+    try {
+      dom.window.goToStep('step-chat');
+      dom.window.document.getElementById('chat-input').value = 'A pottery studio';
+      dom.window.document.getElementById('chat-send-btn').click();
+      await new Promise(resolve => setTimeout(resolve, 20));
+      assert.equal(submitted, 0);
+      assert.equal(dom.window.pendingOnboardingReq, undefined);
+      assert.ok(dom.window.document.getElementById('step-chat').classList.contains('active'));
+      assert.match(dom.window.document.getElementById('chat-messages').textContent, /Failed to connect/);
+      assert.equal(dom.window.document.getElementById('chat-send-btn').disabled, false);
+      assert.equal(dom.window.localStorage.getItem('has_onboarded'), null);
+    } finally { dom.window.close(); }
+  });
+  test(`${path} does not send browser-derived authority with setup chat`, async () => {
+    let options;
+    const dom = await setup(path, async (url, request) => {
+      if (url.endsWith('/chat')) { options = request; return { ok: true, json: async () => ({ reply: 'Tell me more', is_complete: false }) }; }
+      return { ok: true, json: async () => ({}) };
+    });
+    try {
+      dom.window.goToStep('step-chat');
+      dom.window.document.getElementById('chat-input').value = 'A pottery studio';
+      dom.window.document.getElementById('chat-send-btn').click();
+      await new Promise(resolve => setTimeout(resolve, 20));
+      assert.deepEqual(Object.keys(options.headers), ['Content-Type']);
+    } finally { dom.window.close(); }
+  });
 }
 
 for (const path of paths) {
@@ -72,7 +109,7 @@ for (const path of paths) {
       assert.equal(dom.window.localStorage.getItem('has_onboarded'), null);
       assert.equal(dom.window.document.getElementById('approval-error').textContent, 'Launch rejected');
       assert.equal(dom.window.document.getElementById('approve-publish-btn').disabled, false);
-      assert.equal(dom.window.document.getElementById('approve-publish-btn').textContent, 'Approve & Publish');
+      assert.equal(dom.window.document.getElementById('approve-publish-btn').textContent, 'Approve & Complete Setup');
     } finally { dom.window.close(); }
   });
 }
@@ -138,4 +175,123 @@ for (const path of paths) {
       assertBusinessOnly(saved);
     } finally { dom.window.close(); }
   });
+}
+
+const preparation = { preparation_id: 'prep-1', status: 'prepared', organization_id: 'org-1', user_id: 'user-1', primary_product_id: 'p1', reviewed_request: { company_name: 'Studio', first_product_name: 'Consulting', first_product_price: '25.00' }, catalog: [{ product_id: 'p1', name: 'Consulting', price: '25.00', description: '', variants: [] }] };
+for (const path of paths) {
+ test(`${path} never says Saved for a200 rejected draft and sends no forged authority`, async () => {
+  const requests = [];
+  const dom = await setup(path, async (url, options = {}) => {
+   if (options.method === 'POST' && url.endsWith('/draft')) { requests.push(options); return Response.json({success:false,error:'Disk save failed'}); }
+   return Response.json({});
+  });
+  try {
+   const button = dom.window.document.querySelector('.save-draft-btn'); button.click();
+   await new Promise(r => setTimeout(r,20));
+   assert.equal(button.textContent, 'Error!'); assert.equal(requests.length,1);
+   assert.deepEqual(Object.keys(requests[0].headers), ['Content-Type']);
+  } finally { dom.window.close(); }
+ });
+}
+const prepared = { success: true, ...preparation, preparation };
+for (const path of paths) {
+ test(`${path} refuses malformed start acknowledgement and never marks onboarded`, async () => {
+  let launches = 0;
+  const dom = await setup(path, async url => {
+   if (url.endsWith('/start')) return { ok: true, json: async () => ({ success: false }) };
+   if (url.endsWith('/launch')) launches++;
+   return { ok: true, json: async () => ({}) };
+  });
+  try {
+   dom.window.document.getElementById('template-selection').value = 'Modern'; dom.window.document.getElementById('finish-btn').click();
+   await new Promise(r => setTimeout(r, 20));
+   assert.equal(launches, 0); assert.equal(dom.window.localStorage.getItem('has_onboarded'), null);
+   assert.match(dom.window.document.getElementById('submit-error').textContent, /acknowledged|verified/i);
+  } finally { dom.window.close(); }
+ });
+ test(`${path} holds a committed preparation after malformed launch and reuses it`, async () => {
+  let starts = 0; const launches = []; let stateReads = 0;
+  const dom = await setup(path, async (url, options = {}) => {
+   if (url.endsWith('/start')) { starts++; return { ok: true, json: async () => prepared }; }
+   if (url.endsWith('/launch')) { launches.push(JSON.parse(options.body)); return { ok: true, json: async () => ({}) }; }
+   if (url.endsWith('/state')) { stateReads++; return { ok: true, json: async () => stateReads > 1 ? { preparation } : {} }; }
+   return { ok: true, json: async () => ({}) };
+  });
+  try {
+   dom.window.document.getElementById('template-selection').value = 'Modern';
+   dom.window.document.getElementById('finish-btn').click(); await new Promise(r => setTimeout(r,20));
+   assert.equal(dom.window.localStorage.getItem('has_onboarded'), null);
+   dom.window.document.getElementById('finish-btn').click(); await new Promise(r => setTimeout(r,20));
+   assert.equal(starts,1); assert.deepEqual(launches,[{ preparation_id: 'prep-1' },{ preparation_id: 'prep-1' }]);
+  } finally { dom.window.close(); }
+ });
+ test(`${path} blank instant validation leaves the submission lock clear`, async () => {
+  const dom = await setup(path, async () => ({ ok: true, json: async () => ({}) }));
+  try {
+   const button = dom.window.document.getElementById('generate-storefront-btn'); button.disabled = false; button.click();
+   assert.equal(button.dataset.submitting, undefined);
+  } finally { dom.window.close(); }
+ });
+ test(`${path} instant preparation opens review without launching or fabricating identity`, async () => {
+  let options; let launches = 0;
+  const dom = await setup(path, async (url, request) => {
+   if (url.endsWith('/start_zero_click')) { options = request; return { ok: true, json: async () => prepared }; }
+   if (url.endsWith('/launch')) launches++;
+   return { ok: true, json: async () => ({}) };
+  });
+  try {
+   const input = dom.window.document.getElementById('instant-bio'); input.value = 'Consulting studio'; input.dispatchEvent(new dom.window.Event('input'));
+   dom.window.document.getElementById('generate-storefront-btn').click(); await new Promise(r => setTimeout(r,20));
+   assert.ok(options); assert.deepEqual(Object.keys(options.headers), ['Content-Type']); assert.equal(launches,0);
+   assert.equal(dom.window.localStorage.getItem('has_onboarded'),null); assert.ok(dom.window.document.getElementById('step-approval').classList.contains('active'));
+  } finally { dom.window.close(); }
+ });
+ test(`${path} ignores preparation after navigation to another step`, async () => {
+  let resolve; let launches = 0;
+  const dom = await setup(path, async url => {
+   if (url.endsWith('/start')) return new Promise(done => { resolve = done; });
+   if (url.endsWith('/launch')) launches++;
+   return { ok:true,json:async()=>({}) };
+  });
+  try {
+   dom.window.document.getElementById('template-selection').value='Modern'; dom.window.document.getElementById('finish-btn').click();
+   dom.window.goToStep('step-chat'); resolve({ok:true,json:async()=>prepared}); await new Promise(r=>setTimeout(r,20));
+   assert.equal(launches,0); assert.equal(dom.window.localStorage.getItem('has_onboarded'),null);
+  } finally { dom.window.close(); }
+ });
+}
+
+for (const path of paths) {
+ test(`${path} uses only the existing loopback chat endpoint with session credentials`, async () => {
+  let submitted;
+  const dom = await setup(path, async (url, options = {}) => {
+   if (url.endsWith('/chat')) submitted = {url,options};
+   return Response.json(url.endsWith('/chat') ? {reply:'Tell me more',is_complete:false} : {});
+  }, {url:'http://localhost:1420/setup.html', prepare(window) { window.__TAURI__={core:{invoke(){throw new Error('Unexpected native invoke');}}}; }});
+  try {
+   dom.window.goToStep('step-chat'); dom.window.document.getElementById('chat-input').value='A studio'; dom.window.document.getElementById('chat-send-btn').click();
+   await new Promise(r=>setTimeout(r,20));
+   assert.equal(submitted.url,'http://127.0.0.1:18789/api/v1/onboarding/chat');
+   assert.equal(submitted.options.credentials,'include');
+   assert.deepEqual(Object.keys(submitted.options.headers),['Content-Type']);
+  } finally { dom.window.close(); }
+ });
+}
+
+for (const path of paths) {
+ test(`${path} rejects a foreign revision receipt without launching`, async () => {
+  let launches = 0;
+  const dom = await setup(path, async url => {
+   if (url.endsWith('/state')) return Response.json({preparation});
+   if (url.endsWith('/start')) return Response.json({...prepared,organization_id:'foreign',preparation:{...preparation,organization_id:'foreign'}});
+   if (url.endsWith('/launch')) launches++;
+   return Response.json({});
+  });
+  try {
+   dom.window.document.getElementById('template-selection').value='Modern';
+   dom.window.document.getElementById('finish-btn').click(); await new Promise(r=>setTimeout(r,20));
+   assert.equal(launches,0); assert.match(dom.window.document.getElementById('submit-error').textContent,/identity does not match/);
+   assert.equal(dom.window.localStorage.getItem('has_onboarded'),null);
+  } finally { dom.window.close(); }
+ });
 }

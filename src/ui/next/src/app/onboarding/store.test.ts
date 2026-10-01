@@ -117,3 +117,16 @@ describe('useOnboardingStore', () => {
     );
   });
 });
+
+it('does not persist in-flight, error, or completion claims with a business draft', () => {
+ useOnboardingStore.setState({ step: 5, isLoading: true, error: 'Old failure', startResult: { message: 'Old success' }, businessName: 'Keep business' });
+ const state = JSON.parse(localStorage.getItem('onboarding-storage-v4')!).state;
+ expect(state.isLoading).toBeUndefined(); expect(state.error).toBeUndefined(); expect(state.startResult).toBeUndefined();
+ expect(state.step).toBe(3); expect(state.businessName).toBe('Keep business');
+});
+it('purges stale runtime fields and credentials even at the current stored version', async () => {
+ localStorage.setItem('onboarding-storage-v4', JSON.stringify({ version: 6, state: { step: 5, isLoading: true, startResult: { status: 'launched' }, adminPassword: 'stale-secret', businessName: 'Kept' } }));
+ await useOnboardingStore.persist.rehydrate();
+ const state = useOnboardingStore.getState();
+ expect(state.step).toBe(3); expect(state.isLoading).toBe(false); expect(state.startResult).toBeNull(); expect(state).not.toHaveProperty('adminPassword'); expect(state.businessName).toBe('Kept');
+});

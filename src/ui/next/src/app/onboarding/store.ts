@@ -101,16 +101,19 @@ export const useOnboardingStore = create<OnboardingState>()(
     }),
     {
       name: 'onboarding-storage-v4', // Upgraded structure for seamless cross-device resumes
-      version: 5,
-      migrate: (persistedState) => {
-        if (persistedState && typeof persistedState === 'object') {
-          const state = { ...persistedState } as Record<string, unknown>;
-          delete state.adminName;
-          delete state.adminEmail;
-          delete state.adminPassword;
-          return state as unknown as OnboardingState;
-        }
-        return persistedState as OnboardingState;
+      version: 6,
+      partialize: (state) => {
+        const saved = { ...state } as Record<string, unknown>;
+        for (const key of ['adminName', 'adminEmail', 'adminPassword', 'isLoading', 'error', 'startResult']) delete saved[key];
+        saved.step = state.step >= 4 ? 3 : state.step;
+        return saved;
+      },
+      migrate: (persistedState) => persistedState as Record<string, unknown>,
+      merge: (persistedState, current) => {
+        const saved = persistedState && typeof persistedState === 'object' ? { ...persistedState } as Record<string, unknown> : {};
+        for (const key of ['adminName', 'adminEmail', 'adminPassword', 'isLoading', 'error', 'startResult']) delete saved[key];
+        if (typeof saved.step === 'number' && saved.step >= 4) saved.step = 3;
+        return { ...current, ...saved, isLoading: false, error: '', startResult: null } as OnboardingState;
       },
     }
   )

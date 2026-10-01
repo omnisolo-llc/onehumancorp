@@ -5,18 +5,10 @@ import { errorMessage } from '@/lib/errors';
 import { useEffect,useState,useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboardingStore } from "./store";
+import { canonicalRequest, observedWebsite, readDraftAcknowledgement, readLaunchResult, readPreparation, readPreparedResult, resultForPreparation, type Preparation } from "./contracts";
 import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
 
-
-function generateSubdomain(name: string): string {
-  if (!name || name.trim() === "") return "my-business.cloud.omnisolo.co";
-  const cleanName = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return cleanName ? `${cleanName}.cloud.omnisolo.co` : "my-business.cloud.omnisolo.co";
-}
 
 export default function OnboardingWizard() {
   const router = useRouter();
@@ -54,26 +46,14 @@ export default function OnboardingWizard() {
   const [chatInput, setChatInput] = useState("");
   const [chatImageUrl, setChatImageUrl] = useState("");
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
-  const [loadingProgress, setLoadingProgress] = useState(0);
+  const operationEpoch = useRef(0);
+  const operationPending = useRef(false);
+  const prepared = useRef<Preparation | null>(null);
+  const preparedDraft = useRef<string | null>(null);
+  const needsRecovery = useRef(false);
+  useEffect(() => () => { operationEpoch.current += 1; operationPending.current = false; updateState({ isLoading: false }); }, []);
+  const cancelOperation = () => { if (operationPending.current) needsRecovery.current = true; operationEpoch.current += 1; operationPending.current = false; updateState({ isLoading: false }); };
 
-  useEffect(() => {
-    if (step === 4) {
-      setLoadingProgress(0);
-
-      const interval = setInterval(() => {
-        setLoadingProgress((prev) => {
-          // Fast to 90%, then very slow to 99%
-          const increment = prev < 90 ? Math.random() * 5 + 2 : Math.random() * 0.5 + 0.1;
-          const next = prev + increment;
-          if (next >= 99) {
-             clearInterval(interval); return 99;
-          }
-          return next;
-        });
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [step]);
 
   useEffect(() => {
     chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -85,7 +65,10 @@ export default function OnboardingWizard() {
     retries = 3,
     backoff = process.env.NODE_ENV === "test" ? 10 : 500,
   ) => {
-    for (let i = 0; i < retries; i++) {
+    const method = (options.method ?? 'GET').toUpperCase();
+    const safeReplay = method === 'GET' || method === 'HEAD' || ['/api/v1/onboarding/state', '/api/v1/onboarding/draft'].includes(url);
+    const attempts = safeReplay ? retries : 1;
+    for (let i = 0; i < attempts; i++) {
       try {
         const response = await fetch(url, options);
         if (!response.ok) {
@@ -98,7 +81,7 @@ export default function OnboardingWizard() {
         }
         return response;
       } catch (err) {
-        if (i === retries - 1) throw err;
+        if (i === attempts - 1 || options.signal?.aborted) throw err;
         await new Promise((res) => setTimeout(res, backoff * Math.pow(2, i)));
       }
     }
@@ -147,6 +130,7 @@ export default function OnboardingWizard() {
   const [saveMessage, setSaveMessage] = useState("");
 
   const handleSkipSetup = () => {
+    cancelOperation();
     updateState({ error: "" });
     setValidationError("");
     localStorage.setItem("has_onboarded", "true");
@@ -155,6 +139,7 @@ export default function OnboardingWizard() {
   };
 
   const handleBackToIntro = () => {
+    cancelOperation();
     updateState({ error: "" });
     setValidationError("");
     setValidationErrors({});
@@ -188,7 +173,7 @@ export default function OnboardingWizard() {
         instantImageUrl,
       };
 
-      await fetchWithRetry("/api/v1/onboarding/draft", {
+      const response = await fetchWithRetry("/api/v1/onboarding/draft", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -196,6 +181,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ step, ...wizardState }),
       });
 
+      await readDraftAcknowledgement(response);
       setSaveMessage("Draft Saved!");
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (err) {
@@ -206,8 +192,28 @@ export default function OnboardingWizard() {
     }
   };
 
-  // Read state from server on mount
+  const adoptPreparation = (receipt: Preparation, editableDraft?: Record<string, unknown>) => {
+    const request = receipt.reviewed_request;
+    const primary = receipt.catalog.find(product => product.product_id === receipt.primary_product_id)!;
+    const fields: Record<string, string> = { business_type: 'businessType', company_name: 'businessName', company_description: 'businessDescription', selling_categories: 'categories', website_template: 'websiteTemplate', domain_choice: 'domainChoice', location: 'location', target_audience: 'targetAudience', ai_agents: 'aiAgents', ai_auto_respond: 'aiAutoRespond' };
+    const updates: Record<string, unknown> = {};
+    for (const [key, target] of Object.entries(fields)) if (request[key] !== undefined) updates[target] = request[key];
+    localStorage.setItem('onboarding_initial_products', JSON.stringify(receipt.catalog));
+    updateState({ ...updates, firstProductName: primary.name, firstProductPrice: primary.price, startResult: resultForPreparation(receipt), step: receipt.status === 'launched' ? 5 : 3, isLoading: false });
+    prepared.current = receipt;
+    preparedDraft.current = canonicalRequest(draftRequest());
+    if (receipt.status === 'prepared' && editableDraft) {
+      const editable: Record<string, unknown> = {};
+      for (const key of [...Object.values(fields), 'firstProductName', 'firstProductPrice', 'whatYouSell', 'bio', 'businessGoal', 'instantImageUrl']) {
+        if (editableDraft[key] !== undefined) editable[key] = editableDraft[key];
+      }
+      updateState(editable);
+    }
+  };
+
+  // Only the server's protected receipt can restore completion after reload.
   useEffect(() => {
+    let cancelled = false;
     Promise.all([
       fetchWithRetry("/api/v1/onboarding/draft", {})
         .then((res) => (res.ok ? res.json() : null))
@@ -217,12 +223,13 @@ export default function OnboardingWizard() {
         .catch(() => null),
     ])
       .then(([draftData, stateData]) => {
+        if (cancelled) return;
         const isValid = (d: unknown) => typeof d === 'object' && d !== null && Object.keys(d).length > 0;
         let data = isValid(draftData) ? draftData : stateData;
         if (isValid(data)) {
           if (data.wizardState) data = data.wizardState;
           if (data.step !== undefined)
-            updateState({ step: data.step === 4 ? 3 : data.step });
+            updateState({ step: data.step === 4 || data.step === 5 ? 3 : data.step });
           if (data.chatStep !== undefined)
             updateState({ chatStep: data.chatStep });
           if (data.businessDescription !== undefined)
@@ -260,12 +267,14 @@ export default function OnboardingWizard() {
             updateState({ skipped: data.skipped });
           initialStateLoaded.current = true;
         }
+        if (stateData?.preparation) adoptPreparation(readPreparation(stateData.preparation), isValid(draftData) ? (draftData.wizardState || draftData) : undefined);
+        else if (useOnboardingStore.getState().step >= 4) updateState({ step: 3, startResult: null, isLoading: false });
       })
       .catch((err) => console.error("Failed to load onboarding state", err))
       .finally(() => {
-        initialStateLoaded.current = true;
-        setIsLoaded(true);
+        if (!cancelled) { initialStateLoaded.current = true; setIsLoaded(true); }
       });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -342,6 +351,10 @@ export default function OnboardingWizard() {
   ]);
 
   const handleIntake = async () => {
+    if (operationPending.current) return;
+    operationPending.current = true;
+    const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current;
     updateState({ isLoading: true });
     updateState({ error: "" });
 
@@ -358,6 +371,7 @@ export default function OnboardingWizard() {
       });
 
       const intakeData = await intakeRes.json();
+      if (!active()) return;
       if (!intakeRes.ok) {
         throw new Error(
           intakeData.error ||
@@ -417,6 +431,7 @@ export default function OnboardingWizard() {
             : intakeData.initial_products?.[0]?.price || "10.00",
       }); // Go to review step
     } catch (err) {
+      if (!active()) return;
       console.error(err);
       updateState({
         error: errorMessage(err, '') || "Backend connection failed. Please try again.",
@@ -426,256 +441,146 @@ export default function OnboardingWizard() {
       updateState({ chatStep: 3 });
       syncStateToBackend({ chatStep: 3 });
     } finally {
-      updateState({ isLoading: false });
+      if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
   };
 
   const handleSendChatMessage = async () => {
-    if (!chatInput.trim() && !chatImageUrl.trim()) return;
-
-    const newMessage = {
-      role: "user",
-      content: chatInput,
-      image_url: chatImageUrl || undefined,
-    };
-
-    const newHistory = [...chatMessages, newMessage];
-    setChatMessages(newHistory);
-    setChatInput("");
-    setChatImageUrl("");
-    updateState({ isLoading: true });
-
+    if ((!chatInput.trim() && !chatImageUrl.trim()) || operationPending.current) return;
+    operationPending.current = true;
+    const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current;
+    const newHistory = [...chatMessages, { role: 'user', content: chatInput, image_url: chatImageUrl || undefined }];
+    setChatMessages(newHistory); setChatInput(''); setChatImageUrl('');
+    updateState({ isLoading: true, error: '' });
     try {
-      const res = await fetchWithRetry("/api/v1/onboarding/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newHistory }),
-      });
-
-      if (!res.ok) throw new Error("Chat request failed");
+      const res = await fetchWithRetry('/api/v1/onboarding/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: newHistory }) });
+      if (!res.ok) throw new Error('Chat request failed');
       const data = await res.json();
-
-      setChatMessages([
-        ...newHistory,
-        { role: "assistant", content: data.reply },
-      ]);
-
-      if (data.is_complete && data.intake_data) {
-        updateState({ step: 4 });
-        syncStateToBackend({ step: 4 });
-        const intakeData = data.intake_data;
-        // Pre-fill state values so we don't need to manually type everything
-        updateState({
-          businessName: intakeData.business_name || "My Business",
-        });
-        updateState({
-          businessType: intakeData.business_type || "Online Store",
-        });
-        updateState({
-          businessDescription: newHistory.map((m) => m.content).join(" "),
-        });
-        updateState({ categories: intakeData.categories || ["physical"] });
-        updateState({
-          firstProductName:
-            intakeData.initial_products?.[0]?.name || "First Product",
-        });
-        updateState({
-          firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-        });
-        updateState({ location: intakeData.location || "" });
-        updateState({ targetAudience: intakeData.target_audience || "" });
-
-        const startRes = await fetchWithRetry("/api/v1/onboarding/start", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            business_type: intakeData.business_type || "Online Store",
-            company_name: intakeData.business_name || "My Business",
-            company_description: newHistory.map((m) => m.content).join(" "),
-            selling_categories: intakeData.categories || ["physical"],
-            payment_pref: "online",
-            website_template: "auto",
-            first_product_name:
-              intakeData.initial_products?.[0]?.name || "First Product",
-            first_product_price:
-              typeof intakeData.initial_products?.[0]?.price === "number"
-                ? String(intakeData.initial_products[0].price)
-                : intakeData.initial_products?.[0]?.price || "0.00",
-            domain_choice: "subdomain",
-            price_type: "fixed",
-            location: intakeData.location || "",
-            target_audience: intakeData.target_audience || "",
-            ai_agents: [],
-            ai_auto_respond: true,
-            initial_products: intakeData.initial_products || [],
-          }),
-        });
-
-        const result = await startRes.json();
-        updateState({ startResult: result });
-
-        const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
-          method: "POST",
-        });
-        if (!launchRes.ok) throw new Error("Launch failed");
-        updateState({ step: 5 });
-        syncStateToBackend({ step: 5 });
-
-        // Optional, but required by E2E test
-        if (
-          typeof window !== "undefined" &&
-          window.location.href.includes("setup.html")
-        ) {
-          window.location.href = "/success.html";
-        }
+      if (!active()) return;
+      if (typeof data.reply !== 'string') throw new Error('The setup reply is incomplete');
+      setChatMessages([...newHistory, { role: 'assistant', content: data.reply }]);
+      if (data.is_complete) {
+        const intake = data.intake_data;
+        if (!intake?.business_name || !Array.isArray(intake.initial_products) || !intake.initial_products.length) throw new Error('The setup draft is incomplete. Please add your business and product details.');
+        localStorage.setItem('onboarding_initial_products', JSON.stringify(intake.initial_products));
+        updateState({ step: 2, businessName: intake.business_name, businessType: intake.business_type || 'Online Store', businessDescription: newHistory.map(message => message.content).join(' '), categories: intake.categories || [], firstProductName: intake.initial_products[0].name || '', firstProductPrice: String(intake.initial_products[0].price ?? ''), location: intake.location || '', targetAudience: intake.target_audience || '' });
       }
-    } catch (err) {
-      console.error(err);
-      updateState({ error: errorMessage(err, '') || "Failed to send chat message" });
+    } catch (cause) {
+      if (active()) updateState({ error: errorMessage(cause, 'Failed to send chat message') });
     } finally {
-      updateState({ isLoading: false });
+      if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
   };
 
   const handleInstantBuild = async () => {
-    if (!bio.trim()) {
-      updateState({ error: "Please tell us about your business." });
-      return;
-    }
-    updateState({ isLoading: true });
-    updateState({ error: "" });
-
+    if (operationPending.current) return;
+    if (!bio.trim()) { updateState({ error: 'Please tell us about your business.' }); return; }
+    operationPending.current = true;
+    const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current;
+    updateState({ isLoading: true, error: '', step: 4 });
     try {
-      // Navigate to the loading state immediately
-      updateState({ step: 4 });
-      syncStateToBackend({ step: 4 });
-
-      const startRes = await fetchWithRetry(
-        "/api/v1/onboarding/start_zero_click",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: bio,
-            image_url: instantImageUrl || undefined,
-          }),
-        },
-      );
-
-      let result: import("@/lib/builder-types").OnboardingResult;
-      try {
-        result = await startRes.json();
-        if (!startRes.ok) {
-          throw new Error(
-            result.error ||
-              result.message ||
-              `Failed to generate storefront: ${startRes.status}`,
-          );
-        }
-      } catch (e: unknown) {
-        const errorMessage =
-          e instanceof Error ? e.message : "Unknown error parsing response";
-        console.error(errorMessage);
-        updateState({ step: -1, error: errorMessage });
-        syncStateToBackend({ step: -1, error: errorMessage });
-        return;
+      if (needsRecovery.current) {
+        const state = await fetch('/api/v1/onboarding/state');
+        if (!state.ok) throw new Error('Could not check the previous setup. Please reload before retrying.');
+        const value = await state.json();
+        if (!active()) return;
+        if (value.preparation) { adoptPreparation(readPreparation(value.preparation)); needsRecovery.current = false; return; }
+        needsRecovery.current = false;
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      updateState({ startResult: result });
-      localStorage.setItem("has_onboarded", "true");
-
-      const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
-        method: "POST",
-      });
-      if (!launchRes.ok) throw new Error("Launch failed");
-      updateState({ step: 5 });
-      syncStateToBackend({ step: 5 });
-
-      if (
-        typeof window !== "undefined" &&
-        window.location.href.includes("setup.html")
-      ) {
-        window.location.href = "/success.html";
-      }
-    } catch (err) {
-      console.error(err);
-      updateState({
-        step: -1,
-        error: errorMessage(err, '') || "Backend connection failed. Please try again.",
-      });
-      syncStateToBackend({ step: -1 });
+      const response = await fetchWithRetry('/api/v1/onboarding/start_zero_click', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: bio, image_url: instantImageUrl || undefined }) });
+      if (!response.ok) throw new Error('Setup preparation failed. Check its status before retrying.');
+      const result = readPreparedResult(await response.json());
+      if (!active()) return;
+      adoptPreparation(result.preparation);
+    } catch (cause) {
+      if (active()) { needsRecovery.current = true; updateState({ step: -1, error: errorMessage(cause, 'Setup could not be confirmed. Check its status before retrying.') }); }
     } finally {
-      updateState({ isLoading: false });
+      if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
   };
 
+  const draftRequest = () => {
+    const { businessType, businessName, businessDescription, whatYouSell, categories, websiteTemplate, firstProductName, firstProductPrice, domainChoice, location, targetAudience, aiAgents, aiAutoRespond } = useOnboardingStore.getState();
+    const initial: unknown = JSON.parse(localStorage.getItem('onboarding_initial_products') || '[]');
+    if (!Array.isArray(initial)) throw new Error('The reviewed product draft is invalid');
+    const initialProducts = initial.map((item, index) => {
+      if (!item || typeof item !== 'object') throw new Error('The reviewed product draft is invalid');
+      const product = item as Record<string, unknown>;
+      const normalized = { ...product, ...(typeof product.price === 'number' ? { price: String(product.price) } : {}) };
+      return (prepared.current ? product.product_id === prepared.current.primary_product_id : index === 0) && firstProductName ? { ...normalized, name: firstProductName, price: firstProductPrice } : normalized;
+    });
+    return {
+      business_type: businessType, company_name: businessName, company_description: businessDescription || whatYouSell,
+      selling_categories: categories, payment_pref: 'online', website_template: websiteTemplate,
+      first_product_name: firstProductName, first_product_price: firstProductPrice, domain_choice: domainChoice || 'subdomain',
+      price_type: 'fixed', location: location || '', target_audience: targetAudience || '', ai_agents: aiAgents,
+      ai_auto_respond: aiAutoRespond, initial_products: initialProducts,
+    };
+  };
+
   const handleStartOnboarding = async () => {
+    if (operationPending.current) return;
+    operationPending.current = true;
+    const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current;
     setValidationErrors({});
-    updateState({ isLoading: true });
-    updateState({ error: "" });
-    updateState({ step: 4 });
-    syncStateToBackend({ step: 4 }); // Go to loading screen
+    updateState({ isLoading: true, error: '', step: 4 });
     try {
-      const startRes = await fetchWithRetry("/api/v1/onboarding/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          business_type: businessType,
-          company_name: businessName,
-          company_description: businessDescription || whatYouSell,
-          selling_categories: categories,
-          payment_pref: "online",
-          website_template: websiteTemplate,
-          first_product_name: firstProductName,
-          first_product_price: firstProductPrice,
-          domain_choice: domainChoice || "subdomain",
-          price_type: "fixed",
-          location: location || "",
-          target_audience: targetAudience || "",
-          ai_agents: aiAgents,
-          ai_auto_respond: aiAutoRespond,
-          initial_products: JSON.parse(
-            localStorage.getItem("onboarding_initial_products") || "[]",
-          ),
-        }),
-      });
-
-      const result = await startRes.json().catch(() => ({}));
-      if (!startRes.ok) {
-        throw new Error(
-          result.error ||
-            result.message ||
-            "Backend connection failed. Please try again.",
-        );
+      if (needsRecovery.current) {
+        const state = await fetch('/api/v1/onboarding/state');
+        if (!state.ok) throw new Error('Could not check the previous setup. Please reload before retrying.');
+        const value = await state.json();
+        if (!active()) return;
+        if (value.preparation) {
+          const recovered = readPreparation(value.preparation);
+          if (prepared.current && (recovered.preparation_id !== prepared.current.preparation_id || recovered.organization_id !== prepared.current.organization_id || recovered.user_id !== prepared.current.user_id)) throw new Error('Setup changed. Reload to review its current state.');
+          if (!prepared.current) { adoptPreparation(recovered); needsRecovery.current = false; return; }
+          prepared.current = recovered;
+          if (recovered.status === 'launched') { adoptPreparation(recovered); needsRecovery.current = false; return; }
+        }
+        needsRecovery.current = false;
       }
-
-      // UX: enforce a minimum loading screen display of 500ms so the user sees progress
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      updateState({ startResult: result });
-      localStorage.setItem("has_onboarded", "true");
-      const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
-        method: "POST",
+      const request = draftRequest();
+      const signature = canonicalRequest(request);
+      let receipt = prepared.current;
+      if (!receipt || preparedDraft.current !== signature) {
+        const payload = receipt ? {
+          ...request, replaces_preparation_id: receipt.preparation_id,
+          initial_products: receipt.catalog.map(product => ({
+            ...product,
+            ...(product.product_id === receipt!.primary_product_id ? { name: firstProductName, price: firstProductPrice } : {}),
+            variants: product.variants.map(variant => ({ ...variant })),
+          })),
+        } : request;
+        const response = await fetchWithRetry('/api/v1/onboarding/start', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        if (!active()) return;
+        if (!response.ok) throw new Error('Setup preparation was rejected');
+        const result = readPreparedResult(await response.json(), receipt);
+        if (!active()) return;
+        receipt = result.preparation;
+        prepared.current = receipt; preparedDraft.current = signature;
+        updateState({ startResult: result });
+      }
+      if (!active()) return;
+      const response = await fetchWithRetry('/api/v1/onboarding/launch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preparation_id: receipt.preparation_id }),
       });
-      if (!launchRes.ok) throw new Error("Launch failed");
-      updateState({ step: 5 });
-      syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
-    } catch (err) {
-      console.error(err);
-      updateState({
-        error: errorMessage(err, '') || "Backend connection failed. Please try again.",
-      });
-      updateState({ step: 3 });
-      syncStateToBackend({ step: 3 });
+      if (!active()) return;
+      if (!response.ok) throw new Error('Setup completion could not be confirmed');
+      const launched = readLaunchResult(await response.json(), receipt);
+      if (!active()) return;
+      prepared.current = launched;
+      updateState({ startResult: resultForPreparation(launched), step: 5 });
+      localStorage.setItem('has_onboarded', 'true');
+      void syncStateToBackend({ step: 5 });
+    } catch (cause) {
+      if (active()) { needsRecovery.current = true; updateState({ error: errorMessage(cause, 'Setup could not be confirmed. Check its status before retrying.'), step: 3 }); }
     } finally {
-      updateState({ isLoading: false });
+      if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
   };
 
@@ -782,7 +687,7 @@ export default function OnboardingWizard() {
                 Setup
               </h1>
               <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">
-                Your business, live in minutes.
+                Your business workspace, ready to review.
               </p>
             </div>
             <button
@@ -1839,8 +1744,7 @@ export default function OnboardingWizard() {
               </h2>
               <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                  Pick your storefront vibe. We'll automatically assign the best
-                  AI agents to manage it.
+                  Choose your storefront style and preferred assistants for review.
                 </p>
                 <button
                   type="button"
@@ -1913,7 +1817,7 @@ export default function OnboardingWizard() {
 
                 <div className="pt-2 border-t  ">
                   <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
-                    Auto-Configured AI Departments
+                    Preferred AI Departments
                   </label>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
                     Here are the AI departments we've configured for you.
@@ -2021,10 +1925,10 @@ export default function OnboardingWizard() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      Launching...
+                      Completing setup...
                     </span>
                   ) : (
-                    <IconLabel icon="launch">Approve & Publish</IconLabel>
+                    <IconLabel icon="launch">Approve & Complete Setup</IconLabel>
                   )}
                 </button>
               </div>
@@ -2045,102 +1949,14 @@ export default function OnboardingWizard() {
                 id="loading-title"
                 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4"
               >
-                Building Your Business...
+                Preparing your workspace...
               </h2>
 
-              <div className="w-full max-w-xs h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden mb-6">
-                <div
-                  className="h-full bg-[#0066FF] transition-all duration-300"
-                  style={{ width: `${loadingProgress}%` }}
-                ></div>
-              </div>
-
-              <div className="space-y-3 w-full max-w-xs text-left">
-                <div className="flex items-center gap-3">
-                  <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 25 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span
-                    className={`text-sm ${loadingProgress > 25 ? "text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold" : "text-gray-500"}`}
-                  >
-                    Generating your product catalog
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 50 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span
-                    className={`text-sm ${loadingProgress > 50 ? "text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold" : "text-gray-500"}`}
-                  >
-                    Configuring payment settings
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 75 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span
-                    className={`text-sm ${loadingProgress > 75 ? "text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold" : "text-gray-500"}`}
-                  >
-                    Designing your storefront
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 90 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span
-                    className={`text-sm ${loadingProgress > 90 ? "text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold" : "text-gray-500"}`}
-                  >
-                    Onboarding your AI agents
-                  </span>
-                </div>
-              </div>
+              <p role="status">Waiting for confirmed setup status. You can leave this screen and recover the saved preparation later.</p>
             </div>
           )}
 
-          {step === 5 && startResult && (
+          {step === 5 && startResult && prepared.current?.status === 'launched' && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg
@@ -2158,24 +1974,18 @@ export default function OnboardingWizard() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-                You're Live!
+                Setup complete
               </h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
                 {startResult.message ||
-                  "Your business has been successfully launched."}
+                  "Your local workspace setup has been recorded. Review your storefront before sharing it."}
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div data-voice-assistant-surface="glass" className="p-3 translucent-glass-light dark:translucent-glass-dark  flex flex-col items-center mb-6">
-                  <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">
-                    Your Shareable Link
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#0066FF] font-semibold">
-                      {domainChoice === "subdomain" ? generateSubdomain(businessName) : "Custom Domain Configured"}
-                    </span>
-                  </div>
-                </div>
+                {observedWebsite(startResult) && <div className="p-3 translucent-glass-light dark:translucent-glass-dark flex flex-col items-center mb-6">
+                  <p className="text-xs text-gray-500 uppercase font-bold">Recorded storefront link</p>
+                  <a href={observedWebsite(startResult)!}>{observedWebsite(startResult)}</a>
+                </div>}
 
                 <a
                   href="/assistant"

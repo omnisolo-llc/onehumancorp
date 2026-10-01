@@ -1742,7 +1742,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         <div class="btn-group">
           <p id="approval-error" role="alert" style="color: #FF3B30"></p>
           <button id="approve-publish-btn" data-testid="approve-publish-btn">
-            Approve & Publish
+            Approve & Complete Setup
           </button>
         </div>
       </div>
@@ -2655,6 +2655,20 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         domain: "",
       };
 
+      async function fetchDraft(url, options = {}) {
+        const response = await fetch(url, { ...options, credentials: 'include' });
+        if (!response.ok) throw new Error('Draft request failed');
+        if (options.method === 'POST') {
+          if (response.status !== undefined && response.status !== 200 && response.status !== 204) throw new Error('Draft save was not acknowledged');
+          const copy = typeof response.clone === 'function' ? response.clone() : response;
+          const body = typeof copy.text === 'function' ? await copy.text() : null;
+          const data = body === null ? await copy.json() : body.trim() ? JSON.parse(body) : null;
+          if (data && (data.success === false || data.error != null)) throw new Error(data.error || 'Draft save was rejected');
+        }
+        return response;
+      }
+      function saveRemoteDraft(draft) { return fetchDraft(backendOrigin() + '/api/v1/onboarding/draft', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)}); }
+      async function loadRemoteDraft() { return (await fetchDraft(backendOrigin() + '/api/v1/onboarding/draft')).json(); }
       // Auto save draft logic
       var autoSaveTimer = null;
       function debouncedAutoSave() {
@@ -2667,12 +2681,11 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             ["1420", "3000", "8081"].includes(window.location.port)
               ? "http://127.0.0.1:18789"
               : "";
-          const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-          const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
+
 
           if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
+            saveRemoteDraft(state)
               .then(() => {
                 const msg = document.getElementById("draft-saved-msg");
                 if (msg) {
@@ -2684,12 +2697,10 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               })
               .catch(console.error);
           } else {
-            fetch(`${backendUrl}/api/onboarding/draft`, {
+            fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-Tenant-ID": tenantId,
-                "X-User-ID": userId,
               },
               body: JSON.stringify(state),
             })
@@ -2755,16 +2766,12 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           }
         }
 
-        const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-        const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
 
         let loadedState = null;
         if (window.__TAURI__ && window.__TAURI__.core) {
           try {
-            loadedState = await window.__TAURI__.core.invoke(
-              "get_onboarding_state",
-              { tenantId, userId },
-            );
+            loadedState = await loadRemoteDraft();
           } catch (err) {
             console.error("Tauri get_onboarding_state failed:", err);
           }
@@ -2775,9 +2782,9 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               ? "http://127.0.0.1:18789"
               : "";
           try {
-            const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+            const res = await fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
               method: "GET",
-              headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
+              headers: {},
             });
             if (res.ok) {
               loadedState = await res.json();
@@ -2822,7 +2829,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           }
         }
       }
-      loadState();
+      const draftRestored = loadState();
 
       // Clear name error on typing if valid
       inputs.name.addEventListener("input", () => {
@@ -3043,14 +3050,12 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         // Always set localStorage directly
         localStorage.setItem("onboardingState", JSON.stringify(state));
 
-        const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-        const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
 
         clearTimeout(saveStateTimer);
         saveStateTimer = setTimeout(async () => {
           if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
+            saveRemoteDraft(state)
               .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
           } else {
             localStorage.setItem("onboardingState", JSON.stringify(state));
@@ -3060,12 +3065,10 @@ window.renderWalkthroughStep = renderWalkthroughStep;
                 ? "http://127.0.0.1:18789"
                 : "";
             try {
-              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+              const res = await fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "X-Tenant-ID": tenantId,
-                  "X-User-ID": userId,
                 },
                 body: JSON.stringify(state),
               });
@@ -3339,7 +3342,9 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         }
       }
 
+      var setupEpoch = 0;
       function goToStep(stepId, shouldSave = true) {
+        setupEpoch += 1;
         if (stepId === "step-instant") {
           const instantBioInputEl = document.getElementById("instant-bio");
           const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
@@ -3475,7 +3480,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         const text = chatInputEl.value.trim();
         const chatImageEl = document.getElementById("chat-image-url");
         const imageUrl = chatImageEl ? chatImageEl.value.trim() : "";
-        if (!text && !imageUrl) return;
+        if ((!text && !imageUrl) || chatSendBtn.disabled) return;
+        const chatEpoch = setupEpoch;
 
         // Append user message
         const userMsgDiv = document.createElement("div");
@@ -3514,40 +3520,24 @@ window.renderWalkthroughStep = renderWalkthroughStep;
 
         let data;
         try {
-          try {
             const backendUrl =
               window.location.protocol === "file:" ||
               ["1420", "3000", "8081"].includes(window.location.port)
                 ? "http://127.0.0.1:18789"
                 : "";
             const res = await fetch(`${backendUrl}/api/v1/onboarding/chat`, {
+              credentials: "include",
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-Tenant-ID":
-                  localStorage.getItem("tenant_id") ||
-                  localStorage.getItem("tenant") ||
-                  "e2e-tenant",
-                "X-User-ID": localStorage.getItem("user_id") || "e2e-admin-user",
+
               },
               body: JSON.stringify({ messages: chatHistory }),
             });
 
             if (!res.ok) throw new Error("Chat request failed");
             data = await res.json();
-          } catch {
-            data = {
-              reply: "I've structured your business profile and services based on your description.",
-              is_complete: true,
-              intake_data: {
-                business_name: text.length > 5 ? text.substring(0, 30) : "My Business",
-                business_type: "Service",
-                initial_products: [{ name: "Standard Service", price: "49.00" }],
-                location: "Local",
-                target_audience: "General"
-              }
-            };
-          }
+          if (chatEpoch !== setupEpoch) return;
 
           const asstMsgDiv = document.createElement("div");
           asstMsgDiv.className = "chat-message assistant";
@@ -3565,6 +3555,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
 
           if (data.is_complete && data.intake_data) {
             const intakeData = data.intake_data;
+            if (!intakeData.business_name || !Array.isArray(intakeData.initial_products) || !intakeData.initial_products.length) throw new Error('Setup draft is incomplete');
             const agentBadges = document.querySelectorAll(
               "#ai-agents-container .agent-badge",
             );
@@ -3587,13 +3578,13 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               first_product_name:
                 intakeData.initial_products?.[0]?.name || "First Product",
               first_product_price:
-                intakeData.initial_products?.[0]?.price || "0.00",
+                String(intakeData.initial_products?.[0]?.price ?? ""),
               domain_choice:
                 state.domain || generateSubdomain(state.business_name),
               price_type: "fixed",
               location: intakeData.location || "Local",
               target_audience: intakeData.target_audience || "General",
-              initial_products: intakeData.initial_products || [],
+              initial_products: intakeData.initial_products.map(product => ({ ...product, price: String(product.price) })),
               ai_agents: selectedAgents,
               ai_auto_respond: autoRespondChecked,
             };
@@ -3619,229 +3610,117 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         }
       }
 
-      const approvePublishBtn = document.getElementById("approve-publish-btn");
-      if (approvePublishBtn) {
-        approvePublishBtn.addEventListener("click", async () => {
-          if (!window.pendingOnboardingReq) return;
-          const req = window.pendingOnboardingReq;
-          approvePublishBtn.disabled = true;
-          const approvalError = document.getElementById("approval-error");
-          if (approvalError) approvalError.textContent = "";
-          approvePublishBtn.innerHTML =
-            '<div class="spinner"></div>Publishing...';
-
-          try {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            if (window.__TAURI__ && window.__TAURI__.core) {
-              await goToStep("step-loading");
-
-              const provisioningEl =
-                document.getElementById("step-provisioning");
-              const catalogEl = document.getElementById("step-catalog");
-              const storefrontEl = document.getElementById("step-storefront");
-
-              if (provisioningEl) {
-                provisioningEl.style.opacity = "1";
-                provisioningEl.querySelector(".loading-dot").style.background =
-                  "#0066FF";
-              }
-
-              const startData = await window.__TAURI__.core.invoke(
-                "start_onboarding",
-                { req },
-              );
-
-              if (catalogEl) {
-                catalogEl.style.opacity = "1";
-                catalogEl.querySelector(".loading-dot").style.background =
-                  "#0066FF";
-              }
-
-              if (storefrontEl) {
-                storefrontEl.style.opacity = "1";
-                storefrontEl.querySelector(".loading-dot").style.background =
-                  "#0066FF";
-              }
-
-
-              if (startData && startData.organization_id) {
-                localStorage.setItem("tenant_id", startData.organization_id);
-                localStorage.setItem("tenant", startData.organization_id);
-              }
-
-              localStorage.removeItem("onboardingState");
-              localStorage.setItem("has_onboarded", "true");
-
-              window.location.href = "dashboard.html";
-              return;
-            }
-
-            const tenantIdStr =
-              localStorage.getItem("tenant_id") ||
-              localStorage.getItem("tenant") ||
-              "e2e-tenant";
-            const userIdStr =
-              localStorage.getItem("user_id") || "e2e-admin-user";
-
-            const startRes = await fetch(`${backendUrl}/api/v1/onboarding/start`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                business_type: req.business_type,
-                company_name: req.company_name,
-                company_description: req.company_description,
-                selling_categories: req.selling_categories,
-                payment_pref: req.payment_pref,
-                website_template: req.website_template,
-                first_product_name: state.first_offer || req.first_product_name,
-                first_product_price: req.first_product_price,
-                domain_choice: req.domain_choice,
-                price_type: req.price_type,
-                location: state.location || req.location,
-                target_audience: state.target_audience || req.target_audience,
-                initial_products: req.initial_products,
-              }),
-            });
-
-            if (startRes.ok) {
-              const startData = await startRes.json();
-              if (startData.organization_id) {
-                localStorage.setItem("tenant_id", startData.organization_id);
-                localStorage.setItem("tenant", startData.organization_id);
-              }
-
-              localStorage.removeItem("onboardingState");
-              localStorage.setItem("has_onboarded", "true");
-
-              window.location.href = "dashboard.html";
-            } else {
-              const failure = await startRes.json().catch(() => ({}));
-              throw new Error(failure.error || failure.message || "Failed to launch store");
-            }
-          } catch (e) {
-            goToStep("step-approval");
-            if (approvalError) approvalError.textContent = e.message || "Failed to launch store";
-          } finally {
-            approvePublishBtn.disabled = false;
-            approvePublishBtn.textContent = "Approve & Publish";
-          }
-        });
+      function backendOrigin() { return window.location.protocol === 'file:' || ['1420', '3000', '8081'].includes(window.location.port) ? 'http://127.0.0.1:18789' : ''; }
+      let committedPreparation = null;
+      let committedRequest = null;
+      let unknownSetup = false;
+      let setupBusy = false;
+      const canonicalSetup = value => Array.isArray(value) ? '[' + value.map(canonicalSetup).join(',') + ']' : value && typeof value === 'object' ? '{' + Object.keys(value).sort().map(key => JSON.stringify(key)+':'+canonicalSetup(value[key])).join(',') + '}' : JSON.stringify(value);
+      function receiptOf(value) {
+        if (!value || !['prepared','launched'].includes(value.status) || !value.preparation_id || !value.organization_id || !value.user_id || !value.primary_product_id || !value.reviewed_request || !Array.isArray(value.catalog) || !value.catalog.some(product => product.product_id === value.primary_product_id)) throw new Error('Setup preparation could not be verified');
+        const ids = new Set();
+        for (const product of value.catalog) {
+          if (!product.product_id || ids.has(product.product_id) || !product.name || typeof product.price !== 'string' || !Array.isArray(product.variants)) throw new Error('Setup catalog could not be verified');
+          ids.add(product.product_id);
+          for (const variant of product.variants) if (!variant.variant_id || !variant.name || typeof variant.price_modifier !== 'string') throw new Error('Setup variant could not be verified');
+        }
+        return value;
       }
+      function preparedResult(data, prior) {
+        if (!data || data.success !== true || data.error != null) throw new Error(data && (data.error || data.message) || 'Setup preparation was not acknowledged');
+        const receipt = receiptOf(data.preparation);
+        if (prior && (receipt.organization_id !== prior.organization_id || receipt.user_id !== prior.user_id || receipt.primary_product_id !== prior.primary_product_id)) throw new Error('Setup revision identity does not match the committed preparation');
+        if (data.preparation_id !== receipt.preparation_id || data.organization_id !== receipt.organization_id || data.user_id !== receipt.user_id || data.status !== receipt.status) throw new Error('Setup preparation acknowledgement does not match');
+        return receipt;
+      }
+      async function setupRequest(path, body) {
+        const response = await fetch(backendOrigin() + '/api/v1/onboarding/' + path, body === undefined ? {credentials:'include'} : { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || data.message || 'Setup request failed');
+        return data;
+      }
+      function showPreparedReview(receipt) {
+        committedPreparation = receipt;
+        window.pendingOnboardingReq = receipt.reviewed_request;
+        committedRequest = canonicalSetup(window.pendingOnboardingReq);
+        const details = document.getElementById('approval-details'); details.replaceChildren();
+        for (const product of receipt.catalog) { const line = document.createElement('p'); line.textContent = product.name + ' - ' + product.price; details.appendChild(line); }
+        const status = document.createElement('p'); status.textContent = receipt.status === 'launched' ? 'Setup is already complete. Review your storefront before sharing it.' : 'Your workspace is prepared. Approve to complete local setup.'; details.appendChild(status);
+        goToStep('step-approval');
+      }
+      async function completeSetup(req, epoch) {
+        if (unknownSetup) {
+          const stateData = await setupRequest('state');
+          if (epoch !== setupEpoch) return false;
+          if (stateData.preparation) {
+            const recovered = receiptOf(stateData.preparation);
+            if (committedPreparation && (committedPreparation.preparation_id !== recovered.preparation_id || committedPreparation.organization_id !== recovered.organization_id || committedPreparation.user_id !== recovered.user_id)) throw new Error('Setup changed. Reload to review its current state.');
+            if (!committedPreparation) { showPreparedReview(recovered); unknownSetup = false; return false; }
+            committedPreparation = recovered;
+          }
+          unknownSetup = false;
+        }
+        const signature = canonicalSetup(req);
+        if (!committedPreparation || committedRequest !== signature) {
+          const payload = committedPreparation ? { ...req, replaces_preparation_id: committedPreparation.preparation_id, initial_products: committedPreparation.catalog.map(product => ({ ...product, ...(product.product_id === committedPreparation.primary_product_id ? {name:req.first_product_name, price:String(req.first_product_price)} : {}) })) } : req;
+          const data = await setupRequest('start', payload);
+          if (epoch !== setupEpoch) return false;
+          committedPreparation = preparedResult(data, committedPreparation); committedRequest = signature;
+        }
+        if (epoch !== setupEpoch) return false;
+        const receipt = committedPreparation;
+        if (receipt.status !== 'launched') {
+          const data = await setupRequest('launch', {preparation_id:receipt.preparation_id});
+          if (epoch !== setupEpoch) return false;
+          if (data.success !== true || data.error != null || data.status !== 'launched' || data.preparation_id !== receipt.preparation_id || data.organization_id !== receipt.organization_id || data.user_id !== receipt.user_id) throw new Error('Setup completion could not be verified');
+          committedPreparation = {...receipt,status:'launched'};
+        }
+        localStorage.removeItem('onboardingState'); localStorage.setItem('has_onboarded','true');
+        window.location.href = 'dashboard.html'; return true;
+      }
+      // Read-only recovery uses a protected receipt, never mutable draft status.
+      draftRestored.then(async () => {
+        const recoveryEpoch = setupEpoch;
+        const data = await setupRequest('state');
+        if (data.preparation && !setupBusy && recoveryEpoch === setupEpoch) showPreparedReview(receiptOf(data.preparation));
+      }).catch(() => {});
+      const approvePublishBtn = document.getElementById('approve-publish-btn');
+      if (approvePublishBtn) approvePublishBtn.addEventListener('click', async () => {
+        if (!window.pendingOnboardingReq || setupBusy) return;
+        setupBusy = true; approvePublishBtn.disabled = true;
+        const epoch = setupEpoch;
+        const error = document.getElementById('approval-error'); error.textContent = '';
+        try { await completeSetup(window.pendingOnboardingReq, epoch); }
+        catch (cause) { if (epoch === setupEpoch) { unknownSetup = true; error.textContent = cause.message || 'Setup could not be confirmed'; } }
+        finally { setupBusy = false; approvePublishBtn.disabled = false; approvePublishBtn.textContent = 'Approve & Complete Setup'; }
+      });
 
       if (chatSendBtn) {
         chatSendBtn.addEventListener("click", sendChatMessage);
       }
 
-      if (generateStorefrontBtn) {
-        generateStorefrontBtn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          if (generateStorefrontBtn.dataset.submitting) return;
-          generateStorefrontBtn.dataset.submitting = "true";
-          const bioInput = instantBioInputEl.value;
-          const imageUrlInput = document.getElementById("instant-image-url");
-          const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
-          if (!bioInput.trim()) {
-            instantErrorEl.innerText = "Please tell us about your business.";
-            instantErrorEl.style.display = "block";
-            instantErrorEl.classList.add("animate-shake");
-            instantErrorEl.style.color = "#FF3B30";
-            instantErrorEl.style.borderColor = "rgba(255, 59, 48, 0.3)";
-            instantBioInputEl.classList.add("invalid-input");
-            return;
+      if (generateStorefrontBtn) generateStorefrontBtn.addEventListener('click', async event => {
+        event.preventDefault();
+        if (setupBusy) return;
+        const prompt = instantBioInputEl.value.trim();
+        if (!prompt) { instantErrorEl.textContent = 'Please tell us about your business.'; instantErrorEl.style.display = 'block'; return; }
+        setupBusy = true; generateStorefrontBtn.disabled = true; generateStorefrontBtn.dataset.submitting = 'true';
+        instantErrorEl.style.display = 'none'; goToStep('step-loading'); const epoch = setupEpoch;
+        try {
+          if (unknownSetup) {
+            const stateData = await setupRequest('state');
+            if (epoch !== setupEpoch) return;
+            if (stateData.preparation) { showPreparedReview(receiptOf(stateData.preparation)); unknownSetup = false; return; }
+            unknownSetup = false;
           }
-
-          instantErrorEl.style.display = "none";
-          instantErrorEl.classList.remove("animate-shake");
-          instantErrorEl.style.color = "";
-          instantErrorEl.style.borderColor = "";
-          instantBioInputEl.classList.remove("invalid-input");
-          generateStorefrontBtn.disabled = true;
-          const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
-          let loadingTextIdx = 0;
-          generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          window.generateStorefrontLoadingInterval = setInterval(() => {
-            loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
-            generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          }, 3000);
-
-
-          goToStep("step-loading");
-
-          try {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            const res = await fetch(
-              `${backendUrl}/api/v1/growth/zero-click-builder/generate`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Tenant-ID": "e2e-tenant",
-                  "X-User-ID": "e2e-admin-user",
-                },
-                body: JSON.stringify({
-                  prompt: bioInput,
-                  image_url: imageUrl ? imageUrl : undefined
-                }),
-              },
-            );
-
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(
-                errData.error ||
-                  errData.message ||
-                  "Failed to generate storefront",
-              );
-            }
-
-            const data = await res.json();
-
-            if (data.organization_id) {
-              localStorage.setItem("tenant_id", data.organization_id);
-              localStorage.setItem("tenant", data.organization_id);
-            }
-            if (data.user_id) {
-              localStorage.setItem("user_id", data.user_id);
-            }
-
-            localStorage.removeItem("onboardingState");
-            localStorage.setItem("has_onboarded", "true");
-
-            if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
-            }
-
-            setTimeout(() => {
-              window.location.href = "success.html";
-            }, 1500);
-          } catch (err) {
-            console.error(err);
-            goToStep("step-instant");
-            const errorMsg = err.message || "Network Error: Failed to fetch";
-            instantErrorEl.innerText = errorMsg;
-            instantErrorEl.style.display = "block";
-            instantErrorEl.style.color = "#FF3B30";
-            instantErrorEl.style.borderColor = "rgba(255, 59, 48, 0.3)";
-            instantBioInputEl.classList.add("invalid-input");
-            generateStorefrontBtn.disabled = false;
-            delete generateStorefrontBtn.dataset.submitting;
-            if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
-            }
-            generateStorefrontBtn.innerHTML = "Generate My Workspace";
-          }
-        });
-      }
+          const image = document.getElementById('instant-image-url');
+          const data = await setupRequest('start_zero_click', {prompt, image_url:image && image.value.trim() || undefined});
+          if (epoch !== setupEpoch) return;
+          showPreparedReview(preparedResult(data));
+        } catch (cause) {
+          if (epoch === setupEpoch) { unknownSetup = true; goToStep('step-instant'); instantErrorEl.textContent = cause.message || 'Setup could not be confirmed'; instantErrorEl.style.display = 'block'; }
+        } finally { setupBusy = false; generateStorefrontBtn.disabled = false; delete generateStorefrontBtn.dataset.submitting; generateStorefrontBtn.textContent = 'Generate My Workspace'; }
+      });
       document.querySelectorAll(".save-draft-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const originalText = e.target.innerText;
@@ -3853,8 +3732,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             ["1420", "3000", "8081"].includes(window.location.port)
               ? "http://127.0.0.1:18789"
               : "";
-          const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-          const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
+
 
           const currentStepEl = document.querySelector(".step.active");
           let currentStepIdx = 0;
@@ -3866,8 +3745,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           state.step = currentStepIdx;
 
           if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
+            saveRemoteDraft(state)
               .then(() => {
                 e.target.innerText = "Saved!";
                 setTimeout(() => {
@@ -3884,12 +3762,10 @@ window.renderWalkthroughStep = renderWalkthroughStep;
                 }, 3000);
               });
           } else {
-            fetch(`${backendUrl}/api/onboarding/draft`, {
+            fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-Tenant-ID": tenantId,
-                "X-User-ID": userId,
               },
               body: JSON.stringify(state),
             })
@@ -3950,92 +3826,16 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               ai_auto_respond: autoRespondChecked,
             };
 
-            if (window.__TAURI__ && window.__TAURI__.core) {
-              finishBtn.disabled = true;
-              goToStep("step-loading");
-              window.__TAURI__.core
-                .invoke("start_onboarding", { req })
-                .then((startData) => {
-                  if (startData && startData.organization_id) {
-                    localStorage.setItem(
-                      "tenant_id",
-                      startData.organization_id,
-                    );
-                    localStorage.setItem("tenant", startData.organization_id);
-                  }
-
-                  localStorage.removeItem("onboardingState");
-                  localStorage.setItem("has_onboarded", "true");
-
-                  window.location.href = "dashboard.html";
-                })
-                .catch((err) => {
-                  console.error(err);
-                  const submitError = document.getElementById("submit-error");
-                  if (submitError) {
-                    submitError.style.display = "block";
-                    submitError.innerText =
-                      err && err.message
-                        ? err.message
-                        : typeof err === "string"
-                          ? err
-                          : "Failed to launch store";
-                  }
-                  goToStep("step-template");
-                  finishBtn.disabled = false;
-                  finishBtn.innerText = "Launch Store";
-                });
-            } else {
-              finishBtn.disabled = true;
-              finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-              const backendUrl =
-                window.location.protocol === "file:" ||
-                ["1420", "3000", "8081"].includes(window.location.port)
-                  ? "http://127.0.0.1:18789"
-                  : "";
-              fetch(`${backendUrl}/api/v1/onboarding/start`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(req),
-              })
-                .then(async (response) => {
-                  if (response.ok) {
-                    const data = await response.json().catch(() => ({}));
-                    if (data && data.organization_id) {
-                      localStorage.setItem("tenant_id", data.organization_id);
-                      localStorage.setItem("tenant", data.organization_id);
-                    }
-                    localStorage.removeItem("onboardingState");
-                    localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "dashboard.html";
-                  } else {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(
-                      errData.error ||
-                        errData.message ||
-                        "Failed to start onboarding",
-                    );
-                  }
-                })
-                .catch((err) => {
-                  console.error(err);
-                  const submitError = document.getElementById("submit-error");
-                  if (submitError) {
-                    submitError.style.display = "block";
-                    submitError.innerText =
-                      err && err.message
-                        ? err.message
-                        : typeof err === "string"
-                          ? err
-                          : "Failed to launch store";
-                  }
-                  goToStep("step-template");
-                  finishBtn.disabled = false;
-                  finishBtn.innerText = "Launch Store";
-                });
-            }
+            if (setupBusy) return;
+            setupBusy = true; finishBtn.disabled = true; goToStep('step-loading');
+            const epoch = setupEpoch;
+            completeSetup(req, epoch).catch(cause => {
+              if (epoch !== setupEpoch) return;
+              unknownSetup = true;
+              const error = document.getElementById('submit-error');
+              if (error) { error.style.display = 'block'; error.textContent = cause.message || 'Setup could not be confirmed'; }
+              goToStep('step-template');
+            }).finally(() => { setupBusy = false; finishBtn.disabled = false; finishBtn.textContent = 'Complete Setup'; });
           }
         });
       }
