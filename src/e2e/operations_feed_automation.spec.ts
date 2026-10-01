@@ -16,10 +16,12 @@ test.describe('Operations Agent Task Automation', () => {
     await page.reload();
 
     const group = page.getByTestId('grouped-triage-card-daily_prep_checklist-Daily Prep Checklist');
+    const operationsTaskCard = page.getByTestId(`triage-card-${id}`);
+    await expect.poll(async () => await group.isVisible() || await operationsTaskCard.isVisible(),
+      { timeout: 10000, message: 'Wait for the newly created task or its group before expanding' }).toBe(true);
     if (await group.isVisible()) await group.getByRole('button', { name: 'Review Individually' }).click();
 
-    // 2. Check the Agent Feed for the Operations Agent task
-    const operationsTaskCard = page.getByTestId(`triage-card-${id}`);
+    // 2. Check the individual task after any group has loaded and been expanded.
     await expect(operationsTaskCard).toBeVisible({ timeout: 10000 });
 
     // Ensure buttons are visible

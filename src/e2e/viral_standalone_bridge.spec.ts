@@ -43,7 +43,7 @@ test.describe('Viral Standalone Bridge', () => {
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
     const inviteLink = await linkInput.inputValue();
-    const expectedShareText = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${inviteLink}\n\n⚡ OmniSolo`;
+    const expectedShareText = `Join my team on OmniSolo! Here is your invite link:\n\n${inviteLink}\n\n⚡ OmniSolo`;
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
     expect(clipboardText).toBe(expectedShareText);
 
