@@ -94,7 +94,7 @@ async function authenticatedOnboardingFetch(url: string, options: RequestInit, e
   headers.set('x-ohc-expected-user', expected.userId);
   headers.set('x-ohc-expected-tenant', expected.tenantId);
   dispatched?.();
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
   if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This reply was not applied.');
   if (response.status === 409) {
     const problem = await response.clone().json().catch(() => null);
