@@ -93,7 +93,7 @@ impl StripeClient {
     pub async fn approve_issuing_authorization(&self, auth_id: &str) -> Result<(), String> {
         let auth_header = format!("Bearer {}", self.api_key);
         let req = reqwest::Client::new()
-            .post(&format!(
+            .post(format!(
                 "https://api.stripe.com/v1/issuing/authorizations/{}/approve",
                 auth_id
             ))
@@ -112,7 +112,7 @@ impl StripeClient {
     pub async fn decline_issuing_authorization(&self, auth_id: &str) -> Result<(), String> {
         let auth_header = format!("Bearer {}", self.api_key);
         let req = reqwest::Client::new()
-            .post(&format!(
+            .post(format!(
                 "https://api.stripe.com/v1/issuing/authorizations/{}/decline",
                 auth_id
             ))
