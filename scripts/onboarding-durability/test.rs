@@ -932,7 +932,8 @@ async fn protected_receipt_and_catalog_work_under_forced_rls() {
         .await
         .unwrap();
     let role = format!("onb_role_{}", uuid::Uuid::new_v4().simple());
-    sqlx::raw_sql(&format!("CREATE ROLE {role} NOLOGIN; GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT ALL ON ALL TABLES IN SCHEMA {schema} TO {role};")).execute(&a.db.pool).await.unwrap();
+    let password = uuid::Uuid::new_v4().simple().to_string();
+    sqlx::raw_sql(&format!("CREATE ROLE {role} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '{password}'; GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT ALL ON ALL TABLES IN SCHEMA {schema} TO {role};")).execute(&a.db.pool).await.unwrap();
     for table in [
         "users",
         "products",
@@ -947,19 +948,29 @@ async fn protected_receipt_and_catalog_work_under_forced_rls() {
     }
     let url = std::env::var("OHC_SYNC_TEST_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
-        .max_connections(3)
+        .max_connections(1)
         .after_connect(move |conn, _| {
             let q = format!("SET search_path TO {schema},public");
-            let r = format!("SET ROLE {role}");
             Box::pin(async move {
                 sqlx::query(&q).execute(&mut *conn).await?;
-                sqlx::query(&r).execute(&mut *conn).await?;
                 Ok(())
             })
         })
-        .connect(&url)
+        .connect_with(
+            url.parse::<sqlx::postgres::PgConnectOptions>()
+                .unwrap()
+                .username(&role)
+                .password(&password),
+        )
         .await
         .unwrap();
+    let (session, current, superuser, bypass): (String, String, bool, bool) = sqlx::query_as("SELECT session_user::text,current_user::text,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetch_one(&pool).await.unwrap();
+    assert_eq!(
+        session, role,
+        "RLS fixture must authenticate as its restricted role, not inherit postgres"
+    );
+    assert_eq!(current, role);
+    assert!(!superuser && !bypass);
     let scoped = OnboardingAgent {
         db: Arc::new(db::DB {
             pool: pool.clone(),
@@ -986,6 +997,13 @@ async fn protected_receipt_and_catalog_work_under_forced_rls() {
             .unwrap();
     assert!(residual.is_none_or(|value| value.is_empty()));
     assert!(scoped.prepared_state("tenant-b", "user-a").await.is_err());
+    let (session, current, superuser, bypass): (String, String, bool, bool) = sqlx::query_as("SELECT session_user::text,current_user::text,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetch_one(&scoped.db.pool).await.unwrap();
+    assert_eq!(session, role);
+    assert_eq!(current, role);
+    assert!(
+        !superuser && !bypass,
+        "tenant context must not restore superuser authority"
+    );
 }
 #[tokio::test]
 async fn cancellation_during_second_entry_rolls_back_and_can_retry() {
