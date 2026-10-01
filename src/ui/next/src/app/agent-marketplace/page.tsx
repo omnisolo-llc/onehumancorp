@@ -1,7 +1,7 @@
 'use client';
 import { errorMessage } from '@/lib/errors';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
 type Agent = {
@@ -21,26 +21,33 @@ export default function AgentMarketplacePage() {
  const [installedAgents, setInstalledAgents] = useState<string[]>([]);
  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
- const fetchAgents = async (searchQuery: string) => {
+ const requestVersion = useRef(0);
+ const requestController = useRef<AbortController | null>(null);
+ const fetchAgents = useCallback(async (searchQuery: string) => {
+   const version = ++requestVersion.current;
+   requestController.current?.abort();
+   const controller = new AbortController();
+   requestController.current = controller;
    setLoading(true);
    setError(null);
    try {
-     const res = await fetch(`/api/v1/agents/marketplace?q=${encodeURIComponent(searchQuery)}`);
+     const res = await fetch(`/api/v1/agents/marketplace?q=${encodeURIComponent(searchQuery)}`, { signal: controller.signal });
      if (!res.ok) {
        throw new Error('Failed to fetch agents');
      }
      const data: Agent[] = await res.json();
-     setAgents(data);
+     if (version === requestVersion.current) setAgents(data);
    } catch (err: unknown) {
-     setError(errorMessage(err, 'An error occurred while fetching agents'));
+     if (version === requestVersion.current) setError(errorMessage(err, 'An error occurred while fetching agents'));
    } finally {
-     setLoading(false);
+     if (version === requestVersion.current) setLoading(false);
    }
- };
+ }, []);
 
  useEffect(() => {
-   fetchAgents(query);
- }, [query]);
+   void fetchAgents(query);
+   return () => { requestVersion.current += 1; requestController.current?.abort(); };
+ }, [query, fetchAgents]);
 
  return (
    <div className="min-h-screen w-full min-w-0 max-w-full bg-[#f4f6f8] p-8 font-outfit flex flex-col items-center">
