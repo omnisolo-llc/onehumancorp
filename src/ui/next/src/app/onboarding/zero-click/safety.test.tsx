@@ -1,3 +1,7 @@
+import {beforeEach as beforeLocks} from 'vitest';
+beforeLocks(() => installOnboardingLocks());
+import {installOnboardingLocks} from '../testLocks';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { beforeEach, afterEach, it, expect, vi } from 'vitest';
 import Page from './page';
@@ -9,7 +13,7 @@ let chat: () => Promise<Response>;
 let start: () => Promise<Response>;
 let launch: () => Promise<Response>;
 beforeEach(() => {
-  localStorage.clear();
+  localStorage.clear(); notifyQueueIdentityChange();
   chat = async () => Response.json({ reply: 'Review these details', is_complete: true, intake_data: { business_name: 'My studio', business_type: 'Services', categories: ['services'], initial_products: [{ name: 'Consulting', price: '25.00' }] } });
   start = async () => Response.json(result);
   launch = async () => Response.json({ ...result, status: 'launched' });
@@ -75,3 +79,5 @@ it.each(['organization_id', 'user_id'])('rejects changed %s when recovering an u
  expect(screen.queryByText('Setup complete')).toBeNull();
  expect(localStorage.getItem('has_onboarded')).toBeNull();
 });
+
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(), readQueueOwner: vi.fn(async () => ({ userId: 'user-1', tenantId: 'org-1' })) }));

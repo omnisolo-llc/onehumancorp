@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useProPlan } from '../../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
+import { fetchForOnboardingOwner, subscribeOnboardingInvalidation } from '../draftSession';
 import { readLaunchResult, readPreparation, resultForPreparation, type PreparedResult } from '../contracts';
 import { OnboardingChatAgent } from './components/OnboardingChatAgent';
 
@@ -17,14 +18,17 @@ export default function ZeroClickBuilderPage() {
   const busy = useRef(false);
   const epoch = useRef(0);
   const unknownLaunch = useRef(false);
-  useEffect(() => () => { epoch.current += 1; }, []);
+  useEffect(() => {
+    const unsubscribe = subscribeOnboardingInvalidation(() => { epoch.current += 1; busy.current = false; unknownLaunch.current = false; setPending(false); setError(''); setGeneratedStore(null); });
+    return () => { epoch.current += 1; unsubscribe(); };
+  }, []);
   const handleLaunch = async () => {
     if (!generatedStore || busy.current) return;
     busy.current = true; setPending(true); setError('');
     const version = ++epoch.current;
     try {
       if (unknownLaunch.current) {
-        const response = await fetch('/api/v1/onboarding/state');
+        const response = await fetchForOnboardingOwner('/api/v1/onboarding/state', {}, { userId: generatedStore.user_id, tenantId: generatedStore.organization_id });
         if (!response.ok) throw new Error('Could not check setup status. Reload before retrying.');
         const state = await response.json();
         if (version !== epoch.current) return;
@@ -33,7 +37,7 @@ export default function ZeroClickBuilderPage() {
         if (receipt.status === 'launched') { setGeneratedStore(resultForPreparation(receipt)); unknownLaunch.current = false; return; }
         unknownLaunch.current = false;
       }
-      const response = await fetch('/api/v1/onboarding/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preparation_id: generatedStore.preparation_id }) });
+      const response = await fetchForOnboardingOwner('/api/v1/onboarding/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preparation_id: generatedStore.preparation_id }) }, { userId: generatedStore.user_id, tenantId: generatedStore.organization_id });
       if (!response.ok) throw new Error('Setup completion could not be confirmed');
       const receipt = readLaunchResult(await response.json(), generatedStore.preparation);
       if (version !== epoch.current) return;

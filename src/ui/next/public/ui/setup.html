@@ -2648,69 +2648,164 @@
         domain: "",
       };
 
-      async function fetchDraft(url, options = {}) {
-        const response = await fetch(url, { ...options, credentials: 'include' });
-        if (!response.ok) throw new Error('Draft request failed');
-        if (options.method === 'POST') {
-          if (response.status !== undefined && response.status !== 200 && response.status !== 204) throw new Error('Draft save was not acknowledged');
-          const copy = typeof response.clone === 'function' ? response.clone() : response;
-          const body = typeof copy.text === 'function' ? await copy.text() : null;
-          const data = body === null ? await copy.json() : body.trim() ? JSON.parse(body) : null;
-          if (data && (data.success === false || data.error != null)) throw new Error(data.error || 'Draft save was rejected');
+      const emptyLegacyState = JSON.parse(JSON.stringify(state));
+      let legacyOwner = null;
+      let legacyAuthEpoch = 0;
+      let legacyReady = false;
+      const sameLegacyOwner = (a,b) => !!a && !!b && a.userId === b.userId && a.tenantId === b.tenantId;
+      const legacyKey = name => legacyOwner ? 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([legacyOwner.userId,legacyOwner.tenantId])) + ':' + name : null;
+      function legacyStatus(message, error = true) {
+        let status = document.getElementById('setup-session-status');
+        if (!status) { status=document.createElement('p'); status.id='setup-session-status'; if(container)container.before(status);else document.body.prepend(status); }
+        status.textContent=message; status.setAttribute('role',error?'alert':'status');
+      }
+      let legacyStorageFailure=false;
+      const liveLegacyFences=new Set();
+      const unknownDraftWrite='A previous draft save could not be confirmed. Local edits remain held for reconciliation.';
+      const unavailableDraftWrite='Draft saving is unavailable because this browser cannot coordinate safe saves. Your local edits remain held.';
+      function legacyWriteVersion(){const key=legacyKey('write-version');return key?localStorage.getItem(key):null;}
+      function legacyWriteFence(){const key=legacyKey('write-fence');return key&&localStorage.getItem(key)!==null;}
+      const legacyIdleControls=new Map(Array.from(document.querySelectorAll('.save-draft-btn,#finish-btn,#approve-publish-btn,#generate-storefront-btn,#chat-send-btn')).map(button=>[button,button.innerHTML]));
+      function readLegacyEntry() {
+        const key=legacyKey('legacy-draft'); const raw=key&&localStorage.getItem(key); if(!raw)return null;
+        const parsed=JSON.parse(raw);
+        if(!parsed || typeof parsed!=='object' || Array.isArray(parsed) || parsed.format===1 && (!parsed.state || typeof parsed.state!=='object' || Array.isArray(parsed.state) || typeof parsed.revision!=='string' || !parsed.revision || parsed.acknowledgedRevision!==null && typeof parsed.acknowledgedRevision!=='string'))throw new Error('The saved draft could not be read. Its original bytes remain held.');
+        return parsed.format===1 ? parsed : {format:1,state:parsed,revision:null,acknowledgedRevision:null};
+      }
+      function readLegacyDraft() { const entry=readLegacyEntry(); return entry ? JSON.stringify(entry.state) : null; }
+      function legacyDraftPending() { const entry=readLegacyEntry(); return legacyStorageFailure || legacyWriteFence() || !!entry&&(!entry.revision || entry.revision!==entry.acknowledgedRevision || (entry.acknowledgedWriteVersion??null)!==legacyWriteVersion()); }
+      function refreshLegacyPendingStatus() {
+        if(!legacyOwner)return;
+        if(legacyStorageFailure)legacyStatus('This device could not save your latest draft. Its previous saved copy remains held.');
+        else if(!navigator.locks?.request)legacyStatus(unavailableDraftWrite);
+        else if(legacyWriteFence()&&!liveLegacyFences.has(legacyKey('write-fence')))legacyStatus(unknownDraftWrite);
+        else if(legacyDraftPending()){
+          legacyStatus('Local edits are pending save. Other sessions’ drafts remain held.',false);
+          for(const button of document.querySelectorAll('.save-draft-btn'))if(!button.disabled && button.textContent==='Saved!')button.innerHTML=legacyIdleControls.get(button)||'Save Draft';
         }
+        else if(localStorage.getItem('onboardingState') || localStorage.getItem('onboarding-storage-v4'))legacyStatus('An older draft is held on this device and was not loaded into this account.',false);
+        else legacyStatus('',false);
+      }
+      function writeLegacyDraft(value, acknowledged=false) {
+        const key=legacyKey('legacy-draft'); if(!key)return;
+        try {
+          const data=JSON.parse(value); const previous=readLegacyEntry();
+          const unchanged=previous && canonicalSetup(previous.state)===canonicalSetup(data);
+          const revision=unchanged&&previous.revision || Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-');
+          localStorage.setItem(key,JSON.stringify({format:1,state:data,revision,acknowledgedRevision:acknowledged?revision:previous?.acknowledgedRevision||null,acknowledgedWriteVersion:acknowledged?legacyWriteVersion():previous?.acknowledgedWriteVersion??null}));
+        } catch {legacyStorageFailure=true;}
+        refreshLegacyPendingStatus();
+      }
+      function captureLegacyDraftWrite(body) {
+        try {
+          const entry=readLegacyEntry();
+          if(!legacyOwner || !entry?.revision || legacyStorageFailure || typeof body!=='string' || canonicalSetup(JSON.parse(body))!==canonicalSetup(entry.state))return null;
+          return {owner:{...legacyOwner},epoch:legacyAuthEpoch,revision:entry.revision,snapshot:canonicalSetup(entry.state)};
+        } catch {return null;}
+      }
+      function acknowledgeLegacyDraft(stamp) {
+        if(!stamp || stamp.epoch!==legacyAuthEpoch || !sameLegacyOwner(stamp.owner,legacyOwner) || legacyWriteFence())return false;
+        try {
+          const key=legacyKey('legacy-draft');const current=readLegacyEntry();if(!key || !current)return false;
+          const matches=current.revision===stamp.revision && canonicalSetup(current.state)===stamp.snapshot;
+          localStorage.setItem(key,JSON.stringify({...current,acknowledgedRevision:matches?current.revision:null,acknowledgedWriteVersion:matches?legacyWriteVersion():null}));
+          refreshLegacyPendingStatus();return matches;
+        }catch{legacyStorageFailure=true;refreshLegacyPendingStatus();return false;}
+      }
+      async function readLegacyIdentity() {
+        const current=legacyAuthEpoch;
+        const response=await fetch(backendOrigin()+'/api/v1/auth/session-identity',{credentials:'same-origin',cache:'no-store',redirect:'error'});
+        if (!response.ok) throw new Error('Verify your signed-in session before using setup.');
+        const data=await response.json();
+        if (current!==legacyAuthEpoch || typeof data.userId!=='string' || !data.userId || typeof data.tenantId!=='string' || !data.tenantId || typeof data.expiresAt!=='number' || data.expiresAt<=Date.now()) throw new Error('Verified setup identity is unavailable.');
+        return {userId:data.userId,tenantId:data.tenantId};
+      }
+      function holdLegacySession(message, restart = false) {
+        if(legacyOwner && legacyReady)saveCurrentState(true);
+        legacyOwner=null; legacyReady=false; legacyAuthEpoch+=1; setupEpoch=(setupEpoch||0)+1;
+        clearTimeout(autoSaveTimer); clearTimeout(saveStateTimer);
+        state=JSON.parse(JSON.stringify(emptyLegacyState));
+        for(const [button,html] of legacyIdleControls){button.innerHTML=html;button.disabled=false;button.style.backgroundColor='';button.style.color='';button.style.borderColor='';delete button.dataset.submitting;}
+        const savedMessage=document.getElementById('draft-saved-msg');if(savedMessage)savedMessage.style.display='none';
+        window.pendingOnboardingReq=undefined; committedPreparation=null; committedRequest=null; unknownSetup=false; setupBusy=false;
+        chatHistory=[]; if(chatMessagesEl)chatMessagesEl.replaceChildren();
+        const details=document.getElementById('approval-details'); if(details)details.replaceChildren();
+        for(const input of Object.values(inputs))if(input && 'value' in input)input.value='';
+        for(const input of inputs.context)input.checked=false;
+        if(inputs.domain_name)inputs.domain_name.placeholder='e.g. my-business';
+        if(chatInputEl)chatInputEl.value='';
+        const chatImage=document.getElementById('chat-image-url');if(chatImage)chatImage.value='';
+        for(const id of ['submit-error','approval-error','instant-error']){const error=document.getElementById(id);if(error)error.textContent='';}
+        populateForm(); if(container)container.style.visibility='hidden';
+        legacyStatus(message || 'Your session changed. Saved drafts remain held on this device.');
+        const loadEpoch=legacyAuthEpoch;
+        if(restart)loadState().then(ready=>loadEpoch===legacyAuthEpoch&&ready&&restoreProtectedPreparation()).catch(error=>{if(loadEpoch===legacyAuthEpoch)holdLegacySession(error.message);});
+      }
+      async function legacyOwnedFetch(url, options = {}, dispatched = () => {}) {
+        const expected=legacyOwner; const current=legacyAuthEpoch;
+        if(!expected)throw new Error('Verify your signed-in session before using setup.');
+        const target=new URL(url,window.location.href);
+        if(target.origin!==window.location.origin || !['state','draft','chat','intake','start','start_zero_click','launch'].some(path=>target.pathname==='/api/v1/onboarding/'+path) || target.search || target.hash) throw new Error('Invalid setup destination');
+        let actual;
+        try {actual=await readLegacyIdentity();} catch(error) {if(current===legacyAuthEpoch)holdLegacySession(error.message);throw error;}
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(actual,expected) || !sameLegacyOwner(legacyOwner,expected)) {
+          if(current===legacyAuthEpoch)holdLegacySession('Your session changed. Saved drafts remain held.',true);
+          throw new Error('Setup session changed');
+        }
+        dispatched();
+        const response=await fetch(target.pathname,{...options,credentials:'same-origin',headers:{...options.headers,'x-ohc-expected-user':expected.userId,'x-ohc-expected-tenant':expected.tenantId}});
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(legacyOwner,expected))throw new Error('A previous session reply was ignored');
+        if(response.status===409){
+          const problem=await response.clone().json().catch(()=>null);
+          if(current!==legacyAuthEpoch || !sameLegacyOwner(legacyOwner,expected))throw new Error('A previous session reply was ignored');
+          if(problem && ['session_identity_changed','queued owner does not match the current session'].includes(problem.error))holdLegacySession('Your session changed. Sign in again to continue.');
+        }
+        if(response.status===401 || response.status===403)holdLegacySession('Your session could not be verified. Sign in again to continue.');
         return response;
+      }
+      if(container)container.style.visibility='hidden';
+      window.addEventListener('omnisolo_auth_changed',()=>holdLegacySession('Your session changed. Saved drafts remain held.',true));
+      window.addEventListener('storage',event=>{if(event.key===null || event.key==='omnisolo_queue_identity_epoch_v2')holdLegacySession('Your session changed. Saved drafts remain held.',true);else if(event.key===legacyKey('write-version') || event.key===legacyKey('write-fence'))refreshLegacyPendingStatus();});
+      window.addEventListener('pagehide',()=>holdLegacySession('Saved drafts remain held on this device.'));
+
+      async function fetchDraft(url, options = {}) {
+        if(options.method!=='POST'){
+          const response=await legacyOwnedFetch(url,options);
+          if(!response.ok)throw new Error('Draft request failed');
+          return response;
+        }
+        if(!navigator.locks?.request)throw new Error(unavailableDraftWrite);
+        const expected=legacyOwner;const current=legacyAuthEpoch;const key=legacyKey('write-fence');
+        if(!expected || !key)throw new Error('Verify your signed-in session before saving a draft.');
+        const stamp=captureLegacyDraftWrite(options.body);
+        return navigator.locks.request(key,{mode:'exclusive'},async()=>{
+          if(current!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))throw new Error('Your session changed. This draft was not sent.');
+          if(localStorage.getItem(key)!==null)throw new Error(unknownDraftWrite);
+          const marker=JSON.stringify({operation:Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-'),status:'inflight'});
+          try{localStorage.setItem(key,marker);}catch{throw new Error('This device could not record a safe draft save. Your local edits remain held.');}
+          const release=()=>{if(localStorage.getItem(key)!==marker)throw new Error(unknownDraftWrite);localStorage.removeItem(key);};
+          let dispatched=false;liveLegacyFences.add(key);
+          try{
+            const response=await legacyOwnedFetch(url,options,()=>{dispatched=true;});
+            if(response.status>=400 && response.status<500){release();throw new Error('Draft request failed');}
+            if(!response.ok || response.status!==undefined && response.status!==200 && response.status!==204)throw new Error('Draft save was not acknowledged');
+            const copy=typeof response.clone==='function'?response.clone():response;
+            const body=typeof copy.text==='function'?await copy.text():null;
+            const data=body===null?await copy.json():body.trim()?JSON.parse(body):null;
+            if(data && (data.success===false || data.error!=null))throw new Error(data.error || 'Draft save was rejected');
+            localStorage.setItem(key.replace(/write-fence$/,'write-version'),marker);
+            release();acknowledgeLegacyDraft(stamp);return response;
+          }catch(error){if(!dispatched)release();throw error;}
+          finally{liveLegacyFences.delete(key);refreshLegacyPendingStatus();}
+        });
       }
       function saveRemoteDraft(draft) { return fetchDraft(backendOrigin() + '/api/v1/onboarding/draft', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)}); }
       async function loadRemoteDraft() { return (await fetchDraft(backendOrigin() + '/api/v1/onboarding/draft')).json(); }
       // Auto save draft logic
       var autoSaveTimer = null;
       function debouncedAutoSave() {
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(() => {
-          saveCurrentState();
-
-          const backendUrl =
-            window.location.protocol === "file:" ||
-            ["1420", "3000", "8081"].includes(window.location.port)
-              ? "http://127.0.0.1:18789"
-              : "";
-
-
-
-          if (window.__TAURI__ && window.__TAURI__.core) {
-            saveRemoteDraft(state)
-              .then(() => {
-                const msg = document.getElementById("draft-saved-msg");
-                if (msg) {
-                  msg.style.display = "block";
-                  setTimeout(() => {
-                    msg.style.display = "none";
-                  }, 2000);
-                }
-              })
-              .catch(console.error);
-          } else {
-            fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(state),
-            })
-              .then((res) => {
-                if (res.ok) {
-                  const msg = document.getElementById("draft-saved-msg");
-                  if (msg) {
-                    msg.style.display = "block";
-                    setTimeout(() => {
-                      msg.style.display = "none";
-                    }, 2000);
-                  }
-                }
-              })
-              .catch(console.error);
-          }
-        }, 500);
+        if(!legacyReady)return;
+        saveCurrentState();
       }
 
       document.querySelectorAll("input, select, textarea").forEach((el) => {
@@ -2744,7 +2839,14 @@
 
       // Load existing state
       async function loadState() {
-        const stored = localStorage.getItem("onboardingState");
+        const current=legacyAuthEpoch;
+        const verified=await readLegacyIdentity();
+        if(current!==legacyAuthEpoch)return false;
+        legacyOwner=verified; legacyReady=false; legacyStorageFailure=false;
+        state=JSON.parse(JSON.stringify(emptyLegacyState));
+        const stored = readLegacyDraft();
+        const loadedWriteVersion=legacyWriteVersion();
+        const pendingLocal=legacyDraftPending();
         if (stored) {
           try {
             const parsed = businessDraft(JSON.parse(stored));
@@ -2752,15 +2854,15 @@
             if (parsed.businessName && !parsed.business_name) {
               state.business_name = parsed.businessName;
             }
-            localStorage.setItem("onboardingState", JSON.stringify(state));
+            writeLegacyDraft(JSON.stringify(state));
           } catch {
-            // Remove only the unusable draft; leave unrelated browser state intact.
-            localStorage.removeItem("onboardingState");
+            throw new Error('The saved draft could not be read. Its original bytes remain held.');
           }
         }
 
 
 
+        const loadedDraftSnapshot=localStorage.getItem(legacyKey('legacy-draft'));
         let loadedState = null;
         if (window.__TAURI__ && window.__TAURI__.core) {
           try {
@@ -2769,11 +2871,7 @@
             console.error("Tauri get_onboarding_state failed:", err);
           }
         } else {
-          const backendUrl =
-            window.location.protocol === "file:" ||
-            ["1420", "3000", "8081"].includes(window.location.port)
-              ? "http://127.0.0.1:18789"
-              : "";
+          const backendUrl = backendOrigin();
           try {
             const res = await fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
               method: "GET",
@@ -2787,17 +2885,21 @@
           }
         }
 
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(legacyOwner,verified))return false;
+        if(loadedWriteVersion!==legacyWriteVersion() || loadedDraftSnapshot!==localStorage.getItem(legacyKey('legacy-draft')))throw new Error('Your draft changed in another view. Reopen setup to restore the latest local draft.');
         // Merge backend business state, taking priority, without legacy login fields.
         loadedState = businessDraft(loadedState);
-        if (loadedState && Object.keys(loadedState).length > 0) {
+        if (!pendingLocal && loadedState && Object.keys(loadedState).length > 0) {
           state = { ...state, ...loadedState };
           if (loadedState.businessName && !loadedState.business_name) {
              state.business_name = loadedState.businessName;
           }
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+          writeLegacyDraft(JSON.stringify(state));
         }
 
-        populateForm();
+        legacyReady=true; populateForm(); if(container)container.style.visibility='';
+        if(!pendingLocal)writeLegacyDraft(JSON.stringify(state),true);
+        refreshLegacyPendingStatus();
 
         if (state.step === undefined || state.step === 0) {
           goToStep("step-initial", false);
@@ -2821,8 +2923,10 @@
             goToStep(steps[state.step], false);
           }
         }
+        return true;
       }
-      const draftRestored = loadState();
+      const initialLoadEpoch=legacyAuthEpoch;
+      const draftRestored = loadState().catch(error=>{if(initialLoadEpoch===legacyAuthEpoch)holdLegacySession(error.message);return false;});
 
       // Clear name error on typing if valid
       inputs.name.addEventListener("input", () => {
@@ -2969,7 +3073,8 @@
       }
 
       var saveStateTimer = null;
-      function saveCurrentState() {
+      function saveCurrentState(localOnly=false) {
+        if (!legacyReady) return;
         state.categories = inputs.categories.value;
         state.business_name = inputs.name.value;
         state.businessName = inputs.name.value; // Sync for E2E
@@ -3029,38 +3134,22 @@
         }
 
         // Always set localStorage directly
-        localStorage.setItem("onboardingState", JSON.stringify(state));
+        writeLegacyDraft(JSON.stringify(state));
 
 
 
+        if(localOnly)return;
         clearTimeout(saveStateTimer);
-        saveStateTimer = setTimeout(async () => {
-          if (window.__TAURI__ && window.__TAURI__.core) {
-            saveRemoteDraft(state)
-              .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
-          } else {
-            localStorage.setItem("onboardingState", JSON.stringify(state));
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            try {
-              const res = await fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(state),
-              });
-              if (!res.ok) {
-                console.warn("Failed to sync onboarding state with backend", res.status);
-              }
-            } catch (err) {
-              console.warn("Network error syncing onboarding state, offline fallback active", err);
-            }
-          }
-        }, 1000);
+        const ownerEpoch=legacyAuthEpoch; const expected=legacyOwner; const snapshot=JSON.stringify(state);
+        saveStateTimer=setTimeout(async()=>{
+          if(ownerEpoch!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))return;
+          try {
+            await fetchDraft(backendOrigin()+'/api/v1/onboarding/draft',{method:'POST',headers:{'Content-Type':'application/json'},body:snapshot});
+            if(ownerEpoch!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))return;
+            const message=document.getElementById('draft-saved-msg');
+            if(message && !legacyDraftPending()){message.style.display='block';setTimeout(()=>{if(ownerEpoch===legacyAuthEpoch)message.style.display='none';},2000);}
+          }catch(error){if(ownerEpoch===legacyAuthEpoch)legacyStatus(error.message || 'Draft save could not be confirmed. Local edits remain pending.');}
+        },1000);
       }
 
       function validateStep(stepId) {
@@ -3339,7 +3428,7 @@
 
         if (shouldSave) {
           saveCurrentState();
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+          writeLegacyDraft(JSON.stringify(state));
         }
       }
 
@@ -3382,37 +3471,6 @@
         });
       });
 
-      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          const originalText = btn.innerText;
-          btn.innerText = "Saving...";
-          btn.disabled = true;
-
-          // Add a small delay to allow browser to render "Saving..."
-          await new Promise((r) => setTimeout(r, 100));
-
-          saveCurrentState();
-
-          btn.innerText = "Draft Saved!";
-          btn.style.backgroundColor = "#34C759";
-          btn.style.color = "white";
-          btn.style.borderColor = "#34C759";
-
-          const msg = document.getElementById("draft-saved-msg");
-          if (msg) msg.style.display = "block";
-
-          setTimeout(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-            btn.style.backgroundColor = "";
-            btn.style.color = "";
-            btn.style.borderColor = "";
-            if (msg) msg.style.display = "none";
-          }, 2000);
-        });
-      });
-
       const generateStorefrontBtn = document.getElementById(
         "generate-storefront-btn",
       );
@@ -3445,11 +3503,12 @@
       let chatHistory = [];
 
       async function sendChatMessage() {
+        if (!legacyReady) return;
         const text = chatInputEl.value.trim();
         const chatImageEl = document.getElementById("chat-image-url");
         const imageUrl = chatImageEl ? chatImageEl.value.trim() : "";
         if ((!text && !imageUrl) || chatSendBtn.disabled) return;
-        const chatEpoch = setupEpoch;
+        const chatEpoch = setupEpoch; const chatOwnerEpoch=legacyAuthEpoch;
 
         // Append user message
         const userMsgDiv = document.createElement("div");
@@ -3488,13 +3547,8 @@
 
         let data;
         try {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            const res = await fetch(`${backendUrl}/api/v1/onboarding/chat`, {
-              credentials: "include",
+            const backendUrl = backendOrigin();
+            const res = await legacyOwnedFetch(`${backendUrl}/api/v1/onboarding/chat`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -3572,13 +3626,14 @@
             goToStep("step-approval");
           }
         } catch (e) {
+          if(chatEpoch!==setupEpoch || chatOwnerEpoch!==legacyAuthEpoch)return;
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
         } finally {
-          chatSendBtn.disabled = false;
+          if(chatOwnerEpoch===legacyAuthEpoch)chatSendBtn.disabled = false;
         }
       }
 
-      function backendOrigin() { return window.location.protocol === 'file:' || ['1420', '3000', '8081'].includes(window.location.port) ? 'http://127.0.0.1:18789' : ''; }
+      function backendOrigin() { if(!['http:','https:'].includes(window.location.protocol))throw new Error('Authenticated transport is unavailable in this file-only page. Open setup in your signed-in workspace.'); return ''; }
       let committedPreparation = null;
       let committedRequest = null;
       let unknownSetup = false;
@@ -3602,8 +3657,10 @@
         return receipt;
       }
       async function setupRequest(path, body) {
-        const response = await fetch(backendOrigin() + '/api/v1/onboarding/' + path, body === undefined ? {credentials:'include'} : { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        const current=legacyAuthEpoch;const expected=legacyOwner;
+        const response = await legacyOwnedFetch(backendOrigin() + '/api/v1/onboarding/' + path, body === undefined ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
         const data = await response.json();
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))throw new Error('A previous session reply was ignored');
         if (!response.ok) throw new Error(data.error || data.message || 'Setup request failed');
         return data;
       }
@@ -3643,24 +3700,26 @@
           if (data.success !== true || data.error != null || data.status !== 'launched' || data.preparation_id !== receipt.preparation_id || data.organization_id !== receipt.organization_id || data.user_id !== receipt.user_id) throw new Error('Setup completion could not be verified');
           committedPreparation = {...receipt,status:'launched'};
         }
-        localStorage.removeItem('onboardingState'); localStorage.setItem('has_onboarded','true');
+        const completedKey=legacyKey('completion'); if(completedKey)localStorage.setItem(completedKey,'true');
         window.location.href = 'dashboard.html'; return true;
       }
       // Read-only recovery uses a protected receipt, never mutable draft status.
-      draftRestored.then(async () => {
-        const recoveryEpoch = setupEpoch;
-        const data = await setupRequest('state');
-        if (data.preparation && !setupBusy && recoveryEpoch === setupEpoch) showPreparedReview(receiptOf(data.preparation));
-      }).catch(() => {});
+      async function restoreProtectedPreparation() {
+        if(!legacyReady)return;
+        const recoveryEpoch=setupEpoch;
+        const data=await setupRequest('state');
+        if(data.preparation && !setupBusy && recoveryEpoch===setupEpoch)showPreparedReview(receiptOf(data.preparation));
+      }
+      draftRestored.then(ready=>initialLoadEpoch===legacyAuthEpoch&&ready&&restoreProtectedPreparation()).catch(error=>{if(initialLoadEpoch===legacyAuthEpoch)legacyStatus(error.message);});
       const approvePublishBtn = document.getElementById('approve-publish-btn');
       if (approvePublishBtn) approvePublishBtn.addEventListener('click', async () => {
-        if (!window.pendingOnboardingReq || setupBusy) return;
+        if (!legacyReady || !window.pendingOnboardingReq || setupBusy) return;
         setupBusy = true; approvePublishBtn.disabled = true;
-        const epoch = setupEpoch;
+        const epoch = setupEpoch; const ownerEpoch=legacyAuthEpoch;
         const error = document.getElementById('approval-error'); error.textContent = '';
         try { await completeSetup(window.pendingOnboardingReq, epoch); }
         catch (cause) { if (epoch === setupEpoch) { unknownSetup = true; error.textContent = cause.message || 'Setup could not be confirmed'; } }
-        finally { setupBusy = false; approvePublishBtn.disabled = false; approvePublishBtn.textContent = 'Approve & Complete Setup'; }
+        finally { if(ownerEpoch===legacyAuthEpoch){setupBusy = false; approvePublishBtn.disabled = false; approvePublishBtn.textContent = 'Approve & Complete Setup';} }
       });
 
       if (chatSendBtn) {
@@ -3669,11 +3728,11 @@
 
       if (generateStorefrontBtn) generateStorefrontBtn.addEventListener('click', async event => {
         event.preventDefault();
-        if (setupBusy) return;
+        if (!legacyReady || setupBusy) return;
         const prompt = instantBioInputEl.value.trim();
         if (!prompt) { instantErrorEl.textContent = 'Please tell us about your business.'; instantErrorEl.style.display = 'block'; return; }
         setupBusy = true; generateStorefrontBtn.disabled = true; generateStorefrontBtn.dataset.submitting = 'true';
-        instantErrorEl.style.display = 'none'; goToStep('step-loading'); const epoch = setupEpoch;
+        instantErrorEl.style.display = 'none'; goToStep('step-loading'); const epoch = setupEpoch; const ownerEpoch=legacyAuthEpoch;
         try {
           if (unknownSetup) {
             const stateData = await setupRequest('state');
@@ -3687,81 +3746,33 @@
           showPreparedReview(preparedResult(data));
         } catch (cause) {
           if (epoch === setupEpoch) { unknownSetup = true; goToStep('step-instant'); instantErrorEl.textContent = cause.message || 'Setup could not be confirmed'; instantErrorEl.style.display = 'block'; }
-        } finally { setupBusy = false; generateStorefrontBtn.disabled = false; delete generateStorefrontBtn.dataset.submitting; generateStorefrontBtn.textContent = 'Generate My Workspace'; }
+        } finally { if(ownerEpoch===legacyAuthEpoch){setupBusy = false; generateStorefrontBtn.disabled = false; delete generateStorefrontBtn.dataset.submitting; generateStorefrontBtn.textContent = 'Generate My Workspace';} }
       });
-      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          const originalText = e.target.innerText;
-          e.target.innerText = "Saving...";
-          e.target.disabled = true;
-
-          const backendUrl =
-            window.location.protocol === "file:" ||
-            ["1420", "3000", "8081"].includes(window.location.port)
-              ? "http://127.0.0.1:18789"
-              : "";
-
-
-
-          const currentStepEl = document.querySelector(".step.active");
-          let currentStepIdx = 0;
-          if (currentStepEl) {
-            const steps = Array.from(document.querySelectorAll(".step"));
-            currentStepIdx = steps.indexOf(currentStepEl);
-          }
-
-          state.step = currentStepIdx;
-
-          if (window.__TAURI__ && window.__TAURI__.core) {
-            saveRemoteDraft(state)
-              .then(() => {
-                e.target.innerText = "Saved!";
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                  e.target.disabled = false;
-                }, 3000);
-              })
-              .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                  e.target.disabled = false;
-                }, 3000);
-              });
-          } else {
-            fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(state),
-            })
-              .then((res) => {
-                if (res.ok) {
-                  e.target.innerText = "Saved!";
-                  setTimeout(() => {
-                    e.target.innerText = originalText;
-                    e.target.disabled = false;
-                  }, 3000);
-                } else {
-                  throw new Error("Failed to save");
-                }
-              })
-              .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                  e.target.disabled = false;
-                }, 3000);
-              });
+      document.querySelectorAll('.save-draft-btn').forEach(button=>{
+        button.addEventListener('click',async event=>{
+          event.preventDefault();if(!legacyReady || button.disabled)return;
+          const ownerEpoch=legacyAuthEpoch;const expected=legacyOwner;const viewEpoch=setupEpoch;
+          const active=()=>ownerEpoch===legacyAuthEpoch && sameLegacyOwner(expected,legacyOwner);
+          saveCurrentState(true);clearTimeout(autoSaveTimer);clearTimeout(saveStateTimer);
+          const snapshot=JSON.stringify(state);button.textContent='Saving...';button.disabled=true;
+          try {
+            await fetchDraft(backendOrigin()+'/api/v1/onboarding/draft',{method:'POST',headers:{'Content-Type':'application/json'},body:snapshot});
+            if(!active())return;
+            button.textContent=legacyDraftPending()?'Changes pending':'Saved!';
+            const message=document.getElementById('draft-saved-msg');if(message && viewEpoch===setupEpoch && !legacyDraftPending())message.style.display='block';
+          }catch(error){if(active()){button.textContent='Error!';legacyStatus(error.message || 'Draft save could not be confirmed.');}}
+          finally {
+            if(active()){
+              button.disabled=false;
+              setTimeout(()=>{if(active()){button.innerHTML=legacyIdleControls.get(button)||'Save Draft';const message=document.getElementById('draft-saved-msg');if(message)message.style.display='none';}},3000);
+            }
           }
         });
       });
 
       if (finishBtn) {
         finishBtn.addEventListener("click", () => {
+          if (!legacyReady) return;
           if (validateStep("step-template")) {
             const agentBadges = document.querySelectorAll(
               "#ai-agents-container .agent-badge",
@@ -3796,14 +3807,14 @@
 
             if (setupBusy) return;
             setupBusy = true; finishBtn.disabled = true; goToStep('step-loading');
-            const epoch = setupEpoch;
+            const epoch = setupEpoch; const ownerEpoch=legacyAuthEpoch;
             completeSetup(req, epoch).catch(cause => {
               if (epoch !== setupEpoch) return;
               unknownSetup = true;
               const error = document.getElementById('submit-error');
               if (error) { error.style.display = 'block'; error.textContent = cause.message || 'Setup could not be confirmed'; }
               goToStep('step-template');
-            }).finally(() => { setupBusy = false; finishBtn.disabled = false; finishBtn.textContent = 'Complete Setup'; });
+            }).finally(() => { if(ownerEpoch===legacyAuthEpoch){setupBusy = false; finishBtn.disabled = false; finishBtn.textContent = 'Complete Setup';} });
           }
         });
       }
@@ -3829,8 +3840,9 @@
     <script>
 
       document.addEventListener("DOMContentLoaded", () => {
-        // Hybrid Setup Health Check
-        fetch("/api/onboarding/setup-health?mode=standalone")
+        // Use the authenticated same-origin v1 proxy; no file/loopback fallback.
+        if(!['http:','https:'].includes(window.location.protocol))return;
+        fetch("/api/v1/onboarding/setup-health?mode=standalone")
           .then((res) => res.json())
           .then((data) => {
             if (data.status === "error") {

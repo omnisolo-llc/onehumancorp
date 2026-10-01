@@ -4,7 +4,10 @@
 import { errorMessage } from '@/lib/errors';
 import { useEffect,useState,useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useOnboardingStore } from "./store";
+import { sendOnboardingDraft } from './draftWrites';
+import { onboardingDraftWriteProblem } from './draftWriteGate';
+import { useOnboardingStore, initializeOnboardingDraft, onboardingStorageFailed, onboardingDraftPending, markOnboardingDraftFromServer, subscribeOnboardingPersistence } from "./store";
+import { fetchForOnboardingOwner, hasHeldOnboardingDraft, readOwnedOnboardingItem, writeOwnedOnboardingItem, subscribeOnboardingInvalidation, onboardingOwner, captureOnboardingRestoreSnapshot, assertOnboardingRestoreSnapshot, type DraftOwner } from "./draftSession";
 import { canonicalRequest, observedWebsite, readDraftAcknowledgement, readLaunchResult, readPreparation, readPreparedResult, resultForPreparation, type Preparation } from "./contracts";
 import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
@@ -39,6 +42,12 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [viewOwner, setViewOwner] = useState<DraftOwner | null>(null);
+  const [identityError, setIdentityError] = useState('');
+  const [heldDraft, setHeldDraft] = useState(false);
+  const [draftPending, setDraftPending] = useState(false);
+  const [draftWriteProblem, setDraftWriteProblem] = useState<string | null>(null);
+  useEffect(() => subscribeOnboardingPersistence(() => { setDraftPending(onboardingDraftPending()); setDraftWriteProblem(onboardingDraftWriteProblem(onboardingOwner())); }), []);
   const initialStateLoaded = useRef(false);
   const [chatMessages, setChatMessages] = useState<
     { role: string; content: string; image_url?: string }[]
@@ -48,11 +57,12 @@ export default function OnboardingWizard() {
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const operationEpoch = useRef(0);
   const operationPending = useRef(false);
+  const draftSavePending = useRef(false);
   const prepared = useRef<Preparation | null>(null);
   const preparedDraft = useRef<string | null>(null);
   const needsRecovery = useRef(false);
-  useEffect(() => () => { operationEpoch.current += 1; operationPending.current = false; updateState({ isLoading: false }); }, []);
-  const cancelOperation = () => { if (operationPending.current) needsRecovery.current = true; operationEpoch.current += 1; operationPending.current = false; updateState({ isLoading: false }); };
+  useEffect(() => () => { operationEpoch.current += 1; operationPending.current = false; draftSavePending.current = false; updateState({ isLoading: false }); }, []);
+  const cancelOperation = () => { if (operationPending.current) needsRecovery.current = true; operationEpoch.current += 1; operationPending.current = false; draftSavePending.current = false; updateState({ isLoading: false }); };
 
 
   useEffect(() => {
@@ -66,11 +76,12 @@ export default function OnboardingWizard() {
     backoff = process.env.NODE_ENV === "test" ? 10 : 500,
   ) => {
     const method = (options.method ?? 'GET').toUpperCase();
-    const safeReplay = method === 'GET' || method === 'HEAD' || ['/api/v1/onboarding/state', '/api/v1/onboarding/draft'].includes(url);
+    const safeReplay = method === 'GET' || method === 'HEAD';
     const attempts = safeReplay ? retries : 1;
+    const isDraftWrite = method === 'POST' && ['/api/v1/onboarding/state', '/api/v1/onboarding/draft'].includes(url);
     for (let i = 0; i < attempts; i++) {
       try {
-        const response = await fetch(url, options);
+        const response = await (isDraftWrite ? sendOnboardingDraft(url, options, viewOwner) : fetchForOnboardingOwner(url, options, viewOwner));
         if (!response.ok) {
           let errMsg = `HTTP error! status: ${response.status}`;
           try {
@@ -108,6 +119,7 @@ export default function OnboardingWizard() {
       aiAgents,
       aiAutoRespond,
       instantImageUrl,
+      skipped,
       ...overrideState,
     };
 
@@ -148,6 +160,10 @@ export default function OnboardingWizard() {
   };
 
   const handleSaveDraft = async () => {
+    if (draftSavePending.current || operationPending.current) return;
+    draftSavePending.current = true;
+    const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current;
     updateState({ isLoading: true });
     updateState({ error: "" });
 
@@ -171,6 +187,7 @@ export default function OnboardingWizard() {
         aiAgents,
         aiAutoRespond,
         instantImageUrl,
+        skipped,
       };
 
       const response = await fetchWithRetry("/api/v1/onboarding/draft", {
@@ -182,13 +199,15 @@ export default function OnboardingWizard() {
       });
 
       await readDraftAcknowledgement(response);
-      setSaveMessage("Draft Saved!");
-      setTimeout(() => setSaveMessage(""), 3000);
+      if (!active()) return;
+      setSaveMessage(onboardingDraftPending() ? "Earlier draft saved; local edits are pending save." : "Draft Saved!");
+      setTimeout(() => { if (active()) setSaveMessage(""); }, 3000);
     } catch (err) {
+      if (!active()) return;
       console.error(err);
       updateState({ error: errorMessage(err, '') || "An error occurred saving draft" });
     } finally {
-      updateState({ isLoading: false });
+      if (active()) { draftSavePending.current = false; updateState({ isLoading: false }); }
     }
   };
 
@@ -198,7 +217,7 @@ export default function OnboardingWizard() {
     const fields: Record<string, string> = { business_type: 'businessType', company_name: 'businessName', company_description: 'businessDescription', selling_categories: 'categories', website_template: 'websiteTemplate', domain_choice: 'domainChoice', location: 'location', target_audience: 'targetAudience', ai_agents: 'aiAgents', ai_auto_respond: 'aiAutoRespond' };
     const updates: Record<string, unknown> = {};
     for (const [key, target] of Object.entries(fields)) if (request[key] !== undefined) updates[target] = request[key];
-    localStorage.setItem('onboarding_initial_products', JSON.stringify(receipt.catalog));
+    writeOwnedOnboardingItem('products', JSON.stringify(receipt.catalog));
     updateState({ ...updates, firstProductName: primary.name, firstProductPrice: primary.price, startResult: resultForPreparation(receipt), step: receipt.status === 'launched' ? 5 : 3, isLoading: false });
     prepared.current = receipt;
     preparedDraft.current = canonicalRequest(draftRequest());
@@ -214,18 +233,33 @@ export default function OnboardingWizard() {
   // Only the server's protected receipt can restore completion after reload.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetchWithRetry("/api/v1/onboarding/draft", {})
+    let loadVersion = 0;
+    const load = async () => {
+      const version = ++loadVersion;
+      const active = () => !cancelled && version === loadVersion;
+      setIsLoaded(false); setIdentityError('');
+      try {
+        const owner = await initializeOnboardingDraft();
+        if (!active()) return;
+        setViewOwner(owner); setHeldDraft(hasHeldOnboardingDraft());
+        const restoreSnapshot = captureOnboardingRestoreSnapshot();
+        const pendingLocal = onboardingDraftPending();
+        const localSnapshot = pendingLocal ? { ...useOnboardingStore.getState() } : undefined;
+        const localProducts = pendingLocal ? readOwnedOnboardingItem('products') : null;
+        setDraftPending(pendingLocal); setDraftWriteProblem(onboardingDraftWriteProblem(owner));
+        const values = await Promise.all([
+      fetchForOnboardingOwner("/api/v1/onboarding/draft", {}, owner)
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
-      fetchWithRetry("/api/v1/onboarding/state", {})
+      fetchForOnboardingOwner("/api/v1/onboarding/state", {}, owner)
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
-    ])
-      .then(([draftData, stateData]) => {
-        if (cancelled) return;
+        ]);
+        if (!active()) return;
+        assertOnboardingRestoreSnapshot(restoreSnapshot);
+        const [draftData, stateData] = values;
         const isValid = (d: unknown) => typeof d === 'object' && d !== null && Object.keys(d).length > 0;
-        let data = isValid(draftData) ? draftData : stateData;
+        let data = pendingLocal ? null : isValid(draftData) ? draftData : stateData;
         if (isValid(data)) {
           if (data.wizardState) data = data.wizardState;
           if (data.step !== undefined)
@@ -267,14 +301,26 @@ export default function OnboardingWizard() {
             updateState({ skipped: data.skipped });
           initialStateLoaded.current = true;
         }
-        if (stateData?.preparation) adoptPreparation(readPreparation(stateData.preparation), isValid(draftData) ? (draftData.wizardState || draftData) : undefined);
+        if (stateData?.preparation) {
+          adoptPreparation(readPreparation(stateData.preparation), pendingLocal ? localSnapshot : isValid(draftData) ? (draftData.wizardState || draftData) : undefined);
+          if (pendingLocal && localProducts !== null) writeOwnedOnboardingItem('products', localProducts);
+        }
         else if (useOnboardingStore.getState().step >= 4) updateState({ step: 3, startResult: null, isLoading: false });
-      })
-      .catch((err) => console.error("Failed to load onboarding state", err))
-      .finally(() => {
-        if (!cancelled) { initialStateLoaded.current = true; setIsLoaded(true); }
-      });
-    return () => { cancelled = true; };
+        if (!pendingLocal) markOnboardingDraftFromServer(restoreSnapshot.writeVersion);
+        initialStateLoaded.current = true; setIsLoaded(true);
+      } catch (cause) {
+        if (active()) { setViewOwner(null); setIdentityError(errorMessage(cause, 'Sign in to restore your setup draft.')); }
+      }
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(restart => {
+      loadVersion += 1; operationEpoch.current += 1; operationPending.current = false; draftSavePending.current = false;
+      prepared.current = null; preparedDraft.current = null; needsRecovery.current = false;
+      setChatMessages([]); setChatInput(''); setChatImageUrl(''); setSaveMessage(''); setValidationError(''); setValidationErrors({}); setDraftPending(false); setDraftWriteProblem(null);
+      initialStateLoaded.current = false; setViewOwner(null); setIsLoaded(false);
+      if (restart) void load(); else setIdentityError('Your session could not be verified. Sign in again to continue.');
+    });
+    void load();
+    return () => { cancelled = true; loadVersion += 1; unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -285,7 +331,7 @@ export default function OnboardingWizard() {
 
   // Sync state to backend
   useEffect(() => {
-    if (!isLoaded || !initialStateLoaded.current) return;
+    if (!isLoaded || !initialStateLoaded.current || !onboardingDraftPending()) return;
 
     // Only save if we are past the initial state
     if (
@@ -316,6 +362,7 @@ export default function OnboardingWizard() {
       aiAgents,
       aiAutoRespond,
       instantImageUrl,
+      skipped,
     };
 
     const timer = setTimeout(() => {
@@ -347,11 +394,13 @@ export default function OnboardingWizard() {
     aiAgents,
     aiAutoRespond,
     isLoaded,
+    draftPending,
     instantImageUrl,
+    skipped,
   ]);
 
   const handleIntake = async () => {
-    if (operationPending.current) return;
+    if (operationPending.current || draftSavePending.current) return;
     operationPending.current = true;
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
@@ -393,8 +442,8 @@ export default function OnboardingWizard() {
             : intakeData.initial_products?.[0]?.price || "10.00",
       });
       if (intakeData.initial_products) {
-        localStorage.setItem(
-          "onboarding_initial_products",
+        writeOwnedOnboardingItem(
+          "products",
           JSON.stringify(intakeData.initial_products),
         );
       }
@@ -446,7 +495,7 @@ export default function OnboardingWizard() {
   };
 
   const handleSendChatMessage = async () => {
-    if ((!chatInput.trim() && !chatImageUrl.trim()) || operationPending.current) return;
+    if ((!chatInput.trim() && !chatImageUrl.trim()) || operationPending.current || draftSavePending.current) return;
     operationPending.current = true;
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
@@ -463,7 +512,7 @@ export default function OnboardingWizard() {
       if (data.is_complete) {
         const intake = data.intake_data;
         if (!intake?.business_name || !Array.isArray(intake.initial_products) || !intake.initial_products.length) throw new Error('The setup draft is incomplete. Please add your business and product details.');
-        localStorage.setItem('onboarding_initial_products', JSON.stringify(intake.initial_products));
+        writeOwnedOnboardingItem('products', JSON.stringify(intake.initial_products));
         updateState({ step: 2, businessName: intake.business_name, businessType: intake.business_type || 'Online Store', businessDescription: newHistory.map(message => message.content).join(' '), categories: intake.categories || [], firstProductName: intake.initial_products[0].name || '', firstProductPrice: String(intake.initial_products[0].price ?? ''), location: intake.location || '', targetAudience: intake.target_audience || '' });
       }
     } catch (cause) {
@@ -474,7 +523,7 @@ export default function OnboardingWizard() {
   };
 
   const handleInstantBuild = async () => {
-    if (operationPending.current) return;
+    if (operationPending.current || draftSavePending.current) return;
     if (!bio.trim()) { updateState({ error: 'Please tell us about your business.' }); return; }
     operationPending.current = true;
     const epoch = ++operationEpoch.current;
@@ -482,7 +531,7 @@ export default function OnboardingWizard() {
     updateState({ isLoading: true, error: '', step: 4 });
     try {
       if (needsRecovery.current) {
-        const state = await fetch('/api/v1/onboarding/state');
+        const state = await fetchForOnboardingOwner('/api/v1/onboarding/state', {}, viewOwner);
         if (!state.ok) throw new Error('Could not check the previous setup. Please reload before retrying.');
         const value = await state.json();
         if (!active()) return;
@@ -503,7 +552,7 @@ export default function OnboardingWizard() {
 
   const draftRequest = () => {
     const { businessType, businessName, businessDescription, whatYouSell, categories, websiteTemplate, firstProductName, firstProductPrice, domainChoice, location, targetAudience, aiAgents, aiAutoRespond } = useOnboardingStore.getState();
-    const initial: unknown = JSON.parse(localStorage.getItem('onboarding_initial_products') || '[]');
+    const initial: unknown = JSON.parse(readOwnedOnboardingItem('products') || '[]');
     if (!Array.isArray(initial)) throw new Error('The reviewed product draft is invalid');
     const initialProducts = initial.map((item, index) => {
       if (!item || typeof item !== 'object') throw new Error('The reviewed product draft is invalid');
@@ -521,7 +570,7 @@ export default function OnboardingWizard() {
   };
 
   const handleStartOnboarding = async () => {
-    if (operationPending.current) return;
+    if (operationPending.current || draftSavePending.current) return;
     operationPending.current = true;
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
@@ -529,7 +578,7 @@ export default function OnboardingWizard() {
     updateState({ isLoading: true, error: '', step: 4 });
     try {
       if (needsRecovery.current) {
-        const state = await fetch('/api/v1/onboarding/state');
+        const state = await fetchForOnboardingOwner('/api/v1/onboarding/state', {}, viewOwner);
         if (!state.ok) throw new Error('Could not check the previous setup. Please reload before retrying.');
         const value = await state.json();
         if (!active()) return;
@@ -584,7 +633,8 @@ export default function OnboardingWizard() {
     }
   };
 
-  if (!isLoaded) {
+  if (identityError) return <div role="alert">{identityError} Your saved drafts remain held on this device.</div>;
+  if (!isLoaded || !viewOwner) {
     return (
       <div
         role="status"
@@ -1082,6 +1132,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
+                      disabled={isLoading}
                       className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
@@ -1196,6 +1247,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
+                      disabled={isLoading}
                       className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
@@ -1302,6 +1354,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
+                      disabled={isLoading}
                       className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
@@ -1405,6 +1458,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
+                      disabled={isLoading}
                       className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
@@ -1539,6 +1593,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                       onClick={() => handleSaveDraft()}
+                      disabled={isLoading}
                   className="setup-nav-button min-h-[44px]"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
@@ -1749,6 +1804,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                       onClick={() => handleSaveDraft()}
+                      disabled={isLoading}
                   className="setup-nav-button min-h-[44px]"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
@@ -1956,6 +2012,10 @@ export default function OnboardingWizard() {
             </div>
           )}
 
+          {draftPending && <p role="status">Local edits are pending save.</p>}
+          {draftWriteProblem && <p role="alert">{draftWriteProblem}</p>}
+          {onboardingStorageFailed() && <p role="alert">This device couldn’t save your latest edits. Your existing saved draft is unchanged.</p>}
+          {heldDraft && <p role="status">An older or different-account draft is held on this device and was not loaded.</p>}
           {step === 5 && startResult && prepared.current?.status === 'launched' && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">

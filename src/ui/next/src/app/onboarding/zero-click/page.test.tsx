@@ -1,3 +1,7 @@
+import {beforeEach as beforeLocks} from 'vitest';
+beforeLocks(() => installOnboardingLocks());
+import {installOnboardingLocks} from '../testLocks';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -30,7 +34,7 @@ describe('ZeroClickBuilderPage', () => {
         json: () => Promise.resolve({}),
       });
     }) as unknown as typeof fetch;
-    localStorage.clear();
+    localStorage.clear(); notifyQueueIdentityChange();
     vi.stubEnv('NODE_ENV', 'test');
   });
 
@@ -61,6 +65,7 @@ describe('ZeroClickBuilderPage', () => {
 
   it('submits the form and displays the result', async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/v1/onboarding/state') return Promise.resolve({ ok: true, json: async () => ({}) });
       if (url === '/api/v1/billing/my-plan') {
         return Promise.resolve({ ok: true, json: async () => ({ current_plan: 'free' }) });
       }
@@ -136,3 +141,5 @@ describe('ZeroClickBuilderPage', () => {
     expect(components.length).toBeGreaterThan(0);
   });
 });
+
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(), readQueueOwner: vi.fn(async () => ({ userId: 'user_123', tenantId: 'org_123' })) }));

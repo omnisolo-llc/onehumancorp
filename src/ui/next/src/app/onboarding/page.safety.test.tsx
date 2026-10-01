@@ -1,3 +1,8 @@
+import {beforeEach as beforeLocks} from 'vitest';
+beforeLocks(() => installOnboardingLocks());
+import {installOnboardingLocks} from './testLocks';
+import { initializeOnboardingDraft, markOnboardingDraftFromServer } from './store';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -10,9 +15,10 @@ const prepared = { success: true, ...preparation, preparation, product_ids: ['pr
 const launched = { success: true, status: 'launched', preparation_id: prepared.preparation_id, organization_id: prepared.organization_id, user_id: prepared.user_id };
 let start: () => Promise<Response>;
 let launch: () => Promise<Response>;
-beforeEach(() => {
-  localStorage.clear(); push.mockReset();
+beforeEach(async () => {
+  localStorage.clear(); notifyQueueIdentityChange(); await initializeOnboardingDraft(); push.mockReset();
   useOnboardingStore.setState({ step: 3, chatStep: 4, businessDescription: 'Owner studio', businessName: 'Owner Studio', whatYouSell: 'Consulting', location: 'Online', targetAudience: 'Local businesses', businessType: 'Services', categories: ['services'], firstProductName: 'Consultation', firstProductPrice: '25.00', aiAgents: [], aiAutoRespond: false, error: '', isLoading: false, startResult: null, skipped: false });
+  markOnboardingDraftFromServer();
   start = async () => Response.json(prepared);
   launch = async () => Response.json(launched);
   vi.stubGlobal('fetch', vi.fn(async (url: string) => url === '/api/v1/onboarding/start' ? start() : url === '/api/v1/onboarding/launch' ? launch() : Response.json({})));
@@ -138,3 +144,5 @@ it.each(['organization_id','user_id'])('rejects a revision receipt with contradi
  expect(calls('launch')).toHaveLength(0);
  expect(useOnboardingStore.getState().error).toMatch(/identity|match|changed/i);
 });
+
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(), readQueueOwner: vi.fn(async () => ({ userId: 'user-1', tenantId: 'organization-1' })) }));

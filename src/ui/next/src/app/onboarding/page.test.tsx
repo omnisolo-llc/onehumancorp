@@ -1,3 +1,9 @@
+import {beforeEach as beforeLocks} from 'vitest';
+beforeLocks(() => installOnboardingLocks());
+import {installOnboardingLocks} from './testLocks';
+import { initializeOnboardingDraft, markOnboardingDraftFromServer } from './store';
+import { writeOwnedOnboardingItem } from './draftSession';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import { cleanup } from '@testing-library/react';
 /* @vitest-environment jsdom */
 import { render, screen, waitFor, act } from "@testing-library/react";
@@ -40,8 +46,8 @@ describe("OnboardingWizard", () => {
     return view;
   };
 
-  beforeEach(() => {
-    localStorage.clear();
+  beforeEach(async () => {
+    localStorage.clear(); notifyQueueIdentityChange(); await initializeOnboardingDraft();
     mockRouterPush.mockClear();
     useOnboardingStore.setState({
       step: 1,
@@ -58,6 +64,7 @@ describe("OnboardingWizard", () => {
       startResult: null,
       firstProductName: "", firstProductPrice: "", skipped: false,
     });
+    markOnboardingDraftFromServer();
 
     global.fetch = vi.fn().mockImplementation(() => {
       return Promise.resolve({
@@ -1004,9 +1011,9 @@ describe("OnboardingWizard", () => {
     const startZeroClickCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/start_zero_click'));
     expect(startZeroClickCall).toBeDefined();
     expect(startZeroClickCall.url).toBe("/api/v1/onboarding/start_zero_click");
-    expect(startZeroClickCall.options.headers).toEqual({
-      "Content-Type": "application/json",
-    });
+    expect(new Headers(startZeroClickCall.options.headers).get('content-type')).toBe('application/json');
+    expect(new Headers(startZeroClickCall.options.headers).get('x-ohc-expected-user')).toBe('user-1');
+    expect(new Headers(startZeroClickCall.options.headers).get('x-ohc-expected-tenant')).toBe('org-1');
     if (typeof startZeroClickCall?.options?.body !== 'string') throw new Error('Expected JSON instant-build request');
     const startZeroBody = JSON.parse(startZeroClickCall.options.body);
     expect(startZeroBody.prompt).toContain("I consult startups in SF.");
@@ -1014,7 +1021,8 @@ describe("OnboardingWizard", () => {
     const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/launch'));
     expect(launchCall).toBeDefined();
     expect(launchCall.url).toBe("/api/v1/onboarding/launch");
-    expect(launchCall.options.headers).toEqual({ 'Content-Type': 'application/json' });
+    expect(new Headers(launchCall.options.headers).get('content-type')).toBe('application/json');
+    expect(new Headers(launchCall.options.headers).get('x-ohc-expected-user')).toBe('user-1');
     expect(JSON.parse(String(launchCall.options.body))).toEqual({ preparation_id: 'prep-1' });
   });
 
@@ -1131,8 +1139,8 @@ describe("OnboardingWizard", () => {
   it("Step 3: Passes initial_products from localStorage to /api/v1/onboarding/start", async () => {
     const user = userEvent.setup({ delay: null });
 
-    localStorage.setItem(
-      "onboarding_initial_products",
+    writeOwnedOnboardingItem(
+      "products",
       JSON.stringify([{ name: "Custom AI Product", price: "99" }]),
     );
 
@@ -1318,3 +1326,5 @@ describe("OnboardingWizard", () => {
     }, { timeout: 3000 });
   });
 });
+
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(), readQueueOwner: vi.fn(async () => ({ userId: 'user-1', tenantId: 'org-1' })) }));

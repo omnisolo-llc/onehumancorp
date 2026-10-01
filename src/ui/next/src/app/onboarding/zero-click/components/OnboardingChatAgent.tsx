@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { openOnboardingSession, fetchForOnboardingOwner, subscribeOnboardingInvalidation, type DraftOwner } from '../../draftSession';
 import { readPreparation, readPreparedResult, resultForPreparation } from '../../contracts';
 
 interface ChatMessage {
@@ -20,6 +21,8 @@ interface OnboardingChatAgentProps {
 }
 
 export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
+  const [viewOwner, setViewOwner] = useState<DraftOwner | null>(null);
+  const [identityError, setIdentityError] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'assistant', content: "Hi there! I'm your OmniSolo setup assistant. What kind of business do you want to build or manage today?" }
@@ -53,25 +56,34 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/v1/onboarding/state')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch state');
-        return res.json();
-      })
-      .then((data) => {
-        if (cancelled) return;
+    let loadVersion = 0;
+    const load = async () => {
+      const version = ++loadVersion;
+      const active = () => !cancelled && version === loadVersion;
+      setIsLoaded(false); setIdentityError('');
+      try {
+        const owner = await openOnboardingSession();
+        if (!active()) return;
+        setViewOwner(owner);
+        const response = await fetchForOnboardingOwner('/api/v1/onboarding/state', {}, owner);
+        if (!response.ok) throw new Error('Failed to fetch state');
+        const data = await response.json();
+        if (!active()) return;
         if (data?.preparation) { onComplete(resultForPreparation(readPreparation(data.preparation))); return; }
-        if (data?.chatMessages && Array.isArray(data.chatMessages) && data.chatMessages.length > 0) {
-          setMessages(data.chatMessages);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to load onboarding state', err);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoaded(true);
-      });
-    return () => { cancelled = true; };
+        if (Array.isArray(data?.chatMessages) && data.chatMessages.length > 0) setMessages(data.chatMessages);
+        setIsLoaded(true);
+      } catch (cause) {
+        if (active()) { setViewOwner(null); setIdentityError(cause instanceof Error ? cause.message : 'Verify your session before using setup.'); }
+      }
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(restart => {
+      loadVersion += 1;
+      epoch.current += 1; busy.current = false; unknownPreparation.current = false;
+      setInput(''); setReview(null); setMessages([{role:'assistant',content:'Sign in to continue your setup.'}]); setIsLoading(false); setIsProvisioning(false); setViewOwner(null);
+      if (restart) void load(); else { setIsLoaded(false); setIdentityError('Your session could not be verified. Sign in again to continue.'); }
+    });
+    void load();
+    return () => { cancelled = true; loadVersion += 1; unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -82,11 +94,11 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
   const saveStateToBackend = async (chatMessagesToSave: ChatMessage[]) => {
     try {
-      await fetch('/api/v1/onboarding/state', {
+      await fetchForOnboardingOwner('/api/v1/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ step: -2, chatMessages: chatMessagesToSave }),
-      });
+      }, viewOwner);
     } catch (err) {
       console.error('Failed to save chat state', err);
     }
@@ -102,7 +114,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     setMessages(newMessages); setInput(''); setIsLoading(true); setReview(null); setError(null);
     void saveStateToBackend(newMessages);
     try {
-      const response = await fetch('/api/v1/onboarding/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: newMessages }) });
+      const response = await fetchForOnboardingOwner('/api/v1/onboarding/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: newMessages }) }, viewOwner);
       if (!response.ok) throw new Error('Failed to communicate with setup agent');
       const data = await response.json();
       if (!active()) return;
@@ -129,7 +141,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     setIsProvisioning(true); setError(null);
     try {
       if (unknownPreparation.current) {
-        const response = await fetch('/api/v1/onboarding/state');
+        const response = await fetchForOnboardingOwner('/api/v1/onboarding/state', {}, viewOwner);
         if (!response.ok) throw new Error('Could not check the previous setup. Reload before retrying.');
         const state = await response.json();
         if (!active()) return;
@@ -145,7 +157,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         domain_choice: 'subdomain', price_type: 'fixed', location: intake.location || '', target_audience: intake.target_audience || '',
         initial_products: intake.initial_products.map(product => ({ ...product, price: String(product.price), description: product.description || '', variants: product.variants || [] })), ai_agents: [], ai_auto_respond: false,
       };
-      const response = await fetch('/api/v1/onboarding/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const response = await fetchForOnboardingOwner('/api/v1/onboarding/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, viewOwner);
       if (!response.ok) throw new Error('Setup preparation could not be confirmed. Check its status before retrying.');
       const result = readPreparedResult(await response.json());
       if (active()) onComplete(result);
@@ -163,7 +175,8 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     "I manage 15 long-term apartment rentals"
   ];
 
-  if (!isLoaded) {
+  if (identityError) return <div role="alert">{identityError} Your other session’s draft remains held.</div>;
+  if (!isLoaded || !viewOwner) {
     return (
       <div className="flex items-center justify-center min-h-[50vh] w-full max-w-2xl mx-auto">
         <div className="w-8 h-8 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin"></div>

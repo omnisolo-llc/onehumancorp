@@ -1,3 +1,4 @@
+import {createOriginLockManager} from './test-support/origin-locks.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -8,11 +9,17 @@ const paths = [
   ...['setup.html', 'ui/setup.html', 'api/ui/setup.html', 'api/v1/ui/setup.html'].map(p => `src/ui/next/public/${p}`),
 ];
 
+const testOwner={userId:'user-1',tenantId:'org-1'};
+const draftKey='omnisolo_onboarding_owned_v1:'+encodeURIComponent(JSON.stringify([testOwner.userId,testOwner.tenantId]))+':legacy-draft';
+const ownerHeaders=['Content-Type','x-ohc-expected-user','x-ohc-expected-tenant'];
+async function waitUntil(predicate) { const deadline=Date.now()+1000; while(!predicate()) { if(Date.now()>deadline)throw new Error('Expected request was not dispatched'); await new Promise(resolve=>setTimeout(resolve,0)); } }
 async function setup(path, fetch, options = {}) {
   const html = await readFile(new URL(`../${path}`, import.meta.url), 'utf8');
   const dom = new JSDOM(html, { url: options.url || 'https://workspace.example/setup.html', runScripts: 'outside-only', pretendToBeVisual: true });
-  dom.window.fetch = fetch;
-  dom.window.localStorage.setItem('onboardingState', JSON.stringify(options.stored ?? { work_context: 'Agency', business_name: 'Nora Studio', first_offer: 'Logo Design', location: 'Portland, OR', target_audience: 'Local founders', categories: 'Design', assistant_name: 'Nora' }));
+  Object.defineProperty(dom.window.navigator,'locks',{configurable:true,value:options.locks===false?undefined:options.locks||createOriginLockManager()});
+  dom.window.fetch = (url, request) => url.endsWith('/session-identity') ? Promise.resolve(Response.json({...testOwner,expiresAt:Date.now()+60_000})) : fetch(url,request);
+  const initial = options.stored ?? { work_context: 'Agency', business_name: 'Nora Studio', first_offer: 'Logo Design', location: 'Portland, OR', target_audience: 'Local founders', categories: 'Design', assistant_name: 'Nora' };
+  dom.window.localStorage.setItem(draftKey, JSON.stringify({format:1,state:initial,revision:'fixture-acknowledged',acknowledgedRevision:'fixture-acknowledged'}));
   options.prepare?.(dom.window);
   dom.window.HTMLElement.prototype.scrollTo = () => {};
   dom.window.HTMLElement.prototype.scrollIntoView = () => {};
@@ -56,7 +63,7 @@ for (const path of paths) {
       dom.window.document.getElementById('chat-input').value = 'A pottery studio';
       dom.window.document.getElementById('chat-send-btn').click();
       await new Promise(resolve => setTimeout(resolve, 20));
-      assert.deepEqual(Object.keys(options.headers), ['Content-Type']);
+      assert.deepEqual(Object.keys(options.headers), ownerHeaders);
     } finally { dom.window.close(); }
   });
 }
@@ -74,6 +81,7 @@ for (const path of paths) {
     try {
       dom.window.document.getElementById('template-selection').value = 'Modern';
       dom.window.document.getElementById('finish-btn').click();
+      await waitUntil(()=>submitted);
       assert.ok(submitted, 'the actual finish handler must submit setup');
       for (const field of ['admin_email', 'admin_name', 'admin_password']) assert.equal(Object.hasOwn(submitted.body, field), false, field);
       assert.equal(submitted.url, '/api/v1/onboarding/start');
@@ -130,7 +138,7 @@ for (const path of paths) {
       prepare(window) { window.localStorage.setItem('unrelated-setting', 'preserved'); },
     });
     try {
-      const draft = JSON.parse(dom.window.localStorage.getItem('onboardingState'));
+      const draft = JSON.parse(dom.window.localStorage.getItem(draftKey)).state;
       assertBusinessOnly(draft);
       assert.equal(draft.business_name, 'Preserved Studio');
       assert.equal(draft.step, 5, 'saved navigation remains compatible');
@@ -149,7 +157,7 @@ for (const path of paths) {
       prepare(window) {
         const original = window.Storage.prototype.setItem;
         window.Storage.prototype.setItem = function (key, value) {
-          if (key === 'onboardingState') writes.push(JSON.parse(value));
+          if (key === draftKey) writes.push(JSON.parse(value).state ?? JSON.parse(value));
           return original.call(this, key, value);
         };
       },
@@ -169,7 +177,7 @@ for (const path of paths) {
       assert.ok(writes.length > 0, 'real navigation and autosave handlers persist drafts');
       assert.ok(submissions.length > 0, 'the actual draft request is submitted');
       for (const draft of [...writes, ...submissions]) assertBusinessOnly(draft);
-      const saved = JSON.parse(dom.window.localStorage.getItem('onboardingState'));
+      const saved = JSON.parse(dom.window.localStorage.getItem(draftKey)).state;
       assert.equal(saved.business_name, 'Server Studio');
       assert.equal(saved.first_offer, 'Updated service');
       assertBusinessOnly(saved);
@@ -189,7 +197,7 @@ for (const path of paths) {
    const button = dom.window.document.querySelector('.save-draft-btn'); button.click();
    await new Promise(r => setTimeout(r,20));
    assert.equal(button.textContent, 'Error!'); assert.equal(requests.length,1);
-   assert.deepEqual(Object.keys(requests[0].headers), ['Content-Type']);
+   assert.deepEqual(Object.keys(requests[0].headers), ownerHeaders);
   } finally { dom.window.close(); }
  });
 }
@@ -242,7 +250,7 @@ for (const path of paths) {
   try {
    const input = dom.window.document.getElementById('instant-bio'); input.value = 'Consulting studio'; input.dispatchEvent(new dom.window.Event('input'));
    dom.window.document.getElementById('generate-storefront-btn').click(); await new Promise(r => setTimeout(r,20));
-   assert.ok(options); assert.deepEqual(Object.keys(options.headers), ['Content-Type']); assert.equal(launches,0);
+   assert.ok(options); assert.deepEqual(Object.keys(options.headers), ownerHeaders); assert.equal(launches,0);
    assert.equal(dom.window.localStorage.getItem('has_onboarded'),null); assert.ok(dom.window.document.getElementById('step-approval').classList.contains('active'));
   } finally { dom.window.close(); }
  });
@@ -255,6 +263,7 @@ for (const path of paths) {
   });
   try {
    dom.window.document.getElementById('template-selection').value='Modern'; dom.window.document.getElementById('finish-btn').click();
+   await waitUntil(()=>typeof resolve==='function');
    dom.window.goToStep('step-chat'); resolve({ok:true,json:async()=>prepared}); await new Promise(r=>setTimeout(r,20));
    assert.equal(launches,0); assert.equal(dom.window.localStorage.getItem('has_onboarded'),null);
   } finally { dom.window.close(); }
@@ -262,7 +271,7 @@ for (const path of paths) {
 }
 
 for (const path of paths) {
- test(`${path} uses only the existing loopback chat endpoint with session credentials`, async () => {
+ test(`${path} uses the same-origin canonical chat proxy with session credentials`, async () => {
   let submitted;
   const dom = await setup(path, async (url, options = {}) => {
    if (url.endsWith('/chat')) submitted = {url,options};
@@ -271,9 +280,9 @@ for (const path of paths) {
   try {
    dom.window.goToStep('step-chat'); dom.window.document.getElementById('chat-input').value='A studio'; dom.window.document.getElementById('chat-send-btn').click();
    await new Promise(r=>setTimeout(r,20));
-   assert.equal(submitted.url,'http://127.0.0.1:18789/api/v1/onboarding/chat');
-   assert.equal(submitted.options.credentials,'include');
-   assert.deepEqual(Object.keys(submitted.options.headers),['Content-Type']);
+   assert.equal(submitted.url,'/api/v1/onboarding/chat');
+   assert.equal(submitted.options.credentials,'same-origin');
+   assert.deepEqual(Object.keys(submitted.options.headers),ownerHeaders);
   } finally { dom.window.close(); }
  });
 }
