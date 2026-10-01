@@ -32,10 +32,10 @@ impl Error {
                 )
             }
             Self::Database(error) => {
-                tracing::error!(%error, "Quote acceptance transaction failed");
+                tracing::error!(%error, "Quote acceptance database operation failed; prior phases may be committed");
                 (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "transaction_not_committed",
+                    "database_operation_failed",
                 )
             }
         };

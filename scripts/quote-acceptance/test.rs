@@ -543,6 +543,37 @@ async fn cancellation_after_provider_claim_survives_without_a_second_attempt() {
     f.finish().await;
 }
 #[tokio::test]
+async fn second_phase_database_failure_preserves_committed_acceptance_and_truthful_reason() {
+    let f = Fixture::new().await;
+    sqlx::raw_sql("CREATE FUNCTION reject_checkout_claim() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN IF OLD.acceptance_receipt->>'checkout_status'='pending' AND NEW.acceptance_receipt->>'checkout_status'='reconciliation' THEN RAISE EXCEPTION 'forced checkout claim rejection';END IF;RETURN NEW;END$$;CREATE TRIGGER reject_checkout_claim BEFORE UPDATE ON quotes FOR EACH ROW EXECUTE FUNCTION reject_checkout_claim();").execute(&f.pool).await.unwrap();
+    let (status, body) = f.accept().await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(body["success"], false);
+    assert_eq!(body["status"], "reconciliation");
+    assert_eq!(PROVIDER_CALLS.load(Ordering::SeqCst), 0);
+    let invoice_count: i64 = sqlx::query_scalar("SELECT count(*) FROM invoices")
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        invoice_count, 1,
+        "acceptance committed before the claim failed"
+    );
+    let quote_status: String = sqlx::query_scalar("SELECT status FROM quotes")
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(quote_status, "ACCEPTED");
+    assert_eq!(body["reason"], "database_operation_failed");
+    let (replay_status, replay) = f.accept().await;
+    assert_eq!(replay_status, StatusCode::OK);
+    assert_eq!(replay["checkout_status"], "pending");
+    // The failed claim never committed; replay exposes its recorded state without retrying.
+    assert_eq!(PROVIDER_CALLS.load(Ordering::SeqCst), 0);
+    f.finish().await;
+}
+
+#[tokio::test]
 async fn deferred_commit_failure_cannot_start_checkout() {
     let f = Fixture::new().await;
     sqlx::raw_sql("CREATE FUNCTION reject_commit() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'forced deferred rejection';END$$;CREATE CONSTRAINT TRIGGER reject_commit AFTER INSERT ON invoices DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reject_commit();").execute(&f.pool).await.unwrap();
