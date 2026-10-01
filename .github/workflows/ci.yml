@@ -104,6 +104,8 @@ jobs:
           python3 .github/scripts/check_checkout_paths_test.py
           python3 scripts/init_dev_test.py
           python3 .github/scripts/check_native_cache_test.py
+          python3 .github/scripts/check_ignored_ci_test.py
+          python3 scripts/test_ignored_rust_gate.py
 
       - name: Check tracked artifacts
         run: |
@@ -184,6 +186,31 @@ jobs:
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    services:
+      ignored_postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ignored_fixture
+          POSTGRES_DB: ohc_ignored_postgres
+        ports: ['5432/tcp']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ohc_ignored_postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      ignored_mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ignored_fixture
+          MYSQL_DATABASE: ohc_ignored_mysql
+        ports: ['3306/tcp']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pignored_fixture"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+      ignored_redis:
+        image: redis:7
+        ports: ['6379/tcp']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
       - uses: actions/checkout@v6
       - name: Install native system libraries
@@ -204,6 +231,35 @@ jobs:
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         run: make test-backend
+
+      - name: Check out the already pinned OpenHarness SDK for isolated tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        uses: actions/checkout@v6
+        with:
+          repository: AgentBoardTT/openharness
+          ref: 85c54682a209ca7c3fc8b1ab2e820b6724dc3028
+          path: target/ignored-prerequisites/openharness
+          persist-credentials: false
+
+      - name: Execute the fourteen explicit local-only ignored Rust tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          OHC_IGNORED_SERVICE_ISOLATION: '1'
+          OHC_IGNORED_POSTGRES_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_ignored_postgres
+          OHC_IGNORED_MYSQL_URL: mysql://root:ignored_fixture@127.0.0.1:${{ job.services.ignored_mysql.ports[3306] }}/ohc_ignored_mysql
+          OHC_IGNORED_REDIS_URL: redis://127.0.0.1:${{ job.services.ignored_redis.ports[6379] }}/0
+          OPENHARNESS_PINNED_SDK_SOURCE: ${{ github.workspace }}/target/ignored-prerequisites/openharness
+        run: |
+          python3 scripts/test_ignored_rust_gate.py
+          python3 scripts/ignored_rust_gate.py run
+
+      - name: Retain every explicit ignored-test execution result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ignored-rust-execution
+          path: target/ignored-rust-results
+          if-no-files-found: error
 
   native-node:
     name: Native Node quality gates
