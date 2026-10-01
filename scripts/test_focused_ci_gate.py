@@ -64,7 +64,7 @@ class FocusedGateTests(unittest.TestCase):
             root=Path(temp)
             self.assertNotEqual(gate.run_gate(root, 'quote-acceptance', root/'evidence'), 0)
 
-    def test_workflow_has_four_independent_required_gates_and_retained_artifacts(self):
+    def test_workflow_has_independent_required_gates_and_retained_artifacts(self):
         import yaml
         source = yaml.safe_load((Path(__file__).resolve().parents[1]/'.github/workflows/ci.yml').read_text())
         job = source['jobs']['postgres-security']

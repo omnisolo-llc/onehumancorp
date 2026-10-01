@@ -820,6 +820,14 @@ jobs:
         env:
           CARGO_TARGET_DIR: target
         run: python3 scripts/focused_ci_gate.py stripe-webhook-security
+      - name: Verify committed builder publication and invalidation
+        if: ${{ !cancelled() }}
+        env:
+          OHC_BUILDER_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_builder_publication_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_builder_publication_test
+          python3 scripts/focused_ci_gate.py builder-publication
       - name: Retain focused gate execution and source evidence
         uses: actions/upload-artifact@v6
         if: always()

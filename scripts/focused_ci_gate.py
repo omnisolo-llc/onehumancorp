@@ -15,6 +15,7 @@ GATES = {
     'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
     'stripe-webhook-security': (22, None),
+    'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
 }
 RESULT = re.compile(r'test result: (ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out;')
 
