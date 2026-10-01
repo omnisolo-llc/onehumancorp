@@ -2,50 +2,15 @@ import { expect, test } from './fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
+import type { ClickEffects } from './support/ui_click_audit';
+import { ATTACHMENT, INVENTORY_TITLE, PROTOCOL, discoverAppRoutes as discoverSourceRoutes } from '../../scripts/ui-click-audit.cjs';
 import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
 import { createAuditNavigation } from './support/ui_audit_navigation';
 
 const appRoot = path.resolve(__dirname, '../ui/next/src/app');
-const ignoredRouteSegments = new Set(['api']);
-const dynamicRouteExamples: Record<string, string> = {
-  '[articleId]': 'getting-started-1',
-  '[tenant]': 'default',
-  '[id]': 'e2e-id',
-};
-
-function walkFiles(dir: string): string[] {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) return walkFiles(fullPath);
-    return entry.isFile() || entry.isSymbolicLink() ? [fullPath] : [];
-  });
-}
-
-function routeFromPageFile(file: string): string | null {
-  const relativeDir = path.relative(appRoot, path.dirname(file));
-  const segments = relativeDir === '' ? [] : relativeDir.split(path.sep);
-  if (segments.some((segment) => ignoredRouteSegments.has(segment) || segment.startsWith('('))) {
-    return null;
-  }
-
-  const routeSegments = segments
-    .filter((segment) => !segment.startsWith('_'))
-    .map((segment) => dynamicRouteExamples[segment] || segment);
-
-  return `/${routeSegments.join('/')}`.replace(/\/$/, '') || '/';
-}
-
-function discoverAppRoutes() {
-  return Array.from(new Set(
-    walkFiles(appRoot)
-      .filter((file) => file.endsWith(`${path.sep}page.tsx`))
-      .map(routeFromPageFile)
-      .filter((route): route is string => Boolean(route)),
-  )).sort();
-}
+function discoverAppRoutes(): string[] { return discoverSourceRoutes(path.resolve(__dirname, '../..')); }
 
 const clickableCssSelector = [
   'button:not([disabled])',
@@ -213,8 +178,14 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
   return { auditedElements: results.length, failures };
 }
 
-async function auditClickEffectsForRoute(sourcePage: Page, route: string) {
-  const failures: string[] = [];
+type RouteClickAudit = {
+  protocol: number; kind: 'route'; route: string; discoveredKeys: string[];
+  observations: { key: string; completed: boolean; effect: ClickEffects | null; error: string | null }[];
+  exhausted: boolean; failures: string[]; assertionsPassed: boolean;
+};
+
+async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit: RouteClickAudit) {
+  const failures = audit.failures;
   const audited = new Set<string>();
   const startedAt = Date.now();
   // Restore with a committed blank document between clicks, retaining one
@@ -224,8 +195,9 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string) {
     await gotoReady(page, route);
     while (true) {
       const candidates = await tagClickTargets(page);
+      for (const target of candidates) if (!audit.discoveredKeys.includes(target.key)) audit.discoveredKeys.push(target.key);
       const candidate = candidates.find((target) => !audited.has(target.key));
-      if (!candidate) break;
+      if (!candidate) { audit.exhausted = true; break; }
       if (Date.now() - startedAt > 90_000) {
         throw new Error(`${route}: click target enumeration did not converge after ${audited.size} targets; next=${candidate.label}. No remaining coverage was silently skipped.`);
       }
@@ -233,11 +205,13 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string) {
       audited.add(candidate.key);
       try {
         const observed = await observeClickEffects(page, target);
+        audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
         if (!hasMeaningfulClickEffect(observed)) {
           if (observed.dialogSeen) failures.push(`${route}: "${candidate.label}" only opened a browser dialog`);
           failures.push(`${route}: "${candidate.label}" produced no observable user effect`);
         }
       } catch (error) {
+        audit.observations.push({ key: candidate.key, completed: false, effect: null, error: String(error).split('\n')[0] });
         failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
       }
       page = await replaceAuditDocument(page);
@@ -269,9 +243,15 @@ test.describe('comprehensive UI contract', () => {
 
     test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ page }) => {
       test.setTimeout(120000);
-      const audit = await auditClickEffectsForRoute(page, route);
-      console.info(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
-      expect(audit.failures).toEqual([]);
+      const audit: RouteClickAudit = { protocol: PROTOCOL, kind: 'route', route, discoveredKeys: [], observations: [], exhausted: false, failures: [], assertionsPassed: false };
+      try {
+        const result = await auditClickEffectsForRoute(page, route, audit);
+        console.info(`Audited ${result.auditedTargets} click targets on ${routeLabel(route)}.`);
+        expect(audit.failures).toEqual([]);
+        audit.assertionsPassed = true;
+      } finally {
+        await test.info().attach(ATTACHMENT, { body: Buffer.from(JSON.stringify(audit)), contentType: 'application/json' });
+      }
     });
   }
 
@@ -411,22 +391,16 @@ test.describe('comprehensive UI contract', () => {
     expect(failures).toEqual([]);
   });
 
-  test('visible enabled click targets have an observable effect', async ({ page }) => {
-    test.setTimeout(600000);
-    const failures: string[] = [];
-    const appRoutes = discoverAppRoutes();
-    let auditedTargets = 0;
-    console.info(`Discovered ${appRoutes.length} app routes for click target audit.`);
-    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
-
-    for (const route of appRoutes) {
-      const audit = await auditClickEffectsForRoute(page, route);
-      auditedTargets += audit.auditedTargets;
-      failures.push(...audit.failures);
-    }
-
-    console.info(`Audited ${auditedTargets} visible enabled click targets.`);
-    expect(failures).toEqual([]);
+  test(INVENTORY_TITLE, async () => {
+    expect(process.env.OHC_CLICK_AUDIT_CONTEXT, 'Complete coverage requires the native runner and mandatory post-run receipt verification.').toBeTruthy();
+    const routes = discoverAppRoutes();
+    expect(routes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
+    // The required post-run gate evaluates completed per-route click assertions
+    // for this exact inventory, without executing each business action twice.
+    await test.info().attach(ATTACHMENT, {
+      body: Buffer.from(JSON.stringify({ protocol: PROTOCOL, kind: 'inventory', routes, assertionsPassed: true })),
+      contentType: 'application/json',
+    });
   });
 
   test('all visible interactive elements are usable and named', async ({ page }) => {

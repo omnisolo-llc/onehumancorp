@@ -10,6 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { validateWebArtifact } from './package-web.mjs';
 import { runNativeCommand } from './native-process.mjs';
+import clickCoverage from './ui-click-audit.cjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'package.json'));
@@ -76,6 +77,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   const ciSelection = inputArgs.includes('--ci');
   const args = inputArgs.filter((arg) => arg !== '--ci');
   if (args.some((arg) => arg === '--pass-with-no-tests')) throw new Error('Zero-test success is not allowed');
+  const completeSelection = clickCoverage.completeSelection(args);
+  if (ciSelection && !completeSelection) throw new Error('Required CI cannot narrow or override the complete browser selection');
   const env = testEnvironment();
   env.PLAYWRIGHT_TEST_DIR = './src';
   env.PLAYWRIGHT_LIST_REPORTER = '1';
@@ -170,9 +173,18 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     const frontend = start(process.execPath, [web], 'web.log', { ...env, PORT: String(webPort), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' });
     await waitHttp(`${webOrigin}/login`, frontend, 120, execution.signal);
     // Execute exactly the complete/sharded selection checked by preflight.
+    const coverage = completeSelection ? clickCoverage.makeRunContext(root, process.env) : undefined;
+    const receiptDirectory = path.join(root, 'test-results/click-receipts', coverage ? `${coverage.runId}-${coverage.attempt}` : 'partial');
+    const browserEnv = coverage ? { ...env, OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(coverage), OHC_CLICK_AUDIT_DIRECTORY: receiptDirectory } : env;
     await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts', ...args], {
-      env, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
+      env: browserEnv, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
     });
+    if (coverage) {
+      clickCoverage.assertSource(root, coverage);
+      if (!args.some(arg => arg === '--shard' || arg.startsWith('--shard='))) {
+        console.log('Complete click coverage:', clickCoverage.validateReceipts(clickCoverage.readReceipts(receiptDirectory), coverage, 1));
+      }
+    }
   } catch (error) {
     // The database contains only this run's synthetic seed. Its bounded error
     // tail makes migration/type failures diagnosable instead of a bare HTTP 503.

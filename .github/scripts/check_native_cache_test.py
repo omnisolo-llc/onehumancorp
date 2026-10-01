@@ -36,7 +36,7 @@ class NativeCacheTests(unittest.TestCase):
 
     def test_all_application_and_security_gates_remain_required(self):
         expected = {'check-changes', 'dependency-audit', 'native-build', 'native-test',
-            'native-node', 'native-web', 'native-desktop', 'native-e2e', 'native-images',
+            'native-node', 'native-web', 'native-desktop', 'native-e2e', 'native-click-coverage', 'native-images',
             'postgres-security', 'kind-e2e', 'docker-e2e'}
         gate = self.ci['jobs']['ci-required']
         self.assertEqual(set(gate['needs']), expected)
