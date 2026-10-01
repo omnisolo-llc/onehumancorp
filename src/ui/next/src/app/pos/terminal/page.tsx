@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { QUEUE_IDENTITY_EPOCH_KEY } from '../../../lib/sync/queueIdentity';
 import { MutationService } from '../../../lib/sync/MutationService';
 
 type TerminalStaff = { id: string; name: string; role: string; tenant_id: string };
@@ -45,6 +46,7 @@ export default function POSTerminal() {
   const [offlineConversion] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [syncSuccess, setSyncSuccess] = useState(false);
+  const [queueError, setQueueError] = useState('');
   const [chargeAmount, setChargeAmount] = useState('0');
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
   const [posMode, setPosMode] = useState<'catalog' | 'quick_charge'>('catalog');
@@ -54,22 +56,36 @@ export default function POSTerminal() {
 
 
   useEffect(() => {
+    let active = true;
+    let readVersion = 0;
+    let lastKnownCount: number | null = null;
+    let successTimer: ReturnType<typeof setTimeout> | undefined;
     const checkQueue = async () => {
-      const qLen = await SyncManager.getInstance().getQueueLength();
-      setPendingSyncCount((prev) => {
-        if (navigator.onLine && prev > 0 && qLen === 0) {
-          setSyncSuccess(true);
-          setTimeout(() => setSyncSuccess(false), 3000);
-        }
-        return qLen;
-      });
-      if (navigator.onLine && qLen > 0) {
-        setSyncing(true);
-      } else {
-        setSyncing(false);
+      const version = ++readVersion;
+      try {
+        const qLen = await SyncManager.getInstance().getQueueLength();
+        if (!active || version !== readVersion) return;
+        clearTimeout(successTimer);
+        const cleared = navigator.onLine && lastKnownCount !== null && lastKnownCount > 0 && qLen === 0;
+        lastKnownCount = qLen;
+        setPendingSyncCount(qLen); setQueueError('');
+        setSyncSuccess(cleared); setSyncing(navigator.onLine && qLen > 0);
+        if (cleared) successTimer = setTimeout(() => { if (active) setSyncSuccess(false); }, 3000);
+      } catch {
+        if (!active || version !== readVersion) return;
+        lastKnownCount = null; clearTimeout(successTimer);
+        setSyncSuccess(false); setSyncing(false);
+        setQueueError('Queue status is unavailable. Saved actions remain held until your session and local storage can be verified.');
       }
     };
+    const handleIdentityChanged = () => {
+      lastKnownCount = null; clearTimeout(successTimer); setSyncSuccess(false);
+      setPendingSyncCount(0); void checkQueue();
+    };
 
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) handleIdentityChanged();
+    };
     const handleOnline = () => {
       setIsOffline(false);
       checkQueue();
@@ -96,10 +112,15 @@ export default function POSTerminal() {
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
         window.addEventListener('omnisolo_queue_updated', handleQueueUpdated);
+        window.addEventListener('omnisolo_auth_changed', handleIdentityChanged);
+        window.addEventListener('storage', handleStorage);
 
         checkQueue();
 
         return () => {
+          active = false; readVersion += 1; clearTimeout(successTimer);
+          window.removeEventListener('omnisolo_auth_changed', handleIdentityChanged);
+          window.removeEventListener('storage', handleStorage);
           window.removeEventListener('online', handleOnline);
           window.removeEventListener('offline', handleOffline);
           window.removeEventListener('omnisolo_queue_updated', handleQueueUpdated);
@@ -327,6 +348,7 @@ export default function POSTerminal() {
              <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
              <p className="text-gray-500 text-sm mt-2">{t('Enter PIN to access terminal')}</p>
              {authenticationError && <p role="alert" className="mt-3 text-sm text-red-700">{authenticationError}</p>}
+             {queueError && <p role="status" className="mt-3 text-sm text-amber-800">{queueError}</p>}
              {isOffline && <p className="text-[#FF9500] font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
            </div>
 
@@ -370,7 +392,7 @@ export default function POSTerminal() {
              </div>
            </div>
 
-           {syncing && <div className="absolute bottom-4 left-4 text-xs text-blue-400">{t('Syncing...')}</div>}
+           {syncing && <div className="absolute bottom-4 left-4 text-xs text-blue-400">{t('Saved actions awaiting confirmation')}</div>}
         </div>
       </div>
     );
@@ -378,6 +400,7 @@ export default function POSTerminal() {
 
   return (
      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter md:py-10 w-full overflow-x-hidden">
+       {queueError && <p role="status" className="p-3 text-sm text-amber-800">{queueError}</p>}
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 mobile-pos-container">
 
         {/* Header */}
@@ -707,7 +730,7 @@ export default function POSTerminal() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span>{t('Syncing transactions...')}</span>
+            <span>{t('Saved transactions awaiting confirmation')}</span>
           </div>
         )}
         {syncSuccess && !isOffline && (

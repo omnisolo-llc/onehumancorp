@@ -1,4 +1,6 @@
 "use client";
+import { SyncManager } from "../../lib/sync/SyncManager";
+import { QUEUE_IDENTITY_EPOCH_KEY } from "../../lib/sync/queueIdentity";
 import type { AgentFeedData, AgentFeedItem, ActivityItem, TriageItem } from '@/lib/agent-feed-types';
 import type { Step } from '@/components/Walkthrough';
 import type { ApprovalRequest } from '../team/page';
@@ -135,6 +137,7 @@ export default function Dashboard() {
   const [actionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
+  const [queueReadError, setQueueReadError] = useState("");
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
   const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
   const [showReferralModal, setShowReferralModal] = useState(false);
@@ -143,6 +146,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    let queueActive = true; let queueVersion = 0; let syncVersion = 0;
     fetch("/api/v1/walkthrough/dashboard")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
@@ -165,51 +169,41 @@ export default function Dashboard() {
     }
 
     const updateOfflineStatus = async () => {
+      const version = ++queueVersion;
       setIsOffline(!navigator.onLine);
       try {
-        const { getActions } = await import("../utils/offlineQueue");
-        const actions = await getActions();
-        setOfflineQueueCount(actions.length);
+        const summary = await SyncManager.getInstance().getQueueSummary();
+        if (!queueActive || version !== queueVersion) return;
+        setOfflineQueueCount(summary.pending);
+        setSyncErrorCount(summary.needsAttention + summary.reconciliation);
+        setQueueReadError(summary.storageUnavailable ? 'Queue status is unavailable for one local adapter. Saved actions remain held.' : '');
       } catch {
-        setOfflineQueueCount(0);
+        if (queueActive && version === queueVersion) setQueueReadError('Queue status is unavailable. Saved actions remain held until your session and local storage can be verified.');
       }
     };
 
     const handleSync = async () => {
       if (!navigator.onLine) return;
+      const version = ++syncVersion;
+      setIsSyncing(true);
       try {
-        const { getActions, removeAction } = await import("../utils/offlineQueue");
-        const queue = await getActions();
-        if (!Array.isArray(queue) || queue.length === 0) return;
-
-        setIsSyncing(true);
-        setSyncErrorCount(0);
-
-        const res = await fetch("/api/v1/sync/offline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mutations: queue }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.failed_count && data.failed_count > 0) {
-            setSyncErrorCount(data.failed_count);
-          }
-
-          // Remove exactly the items we just synced
-          for (const item of queue) {
-             await removeAction(item.id);
-          }
-
-          const currentQueue = await getActions();
-          setOfflineQueueCount(currentQueue.length);
-        }
-      } catch (e) {
-        console.error("Sync failed", e);
+        await SyncManager.getInstance().sync();
+        if (queueActive && version === syncVersion) await updateOfflineStatus();
+      } catch {
+        if (queueActive && version === syncVersion) setQueueReadError('Queue status is unavailable. Saved actions remain held until their result can be verified.');
       } finally {
-        setIsSyncing(false);
+        if (queueActive && version === syncVersion) setIsSyncing(false);
       }
+    };
+    const handleIdentityChanged = () => {
+      syncVersion += 1; setIsSyncing(false); setOfflineQueueCount(0); setSyncErrorCount(0);
+      setQueueReadError('Queue status is unavailable while your session is being verified.');
+      void updateOfflineStatus();
+    };
+
+    const handleQueueStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) handleIdentityChanged();
+      else void updateOfflineStatus();
     };
 
     async function loadDashboard() {
@@ -287,16 +281,21 @@ export default function Dashboard() {
     window.addEventListener("online", updateOfflineStatus);
     window.addEventListener("online", handleSync);
     window.addEventListener("offline", updateOfflineStatus);
-    window.addEventListener("storage", updateOfflineStatus);
+    window.addEventListener("storage", handleQueueStorage);
+    window.addEventListener("omnisolo_queue_updated", updateOfflineStatus);
+    window.addEventListener("omnisolo_auth_changed", handleIdentityChanged);
 
 
 
 
   return () => {
+      queueActive = false; queueVersion += 1; syncVersion += 1;
+      window.removeEventListener("omnisolo_queue_updated", updateOfflineStatus);
+      window.removeEventListener("omnisolo_auth_changed", handleIdentityChanged);
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
-      window.removeEventListener("storage", updateOfflineStatus);
+      window.removeEventListener("storage", handleQueueStorage);
     };
   }, []);
 
@@ -436,10 +435,10 @@ export default function Dashboard() {
           Migrate Existing Store
         </button>
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
-          {offlineQueueCount} Payments Pending Sync
+          {offlineQueueCount} Actions Pending Sync
         </div>
         <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
-          Offline - changes saved locally
+          Offline - queued actions still need a verified result
         </div>
         {isSyncing && (
           <div className="fixed bottom-4 right-4 bg-[#0f766e] text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
@@ -447,12 +446,13 @@ export default function Dashboard() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Syncing {offlineQueueCount} offline payments...
+            Checking {offlineQueueCount} pending actions...
           </div>
         )}
+        {queueReadError && <p role="status" className="app-badge warn">{queueReadError}</p>}
         {syncErrorCount > 0 && (
           <div className="app-badge bad" role="alert">
-            {syncErrorCount} payment{syncErrorCount > 1 ? 's' : ''} failed to sync. Tap to resolve.
+            {syncErrorCount} action{syncErrorCount > 1 ? 's need' : ' needs'} attention or reconciliation. Their saved copies are retained.
           </div>
         )}
         {error && <div className="app-badge bad">{error}</div>}
