@@ -65,6 +65,12 @@ pub struct IntegrationsRegistry {
             std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>,
         >,
     >,
+    google_workspace_clients: std::sync::RwLock<
+        std::collections::HashMap<
+            String,
+            std::sync::Arc<crate::integrations::google_workspace::provider::GoogleWorkspaceProvider>,
+        >,
+    >,
     mailchimp_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
@@ -223,6 +229,7 @@ impl IntegrationsRegistry {
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_workspace_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -533,6 +540,17 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(
+                        creds.api_token.clone(),
+                    ),
+                ),
+            );
+        }
+        if integration_id == "google_workspace" {
+            let mut clients = self.google_workspace_clients.write().unwrap();
+            clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(
+                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
                         creds.api_token.clone(),
                     ),
                 ),

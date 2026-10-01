@@ -45,6 +45,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "https://www.googleapis.com/calendar/v3".to_string(),
         ),
         metadata_provider(
+            "google_workspace",
+            "Google Workspace",
+            "productivity",
+            "https://www.googleapis.com".to_string(),
+        ),
+        metadata_provider(
             "cal_com",
             "Cal.com",
             "calendar",
