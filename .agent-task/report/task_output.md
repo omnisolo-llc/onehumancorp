@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+issue_title: "Implement native Rust Omnichannel Chat to replace Chatwoot"
+issue_description: "Superpowers skill provenance: 8ca22dba9a94f28898bbce59f2537ff4d87c747d (skills/using-superpowers/SKILL.md). Chatwoot removal has already been implemented (CHAT-00). The issue description asks to implement the core canonical conversation domain in Rust (`src/server/omnichannel` or equivalent). However, `src/server/domain/repository/omnichannel_repo.rs` already contains the requested Rust structs and PostgreSQL/SQLite repository traits for `Conversation`, `Message`, and `CustomerProfile`, with strict `tenant_id` based isolation in queries. A transactional outbox pattern and further backend features require API integration, which the current issue specification describes partially but is largely implemented or beyond the safe scope without owner verification and explicit boundaries, particularly around external provider integration limits mentioned in `F06` and `F13` of `docs/research/native_migration_and_remediation.md`. Additionally, Bazel tests are referenced in the issue (`bazel test //...`), but the project has moved away from Bazel (per `docs/development/native-build.md`). No safe, well-scoped implementation follows from the repository state."
+outcome: blocked
