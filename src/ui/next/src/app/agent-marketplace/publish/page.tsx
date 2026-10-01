@@ -1,50 +1,18 @@
 'use client';
-import { errorMessage } from '@/lib/errors';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function PublishAgentPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [role, setRole] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    // The current registry persists descriptor links, not role/prompt definitions.
+    // Keep a programmatic or keyboard submit from sending an unsupported draft.
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/v1/agents/marketplace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description,
-          role,
-          system_prompt: systemPrompt,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to publish agent');
-      }
-
-      const data = await res.json();
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      router.push('/agent-marketplace');
-    } catch (err: unknown) {
-      setError(errorMessage(err, 'An error occurred while publishing the agent'));
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -53,15 +21,13 @@ export default function PublishAgentPage() {
         <header className="mb-8">
           <h1 className="text-4xl font-bold text-[#18212f] mb-2">Publish New Agent</h1>
           <p className="text-xl text-gray-600">
-            Add your custom pre-built agent to the Agent Marketplace. (AutoGPT Harness Mechanic)
+            Prepare agent details in this unsaved form.
           </p>
         </header>
 
-        {error && (
-          <div className="p-4 mb-8 bg-red-100 text-red-700 border border-red-200 rounded-[12px] animate-in fade-in slide-in-from-top-4">
-            {error}
-          </div>
-        )}
+        <p id="marketplace-publication-status" role="status" className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          Full-agent publication is unavailable. Roles and system prompts cannot be saved by this catalogue. Your entries are kept only in this open form.
+        </p>
 
         <form onSubmit={handleSubmit} className="glassmorphism p-8  border border-white/40 shadow-sm backdrop-blur-[30px] saturate-[210%] bg-white/65">
           <div className="mb-6">
@@ -118,10 +84,10 @@ export default function PublishAgentPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled aria-describedby="marketplace-publication-status"
             className="w-full py-3 px-6 bg-[#007aff] hover:bg-[#005bb5] text-white font-semibold rounded-[12px] disabled:opacity-50 transition-colors shadow-sm focus:ring-4 focus:ring-blue-200"
           >
-            {loading ? 'Publishing...' : 'Publish to Marketplace'}
+            Publish to Marketplace
           </button>
         </form>
       </div>

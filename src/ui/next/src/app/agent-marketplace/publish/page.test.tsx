@@ -1,102 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import React from "react";
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import PublishAgentPage from './page';
-
-/**
- * @jest-environment jsdom
- */
-
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-  }),
-}));
-
-describe('Publish Agent Page', () => {
-  beforeEach(() => {
-    mockFetch.mockClear();
-  });
-
-  it('renders the publish agent form', async () => {
+const values = { 'Agent Name': 'Test Agent', Description: 'Test description', Role: 'Writer', 'System Prompt': 'Private instructions' };
+afterEach(() => vi.unstubAllGlobals());
+describe('Publish Agent Page capability boundary', () => {
+  beforeEach(() => { mockFetch.mockReset(); vi.stubGlobal('fetch', mockFetch); });
+  it('renders the existing editable form and explains unavailable publication', () => {
     render(<PublishAgentPage />);
-
-    expect(screen.getByText('Publish New Agent')).toBeInTheDocument();
-    expect(screen.getByLabelText('Agent Name')).toBeInTheDocument();
-    expect(screen.getByLabelText('Description')).toBeInTheDocument();
-    expect(screen.getByLabelText('Role')).toBeInTheDocument();
-    expect(screen.getByLabelText('System Prompt')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Publish to Marketplace' })).toBeInTheDocument();
+    expect(screen.getByText('Publish New Agent')).toBeVisible();
+    expect(screen.getByText('Prepare agent details in this unsaved form.')).toBeVisible();
+    for (const name of Object.keys(values)) expect(screen.getByLabelText(name)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Publish to Marketplace' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Full-agent publication is unavailable');
   });
-
-  it('handles successful submission', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ id: 'new-agent-id' }),
-    });
-
+  it('retains every entered field when an unsupported submission is attempted', () => {
     render(<PublishAgentPage />);
-
-    fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Test Agent' } });
-    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Test Desc' } });
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Tester' } });
-    fireEvent.change(screen.getByLabelText('System Prompt'), { target: { value: 'You are a tester.' } });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Publish to Marketplace' }));
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/marketplace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'Test Agent',
-          description: 'Test Desc',
-          role: 'Tester',
-          system_prompt: 'You are a tester.',
-        }),
-      });
-    });
+    for (const [name, value] of Object.entries(values)) fireEvent.change(screen.getByLabelText(name), { target: { value } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Publish to Marketplace' }).closest('form')!);
+    for (const [name, value] of Object.entries(values)) expect(screen.getByLabelText(name)).toHaveValue(value);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
-
-  it('displays error on failed submission', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: 'Invalid agent data' }),
-    });
-
+  it('prevents default form navigation even for programmatic submission', () => {
     render(<PublishAgentPage />);
-
-    fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Bad Agent' } });
-    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Bad Desc' } });
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Bad Role' } });
-    fireEvent.change(screen.getByLabelText('System Prompt'), { target: { value: 'Bad Prompt' } });
-
-    const form = screen.getByRole('button', { name: 'Publish to Marketplace' }).closest('form');
-    fireEvent.submit(form!);
-
-    expect(await screen.findByText(/Failed to publish agent/i)).toBeInTheDocument();
+    const submit = new Event('submit', { bubbles: true, cancelable: true });
+    screen.getByRole('button', { name: 'Publish to Marketplace' }).closest('form')!.dispatchEvent(submit);
+    expect(submit.defaultPrevented).toBe(true);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
-
-  it('displays error when data contains error', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ error: 'Invalid agent data from backend' }),
-    });
-
+  it('does not send private form edits or create publication state during rendering', () => {
     render(<PublishAgentPage />);
-
-    fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Bad Agent' } });
-    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Bad Desc' } });
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Bad Role' } });
-    fireEvent.change(screen.getByLabelText('System Prompt'), { target: { value: 'Bad Prompt' } });
-
-    const form = screen.getByRole('button', { name: 'Publish to Marketplace' }).closest('form');
-    fireEvent.submit(form!);
-
-    expect(await screen.findByText('Invalid agent data from backend')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('System Prompt'), { target: { value: 'Unsubmitted private draft' } });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Publishing\.\.\./)).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('kept only in this open form');
   });
 });

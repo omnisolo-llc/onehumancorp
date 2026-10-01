@@ -18,8 +18,6 @@ export default function AgentMarketplacePage() {
  const [query, setQuery] = useState('');
  const [loading, setLoading] = useState(false);
  const [error, setError] = useState<string | null>(null);
- const [installedAgents, setInstalledAgents] = useState<string[]>([]);
- const [toastMessage, setToastMessage] = useState<string | null>(null);
 
  const requestVersion = useRef(0);
  const requestController = useRef<AbortController | null>(null);
@@ -56,7 +54,7 @@ export default function AgentMarketplacePage() {
          <div className="min-w-0">
            <h1 className="text-4xl font-bold text-[#18212f] mb-2">Agent Marketplace</h1>
            <p className="text-xl text-gray-600">
-             Discover and install pre-built AI agents for your business. (AutoGPT Unique Harness Innovations)
+             Browse agent descriptions from the connected catalogue.
            </p>
          </div>
          <Link
@@ -83,7 +81,7 @@ export default function AgentMarketplacePage() {
        {error && (
          <div className="p-6 mb-8 bg-red-50 text-red-800 border border-red-200 rounded-[16px] w-full text-center" role="alert">
            <p className="font-semibold">{error}</p>
-           <p className="mt-1 text-sm text-red-700">The marketplace service is temporarily unavailable. Your installed agents are unaffected.</p>
+           <p className="mt-1 text-sm text-red-700">The marketplace catalogue could not be loaded.</p>
            <button
              type="button"
              onClick={() => fetchAgents(query)}
@@ -93,6 +91,8 @@ export default function AgentMarketplacePage() {
            </button>
          </div>
        )}
+
+       <p id="marketplace-installation-status" role="status" className="mb-6 text-sm text-gray-600">Installation is unavailable. No agent is added to your business from this catalogue.</p>
 
        {loading ? (
          <div className="flex justify-center items-center h-64 w-full">
@@ -114,18 +114,11 @@ export default function AgentMarketplacePage() {
                </div>
                <div className="mt-auto">
                  <button
-                   onClick={() => {
-                     const isInstalled = installedAgents.includes(agent.id);
-                     if (!isInstalled) {
-                       setToastMessage(`Successfully installed ${agent.name}!`);
-                       setTimeout(() => setToastMessage(null), 3000);
-                     }
-                     setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
-                   }}
-                   aria-pressed={installedAgents.includes(agent.id)}
-                   className={`w-full py-2.5 px-4 font-semibold rounded-[10px] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${installedAgents.includes(agent.id) ? 'bg-[#34c759]/10 text-[#34c759] focus:ring-[#34c759]' : 'bg-[#007aff] hover:bg-[#005bb5] text-white focus:ring-[#007aff] shadow-sm'}`}
+                   disabled
+                   aria-describedby="marketplace-installation-status"
+                   className="w-full py-2.5 px-4 font-semibold rounded-[10px] bg-gray-200 text-gray-600 cursor-not-allowed"
                  >
-                   {installedAgents.includes(agent.id) ? 'Installed' : 'Install Agent'}
+                   Install Agent
                  </button>
                </div>
              </div>
@@ -140,12 +133,7 @@ export default function AgentMarketplacePage() {
          </div>
        )}
 
-       {toastMessage && (
-         <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-[#18212f]/90 backdrop-blur-[20px] shadow-lg rounded-[100px] px-5 py-3 text-white animate-in fade-in slide-in-from-bottom-4 flex items-center gap-3">
-           <div className="w-5 h-5 rounded-full bg-[#34c759] flex items-center justify-center text-white text-xs font-bold">✓</div>
-           <span className="font-medium text-sm tracking-wide">{toastMessage}</span>
-         </div>
-       )}
+
 
      </div>
    </div>
