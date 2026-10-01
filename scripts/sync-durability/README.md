@@ -60,7 +60,7 @@ transactions are held because the existing downstream worker only supports USD.
 
 The gate also extracts the complete POS order reader and inventory GET handler,
 their signed-tenant helper, and the original SQLite order-query regression. Its
-HTTP fixture uses the actual strict bearer middleware and PostgreSQL user store.
+read-to-sync HTTP fixture uses the actual strict bearer middleware and PostgreSQL user store.
 It reads microsecond row timestamps and stored sold-out state through the real
 GET responses, then uses those exact fields to obtain committed product/order
 sync acknowledgements while a forged tenant header cannot select another tenant.
@@ -72,3 +72,7 @@ unchanged MySQL branch is compiled but is not exercised. This does not certify
 MySQL or SQLite HTTP execution, the full outer router, or the Kitchen browser
 journey. All pre-existing sync tests remain selected by run.sh and the existing
 mandatory PostgreSQL CI step.
+
+The separate empty-catalog regression mounts the real GET handler with the
+verified-claims type and confirms repeated reads return an empty array without
+creating a product. Explicit product/onboarding creation stays outside this read.

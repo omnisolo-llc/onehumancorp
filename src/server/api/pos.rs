@@ -446,23 +446,10 @@ pub async fn get_inventory_handler(
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await;
-    let mut rows = match rows {
+    let rows = match rows {
         Ok(rows) => rows,
         Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    if rows.is_empty() {
-        let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, inventory_count, available_quantity, is_sold_out) VALUES ('e2e-product-cake', $1, 'Chocolate Cake', 'Delicious chocolate cake with fudge frosting.', 2500, 12, 12, FALSE) ON CONFLICT (id) DO NOTHING")
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await;
-        if let Ok(new_rows) = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency, is_sold_out, updated_at FROM products WHERE tenant_id = $1")
-            .bind(&tenant_id)
-            .fetch_all(&mut *tx)
-            .await
-        {
-            rows = new_rows;
-        }
-    }
     if tx.commit().await.is_err() {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }

@@ -240,6 +240,7 @@ async fn pos_reads_reject_forged_tenant_headers_without_verified_claims() {
 #[tokio::test]
 #[ignore = "requires OHC_SYNC_TEST_DATABASE_URL"]
 async fn authenticated_pos_reads_supply_exact_observed_state_for_durable_sync() {
+    let _guard = crate::db::POS_READ_LOCK.lock().await;
     let (pool, store) = fixture().await;
     sqlx::raw_sql("CREATE TABLE users(id TEXT,tenant_id TEXT,username TEXT,email TEXT,password_hash TEXT,roles TEXT[],active BOOL,oidc_subject TEXT,created_at TIMESTAMPTZ,updated_at TIMESTAMPTZ);CREATE TABLE customers(id TEXT,tenant_id TEXT,name TEXT);
     ALTER TABLE products ADD COLUMN title TEXT,ADD COLUMN description TEXT,ADD COLUMN price_cents BIGINT DEFAULT 100,ADD COLUMN currency TEXT DEFAULT 'USD',ADD COLUMN is_subscribable BOOL DEFAULT false,ADD COLUMN subscription_discount_percent INTEGER DEFAULT 0,ADD COLUMN subscription_frequency TEXT;
@@ -325,4 +326,44 @@ async fn authenticated_pos_reads_supply_exact_observed_state_for_durable_sync() 
     );
     let foreign:(bool,String)=sqlx::query_as("SELECT p.is_sold_out,o.status FROM products p,orders o WHERE p.id='foreign' AND o.id='foreign-o'").fetch_one(&pool).await.unwrap();
     assert_eq!(foreign, (false, "pending".to_owned()));
+}
+
+#[tokio::test]
+#[ignore = "requires OHC_SYNC_TEST_DATABASE_URL"]
+async fn empty_inventory_get_is_read_only_and_does_not_invent_catalog_entries() {
+    let _guard = crate::db::POS_READ_LOCK.lock().await;
+    let (pool, _) = fixture().await;
+    sqlx::raw_sql("ALTER TABLE products ADD COLUMN title TEXT,ADD COLUMN description TEXT,ADD COLUMN price_cents BIGINT DEFAULT 100,ADD COLUMN currency TEXT DEFAULT 'USD',ADD COLUMN is_subscribable BOOL DEFAULT false,ADD COLUMN subscription_discount_percent INTEGER DEFAULT 0,ADD COLUMN subscription_frequency TEXT;").execute(&pool).await.unwrap();
+    crate::db::set_pool(pool.clone());
+    let claims: server_common::Claims = serde_json::from_value(serde_json::json!({"sub":"owner","exp":4000000000u64,"organization_id":"empty-tenant","roles":["ADMIN"],"iat":0})).unwrap();
+    let app =
+        crate::pos_read::router(std::sync::Arc::new(crate::Hub)).layer(axum::Extension(claims));
+    for _ in 0..2 {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::get("/api/v1/pos/inventory")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: serde_json::Value = serde_json::from_slice(
+            &axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            body,
+            serde_json::json!({"inventory":[]}),
+            "an empty catalog is an actual empty result"
+        );
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM products")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0, "a GET must never seed a hardcoded product");
+    }
 }

@@ -48,9 +48,10 @@ pub mod builder { pub mod edge {
     impl Cache {pub async fn invalidate_by_tag(&self,_tag:&str){}}
 }}
 pub mod db {
-    static POOL:std::sync::OnceLock<sqlx::PgPool>=std::sync::OnceLock::new();
-    pub fn get_pool()->sqlx::PgPool{POOL.get().expect("test pool configured").clone()}
-    pub fn set_pool(pool:sqlx::PgPool){assert!(POOL.set(pool).is_ok(),"isolated POS pool configured once");}
+    static POOL:std::sync::RwLock<Option<sqlx::PgPool>>=std::sync::RwLock::new(None);
+    pub static POS_READ_LOCK:tokio::sync::Mutex<()>=tokio::sync::Mutex::const_new(());
+    pub fn get_pool()->sqlx::PgPool{POOL.read().unwrap().as_ref().expect("test pool configured").clone()}
+    pub fn set_pool(pool:sqlx::PgPool){*POOL.write().unwrap()=Some(pool);}
     pub fn get_mysql_pool_if_exists()->Option<sqlx::MySqlPool>{None}
 }
 pub struct Hub;
