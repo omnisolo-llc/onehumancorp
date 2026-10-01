@@ -598,6 +598,18 @@ Your response:",
 
         use sqlx::Row;
 
+        // A missing row cannot be locked by SELECT FOR UPDATE. Materialize it
+        // in this transaction first so concurrent initial saves wait for the
+        // winner, then merge its committed state using the existing policy.
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at) VALUES ($1, $2, 0, '{}'::jsonb, CURRENT_TIMESTAMP) ON CONFLICT (tenant_id, user_id) DO NOTHING",
+        )
+        .bind(tenant_id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
         let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2 FOR UPDATE")
             .bind(tenant_id)
             .bind(user_id)
