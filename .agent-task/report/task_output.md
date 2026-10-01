@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "Architecture & Implementation Plan: Native Rust Omnichannel Chat System"
+issue_description: "The issue asks to build a native omnichannel chat system because Chatwoot was removed. The 'Superpowers skill provenance: 8ca22dba9a94f28898bbce59f2537ff4d87c747d' was loaded. The migration file `src/server/migrations/1009_native_omnichannel_chat.sql` shows that PostgreSQL tables (`chat_inboxes`, `chat_channels`, `chat_contacts`, `chat_conversations`, `chat_messages`) with strict multi-tenancy and RLS already exist, fulfilling the data layer requirements. The design documentation and source code indicate that the native OmniSolo omnichannel inbox was implemented and Chatwoot removal is complete (CHAT-00). A blocked no-work finding is returned because the data layer MVP and schema asked for in the implementation prompt are already implemented in the source tree, and attempting to duplicate or re-implement this schema would conflict with the existing `chat_inboxes` and `chat_conversations` architecture. Acceptance criteria related to schemas and data models are satisfied; recreating them is unsafe."
