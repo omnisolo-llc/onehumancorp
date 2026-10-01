@@ -29,13 +29,13 @@ it('offers a real proposal-editor link when dashboard data is unavailable', asyn
 
 it('opens and dismisses the actual quick-action links alongside shell actions', async () => {
   await act(async () => { render(<TooltipProvider><Dashboard /></TooltipProvider>); });
-  expect(screen.getByRole('button', { name: 'New Product', exact: true })).toHaveAttribute('href', '/products/new');
+  expect(screen.getByRole('button', { name: 'New Product' })).toHaveAttribute('href', '/products/new');
   const toggle = screen.getByRole('button', { name: 'Quick Actions' });
-  expect(screen.queryByRole('link', { name: '📦 New Product', exact: true })).toBeNull();
+  expect(screen.queryByRole('link', { name: '📦 New Product' })).toBeNull();
   fireEvent.click(toggle);
-  expect(screen.getByRole('link', { name: '📦 New Product', exact: true })).toHaveAttribute('href', '/products/new');
+  expect(screen.getByRole('link', { name: '📦 New Product' })).toHaveAttribute('href', '/products/new');
   expect(screen.getByRole('link', { name: /Snap Receipt/ })).toHaveAttribute('href', '/dashboard/receipt');
   expect(screen.getByRole('link', { name: /Quick Charge/ })).toHaveAttribute('href', '/pos/terminal');
   fireEvent.click(toggle);
-  expect(screen.queryByRole('link', { name: '📦 New Product', exact: true })).toBeNull();
+  expect(screen.queryByRole('link', { name: '📦 New Product' })).toBeNull();
 });
