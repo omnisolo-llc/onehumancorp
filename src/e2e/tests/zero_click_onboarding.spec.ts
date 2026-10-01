@@ -32,12 +32,17 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const approval = page.locator('#step-approval');
     await expect(approval.getByRole('heading', { name: 'Ready to Launch' })).toBeVisible({ timeout: 45000 });
     await expect(approval.locator('#approval-details')).not.toBeEmpty();
-    const preparation = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start') && response.request().method() === 'POST');
-    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/launch') && response.request().method() === 'POST');
-    await approval.getByRole('button', { name: 'Approve & Complete Setup' }).click();
-    const preparedResponse = await preparation;
-    expect(preparedResponse.status()).toBe(200);
-    const prepared = await preparedResponse.json();
+    const preparation = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start') && response.request().method() === 'POST')
+      .then(async response => {
+        const text = await response.text();
+        expect(response.status(), text).toBe(200);
+        return { status: response.status(), body: JSON.parse(text) };
+      });
+    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/launch') && response.request().method() === 'POST')
+      .then(async response => ({ status: response.status(), body: await response.json() }));
+    const [preparedResponse, launchedResponse] = await Promise.all([preparation, launch, approval.getByRole('button', { name: 'Approve & Complete Setup' }).click()]);
+    expect(preparedResponse.status).toBe(200);
+    const prepared = preparedResponse.body;
     expect(prepared.success).toBe(true);
     expect(typeof prepared.preparation_id).toBe('string');
     expect(prepared.preparation_id.length).toBeGreaterThan(0);
@@ -47,9 +52,8 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     expect(prepared.user_id.length).toBeGreaterThan(0);
     expect(prepared.organization_id).toBe(identity.tenantId);
     expect(prepared.user_id).toBe(identity.userId);
-    const launchedResponse = await launch;
-    expect(launchedResponse.status()).toBe(200);
-    const launched = await launchedResponse.json();
+    expect(launchedResponse.status).toBe(200);
+    const launched = launchedResponse.body;
     expect(launched).toMatchObject({ success: true, status: 'launched', preparation_id: prepared.preparation_id, organization_id: prepared.organization_id, user_id: prepared.user_id });
     const stateResponse = await page.request.get('/api/v1/onboarding/state');
     expect(stateResponse.status()).toBe(200);

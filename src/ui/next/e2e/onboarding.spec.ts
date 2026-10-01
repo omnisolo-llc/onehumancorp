@@ -10,14 +10,14 @@ test.describe('Onboarding Flow E2E', () => {
     await page.click('text=Start Business Setup');
     await expect(page).toHaveURL(/\/onboarding/);
 
-    // Initial Chat screen
-    const welcome = page.getByText('Welcome');
-    if (await welcome.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const startBtn = page.locator('text=Start Onboarding');
-      if (await startBtn.isVisible()) {
-        await startBtn.click();
-      }
-    }
+    // A fresh persisted step0 opens conversational setup. Choose the guided
+    // path explicitly instead of treating an optional Welcome check as readiness.
+    const start = page.getByRole('button', { name: 'Start My Business', exact: true });
+    const conversational = page.getByPlaceholder('Type a message...', { exact: true });
+    await expect(start.or(conversational)).toBeVisible();
+    if (await conversational.isVisible()) await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(start).toBeVisible();
+    await start.click();
 
     // Chat Step 1: Business Name
     await expect(page.getByText("What's the name of your business?")).toBeVisible();

@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures';
 
+// Preserve the finite501 body stall on its first failure, with CI retries off.
+test.use({ trace: 'retain-on-failure' });
+
 function integrationCard(page: import('@playwright/test').Page, name: string) {
   return page
     .getByRole('heading', { name })

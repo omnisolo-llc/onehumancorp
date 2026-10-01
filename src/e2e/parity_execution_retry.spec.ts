@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect } from '@playwright/test';
 
+// These finite mutation responses have stalled after headers in hosted runs.
+// Retain the original failure trace even when CI retries are disabled.
+test.use({ trace: 'retain-on-failure' });
+
 test.describe('Agent Jobs DB Sync Parity CUJ', () => {
   // Test 1: Simulating Task Creation to Verify No Timeout Failures
   test('verify owner can create a task successfully and UI reflects correct state', async ({ page }) => {
@@ -46,6 +50,11 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
 
   // Test 4: Delete Task (Database Delete Action)
   test('verify owner can delete a task and handle degradation gracefully', async ({ page }, testInfo) => {
+    const transportEvents: { event: string; at: number; error?: string | null }[] = [];
+    const isDeletion = (request: import('@playwright/test').Request) => request.method() === 'DELETE'
+      && new URL(request.url()).pathname.startsWith('/api/v1/staff/tasks/');
+    page.on('requestfinished', request => { if (isDeletion(request)) transportEvents.push({ event: 'requestfinished', at: Date.now() }); });
+    page.on('requestfailed', request => { if (isDeletion(request)) transportEvents.push({ event: 'requestfailed', at: Date.now(), error: request.failure()?.errorText }); });
     const title = `Delete Me Task ${randomUUID()}`;
     await page.goto('/tasks');
 
@@ -73,7 +82,11 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
         })]);
       } finally { clearTimeout(timer); }
     };
-    const completion = await bounded(deleted.finished(), 'response');
+    let completion;
+    try { completion = await bounded(deleted.finished(), 'response'); }
+    finally {
+      await testInfo.attach('delete-transport-events', { contentType: 'application/json', body: JSON.stringify({ fromServiceWorker: deleted.fromServiceWorker(), resourceType: deleted.request().resourceType(), events: transportEvents }) });
+    }
     await testInfo.attach('delete-response-completion', { contentType: 'application/json', body: JSON.stringify({ error: completion?.message ?? null }) });
     expect(completion).toBeNull();
     const body = await bounded(deleted.text(), 'body retrieval');

@@ -20,11 +20,11 @@ test.describe('Zero-Click Onboarding Flow', () => {
     await page.locator('#instant-bio').fill('I am a baker in Austin selling custom cakes');
 
     // The instant path prepares a workspace. Completion still requires approval.
-    const generated = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start_zero_click') && response.request().method() === 'POST');
-    await page.locator('#generate-storefront-btn').click();
-    const preparedResponse = await generated;
-    expect(preparedResponse.status()).toBe(200);
-    const prepared = await preparedResponse.json();
+    const generated = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start_zero_click') && response.request().method() === 'POST')
+      .then(async response => ({ status: response.status(), body: await response.json() }));
+    const [preparedResponse] = await Promise.all([generated, page.locator('#generate-storefront-btn').click()]);
+    expect(preparedResponse.status).toBe(200);
+    const prepared = preparedResponse.body;
     expect(prepared).toMatchObject({ success: true, status: 'prepared' });
     expect(typeof prepared.preparation_id).toBe('string');
     expect(prepared.preparation_id.length).toBeGreaterThan(0);
@@ -39,11 +39,13 @@ test.describe('Zero-Click Onboarding Flow', () => {
     expect(prepared.user_id).toBe(identity.userId);
     const approval = page.locator('#step-approval');
     await expect(approval).toBeVisible();
-    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/launch') && response.request().method() === 'POST');
-    await approval.getByRole('button', { name: 'Approve & Complete Setup' }).click();
-    const launchedResponse = await launch;
-    expect(launchedResponse.status()).toBe(200);
-    expect(await launchedResponse.json()).toMatchObject({ success: true, status: 'launched', preparation_id: prepared.preparation_id, organization_id: identity.tenantId, user_id: identity.userId });
+    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/launch') && response.request().method() === 'POST')
+      .then(async response => ({ status: response.status(), body: await response.json() }));
+    // Start reading the real receipt when its response arrives, before the click
+    // completes navigation and Chromium retires the previous document's body.
+    const [launchedResponse] = await Promise.all([launch, approval.getByRole('button', { name: 'Approve & Complete Setup' }).click()]);
+    expect(launchedResponse.status).toBe(200);
+    expect(launchedResponse.body).toMatchObject({ success: true, status: 'launched', preparation_id: prepared.preparation_id, organization_id: identity.tenantId, user_id: identity.userId });
 
     // The acknowledged local setup leads to the dashboard.
     await expect(page).toHaveURL(/.*(dashboard\.html|dashboard|success\.html).*/, { timeout: 30000 });
