@@ -213,6 +213,31 @@ class NativeCacheTests(unittest.TestCase):
         self.assertIn('FEED_QUERY_TEST_DATABASE_URL', feed.get('env', {}))
         self.assertFalse(feed.get('continue-on-error', False))
 
+    def test_rust_lint_diagnostics_are_uploaded_before_tests_without_masking_failure(self):
+        steps = self.ci['jobs']['native-test']['steps']
+        lint = next(step for step in steps if 'make lint-backend' in step.get('run', ''))
+        upload = next((step for step in steps if step.get('with', {}).get('path') == 'target/ci-logs/lint-backend.log'), None)
+        tests = next(step for step in steps if step.get('run') == 'make test-backend')
+        self.assertIsNotNone(upload, 'the exact lint log must be available before a long test job finishes')
+        self.assertLess(steps.index(lint), steps.index(upload))
+        self.assertLess(steps.index(upload), steps.index(tests))
+        self.assertEqual(upload.get('if'), '${{ always() }}')
+        self.assertEqual(upload['uses'], 'actions/upload-artifact@v6')
+        self.assertEqual(upload['with'].get('if-no-files-found'), 'error')
+        self.assertFalse(lint.get('continue-on-error', False))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            executable = root / 'make'
+            executable.write_text('#!/usr/bin/env bash\necho "fixture stdout"\necho "fixture stderr" >&2\nexit 23\n')
+            executable.chmod(0o700)
+            result = subprocess.run(['bash', '-c', lint['run']], cwd=root,
+                env={**os.environ, 'PATH': str(root) + os.pathsep + os.environ['PATH']},
+                capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+            recorded = (root / 'target/ci-logs/lint-backend.log').read_text()
+            self.assertIn('fixture stdout', recorded)
+            self.assertIn('fixture stderr', recorded)
+
 
     def test_postgres_runs_product_seo_snapshot_regression(self):
         steps = self.ci['jobs']['postgres-security']['steps']

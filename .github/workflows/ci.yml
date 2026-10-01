@@ -227,7 +227,18 @@ jobs:
           version="$(.github/test-tools/node_modules/.bin/opencode --version)"
           test "$version" = '1.18.15'
       - name: Lint the complete headless Rust workspace before linking tests
-        run: make lint-backend
+        run: |
+          set -euo pipefail
+          mkdir -p target/ci-logs
+          make lint-backend 2>&1 | tee target/ci-logs/lint-backend.log
+      - name: Retain Rust lint diagnostics before running tests
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-rust-lint-${{ github.run_attempt }}
+          path: target/ci-logs/lint-backend.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         run: make test-backend
