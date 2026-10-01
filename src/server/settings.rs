@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockWriteGuard};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiProvider {
@@ -66,6 +68,34 @@ impl Default for AppSettings {
 pub struct Store {
     data: RwLock<AppSettings>,
     path: Option<PathBuf>,
+}
+
+/// Serializes voice transitions for one persistent settings path. Unrelated
+/// settings writers and distinct paths are outside this guard's scope.
+pub(crate) struct VoiceSettingsGuard<'a> {
+    store: &'a Store,
+    data: RwLockWriteGuard<'a, AppSettings>,
+    _file: std::fs::File,
+    pub value: AppSettings,
+    pub persisted: bool,
+}
+impl VoiceSettingsGuard<'_> {
+    pub fn persist(&mut self) -> Result<(), String> {
+        self.store.save_snapshot(&self.value)?;
+        #[cfg(unix)]
+        std::fs::File::open(
+            self.store
+                .path
+                .as_ref()
+                .and_then(|path| path.parent())
+                .ok_or("Invalid settings path")?,
+        )
+        .and_then(|directory| directory.sync_all())
+        .map_err(|error| error.to_string())?;
+        *self.data = self.value.clone();
+        self.persisted = true;
+        Ok(())
+    }
 }
 
 use std::sync::Arc;
@@ -139,6 +169,64 @@ impl Store {
         self.path.is_some()
     }
 
+    pub(crate) fn voice_provisioning_path(&self) -> Result<PathBuf, String> {
+        let path = self
+            .path
+            .as_ref()
+            .ok_or("Persistent settings storage is unavailable")?;
+        let name = path
+            .file_name()
+            .ok_or("Invalid settings path")?
+            .to_string_lossy();
+        Ok(path.with_file_name(format!("{name}.voice-provisioning.json")))
+    }
+
+    pub(crate) fn lock_voice_settings(&self) -> Result<VoiceSettingsGuard<'_>, String> {
+        let path = self
+            .path
+            .as_ref()
+            .ok_or("Persistent settings storage is unavailable")?;
+        let name = path
+            .file_name()
+            .ok_or("Invalid settings path")?
+            .to_string_lossy();
+        let lock_path = path.with_file_name(format!("{name}.voice-settings.lock"));
+        std::fs::create_dir_all(path.parent().ok_or("Invalid settings path")?)
+            .map_err(|error| error.to_string())?;
+        if let Ok(metadata) = std::fs::symlink_metadata(&lock_path)
+            && (!metadata.is_file() || metadata.file_type().is_symlink())
+        {
+            return Err("Voice settings lock is unavailable".into());
+        }
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true).write(true).create(true).truncate(false);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let file = options
+            .open(&lock_path)
+            .map_err(|error| error.to_string())?;
+        file.try_lock().map_err(|error| error.to_string())?;
+        let data = self
+            .data
+            .write()
+            .map_err(|_| "Settings lock is unavailable")?;
+        let (value, persisted) = match std::fs::read(path) {
+            Ok(bytes) => (
+                serde_json::from_slice(&bytes).map_err(|error| error.to_string())?,
+                true,
+            ),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (data.clone(), false),
+            Err(error) => return Err(error.to_string()),
+        };
+        Ok(VoiceSettingsGuard {
+            store: self,
+            data,
+            _file: file,
+            value,
+            persisted,
+        })
+    }
+
     pub(crate) fn telemetry_snapshot(&self) -> (bool, bool) {
         let data = self.data.read().unwrap();
         (
@@ -191,13 +279,20 @@ impl Store {
         persona: Option<String>,
         instructions: Option<String>,
     ) -> Result<(), String> {
+        if self.path.is_some() {
+            let mut guard = self.lock_voice_settings()?;
+            guard.value.voice_receptionist_enabled = enabled;
+            guard.value.voice_receptionist_number = number;
+            guard.value.voice_receptionist_persona = persona;
+            guard.value.voice_receptionist_instructions = instructions;
+            return guard.persist();
+        }
         let mut data = self.data.write().unwrap();
         data.voice_receptionist_enabled = enabled;
         data.voice_receptionist_number = number;
         data.voice_receptionist_persona = persona;
         data.voice_receptionist_instructions = instructions;
-        drop(data);
-        self.save()
+        Ok(())
     }
 
     pub fn set_product_telemetry(&self, enabled: bool) -> Result<(), String> {

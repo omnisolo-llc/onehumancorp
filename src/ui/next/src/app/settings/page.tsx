@@ -3,6 +3,7 @@
 import { useState,useEffect,useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { QUEUE_IDENTITY_EPOCH_KEY } from "../../lib/sync/queueIdentity";
 import { AppShell } from "../components/AppShell";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import {
@@ -65,9 +66,16 @@ export default function SettingsPage() {
     voice_receptionist_persona: "Friendly",
     voice_receptionist_instructions: "",
   });
+  const voiceEpoch = useRef(0);
   const voiceProvisionBusy = useRef(false);
   const [voiceProvisionState, setVoiceProvisionState] = useState<'idle' | 'pending' | 'unconfirmed'>('idle');
   const [voiceProvisionMessage, setVoiceProvisionMessage] = useState('');
+  const [voiceSettingsReady, setVoiceSettingsReady] = useState(false);
+  const [voiceProvisionAllowed, setVoiceProvisionAllowed] = useState(false);
+  const [voiceAvailabilityMessage, setVoiceAvailabilityMessage] = useState('Verifying voice settings…');
+  const voiceSettingBusy = useRef(false);
+  const [voiceSettingSaving, setVoiceSettingSaving] = useState(false);
+  const [voiceSettingMessage, setVoiceSettingMessage] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [agentName, setAgentName] = useState("Agent One");
@@ -120,6 +128,22 @@ export default function SettingsPage() {
 
   useEffect(() => {
     document.title = "Settings | OmniSolo OneHumanCorp";
+    const voiceGeneration = ++voiceEpoch.current;
+    const voiceActive = () => voiceEpoch.current === voiceGeneration;
+    const invalidateVoice = () => {
+      voiceEpoch.current += 1;
+      voiceProvisionBusy.current = true; voiceSettingBusy.current = true;
+      setVoiceSettings({ voice_receptionist_enabled: false, voice_receptionist_number: '', voice_receptionist_persona: 'Friendly', voice_receptionist_instructions: '' });
+      setVoiceSettingsReady(false); setVoiceProvisionAllowed(false);
+      setVoiceSettingSaving(false); setVoiceSettingMessage('');
+      setVoiceProvisionState('unconfirmed'); setVoiceProvisionMessage('');
+      setVoiceAvailabilityMessage('Your session changed. Reload to verify voice settings before continuing.');
+    };
+    const invalidateVoiceStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) invalidateVoice();
+    };
+    window.addEventListener('omnisolo_auth_changed', invalidateVoice);
+    window.addEventListener('storage', invalidateVoiceStorage);
     Promise.all([
       fetch("/api/v1/settings/delivery")
         .then(res => res.ok ? res.json() : null)
@@ -149,18 +173,32 @@ export default function SettingsPage() {
         }),
 
       fetch("/api/v1/settings/voice")
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data) {
+        .then(async res => {
+          const data = await res.json();
+          if (!voiceActive()) return;
+          if (res.status === 200 && data?.success !== false && data.error == null && typeof data.voice_receptionist_enabled === 'boolean' && typeof data.provisioning_available === 'boolean') {
             setVoiceSettings({
-              voice_receptionist_enabled: data.voice_receptionist_enabled || false,
-              voice_receptionist_number: data.voice_receptionist_number || "",
-              voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
-              voice_receptionist_instructions: data.voice_receptionist_instructions || "",
+              voice_receptionist_enabled: data.voice_receptionist_enabled,
+              voice_receptionist_number: typeof data.voice_receptionist_number === 'string' ? data.voice_receptionist_number : "",
+              voice_receptionist_persona: typeof data.voice_receptionist_persona === 'string' ? data.voice_receptionist_persona : "Friendly",
+              voice_receptionist_instructions: typeof data.voice_receptionist_instructions === 'string' ? data.voice_receptionist_instructions : "",
             });
+            setVoiceSettingsReady(true);
+            setVoiceProvisionAllowed(data.provisioning_available);
+            setVoiceAvailabilityMessage(data.provisioning_available ? '' : data.provisioning_block_reason === 'provider_not_configured'
+              ? 'Voice number provisioning is unavailable because a provider is not configured.'
+              : 'Voice provisioning requires reconciliation. Review the provider before requesting another number.');
+          } else {
+            setVoiceSettingsReady(false); setVoiceProvisionAllowed(false);
+            setVoiceAvailabilityMessage(data?.error === 'hosted_global_provisioning_unavailable'
+              ? 'Voice settings are unavailable in this deployment. No provider action can be started.'
+              : 'Voice settings could not be verified. No provider action can be started.');
           }
         })
         .catch(e => {
+          if (!voiceActive()) return;
+          setVoiceSettingsReady(false); setVoiceProvisionAllowed(false);
+          setVoiceAvailabilityMessage('Voice settings could not be verified. No provider action can be started.');
           if (isAbortError(e)) return;
           console.error("Failed to load voice settings", e);
         }),
@@ -232,6 +270,11 @@ export default function SettingsPage() {
         }
       })
       .catch(() => undefined);
+    return () => {
+      voiceEpoch.current += 1;
+      window.removeEventListener('omnisolo_auth_changed', invalidateVoice);
+      window.removeEventListener('storage', invalidateVoiceStorage);
+    };
   }, []);
 
   const handleRegistrationModeChange = async (mode: RegistrationMode) => {
@@ -363,17 +406,28 @@ export default function SettingsPage() {
   };
 
   const handleVoiceSettingChange = async (key: string, value: string | boolean) => {
-    const newSettings = { ...voiceSettings, [key]: value };
-    setVoiceSettings(newSettings);
+    if (!voiceSettingsReady || voiceSettingBusy.current) return;
+    const generation = voiceEpoch.current;
+    voiceSettingBusy.current = true; setVoiceSettingSaving(true); setVoiceSettingMessage('Saving voice preference…');
+    const change = { [key]: value };
 
     try {
-      await fetch("/api/v1/settings/voice", {
+      const response = await fetch("/api/v1/settings/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSettings),
+        body: JSON.stringify(change),
       });
+      const result = await response.json();
+      if (generation !== voiceEpoch.current) return;
+      if (response.status !== 200 || result?.success !== true || result.error != null) throw new Error('Voice preference change could not be confirmed');
+      setVoiceSettings(previous => ({ ...previous, [key]: value }));
+      setVoiceSettingMessage('Voice preference saved.');
     } catch (e) {
+      if (generation !== voiceEpoch.current) return;
       console.error("Failed to save voice settings", e);
+      setVoiceSettingMessage('Voice preference change could not be confirmed. Reload to check the saved value.');
+    } finally {
+      if (generation === voiceEpoch.current) { voiceSettingBusy.current = false; setVoiceSettingSaving(false); }
     }
   };
 
@@ -391,7 +445,8 @@ export default function SettingsPage() {
   };
 
   const handleProvisionVoiceNumber = async () => {
-    if (voiceProvisionBusy.current) return;
+    if (!voiceProvisionAllowed || voiceProvisionBusy.current) return;
+    const generation = voiceEpoch.current;
     voiceProvisionBusy.current = true;
     setVoiceProvisionState('pending');
     setVoiceProvisionMessage('Requesting a phone number…');
@@ -400,6 +455,7 @@ export default function SettingsPage() {
         method: "POST",
       });
       const data = await res.json();
+      if (generation !== voiceEpoch.current) return;
       if (res.status === 200 && data?.success === true && data.error == null && typeof data.number === 'string' && /^\+[1-9]\d{1,14}$/.test(data.number)) {
         // The provisioning endpoint already persists its acknowledged number.
         setVoiceSettings(previous => ({ ...previous, voice_receptionist_number: data.number }));
@@ -411,6 +467,7 @@ export default function SettingsPage() {
         setVoiceProvisionState('unconfirmed');
       }
     } catch (e) {
+      if (generation !== voiceEpoch.current) return;
       console.error("Failed to provision voice number", e);
       setVoiceProvisionMessage('The phone number could not be provisioned or confirmed. Check the provider before trying again.');
       setVoiceProvisionState('unconfirmed');
@@ -643,11 +700,14 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="app-panel-body p-6 space-y-4">
+                {voiceAvailabilityMessage && <p aria-live="polite">{voiceAvailabilityMessage}</p>}
+                {voiceSettingMessage && <p aria-live="polite">{voiceSettingMessage}</p>}
                 <label className="flex items-center justify-between rounded-xl border border-teal-55/60 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-teal-50/10 hover:bg-teal-50/20 transition-colors">
                   <span>Enable AI Voice Receptionist</span>
                   <input
                     type="checkbox"
                     aria-label="Enable AI Voice Receptionist"
+                    disabled={!voiceSettingsReady || voiceSettingSaving}
                     checked={voiceSettings.voice_receptionist_enabled}
                     onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
@@ -660,6 +720,7 @@ export default function SettingsPage() {
                                             <label className="block">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Voice Persona</span>
                         <select
+                          disabled={!voiceSettingsReady || voiceSettingSaving}
                           value={voiceSettings.voice_receptionist_persona}
                           onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
                           className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
@@ -673,6 +734,7 @@ export default function SettingsPage() {
                       <label className="block">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Custom Instructions</span>
                         <textarea
+                          disabled={!voiceSettingsReady || voiceSettingSaving}
                           value={voiceSettings.voice_receptionist_instructions || ""}
                           onChange={(e) => handleVoiceSettingChange('voice_receptionist_instructions', e.target.value)}
                           placeholder="e.g. Always mention today's special: Vegan Chocolate Cake"
@@ -682,17 +744,17 @@ export default function SettingsPage() {
                       </label>
 
                       <div className="block">
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Assigned Phone Number</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Phone number</span>
                         <div className="mt-2 flex gap-2">
                           <input
-                            aria-label="Assigned Phone Number"
+                            aria-label="Phone number"
                             type="text"
                             readOnly
                             value={voiceSettings.voice_receptionist_number || "Not assigned"}
                             className="w-full rounded-xl border border-gray-200 bg-gray-55 px-4 py-2.5 text-sm text-gray-500 outline-none"
                           />
                           {!voiceSettings.voice_receptionist_number && (
-                            <button disabled={voiceProvisionState !== 'idle'} onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
+                            <button disabled={!voiceProvisionAllowed || voiceProvisionState !== 'idle'} onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
                               Get Number
                             </button>
                           )}

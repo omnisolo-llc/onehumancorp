@@ -76,3 +76,5 @@ pub(crate) mod sync_transaction;
 pub mod telemetry_settings;
 
 pub mod stripe_webhook_security;
+
+pub mod voice_provisioning;

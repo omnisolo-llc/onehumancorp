@@ -25,6 +25,15 @@ impl RealTwilioClient {
             provisioning_api: "https://api.twilio.com".into(),
         }
     }
+
+    pub fn provisioning_configured(&self) -> bool {
+        self.account_sid.len() == 34
+            && self.account_sid.starts_with("AC")
+            && self.account_sid[2..]
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
+            && !self.auth_token.trim().is_empty()
+    }
 }
 
 #[async_trait]
@@ -74,13 +83,7 @@ impl TwilioClientWrapper for RealTwilioClient {
     }
 
     async fn provision_number(&self, area_code: &str) -> Result<String, String> {
-        if self.account_sid.len() != 34
-            || !self.account_sid.starts_with("AC")
-            || !self.account_sid[2..]
-                .bytes()
-                .all(|byte| byte.is_ascii_hexdigit())
-            || self.auth_token.trim().is_empty()
-        {
+        if !self.provisioning_configured() {
             return Err("Twilio number provisioning is unavailable: configure a valid account SID and auth token".into());
         }
 
@@ -228,7 +231,7 @@ fn valid_phone_number(value: &str) -> bool {
 }
 
 #[cfg(test)]
-mod provisioning_tests {
+pub(crate) mod provisioning_tests {
     use super::*;
     use std::sync::{
         Arc,
@@ -239,7 +242,7 @@ mod provisioning_tests {
     const NUMBER: &str = "+14155550123";
     const RESOURCE: &str = "PN22222222222222222222222222222222";
 
-    async fn recorded_provider(
+    pub(crate) async fn recorded_provider(
         status: u16,
         body: String,
         drop_reply: bool,
@@ -248,6 +251,19 @@ mod provisioning_tests {
         Arc<AtomicUsize>,
         tokio::task::JoinHandle<()>,
     ) {
+        recorded_provider_with_hook(status, body, drop_reply, || {}).await
+    }
+    pub(crate) async fn recorded_provider_with_hook(
+        status: u16,
+        body: String,
+        drop_reply: bool,
+        before_reply: impl FnOnce() + Send + 'static,
+    ) -> (
+        RealTwilioClient,
+        Arc<AtomicUsize>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        let mut before_reply = Some(before_reply);
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let calls = Arc::new(AtomicUsize::new(0));
@@ -300,6 +316,9 @@ mod provisioning_tests {
                         std::str::from_utf8(&request[header_end..]).unwrap(),
                         "PhoneNumber=%2B14155550123"
                     );
+                    if let Some(before_reply) = before_reply.take() {
+                        before_reply();
+                    }
                     if drop_reply {
                         drop(stream);
                         continue;
