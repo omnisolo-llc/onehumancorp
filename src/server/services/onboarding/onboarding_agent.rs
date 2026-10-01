@@ -10228,10 +10228,9 @@ mod tests {
         Some(db)
     }
 
-    async fn start_authenticated_test_onboarding(
+    async fn authenticated_test_identity(
         agent: &OnboardingAgent,
-        request: StartOnboardingRequest,
-    ) -> Result<StartOnboardingResponse, String> {
+    ) -> Result<(String, String), String> {
         let suffix = uuid::Uuid::new_v4().simple().to_string();
         let tenant_id = format!("onboarding-test-tenant-{suffix}");
         let user_id = format!("onboarding-test-user-{suffix}");
@@ -10252,6 +10251,14 @@ mod tests {
         .execute(&agent.db.pool)
         .await
         .map_err(|error| error.to_string())?;
+        Ok((tenant_id, user_id))
+    }
+
+    async fn start_authenticated_test_onboarding(
+        agent: &OnboardingAgent,
+        request: StartOnboardingRequest,
+    ) -> Result<StartOnboardingResponse, String> {
+        let (tenant_id, user_id) = authenticated_test_identity(agent).await?;
         agent
             .start_onboarding_for_identity(request, &tenant_id, &user_id)
             .await
@@ -10267,11 +10274,12 @@ mod tests {
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub.clone());
 
-        let tenant_id = "test_cache_invalidation_tenant";
-        let user_id = "test_cache_invalidation_user";
+        let (tenant, user) = authenticated_test_identity(&agent).await.unwrap();
+        let tenant_id = tenant.as_str();
+        let user_id = user.as_str();
 
         // Save initial state using agent
-        let state1 = serde_json::json!({"test_key": "val1"});
+        let state1 = serde_json::json!({"businessName": "val1"});
         agent
             .save_onboarding_state(tenant_id, user_id, 1, &state1)
             .await
@@ -10321,7 +10329,7 @@ mod tests {
         );
 
         // Save updated state using agent (this should invalidate both caches)
-        let state2 = serde_json::json!({"test_key": "val2"});
+        let state2 = serde_json::json!({"businessName": "val2"});
         agent
             .save_onboarding_state(tenant_id, user_id, 2, &state2)
             .await
@@ -10520,7 +10528,7 @@ mod tests {
             .await;
         assert_eq!(
             cross_tenant_result,
-            Err("Authenticated user is not an active member of the organization".to_string())
+            Err("active_authenticated_owner_required".to_string())
         );
 
         let other_tenant_name =
@@ -10533,30 +10541,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_process_intake_and_variants() {
+    async fn test_reviewed_intake_json_and_variants() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
         };
         let (tx, _) = tokio::sync::mpsc::channel(10);
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let mut agent = OnboardingAgent::new(db.clone(), hub);
+        let agent = OnboardingAgent::new(db.clone(), hub);
 
-        if std::env::var("MINIMAX_API_KEY").is_err() {
-            agent.minimax = Some(std::sync::Arc::new(MinimaxClient::new(
-                "fake-key".to_string(),
-            )));
-        }
-
+        // Parse a reviewed model-response fixture with the same typed JSON decoder
+        // used by process_intake. No provider request belongs in this DB test.
         let input = "I sell custom vegan cakes in Austin, Texas. Maya's Cakes.";
-        let res = agent.process_intake(input).await;
-        assert!(res.is_ok());
-        let data = res.unwrap();
-
+        let data: IntakeData = serde_json::from_str(
+            r#"{
+            "business_name":"Maya's Cakes", "business_type":"Home Baker",
+            "categories":["physical"], "location":"Austin, Texas",
+            "initial_products":[{"name":"Vegan cake","price":"45.00",
+                "description":"Reviewed custom cake",
+                "variants":[{"name":"Vanilla","price_modifier":"0.29"}]}]
+        }"#,
+        )
+        .unwrap();
         assert_eq!(data.business_name, "Maya's Cakes");
-        assert!(!data.initial_products.is_empty());
+        assert_eq!(data.initial_products[0].price, "45.00");
 
-        // Also test creating the variants via start_onboarding directly with the mocked data
+        // Persist the complete parsed collection and its variants through the real service.
         let req = StartOnboardingRequest {
             business_type: data.business_type,
             company_name: data.business_name,
@@ -10636,25 +10646,10 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_process_intake() {
-        let db = match setup_test_db().await {
-            Some(db) => db,
-            None => return,
-        };
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let mut agent = OnboardingAgent::new(db.clone(), hub);
-
-        // Mock MinimaxClient if we could, but here we'll just check if it handles configured key
-        if std::env::var("MINIMAX_API_KEY").is_err() {
-            // Setup a fake one for testing if not present
-            agent.minimax = Some(Arc::new(MinimaxClient::new("fake-key".to_string())));
-        }
-
-        // This test will likely fail without a real API key if it actually calls the API,
-        // but we want to verify the method existence and basic logic.
-        // In a real scenario we'd use a trait and mock it.
+    #[test]
+    fn test_intake_json_requires_business_fields() {
+        assert!(serde_json::from_str::<IntakeData>(r#"{"initial_products":[]}"#).is_err());
+        assert!(repair_truncated_json(r#"{"business_name":"Incomplete""#).is_err());
     }
 
     #[test]
@@ -10798,7 +10793,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_onboarding_state_caching() {
+    async fn test_get_onboarding_state_reads_committed_rows() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -10807,17 +10802,18 @@ mod tests {
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub);
 
-        let tenant_id = "test_cache_tenant";
-        let user_id = "test_cache_user";
+        let (tenant, user) = authenticated_test_identity(&agent).await.unwrap();
+        let tenant_id = tenant.as_str();
+        let user_id = user.as_str();
 
         // Pre-fill state in DB
-        let state = serde_json::json!({"test_key": "test_value"});
+        let state = serde_json::json!({"businessName": "test_value"});
         agent
             .save_onboarding_state(tenant_id, user_id, 2, &state)
             .await
             .unwrap();
 
-        // Fetch once - should query DB and cache
+        // Protected recovery reads the current committed row.
         let start1 = std::time::Instant::now();
         let res1 = agent
             .get_onboarding_state(tenant_id, user_id)
@@ -10827,11 +10823,11 @@ mod tests {
 
         assert_eq!(res1.get("step").and_then(|v| v.as_i64()), Some(2));
         assert_eq!(
-            res1.get("test_key").and_then(|v| v.as_str()),
+            res1.get("businessName").and_then(|v| v.as_str()),
             Some("test_value")
         );
 
-        // Update directly in DB (bypass cache logic to prove cache is working)
+        // Simulate another writer committing a newer step.
         let _ = sqlx::query(
             "UPDATE onboarding_state SET current_step = 3 WHERE tenant_id = $1 AND user_id = $2",
         )
@@ -10841,7 +10837,7 @@ mod tests {
         .await
         .unwrap();
 
-        // Fetch second time - should use cache and get step 2, not 3
+        // Recovery must see the newer commit rather than returning a stale cache.
         let start2 = std::time::Instant::now();
         let res2 = agent
             .get_onboarding_state(tenant_id, user_id)
@@ -10850,8 +10846,8 @@ mod tests {
         let _elapsed2 = start2.elapsed();
         assert_eq!(
             res2.get("step").and_then(|v| v.as_i64()),
-            Some(2),
-            "Should return cached step 2"
+            Some(3),
+            "Must return the committed step 3"
         );
 
         // Now save using the agent which invalidates the cache
@@ -10883,7 +10879,8 @@ mod tests {
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub);
 
-        let org_id = "test-org-products";
+        let (tenant, _) = authenticated_test_identity(&agent).await.unwrap();
+        let org_id = tenant.as_str();
 
         // Test Bakery
         agent
@@ -10902,7 +10899,8 @@ mod tests {
         );
 
         // Test Handyman
-        let org_id2 = "test-org-handyman";
+        let (tenant2, _) = authenticated_test_identity(&agent).await.unwrap();
+        let org_id2 = tenant2.as_str();
         agent
             .generate_initial_products(org_id2, "Handyman")
             .await

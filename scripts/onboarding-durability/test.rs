@@ -1,7 +1,7 @@
 use super::*;
 use sqlx::{Row, postgres::PgPoolOptions};
 use std::sync::Arc;
-async fn setup() -> OnboardingAgent {
+pub(super) async fn setup() -> OnboardingAgent {
     let url =
         std::env::var("OHC_SYNC_TEST_DATABASE_URL").expect("real isolated PostgreSQL is required");
     let admin = PgPoolOptions::new().connect(&url).await.unwrap();
@@ -23,7 +23,7 @@ async fn setup() -> OnboardingAgent {
         .await
         .unwrap();
     sqlx::raw_sql(r#"
- CREATE TABLE tenants(id text primary key,name text,subdomain text unique);
+ CREATE TABLE tenants(id text primary key,name text,tier text,subdomain text);
  CREATE TABLE users(id text primary key,tenant_id text,active boolean,username text default 'owner',email text default 'owner@example.test',password_hash text default '',roles text[] default '{ADMIN}',oidc_subject text,created_at timestamptz default now(),updated_at timestamptz default now()); CREATE TABLE revoked_tokens(jti text,tenant_id text,expires_at timestamptz,unique(jti,tenant_id));
  CREATE TABLE products(id text primary key,tenant_id text,title text,description text,price_cents bigint,type text,metadata jsonb,price numeric,updated_at timestamptz default clock_timestamp());
  CREATE TABLE product_variants(id text primary key,tenant_id text,product_id text references products(id),name text CHECK(name<>'FAIL'),sku text,price_modifier numeric,inventory_count integer);
@@ -33,7 +33,7 @@ async fn setup() -> OnboardingAgent {
  CREATE TABLE sub_agent_queue(id text primary key,tenant_id text,parent_task_id text,payload jsonb,status text,scheduled_at timestamp,created_at timestamptz,updated_at timestamptz);
  CREATE TABLE agent_feed_items(id text primary key,tenant_id text,event_source text,context_payload jsonb,proposed_action jsonb,lifecycle_state text);
  CREATE TABLE onboarding_state(tenant_id text,user_id text,current_step integer default 0,state_json jsonb default '{}',updated_at timestamptz,primary key(tenant_id,user_id));
- INSERT INTO tenants VALUES('tenant-a','Original','original'); INSERT INTO users(id,tenant_id,active) VALUES('user-a','tenant-a',true);
+ INSERT INTO tenants(id,name,subdomain) VALUES('tenant-a','Original','original'); INSERT INTO users(id,tenant_id,active) VALUES('user-a','tenant-a',true);
  "#).execute(&pool).await.unwrap();
     sqlx::raw_sql(include_str!(
         "../../src/server/migrations/235_onboarding_preparation_receipt.sql"
@@ -183,10 +183,12 @@ async fn concurrent_exact_replay_does_not_duplicate_catalog() {
 #[tokio::test]
 async fn setup_failure_rolls_back_all_products() {
     let a = setup().await;
-    sqlx::query("INSERT INTO tenants VALUES('other','Other','taken')")
-        .execute(&a.db.pool)
-        .await
-        .unwrap();
+    sqlx::query(
+        "ALTER TABLE tenants ADD CONSTRAINT reject_taken_subdomain CHECK (subdomain <> 'taken')",
+    )
+    .execute(&a.db.pool)
+    .await
+    .unwrap();
     let mut req = request();
     req.initial_products.clear();
     req.first_product_name = "First".into();
@@ -526,7 +528,7 @@ fn exact_money_rejects_bad_shapes_and_keeps_signed_variants() {
         1_000_000_000
     );
 }
-fn auth_user(role: &str) -> server_auth::User {
+pub(super) fn auth_user(role: &str) -> server_auth::User {
     server_auth::User {
         id: "user-a".into(),
         username: "owner".into(),
@@ -540,7 +542,7 @@ fn auth_user(role: &str) -> server_auth::User {
         oidc_subject: None,
     }
 }
-fn mounted(a: &OnboardingAgent) -> (axum::Router, Arc<server_auth::Store>) {
+pub(super) fn mounted(a: &OnboardingAgent) -> (axum::Router, Arc<server_auth::Store>) {
     let store = Arc::new(server_auth::Store::with_repo(Arc::new(
         server_auth::postgres_store::PgUserRepository::new(a.db.pool.clone()),
     )));
@@ -1184,4 +1186,106 @@ async fn legacy_business_draft_fields_round_trip_without_credentials_or_authorit
         .0,
         axum::http::StatusCode::BAD_REQUEST
     );
+}
+
+#[tokio::test]
+async fn expected_owner_precondition_rejects_switched_or_ambiguous_identity_before_effects() {
+    use tower::ServiceExt;
+    let a = setup().await;
+    let (app, store) = mounted(&a);
+    let token = store.issue_token(&auth_user("ADMIN")).unwrap();
+    for (users, tenants) in [
+        (vec!["other-user"], vec!["tenant-a"]),
+        (vec!["user-a"], vec!["other-tenant"]),
+        (vec!["user-a"], vec![]),
+        (vec![], vec!["tenant-a"]),
+        (vec!["user-a", "user-a"], vec!["tenant-a"]),
+        (vec!["user-a"], vec!["tenant-a", "tenant-a"]),
+        (vec![""], vec!["tenant-a"]),
+    ] {
+        for (method, path, body) in [
+            ("POST", "/start", http_request()),
+            ("POST", "/draft", json!({"business_name":"Should not save"})),
+            (
+                "POST",
+                "/state",
+                json!({"step":3,"businessName":"Should not save"}),
+            ),
+            ("GET", "/state", json!({})),
+            ("GET", "/draft", json!({})),
+        ] {
+            let mut req = axum::http::Request::builder()
+                .method(method)
+                .uri(path)
+                .header("authorization", format!("Bearer {token}"))
+                .header("content-type", "application/json");
+            for user in &users {
+                req = req.header("x-ohc-expected-user", *user);
+            }
+            for tenant in &tenants {
+                req = req.header("x-ohc-expected-tenant", *tenant);
+            }
+            let response = app
+                .clone()
+                .oneshot(req.body(axum::body::Body::from(body.to_string())).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                axum::http::StatusCode::CONFLICT,
+                "{method} {path} {users:?} {tenants:?}"
+            );
+            let value: serde_json::Value = serde_json::from_slice(
+                &axum::body::to_bytes(response.into_body(), 1024)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(value["error"], "session_identity_changed");
+        }
+    }
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM products")
+            .fetch_one(&a.db.pool)
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM onboarding_state")
+            .fetch_one(&a.db.pool)
+            .await
+            .unwrap(),
+        0
+    );
+    assert!(a.hub.events.lock().await.is_empty());
+}
+
+#[tokio::test]
+async fn expected_owner_precondition_allows_matching_verified_identity_only() {
+    use tower::ServiceExt;
+    let a = setup().await;
+    let (app, store) = mounted(&a);
+    let token = store.issue_token(&auth_user("ADMIN")).unwrap();
+    for authenticated in [false, true] {
+        let mut req = axum::http::Request::get("/state")
+            .header("x-ohc-expected-user", "user-a")
+            .header("x-ohc-expected-tenant", "tenant-a");
+        if authenticated {
+            req = req.header("authorization", format!("Bearer {token}"));
+        }
+        let response = app
+            .clone()
+            .oneshot(req.body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            if authenticated {
+                axum::http::StatusCode::OK
+            } else {
+                axum::http::StatusCode::UNAUTHORIZED
+            }
+        );
+    }
 }

@@ -36,8 +36,35 @@ pub static ONBOARDING_STATE_AGENT_CACHE:std::sync::OnceLock<HybridCache<serde_js
 #[derive(Clone)] pub struct OnboardingAgent{db:std::sync::Arc<db::DB>,hub:std::sync::Arc<hub::Hub>}
 '''
 a=s.index('const USER_ONBOARDING_STATE_FIELDS'); b=s.index('#[derive(Debug, Serialize, Deserialize, Clone)]\npub struct IntakeData',a)
-(HERE/'generated.rs').write_text(head+f'#[path={json.dumps(str(ROOT/"src/server/services/onboarding/preparation.rs"))}]\npub mod preparation;\n'+s[a:b]+types+'\nimpl OnboardingAgent {\n'+'\n'.join(block(n).replace('super::preparation::','crate::preparation::') for n in methods)+'\n pub fn new(db:std::sync::Arc<db::DB>,hub:std::sync::Arc<hub::Hub>)->Self{Self{db,hub}} pub async fn process_intake(&self,_input:&str)->Result<IntakeData,String>{Err("provider disabled in isolated test".into())} pub async fn process_chat(&self,_messages:Vec<ChatMessage>)->Result<ChatResponse,String>{Err("provider disabled in isolated test".into())} \n}\n'+block('pub fn onboarding_feature_state')+f'\n#[path={json.dumps(str(ROOT/"src/server/api/onboarding/mod.rs"))}]pub mod onboarding_api;\n'+'\n#[cfg(test)]\n#[path="test.rs"]mod tests;\n')
+generated=head+f'#[path={json.dumps(str(ROOT/"src/server/services/onboarding/preparation.rs"))}]\npub mod preparation;\n'+s[a:b]+types+'\nimpl OnboardingAgent {\n'+'\n'.join(block(n).replace('super::preparation::','crate::preparation::') for n in methods)+'\n pub fn new(db:std::sync::Arc<db::DB>,hub:std::sync::Arc<hub::Hub>)->Self{Self{db,hub}} pub async fn process_intake(&self,_input:&str)->Result<IntakeData,String>{Err("provider disabled in isolated test".into())} pub async fn process_chat(&self,_messages:Vec<ChatMessage>)->Result<ChatResponse,String>{Err("provider disabled in isolated test".into())} \n}\n'+block('pub fn onboarding_feature_state')+f'\n#[path={json.dumps(str(ROOT/"src/server/api/onboarding/mod.rs"))}]pub mod onboarding_api;\n'+'\n#[cfg(test)]\n#[path="test.rs"]mod tests;\n'
 
-inputs=[ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/api/onboarding/mod.rs',ROOT/'src/server/services/onboarding/onboarding_agent.rs',ROOT/'src/server/services/onboarding/preparation.rs',ROOT/'src/server/services/onboarding/mod.rs',ROOT/'src/server/migrations/235_onboarding_preparation_receipt.sql',HERE/'test.rs',HERE/'prepare.py',HERE/'Cargo.toml']
+
+service=s[s.index('#[cfg(test)]\nmod tests {'):]
+a=service.index('    async fn setup_test_db()');b=service.index('    async fn authenticated_test_identity',a)
+service=service[:a]+"    async fn setup_test_db() -> Option<Arc<DB>> { Some(crate::tests::setup().await.db) }\n\n"+service[b:]
+a=service.index('    static TEST_MIGRATIONS:');b=service.index('    #[test]',a)
+service=service[:a]+service[b:]
+service=service.replace('mod tests {','mod service_regressions {',1)
+a=s.index('fn repair_truncated_json(');b=s.index('\nimpl OnboardingAgent {',a)
+generated += s[a:b]+service
+
+auth=(ROOT/'src/server/auth/http.rs').read_text()
+a=auth.index('    fn identity_request('); b=auth.index('    #[tokio::test]\n    async fn login_rejects_non_json',a)
+auth_tests=auth[a:b]
+auth_tests=auth_tests.replace('&store.secret','std::env::var("JWT_SECRET").unwrap().as_bytes()')
+auth_tests=auth_tests.replace('store.users.write().unwrap().insert(user.id.clone(), user);','store.update_user(&user.id,None,None,Some(false),user.organization_id.as_deref().unwrap()).await.unwrap();')
+generated += """
+#[cfg(test)] mod session_identity_regressions {
+use axum::{Router,body::{Body,to_bytes},http::{Request,StatusCode,header},response::Response};
+use chrono::Utc;
+use server_auth::{Store,User};
+use std::sync::Arc;
+use tower::ServiceExt;
+async fn app_with_user()->(Router,Arc<Store>,User){let a=crate::tests::setup().await;let (_,store)=crate::tests::mounted(&a);let app=server_auth::http::router(store.clone()).unwrap();(app,store,crate::tests::auth_user("ADMIN"))}
+""" + auth_tests + "\n}\n"
+
+(HERE/'generated.rs').write_text(generated)
+
+inputs=[ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/auth/http.rs',ROOT/'src/server/api/onboarding/mod.rs',ROOT/'src/server/services/onboarding/onboarding_agent.rs',ROOT/'src/server/services/onboarding/preparation.rs',ROOT/'src/server/services/onboarding/mod.rs',ROOT/'src/server/migrations/235_onboarding_preparation_receipt.sql',HERE/'test.rs',HERE/'prepare.py',HERE/'Cargo.toml']
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},indent=2)+'\n')
 print('Prepared exact-source onboarding harness')

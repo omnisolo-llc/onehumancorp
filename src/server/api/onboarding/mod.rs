@@ -72,6 +72,35 @@ async fn require_onboarding_admin(
         .get::<::server_common::Claims>()
         .is_some_and(is_onboarding_admin)
     {
+        let claims = req
+            .extensions()
+            .get::<::server_common::Claims>()
+            .expect("checked claims");
+        let expected_user = req.headers().get_all("x-ohc-expected-user");
+        let expected_tenant = req.headers().get_all("x-ohc-expected-tenant");
+        if expected_user.iter().next().is_some() || expected_tenant.iter().next().is_some() {
+            let exact = |values: axum::http::header::GetAll<'_, axum::http::HeaderValue>,
+                         actual: &str| {
+                let mut values = values.iter();
+                values.next().and_then(|value| value.to_str().ok()) == Some(actual)
+                    && values.next().is_none()
+                    && !actual.is_empty()
+            };
+            if !exact(expected_user, &claims.sub)
+                || !exact(
+                    expected_tenant,
+                    claims.organization_id.as_deref().unwrap_or_default(),
+                )
+            {
+                return (
+                    axum::http::StatusCode::CONFLICT,
+                    Json(serde_json::json!({
+                        "success": false, "error": "session_identity_changed"
+                    })),
+                )
+                    .into_response();
+            }
+        }
         next.run(req).await
     } else {
         axum::http::StatusCode::FORBIDDEN.into_response()
