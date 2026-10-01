@@ -866,6 +866,14 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_onboarding_draft_test
           python3 scripts/focused_ci_gate.py onboarding-draft-merge
+      - name: Verify tenant-scoped search and database failure handling
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SEARCH_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_search_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_search_test
+          python3 scripts/focused_ci_gate.py tenant-search
       - name: Verify agent workflow tenant isolation and requested tasks offline
         if: ${{ !cancelled() }}
         env:

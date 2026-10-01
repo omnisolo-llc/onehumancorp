@@ -12,6 +12,12 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_tenant_search_gate_runs_all_real_database_cases(self):
+        minimum, database = gate.GATES['tenant-search']
+        self.assertGreaterEqual(minimum, 13)
+        self.assertEqual(database, 'OHC_SEARCH_TEST_DATABASE_URL')
+        self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/tenant-search/run.sh').is_file())
+
     def test_service_creation_gate_keeps_canonical_pg_and_original_sqlite_cases(self):
         minimum, database = gate.GATES['service-creation']
         self.assertGreaterEqual(minimum, 6)

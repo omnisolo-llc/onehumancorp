@@ -10396,6 +10396,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             "/api/v1/inbox",
             protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
         )
+        .merge(api::search::router(db.pool.clone(), http_auth_store.clone()))
         .nest(
             "/api/v1/memory",
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
