@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '../components/TooltipRegistry';
 import DigitalCard from './digital-business-card/page';
@@ -60,10 +60,11 @@ describe('clipboard feedback follows the actual platform outcome', () => {
       const copy = screen.getByRole('button', { name: button });
       fireEvent.click(copy);
       expect(copy).toBeDisabled();
-      expect(screen.getByRole('status')).toHaveTextContent(/copying/i);
+      const copyFeedback = name === 'team embed' ? within(copy.parentElement!) : screen;
+      expect(copyFeedback.getByRole('status')).toHaveTextContent(/copying/i);
       expect(screen.queryByText(/^Copied!?$/)).not.toBeInTheDocument();
       await act(async () => { completion.resolve(); });
-      await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/copied/i));
+      await waitFor(() => expect(copyFeedback.getByRole('status')).toHaveTextContent(/copied/i));
       expect(copy).toBeEnabled();
       expect(writeText.mock.calls.length + write.mock.calls.length).toBe(1);
     });

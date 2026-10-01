@@ -4,8 +4,14 @@ import '@testing-library/jest-dom';
 import GrowthReferralWidget from './GrowthReferralWidget';
 
 describe('GrowthReferralWidget', () => {
+  let inviteReply: () => Promise<Response>;
   beforeEach(() => {
-    global.fetch = vi.fn() as unknown as typeof fetch;
+    localStorage.clear();
+    inviteReply = async () => Response.json({ invite_link: 'https://cloud.omnisolo.co/invite/123' });
+    global.fetch = vi.fn(async url => url === '/api/v1/auth/session-identity'
+      ? Response.json({ userId: 'owner', tenantId: 'tenant', expiresAt: Date.now() + 60_000 })
+      : inviteReply());
+    Object.defineProperty(navigator, 'locks', { value: { request: async (_name: string, _options: unknown, callback: (lock: object) => Promise<void>) => callback({}) } });
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn().mockImplementation(() => Promise.resolve()),
@@ -26,14 +32,12 @@ describe('GrowthReferralWidget', () => {
   });
 
   it('generates a link successfully', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ invite_link: 'https://cloud.omnisolo.co/invite/123' }),
-    });
+
 
     render(<GrowthReferralWidget />);
 
     const button = screen.getByText('Invite to Cloud Team');
+    await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
 
     expect(screen.getByText('Generating...')).toBeInTheDocument();
@@ -47,27 +51,24 @@ describe('GrowthReferralWidget', () => {
   });
 
   it('handles error when generating link', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: false,
-    });
+    inviteReply = async () => Response.json({ error: 'unavailable' }, { status: 503 });
 
     render(<GrowthReferralWidget />);
 
     const button = screen.getByText('Invite to Cloud Team');
+    await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to generate invite')).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Team invitation status' })).toHaveTextContent('could not be confirmed or saved');
     });
   });
 
   it('copies link to clipboard', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ invite_link: 'https://cloud.omnisolo.co/invite/123' }),
-    });
+
 
     render(<GrowthReferralWidget />);
+    await waitFor(() => expect(screen.getByText('Invite to Cloud Team')).toBeEnabled());
     fireEvent.click(screen.getByText('Invite to Cloud Team'));
 
     await waitFor(() => {
