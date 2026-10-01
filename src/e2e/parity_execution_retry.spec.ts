@@ -45,7 +45,7 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
   });
 
   // Test 4: Delete Task (Database Delete Action)
-  test('verify owner can delete a task and handle degradation gracefully', async ({ page }) => {
+  test('verify owner can delete a task and handle degradation gracefully', async ({ page }, testInfo) => {
     const title = `Delete Me Task ${randomUUID()}`;
     await page.goto('/tasks');
 
@@ -59,7 +59,27 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
     await page.getByRole('button', { name: 'Delete' }).click();
 
     const deleted = await deletion;
-    expect(deleted.ok(), await deleted.text()).toBe(true);
+    await testInfo.attach('delete-response-headers', {
+      contentType: 'application/json',
+      body: JSON.stringify({ status: deleted.status(), path: new URL(deleted.url()).pathname, headers: { contentType: await deleted.headerValue('content-type'), contentLength: await deleted.headerValue('content-length'), transferEncoding: await deleted.headerValue('transfer-encoding') } }),
+    });
+    // Capture whether the finite backend response finished before requesting its
+    // diagnostic body. A transport/body stall stays a failure with an exact stage.
+    const bounded = async <T,>(promise: Promise<T>, stage: string): Promise<T> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([promise, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`DELETE ${stage} did not finish within 10 seconds (HTTP ${deleted.status()})`)), 10_000);
+        })]);
+      } finally { clearTimeout(timer); }
+    };
+    const completion = await bounded(deleted.finished(), 'response');
+    await testInfo.attach('delete-response-completion', { contentType: 'application/json', body: JSON.stringify({ error: completion?.message ?? null }) });
+    expect(completion).toBeNull();
+    const body = await bounded(deleted.text(), 'body retrieval');
+    await testInfo.attach('delete-response-body', { contentType: 'text/plain', body: body.slice(0, 4096) });
+    expect(deleted.ok(), body).toBe(true);
+    expect(JSON.parse(body)).toMatchObject({ success: true });
     // Both the selected detail and the list row must be removed after persistence.
     await expect(page.getByText(title, { exact: true })).toHaveCount(0);
     await page.reload();
