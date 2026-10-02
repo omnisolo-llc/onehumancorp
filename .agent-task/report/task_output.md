@@ -1,3 +1,3 @@
 outcome: no_work
-issue_title: "Native Rust Omnichannel Chat System - Core Architecture"
-issue_description: "According to RESEARCH.md, the core strategic directive is to integrate existing tools instead of rebuilding them. Requests to build native replacements for external services (such as Chatwoot) without explicit authorization, evidence, and an expansion gate must be rejected."
+issue_title: Native Rust Omnichannel Chat System - Core Architecture
+issue_description: "According to RESEARCH.md, the core strategic directive is to integrate existing tools instead of rebuilding them. Requests to build native replacements for external services (such as Chatwoot) without explicit authorization, evidence, and an expansion gate must be rejected with a no_work finding. This task violates the strategic directive as it aims to build a native Chatwoot replacement without the required evidence and expansion gate. Superpowers workflow provenance: loaded skills using-superpowers, brainstorming from revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d."
