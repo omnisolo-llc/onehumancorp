@@ -351,6 +351,34 @@ where
     let backend = connection.get_database_backend();
     let (transaction, assumed_bypass_role) =
         begin_portable_migration_transaction(connection).await?;
+    // The normalized table becomes authoritative after its first conversion.
+    // Claim the existing schema-version row in this same transaction so a
+    // concurrent/repeated startup cannot restore roles from a stale mirror.
+    let marker_sql = match backend {
+        sea_orm::DatabaseBackend::Postgres => {
+            "INSERT INTO onehumancorp_schema_versions(id,applied_at) VALUES($1,$2) ON CONFLICT(id) DO NOTHING"
+        }
+        sea_orm::DatabaseBackend::MySql => {
+            "INSERT IGNORE INTO onehumancorp_schema_versions(id,applied_at) VALUES(?,?)"
+        }
+        sea_orm::DatabaseBackend::Sqlite => {
+            "INSERT OR IGNORE INTO onehumancorp_schema_versions(id,applied_at) VALUES(?,?)"
+        }
+    };
+    let claimed = transaction
+        .execute(Statement::from_sql_and_values(
+            backend,
+            marker_sql,
+            [
+                PORTABLE_ROLE_SCHEMA_VERSION.to_owned().into(),
+                Utc::now().into(),
+            ],
+        ))
+        .await?;
+    if claimed.rows_affected() == 0 {
+        reset_portable_migration_role(&transaction, assumed_bypass_role).await?;
+        return transaction.commit().await;
+    }
     let sql = match backend {
         sea_orm::DatabaseBackend::Postgres => {
             "INSERT INTO identity_user_roles (user_id, role_name, tenant_id, position) SELECT users.id, role_name, users.tenant_id, position::INTEGER - 1 FROM users CROSS JOIN LATERAL unnest(COALESCE(users.roles, ARRAY[]::TEXT[])) WITH ORDINALITY AS legacy_roles(role_name, position) ON CONFLICT (user_id, role_name) DO NOTHING"
