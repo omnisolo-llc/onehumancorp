@@ -12,6 +12,13 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_widget_chat_requires_the_complete_owned_database_gate(self):
+        minimum, database = gate.GATES['widget-chat-contract']
+        self.assertGreaterEqual(minimum, 32)
+        self.assertEqual(database, 'OHC_WIDGET_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        self.assertTrue((root/'scripts/widget-chat-contract/run.sh').is_file())
+
     def test_agent_definition_gate_requires_real_database_and_complete_inventory(self):
         minimum,database=gate.GATES['agent-definition-contract']
         self.assertGreaterEqual(minimum,49)

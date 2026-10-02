@@ -901,6 +901,15 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_chat_tenant_test
           python3 scripts/focused_ci_gate.py chat-tenant-isolation
 
+      - name: Verify authenticated widget chat and canonical tenant storage
+        if: ${{ !cancelled() }}
+        env:
+          OHC_WIDGET_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_widget_chat_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_widget_chat_test
+          python3 scripts/focused_ci_gate.py widget-chat-contract
+
       - name: Verify signed-tenant appointment reads
         if: ${{ !cancelled() }}
         env:
