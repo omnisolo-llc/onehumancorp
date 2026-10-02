@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+issue_title: "Universal Provider & Local Usage Accounting (F04)"
+issue_description: "The issue F04 is partially satisfied but cannot be safely completed. The specific acceptance criteria that are already satisfied include: the proposal adapter (\`api/proposals.rs\`) no longer hardcodes dummy tokens but successfully captures actual usage via \`reason_with_usage\`; the proxy streaming boundary (\`usage_meter.rs\`'s \`UsageCapture\`) successfully intercepts and strictly parses usage headers from stream chunks; and if the provider omits usage, the system correctly fails closed by dropping the receipt and moving the ledger into a \`reconciliation_required\` state without inventing free usage or using fallback tokenizer estimations. However, the requirement to plumb \`tenant_id\`, \`task_id\`, and \`model_name\` through to the usage ledger for every generation, tool use, and embedding remains unmet. Implementing this requirement would necessitate an invasive rewrite of hundreds of background worker and department files (e.g., \`customer_success_agent.rs\`) that currently lack local tenant context, which contradicts the directive to not expand a bounded task into an unrelated rewrite. No safe, well-scoped implementation follows from the current repository state."
+outcome: blocked
