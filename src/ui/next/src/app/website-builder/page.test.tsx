@@ -159,7 +159,7 @@ describe('WebsiteBuilderPage', () => {
   it('never reports a rejected publication as live', async () => {
     vi.useRealTimers();useWebsiteBuilderStore.setState({businessName:'Rejected Shop',blocks:[{type:'Hero',props:{headline:'Local draft'}}],status:'draft'});
     vi.mocked(fetch).mockImplementation(async url=>String(url).endsWith('/publish_draft')?Response.json({error:'rejected'},{status:500}):Response.json({}));
-    render(<WebsiteBuilderPage/>);fireEvent.click(await screen.findByText('Save site for publishing'));
+    render(<WebsiteBuilderPage/>);fireEvent.click(await screen.findByText('Save site draft'));
     expect(await screen.findByText(/site save was not acknowledged/i)).toBeVisible();
     expect(screen.queryByText('Success! Your business is live!')).toBeNull();expect(screen.queryByText(/Site saved \(/)).toBeNull();
   });
@@ -218,10 +218,10 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Save site for publishing')).toBeInTheDocument();
+      expect(screen.getByText('Save site draft')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Save site for publishing'));
+    fireEvent.click(screen.getByText('Save site draft'));
 
     await waitFor(() => {
       expect(screen.getByText(/Site saved.*33333333/)).toBeInTheDocument();

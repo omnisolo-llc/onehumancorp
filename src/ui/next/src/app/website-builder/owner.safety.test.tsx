@@ -67,7 +67,7 @@ it.each(['review','instant'])('moves %s setup to the canonical review without im
 it('reports a real site save without inventing a published URL',async()=>{
  render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'draft',blocks:[{type:'Hero',props:{headline:'B layout'}}]}));
  vi.mocked(fetch).mockImplementation(async url=>String(url).endsWith('/session-identity')?Response.json({...owner,expiresAt:Date.now()+60_000}):Response.json({id:'22222222-2222-4222-8222-222222222222',domain:null}));
- fireEvent.click(screen.getByText(/1-Tap Launch|Save site for publishing/));
+ fireEvent.click(screen.getByText(/1-Tap Launch|Save site draft/));
  expect(await screen.findByText(/Site saved.*publishing.*not.*verified/i)).toBeVisible();expect(screen.queryByText('/bio/myshop')).toBeNull();expect(screen.queryByText('Success! Your business is live!')).toBeNull();
 });
 
@@ -75,7 +75,7 @@ it('keeps a newer edited layout local when an earlier publication body completes
  render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({status:'draft',blocks:[{type:'Hero',props:{headline:'Earlier layout'}}]}));
  let release!:()=>void;
  vi.mocked(fetch).mockImplementation(async url=>String(url).endsWith('/session-identity')?Response.json({...owner,expiresAt:Date.now()+60_000}):new Response(new ReadableStream({start(controller){release=()=>{controller.enqueue(new TextEncoder().encode(JSON.stringify({id:'22222222-2222-4222-8222-222222222222',domain:null})));controller.close();};}})));
- fireEvent.click(screen.getByText('Save site for publishing'));await waitFor(()=>expect(release).toBeDefined());act(()=>useWebsiteBuilderStore.setState({blocks:[{type:'Hero',props:{headline:'Newer local layout'}}]}));await act(async()=>release());
+ fireEvent.click(screen.getByText('Save site draft'));await waitFor(()=>expect(release).toBeDefined());act(()=>useWebsiteBuilderStore.setState({blocks:[{type:'Hero',props:{headline:'Newer local layout'}}]}));await act(async()=>release());
  expect(await screen.findByText(/Earlier layout saved.*newer.*local/i)).toBeVisible();expect(useWebsiteBuilderStore.getState().blocks[0].props.headline).toBe('Newer local layout');
 });
 it('cancels a pending setup handoff when the user goes back',async()=>{
@@ -130,7 +130,7 @@ it('retires a draft spinner after overlapping site saving without clearing a new
  });
  fireEvent.click(screen.getByRole('button',{name:'Save Draft'}));await waitFor(()=>expect(release).toBeDefined());
  act(()=>useWebsiteBuilderStore.setState({status:'draft',blocks:[{type:'Hero',props:{headline:'Current site'}}]}));
- fireEvent.click(screen.getByText('Save site for publishing'));await screen.findByText(/Site saved/);
+ fireEvent.click(screen.getByText('Save site draft'));await screen.findByText(/Site saved/);
  await act(async()=>release());act(()=>useWebsiteBuilderStore.setState({status:'idle'}));
  expect(screen.getByRole('button',{name:'Save Draft'})).not.toBeDisabled();
 });

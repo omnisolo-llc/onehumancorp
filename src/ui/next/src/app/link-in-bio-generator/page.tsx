@@ -5,6 +5,8 @@ import { isSupportedBioUrl } from '@/lib/bioLinks';
 import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
+import { PublicationPanel } from '../builder/PublicationPanel';
+import { bioPublicationSnapshot } from './publicationSnapshot';
 
 type BioOwner = {userId: string; tenantId: string; expiresAt: number};
 async function verifiedIdentity(): Promise<BioOwner> {
@@ -62,7 +64,7 @@ export default function LinkInBioGeneratorPage() {
         const data = await response.json();
         if (!active.current || current !== epoch.current) return;
         if (data?.error != null || data?.success === false || typeof data?.store_name !== 'string' || typeof data.bio !== 'string' || typeof data.theme !== 'string' || !Array.isArray(data.links) || data.links.some((link: {title?:unknown;url?:unknown}|null) => !link || typeof link.title !== 'string' || typeof link.url !== 'string') || (data.remove_branding !== undefined && typeof data.remove_branding !== 'boolean')) throw new Error('Private profile is incomplete');
-        setStoreName(data.store_name); setBio(data.bio); setTheme(data.theme); setLinks(data.links); setRemoveBranding(data.remove_branding ?? false); setHasSaved(true); setPhase('ready'); setStatus('Saved private profile loaded. Public publication is not available.');
+        setStoreName(data.store_name); setBio(data.bio); setTheme(data.theme); setLinks(data.links); setRemoveBranding(data.remove_branding ?? false); setHasSaved(true); setPhase('ready'); setStatus('Saved private profile loaded. Public publication requires a separate review below.');
       } catch {
         if (active.current && current === epoch.current) {setPhase('held'); setStatus('Private profile could not be loaded. Reload before editing existing configuration.');}
       }
@@ -109,7 +111,7 @@ export default function LinkInBioGeneratorPage() {
         if (error === 'queued owner does not match the current session' || error === 'session_identity_changed') {retire(); return;}
       }
       if (response.status !== 200 || body !== '') throw new Error('Unconfirmed profile save');
-      setSaveSuccess(true); setHasSaved(true); setPhase('ready'); setStatus('Saved private configuration. Public publication is not available.');
+      setSaveSuccess(true); setHasSaved(true); setPhase('ready'); setStatus('Saved private configuration. Public publication requires a separate review below.');
     } catch {
       if (active.current && current === epoch.current) {setPhase('held');setStatus('The private save could not be confirmed. Reload and review stored data before trying again.');}
     } finally {if (current === epoch.current) saving.current=false;}
@@ -131,7 +133,7 @@ export default function LinkInBioGeneratorPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white tracking-tight">Link in Bio Generator</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Edit your private business profile. Public publication is not available.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Edit your private business profile. Public publication requires a separate review below.</p>
           </div>
         </div>
 
@@ -245,6 +247,16 @@ export default function LinkInBioGeneratorPage() {
                 {isSaving ? 'Saving...' : saveSuccess ? 'Saved private configuration' : 'Save private configuration'}
             </button>
             <p role="status" aria-label="Private profile status">{status}</p>
+            {phase === 'ready' && owner && <PublicationPanel
+              channel="public-bio"
+              expectedOwner={owner}
+              getSnapshot={() => {
+                if (links.some(link => !isSupportedBioUrl(link.url))) throw new Error('Each public link needs an absolute HTTP or HTTPS URL without whitespace or control characters.');
+                return bioPublicationSnapshot({ storeName, bio, links });
+              }}
+              isEditorCurrent={() => active.current && phase === 'ready' && !!owner}
+              onRetired={retire}
+            />}
           </fieldset>
 
           {/* Live Preview */}

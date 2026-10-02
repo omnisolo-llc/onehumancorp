@@ -1,4 +1,7 @@
 "use client";
+import { PublicationPanel } from '../builder/PublicationPanel';
+import { layoutPublicationSnapshot } from '../builder/layoutPublicationSnapshot';
+import { invalidateOnboardingSession } from '../onboarding/draftSession';
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -655,6 +658,13 @@ export default function WebsiteBuilderPage() {
               <SmartBlock {...b} />
             </DraggableBlock>
           ))}
+          <PublicationPanel channel="website-builder" expectedOwner={viewScope?.owner ?? null}
+            getSnapshot={() => (() => { const current = useWebsiteBuilderStore.getState(); return layoutPublicationSnapshot({ title: current.businessName || 'Home', bio: current.bio, blocks: current.blocks }); })()}
+            isEditorCurrent={() => {
+              if (!builderScopeActive(viewScope) || scope.current !== viewScope) return false;
+              try { assertBuilderEditor(viewScope, WEBSITE_DRAFT_KEY); return true; } catch { return false; }
+            }}
+            onRetired={() => invalidateOnboardingSession(false)} />
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
           <SmartBlock type="PoweredBy" props={{ tenantId: "omnisolo", isPremium: false }} />
           <div className="text-center mt-4 mb-8">
@@ -663,13 +673,13 @@ export default function WebsiteBuilderPage() {
         </div>
 
         <div className="absolute bottom-0 w-full p-4 translucent-glass-light dark:translucent-glass-dark z-50 rounded-b-[16px]">
-          <WithTooltip id="launch-btn-tooltip" defaultText="Save your reviewed site and request publishing. Publishing completion is checked separately.">
+          <WithTooltip id="launch-btn-tooltip" defaultText="Save this private site draft. Public publication requires a separate review.">
             <button
               id="launch-btn"
               className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-lg hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2 rounded-[8px]"
               onClick={handleLaunch}
             >
-              <span>Save site for publishing</span>
+              <span>Save site draft</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </button>
           </WithTooltip>

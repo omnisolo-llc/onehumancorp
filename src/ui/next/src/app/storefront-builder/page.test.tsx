@@ -95,12 +95,12 @@ describe('StorefrontBuilderPage', () => {
     fireEvent.click(screen.getByText('Build My Storefront'));
 
     await waitFor(() => {
-      expect(screen.getByText('Save site for publishing')).toBeTruthy();
+      expect(screen.getByText('Save site draft')).toBeTruthy();
     });
 
     vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce(Response.json({ id:'33333333-3333-4333-8333-333333333333',domain: 'test' }));
 
-    fireEvent.click(screen.getByText('Save site for publishing'));
+    fireEvent.click(screen.getByText('Save site draft'));
 
     await waitFor(() => {
       expect(screen.getByText(/Site saved.*publishing has not been verified/)).toBeTruthy();

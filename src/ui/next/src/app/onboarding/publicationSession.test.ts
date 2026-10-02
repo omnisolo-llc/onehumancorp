@@ -53,3 +53,22 @@ it('retires access on an exact owner contradiction while preserving ordinary con
   await fetchPublication(root, { method: 'POST' }, owner);
   expect(owned.onboardingOwner()).toBeNull();
 });
+it('does not trust a403 whose raw effect keys contradict one another', async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response('{"schema_version":1,"error":"publication_forbidden","effect":"unknown","effect":"none","message":"Rejected"}', { status: 403, headers: { 'content-type': 'application/json' } }));
+  await fetchPublication(root, { method: 'POST' }, owner);
+  expect(owned.onboardingOwner()).toBeNull();
+});
+it('keeps a verified session for the exact pre-effect role denial so its fresh rejection can be recorded', async () => {
+  vi.mocked(fetch).mockResolvedValue(Response.json({ schema_version: 1, error: 'publication_forbidden', effect: 'none', message: 'Current authority required' }, { status: 403 }));
+  expect((await fetchPublication(root, { method: 'POST' }, owner)).status).toBe(403);
+  expect(owned.onboardingOwner()).toEqual(owner);
+});
+it.each([
+  { schema_version: 1, error: 'publication_forbidden', effect: 'unknown', message: 'Unknown' },
+  { schema_version: 2, error: 'publication_forbidden', effect: 'none', message: 'Unrecognized' },
+  { error: 'Forbidden' },
+])('retires the session for an unverified403 envelope %#', async body => {
+  vi.mocked(fetch).mockResolvedValue(Response.json(body, { status: 403 }));
+  await fetchPublication(root, { method: 'POST' }, owner);
+  expect(owned.onboardingOwner()).toBeNull();
+});

@@ -32,7 +32,7 @@ it('uses verified encoded tenant for private load and save, never the local disp
 });
 it('does not label private persistence as publication',async()=>{
  render(<Page/>);await ready();expect(screen.queryByText('Save & Publish')).not.toBeInTheDocument();
- expect(screen.getByRole('status',{name:'Private profile status'})).toHaveTextContent('Public publication is not available');
+ expect(screen.getByRole('status',{name:'Private profile status'})).toHaveTextContent('Public publication requires a separate review');
 });
 it('a202 result is not a completed save',async()=>{
  save=async()=>new Response('',{status:202});render(<Page/>);await ready();

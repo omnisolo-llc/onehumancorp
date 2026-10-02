@@ -1,5 +1,6 @@
 import { serializeOnboardingDraftWrite, onboardingWriteVersion } from './draftWriteGate';
 import { QUEUE_IDENTITY_EPOCH_KEY, readQueueOwner, sameOwner, type QueueOwner } from '@/lib/sync/queueIdentity';
+import { readPublicationResponse } from '../builder/publicationContracts';
 
 export type DraftOwner = QueueOwner;
 const PREFIX = 'omnisolo_onboarding_owned_v1:';
@@ -107,7 +108,7 @@ export async function fetchForOwnedPublication(url: string, options: RequestInit
       throw new Error('Dispatch markers must be saved synchronously');
     }
     if (before !== epoch || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. This action was not sent.');
-  });
+  }, 'publication');
 }
 export async function fetchForOwnedDefinition(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
   const method = (options.method ?? 'GET').toUpperCase();
@@ -139,9 +140,9 @@ export async function fetchForOwnedDefinition(url: string, options: RequestInit,
       throw new Error('Dispatch markers must be saved synchronously');
     }
     if (before !== epoch || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. This action was not sent.');
-  }, true);
+  }, 'definition');
 }
-async function authenticatedOnboardingFetch(url: string, options: RequestInit, expected: DraftOwner, before: number, dispatched?: () => void, definitionPermission = false): Promise<Response> {
+async function authenticatedOnboardingFetch(url: string, options: RequestInit, expected: DraftOwner, before: number, dispatched?: () => void, permission: false | 'definition' | 'publication' = false): Promise<Response> {
   let verified: DraftOwner;
   try { verified = await readQueueOwner(); }
   catch (cause) { if (before === epoch) invalidateOnboardingSession(false); throw cause; }
@@ -155,12 +156,19 @@ async function authenticatedOnboardingFetch(url: string, options: RequestInit, e
   dispatched?.();
   const response = await fetch(url, { ...options, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
   if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This reply was not applied.');
-  if (response.status === 409 || (definitionPermission && response.status === 403)) {
-    const problem = await response.clone().json().catch(() => null);
+  if (response.status === 409 || (permission && response.status === 403)) {
+    const problem = await (permission === 'publication'
+      ? readPublicationResponse(response.clone(), () => {
+          if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This reply was not applied.');
+        })
+      : response.clone().json()).catch(() => null) as Record<string, unknown> | null;
     if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This reply was not applied.');
-    const reason = problem?.error ?? (definitionPermission ? problem?.reason : undefined);
+    const reason = problem?.error ?? (permission === 'definition' ? problem?.reason : undefined);
     if (reason === 'session_identity_changed' || reason === 'queued owner does not match the current session') invalidateOnboardingSession(false);
-    if (response.status === 403 && problem?.success === false && problem?.reason === 'owner_or_admin_required') return response;
+    if (response.status === 403 && permission === 'definition' && problem?.success === false && problem?.reason === 'owner_or_admin_required') return response;
+    if (response.status === 403 && permission === 'publication' && problem?.schema_version === 1
+      && problem.error === 'publication_forbidden' && problem.effect === 'none' && typeof problem.message === 'string' && problem.message.length <= 2000
+      && Object.keys(problem).length === 4 && Object.keys(problem).every(key => ['schema_version', 'error', 'effect', 'message'].includes(key))) return response;
   }
   if (response.status === 401 || response.status === 403) invalidateOnboardingSession(false);
   return response;
