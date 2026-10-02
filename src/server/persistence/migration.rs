@@ -173,6 +173,7 @@ where
     backfill_portable_user_roles(connection).await?;
     backfill_identity_email_claims(connection).await?;
     configure_postgres_role_rls(connection).await?;
+    configure_agent_definition_authority(connection).await?;
 
     insert_default_or_ignore(
         connection,
@@ -214,6 +215,83 @@ where
     )
     .await?;
     Ok(())
+}
+
+/// Private identity-derived public eligibility. This runs under the existing
+/// portable migration lock/authority, before any application routes are built.
+async fn configure_agent_definition_authority<C>(connection: &C) -> Result<(), sea_orm::DbErr>
+where
+    C: ConnectionTrait + TransactionTrait,
+{
+    let backend = connection.get_database_backend();
+    if backend == sea_orm::DatabaseBackend::MySql {
+        return Ok(());
+    }
+    let (transaction, assumed_bypass_role) =
+        begin_portable_migration_transaction(connection).await?;
+    if backend == sea_orm::DatabaseBackend::Postgres {
+        let sql = include_str!("agent_definition_authority_pg.sql");
+        let (schema, rest) = sql
+            .split_once("-- AUTHORITY_SCHEMA_END")
+            .ok_or_else(|| sea_orm::DbErr::Custom("authority schema boundary missing".into()))?;
+        let (backfill, triggers) = rest
+            .split_once("-- AUTHORITY_BACKFILL_END")
+            .ok_or_else(|| sea_orm::DbErr::Custom("authority backfill boundary missing".into()))?;
+        // DDL stays with the existing migration owner; only the private-row
+        // backfill uses the already-validated migration authority, as other
+        // portable identity backfills do. Runtime never assumes that role.
+        reset_portable_migration_role(&transaction, assumed_bypass_role).await?;
+        transaction.execute_unprepared(schema).await?;
+        if assumed_bypass_role {
+            transaction
+                .execute_unprepared("SET LOCAL ROLE ohc_bypassrls")
+                .await?;
+        }
+        transaction.execute_unprepared(backfill).await?;
+        reset_portable_migration_role(&transaction, assumed_bypass_role).await?;
+        transaction.execute_unprepared(triggers).await?;
+    } else {
+        let enabled = transaction
+            .query_one(Statement::from_string(
+                backend,
+                "PRAGMA foreign_keys".to_string(),
+            ))
+            .await?
+            .ok_or_else(|| sea_orm::DbErr::Custom("SQLite foreign key state unavailable".into()))?
+            .try_get::<i64>("", "foreign_keys")?;
+        if enabled != 1 {
+            return Err(sea_orm::DbErr::Custom(
+                "SQLite foreign keys must be enabled".into(),
+            ));
+        }
+        let columns = transaction
+            .query_all(Statement::from_string(
+                backend,
+                "PRAGMA table_info(users)".to_string(),
+            ))
+            .await?;
+        for (name, ddl) in [
+            (
+                "marketplace_authority_key",
+                "ALTER TABLE users ADD COLUMN marketplace_authority_key TEXT",
+            ),
+            (
+                "marketplace_eligible",
+                "ALTER TABLE users ADD COLUMN marketplace_eligible BOOLEAN NOT NULL DEFAULT 0",
+            ),
+        ] {
+            if !columns.iter().any(|row| {
+                row.try_get::<String>("", "name")
+                    .is_ok_and(|value| value == name)
+            }) {
+                transaction.execute_unprepared(ddl).await?;
+            }
+        }
+        transaction
+            .execute_unprepared(include_str!("agent_definition_authority_sqlite.sql"))
+            .await?;
+    }
+    transaction.commit().await
 }
 
 async fn insert_default_or_ignore<C>(

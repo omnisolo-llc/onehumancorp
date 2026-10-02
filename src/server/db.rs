@@ -3269,6 +3269,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
+                sqlx::raw_sql(include_str!("persistence/agent_definitions_sqlite.sql"))
+                    .execute(sqlite_pool)
+                    .await?;
                 ensure_sqlite_column(
                     sqlite_pool,
                     "orders",

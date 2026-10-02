@@ -12,6 +12,12 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_agent_definition_gate_requires_real_database_and_complete_inventory(self):
+        minimum,database=gate.GATES['agent-definition-contract']
+        self.assertGreaterEqual(minimum,48)
+        self.assertEqual(database,'OHC_AGENT_DEFINITION_TEST_DATABASE_URL')
+        self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/agent-definition-contract/run.sh').is_file())
+
     def test_bootstrap_portable_role_gate_is_mandatory_and_complete(self):
         self.assertIn('bootstrap-portable-roles', gate.GATES)
         minimum, database = gate.GATES['bootstrap-portable-roles']
