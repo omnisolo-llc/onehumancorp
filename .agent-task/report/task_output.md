@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Implement OHC Unified Work Feed - Competitor Research & Issue Brief"
+issue_description: "The request proposes building a native Rust-based omnichannel chat system and a unified frontend feed, replacing external services like Chatwoot. According to RESEARCH.md, the core strategic directive is to 'Integrate existing tools instead of rebuilding them.' Requests to build native replacements for external services without explicit authorization, evidence, and an expansion gate must be rejected with a no_work outcome. Additionally, a natural-language task graph paired with an approval-and-execution UI falls within the explicitly deferred 'visual workflow builders' scope."
