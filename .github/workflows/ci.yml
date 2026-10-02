@@ -874,6 +874,14 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_search_test
           python3 scripts/focused_ci_gate.py tenant-search
+      - name: Verify bootstrap administrator roles through portable authentication
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SETUP_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_setup_role_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_setup_role_test
+          python3 scripts/focused_ci_gate.py bootstrap-portable-roles
       - name: Verify agent workflow tenant isolation and requested tasks offline
         if: ${{ !cancelled() }}
         env:

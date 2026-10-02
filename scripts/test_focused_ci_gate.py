@@ -12,6 +12,13 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_bootstrap_portable_role_gate_is_mandatory_and_complete(self):
+        self.assertIn('bootstrap-portable-roles', gate.GATES)
+        minimum, database = gate.GATES['bootstrap-portable-roles']
+        self.assertGreaterEqual(minimum, 9)
+        self.assertEqual(database, 'OHC_SETUP_TEST_DATABASE_URL')
+        self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/bootstrap-portable-roles/run.sh').is_file())
+
     def test_tenant_search_gate_runs_all_real_database_cases(self):
         minimum, database = gate.GATES['tenant-search']
         self.assertGreaterEqual(minimum, 13)
