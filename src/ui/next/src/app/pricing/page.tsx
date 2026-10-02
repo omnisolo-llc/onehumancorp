@@ -8,6 +8,17 @@ import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import '../components/ViralTrialExtensionWidget';
 import { PricingCard } from './PricingCard';
+import { fetchForOwnedBusinessAction, fetchForOwnedBusinessRead, onboardingOwner, onboardingSessionEpoch, openOnboardingSession, subscribeOnboardingInvalidation } from '../onboarding/draftSession';
+import { hasVerifiedOfflineQueueOwner, QUEUE_IDENTITY_EPOCH_KEY, sameOwner, subscribeQueueIdentityReadiness, type QueueOwner } from '@/lib/sync/queueIdentity';
+
+type BillingScope = { owner: QueueOwner; epoch: number; storageEpoch: string | null };
+function billingScopeActive(scope: BillingScope | null, requireFreshIdentity = true): scope is BillingScope {
+  const owner = onboardingOwner();
+  try {
+    return !!scope && !!owner && scope.epoch === onboardingSessionEpoch() && sameOwner(scope.owner, owner)
+      && scope.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && (!requireFreshIdentity || hasVerifiedOfflineQueueOwner(scope.owner));
+  } catch { return false; }
+}
 
 
 type PlanSummary = Partial<import('@/lib/business-records').BillingPlan> & { current_plan: string };
@@ -34,62 +45,96 @@ export default function PricingPage() {
   const [planDetails, setPlanDetails] = useState<PlanSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAnnual, setIsAnnual] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
   const checkoutPending = useRef(false);
+  const portalPending = useRef(false);
+  const scope = useRef<BillingScope | null>(null);
 
   useEffect(() => {
-    const fetchPlanData = async () => {
-      try {
-        const response = await fetch('/api/v1/billing/my-plan');
-        const summary = response.status === 200 ? readPlanSummary(await response.json()) : null;
-        setCurrentPlan(summary?.current_plan ?? null);
-        setPlanDetails(summary);
-      } catch (error) {
-        if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
-        console.error('Failed to fetch plan data:', error);
-      } finally {
-        setLoading(false);
+    let active = true;
+    let retired = false;
+    const retire = () => {
+      retired = true; scope.current = null;
+      if (active) {
+        setCurrentPlan(null); setPlanDetails(null); setLoading(false);
+        setBillingError('Your session changed. Reload pricing to verify billing access.');
       }
     };
-
-    fetchPlanData();
+    const unsubscribeSession = subscribeOnboardingInvalidation(retire);
+    const unsubscribeIdentity = subscribeQueueIdentityReadiness(() => {
+      if (scope.current && hasVerifiedOfflineQueueOwner() && !hasVerifiedOfflineQueueOwner(scope.current.owner)) retire();
+    });
+    void (async () => {
+      try {
+        const owner = await openOnboardingSession();
+        if (!active || retired) return;
+        const current: BillingScope = { owner, epoch: onboardingSessionEpoch(), storageEpoch: localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) };
+        scope.current = current;
+        const response = await fetchForOwnedBusinessRead('/api/v1/billing/my-plan', owner);
+        const summary = response.status === 200 ? readPlanSummary(await response.json()) : null;
+        if (!active || scope.current !== current || !billingScopeActive(current)) return;
+        setCurrentPlan(summary?.current_plan ?? null); setPlanDetails(summary);
+      } catch {
+        if (active && !retired) { setCurrentPlan(null); setPlanDetails(null); }
+      } finally {
+        if (active && !retired) setLoading(false);
+      }
+    })();
+    return () => { active = false; scope.current = null; unsubscribeSession(); unsubscribeIdentity(); };
   }, []);
 
   const handleManageBilling = async () => {
+    const current = scope.current;
+    if (portalPending.current || !billingScopeActive(current, false)) return;
+    const active = () => scope.current === current && billingScopeActive(current);
+    portalPending.current = true;
+    setBillingError(null);
     try {
-      const response = await fetch('/api/v1/billing/create-billing-portal-session', {
+      const response = await fetchForOwnedBusinessAction('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-      });
+      }, current.owner, () => { if (!active()) throw new Error('Billing view changed'); });
 
-      if (!response.ok) {
+      if (!response.ok || ![200, 201].includes(response.status)) {
         throw new Error('Failed to create billing portal session');
       }
 
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
+      const data: unknown = await response.json();
+      if (!data || typeof data !== 'object' || Array.isArray(data)
+        || ('success' in data && data.success !== true) || ('error' in data && data.error != null)
+        || !('url' in data) || typeof data.url !== 'string'
+        || data.url.trim() !== data.url || data.url.includes('\\')) {
+        throw new Error('Invalid billing portal receipt');
       }
-    } catch (error) {
-      console.error('Upgrade error:', error);
-      alert('Failed to initiate billing portal. Please try again.');
+      const portalUrl = new URL(data.url);
+      if (portalUrl.protocol !== 'https:' || portalUrl.hostname !== 'billing.stripe.com'
+        || portalUrl.port || portalUrl.username || portalUrl.password || portalUrl.pathname === '/') {
+        throw new Error('Invalid billing portal destination');
+      }
+      if (active()) window.location.href = portalUrl.href;
+    } catch {
+      if (active()) setBillingError('The billing portal is unavailable. Please try again.');
+    } finally {
+      portalPending.current = false;
     }
   };
 
   const handleUpgrade = async (tier: string, isAnnualSelected?: boolean) => {
-    if (checkoutPending.current) return;
+    const current = scope.current;
+    if (checkoutPending.current || !billingScopeActive(current, false)) return;
+    const active = () => scope.current === current && billingScopeActive(current);
     checkoutPending.current = true;
-    setCheckoutError(null);
+    setBillingError(null);
     try {
-      const response = await fetch('/api/v1/billing/create-checkout-session', {
+      const response = await fetchForOwnedBusinessAction('/api/v1/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ tier, is_subscription: true, subscription_interval: isAnnualSelected ? 'year' : 'month' }),
-      });
+      }, current.owner, () => { if (!active()) throw new Error('Billing view changed'); });
 
       if (!response.ok || ![200, 201].includes(response.status)) {
         throw new Error('Failed to create checkout session');
@@ -107,9 +152,9 @@ export default function PricingPage() {
         || checkoutUrl.port || checkoutUrl.username || checkoutUrl.password || checkoutUrl.pathname === '/') {
         throw new Error('Invalid checkout destination');
       }
-      window.location.href = checkoutUrl.href;
+      if (active()) window.location.href = checkoutUrl.href;
     } catch {
-      setCheckoutError('Checkout is unavailable. Your plan has not changed. Please try again.');
+      if (active()) setBillingError('Checkout is unavailable. Your plan has not changed. Please try again.');
     } finally {
       checkoutPending.current = false;
     }
@@ -125,7 +170,7 @@ export default function PricingPage() {
       </header>
 
       <main id="pricing-screen" className="p-4 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-6">
-        {checkoutError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{checkoutError}</p>}
+        {billingError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{billingError}</p>}
         <div className="text-center mb-4 md:mb-8 max-w-2xl mx-auto">
           <p className="text-base md:text-lg text-gray-600 leading-relaxed">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>
