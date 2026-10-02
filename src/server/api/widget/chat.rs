@@ -1,12 +1,12 @@
+use crate::db::DB;
+use crate::domain::repository::omnichannel_repo::OmniChannelRepo;
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::domain::repository::omnichannel_repo::OmniChannelRepo;
-use crate::db::DB;
 
 pub struct WidgetChatState {
     pub repo: OmniChannelRepo,
@@ -40,7 +40,11 @@ pub async fn create_conversation(
 ) -> Result<Json<CreateConversationResponse>, axum::http::StatusCode> {
     let channel = req.channel.unwrap_or_else(|| "widget".to_string());
 
-    match state.repo.create_conversation(req.tenant_id, None, None, channel, "OPEN".to_string()).await {
+    match state
+        .repo
+        .create_conversation(req.tenant_id, None, None, channel, "OPEN".to_string())
+        .await
+    {
         Ok(conv) => Ok(Json(CreateConversationResponse {
             id: conv.id,
             tenant_id: conv.tenant_id,
@@ -74,7 +78,11 @@ pub async fn create_message(
 ) -> Result<Json<CreateMessageResponse>, axum::http::StatusCode> {
     let direction = req.direction.unwrap_or_else(|| "INBOUND".to_string());
 
-    match state.repo.create_message(req.tenant_id, req.conversation_id, direction, req.content).await {
+    match state
+        .repo
+        .create_message(req.tenant_id, req.conversation_id, direction, req.content)
+        .await
+    {
         Ok(msg) => Ok(Json(CreateMessageResponse {
             id: msg.id,
             tenant_id: msg.tenant_id,
@@ -90,17 +98,24 @@ pub async fn get_messages(
     State(state): State<Arc<WidgetChatState>>,
     Path((_tenant_id, conversation_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Vec<CreateMessageResponse>>, axum::http::StatusCode> {
-    match state.repo.get_messages_by_conversation_id(conversation_id).await {
+    match state
+        .repo
+        .get_messages_by_conversation_id(conversation_id)
+        .await
+    {
         Ok(messages) => {
-            let res = messages.into_iter().map(|msg| CreateMessageResponse {
-                id: msg.id,
-                tenant_id: msg.tenant_id,
-                conversation_id: msg.conversation_id,
-                direction: msg.direction,
-                content: msg.content,
-            }).collect();
+            let res = messages
+                .into_iter()
+                .map(|msg| CreateMessageResponse {
+                    id: msg.id,
+                    tenant_id: msg.tenant_id,
+                    conversation_id: msg.conversation_id,
+                    direction: msg.direction,
+                    content: msg.content,
+                })
+                .collect();
             Ok(Json(res))
-        },
+        }
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
