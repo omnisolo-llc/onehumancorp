@@ -47,6 +47,24 @@ describe('LinkInBioGeneratorPage', () => {
     });
   });
 
+  it('exposes exclusive theme selection and restores it through real theme clicks', async () => {
+    await act(async () => { render(<LinkInBioGeneratorPage />); });
+    const light = screen.getByRole('button', { name: 'Light', exact: true });
+    const dark = screen.getByRole('button', { name: 'Dark', exact: true });
+    expect(dark).toHaveAttribute('aria-pressed', 'true');
+    expect(light).toHaveAttribute('aria-pressed', 'false');
+    const preview = screen.getByRole('link', { name: 'Existing Link' });
+    expect(preview).toHaveClass('bg-[#222222]');
+    fireEvent.click(light);
+    expect(light).toHaveAttribute('aria-pressed', 'true');
+    expect(dark).toHaveAttribute('aria-pressed', 'false');
+    expect(preview).toHaveClass('bg-white');
+    fireEvent.click(dark);
+    expect(dark).toHaveAttribute('aria-pressed', 'true');
+    expect(light).toHaveAttribute('aria-pressed', 'false');
+    expect(preview).toHaveClass('bg-[#222222]');
+  });
+
   it('adds and removes links', async () => {
     await act(async () => {
         render(<LinkInBioGeneratorPage />);

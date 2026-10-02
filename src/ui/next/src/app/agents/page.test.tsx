@@ -374,3 +374,26 @@ test('unsupported task media and result actions explain their unavailable state'
 });
 
 afterEach(() => vi.unstubAllGlobals());
+
+
+test('keeps the approval navigation purpose stable when its asynchronous count arrives', async () => {
+  const original = mockFetch.getMockImplementation()!;
+  let resolveApprovals!: (response: Response) => void;
+  const approvals = new Promise<Response>(resolve => { resolveApprovals = resolve; });
+  mockFetch.mockImplementation((url: string, ...args: unknown[]) =>
+    url === '/api/v1/agents/approvals' ? approvals : original(url, ...args));
+  render(<TooltipProvider><AgentsPage /></TooltipProvider>);
+  const button = screen.getByRole('button', { name: 'Needs Approval', exact: true });
+  await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/approvals', expect.anything()));
+  await act(async () => resolveApprovals(Response.json({ pending_approvals: [
+    { id: 'pending-1', department: 'sales', description: 'Review a quote', status: 'Draft' },
+    { id: 'pending-2', department: 'sales', description: 'Review another quote', status: 'Draft' },
+  ] })));
+  expect(button).toHaveTextContent('(2)');
+  expect(button).toHaveAccessibleName('Needs Approval');
+  expect(button).toHaveAccessibleDescription('(2) pending approvals');
+  fireEvent.click(button);
+  expect(button).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('heading', { name: 'Needs Approval' })).toBeVisible();
+  expect(screen.getByText('Review a quote')).toBeVisible();
+});

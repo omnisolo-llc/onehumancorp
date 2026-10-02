@@ -225,12 +225,14 @@ export default function LinkInBioGeneratorPage() {
               <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Theme</h2>
               <div className="flex gap-4">
                 <button
+                  aria-pressed={theme === 'light'}
                   onClick={() => setTheme('light')}
                   className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-all ${theme === 'light' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-400'}`}
                 >
                   Light
                 </button>
                 <button
+                  aria-pressed={theme === 'dark'}
                   onClick={() => setTheme('dark')}
                   className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-all ${theme === 'dark' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-400'}`}
                 >

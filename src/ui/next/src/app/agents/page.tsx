@@ -275,6 +275,8 @@ export default function AgentsPage() {
                 type="button"
                 onClick={() => { setPanel(id as Panel); if (id === 'operations') setSelectedDepartment(null); }}
                 aria-pressed={panel === id}
+                aria-label={label}
+                aria-describedby={id === 'approvals' && approvals.length > 0 ? 'agent-pending-approvals-count' : undefined}
                 className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all border outline-none ${
                   panel === id
                     ? 'border-teal-600 bg-teal-600 text-white shadow-sm'
@@ -282,7 +284,7 @@ export default function AgentsPage() {
                 }`}
               >
                 {label}
-                {id === 'approvals' && approvals.length > 0 ? ` (${approvals.length})` : ''}
+                {id === 'approvals' && approvals.length > 0 && <span id="agent-pending-approvals-count"> ({approvals.length}) <span className="sr-only">pending approvals</span></span>}
               </button>
             ))}
           </nav>

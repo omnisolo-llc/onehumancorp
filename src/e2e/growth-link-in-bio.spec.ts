@@ -15,7 +15,7 @@ test.describe('Private Link in Bio Generator', () => {
     const response=await pending;expect(response.status()).toBe(200);expect(await response.text()).toBe('');
     expect(response.request().postDataJSON().tenant_id).toBe(actor.tenantId);expect(response.request().headers()['x-ohc-expected-user']).toBe(actor.userId);
     await expect(page.getByRole('status',{name:'Private profile status'})).toContainText('Saved private configuration');
-    await expect(page.getByRole('status',{name:'Private profile status'})).toContainText('Public publication is not available');
+    await expect(page.getByRole('status',{name:'Private profile status'})).toContainText('Public publication requires a separate review below.');
     await page.goto(`/bio/${encodeURIComponent(actor.tenantId)}`);
     await expect(page.getByRole('heading',{name:'My Awesome Creator Store'})).toBeVisible();await expect(page.getByText('This is a test bio description.')).toBeVisible();
     const link=page.getByRole('link',{name:'My Custom Link'});await expect(link).toBeVisible();await expect(link).toHaveAttribute('href','https://example.com/shop');
