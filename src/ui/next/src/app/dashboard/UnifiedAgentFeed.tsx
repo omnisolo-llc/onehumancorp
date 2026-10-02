@@ -667,14 +667,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 Loading Agent Proposals...
               </div>
             )}
-            {!loading && items.length === 0 && (
+            {!loading && !error && items.length === 0 && (
               <div
                 className="w-full flex flex-col items-center gap-6 p-6 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm  shadow-sm opacity-90 text-center"
                 data-testid="triage-feed-empty"
               >
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  All caught up! Your business is running smoothly.
+                  No pending proposals are recorded.
                 </h3>
                 <div className="w-full max-w-md text-left">
                   <GrowthReferralWidget />
@@ -747,7 +747,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
             })}
             {items.length > 0 && (
               <div data-testid="triage-feed-empty" className="text-center py-2 text-xs text-gray-500">
-                All caught up on automated triage proposals!
+                {items.length} recorded proposal{items.length === 1 ? "" : "s"} in this feed.
               </div>
             )}
           </>

@@ -149,3 +149,28 @@ it('delegates reconnection to the durable queue instead of sending queued approv
   expect(queue.removeAction).not.toHaveBeenCalled();
   vi.mocked(queue.getActions).mockResolvedValue([]);
 });
+
+it('describes a verified empty feed without claiming that the business is healthy', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ items: [] })));
+  render(<UnifiedAgentFeed initialData={{ items: [], activity: [] }} />);
+  expect(await screen.findByRole('heading', { name: 'No pending proposals are recorded.' })).toBeVisible();
+  expect(screen.queryByText(/your business is running smoothly/i)).not.toBeInTheDocument();
+});
+
+it('does not claim an empty feed when its initial read failed', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 503 })));
+  const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    render(<UnifiedAgentFeed initialData={{ items: [], activity: [] }} />);
+    expect(await screen.findByText('Feed temporarily unavailable')).toBeVisible();
+    expect(screen.queryByTestId('triage-feed-empty')).not.toBeInTheDocument();
+    expect(screen.queryByText(/your business is running smoothly|no pending proposals are recorded/i)).not.toBeInTheDocument();
+  } finally { errorLog.mockRestore(); }
+});
+
+it('does not claim all proposals are handled while a recorded proposal still awaits review', async () => {
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await screen.findByTestId('triage-card-decision-1');
+  expect(screen.queryByText('All caught up on automated triage proposals!')).not.toBeInTheDocument();
+  expect(screen.getByText('1 recorded proposal in this feed.')).toBeVisible();
+});
