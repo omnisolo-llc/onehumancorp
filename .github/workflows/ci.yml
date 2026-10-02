@@ -382,14 +382,15 @@ jobs:
     name: Native real-stack Playwright ${{ matrix.shard }}/12
     strategy:
       fail-fast: false
-      # Keep all twelve shards, reserving four runners for Rust, desktop,
-      # Kind and Compose. Together the complete job graph uses at most eight.
+      # Keep all twelve shards; the desktop fence leaves at most four other
+      # runners for Rust, PostgreSQL, Kind and Compose (DAG-tested total: eight).
       max-parallel: 4
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    needs: [check-changes, native-build, native-web, dependency-audit, native-node, postgres-security]
-    # These independent quality lanes release their runner slots first, but a
-    # failure there must not conceal browser results for successfully built code.
+    needs: [check-changes, native-build, native-web, dependency-audit, native-node, native-desktop]
+    # Browser setup owns its database; PostgreSQL correctness remains mandatory
+    # in CI Required and can run concurrently. Desktop releases its runner first.
+    # A quality failure must not conceal browser results for successfully built code.
     if: ${{ !cancelled() && needs.check-changes.outputs.markdown-only == 'false' && needs.native-build.result == 'success' && needs.native-web.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
