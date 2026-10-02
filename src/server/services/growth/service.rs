@@ -871,7 +871,9 @@ mod tests {
             });
             request.metadata_mut().insert(
                 "x-spiffe-id",
-                "spiffe://omnisolo.io/fixture-owner/agent1".parse().unwrap(),
+                "spiffe://omnisolo.io/org/fixture-owner/agent/agent1"
+                    .parse()
+                    .unwrap(),
             );
             let error = service.convert_referral(request).await.unwrap_err();
             assert_eq!(error.code(), tonic::Code::FailedPrecondition);
