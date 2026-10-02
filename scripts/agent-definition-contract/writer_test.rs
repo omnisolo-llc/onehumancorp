@@ -238,3 +238,63 @@ async fn legacy_postgres_user_writer_cannot_override_canonical_revocation() {
     drop(legacy);
     pg.close().await;
 }
+
+#[tokio::test]
+async fn actual_browser_growth_owner_cte_creates_current_authority_atomically() {
+    let pg = PgFixture::new().await;
+    sqlx::raw_sql(include_str!(
+        "../../src/server/migrations/110_trial_extension_claim.sql"
+    ))
+    .execute(&pg.admin)
+    .await
+    .unwrap();
+    let tenant = format!("e2e-growth-{}", Uuid::new_v4());
+    let user = format!("e2e-growth-owner-{}", Uuid::new_v4());
+    let email = format!("growth-{}@example.test", Uuid::new_v4());
+    // Byte-exact SQL extracted from the maintained browser fixture. Only its
+    // parameter values are synthetic; the writable CTE ordering is unchanged.
+    let created: (String, String) = sqlx::query_as(include_str!("growth_owner.sql"))
+        .bind(&tenant)
+        .bind(&user)
+        .bind(&email)
+        .bind("user-a")
+        .bind("pg-a")
+        .fetch_one(&pg.admin)
+        .await
+        .unwrap();
+    assert_eq!(created, (user.clone(), tenant.clone()));
+    let canonical: String = sqlx::query_scalar(
+        "SELECT role_name FROM identity_user_roles WHERE user_id=$1 AND tenant_id=$2",
+    )
+    .bind(&user)
+    .bind(&tenant)
+    .fetch_one(&pg.admin)
+    .await
+    .unwrap();
+    assert_eq!(canonical, "ADMIN");
+    let eligible: bool = sqlx::query_scalar("SELECT a.eligible FROM users u JOIN agent_definition_authorities a ON a.authority_key=u.marketplace_authority_key WHERE u.id=$1 AND u.tenant_id=$2")
+        .bind(&user).bind(&tenant).fetch_one(&pg.admin).await.unwrap();
+    assert!(
+        eligible,
+        "the single browser fixture statement must leave derived authority current"
+    );
+    let receipt = pg
+        .store
+        .publish(&owner(&tenant, &user), &typed_publish())
+        .await
+        .unwrap();
+    assert_eq!(receipt.status, "published");
+    sqlx::query("DELETE FROM identity_user_roles WHERE user_id=$1 AND tenant_id=$2")
+        .bind(&user)
+        .bind(&tenant)
+        .execute(&pg.admin)
+        .await
+        .unwrap();
+    assert!(matches!(
+        pg.store
+            .publish(&owner(&tenant, &user), &typed_publish())
+            .await,
+        Err(crate::agent_definitions::Error::Forbidden)
+    ));
+    pg.close().await;
+}

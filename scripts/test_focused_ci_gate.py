@@ -14,7 +14,7 @@ SPEC.loader.exec_module(gate)
 class FocusedGateTests(unittest.TestCase):
     def test_agent_definition_gate_requires_real_database_and_complete_inventory(self):
         minimum,database=gate.GATES['agent-definition-contract']
-        self.assertGreaterEqual(minimum,48)
+        self.assertGreaterEqual(minimum,49)
         self.assertEqual(database,'OHC_AGENT_DEFINITION_TEST_DATABASE_URL')
         self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/agent-definition-contract/run.sh').is_file())
 

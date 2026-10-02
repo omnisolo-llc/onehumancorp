@@ -4,3 +4,4 @@ source-manifest.json
 core_pg.sql
 core_sqlite.sql
 setup_source.rs
+growth_owner.sql

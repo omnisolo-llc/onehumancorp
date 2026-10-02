@@ -702,7 +702,7 @@ impl PgFixture {
         assert!(
             database.starts_with("ohc_")
                 && database.ends_with("_test")
-                && database.len() > 8
+                && database.len() > "ohc__test".len()
                 && database.len() <= 63
                 && database
                     .bytes()

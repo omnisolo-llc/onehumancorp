@@ -72,4 +72,4 @@ The private operation receipt and installation belong to the verified tenant and
 
 ## Verification boundary
 
-The mandatory agent-definition-contract CI gate executes the full source-bound PostgreSQL/SQLite inventory with a minimum of48 cases and no ignored or filtered cases. It retains source fingerprints and logs. Full server compilation, the paired BFF/UI, and actual browser journeys remain separate required checks. See scripts/agent-definition-contract/README.md for fixture privileges and the exact scope of fault and concurrency coverage.
+The mandatory agent-definition-contract CI gate executes the full source-bound PostgreSQL/SQLite inventory with a minimum of 49 cases and no ignored or filtered cases. It retains source fingerprints and logs. Full server compilation, the paired BFF/UI, and actual browser journeys remain separate required checks. See scripts/agent-definition-contract/README.md for fixture privileges and the exact scope of fault and concurrency coverage.
