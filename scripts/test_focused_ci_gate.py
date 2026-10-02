@@ -31,6 +31,17 @@ class FocusedGateTests(unittest.TestCase):
         self.assertIn('python3 scripts/focused_ci_gate.py proactive-worker-contract', workflow)
         self.assertIn('bash scripts/proactive-worker-contract/fetch.sh', workflow)
 
+    def test_staff_reads_require_real_owned_database_and_preserved_failure_cases(self):
+        minimum, database = gate.GATES['staff-read-contract']
+        self.assertGreaterEqual(minimum, 8)
+        self.assertEqual(database, 'OHC_STAFF_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertIn('python3 scripts/focused_ci_gate.py staff-read-contract', workflow)
+        self.assertIn('bash scripts/staff-read-contract/fetch.sh', workflow)
+        self.assertIn('--locked --offline', (root/'scripts/staff-read-contract/run.sh').read_text())
+
+
     def test_builder_generation_requires_real_http_and_owned_storage(self):
         minimum, database = gate.GATES['builder-generation-contract']
         self.assertGreaterEqual(minimum, 50)

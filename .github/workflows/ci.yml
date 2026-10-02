@@ -934,6 +934,15 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_widget_chat_test
           python3 scripts/focused_ci_gate.py widget-chat-contract
 
+      - name: Verify recorded staff reads and native staff migrations
+        if: ${{ !cancelled() }}
+        env:
+          OHC_STAFF_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_staff_read_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_staff_read_test
+          bash scripts/staff-read-contract/fetch.sh
+          python3 scripts/focused_ci_gate.py staff-read-contract
       - name: Verify signed-tenant appointment reads
         if: ${{ !cancelled() }}
         env:

@@ -1,0 +1,20 @@
+[package]
+name = "ohc-staff-read-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+server_common = { path = "../../src/server/common" }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

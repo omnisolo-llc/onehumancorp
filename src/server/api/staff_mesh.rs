@@ -327,8 +327,14 @@ pub async fn get_staff_handler(
             .fetch_all(pool)
             .await;
 
-            rows.unwrap_or_default()
-                .into_iter()
+            let Ok(rows) = rows else {
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                )
+                    .into_response();
+            };
+            rows.into_iter()
                 .map(|(id, name, phone_number, role)| StaffMember {
                     id,
                     name,
@@ -373,8 +379,14 @@ pub async fn get_staff_handler(
                     .into_response();
             }
 
-            rows.unwrap_or_default()
-                .into_iter()
+            let Ok(rows) = rows else {
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                )
+                    .into_response();
+            };
+            rows.into_iter()
                 .map(|(id, name, phone_number, role)| StaffMember {
                     id,
                     name,
@@ -684,22 +696,26 @@ pub async fn get_tasks_handler(
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await;
-            rows.map(|rows| {
-                rows.into_iter()
-                    .map(|row| {
-                        use sqlx::Row;
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "staff_id": row.get::<String, _>("staff_id"),
-                            "title": row.get::<String, _>("title"),
-                            "description": row.get::<String, _>("description"),
-                            "status": row.get::<String, _>("status"),
-                            "priority": row.get::<String, _>("priority"),
-                        })
+            let Ok(rows) = rows else {
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                )
+                    .into_response();
+            };
+            rows.into_iter()
+                .map(|row| {
+                    use sqlx::Row;
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "staff_id": row.get::<String, _>("staff_id"),
+                        "title": row.get::<String, _>("title"),
+                        "description": row.get::<String, _>("description"),
+                        "status": row.get::<String, _>("status"),
+                        "priority": row.get::<String, _>("priority"),
                     })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default()
+                })
+                .collect::<Vec<_>>()
         }
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
@@ -733,22 +749,26 @@ pub async fn get_tasks_handler(
                 )
                     .into_response();
             }
-            rows.map(|rows| {
-                rows.into_iter()
-                    .map(|row| {
-                        use sqlx::Row;
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "staff_id": row.get::<String, _>("staff_id"),
-                            "title": row.get::<String, _>("title"),
-                            "description": row.get::<String, _>("description"),
-                            "status": row.get::<String, _>("status"),
-                            "priority": row.get::<String, _>("priority"),
-                        })
+            let Ok(rows) = rows else {
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                )
+                    .into_response();
+            };
+            rows.into_iter()
+                .map(|row| {
+                    use sqlx::Row;
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "staff_id": row.get::<String, _>("staff_id"),
+                        "title": row.get::<String, _>("title"),
+                        "description": row.get::<String, _>("description"),
+                        "status": row.get::<String, _>("status"),
+                        "priority": row.get::<String, _>("priority"),
                     })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default()
+                })
+                .collect::<Vec<_>>()
         }
     };
     (axum::http::StatusCode::OK, Json(GetTasksResponse { tasks })).into_response()
@@ -956,20 +976,24 @@ pub async fn get_summaries_handler(
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await;
-            rows.map(|rows| {
-                rows.into_iter()
-                    .map(|row| {
-                        use sqlx::Row;
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "summary_text": row.get::<String, _>("summary_text"),
-                            "escalations": row.get::<Option<String>, _>("escalations"),
-                            "created_at": row.get::<String, _>("created_at"),
-                        })
+            let Ok(rows) = rows else {
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                )
+                    .into_response();
+            };
+            rows.into_iter()
+                .map(|row| {
+                    use sqlx::Row;
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "summary_text": row.get::<String, _>("summary_text"),
+                        "escalations": row.get::<Option<String>, _>("escalations"),
+                        "created_at": row.get::<String, _>("created_at"),
                     })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default()
+                })
+                .collect::<Vec<_>>()
         }
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
@@ -1003,20 +1027,24 @@ pub async fn get_summaries_handler(
                 )
                     .into_response();
             }
-            rows.map(|rows| {
-                rows.into_iter()
-                    .map(|row| {
-                        use sqlx::Row;
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "summary_text": row.get::<String, _>("summary_text"),
-                            "escalations": row.get::<Option<String>, _>("escalations"),
-                            "created_at": row.get::<String, _>("created_at"),
-                        })
+            let Ok(rows) = rows else {
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                )
+                    .into_response();
+            };
+            rows.into_iter()
+                .map(|row| {
+                    use sqlx::Row;
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "summary_text": row.get::<String, _>("summary_text"),
+                        "escalations": row.get::<Option<String>, _>("escalations"),
+                        "created_at": row.get::<String, _>("created_at"),
                     })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default()
+                })
+                .collect::<Vec<_>>()
         }
     };
     (
@@ -1116,96 +1144,6 @@ pub async fn get_escalations_handler(
         .into_response()
 }
 
-pub async fn simulate_event_handler(
-    claims: Option<Extension<::server_common::Claims>>,
-    State(_db): State<Arc<DB>>,
-) -> impl IntoResponse {
-    let tenant_id = match get_tenant_id(claims.as_ref()) {
-        Some(id) => id,
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({"error": "unauthorized"})),
-            )
-                .into_response();
-        }
-    };
-    let task_id = format!("task_{}", Uuid::new_v4());
-    let staff_id = "unassigned";
-
-    let pool = crate::db::get_pool();
-    let res = sqlx::query(
-        "INSERT INTO staff_tasks (id, tenant_id, staff_id, description, status, priority) VALUES ($1, $2, $3, $4, $5, $6)",
-    )
-    .bind(&task_id)
-    .bind(&tenant_id)
-    .bind(staff_id)
-    .bind("Simulated Event: Low Inventory")
-    .bind("pending")
-    .bind("high")
-    .execute(&pool)
-    .await;
-
-    if res.is_ok() {
-        (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({"success": true})),
-        )
-            .into_response()
-    } else {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": "failed to simulate event"})),
-        )
-            .into_response()
-    }
-}
-
-pub async fn generate_summary_handler(
-    claims: Option<Extension<::server_common::Claims>>,
-    State(_db): State<Arc<DB>>,
-) -> impl IntoResponse {
-    let tenant_id = match get_tenant_id(claims.as_ref()) {
-        Some(id) => id,
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({"error": "unauthorized"})),
-            )
-                .into_response();
-        }
-    };
-
-    let summary_id = format!("sum_{}", Uuid::new_v4());
-
-    // Simulate LLM summary generation
-    let summary_text = "Shift Summary: Staff completed 3 inventory tasks and handled 2 orders smoothly. No escalations reported. (Simulated AI Summary)";
-
-    let pool = crate::db::get_pool();
-    let res = sqlx::query(
-        "INSERT INTO shift_summaries (id, tenant_id, shift_date, summary_text) VALUES ($1, $2, CURRENT_DATE, $3)",
-    )
-    .bind(&summary_id)
-    .bind(&tenant_id)
-    .bind(summary_text)
-    .execute(&pool)
-    .await;
-
-    if res.is_ok() {
-        (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({"success": true})),
-        )
-            .into_response()
-    } else {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": "failed to generate summary"})),
-        )
-            .into_response()
-    }
-}
-
 pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     Router::new()
         .route("/", post(create_staff_handler).get(get_staff_handler))
@@ -1222,14 +1160,6 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route("/summaries", axum::routing::get(get_summaries_handler))
         .route("/shifts", axum::routing::get(get_shifts_handler))
         .route("/escalations", axum::routing::get(get_escalations_handler))
-        .route(
-            "/simulate-event",
-            axum::routing::post(simulate_event_handler),
-        )
-        .route(
-            "/generate-summary",
-            axum::routing::post(generate_summary_handler),
-        )
         .with_state(db)
 }
 
@@ -1242,6 +1172,52 @@ mod tests {
         http::{Request, StatusCode},
     };
     use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn retired_demo_routes_never_reach_storage_or_fabricate_summaries() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let db = Arc::new(DB {
+            pool: crate::db::secure_pg_pool_options()
+                .connect_lazy("postgres://unused@127.0.0.1:1/unused")
+                .unwrap(),
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        });
+        let claims = ::server_common::Claims {
+            sub: "staff-demo-regression".into(),
+            exp: 4_000_000_000,
+            iat: 0,
+            organization_id: Some("test-tenant".into()),
+            username: String::new(),
+            email: String::new(),
+            roles: vec!["ADMIN".into()],
+            session_id: None,
+            jti: "explicit-test-identity".into(),
+        };
+        let app: Router = router(db).layer(Extension(claims));
+        for path in ["/simulate-event", "/generate-summary"] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(path)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND, "{path}");
+        }
+        let created_tables: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                .fetch_one(&sqlite_pool)
+                .await
+                .unwrap();
+        assert_eq!(created_tables, 0);
+    }
 
     #[tokio::test]
     async fn test_staff_mesh_flow() {
