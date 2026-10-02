@@ -1,3 +1,3 @@
 outcome: no_work
-issue_title: "Native Rust Omnichannel Chat System - Core Architecture"
-issue_description: "According to RESEARCH.md, the core strategic directive is to integrate existing tools instead of rebuilding them. Requests to build native replacements for external services (such as Chatwoot) without explicit authorization, evidence, and an expansion gate must be rejected."
+issue_title: "Implement Agentic Unresolved Pain Point Solutions based on Shopify Sidekick Deep Dive"
+issue_description: "The issue requests building a native Rust-based omnichannel engine inspired by Chatwoot's source to handle all I/O. According to memory and the current instructions: 'Requests to build native replacements for external services (e.g., Chatwoot) ... require explicit authorization, evidence, and an expansion gate in RESEARCH.md; otherwise, return a no_work finding.' I have searched RESEARCH.md and found no expansion gate or explicit authorization for building a native omnichannel replacement for Chatwoot. Therefore, this issue is blocked."
