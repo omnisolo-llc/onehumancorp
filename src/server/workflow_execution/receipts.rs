@@ -85,6 +85,29 @@ pub(crate) struct DispatchLease {
     receipt: Receipt,
     admitted: AdmittedAnalysis,
     nonce: String,
+    fingerprint: String,
+}
+
+/// Internal storage-finalization capability, never an HTTP input or DTO.
+/// It cannot repeat provider execution; it only acknowledges this exact claim.
+#[derive(Clone)]
+pub(crate) struct CompletionProof {
+    pub(super) receipt: Receipt,
+    pub(super) authority: Authority,
+    pub(super) nonce: String,
+    pub(super) generation: i64,
+    pub(super) fingerprint: String,
+}
+impl DispatchLease {
+    pub(crate) fn completion_proof(&self) -> CompletionProof {
+        CompletionProof {
+            receipt: self.receipt.clone(),
+            authority: self.admitted.authority.clone(),
+            nonce: self.nonce.clone(),
+            generation: 1,
+            fingerprint: self.fingerprint.clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -247,7 +270,7 @@ impl ReceiptStore {
         Self { database }
     }
 
-    async fn transaction(
+    async fn begin_transaction(
         &self,
         authority: &Authority,
         write: bool,
@@ -301,11 +324,19 @@ impl ReceiptStore {
         .await?
         .ok_or(Error::Unavailable)?;
         let now: i64 = field(&clock, "now")?;
+        Ok((tx, now))
+    }
+
+    async fn require_authority(
+        tx: &DatabaseTransaction,
+        authority: &Authority,
+        now: i64,
+    ) -> Result<(), Error> {
         if authority.expires_at <= now {
             return Err(Error::Forbidden);
         }
         let identity = row(
-            &tx,
+            tx,
             "SELECT active FROM users WHERE id=$1 AND tenant_id=$2",
             vec![(&authority.actor_id).into(), (&authority.tenant_id).into()],
         )
@@ -316,7 +347,7 @@ impl ReceiptStore {
         }
         let roles = tx
             .query_all(statement(
-                &tx,
+                tx,
                 "SELECT role_name FROM identity_user_roles WHERE user_id=$1 AND tenant_id=$2",
                 vec![(&authority.actor_id).into(), (&authority.tenant_id).into()],
             ))
@@ -332,7 +363,7 @@ impl ReceiptStore {
             return Err(Error::Forbidden);
         }
         if row(
-            &tx,
+            tx,
             "SELECT jti FROM auth_revoked_tokens WHERE jti=$1 AND tenant_id=$2",
             vec![(&authority.token_id).into(), (&authority.tenant_id).into()],
         )
@@ -341,6 +372,16 @@ impl ReceiptStore {
         {
             return Err(Error::Forbidden);
         }
+        Ok(())
+    }
+
+    async fn transaction(
+        &self,
+        authority: &Authority,
+        write: bool,
+    ) -> Result<(DatabaseTransaction, i64), Error> {
+        let (tx, now) = self.begin_transaction(authority, write).await?;
+        Self::require_authority(&tx, authority, now).await?;
         Ok((tx, now))
     }
 
@@ -392,20 +433,151 @@ impl ReceiptStore {
         })
     }
 
+    /// Persist an acknowledged storage outcome for the exact admitted claim.
+    /// The caller must obtain it from actual execution; this method performs no
+    /// provider work and cannot make an unknown provider attempt safe to retry.
+    pub(crate) async fn finish(
+        &self,
+        proof: &CompletionProof,
+        outcome: &super::AnalysisOutcome,
+    ) -> Result<Receipt, Error> {
+        let (requested_phase, requested_output, requested_error) = match outcome {
+            super::AnalysisOutcome::Completed(output) => {
+                if output.trim().is_empty() || output.len() > super::MAX_OUTPUT_BYTES {
+                    return Err(Error::Invalid);
+                }
+                (StoredPhase::Completed, Some(output.clone()), None)
+            }
+            super::AnalysisOutcome::Cancelled => (StoredPhase::Cancelled, None, Some("cancelled")),
+            super::AnalysisOutcome::OutcomeUnknown => (
+                StoredPhase::OutcomeUnknown,
+                None,
+                Some("execution_uncertain"),
+            ),
+        };
+        if proof.generation != 1
+            || proof.receipt.tenant_id != proof.authority.tenant_id
+            || proof.receipt.actor_id != proof.authority.actor_id
+        {
+            return Err(Error::Conflict);
+        }
+        let (tx, now) = self.begin_transaction(&proof.authority, true).await?;
+        let saved = row(
+            &tx,
+            "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2 AND actor_id=$3",
+            vec![
+                (&proof.receipt.id).into(),
+                (&proof.authority.tenant_id).into(),
+                (&proof.authority.actor_id).into(),
+            ],
+        )
+        .await?
+        .ok_or(Error::NotFound)?;
+        let generation: i64 = field(&saved, "generation")?;
+        let nonce: Option<String> = field(&saved, "lease")?;
+        let expires: Option<i64> = field(&saved, "lease_expires_at")?;
+        if nonce.as_deref() != Some(proof.nonce.as_str())
+            || field::<String>(&saved, "token_id")? != proof.authority.token_id
+            || field::<i64>(&saved, "token_expires_at")? != proof.authority.expires_at
+            || field::<Option<String>>(&saved, "session_id")? != proof.authority.session_id
+        {
+            return Err(Error::Conflict);
+        }
+        let saved = decode(saved)?;
+        let mut expected = proof.receipt.clone();
+        expected.phase = saved.receipt.phase;
+        expected.updated_at = saved.receipt.updated_at;
+        expected.output.clone_from(&saved.receipt.output);
+        expected.error.clone_from(&saved.receipt.error);
+        if expected != saved.receipt || proof.fingerprint != saved.fingerprint {
+            return Err(Error::Conflict);
+        }
+        let authority = Self::require_authority(&tx, &proof.authority, now).await;
+        if matches!(
+            saved.receipt.phase,
+            StoredPhase::Completed | StoredPhase::Cancelled | StoredPhase::OutcomeUnknown
+        ) {
+            authority?;
+            if generation != 2
+                || saved.receipt.phase != requested_phase
+                || saved.receipt.output != requested_output
+            {
+                return Err(Error::Conflict);
+            }
+            // A terminal replay is read-only: don't reopen or re-run a trigger.
+            tx.commit().await?;
+            return Ok(saved.receipt);
+        }
+        if saved.receipt.phase != StoredPhase::Dispatching || generation != proof.generation {
+            return Err(Error::Conflict);
+        }
+        let authority_lost = match authority {
+            Ok(()) => false,
+            Err(Error::Forbidden) => true,
+            Err(error) => return Err(error),
+        };
+        let (phase, output, error) = if authority_lost {
+            (StoredPhase::OutcomeUnknown, None, Some("authority_lost"))
+        } else if expires.ok_or(Error::Corrupt)? <= now {
+            (StoredPhase::OutcomeUnknown, None, Some("lease_expired"))
+        } else {
+            (requested_phase, requested_output, requested_error)
+        };
+        let phase = match phase {
+            StoredPhase::Completed => "completed",
+            StoredPhase::Cancelled => "cancelled",
+            StoredPhase::OutcomeUnknown => "outcome_unknown",
+            _ => return Err(Error::Invalid),
+        };
+        let changed = execute(&tx, "UPDATE tenant_workflow_receipts SET phase=$1,generation=generation+1,updated_at=$2,output=$3,error=$4 WHERE id=$5 AND tenant_id=$6 AND actor_id=$7 AND phase='dispatching' AND generation=$8 AND lease=$9 AND fingerprint=$10", vec![phase.into(), now.into(), output.into(), error.into(), (&proof.receipt.id).into(), (&proof.authority.tenant_id).into(), (&proof.authority.actor_id).into(), proof.generation.into(), (&proof.nonce).into(), (&proof.fingerprint).into()]).await?;
+        if changed != 1 {
+            return Err(Error::Conflict);
+        }
+        let actual = decode(row(&tx, "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2 AND actor_id=$3", vec![(&proof.receipt.id).into(), (&proof.authority.tenant_id).into(), (&proof.authority.actor_id).into()]).await?.ok_or(Error::Corrupt)?)?;
+        tx.commit().await?;
+        // Recording that a claimed effect is uncertain isn't authority to
+        // disclose private task data after the actor's access was revoked.
+        if authority_lost {
+            return Err(Error::Forbidden);
+        }
+        Ok(actual.receipt)
+    }
+
     pub(crate) async fn get(&self, authority: &Authority, id: &str) -> Result<Receipt, Error> {
         if Uuid::parse_str(id).is_err() {
             return Err(Error::Invalid);
         }
-        let (tx, _) = self.transaction(authority, false).await?;
-        let actual = decode(
-            row(
-                &tx,
-                "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2",
-                vec![id.into(), (&authority.tenant_id).into()],
-            )
-            .await?
-            .ok_or(Error::NotFound)?,
-        )?;
+        let (tx, now) = self.transaction(authority, true).await?;
+        let saved = row(
+            &tx,
+            "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2",
+            vec![id.into(), (&authority.tenant_id).into()],
+        )
+        .await?
+        .ok_or(Error::NotFound)?;
+        let generation: i64 = field(&saved, "generation")?;
+        let nonce: Option<String> = field(&saved, "lease")?;
+        let expires: Option<i64> = field(&saved, "lease_expires_at")?;
+        let mut actual = decode(saved)?;
+        if actual.receipt.phase == StoredPhase::Dispatching && expires.ok_or(Error::Corrupt)? <= now
+        {
+            if generation != 1 || nonce.is_none() {
+                return Err(Error::Corrupt);
+            }
+            let changed = execute(&tx, "UPDATE tenant_workflow_receipts SET phase='outcome_unknown',generation=generation+1,updated_at=$1,output=NULL,error='lease_expired' WHERE id=$2 AND tenant_id=$3 AND phase='dispatching' AND generation=1 AND lease=$4 AND lease_expires_at<=$1", vec![now.into(), id.into(), (&authority.tenant_id).into(), nonce.into()]).await?;
+            if changed != 1 {
+                return Err(Error::Conflict);
+            }
+            actual = decode(
+                row(
+                    &tx,
+                    "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2",
+                    vec![id.into(), (&authority.tenant_id).into()],
+                )
+                .await?
+                .ok_or(Error::Corrupt)?,
+            )?;
+        }
         tx.commit().await?;
         Ok(actual.receipt)
     }
@@ -435,6 +607,7 @@ impl ReceiptStore {
             receipt: actual.receipt,
             admitted,
             nonce,
+            fingerprint: actual.fingerprint,
         }))
     }
 }

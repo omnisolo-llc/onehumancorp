@@ -364,3 +364,409 @@ async fn public_receipt_never_contains_bearer_or_session_authority_fields() {
         );
     }
 }
+
+#[tokio::test]
+async fn completed_storage_result_is_committed_and_identical_terminal_replay_is_idempotent() {
+    let directory = ReceiptDirectory::new();
+    let url = format!(
+        "sqlite://{}?mode=rwc",
+        directory.0.join("terminal.sqlite").display()
+    );
+    let fixture = ReceiptFixture::open(&url).await;
+    let store = fixture.store();
+    let reserved = store
+        .reserve(fixture.admitted().await, request())
+        .await
+        .unwrap();
+    let lease = store.claim(reserved).await.unwrap().unwrap();
+    let proof = lease.completion_proof();
+    // This is a storage artifact supplied by the test. NeverInfer proves this
+    // checkpoint does not simulate, invoke or certify an external provider.
+    let artifact = AnalysisOutcome::Completed("Explicit storage-only test artifact 雪".into());
+    let completed = store.finish(&proof, &artifact).await.unwrap();
+    assert_eq!(completed.phase, StoredPhase::Completed);
+    assert_eq!(
+        completed.output.as_deref(),
+        Some("Explicit storage-only test artifact 雪")
+    );
+    assert_eq!(store.finish(&proof, &artifact).await.unwrap(), completed);
+    assert!(matches!(
+        store
+            .finish(
+                &proof,
+                &AnalysisOutcome::Completed("Different artifact".into())
+            )
+            .await,
+        Err(super::receipts::Error::Conflict)
+    ));
+    let reopened = ReceiptStore::new(AppDatabase::connect(&url).await.unwrap());
+    assert_eq!(
+        reopened
+            .get(&fixture.authority().await, &proof.receipt.id)
+            .await
+            .unwrap(),
+        completed
+    );
+}
+
+#[tokio::test]
+async fn terminal_storage_rejects_changed_nonce_generation_and_admitted_payload() {
+    let fixture = ReceiptFixture::open(&format!(
+        "sqlite:file:receipts_{}?mode=memory&cache=shared",
+        Uuid::new_v4()
+    ))
+    .await;
+    let store = fixture.store();
+    let reserved = store
+        .reserve(fixture.admitted().await, request())
+        .await
+        .unwrap();
+    let lease = store.claim(reserved).await.unwrap().unwrap();
+    let original = lease.completion_proof();
+    for field in ["nonce", "generation", "payload", "fingerprint", "tenant"] {
+        let mut altered = original.clone();
+        match field {
+            "nonce" => altered.nonce = Uuid::new_v4().to_string(),
+            "generation" => altered.generation += 1,
+            "payload" => altered.receipt.task = "Unadmitted replacement".into(),
+            "fingerprint" => altered.fingerprint = "0".repeat(64),
+            "tenant" => altered.authority.tenant_id = "receipt-b".into(),
+            _ => unreachable!(),
+        }
+        assert!(
+            matches!(
+                store
+                    .finish(
+                        &altered,
+                        &AnalysisOutcome::Completed("Storage-only artifact".into())
+                    )
+                    .await,
+                Err(super::receipts::Error::Conflict
+                    | super::receipts::Error::NotFound
+                    | super::receipts::Error::Forbidden)
+            ),
+            "accepted altered {field}"
+        );
+        assert_eq!(
+            store
+                .get(&fixture.authority().await, &original.receipt.id)
+                .await
+                .unwrap()
+                .phase,
+            StoredPhase::Dispatching
+        );
+    }
+    assert_eq!(
+        store
+            .finish(&original, &AnalysisOutcome::Cancelled)
+            .await
+            .unwrap()
+            .phase,
+        StoredPhase::Cancelled
+    );
+}
+
+#[tokio::test]
+async fn empty_or_oversized_terminal_output_never_replaces_the_pending_dispatch() {
+    let fixture = ReceiptFixture::open(&format!(
+        "sqlite:file:receipts_{}?mode=memory&cache=shared",
+        Uuid::new_v4()
+    ))
+    .await;
+    let store = fixture.store();
+    let reserved = store
+        .reserve(fixture.admitted().await, request())
+        .await
+        .unwrap();
+    let lease = store.claim(reserved).await.unwrap().unwrap();
+    let proof = lease.completion_proof();
+    for output in [" \n\t".into(), "x".repeat(64_001), "🧪".repeat(16_001)] {
+        assert!(matches!(
+            store
+                .finish(&proof, &AnalysisOutcome::Completed(output))
+                .await,
+            Err(super::receipts::Error::Invalid)
+        ));
+        assert_eq!(
+            store
+                .get(&fixture.authority().await, &proof.receipt.id)
+                .await
+                .unwrap()
+                .phase,
+            StoredPhase::Dispatching
+        );
+    }
+    let maximum = "x".repeat(64_000);
+    assert_eq!(
+        store
+            .finish(&proof, &AnalysisOutcome::Completed(maximum.clone()))
+            .await
+            .unwrap()
+            .output,
+        Some(maximum)
+    );
+}
+
+#[tokio::test]
+async fn recorded_unknown_outcome_cannot_be_reclaimed_or_overwritten_by_a_late_result() {
+    let fixture = ReceiptFixture::open(&format!(
+        "sqlite:file:receipts_{}?mode=memory&cache=shared",
+        Uuid::new_v4()
+    ))
+    .await;
+    let store = fixture.store();
+    let metadata = request();
+    let reserved = store
+        .reserve(fixture.admitted().await, metadata.clone())
+        .await
+        .unwrap();
+    let lease = store.claim(reserved).await.unwrap().unwrap();
+    let proof = lease.completion_proof();
+    let unknown = store
+        .finish(&proof, &AnalysisOutcome::OutcomeUnknown)
+        .await
+        .unwrap();
+    assert_eq!(unknown.phase, StoredPhase::OutcomeUnknown);
+    assert!(unknown.output.is_none());
+    assert_eq!(unknown.error.as_deref(), Some("execution_uncertain"));
+    assert_eq!(
+        store
+            .finish(&proof, &AnalysisOutcome::OutcomeUnknown)
+            .await
+            .unwrap(),
+        unknown
+    );
+    let replay = store
+        .reserve(fixture.admitted().await, metadata)
+        .await
+        .unwrap();
+    assert_eq!(replay.receipt(), &unknown);
+    assert!(store.claim(replay).await.unwrap().is_none());
+    assert!(matches!(
+        store
+            .finish(&proof, &AnalysisOutcome::Completed("Late artifact".into()))
+            .await,
+        Err(super::receipts::Error::Conflict)
+    ));
+    assert_eq!(
+        store
+            .get(&fixture.authority().await, &proof.receipt.id)
+            .await
+            .unwrap(),
+        unknown
+    );
+}
+
+#[tokio::test]
+async fn revoked_terminal_authority_discards_output_and_records_uncertainty() {
+    for loss in ["role", "disabled", "token"] {
+        let fixture = ReceiptFixture::open(&format!(
+            "sqlite:file:receipts_{}?mode=memory&cache=shared",
+            Uuid::new_v4()
+        ))
+        .await;
+        let store = fixture.store();
+        let reserved = store
+            .reserve(fixture.admitted().await, request())
+            .await
+            .unwrap();
+        let lease = store.claim(reserved).await.unwrap().unwrap();
+        let proof = lease.completion_proof();
+        let claims = &fixture.identity.0;
+        match loss {
+            "role" => {
+                fixture
+                    .auth
+                    .update_user(
+                        &claims.sub,
+                        None,
+                        Some(vec!["STAFF".into()]),
+                        None,
+                        "receipt-a",
+                    )
+                    .await
+                    .unwrap();
+            }
+            "disabled" => {
+                fixture
+                    .auth
+                    .update_user(&claims.sub, None, None, Some(false), "receipt-a")
+                    .await
+                    .unwrap();
+            }
+            "token" => {
+                fixture
+                    .auth
+                    .revoke_token(
+                        claims.jti.clone(),
+                        chrono::DateTime::from_timestamp(claims.exp, 0).unwrap(),
+                        "receipt-a",
+                    )
+                    .await
+                    .unwrap();
+            }
+            _ => unreachable!(),
+        }
+        assert!(matches!(
+            store
+                .finish(
+                    &proof,
+                    &AnalysisOutcome::Completed("Must not persist after revoked authority".into())
+                )
+                .await,
+            Err(super::receipts::Error::Forbidden)
+        ));
+        let row = fixture
+            .database
+            .connection()
+            .query_one(sea_orm::Statement::from_sql_and_values(
+                sea_orm::DatabaseBackend::Sqlite,
+                "SELECT phase,output,error FROM tenant_workflow_receipts WHERE id=$1",
+                [proof.receipt.id.clone().into()],
+            ))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            row.try_get::<String>("", "phase").unwrap(),
+            "outcome_unknown"
+        );
+        assert_eq!(row.try_get::<Option<String>>("", "output").unwrap(), None);
+        assert_eq!(
+            row.try_get::<String>("", "error").unwrap(),
+            "authority_lost"
+        );
+    }
+}
+
+#[tokio::test]
+async fn deferred_terminal_commit_failure_preserves_dispatch_and_safe_storage_retry() {
+    let directory = ReceiptDirectory::new();
+    let url = format!(
+        "sqlite://{}?mode=rwc",
+        directory.0.join("failed-commit.sqlite").display()
+    );
+    let fixture = ReceiptFixture::open(&url).await;
+    let store = fixture.store();
+    let reserved = store
+        .reserve(fixture.admitted().await, request())
+        .await
+        .unwrap();
+    let lease = store.claim(reserved).await.unwrap().unwrap();
+    let proof = lease.completion_proof();
+    fixture.database.connection().execute_unprepared("CREATE TABLE terminal_parent (id TEXT PRIMARY KEY); CREATE TABLE terminal_child (id TEXT REFERENCES terminal_parent(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER reject_terminal_commit AFTER UPDATE OF phase ON tenant_workflow_receipts WHEN NEW.phase='completed' BEGIN INSERT INTO terminal_child VALUES('missing-parent'); END;").await.unwrap();
+    let artifact = AnalysisOutcome::Completed("Storage artifact for deferred-commit test".into());
+    assert!(matches!(
+        store.finish(&proof, &artifact).await,
+        Err(super::receipts::Error::Database(_))
+    ));
+    let reopened = ReceiptStore::new(AppDatabase::connect(&url).await.unwrap());
+    let unchanged = reopened
+        .get(&fixture.authority().await, &proof.receipt.id)
+        .await
+        .unwrap();
+    assert_eq!(unchanged.phase, StoredPhase::Dispatching);
+    assert!(unchanged.output.is_none());
+    fixture
+        .database
+        .connection()
+        .execute_unprepared("DROP TRIGGER reject_terminal_commit")
+        .await
+        .unwrap();
+    let completed = reopened.finish(&proof, &artifact).await.unwrap();
+    assert_eq!(completed.phase, StoredPhase::Completed);
+    assert_eq!(
+        store
+            .get(&fixture.authority().await, &proof.receipt.id)
+            .await
+            .unwrap(),
+        completed
+    );
+}
+
+#[tokio::test]
+async fn reopening_an_expired_dispatch_records_unknown_without_reexecution_or_late_completion() {
+    use sha2::{Digest, Sha256};
+    let directory = ReceiptDirectory::new();
+    let url = format!(
+        "sqlite://{}?mode=rwc",
+        directory.0.join("expired.sqlite").display()
+    );
+    let fixture = ReceiptFixture::open(&url).await;
+    let store = fixture.store();
+    let reserved = store
+        .reserve(fixture.admitted().await, request())
+        .await
+        .unwrap();
+    let lease = store.claim(reserved).await.unwrap().unwrap();
+    let mut expired = lease.completion_proof();
+    let backend = sea_orm::DatabaseBackend::Sqlite;
+    let connection = fixture.database.connection();
+    let actual = connection.query_one(sea_orm::Statement::from_sql_and_values(backend, "SELECT payload,CAST(strftime('%s','now') AS INTEGER) AS now FROM tenant_workflow_receipts WHERE id=$1", [expired.receipt.id.clone().into()])).await.unwrap().unwrap();
+    let payload: String = actual.try_get("", "payload").unwrap();
+    let now: i64 = actual.try_get("", "now").unwrap();
+    // Build an explicitly backdated restart fixture through the canonical
+    // admission/claim transitions. No schema trigger is dropped, no clock is
+    // mocked and no assertion claims that a provider performed this fixture.
+    expired.receipt.id = Uuid::new_v4().to_string();
+    expired.receipt.request_id = Uuid::new_v4().to_string();
+    expired.receipt.created_at = now - 300;
+    expired.receipt.updated_at = now - 240;
+    expired.nonce = Uuid::new_v4().to_string();
+    let prefix = serde_json::to_string(&(
+        "ohc-tenant-text-admission-v1",
+        &expired.authority.tenant_id,
+        &expired.authority.actor_id,
+        &expired.receipt.request_id,
+        &expired.authority.token_id,
+        expired.authority.expires_at,
+        expired.authority.session_id.as_deref(),
+    ))
+    .unwrap();
+    let encoded = format!("{},{}]", prefix.strip_suffix(']').unwrap(), payload);
+    expired.fingerprint = format!("{:x}", Sha256::digest(encoded.as_bytes()));
+    connection.execute(sea_orm::Statement::from_sql_and_values(backend,
+        "INSERT INTO tenant_workflow_receipts(id,tenant_id,actor_id,request_id,fingerprint,payload,token_id,token_expires_at,session_id,phase,generation,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'queued',0,$10,$10)",
+        vec![expired.receipt.id.clone().into(), expired.authority.tenant_id.clone().into(), expired.authority.actor_id.clone().into(), expired.receipt.request_id.clone().into(), expired.fingerprint.clone().into(), payload.into(), expired.authority.token_id.clone().into(), expired.authority.expires_at.into(), expired.authority.session_id.clone().into(), (now-300).into()]
+    )).await.unwrap();
+    connection.execute(sea_orm::Statement::from_sql_and_values(backend,
+        "UPDATE tenant_workflow_receipts SET phase='dispatching',generation=1,lease=$1,lease_expires_at=$2,updated_at=$3 WHERE id=$4",
+        vec![expired.nonce.clone().into(), (now-120).into(), (now-240).into(), expired.receipt.id.clone().into()]
+    )).await.unwrap();
+    let reopened = ReceiptStore::new(AppDatabase::connect(&url).await.unwrap());
+    let recovered = reopened
+        .get(&fixture.authority().await, &expired.receipt.id)
+        .await
+        .unwrap();
+    assert_eq!(recovered.phase, StoredPhase::OutcomeUnknown);
+    assert_eq!(recovered.error.as_deref(), Some("lease_expired"));
+    assert!(recovered.output.is_none());
+    assert!(matches!(
+        reopened
+            .finish(
+                &expired,
+                &AnalysisOutcome::Completed("Late storage artifact".into())
+            )
+            .await,
+        Err(super::receipts::Error::Conflict)
+    ));
+    assert_eq!(
+        reopened
+            .get(&fixture.authority().await, &expired.receipt.id)
+            .await
+            .unwrap(),
+        recovered
+    );
+    let metadata = RequestMetadata {
+        request_id: Uuid::parse_str(&expired.receipt.request_id).unwrap(),
+        name: expired.receipt.name.clone(),
+        workflow: expired.receipt.workflow.clone(),
+        requested_model: "Auto".into(),
+    };
+    let replay = reopened
+        .reserve(fixture.admitted().await, metadata)
+        .await
+        .unwrap();
+    assert_eq!(replay.receipt(), &recovered);
+    assert!(reopened.claim(replay).await.unwrap().is_none());
+}
