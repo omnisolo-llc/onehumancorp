@@ -43,14 +43,14 @@ test.describe('Growth & Referral Features', () => {
   test('Hybrid landing page loads correctly with standalone card', async ({ page }) => {
     await page.goto('/hybrid-landing');
 
-    const standaloneHeading = page.locator('h3:has-text("Sovereign Node")');
+    const standaloneHeading = page.locator('h2, h3').filter({ hasText: /Sovereign|Local/ }).first();
     await expect(standaloneHeading).toBeVisible();
   });
 
   test('Hybrid landing page loads correctly with cloud card', async ({ page }) => {
     await page.goto('/hybrid-landing');
 
-    const cloudHeading = page.locator('h3:has-text("Cloud Team")');
+    const cloudHeading = page.locator('h2, h3').filter({ hasText: /Cloud/ }).first();
     await expect(cloudHeading).toBeVisible();
   });
 });

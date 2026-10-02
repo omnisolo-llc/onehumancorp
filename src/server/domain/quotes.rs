@@ -116,12 +116,17 @@ pub async fn handle_quote_action(
         let mut stripe_payment_link = payload
             .get("stripe_payment_link")
             .and_then(|v| v.as_str())
+<<<<<<< HEAD
             .map(|s| s.to_string())
             .unwrap_or_else(|| "".to_string());
+=======
+            .map(|s| s.to_string());
+>>>>>>> origin/main
 
         // Use idempotent safe checkout session instead of fake URL
         if payload.get("stripe_payment_link").is_none() {
             let amount_cents = (price * 100.0).round() as i64;
+<<<<<<< HEAD
             let operation_id = format!("quote-deposit-{}", invoice_id);
             let mut metadata = std::collections::HashMap::new();
             if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
@@ -146,6 +151,29 @@ pub async fn handle_quote_action(
                 Err(err) => {
                     tracing::error!("Failed to generate idempotent Stripe checkout session link: {}", err); // pii-safe
                     // Still proceed with saving the invoice but log heavily without fabricating a link.
+=======
+            match stripe_client
+                .create_checkout_session_idempotent(
+                    server_integrations_stripe::safe_checkout::CheckoutRequest {
+                        name: scope,
+                        reference: client_id,
+                        amount_cents,
+                        interval: None,
+                        product: None,
+                        currency: "usd",
+                        operation_id: &invoice_id,
+                    },
+                )
+                .await
+            {
+                Ok(receipt) => {
+                    stripe_payment_link = Some(receipt.url);
+                }
+                Err(err) => {
+                    tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
+                    // Set explicitly to None if checkout fails instead of faking success
+                    stripe_payment_link = None;
+>>>>>>> origin/main
                 }
             }
         }
@@ -192,7 +220,7 @@ pub async fn handle_quote_action(
         }
 
         tracing::info!(
-            "Dispatched SMS/WhatsApp with quote and payment link {} to customer {}",
+            "Dispatched SMS/WhatsApp with quote and payment link {:?} to customer {}",
             stripe_payment_link,
             client_id
         );

@@ -9,7 +9,7 @@ test('Assistant Workstation UI handles Mobile layout', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
 
   // Basic check to see if layout renders
-  const assistantHeader = page.locator('.header-title, h1, text=WorkBuddy');
+  const assistantHeader = page.locator('.header-title, h1').or(page.getByText('WorkBuddy'));
   if (await assistantHeader.count() > 0) {
       await expect(assistantHeader.first()).toBeVisible({ timeout: 10000 });
   }

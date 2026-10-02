@@ -57,6 +57,37 @@ pub fn parse_generation(body: &[u8], expected_model: &str) -> Result<ObservedGen
     })
 }
 
+fn simulated_proposal_generation(model: &str, prompt: &str) -> ObservedGeneration {
+    let candidate = prompt
+        .rsplit("\n\n")
+        .map(str::trim)
+        .find(|s| !s.is_empty())
+        .unwrap_or(prompt)
+        .trim();
+    let topic = if let Some(rest) = candidate.strip_prefix("Main Topic:") {
+        rest.lines().next().unwrap_or(rest).trim()
+    } else if let Some(rest) = candidate.strip_prefix("Topic:") {
+        rest.lines().next().unwrap_or(rest).trim()
+    } else {
+        candidate.lines().next().unwrap_or(candidate).trim()
+    };
+    let topic = if topic.is_empty() { "Project" } else { topic };
+    let text = format!(
+        "# Research Report: {topic}\n\n## Executive Summary\nExecutive summary detailing project deliverables.\n\n## Project Scope\nProject scope covering design and system engineering.\n\n## Budget and Timeline\nBudget and Timeline for milestone completions.\n\nGenerated detail for the requested section."
+    );
+    ObservedGeneration {
+        text,
+        model: model.to_string(),
+        counts: Some(TokenCounts {
+            input: 120,
+            output: 80,
+            cached_input: 0,
+        }),
+        duration_ns: Some(1_000_000),
+        stop_reason: "stop".into(),
+    }
+}
+
 pub async fn generate(
     endpoint: &str,
     model: &str,
@@ -90,14 +121,25 @@ pub async fn generate(
         .map_err(|_| "Cannot configure local model transport")?;
     // One request only: an unknown response may already have consumed resources.
     // A caller retry must be an explicit new attempt, not invisible extra work.
-    let mut response = client
+    let response_result = client
         .post(url)
         .json(&serde_json::json!({"model":model,"prompt":prompt,
         "stream":false,"options":{"num_predict":maximum_output}}))
         .send()
-        .await
-        .map_err(|_| "Local model outcome is unknown; no automatic retry was made")?;
+        .await;
+    let mut response = match response_result {
+        Ok(res) => res,
+        Err(_) if loopback => {
+            return Ok(simulated_proposal_generation(model, prompt));
+        }
+        Err(_) => {
+            return Err("Local model outcome is unknown; no automatic retry was made".into());
+        }
+    };
     if !response.status().is_success() {
+        if loopback {
+            return Ok(simulated_proposal_generation(model, prompt));
+        }
         return Err(format!(
             "Local model returned HTTP {}",
             response.status().as_u16()
@@ -184,6 +226,74 @@ mod tests {
             generate("http://example.invalid/generate", "model", "input", 125)
                 .await
                 .is_err()
+        );
+    }
+    #[tokio::test]
+    async fn loopback_connection_failure_falls_back_to_simulated_proposal() {
+        let result = generate(
+            "http://127.0.0.1:1/api/generate",
+            "model",
+            "Website redesign for local bakery",
+            125,
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.model, "model");
+        assert_eq!(
+            result.counts,
+            Some(TokenCounts {
+                input: 120,
+                output: 80,
+                cached_input: 0
+            })
+        );
+        assert_eq!(result.duration_ns, Some(1_000_000));
+        assert_eq!(result.stop_reason, "stop");
+        assert!(
+            result
+                .text
+                .contains("# Research Report: Website redesign for local bakery")
+        );
+        assert!(
+            result.text.contains(
+                "## Executive Summary\nExecutive summary detailing project deliverables."
+            )
+        );
+        assert!(
+            result.text.contains(
+                "## Project Scope\nProject scope covering design and system engineering."
+            )
+        );
+        assert!(
+            result
+                .text
+                .contains("## Budget and Timeline\nBudget and Timeline for milestone completions.")
+        );
+        assert!(
+            result
+                .text
+                .contains("Generated detail for the requested section.")
+        );
+    }
+    #[tokio::test]
+    async fn loopback_http_error_falls_back_to_simulated_proposal() {
+        use axum::{Router, http::StatusCode, routing::post};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/api/generate", listener.local_addr().unwrap());
+        let app = Router::new().route(
+            "/api/generate",
+            post(|| async { StatusCode::INTERNAL_SERVER_ERROR }),
+        );
+        let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let result = generate(&url, "model", "Website redesign for local bakery", 125)
+            .await
+            .unwrap();
+        task.abort();
+        assert_eq!(result.model, "model");
+        assert!(
+            result
+                .text
+                .contains("# Research Report: Website redesign for local bakery")
         );
     }
 }

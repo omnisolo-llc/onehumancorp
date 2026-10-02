@@ -4,7 +4,7 @@ test.describe('WhatsApp Cloud API Integration', () => {
     test('user can link their WhatsApp Cloud API account', async ({ page }) => {
         // Login and navigate to Integrations
         await page.goto('/login');
-        await page.fill('input[name="email"]', 'admin@example.com');
+        await page.fill('input[name="email"]', 'test@example.com');
         await page.fill('input[name="password"]', 'password123');
         await page.click('button[type="submit"]');
         await page.waitForURL('/dashboard');
@@ -16,7 +16,8 @@ test.describe('WhatsApp Cloud API Integration', () => {
         await expect(integrationCard).toBeVisible();
 
         // Click Connect
-        const connectBtn = page.locator('div').filter({ has: integrationCard }).locator('button', { hasText: 'Connect' });
+        const card = page.locator('div.rounded-2xl', { has: integrationCard });
+        const connectBtn = card.locator('button', { hasText: 'Connect' });
         await expect(connectBtn).toBeVisible();
         await connectBtn.click();
 

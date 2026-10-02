@@ -7,6 +7,12 @@ fn docs_tenant(claims: &::server_common::Claims) -> Result<String, axum::http::S
         .ok_or(axum::http::StatusCode::UNAUTHORIZED)
 }
 
+fn optional_docs_tenant(claims: Option<&::server_common::Claims>) -> String {
+    claims
+        .and_then(::server_common::auth_utils::signed_tenant_id)
+        .unwrap_or_else(|| "default".to_string())
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct HelpArticle {
     pub category: String,
@@ -245,12 +251,12 @@ pub async fn get_walkthrough(
             "dashboard" => vec![
                 WalkthroughStep {
                     target_id: "dashboard-title".to_string(),
-                    title: "Welcome".to_string(),
+                    title: "Business Analytics".to_string(),
                     content: "Welcome to your dashboard! This is your control center.".to_string(),
                 },
                 WalkthroughStep {
-                    target_id: "wrapped-summary".to_string(),
-                    title: "AI Savings".to_string(),
+                    target_id: "operations-map".to_string(),
+                    title: "Operations Map".to_string(),
                     content: "Here you can see the time and effort your agents have saved you."
                         .to_string(),
                 },
@@ -575,6 +581,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/accept-payments".to_string(),
         },
         HelpArticle {
+            category: "Proposals & Invoicing".to_string(),
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            desc: "Generate accurate quotes from inquiries, secure owner approvals, and send verifiable checkout links.".to_string(),
+            link: "/help/proposals-payments".to_string(),
+        },
+        HelpArticle {
             category: "AI Agents".to_string(),
             title: "Activate AI Support".to_string(),
             desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(),
@@ -587,10 +599,24 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/marketing-tools".to_string(),
         },
         HelpArticle {
+            category: "Getting Started".to_string(),
+            title: "Setup, Connected Accounts, and Standing Authority".to_string(),
+            desc: "Learn how to configure connected accounts, set up standing authority, and review evidence.".to_string(),
+            link: "/help/setup-accounts-authority".to_string(),
+        },
+        HelpArticle {
             category: "Account & Billing".to_string(),
             title: "Manage Billing".to_string(),
             desc: "Update your subscription and payment methods.".to_string(),
             link: "/help/billing-settings".to_string(),
+        },
+        HelpArticle {
+            category: "Account & Billing".to_string(),
+            title: "Connected Accounts and Standing Authority".to_string(),
+            desc:
+                "Set up your connected accounts and establish standing authority for your AI team."
+                    .to_string(),
+            link: "/help/connected-accounts".to_string(),
         },
         HelpArticle {
             category: "Advanced".to_string(),
@@ -598,6 +624,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
             desc: "Interactive API reference for connecting external services to your workspace."
                 .to_string(),
             link: "/api-docs".to_string(),
+        },
+        HelpArticle {
+            category: "Sales & Checkout".to_string(),
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            desc: "Learn how to generate accurate proposals, securely collect payments, and manage invoice drafts.".to_string(),
+            link: "/help/proposals-payments".to_string(),
         },
     ]
 }
@@ -708,10 +740,10 @@ static DOCS_VIDEOS_CACHE: std::sync::OnceLock<
 
 pub async fn list_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     Query(query): Query<DocsQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
-    let tenant_id = docs_tenant(&claims)?;
+    let tenant_id = optional_docs_tenant(claims.as_ref().map(|c| &c.0));
 
     let cache = DOCS_ARTICLES_CACHE
         .get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
@@ -819,10 +851,10 @@ pub async fn list_articles(
 
 pub async fn search_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     Query(query): Query<SearchQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
-    let tenant_id = docs_tenant(&claims)?;
+    let tenant_id = optional_docs_tenant(claims.as_ref().map(|c| &c.0));
 
     let q = query.q.to_lowercase();
     let cache_key = format!("docs:articles:search:{}:{}", tenant_id, q);
@@ -1179,6 +1211,90 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
+
+        "proposals-payments" => Some(HelpArticleDetail {
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            content_html: r#"
+      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
+        Sending a proposal and getting paid should be easy and safe. OmniSolo makes sure your quotes are accurate and your payment links work.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Accurate Proposals</h2>
+      <p class="text-gray-700 mb-4">
+        OmniSolo builds quotes based on exactly what your customer asks for and the rules you set. We check the math for you.
+      </p>
+      <ul class="list-disc pl-6 mb-4 text-gray-700 space-y-2">
+        <li>If any prices are missing, the app marks them as <code>NEEDS_PRICING</code> so you can fill them in.</li>
+        <li>The app will not guess prices for you.</li>
+        <li>Optional items are left out of the total until the customer selects them.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Secure Payment Links</h2>
+      <p class="text-gray-700 mb-4">
+        When you make an invoice, OmniSolo connects directly to your payment provider (like Stripe) to create a real, secure checkout link. If there is a problem connecting to your provider, the app will let you know so you never send a broken link.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Drafts vs. Sent Reminders</h2>
+      <p class="text-gray-700 mb-4">
+        OmniSolo saves your drafts so you can review them. Once an invoice is paid or canceled, old drafts are removed automatically. This way, you won't ask a customer to pay twice by mistake.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">You Are in Control</h2>
+      <p class="text-gray-700 mb-4">
+        Your AI team only takes actions you approve. You set the rules and limits, and you can stop or change them at any time.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">How to Send a Proposal</h2>
+      <ol class="list-decimal pl-6 mb-4 text-gray-700 space-y-2">
+        <li>Open a Lead or Inquiry in the OmniSolo app.</li>
+        <li>Click <strong>Generate Proposal</strong>. Review the items. If any say <code>NEEDS_PRICING</code>, add the correct prices.</li>
+        <li>Approve the proposal to lock in the final price.</li>
+        <li>Click <strong>Create Invoice</strong>. OmniSolo will securely connect to your payment provider to make a checkout link.</li>
+        <li>The email or SMS draft will go to your outbox for one last check before you send it.</li>
+      </ol>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost</h2>
+      <p class="text-gray-700 mb-4">
+        These features are included in your regular subscription. We do not add any hidden markup fees to your customer's invoice. Standard fees from your payment provider still apply.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">What If Something Goes Wrong?</h2>
+      <p class="text-gray-700 mb-4">
+        If your payment provider disconnects and cannot make a link, the invoice will say "Draft/Pending Provider". Just try again later. The app will safely try again without charging anyone twice.
+      </p>
+            "#.to_string()
+        }),
+        "setup-accounts-authority" => Some(HelpArticleDetail {
+            title: "Setup, Connected Accounts, and Standing Authority".to_string(),
+            content_html: r#"
+      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
+        Welcome to OmniSolo! Getting your business up and running involves setting up your connected accounts and establishing the standing authority of your AI team.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Setup</h2>
+      <p class="text-gray-700 mb-4">
+        To set up your business, you need to configure your connected accounts and establish your standing authority. This ensures that the AI team can operate safely and securely on your behalf.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Connected Accounts</h2>
+      <ul class="list-disc pl-5 mb-4 text-gray-700">
+        <li><strong>Link Accounts</strong>: Connect your Google Workspace and Stripe accounts.</li>
+        <li><strong>Verify Settings</strong>: Verify your connection settings to ensure the AI team can access your tools to act on your behalf.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Standing Authority</h2>
+      <ul class="list-disc pl-5 mb-4 text-gray-700">
+        <li><strong>Define Scope</strong>: Define the scope of the AI team's authority.</li>
+        <li><strong>Set Rules</strong>: Set specific rules for external actions, such as sending emails or making payments.</li>
+        <li><strong>Establish Limits</strong>: Establish a budget and spending limits for the AI team.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Evidence</h2>
+      <ul class="list-disc pl-5 mb-4 text-gray-700">
+        <li><strong>Maintain Records</strong>: Maintain a record of all actions taken by the AI team.</li>
+        <li><strong>Review Feed</strong>: Review the evidence feed to verify that the team is completing work as expected.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost</h2>
+      <ul class="list-disc pl-5 mb-4 text-gray-700">
+        <li><strong>Monitor Cost</strong>: Monitor the cost of the AI team's operations.</li>
+        <li><strong>Understand Pricing</strong>: Understand the pricing structure and how usage is billed. Note that your AI usage uses your regular OHC subscription without any hidden markup fees on your customer's invoice.</li>
+      </ul>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Exceptions and Recovery</h2>
+      <ul class="list-disc pl-5 mb-4 text-gray-700">
+        <li><strong>Handle Exceptions</strong>: Learn how to handle exceptions and errors that may occur during execution. </li>
+        <li><strong>Recovery Process</strong>: Understand the recovery process and how to resume work after a failure. If an action fails, you can simply retry without the system creating duplicate charges.</li>
+      </ul>
+            "#.to_string()
+        }),
         "ai-support" => Some(HelpArticleDetail {
             title: "Your AI Helpers".to_string(),
             content_html: r#"
@@ -1196,6 +1312,35 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Approving Their Work</h2>
       <p class="text-gray-700 mb-4">
         Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.
+      </p>
+            "#.to_string()
+        }),
+        "connected-accounts" => Some(HelpArticleDetail {
+            title: "Connected Accounts and Standing Authority".to_string(),
+            content_html: r#"
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Setup</h2>
+      <p class="text-gray-700 mb-4">
+        To let your AI team help your business, you need to connect your accounts and tell the team what they are allowed to do. This keeps your business safe and in your control.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Connected Accounts</h2>
+      <p class="text-gray-700 mb-4">
+        You can connect tools you already use, like Google Workspace for emails and files, and Stripe for payments. When you link these accounts, your AI team can use them to work for you. Always check your connection settings so your team has the right access.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Standing Authority</h2>
+      <p class="text-gray-700 mb-4">
+        Standing authority is like giving your team a rulebook. You tell them what they can do on their own and what they need to ask you first. You set rules for sending emails or making payments. You set hard spending limits so the team never spends more than you want. You can change these rules or stop the team at any time.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Evidence</h2>
+      <p class="text-gray-700 mb-4">
+        You will always know what your AI team is doing. The app keeps a clear record of all their work. You can check the evidence feed to see the emails they sent, the payments they collected, and the tasks they finished.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Cost</h2>
+      <p class="text-gray-700 mb-4">
+        We want you to understand exactly what you pay for. You pay for the computer power and AI tools the team uses. You will see an estimated cost before a task starts, and a detailed bill when it finishes. There are no hidden fees. Any standard fees from your payment provider still apply.
+      </p>
+      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Exceptions and Recovery</h2>
+      <p class="text-gray-700 mb-4">
+        Sometimes things go wrong, like a payment link failing to send. If this happens, your AI team will stop and let you know. The app saves their progress, so you can easily try again later without starting over or paying twice.
       </p>
             "#.to_string()
         }),
@@ -1223,7 +1368,17 @@ pub struct ChangelogSection {
 }
 
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
-    let mut sections = Vec::new();
+    let mut sections = vec![ChangelogSection {
+        version: "Version 1.1 (Latest)".to_string(),
+        screenshot_url: None,
+        content_lines: vec![
+            "### 🌟 New Features".to_string(),
+            "- **Help Center:** Fully searchable help center with video tutorials and articles."
+                .to_string(),
+            "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you."
+                .to_string(),
+        ],
+    }];
     let content = std::include_str!("../../../CHANGELOG.md");
 
     let mut current_version = String::new();
@@ -1802,7 +1957,7 @@ mod tests {
         let db = docs_test_db().await;
         let res = list_articles(
             axum::extract::Extension(db),
-            axum::extract::Extension(claims("default")),
+            Some(axum::extract::Extension(claims("default"))),
             axum::extract::Query(DocsQuery {
                 mobile_optimized: None,
             }),
@@ -1817,7 +1972,7 @@ mod tests {
         let db = docs_test_db().await;
         let res = search_articles(
             axum::extract::Extension(db),
-            axum::extract::Extension(claims("default")),
+            Some(axum::extract::Extension(claims("default"))),
             axum::extract::Query(SearchQuery {
                 q: "getting".to_string(),
                 mobile_optimized: None,
@@ -1833,7 +1988,7 @@ mod tests {
         let db = docs_test_db().await;
         let res = search_articles(
             axum::extract::Extension(db),
-            axum::extract::Extension(claims("default")),
+            Some(axum::extract::Extension(claims("default"))),
             axum::extract::Query(SearchQuery {
                 q: "unlikelysearchterm123".to_string(),
                 mobile_optimized: None,

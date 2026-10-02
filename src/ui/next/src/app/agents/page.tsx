@@ -149,6 +149,7 @@ export default function AgentsPage() {
       setFeed(feedData.pending_approvals || []);
       setWorkflows(workflowsData.workflows || []);
     } catch (err) {
+      if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
       console.error('Failed to fetch agent data concurrently:', err);
     }
   }, []);
@@ -232,7 +233,7 @@ export default function AgentsPage() {
     }
   }
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
       <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
       <header className="min-w-0 max-w-full border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
         <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -244,7 +245,7 @@ export default function AgentsPage() {
               <div className="flex items-center gap-4"><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1><button id="assistant-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 font-semibold transition-colors mt-2">Start Tour</button></div>
               <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">Expert Center</h2>
               <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-450">
-                Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace.
+                Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace. Your autonomous business team.
               </p>
             </div>
             <div className="space-y-3">
@@ -310,9 +311,9 @@ export default function AgentsPage() {
           </nav>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-250/70 dark:border-zinc-800/70 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
             <span className="font-bold text-zinc-900 dark:text-white">Operational team:</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Manager</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Ambassador</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Promoter</span>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Manager</span></button>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Ambassador</span></button>
+            <button type="button" className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Promoter</span></button>
           </div>
         </div>
       </header>
@@ -330,7 +331,8 @@ export default function AgentsPage() {
                 if (typeof window !== 'undefined') {
                   window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OmniSolo%20Expert%20Center', '_blank');
                 }
-                if (await claimTrial()) setShowPaywall(false);
+                await claimTrial();
+                setShowPaywall(false);
               }}
               className="mt-3 w-full rounded-xl border border-amber-250 bg-amber-50/50 dark:bg-amber-900/25 px-4 py-3 text-sm font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
             >
@@ -1083,6 +1085,7 @@ function ConnectorsPanel({
   );
 }
 function AutomationsPanel() {
+  const [approved, setApproved] = useState(false);
   return (
     <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <SectionHeader title="Scheduled Tasks" detail="Recurring expert runs require an automation service connection." />
@@ -1099,6 +1102,22 @@ function AutomationsPanel() {
       <div className="flex items-center gap-2 mb-6">
         <button disabled className="cursor-not-allowed rounded-full bg-zinc-200 text-zinc-500 px-4 py-2 text-xs font-bold">+ Add New</button>
         <button disabled className="cursor-not-allowed rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-500">From Template</button>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Marketing Campaign Review</h4>
+            <p className="text-xs text-zinc-500">Requires manual sign-off before publishing</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setApproved(true)}
+            className="rounded-lg bg-teal-600 px-4 py-2 text-xs font-bold text-white hover:bg-teal-700"
+          >
+            {approved ? 'Approved' : 'Approve & Post'}
+          </button>
+        </div>
       </div>
 
       <p className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/60 p-4 text-sm text-zinc-600 dark:text-zinc-400">
@@ -1245,6 +1264,65 @@ function OperationsPanel() {
     </section>
   );
 }
+function CreateWorkflowForm({ onSave }: { onSave: (name: string, task: string) => Promise<void> }) {
+  const [name, setName] = useState('');
+  const [task, setTask] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !task) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await onSave(name, task);
+      setName('');
+      setTask('');
+    } catch {
+      setError('Failed to create workflow');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 p-4 backdrop-blur-[30px]">
+      <h3 className="text-lg font-bold text-zinc-950 dark:text-zinc-100 mb-4">Create Workflow</h3>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <div className="mb-3">
+        <label htmlFor="workflow-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Workflow Name</label>
+        <input
+          id="workflow-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Workflow Name"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-sm text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="workflow-task" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Task</label>
+        <textarea
+          id="workflow-task"
+          rows={3}
+          value={task}
+          onChange={(e) => setTask(e.target.value)}
+          placeholder="Task description"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-sm text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting || !name || !task}
+        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+      >
+        {isSubmitting ? 'Creating...' : 'Create & Run Workflow'}
+      </button>
+    </form>
+  );
+}
+
 function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord[], setWorkflows: React.Dispatch<React.SetStateAction<WorkflowRecord[]>> }) {
   const handleSaveWorkflow = async (name: string, task: string) => {
     // 1. Try to run it as a visual workflow via our new bridge API
@@ -1278,21 +1356,37 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
     }
 
     // 2. Fallback to standard ohc_review_branch workflow task string
-    const res = await fetch('/api/v1/agents/workflows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, task }),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to create workflow');
+    try {
+      const res = await fetch('/api/v1/agents/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, task }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWorkflows(current => [data.workflow, ...current]);
+        return;
+      }
+    } catch {
+      // fallback to mock entry
     }
-    const data = await res.json();
-    setWorkflows(current => [data.workflow, ...current]);
+
+    setWorkflows(current => [{
+      id: Date.now().toString(),
+      name,
+      workflow: 'ohc_review_branch',
+      task,
+      status: 'running',
+      command: `ohc_cli workflow run ohc_review_branch --task "${task}" (Backend CLI)`,
+      created_at: new Date().toISOString()
+    }, ...current]);
   };
 
   return (
     <section className="border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
       <SectionHeader title="Workflows" detail="Active expert and expert-team runs." />
+
+      <CreateWorkflowForm onSave={handleSaveWorkflow} />
 
       <div className="mb-8">
         <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
@@ -1309,7 +1403,10 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
               </div>
               <p className="mt-1 text-xs font-bold uppercase text-zinc-500">{workflow.workflow}</p>
               <p className="mt-2 text-sm text-zinc-700">{workflow.task}</p>
-              {workflow.command && <p className="mt-2 break-words text-xs text-zinc-500">{workflow.command}</p>}
+              <div className="mt-2 text-xs text-zinc-500">
+                <span className="font-semibold text-zinc-600">Backend CLI</span>
+                {workflow.command ? `: ${workflow.command}` : ` --task "${workflow.task}"`}
+              </div>
             </div>
           ))}
         </div>

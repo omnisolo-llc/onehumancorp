@@ -51,19 +51,19 @@ export default function ViralLeaderboardGeneratorPage() {
 
           <div className="space-y-4">
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Leaderboard Title</label>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <label htmlFor="leaderboard-title" className="block text-sm font-medium text-gray-700 mb-1">Leaderboard Title</label>
+                <input id="leaderboard-title" aria-label="Leaderboard Title" placeholder="Top Referrers" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Metric to Display</label>
-                <select value={metric} onChange={(e) => setMetric(e.target.value as Parameters<typeof setMetric>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <label htmlFor="leaderboard-metric" className="block text-sm font-medium text-gray-700 mb-1">Metric to Display</label>
+                <select id="leaderboard-metric" aria-label="Metric to Display" value={metric} onChange={(e) => setMetric(e.target.value as Parameters<typeof setMetric>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                   <option value="referrers">Top Referrers</option>
                   <option value="buyers">Top Buyers</option>
                 </select>
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <label htmlFor="leaderboard-theme" className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
+                <select id="leaderboard-theme" aria-label="Theme" value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>
@@ -72,6 +72,7 @@ export default function ViralLeaderboardGeneratorPage() {
                 <input
                     type="checkbox"
                     id="removeBranding"
+                    aria-label='Remove "Powered by OmniSolo" Badge'
                     checked={hasPro}
                     onChange={handleRemoveBranding}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"

@@ -14,6 +14,15 @@ pub struct ViolationStore {
     pub rate_limit_checks_total: Counter<u64>,
     pub rate_limit_exceeded_total: Counter<u64>,
     pub mission_cost_cents: Counter<u64>,
+    pub byok_cost_counter: Counter<u64>,
+}
+
+impl std::fmt::Debug for ViolationStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ViolationStore")
+            .field("pool_is_some", &self.pool.is_some())
+            .finish()
+    }
 }
 
 impl ViolationStore {
@@ -26,6 +35,7 @@ impl ViolationStore {
         let rate_limit_checks_total = meter.u64_counter("ohc_rate_limit_checks_total").build();
         let rate_limit_exceeded_total = meter.u64_counter("ohc_rate_limit_exceeded_total").build();
         let mission_cost_cents = meter.u64_counter("ohc_mission_cost_cents").build();
+        let byok_cost_counter = meter.u64_counter("ohc_byok_cost_total_cents").build();
 
         Self {
             pool,
@@ -36,6 +46,7 @@ impl ViolationStore {
             rate_limit_checks_total,
             rate_limit_exceeded_total,
             mission_cost_cents,
+            byok_cost_counter,
         }
     }
 

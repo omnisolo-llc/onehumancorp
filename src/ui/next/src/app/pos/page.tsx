@@ -61,9 +61,12 @@ export default function POSPage() {
     setMessage("Processing payment...");
 
     try {
+      const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const payload = {
         items: cart,
-        total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        total,
+        amount_cents: Math.round(total * 100),
+        currency: "usd",
         offline_id: crypto.randomUUID(), // Unique ID for idempotency and offline sync
         timestamp: new Date().toISOString(),
       };

@@ -29,10 +29,12 @@ export default function TrialExtensionPage() {
       if (response.ok) {
         setHasClaimed(true);
       } else {
-        setError("Pro activation could not be confirmed. Please try again.");
+        alert("Failed to claim trial extension. Please try again.");
+        setError("Failed to claim trial extension. Please try again.");
       }
     } catch {
-      setError("The Pro activation service is unavailable. Please try again later.");
+      alert("Error claiming trial extension. Please check your connection.");
+      setError("Error claiming trial extension. Please check your connection.");
     } finally {
       setIsClaiming(false);
     }
@@ -48,7 +50,7 @@ export default function TrialExtensionPage() {
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center">
-        <div className="w-full glassmorphism rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-white/10 p-8 md:p-12 text-center max-w-2xl relative">
+        <div className="w-full glassmorphism rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-white/10 p-8 md:p-12 mb-24 text-center max-w-2xl relative">
 
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
 
@@ -101,7 +103,7 @@ export default function TrialExtensionPage() {
           )}
         </div>
       </main>
-      <div className="mt-8 text-center pb-8"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ Powered by OmniSolo</a></div>
+      <div className="mt-8 text-center pb-8"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ OmniSolo</a></div>
 
       <style dangerouslySetInnerHTML={{__html: `
 

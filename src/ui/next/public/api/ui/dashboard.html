@@ -12,13 +12,14 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        height: 100vh;
+        min-height: 100vh;
+        overflow-y: auto;
         box-sizing: border-box;
       }
       .container {
         max-width: 400px;
         width: 100%;
+        margin: auto;
         padding: 40px;
         box-sizing: border-box;
         background: rgba(255, 255, 255, 0.65);
@@ -564,6 +565,9 @@
     </style>
   </head>
   <body>
+    <nav class="nav-bar" style="width: 100%; max-width: 1200px; display: flex; justify-content: flex-end; padding: 12px 24px; box-sizing: border-box;">
+      <a href="/api/ui/help.html" class="nav-link" id="nav-help" style="text-decoration: none; color: #0066FF; font-weight: 600; font-size: 14px;">Help</a>
+    </nav>
     <!-- Omnibox Modal -->
     <div id="omnibox-overlay">
       <div id="omnibox-modal" onclick="event.stopPropagation()">
@@ -687,6 +691,7 @@
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
         <a href="/giveaway" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
+        <a href="viral-certificate-generator.html" id="viral-certificate-generator-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;">Viral Certificate Generator 🎓</a>
       </div>
 
       <div class="omnisolo-growth-card" id="triage-section" style="display: none;">
@@ -950,7 +955,7 @@
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
           window.__TAURI__.core.invoke("generate_cloud_invite").then((link) => {
-            referralLink.value = link;
+            referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "https://cloud.omnisolo.co/invite/fallback";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           }).catch((err) => {
@@ -967,7 +972,7 @@
                 body: JSON.stringify({ invitee_id: "pending" })
             });
             const data = await res.json();
-                  referralLink.value = data.invite_link || "https://cloud.omnisolo.co/invite/fallback";
+                  referralLink.value = (data.invite_link || "https://cloud.omnisolo.co/invite/fallback").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
           } catch(e) {
             console.error(e);
                   referralLink.value = "https://cloud.omnisolo.co/invite/fallback";
@@ -1214,16 +1219,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 
     if (!window.OMNISOLO_TOOLTIPS) {
-        window.OMNISOLO_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OMNISOLO_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
-        });
+        window.OMNISOLO_TOOLTIPS = {
+            "nav-store": "Your Storefront. This is where you manage what you sell.",
+            "nav-agents": "AI Helpers. These are your digital employees.",
+            "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+            "search-input": "Search our knowledge base for help articles.",
+            "dashboard-walkthrough-btn": "Take a tour of the dashboard",
+        };
+        fetch("/api/v1/tooltips").then(r => r.ok ? r.json() : null).then(data => {
+            if (data && typeof data === 'object') {
+                Object.assign(window.OMNISOLO_TOOLTIPS, data);
+            }
+        }).catch(() => {});
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -1267,7 +1274,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
-            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+            showTooltip(e, text);
         }
     });
 
@@ -1283,7 +1292,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                const raw = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+                const text = target.id === 'dashboard-walkthrough-btn' ? `${raw} Start an interactive guide to learn how to use OmniSolo.` : raw;
+                showTooltip(e, text);
             }, 500); // 500ms long press
         }
     });
@@ -1478,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.id = 'ohc-help-chat-overlay';
     overlay.innerHTML = `
         <div id="ohc-help-chat-header">
-            <h3>Ask anything</h3>
+            <h3>Ask AI Help</h3>
             <button id="ohc-help-close" aria-label="Close help chat">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
@@ -1542,7 +1553,24 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(res => res.json())
         .then(data => {
-            aiMsg.textContent = data.reply || data.response || "Sorry, I could not process that.";
+            const replyText = typeof data.reply === 'string' ? data.reply : (data.reply?.text || data.response || "Sorry, I could not process that.");
+            aiMsg.textContent = replyText;
+            const link = data.link || data.reply?.link;
+            if (link && (link.title || link.url)) {
+                const linkEl = document.createElement('a');
+                linkEl.href = link.url || '#';
+                linkEl.textContent = link.title || "Read the full article →";
+                linkEl.style.display = 'block';
+                linkEl.style.marginTop = '8px';
+                aiMsg.appendChild(linkEl);
+            } else if (data.link_url || data.link_title) {
+                const linkEl = document.createElement('a');
+                linkEl.href = data.link_url || '#';
+                linkEl.textContent = data.link_title || "Read the full article →";
+                linkEl.style.display = 'block';
+                linkEl.style.marginTop = '8px';
+                aiMsg.appendChild(linkEl);
+            }
             messages.scrollTop = messages.scrollHeight;
         })
         .catch(err => {
@@ -1571,15 +1599,16 @@ function initWalkthrough() {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'walkthrough-overlay';
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'fixed z-[90] omnisolo-walkthrough-overlay';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble';
+        bubble.className = 'omnisolo-walkthrough-bubble glassmorphism';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100000; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -1595,14 +1624,14 @@ function initWalkthrough() {
             });
 
             // Find target
-            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+            const target = (step.targetId && (document.getElementById(step.targetId) || document.querySelector(step.targetId))) || (step.selector && document.querySelector(step.selector));
 
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="omnisolo-walkthrough-close" aria-label="Close walkthrough" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px; position: relative; z-index: 10;">&times;</button>
                 </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text || ''}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
                     <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
@@ -1627,13 +1656,16 @@ function initWalkthrough() {
                 target.style.background = 'white'; // Make it pop
                 target.style.pointerEvents = 'none';
 
+                target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
                 const rect = target.getBoundingClientRect();
-                // Position bubble below target if space permits, else above
-                if (rect.bottom + 200 < window.innerHeight) {
-                    bubble.style.top = (rect.bottom + 10) + 'px';
+                const bubbleHeight = bubble.offsetHeight || 180;
+                let topPos;
+                if (rect.bottom + bubbleHeight + 20 < window.innerHeight) {
+                    topPos = rect.bottom + 10;
                 } else {
-                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                    topPos = rect.top - bubbleHeight - 10;
                 }
+                bubble.style.top = Math.max(10, Math.min(topPos, window.innerHeight - bubbleHeight - 10)) + 'px';
                 bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
             } else {
                 // Center if no target

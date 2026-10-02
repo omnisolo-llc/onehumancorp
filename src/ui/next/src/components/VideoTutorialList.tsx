@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { WithTooltip } from './TooltipRegistry';
 
 type VideoTutorial = {
   id: number;
@@ -37,6 +36,10 @@ export function VideoTutorialList({
         setFetchedLoading(false);
       })
       .catch(err => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) {
+          setFetchedLoading(false);
+          return;
+        }
         console.error('Failed to load video tutorials', err);
         setFetchedLoading(false);
       });
@@ -131,15 +134,13 @@ export function VideoTutorialList({
       {/* Video Player Modal */}
       {activeVideo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[20px] saturate-200 p-4 animate-fade-in">
-          <div className="bg-black backdrop-blur-[30px] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in">
+          <div className="bg-black backdrop-blur-[30px] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] max-h-[90vh] mx-auto aspect-[9/16] relative animate-pop-in">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
               <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{activeVideo.title}</h3>
-              <WithTooltip id="video-close-btn-tooltip" defaultText="Close video player">
-                <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-[30px] saturate-[210%] border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </WithTooltip>
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-[30px] saturate-[210%] border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
 
             {/* Real Video Player area */}

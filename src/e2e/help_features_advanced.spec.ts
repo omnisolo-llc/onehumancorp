@@ -32,12 +32,12 @@ test.describe('In-App Help & Documentation Features', () => {
     // We will check the help widget.
 
     // Open help widget
-    const helpBtn = page.getByRole('button', { name: 'Help' });
+    const helpBtn = page.getByRole('button', { name: 'Help', exact: true }).first();
     await helpBtn.waitFor({ state: 'visible' });
     await helpBtn.click();
 
     // Widget should be open
-    await expect(page.getByRole('button', { name: 'Help', exact: true }).or(page.getByText('Interactive Tours'))).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Help', exact: true }).first().or(page.getByText('Interactive Tours')).first()).toBeVisible();
 
     // Switch to Ask AI tab
     await page.getByRole('button', { name: 'Ask AI' }).click();
@@ -52,7 +52,7 @@ test.describe('In-App Help & Documentation Features', () => {
 
   test('api docs page', async ({ page }) => {
     await page.goto('/api/v1/ui/api-docs.html');
-    await expect(page.getByText('OmniSolo Advanced API Reference')).toBeVisible();
+    await expect(page.getByText('OmniSolo Advanced API Reference').first()).toBeVisible();
   });
 
   test('changelog page', async ({ page }) => {

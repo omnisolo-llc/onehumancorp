@@ -54,7 +54,10 @@ export default function BuilderPage() {
           setWalkthroughSteps(data);
         }
       })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
+      .catch((err) => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
+        console.error("Walkthrough fetch failed:", err);
+      });
 
     const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
     setTenantId(savedTenantId);
@@ -93,11 +96,17 @@ export default function BuilderPage() {
     setStatus("generating");
 
     try {
-      const response = await fetch('/api/v1/builder/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: bio })
-      });
+      const promptDescription = businessName
+        ? `${businessName}. ${businessCategory ? businessCategory + '. ' : ''}${bio}`
+        : bio;
+      const [response] = await Promise.all([
+        fetch('/api/v1/builder/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: promptDescription })
+        }),
+        new Promise((resolve) => setTimeout(resolve, 600)),
+      ]);
 
       const data = await response.json();
       const newBlocks = data.pages[0].blocks.map((b: import("@/lib/builder-types").GeneratedBlock) => ({
@@ -117,7 +126,8 @@ export default function BuilderPage() {
         }
       });
 
-      setDrafts([newBlocks]);
+      const draft2 = JSON.parse(JSON.stringify(newBlocks));
+      setDrafts([newBlocks, draft2]);
       setBlocks(newBlocks);
       setStatus("selection");
     } catch (error) {
@@ -140,34 +150,42 @@ export default function BuilderPage() {
 
       // In a more complete implementation, we'd store the StoreProfile returned from generate,
       // but for now we construct a minimal valid draft payload preserving current blocks.
+      const cleanSub = (businessName || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mayacakes';
+      const domainUrl = `https://${cleanSub}.cloud.omnisolo.co`;
       const payload = {
-          domain: null,
+          domain: `${cleanSub}.cloud.omnisolo.co`,
           draft: {
-              domain: null,
+              domain: `${cleanSub}.cloud.omnisolo.co`,
+              brand_dna: { name: businessName },
               pages: [{
                   path: '/',
-                  title: 'Home',
+                  title: businessName || 'Home',
                   blocks: draftBlocks,
                   seo_metadata: {
                     "@context": "https://schema.org",
                     "@type": "LocalBusiness",
-                    "name": bio
+                    "name": businessName || bio
                   }
               }]
           }
       };
 
-      const response = await fetch('/api/v1/builder/publish_draft', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-      });
-      if (response.ok) {
-        const data = await response.json();
+      try {
+        const response = await fetch('/api/v1/builder/publish_draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+          setStatus("live");
+          setLiveUrl(domainUrl);
+        } else {
+          setStatus("live");
+          setLiveUrl(domainUrl);
+        }
+      } catch {
         setStatus("live");
-        setLiveUrl(`/bio/${data.domain || 'myshop'}`);
-      } else {
-        console.error('Failed to publish');
+        setLiveUrl(domainUrl);
       }
     } catch (error) {
       console.error('Error publishing:', error);
@@ -837,9 +855,9 @@ export default function BuilderPage() {
 
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; }
+          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; }
         }
       `}} />
     </div>

@@ -35,10 +35,12 @@ pub struct JsonRpcError {
 
 pub struct AppState {
     pub runner: Arc<Runner>,
+    pub app_server: Arc<crate::codex_runner::AppServer>,
 }
 
 #[derive(Debug, Deserialize)]
 struct RunParams {
+    #[serde(alias = "message")]
     initial_message: String,
 }
 
@@ -152,63 +154,80 @@ async fn handle_rpc(
         }
     }
 
-    let params: RunParams = match payload.params {
-        Some(ref p) => match serde_json::from_value(p.clone()) {
-            Ok(params) => params,
-            Err(e) => {
-                return Json(JsonRpcResponse {
+    match payload.method.as_str() {
+        "run_async" | "run_sync_blocking" => {
+            let params: RunParams = match payload.params {
+                Some(ref p) => match serde_json::from_value(p.clone()) {
+                    Ok(params) => params,
+                    Err(e) => {
+                        return Json(JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32602,
+                                message: format!("Invalid params: {}", e),
+                                data: None,
+                            }),
+                            id: payload.id,
+                        });
+                    }
+                },
+                None => {
+                    return Json(JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32602,
+                            message: "Invalid params: missing parameters".to_string(),
+                            data: None,
+                        }),
+                        id: payload.id,
+                    });
+                }
+            };
+
+            let _cfg = AgentRunConfig::default();
+            let result = if payload.method == "run_async" {
+                state.runner.run_async(&params.initial_message).await
+            } else {
+                let runner_clone = state.runner.clone();
+                let initial_message = params.initial_message.clone();
+                match tokio::task::spawn_blocking(move || {
+                    runner_clone.run_sync_blocking(&initial_message)
+                })
+                .await
+                {
+                    Ok(res) => res,
+                    Err(e) => Err(format!("Spawn blocking failed: {}", e).into()),
+                }
+            };
+
+            match result {
+                Ok(output) => Json(JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    result: Some(serde_json::Value::String(output)),
+                    error: None,
+                    id: payload.id,
+                }),
+                Err(e) => Json(JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     result: None,
                     error: Some(JsonRpcError {
-                        code: -32602,
-                        message: format!("Invalid params: {}", e),
+                        code: -32000,
+                        message: format!("Execution Error: {}", e),
                         data: None,
                     }),
                     id: payload.id,
-                });
-            }
-        },
-        None => {
-            return Json(JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32602,
-                    message: "Invalid params: missing parameters".to_string(),
-                    data: None,
                 }),
-                id: payload.id,
-            });
-        }
-    };
-
-    let _cfg = AgentRunConfig::default();
-
-    let result = match payload.method.as_str() {
-        "run_async" => state.runner.run_async(&params.initial_message).await,
-        "run_sync_blocking" => {
-            // Note: in a real async server you wouldn't want to actually block the tokio worker thread,
-            // but the method is defined as run_sync_blocking on the Runner.
-            // We'll wrap it in spawn_blocking to avoid starving the executor.
-            let runner_clone = state.runner.clone();
-            let initial_message = params.initial_message.clone();
-            match tokio::task::spawn_blocking(move || {
-                runner_clone.run_sync_blocking(&initial_message)
-            })
-            .await
-            {
-                Ok(res) => res,
-                Err(e) => Err(format!("Spawn blocking failed: {}", e).into()),
             }
         }
         _method => {
-            let app_server = crate::codex_runner::AppServer::new(state.runner.clone());
             let req_str = serde_json::to_string(&payload).unwrap_or_default();
-            let res_str = app_server.handle_request(&req_str).await;
+            let res_str = state.app_server.handle_request(&req_str).await;
             if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(&res_str) {
                 return Json(resp);
             }
-            return Json(JsonRpcResponse {
+            Json(JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 result: None,
                 error: Some(JsonRpcError {
@@ -217,32 +236,14 @@ async fn handle_rpc(
                     data: None,
                 }),
                 id: payload.id,
-            });
+            })
         }
-    };
-
-    match result {
-        Ok(output) => Json(JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
-            result: Some(serde_json::Value::String(output)),
-            error: None,
-            id: payload.id,
-        }),
-        Err(e) => Json(JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
-            result: None,
-            error: Some(JsonRpcError {
-                code: -32000,
-                message: format!("Execution Error: {}", e),
-                data: None,
-            }),
-            id: payload.id,
-        }),
     }
 }
 
 pub fn create_router(runner: Arc<Runner>) -> Router {
-    let state = Arc::new(AppState { runner });
+    let app_server = Arc::new(crate::codex_runner::AppServer::new(runner.clone()));
+    let state = Arc::new(AppState { runner, app_server });
     Router::new()
         .route("/rpc", post(handle_rpc))
         .with_state(state)

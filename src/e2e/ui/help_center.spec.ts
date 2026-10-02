@@ -34,7 +34,7 @@ test.describe('Help Center & Documentation Features', () => {
     await page.goto('/api/v1/ui/help.html');
 
     // 2. Click the API Documentation link in Advanced section
-    const apiLink = page.locator('a:has-text("API Documentation")');
+    const apiLink = page.locator('a:has-text("API Documentation")').first();
     await expect(apiLink).toBeVisible();
 
     // 3. Navigate to API Docs
@@ -49,7 +49,7 @@ test.describe('Help Center & Documentation Features', () => {
 
     // 5. Verify API docs loaded (Swagger UI)
     await expect(page.locator('text=Advanced:')).toBeVisible();
-    await expect(page.locator('.swagger-ui')).toBeVisible();
+    await expect(page.locator('.swagger-ui').first()).toBeVisible();
   });
 
   test('Owner can trigger Interactive Walkthroughs from the Help Widget', async ({ page }) => {

@@ -59,19 +59,45 @@ impl ResearcherLlmClient for AdapterLlm {
         #[cfg(not(test))]
         let forced_response: Option<String> = None;
 
-        let response_text = if let Some(response) = forced_response {
-            response
+        let (response_text, usage) = if let Some(response) = forced_response {
+            (
+                response,
+                Usage {
+                    input_tokens: 10,
+                    output_tokens: 20,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
+            )
         } else if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
+            (r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string(), Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
         } else {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&prompt)
-                .await?
+            let observed = crate::minimax::LocalLLMClient::new()
+                .reason_with_usage(&prompt, req.max_tokens)
+                .await?;
+            let counts = observed
+                .counts
+                .ok_or("Local provider omitted usage; draft accounting requires reconciliation")?;
+            let input_tokens = i32::try_from(counts.input)
+                .map_err(|_| "Local input usage exceeds supported range")?;
+            let output_tokens = i32::try_from(counts.output)
+                .map_err(|_| "Local output usage exceeds supported range")?;
+            let cache_read_input_tokens = i32::try_from(counts.cached_input)
+                .map_err(|_| "Local cache usage exceeds supported range")?;
+            (
+                observed.text,
+                Usage {
+                    input_tokens,
+                    output_tokens,
+                    cache_read_input_tokens,
+                    cache_creation_input_tokens: 0,
+                },
+            )
         };
 
         Ok(ChatResponse {
             message: Message::assistant(response_text),
-            usage: Usage::default(),
+            usage,
             stop_reason: "stop".to_string(),
             response_id: None,
         })
@@ -116,10 +142,13 @@ pub struct CreateQuoteRequest {
 
 #[derive(Deserialize)]
 pub struct UpdateQuoteRequest {
+    #[serde(alias = "total_amount")]
     pub total_amount_cents: Option<i64>,
+    #[serde(alias = "required_deposit")]
     pub required_deposit_cents: Option<i64>,
     pub stripe_payment_link: Option<String>,
     pub status: Option<String>,
+    #[serde(default)]
     pub line_items: Vec<QuoteLineItemRequest>,
 }
 

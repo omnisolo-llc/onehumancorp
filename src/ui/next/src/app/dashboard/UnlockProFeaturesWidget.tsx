@@ -24,6 +24,7 @@ export function UnlockProFeaturesWidget() {
           setInvitesSent(data.total_invites || 0);
         }
       } catch (err) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
         console.error("Failed to fetch invite metrics", err);
       }
     }
@@ -55,12 +56,13 @@ export function UnlockProFeaturesWidget() {
   return (
     <div
       data-testid="unlock-pro-features-widget"
-      className="glassmorphism app-card p-6 rounded-2xl mb-6 shadow-sm border border-purple-100 dark:border-purple-900/50 bg-gradient-to-br from-white to-purple-50/50 dark:from-gray-900 dark:to-purple-900/20"
+      data-voice-assistant-surface="glass"
+      className="glassmorphism p-6 rounded-2xl mb-6 shadow-sm border border-purple-100 dark:border-purple-900/50 bg-gradient-to-br from-white to-purple-50/50 dark:from-gray-900 dark:to-purple-900/20"
     >
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-bold text-gray-900 dark:text-white font-outfit text-xl flex items-center gap-2">
-            <span className="text-2xl">✨</span> Referral Progress
+            <span className="text-2xl">✨</span> Unlock Pro Features (Referral Progress)
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Track confirmed invites. Any associated reward must be verified by the billing service.

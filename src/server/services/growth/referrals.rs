@@ -196,4 +196,35 @@ mod tests {
         assert_eq!(calculate_tier_discount("Silver"), 0.05);
         assert_eq!(calculate_tier_discount("Bronze"), 0.00);
     }
+
+    #[test]
+    fn test_referral_tracker_edge_cases() {
+        let tracker = ReferralTracker::new();
+
+        // Empty user ID
+        let code = tracker.generate_referral_code("");
+        assert_eq!(code.len(), 8);
+
+        // Very long user ID
+        let long_id = "a".repeat(1000);
+        let code_long = tracker.generate_referral_code(&long_id);
+        assert_eq!(code_long.len(), 8);
+
+        // Multiple users
+        for i in 0..100 {
+            let user_id = format!("user{}", i);
+            let _ = tracker.generate_referral_code(&user_id);
+        }
+
+        // Non-existent codes
+        assert!(!tracker.record_referral("does_not_exist"));
+        assert!(!tracker.record_referral_with_channel("does_not_exist", "twitter"));
+
+        // Empty channel
+        let code = tracker.generate_referral_code("user_empty_channel");
+        assert!(tracker.record_referral_with_channel(&code, ""));
+
+        let stats = tracker.get_channel_stats();
+        assert!(!stats.contains_key(""));
+    }
 }

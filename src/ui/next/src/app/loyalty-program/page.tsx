@@ -20,6 +20,10 @@ export default function LoyaltyProgramPage() {
     setGeneratedDraft('');
     setSendError(null);
 
+    const giveText = rewardType === 'fixed' ? `$${giveAmount} in store credit` : `${giveAmount}% discount`;
+    const getText = rewardType === 'fixed' ? `$${getAmount} in store credit` : `${getAmount}% discount`;
+    const fallbackTemplate = `Subject: Welcome to the VIP Loyalty Program!\n\nHey there,\n\nGive your friends ${giveText} on their first purchase, and receive ${getText} when they order.\n\nThank you for being part of our VIP Loyalty Program.\n\n⚡ OmniSolo`;
+
     try {
       const response = await fetch('/api/v1/growth/loyalty/generate', {
         method: 'POST',
@@ -34,11 +38,15 @@ export default function LoyaltyProgramPage() {
         })
       });
 
-      const data = await response.json();
-      setGeneratedDraft(`${data.message}\n\n⚡ Powered by OmniSolo`);
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.message) {
+        setGeneratedDraft(`${data.message}\n\n⚡ OmniSolo`);
+      } else {
+        setGeneratedDraft(fallbackTemplate);
+      }
     } catch (error) {
       console.error("Failed to generate draft", error);
-      setGeneratedDraft("Failed to generate email draft. Please try again.");
+      setGeneratedDraft(fallbackTemplate);
     } finally {
       setIsGenerating(false);
     }

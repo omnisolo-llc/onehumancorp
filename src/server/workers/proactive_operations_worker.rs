@@ -13,7 +13,7 @@ impl ProactiveOperationsWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
-            poll_interval: Duration::from_secs(60), // Check every minute in dev
+            poll_interval: Duration::from_secs(2), // Check every 2 seconds in dev / test
         }
     }
 
@@ -120,6 +120,10 @@ impl ProactiveOperationsWorker {
                             }
                         }
                     }
+
+                    let cache = crate::api::agent_feed::get_agent_feed_cache();
+                    let tag = format!("agent_feed_tenant:{}", tenant_id);
+                    cache.invalidate_by_tag(&tag).await;
                 }
             }
         });

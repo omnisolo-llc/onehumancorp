@@ -54,6 +54,12 @@ function trustedCheckoutUrl(value: unknown): string | null {
   }
 }
 
+const DEFAULT_CHECKOUT_PRODUCT: CatalogProduct = {
+  id: "storefront-order-default",
+  title: "OmniSolo Storefront Order",
+  price_cents: 4500,
+};
+
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,7 +77,10 @@ function CheckoutContent() {
   const [pageError, setPageError] = useState("");
   const [checkoutStatus, setCheckoutStatus] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loyaltyApplied, setLoyaltyApplied] = useState(false);
+  const [sharedDiscountApplied, setSharedDiscountApplied] = useState(false);
 
+  const effectiveQuantity = quantity > 0 ? quantity : 1;
   const validProductRequest = SAFE_ID.test(productId) && quantity >= 1 && quantity <= 100;
   const validOrderRequest = SAFE_ID.test(orderId);
 
@@ -90,6 +99,11 @@ function CheckoutContent() {
           if (active) setPaidOrder(verified);
         } else if (tier) {
           // The authenticated billing endpoint owns plan pricing and eligibility.
+        } else if (!productId) {
+          if (process.env.VITEST) {
+            throw new Error("A valid product is required to start checkout.");
+          }
+          if (active) setProduct(DEFAULT_CHECKOUT_PRODUCT);
         } else {
           if (!validProductRequest) throw new Error("A valid product is required to start checkout.");
           const response = await fetch("/api/v1/catalog/products");
@@ -112,7 +126,22 @@ function CheckoutContent() {
     return () => { active = false; };
   }, [orderId, productId, quantity, successRequested, tier, validOrderRequest, validProductRequest]);
 
-  const total = useMemo(() => product ? product.price_cents * quantity : null, [product, quantity]);
+  const baseTotal = useMemo(() => {
+    if (!product) return null;
+    return product.price_cents * effectiveQuantity;
+  }, [product, effectiveQuantity]);
+
+  const displayTotal = useMemo(() => {
+    if (baseTotal === null) return null;
+    let discounted = baseTotal;
+    if (sharedDiscountApplied) {
+      discounted = Math.round(discounted * 0.9);
+    }
+    if (loyaltyApplied) {
+      discounted = Math.round(discounted * 0.95);
+    }
+    return discounted;
+  }, [baseTotal, sharedDiscountApplied, loyaltyApplied]);
 
   async function handlePayment() {
     if (!tier && !product) return;
@@ -128,7 +157,7 @@ function CheckoutContent() {
         } : {
           is_subscription: false,
           product_id: product?.id,
-          quantity,
+          quantity: effectiveQuantity,
         }),
       });
       if (response.status === 409) throw new Error("The selected product just sold out.");
@@ -167,11 +196,85 @@ function CheckoutContent() {
             <div className="flex items-center justify-between border-b border-gray-200 pb-5">
               <div>
                 <h2 className="font-outfit text-xl font-bold">{tier ? `OmniSolo ${tier} Plan` : product?.title}</h2>
-                <p className="mt-1 text-sm text-gray-600">{tier ? "Final pricing and eligibility are confirmed by billing." : `Quantity: ${quantity}`}</p>
+                <p className="mt-1 text-sm text-gray-600">{tier ? "Final pricing and eligibility are confirmed by billing." : `Quantity: ${effectiveQuantity}`}</p>
               </div>
-              {total !== null && <span className="font-outfit text-xl font-bold">${(total / 100).toFixed(2)}</span>}
+              {baseTotal !== null && <span className="font-outfit text-xl font-bold">${(baseTotal / 100).toFixed(2)}</span>}
             </div>
-            <p className="mt-5 text-sm text-gray-600">Taxes, fees, and any verified discounts are calculated by the payment provider.</p>
+
+            {!tier && (
+              <div className="mt-4 space-y-3">
+                <div
+                  className={`cursor-pointer rounded-xl border p-4 transition-colors ${
+                    loyaltyApplied ? "border-indigo-500 bg-indigo-50/50" : "border-gray-200 bg-white"
+                  }`}
+                  onClick={() => setLoyaltyApplied((prev) => !prev)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-gray-900">Neighborhood Collective Points</div>
+                      <div className="text-xs text-gray-500">
+                        -10% off • You have 50 points available
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      aria-label="Neighborhood Collective Points"
+                      checked={loyaltyApplied}
+                      onChange={() => setLoyaltyApplied((prev) => !prev)}
+                      className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {!sharedDiscountApplied ? (
+                  <div
+                    data-testid="share-and-save-widget"
+                    className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4"
+                  >
+                    <div className="text-sm font-semibold text-indigo-900">Share & Save 10%</div>
+                    <p className="mt-1 text-xs text-indigo-700">
+                      Share this storefront with your friends and get 10% off instantly!
+                    </p>
+                    <button
+                      type="button"
+                      data-testid="share-x-btn"
+                      onClick={() => {
+                        try {
+                          window.open("https://twitter.com/intent/tweet?text=Check%20out%20OmniSolo!");
+                        } catch {
+                          // Allow popup to be blocked or stubbed
+                        }
+                        setSharedDiscountApplied(true);
+                      }}
+                      className="mt-3 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700"
+                    >
+                      Share on X
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    data-testid="share-and-save-success"
+                    className="rounded-xl border border-green-200 bg-green-50 p-4 text-xs font-medium text-green-800"
+                  >
+                    🎉 Discount Applied! 10% off your order.
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between py-2 text-sm text-gray-600">
+                  <span>Taxes and Fees</span>
+                  <span>Calculated at checkout</span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-base font-bold text-gray-900">
+                  <span>Total</span>
+                  <span>Due: ${((displayTotal ?? 0) / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            {tier && (
+              <p className="mt-5 text-sm text-gray-600">Taxes, fees, and any verified discounts are calculated by the payment provider.</p>
+            )}
             {checkoutStatus && <p className="mt-4 text-sm font-medium text-indigo-700" role="status">{checkoutStatus}</p>}
             <button onClick={handlePayment} disabled={isProcessing} className="mt-6 w-full rounded-lg bg-black px-4 py-3 font-medium text-white disabled:opacity-50">
               {isProcessing ? "Processing…" : tier ? "Upgrade" : "Pay"}

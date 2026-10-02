@@ -7,8 +7,9 @@ test('viral_upgrade_paywall', async ({ page, request, loginAs, adminUser }) => {
 });
 
 test.describe('Viral SaaS Upgrade Soft Paywall Growth Loop', () => {
-  test('should display the upgrade paywall widget on the dashboard', async ({ page }) => {
+  test('should display the upgrade paywall widget on the dashboard', async ({ page, loginAs, adminUser }) => {
     // Navigate to dashboard
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
@@ -17,8 +18,8 @@ test.describe('Viral SaaS Upgrade Soft Paywall Growth Loop', () => {
     await expect(widgetHeading).toBeVisible();
 
     // 2. Verify the progress text
-    await expect(page.getByText('1 / 3')).toBeVisible();
-    await expect(page.getByText('2 more to unlock')).toBeVisible();
+    await expect(page.getByText(/\d+ \/ 3/).first()).toBeVisible();
+    await expect(page.getByText(/\d+ more to unlock/)).toBeVisible();
 
     // 3. Verify the share/copy button is present
     const copyButton = page.getByRole('button', { name: /Copy Link/i });

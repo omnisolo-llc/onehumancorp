@@ -15,6 +15,8 @@ toc:
     path: /docs/technical/features/index.md
   - title: Universal Harness Orchestration
     path: /docs/features/kairos_orchestration.md
+  - title: Connected Accounts and Standing Authority
+    path: /docs/features/connected_accounts_and_standing_authority.md
   - title: Operations
     path: /docs/technical/operations/index.md
   - title: Research
@@ -29,3 +31,7 @@ toc:
     path: /docs/business/roadmap.md
   - title: Vision
     path: /docs/vision/market_strategy.md
+  - title: Help Center
+    path: /docs/help_center/index.md
+  - title: Setup & Authority
+    path: /docs/help_center/setup_accounts_authority.md

@@ -23,7 +23,7 @@ test.describe('Agentic Storefront Editor', () => {
     await page.click('button:has-text("Ask Agent to Edit")');
 
     // Verify Marketing Agent chat opens
-    await expect(page.locator('text=Marketing Agent')).toBeVisible();
+    await expect(page.locator('text=Marketing Agent').first()).toBeVisible();
 
     // Type a request to the agent
     await page.fill('textarea[placeholder="e.g. Add a new product..."]', 'Add a new vegan chocolate cake for $45');

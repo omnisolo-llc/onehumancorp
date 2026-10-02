@@ -53,6 +53,24 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 title: "Understanding your invoice".to_string(),
                 content_markdown: "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string(),
             },
+            HelpArticle {
+                id: "setup-accounts-authority".to_string(),
+                topic: "Getting Started".to_string(),
+                title: "Setup, Connected Accounts, and Standing Authority".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/setup_accounts_authority.md").to_string(),
+            },
+            HelpArticle {
+                id: "proposals-payments".to_string(),
+                topic: "Sales & Checkout".to_string(),
+                title: "How to Send Proposals and Collect Payments Securely".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/managing_quotes_invoices_approvals.md").to_string(),
+            },
+            HelpArticle {
+                id: "connected-accounts".to_string(),
+                topic: "Account & Billing".to_string(),
+                title: "Connected Accounts and Standing Authority".to_string(),
+                content_markdown: include_str!("../../../../docs/help_center/connected_accounts.md").to_string(),
+            },
         ]
     })
 }

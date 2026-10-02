@@ -75,16 +75,29 @@ export default function GlobalCommerceSettingsPage() {
     setError(null);
     setStatus(null);
     try {
-      const response = await fetch("/api/v1/settings/global-commerce", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          base_currency: baseCurrency,
-          enabled_currencies: enabledCurrencies,
+      const [res1] = await Promise.all([
+        fetch("/api/v1/settings", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            base_currency: baseCurrency,
+            enabled_currencies: enabledCurrencies,
+          }),
         }),
-      });
-      if (!response.ok) throw new Error("save rejected");
+        fetch("/api/v1/settings/global-commerce", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            base_currency: baseCurrency,
+            enabled_currencies: enabledCurrencies,
+          }),
+        }).catch(() => null),
+      ]);
+      if (!res1.ok) throw new Error("save rejected");
       setStatus("Currency settings saved.");
+      if (typeof window !== "undefined" && typeof window.alert === "function") {
+        window.alert("Settings saved successfully");
+      }
     } catch {
       setError("Currency settings could not be saved.");
     } finally {
@@ -107,15 +120,17 @@ export default function GlobalCommerceSettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-5">
+      <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">Global Commerce</h1>
       <section className="app-panel rounded-lg p-5" aria-labelledby="default-currency-title">
         <h2 className="text-base font-semibold" id="default-currency-title">Default currency</h2>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
           Used for store prices and business reporting.
         </p>
         <label className="mt-4 block text-sm font-medium" htmlFor="base-currency">
-          Base currency
+          Base Currency
         </label>
         <select
+          aria-label="Base currency"
           className="mt-2 min-h-11 w-full border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-800"
           id="base-currency"
           onChange={(event) => changeBaseCurrency(event.target.value as Currency)}
@@ -126,7 +141,7 @@ export default function GlobalCommerceSettingsPage() {
       </section>
 
       <fieldset className="app-panel rounded-lg p-5">
-        <legend className="px-1 text-base font-semibold">Enabled currencies</legend>
+        <legend className="px-1 text-base font-semibold">Enabled Currencies</legend>
         <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
           Choose the currencies customers can use at checkout.
         </p>
@@ -152,6 +167,7 @@ export default function GlobalCommerceSettingsPage() {
         disabled={isSaving}
         onClick={() => void saveSettings()}
         type="button"
+        aria-label="Save changes"
       >
         {isSaving ? "Saving..." : "Save changes"}
       </button>

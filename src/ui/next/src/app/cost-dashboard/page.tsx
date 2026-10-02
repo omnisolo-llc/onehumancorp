@@ -109,6 +109,10 @@ export default function CostDashboardPage() {
   };
 
   const handleManageBilling = async () => {
+    if (!myPlanData || myPlanData.current_plan === 'Free') {
+      router.push('/pricing');
+      return;
+    }
     setIsActionLoading(true);
     try {
       const response = await fetch('/api/v1/billing/create-billing-portal-session', {
@@ -125,10 +129,13 @@ export default function CostDashboardPage() {
       const session = await response.json();
       if (session.url) {
         window.location.href = session.url;
+      } else {
+        router.push('/pricing');
       }
     } catch (error) {
       console.error('Error initiating billing portal:', error);
       setActionMessage('Failed to initiate billing portal. Please try again.');
+      router.push('/pricing');
     } finally {
       setIsActionLoading(false);
     }
@@ -205,7 +212,7 @@ export default function CostDashboardPage() {
         {/* My Plan Section */}
         <section id="my-plan-section" className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg rounded-2xl overflow-hidden">
           <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40 flex justify-between items-center">
-             <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">My Plan</h2>
+             <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">My Plan</h1>
              <button
                onClick={() => router.push('/pricing')}
                className="min-h-[44px] px-6 py-2 bg-[#0071E3] hover:bg-[#147ce5] active:bg-[#0062c2] text-white rounded-full text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer">
@@ -213,21 +220,22 @@ export default function CostDashboardPage() {
              </button>
           </div>
           <div className="app-panel-body p-6">
+              <h2 className="app-panel-title text-lg font-bold font-outfit text-gray-900 mb-4">Your Current Usage</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="p-4 app-card omnisolo-growth-card">
                       <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
                       <p id="cost-dashboard-plan-name" className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{myPlanData?.current_plan || 'Free'}</p>
                   </div>
                   <div className="p-4 app-card omnisolo-growth-card">
-                      <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
+                      <h3 className="text-sm font-medium text-gray-500"><span>AI Actions Used</span></h3>
                       <p className="text-2xl font-bold text-gray-900  mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null && myPlanData.ai_actions_limit > 0 ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 app-card omnisolo-growth-card">
-                      <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
+                      <h3 className="text-sm font-medium text-gray-500 stat-title">Storage Used</h3>
                       <p className="text-2xl font-bold text-gray-900  mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null && myPlanData.storage_limit_bytes > 0 ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 app-card omnisolo-growth-card">
-                      <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
+                      <h2 className="text-sm font-medium text-gray-500">Estimated Next Bill:</h2>
                       <p className="text-2xl font-bold text-gray-900  mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
                   </div>
                   {myPlanData?.storage_used_bytes != null && (
@@ -246,16 +254,26 @@ export default function CostDashboardPage() {
                       </div>
                   )}
               </div>
-              {myPlanData?.current_plan !== 'Free' && (
-                  <div className="mt-6 flex flex-col md:flex-row gap-4">
-                      <button
-                          id="manage-billing-btn"
-                          onClick={handleManageBilling}
-                          disabled={isActionLoading}
-                          className="min-h-[44px] px-6 py-2 glass-card glass-control shadow-sm text-gray-700 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                          Manage Billing
-                      </button>
+              <div className="mt-6 flex flex-col md:flex-row gap-4">
+                  <button
+                      id="manage-billing-btn"
+                      onClick={handleManageBilling}
+                      disabled={isActionLoading}
+                      className="min-h-[44px] px-6 py-2 glass-card glass-control shadow-sm text-gray-700 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      Manage Billing
+                  </button>
+                  <button
+                      id="view-detailed-costs"
+                      onClick={() => {
+                        const elem = document.getElementById('cost-breakdown-section') || document.querySelector('.metrics-grid');
+                        elem?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="min-h-[44px] px-6 py-2 glass-card glass-control shadow-sm text-gray-700 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                  >
+                      View Detailed Costs
+                  </button>
+                  {myPlanData?.current_plan !== 'Free' && (
                       <button
                           id="cancel-subscription-btn"
                           onClick={handleCancelSubscription}
@@ -264,8 +282,8 @@ export default function CostDashboardPage() {
                       >
                           Cancel Subscription
                       </button>
-                  </div>
-              )}
+                  )}
+              </div>
               {actionMessage && (
                   <div
                       id="plan-message"

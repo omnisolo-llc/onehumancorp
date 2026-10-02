@@ -19,29 +19,29 @@ test.describe('Digital Business Card Generator E2E', () => {
       await page.getByRole('button', { name: 'Generate Shareable Link' }).click();
 
       // Verify link is generated
-      await expect(page.locator('input[readonly]')).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Copy' })).toBeVisible();
+      await expect(page.locator('input[readonly]').first()).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Copy' }).first()).toBeVisible();
     });
 
     await test.step('Trigger soft paywall', async () => {
       // Check "Remove OmniSolo branding" checkbox
-      await page.locator('input[type="checkbox"]').click({ force: true });
+      await page.locator('input[type="checkbox"]').first().click({ force: true });
 
       // Soft paywall should appear
-      await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Upgrade to Pro' }).first()).toBeVisible();
       await expect(page.getByText('Make the Digital Business Card 100% white-labeled')).toBeVisible();
 
       // Close soft paywall
-      await page.getByRole('button', { name: 'Keep Watermark' }).click();
+      await page.getByRole('button', { name: 'Keep Watermark' }).first().click();
       await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeHidden();
     });
 
     await test.step('Verify generated view and viral loop', async () => {
       // Re-generate link just in case
-      await page.getByRole('button', { name: 'Generate Shareable Link' }).click();
+      await page.getByRole('button', { name: 'Generate Shareable Link' }).first().click();
 
       // Get the link
-      const linkInput = page.locator('input[readonly]');
+      const linkInput = page.locator('input[readonly]').first();
       await expect(linkInput).toBeVisible();
       const generatedUrl = await linkInput.inputValue();
 
@@ -49,7 +49,7 @@ test.describe('Digital Business Card Generator E2E', () => {
       await page.goto(generatedUrl);
 
       // Verify VCard data renders
-      await expect(page.getByRole('heading', { name: 'Carlos Repair' })).toBeVisible({ timeout: 15000 });
+      await expect(page.getByRole('heading', { name: 'Carlos Repair' }).first()).toBeVisible({ timeout: 15000 });
       await expect(page.getByText('Carlos Home Repair')).toBeVisible();
       await expect(page.getByText('+15559876543')).toBeVisible();
 

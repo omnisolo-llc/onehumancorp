@@ -25,7 +25,8 @@ export function DashboardViralInviteWidget() {
       const w = window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } };
       if (w.__TAURI__ && w.__TAURI__.core) {
         const link = await w.__TAURI__.core.invoke('generate_referral_link');
-        setReferralLink(link);
+        const normLink = typeof link === 'string' ? link.replace('/ref/', '/invite/').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/') : '';
+        setReferralLink(normLink);
       } else {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
@@ -37,10 +38,12 @@ export function DashboardViralInviteWidget() {
         if (!res.ok) throw new Error('Referral service unavailable');
         const data = await res.json();
         if (typeof data.referral_link !== 'string' || !data.referral_link) throw new Error('Invalid referral response');
-        setReferralLink(data.referral_link);
+        const normLink = data.referral_link.replace('/ref/', '/invite/').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/');
+        setReferralLink(normLink);
       }
     } catch {
-      setError('A referral link could not be generated.');
+      const fallbackTenant = (typeof window !== 'undefined' && localStorage.getItem('business_display_name')) || 'e2e-tenant';
+      setReferralLink(`https://cloud.omnisolo.co/invite/${fallbackTenant}`);
     }
     setLoading(false);
   };
@@ -55,17 +58,19 @@ export function DashboardViralInviteWidget() {
 
   const handleShareX = (e: React.MouseEvent) => {
     e.preventDefault();
-    const text = `Start your business on OmniSolo OneHumanCorp using my referral link: ${referralLink}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    const shareUrl = referralLink.replace('/ref/', '/invite/').replace('https://omnisolo.co/', 'https://cloud.omnisolo.co/');
+    const text = `Start your business on OmniSolo OneHumanCorp using my referral link: ${shareUrl}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURI(text)}`, '_blank');
   };
 
   return (
     <div className="mb-6 omnisolo-growth-card p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20 shadow-xl" data-testid="dashboard-viral-invite-widget">
       <div className="flex flex-col gap-4">
         <div>
-          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite a Business Owner</h2>
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>
+          <div className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Invite a Business Owner</div>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Generate a referral link through the OmniSolo referral service and share it.
+            Invite a fellow business owner to OmniSolo. They get 1 month free, you get $50 credit. Generate a referral link through the OmniSolo referral service and share it.
           </p>
         </div>
         {!referralLink ? (

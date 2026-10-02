@@ -70,7 +70,7 @@ export default function PublicBioPage() {
         </div>
 
         <h1 className="text-3xl font-bold font-outfit text-center mb-3 tracking-tight">{store_name}</h1>
-        <p className={`text-center mb-10 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{bio}</p>
+        <p className={`leading-relaxed text-center mb-10 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{bio}</p>
 
         <div className="w-full space-y-4 flex-1">
           {links && links.map((link, i) => (
@@ -90,10 +90,10 @@ export default function PublicBioPage() {
         {!config.remove_branding && (
           <div className="mt-12 pt-8">
             <a
-              href={`https://cloud.omnisolo.co/join?ref=${tenant}`}
+              href={`/onboarding?ref=linkinbio_${tenant}`}
               className={`text-sm font-semibold flex items-center justify-center gap-1 hover:underline ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
             >
-              ⚡ Powered by OmniSolo
+              ⚡ OmniSolo
             </a>
           </div>
         )}

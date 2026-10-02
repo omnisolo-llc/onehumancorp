@@ -190,12 +190,25 @@ pub async fn handle_autonomous_quote_action(
         let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
         let stripe_client = StripeClient::new(api_key);
 
+<<<<<<< HEAD
         // Generate an idempotent checkout session
         let operation_id = format!("quote-deposit-{}", quote_id);
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("quote_id".to_string(), quote_id.clone());
         if let Some(bid) = generated_booking_id {
             metadata.insert("booking_id".to_string(), bid.to_string());
+=======
+        // Generate a Stripe Payment Link for the deposit
+        let link_res = stripe_client
+            .create_payment_link(service, deposit_amount_cents)
+            .await;
+        if let Ok(link) = link_res {
+            stripe_payment_link = link;
+        } else if let Err(e) = link_res {
+            tracing::error!("Failed to generate Stripe payment link for deposit: {}", e); // pii-safe
+            // Empty means payment has not been configured; never invent a payable URL.
+            stripe_payment_link = String::new();
+>>>>>>> origin/main
         }
         let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
             name: service,

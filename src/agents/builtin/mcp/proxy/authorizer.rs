@@ -19,6 +19,20 @@ pub struct InMemoryViolationStore {
     violations: RwLock<HashMap<String, Vec<String>>>,
 }
 
+impl std::fmt::Debug for InMemoryViolationStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Ok(violations_guard) = self.violations.try_read() {
+            f.debug_struct("InMemoryViolationStore")
+                .field("violations", &*violations_guard)
+                .finish()
+        } else {
+            f.debug_struct("InMemoryViolationStore")
+                .field("violations", &"<locked>")
+                .finish()
+        }
+    }
+}
+
 impl InMemoryViolationStore {
     pub fn new() -> Self {
         InMemoryViolationStore {

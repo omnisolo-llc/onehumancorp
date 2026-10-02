@@ -118,7 +118,7 @@ The CI graph now separates work that can run independently:
 
 - Rust executable build publishes this run's backend, agent, worker and mTLS probe. The headless test/lint job and desktop test/lint job partition the complete Rust workspace without making the desktop lane rebuild every backend crate.
 - The production Next build publishes promptly. Root/web/CLI/legacy-desktop Node tests, typechecks and lint run in an independent **required** job; a passing build cannot bypass them.
-- Four browser shards consume the same source-validated web/binary artifacts and may run concurrently. They retain the complete browser discovery, not a smoke allowlist.
+- Twelve browser shards consume the same source-validated web/binary artifacts and may run concurrently with two workers per shard. CI reports each browser failure once. The shards retain the complete browser discovery, not a smoke allowlist.
 - One production Docker build produces the server/agent image layers. Kind and Compose both load that same run's archive and still execute their full deployment checks. `scripts/native-images.py` checks the source fingerprint, tar checksum, image tags and loaded image IDs; caches and arbitrary local images are not accepted as current build evidence. Both deployment suites reuse the compiled mTLS probe rather than installing another Rust toolchain and recompiling it.
 - PostgreSQL tenant-isolation tests remain independently required under the non-superuser application role. `CI Required` fails on failed/cancelled or unexpectedly skipped builds, tests, lint, dependency audit and security lanes.
 

@@ -104,7 +104,8 @@ test.describe("Documentation Features Flow", () => {
     await expect(
       page
         .locator('[data-testid="changelog-title"]')
-        .or(page.locator("text=Release Notes & Changelog")),
+        .or(page.locator("text=Release Notes & Changelog"))
+        .first(),
     ).toBeVisible();
   });
 

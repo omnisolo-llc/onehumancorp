@@ -769,27 +769,37 @@ html.dark .glass-control {
 
 
 .app-shell .app-card,
-.app-shell .app-panel,
-.app-shell .glassmorphism,
-.app-shell .glass-card {
+.app-shell .app-panel {
   border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+.app-shell .glassmorphism,
+.app-shell .glass-card {
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
 .app-shell .app-card.rounded-full,
-.app-shell .app-panel.rounded-full,
-.app-shell .glassmorphism.rounded-full,
-.app-shell .glass-card.rounded-full {
+.app-shell .app-panel.rounded-full {
   border-radius: 9999px !important;
 }
 
 @media (prefers-color-scheme: dark) {
   .app-shell .app-card,
-  .app-shell .app-panel,
+  .app-shell .app-panel {
+    background: rgba(22, 22, 26, 0.7);
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
   .app-shell .glassmorphism,
   .app-shell .glass-card {
+    border-radius: 16px !important;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -797,9 +807,16 @@ html.dark .glass-control {
 }
 
 html.dark .app-shell .app-card,
-html.dark .app-shell .app-panel,
+html.dark .app-shell .app-panel {
+  border-radius: 8px !important;
+  background: rgba(22, 22, 26, 0.7);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 html.dark .app-shell .glassmorphism,
 html.dark .app-shell .glass-card {
+  border-radius: 16px !important;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1206,6 +1223,10 @@ textarea.glass-control {
   border-radius: 8px !important;
 }
 
+button,
+[role="button"],
+a.button,
+.app-button,
 button.glass-control,
 a.glass-control,
 input[type="text"],
@@ -1225,6 +1246,10 @@ select {
 
 .rounded-full {
   border-radius: 9999px !important;
+}
+
+.rounded-2xl {
+  border-radius: 16px !important;
 }
 
 .omnisolo-growth-card {
@@ -1276,7 +1301,18 @@ html.dark .glass-panel {
   }
 }
 /* Global border radius to fix UI regression */
-.app-card, .glassmorphism, .glass-card {
+.app-card:not(.app-shell *),
+.glassmorphism:not(.app-shell *),
+.glass-card:not(.app-shell *) {
+  border-radius: 16px !important;
+}
+.app-shell .app-card,
+.app-shell .app-panel,
+.app-shell .glass-card,
+.app-shell .glassmorphism:not([data-voice-assistant-surface]) {
+  border-radius: 8px !important;
+}
+.app-shell .glassmorphism[data-voice-assistant-surface] {
   border-radius: 16px !important;
 }
 .glass-control {

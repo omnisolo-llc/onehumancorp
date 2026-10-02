@@ -12,6 +12,7 @@ test.describe('Agentic Unified Intake & Action Feed', () => {
 
     // Verify loading or empty state.
     // It's possible the test environment has no items seeded.
+    await expect(page.getByTestId('agent-feed-empty').or(page.getByTestId('agent-feed-card').first())).toBeVisible({ timeout: 15000 });
     const emptyStateVisible = await page.getByTestId('agent-feed-empty').isVisible();
     const cardsVisible = await page.getByTestId('agent-feed-card').count() > 0;
 
