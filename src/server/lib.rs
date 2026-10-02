@@ -9171,8 +9171,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let setup_router: axum::Router =
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
 
-    let widget_router = axum::Router::new()
-        .nest("/api/widget", api::widget::router(db.clone(), http_auth_store.clone()));
+    let widget_router = axum::Router::new().nest(
+        "/api/widget",
+        api::widget::router(db.clone(), http_auth_store.clone()),
+    );
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());

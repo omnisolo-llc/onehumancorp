@@ -11,7 +11,7 @@ core_sqlite='\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\s
 pool_start=db_source.index('pub fn secure_pg_pool_options()')
 pool_end=db_source.index('\npub fn get_sqlite_pool_if_exists()',pool_start)
 pool_helper=db_source[pool_start:pool_end]
-assert '.nest("/api/widget", api::widget::router(' in mount
+assert re.search(r'\.nest\(\s*"/api/widget"\s*,\s*api::widget::router\(', mount)
 assert '.merge(widget_router)' in source
 modules={'widget':'src/server/api/widget/mod.rs','omnichannel_repo':'src/server/domain/repository/omnichannel_repo.rs','chat_models':'src/server/services/chat/models.rs'}
 lines=['pub mod services { pub mod chat { pub use crate::chat_models as models; } }','pub mod domain { pub mod repository { pub use crate::omnichannel_repo; } }','pub mod api { pub use crate::widget; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore }'+pool_helper+'}']
