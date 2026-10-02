@@ -6022,6 +6022,26 @@ pub struct SetLinkInBioConfigReq {
     pub remove_branding: Option<bool>,
 }
 
+fn is_supported_bio_url(value: &str) -> bool {
+    if value
+        .chars()
+        .any(|c| c.is_whitespace() || c.is_control() || c == '\\')
+    {
+        return false;
+    }
+    let lower = value.to_ascii_lowercase();
+    if !(lower.starts_with("https://") || lower.starts_with("http://")) {
+        return false;
+    }
+    match url::Url::parse(value) {
+        Ok(parsed) => {
+            matches!(parsed.scheme(), "http" | "https")
+                && parsed.host_str().is_some_and(|host| !host.is_empty())
+        }
+        Err(_) => false,
+    }
+}
+
 pub async fn handle_get_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
     claims: Option<axum::extract::Extension<::server_common::Claims>>,
@@ -6052,6 +6072,13 @@ pub async fn handle_get_link_in_bio(
     let value = value.ok_or(axum::http::StatusCode::NOT_FOUND)?;
     let config: LinkInBioConfig =
         serde_json::from_str(&value).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    if config
+        .links
+        .iter()
+        .any(|link| !is_supported_bio_url(&link.url))
+    {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
     tx.commit()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -6076,6 +6103,14 @@ pub async fn handle_post_link_in_bio(
         .is_some_and(|tenant| tenant != &target_tenant)
     {
         return Err(axum::http::StatusCode::FORBIDDEN);
+    }
+
+    if req
+        .links
+        .iter()
+        .any(|link| !is_supported_bio_url(&link.url))
+    {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
     }
 
     let mut tx = state

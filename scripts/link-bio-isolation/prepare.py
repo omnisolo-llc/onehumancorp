@@ -6,6 +6,7 @@ HERE=Path(__file__).resolve().parent
 source=(ROOT/'src/server/api/growth.rs').read_text()
 items=[]; exact={}
 for name,pattern in [
+    ('is_supported_bio_url', r"^fn is_supported_bio_url\(.*?^\}\n"),
     *[(n,rf"^#\[derive\([^\n]+\)\]\npub struct {n} \{{.*?^\}}\n") for n in ['LinkItem','LinkInBioConfig','SetLinkInBioConfigReq']],
     *[(n,rf"^pub async fn {n}\(.*?^\}}\n") for n in ['growth_auth_fallback_middleware','handle_get_link_in_bio','handle_post_link_in_bio']],
 ]:
@@ -25,4 +26,4 @@ for name in ['auth','common','config','oidc','omnisolo','telemetry']:
  paths += [str(p.relative_to(ROOT)) for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 manifest={'inputs':{p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in sorted(set(paths))},'exact_items':exact,'generated_sha256':hashlib.sha256(generated.encode()).hexdigest()}
 (HERE/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
-print('Prepared six complete production items with real authentication and canonical schemas')
+print('Prepared seven complete production items with real authentication and canonical schemas')

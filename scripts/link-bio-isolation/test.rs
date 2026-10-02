@@ -486,3 +486,116 @@ async fn successful_private_profile_response_disables_shared_caching() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(cache.as_deref(), Some("private, no-store"));
 }
+
+fn unsafe_urls() -> Vec<&'static str> {
+    vec![
+        "javascript:alert(1)",
+        "JaVaScRiPt:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "blob:https://example.test/id",
+        "mailto:a@example.test",
+        "tel:+12025550123",
+        "/relative",
+        "//example.test",
+        "https:example.test",
+        "https://",
+        " https://example.test",
+        "https://exa\nmple.test",
+        "https://example.test/white space",
+        "https://example.test/\0x",
+        "https:\\example.test",
+    ]
+}
+#[tokio::test]
+async fn unsafe_url_writes_never_replace_the_stored_private_profile() {
+    let f = Fixture::new().await;
+    let original = config("Original valid profile").to_string();
+    f.seed("tenant-a", &original).await;
+    let mut observed = Vec::new();
+    for url in unsafe_urls() {
+        let mut payload = config("Unaccepted change");
+        payload["links"][0]["url"] = json!(url);
+        let result = f
+            .request(Some("tenant-a"), "POST", "/link-in-bio", payload, true)
+            .await;
+        observed.push((url, result.0, f.stored("tenant-a").await));
+    }
+    f.finish().await;
+    for (url, status, stored) in observed {
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "unsafe URL accepted: {url:?}"
+        );
+        assert_eq!(stored.as_deref(), Some(original.as_str()));
+    }
+}
+#[tokio::test]
+async fn unsafe_historical_urls_are_unavailable_on_read_without_modifying_bytes() {
+    let f = Fixture::new().await;
+    let mut observed = Vec::new();
+    for url in unsafe_urls() {
+        let mut payload = config("Historical private profile");
+        payload["links"][0]["url"] = json!(url);
+        let bytes = payload.to_string();
+        sqlx::query("INSERT INTO agent_kv_store(tenant_id,kv_key,kv_value)VALUES('tenant-a','link_in_bio_config',$1) ON CONFLICT(tenant_id,kv_key) DO UPDATE SET kv_value=$1").bind(&bytes).execute(&f.admin).await.unwrap();
+        let result = f
+            .request(
+                Some("tenant-a"),
+                "GET",
+                "/link-in-bio/tenant-a",
+                json!({}),
+                true,
+            )
+            .await;
+        observed.push((url, bytes, result, f.stored("tenant-a").await));
+    }
+    f.finish().await;
+    for (url, bytes, result, stored) in observed {
+        assert_eq!(
+            result.0,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "unsafe stored URL returned: {url:?}"
+        );
+        assert_eq!(stored.as_deref(), Some(bytes.as_str()));
+        assert_eq!(result.1, Value::Null);
+    }
+}
+#[tokio::test]
+async fn valid_web_destinations_round_trip_exactly_without_sanitizing_titles_or_urls() {
+    let f = Fixture::new().await;
+    let mut observed = Vec::new();
+    for url in [
+        "http://example.test/",
+        "https://example.test/路径?q='\"&x=%26#✓",
+        "HTTPS://example.test/Case",
+    ] {
+        let mut payload = config("Verified web profile");
+        payload["links"][0]["url"] = json!(url);
+        payload["links"][0]["title"] = json!("<img src=x onerror=throw(1)>");
+        let saved = f
+            .request(
+                Some("tenant-a"),
+                "POST",
+                "/link-in-bio",
+                payload.clone(),
+                true,
+            )
+            .await;
+        let read = f
+            .request(
+                Some("tenant-a"),
+                "GET",
+                "/link-in-bio/tenant-a",
+                json!({}),
+                true,
+            )
+            .await;
+        observed.push((payload, saved, read));
+    }
+    f.finish().await;
+    for (payload, saved, read) in observed {
+        assert_eq!(saved.0, StatusCode::OK);
+        assert_eq!(read, (StatusCode::OK, payload));
+    }
+}

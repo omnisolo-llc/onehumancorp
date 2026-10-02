@@ -1,6 +1,7 @@
 "use client";
 
 import { useState,useEffect } from 'react';
+import { isSupportedBioUrl } from '@/lib/bioLinks';
 import { useParams } from 'next/navigation';
 
 interface Link {
@@ -75,7 +76,7 @@ export default function PublicBioPage() {
 
         <div className="w-full space-y-4 flex-1">
           {links && links.map((link, i) => (
-            <a
+            isSupportedBioUrl(link.url) ? <a
               key={i}
               href={link.url}
               target="_blank"
@@ -83,7 +84,7 @@ export default function PublicBioPage() {
               className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-lg transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-gray-900 shadow-md hover:shadow-lg'}`}
             >
               {link.title}
-            </a>
+            </a> : <span key={i} aria-disabled="true" className="block py-4 px-6 text-center">{link.title} (unavailable)</span>
           ))}
         </div>
 

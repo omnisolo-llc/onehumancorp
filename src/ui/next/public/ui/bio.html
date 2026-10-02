@@ -273,6 +273,10 @@
 </div>
 
 <script>
+function isSupportedBioUrl(value) {
+    if(typeof value!=='string'||!/^https?:\/\//i.test(value)||/[\s\p{Cc}\\]/u.test(value))return false;
+    try{const url=new URL(value);return (url.protocol==='http:'||url.protocol==='https:')&&url.hostname.length>0;}catch{return false;}
+}
     document.addEventListener('DOMContentLoaded', async () => {
         const titleEl=document.getElementById('title'), bioEl=document.getElementById('bio'), linksEl=document.getElementById('links'), appEl=document.getElementById('app'), statusEl=document.getElementById('private-preview-status');
         let active=true, expiry;
@@ -330,10 +334,11 @@
         appEl.style.color = styles.color;
 
         data.links.forEach(link => {
-            const a = document.createElement('a');
-            a.href = link.url;
+            const supported = isSupportedBioUrl(link.url);
+            const a = document.createElement(supported ? 'a' : 'span');
+            if(supported)a.href = link.url;else a.setAttribute('aria-disabled','true');
             a.className = 'link-item';
-            a.textContent = link.title;
+            a.textContent = link.title + (supported ? '' : ' (unavailable)');
             a.style.background = styles.linkBg;
             a.style.border = `1px solid ${styles.linkBorder}`;
             a.style.color = styles.color;

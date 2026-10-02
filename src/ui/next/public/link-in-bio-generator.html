@@ -411,6 +411,10 @@
 </div>
 
 <script>
+function isSupportedBioUrl(value) {
+    if(typeof value!=='string'||!/^https?:\/\//i.test(value)||/[\s\p{Cc}\\]/u.test(value))return false;
+    try{const url=new URL(value);return (url.protocol==='http:'||url.protocol==='https:')&&url.hostname.length>0;}catch{return false;}
+}
 function initLinkInBio() {
     const $ = id => document.getElementById(id);
     const editor = $('private-profile-editor'), status = $('private-profile-status');
@@ -439,7 +443,7 @@ function initLinkInBio() {
         $('remove-branding-slider').style.backgroundColor=state.remove_branding?'#4f46e5':'#d1d5db';
         $('remove-branding-knob').style.transform=state.remove_branding?'translateX(24px)':'translateX(0)';
         $('preview-links').replaceChildren();
-        for(const link of state.links){const a=document.createElement('a');a.href=link.url;a.textContent=link.title;a.className='preview-link';a.style.background=theme.linkBg;a.style.border=`1px solid ${theme.border}`;a.style.color=theme.color;$('preview-links').appendChild(a);}
+        for(const link of state.links){const supported=isSupportedBioUrl(link.url);const a=document.createElement(supported?'a':'span');if(supported)a.href=link.url;else a.setAttribute('aria-disabled','true');a.textContent=link.title+(supported?'':' (unavailable)');a.className='preview-link';a.style.background=theme.linkBg;a.style.border=`1px solid ${theme.border}`;a.style.color=theme.color;$('preview-links').appendChild(a);}
         for(const button of themes){button.classList.toggle('active',button.dataset.theme===state.theme);button.setAttribute('aria-pressed',String(button.dataset.theme===state.theme));}
     }
     function retire() {
@@ -462,6 +466,7 @@ function initLinkInBio() {
     function scheduleSave() {
         clearTimeout(saveTimer);
         if(phase!=='ready' || saving || !owner)return;
+        if(state.links.some(link=>!isSupportedBioUrl(link.url))){message('Each link needs an absolute HTTP or HTTPS URL without whitespace or control characters.');return;}
         message('Private changes are not saved yet.');
         saveTimer=setTimeout(async()=>{
             if(phase!=='ready' || saving || !owner)return;

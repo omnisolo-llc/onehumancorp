@@ -21,7 +21,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_link_bio_gate_requires_all_private_database_cases(self):
         minimum, database = gate.GATES['link-bio-isolation']
-        self.assertGreaterEqual(minimum, 11)
+        self.assertGreaterEqual(minimum, 14)
         self.assertEqual(database, 'OHC_BIO_TEST_DATABASE_URL')
         self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/link-bio-isolation/run.sh').is_file())
 

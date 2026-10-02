@@ -5,10 +5,10 @@ only to an owned disposable UTF8 PostgreSQL database. Both the launcher and
 Rust fixture validate a literal loopback IP and an `ohc_*_test` database name
 before any connection. URL options and fragments are rejected. The launcher
 also runs three prerequisite checks, including a no-connection rejection. The registered CI gate
-requires all eleven Rust cases; no filtering or skipped cases certify it.
+requires all fourteen Rust cases; no filtering or skipped cases certify it.
 
-The generator copies six complete production items: both link-bio handlers,
-three input/output types, and the existing growth auth compatibility middleware.
+The generator copies seven complete production items: both link-bio handlers,
+the URL validator, three input/output types, and the existing growth auth compatibility middleware.
 The HTTP fixture uses the real strict bearer middleware and Store with actual
 signed member credentials. It extracts the canonical tenant/user/KV schemas,
 forces KV row-level security under a real non-superuser role, and reuses one
@@ -21,3 +21,5 @@ missing/corrupt state, global alias overwrite, anonymous and unsigned fallback
 identity, connection context reset and private response caching. No fixture
 executes a provider or publishes a public profile. SQLite/MySQL, full server
 composition and actual browser acceptance are separate gates.
+
+URL regressions cover rejected writes retaining the prior profile, unsafe historical reads remaining unavailable without changing bytes, and exact valid HTTP(S) round trips.

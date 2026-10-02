@@ -41,3 +41,9 @@ Focused results do not replace full `make lint`, `make test`, main-server or
 hosted browser acceptance.
 
 Save-time 401/403 responses retire loaded private fields immediately, even if their response body stalls. Only the two exact authenticated owner-mismatch 409 errors also retire them; other conflict/error responses hold the current draft without retry or a save claim.
+
+## Supported destinations
+
+Profile links support absolute HTTP and HTTPS URLs, matching the web-link editor. Email, telephone, relative, executable and opaque schemes are not part of this field's contract. Inputs containing literal whitespace, control characters or backslashes are rejected; valid destinations are stored and returned exactly, without trimming or rewriting them.
+
+The backend rejects invalid links before writes. A historical profile containing an unsupported URL is unavailable on read, with its original bytes retained. This change does not invent a migration or recovery UI for those historical rows. Modern and maintained HTML renderers also keep invalid loaded or in-progress values out of active anchors and show an unavailable label. Link titles render as text. The modern editor lets the owner correct invalid input before any save request; preview validation grants no publication or entitlement authority.

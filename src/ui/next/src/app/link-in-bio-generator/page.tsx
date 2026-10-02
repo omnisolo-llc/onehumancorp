@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { isSupportedBioUrl } from '@/lib/bioLinks';
 import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
@@ -85,6 +86,7 @@ export default function LinkInBioGeneratorPage() {
 
   const handleSave = async () => {
     if (phase !== 'ready' || !owner || saving.current) return;
+    if (links.some(link => !isSupportedBioUrl(link.url))) {setStatus('Each link needs an absolute HTTP or HTTPS URL without whitespace or control characters.'); return;}
     saving.current=true;
     const current = epoch.current; const intended = {...owner};
     const payload = {tenant_id:intended.tenantId,store_name:storeName,bio,theme,links:links.map((link,index)=>({id:String(index+1),title:link.title,url:link.url})),remove_branding:removeBranding};
@@ -268,14 +270,14 @@ export default function LinkInBioGeneratorPage() {
 
                         <div className="w-full space-y-4">
                             {links.map((link, i) => (
-                                <a
+                                isSupportedBioUrl(link.url) ? <a
                                     key={i}
-                                    href={link.url || `/link/${i + 1}`}
+                                    href={link.url}
                                     onClick={(e) => e.preventDefault()}
                                     className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-black shadow-md hover:shadow-lg'}`}
                                 >
                                     {link.title || 'Link Title'}
-                                </a>
+                                </a> : <span key={i} aria-disabled="true" className="block py-4 px-6 text-center">{link.title || 'Link Title'} (unavailable)</span>
                             ))}
                         </div>
 
