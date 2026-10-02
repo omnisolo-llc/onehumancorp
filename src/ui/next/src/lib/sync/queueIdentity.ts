@@ -52,9 +52,10 @@ export async function readQueueOwner(): Promise<QueueOwner> {
   verified = undefined; publishReadiness();
   try {
     const response = await fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
-    if (!response.ok) throw new Error('Verified queue identity unavailable');
-    const data = await response.json() as { userId?: unknown; tenantId?: unknown; expiresAt?: unknown };
-    if (epoch !== generation || storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) || typeof data.userId !== 'string' || !data.userId || typeof data.tenantId !== 'string' || !data.tenantId || typeof data.expiresAt !== 'number' || data.expiresAt <= Date.now()) throw new Error('Verified queue identity unavailable');
+    if (response.status !== 200) throw new Error('Verified queue identity unavailable');
+    const data = await response.json() as { userId?: unknown; tenantId?: unknown; expiresAt?: unknown; error?: unknown; success?: unknown };
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.error != null || ('success' in data && data.success !== true)) throw new Error('Verified queue identity unavailable');
+    if (epoch !== generation || storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) || typeof data.userId !== 'string' || !data.userId || typeof data.tenantId !== 'string' || !data.tenantId || typeof data.expiresAt !== 'number' || !Number.isSafeInteger(data.expiresAt) || data.expiresAt <= Date.now()) throw new Error('Verified queue identity unavailable');
     const owner = { userId: data.userId, tenantId: data.tenantId };
     if (requestNumber < lastResolved) {
       // A late same-owner read is harmless; a stale different login is not.

@@ -93,3 +93,22 @@ it('pending same-owner verification is unavailable rather than proof of a differ
   resolve(Response.json({ ...owner, expiresAt: Date.now() + 100000 })); await pending;
   expect(hasVerifiedOfflineQueueOwner()).toBe(true); expect(hasVerifiedOfflineQueueOwner(owner)).toBe(true);
 });
+it.each([201, 202, 206])('does not certify a nonfinal identity response with HTTP%s', async status => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ userId: 'a', tenantId: 't', expiresAt: Date.now() + 100000 }, { status })));
+  await expect(readQueueOwner()).rejects.toThrow('identity');
+  expect(hasVerifiedOfflineQueueOwner()).toBe(false);
+});
+it.each([{ error: 'identity_unavailable' }, { error: false }, { success: false }, { success: 0 }, { success: 'true' }])('rejects a contradictory identity receipt and cannot reuse it offline: %j', async contradiction => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json({ userId: 'a', tenantId: 't', expiresAt: Date.now() + 100000 }))
+    .mockResolvedValueOnce(Response.json({ userId: 'a', tenantId: 't', expiresAt: Date.now() + 100000, ...contradiction })));
+  await readQueueOwner();
+  await expect(readQueueOwner()).rejects.toThrow('identity');
+  expect(hasVerifiedOfflineQueueOwner()).toBe(false);
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  await expect(readQueueOwner()).rejects.toThrow('identity');
+});
+it.each(['1e309', '9007199254740992'])('does not certify a nonrepresentable expiry%s', async expiry => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"userId":"a","tenantId":"t","expiresAt":' + expiry + '}', { headers: { 'content-type': 'application/json' } })));
+  await expect(readQueueOwner()).rejects.toThrow('identity');
+  expect(hasVerifiedOfflineQueueOwner()).toBe(false);
+});
