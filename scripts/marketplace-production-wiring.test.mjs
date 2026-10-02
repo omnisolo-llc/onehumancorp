@@ -7,11 +7,11 @@ const read = path => readFile(new URL(path, root), 'utf8');
 test('marketplace RPC connection failures cannot invent success or replay through a fallback', async () => {
   const source = await read('src/server/lib.rs');
   const handler = source.slice(source.indexOf('async fn proxy_agent_rpc_handler('), source.indexOf('fn strict_ui_claim_tenant('));
-  const failed = handler.slice(handler.indexOf('let Ok(upstream) = request.send().await else'));
-  assert.doesNotMatch(failed, /MP_CLIENT|MockMarketplaceProvider/);
-  const firstFallback = failed.indexOf('FALLBACK_APP_SERVER');
-  assert.ok(firstFallback > 0);
-  const boundary = failed.slice(0, firstFallback);
+  const start = handler.indexOf('let Ok(upstream) = request.send().await else');
+  const end = handler.indexOf('    };\n    if upstream', start);
+  assert.ok(start >= 0 && end > start);
+  const boundary = handler.slice(start, end);
+  assert.doesNotMatch(boundary, /MP_CLIENT|MockMarketplaceProvider|FALLBACK_APP_SERVER|handle_request|RepoMap/);
   for (const method of ['am_publish_agent', 'am_search_agents', 'am_fetch_agent']) assert.ok(boundary.includes('"' + method + '"'));
   assert.match(boundary, /StatusCode::SERVICE_UNAVAILABLE/);
   assert.doesNotMatch(boundary, /publish_agent\(|fetch_agent\(|\.search\(/);

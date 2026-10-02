@@ -338,6 +338,41 @@ where
         ))
 }
 
+async fn legacy_agent_rpc_unavailable(
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if ::server_common::auth_utils::signed_tenant_id(&claims).is_none() {
+        return (
+            axum::http::StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({"error":"Authentication required"})),
+        )
+            .into_response();
+    }
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return (
+            axum::http::StatusCode::FORBIDDEN,
+            axum::Json(serde_json::json!({"error":"Owner or administrator access required"})),
+        )
+            .into_response();
+    }
+    // The legacy AppServer stores task state globally and has no tenant-bound
+    // workspace authority. Authentication alone cannot make it safe to dispatch.
+    (axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        axum::Json(serde_json::json!({"error":"Legacy agent RPC requires a tenant-bound runtime; no work was dispatched"}))).into_response()
+}
+
+fn legacy_agent_rpc_router(store: std::sync::Arc<::server_auth::Store>) -> axum::Router {
+    protect_internal_ingress(
+        axum::Router::new().route("/rpc", axum::routing::post(legacy_agent_rpc_unavailable)),
+        store,
+    )
+}
+
 const AGENT_RPC_REQUEST_LIMIT_BYTES: usize = 1_048_576;
 const AGENT_RPC_RESPONSE_LIMIT_BYTES: usize = 2_097_152;
 
@@ -496,59 +531,11 @@ async fn proxy_agent_rpc_handler(
                 axum::Json(serde_json::json!({ "error": "Marketplace outcome unavailable; no fallback was attempted. Reconcile a publication before retrying." })),
             ).into_response();
         }
-        if method == "aider_repomap" {
-            let path = payload
-                .get("params")
-                .and_then(|p| p.get("path"))
-                .and_then(|v| v.as_str())
-                .unwrap_or(".");
-            let repomap = omnisolo_builtin_agent::aider_repomap::RepoMap::new(path);
-            let result = repomap
-                .generate_map()
-                .unwrap_or_else(|e| format!("Error: {}", e));
-            return (
-                axum::http::StatusCode::OK,
-                axum::Json(serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "id": payload.get("id"),
-                    "result": result
-                })),
-            )
-                .into_response();
-        }
-        static FALLBACK_APP_SERVER: std::sync::LazyLock<
-            omnisolo_builtin_agent::codex_runner::AppServer,
-        > = std::sync::LazyLock::new(|| {
-            let mut agent = omnisolo_builtin_agent::agent::Agent::new(
-                std::sync::Arc::new(omnisolo_builtin_agent::llm::ollama::OllamaClient::new(
-                    "http://localhost:11434",
-                )),
-                vec![],
-            );
-            agent.sona_matcher = Some(std::sync::Arc::new(tokio::sync::Mutex::new(
-                omnisolo_builtin_agent::sona_patterns::PatternMatcher::new(),
-            )));
-            let runner = std::sync::Arc::new(omnisolo_builtin_agent::codex_runner::Runner::new(
-                std::sync::Arc::new(agent),
-            ));
-            omnisolo_builtin_agent::codex_runner::AppServer::new(runner)
-        });
-        if let Ok(req_str) = serde_json::to_string(&payload) {
-            let resp_str = FALLBACK_APP_SERVER.handle_request(&req_str).await;
-            if let Ok(resp_json) = serde_json::from_str::<serde_json::Value>(&resp_str)
-                && (resp_json.get("result").is_some()
-                    || resp_json
-                        .get("error")
-                        .and_then(|e| e.get("code"))
-                        .and_then(|c| c.as_i64())
-                        != Some(-32601))
-            {
-                return (axum::http::StatusCode::OK, axum::Json(resp_json)).into_response();
-            }
-        }
+        // A failed transport may have accepted work upstream. Never switch the
+        // request to a different in-process agent or expose its global state.
         return (
-            axum::http::StatusCode::BAD_GATEWAY,
-            axum::Json(serde_json::json!({ "error": "agent service unavailable" })),
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::Json(serde_json::json!({ "error": "Agent outcome unavailable; no fallback was attempted. Reconcile work before retrying." })),
         )
             .into_response();
     };
@@ -10454,14 +10441,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
         )))
-        .merge(omnisolo_builtin_agent::json_rpc_server::create_router(std::sync::Arc::new(
-            omnisolo_builtin_agent::codex_runner::Runner::new(std::sync::Arc::new(
-                omnisolo_builtin_agent::agent::Agent::new(
-                    std::sync::Arc::new(omnisolo_builtin_agent::llm::ollama::OllamaClient::new("http://localhost:11434")),
-                    vec![],
-                ),
-            )),
-        )))
+        .merge(legacy_agent_rpc_router(http_auth_store.clone()))
         .merge(meta_webhook_router)
         .merge(protect_internal_ingress(
             omnichannel_webhook_router,

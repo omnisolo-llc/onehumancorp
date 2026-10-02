@@ -23,7 +23,7 @@ python3 scripts/focused_ci_gate.py agent-workflow-contract
 ```
 
 The required PostgreSQL security CI job also runs this offline gate. The wrapper
-requires at least 35 executed tests, rejects failures/skips/filters, and retains
+requires at least 39 executed tests, rejects failures/skips/filters, and retains
 the log plus source manifest. `make test` checks the mandatory CI registration
 through the native-contract discovery guard; it does not claim that discovery is
 runtime acceptance.
@@ -32,3 +32,13 @@ The configured tenant text adapter and real LLM client modules are compiled. Its
 unit tests record the terminal LlmClient request, proving exact model/text and an
 empty tool list without contacting a provider. The full server and genuine
 provider execution still require their separate gates.
+
+The raw RPC boundary tests compile the complete production JSON-RPC HTTP handler,
+router constructor, authenticated proxy and exact main mount/outer middleware.
+The terminal AppServer only records dispatch; provider/agent/tool paths panic.
+A test-owned loopback connection closes without a response to exercise actual
+proxy transport loss. These tests prove that anonymous/staff requests and an
+unscoped global runtime cannot dispatch, not durable task-store isolation.
+The original mounted anonymous/staff/global-fallback failures are preserved as
+baseline evidence. The raw legacy endpoint is explicitly unavailable until a
+tenant-bound runtime exists; the supported tenant text workflow API remains.

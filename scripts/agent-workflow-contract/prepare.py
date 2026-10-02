@@ -91,12 +91,35 @@ parts.append(block(server,'fn configured_workflow_execution('))
 parts.append(block(server,'pub(crate) struct RegisteredWorkflowAgent'))
 parts.append(block(server,'impl workflow_execution::RegistrationLease for RegisteredWorkflowAgent'))
 parts.append(block(server,'pub(crate) fn dispatch_workflow(').replace('pub(crate) fn dispatch_workflow(', 'fn actual_dispatch_workflow(', 1))
+# Preserve actual route ordering: these outer layers precede the separate raw
+# RPC merge. Copy the complete raw handler/constructor; replace terminal agent,
+# provider and tool implementations only with fail-fast/recording boundaries.
+rpc_source = (ROOT/'src/agents/builtin/json_rpc_server.rs').read_text().split('#[cfg(test)]', 1)[0]
+parts.append((HERE/'rpc_boundary.rs.in').read_text())
+parts.append('pub mod json_rpc_server {\n'+rpc_source+'\n}')
+parts.append(block(server, 'async fn protected_bearer_auth_middleware('))
+parts.append('const AGENT_RPC_REQUEST_LIMIT_BYTES: usize = 1_048_576;\nconst AGENT_RPC_RESPONSE_LIMIT_BYTES: usize = 2_097_152;')
+for name in ['fn agent_rpc_available(', 'fn extend_agent_rpc_body(', 'async fn read_limited_agent_rpc_body(', 'fn allowed_agent_rpc_method(', 'fn agent_rpc_url(', 'async fn proxy_agent_rpc_handler(']:
+    parts.append(block(server, name))
+api_start=server.index('        .route(\n            "/api/v1/rpc",')
+api_end=server.index('.with_state(mesh_transport)',api_start)+len('.with_state(mesh_transport)')
+api_chain=server[api_start:api_end]
+raw_start=server.index('.merge(legacy_agent_rpc_router(')
+for name in ['fn protect_internal_ingress<S>(', 'async fn legacy_agent_rpc_unavailable(', 'fn legacy_agent_rpc_router(']:
+    parts.append(block(server, name))
+raw_end=server.index('        .merge(meta_webhook_router)',raw_start)
+raw_chain=server[raw_start:raw_end].strip()
+# No later global layer surrounds this merge in the real app construction.
+app_end=server.index('.fallback(api_not_found_handler);',raw_end)
+assert '.layer(' not in server[raw_end:app_end]
+assert '.route_layer(' not in server[raw_end:app_end]
+parts.append('fn mounted_rpc_boundary(http_auth_store: std::sync::Arc<server_auth::Store>) -> axum::Router {\n    let rate_limiter = std::sync::Arc::new(server_pricing::rate_limit::RedisRateLimiter::new(redis::Client::open("redis://127.0.0.1:1").unwrap()));\n    #[derive(Clone)]\n    struct MeshTransportFixture;\n    let mesh_transport = MeshTransportFixture;\n    axum::Router::new()\n'+api_chain+'\n'+raw_chain+'\n}')
 parts += ['#[cfg(test)]#[path="test.rs"]mod tests;']
 (HERE/'generated.rs').write_text('\n\n'.join(parts)+'\n')
 inputs = [ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/api/agents/hire.rs',ROOT/'src/server/workflow_execution.rs',ROOT/'src/server/hub.rs']
-inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py']]
+inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py','rpc_boundary.rs.in']]
 inputs += [p for p in (ROOT/'src/proto').rglob('*.proto')]
-for name in ['auth','common','config','oidc','omnisolo','telemetry','pricing']:
+for name in ['auth','common','config','oidc','omnisolo','telemetry','pricing','utils']:
     inputs += [p for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 inputs += [p for p in (ROOT/'src/agents/builtin').rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(inputs))},indent=2)+'\n')

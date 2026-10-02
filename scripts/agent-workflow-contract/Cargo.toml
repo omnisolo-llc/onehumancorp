@@ -5,6 +5,12 @@ edition = "2024"
 [workspace]
 [dependencies]
 async-trait = "0.1"
+futures-util = "0.3.32"
+server_config = { path = "../../src/server/config" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }
+redis = { version = "0.27.6", features = ["tokio-comp"] }
+server_pricing = { path = "../../src/server/pricing" }
+server_utils = { path = "../../src/server/utils" }
 omnisolo_builtin_agent_core = { path = "../../src/agents/builtin/core" }
 omnisolo_builtin_agent_llm = { path = "../../src/agents/builtin/llm" }
 axum = "0.8.1"

@@ -7,6 +7,118 @@ use axum::{
 };
 use tower::ServiceExt;
 
+async fn raw_rpc_response(
+    fixture: &Fixture,
+    route: &str,
+    token: Option<&str>,
+) -> (StatusCode, serde_json::Value) {
+    let mut request = Request::builder()
+        .method("POST")
+        .uri(route)
+        .header("content-type", "application/json")
+        .header("x-tenant-id", "workflow-tenant-a")
+        .header("x-user-id", "forged-owner");
+    if let Some(token) = token {
+        request = request.header("authorization", format!("Bearer {token}"));
+    }
+    let response = mounted_rpc_boundary(fixture.store.clone()).oneshot(request.body(Body::from(
+        serde_json::json!({"jsonrpc":"2.0","id":"owned-local-probe","method":"ap_list_tasks","params":{"tenant_id":"workflow-tenant-a"}}).to_string()
+    )).unwrap()).await.unwrap();
+    let status = response.status();
+    let bytes = to_bytes(response.into_body(), 1_048_576).await.unwrap();
+    (
+        status,
+        if bytes.is_empty() {
+            serde_json::Value::Null
+        } else {
+            serde_json::from_slice(&bytes).unwrap()
+        },
+    )
+}
+
+#[tokio::test]
+async fn actual_rpc_mounts_reject_anonymous_dispatch() {
+    let fixture = Fixture::new().await;
+    RPC_DISPATCHES.store(0, std::sync::atomic::Ordering::SeqCst);
+    for route in ["/api/v1/rpc", "/rpc"] {
+        let (status, _) = raw_rpc_response(&fixture, route, None).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "actual mount {route}");
+        assert_eq!(RPC_DISPATCHES.load(std::sync::atomic::Ordering::SeqCst), 0);
+    }
+}
+
+#[tokio::test]
+async fn actual_raw_rpc_mount_rejects_staff_before_dispatch() {
+    let fixture = Fixture::new().await;
+    RPC_DISPATCHES.store(0, std::sync::atomic::Ordering::SeqCst);
+    let (status, _) = raw_rpc_response(&fixture, "/rpc", Some(&fixture.staff)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(RPC_DISPATCHES.load(std::sync::atomic::Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn actual_raw_rpc_mount_never_shares_a_global_dispatcher_between_signed_tenants() {
+    let fixture = Fixture::new().await;
+    RPC_DISPATCHES.store(0, std::sync::atomic::Ordering::SeqCst);
+    let mut responses = Vec::new();
+    for token in [&fixture.a, &fixture.b] {
+        responses.push(raw_rpc_response(&fixture, "/rpc", Some(token)).await);
+    }
+    assert_eq!(responses.len(), 2);
+    for (status, body) in responses {
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(body.get("result").is_none());
+        assert_eq!(RPC_DISPATCHES.load(std::sync::atomic::Ordering::SeqCst), 0);
+    }
+}
+
+#[tokio::test]
+async fn actual_authenticated_rpc_does_not_switch_to_a_global_fallback_after_transport_loss() {
+    use tokio::io::AsyncReadExt;
+    let fixture = Fixture::new().await;
+    assert!(
+        agent_rpc_available(server_config::get().multitenant),
+        "This fixture must exercise the actual allowed standalone proxy branch"
+    );
+    RPC_DISPATCHES.store(0, std::sync::atomic::Ordering::SeqCst);
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let accepted = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let observed = accepted.clone();
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut buffer = [0_u8; 4096];
+        let count = stream.read(&mut buffer).await.unwrap();
+        assert!(count > 0);
+        observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        // Actual local transport failure: no fabricated application response.
+        drop(stream);
+        drop(listener);
+    });
+    struct RestoreFixtureUrl;
+    impl Drop for RestoreFixtureUrl {
+        fn drop(&mut self) {
+            // run.sh fixes this public local fixture value before the serial run.
+            unsafe { std::env::set_var("OMNISOLO_AGENT_URL", "http://127.0.0.1:1") };
+        }
+    }
+    let _restore = RestoreFixtureUrl;
+    // The harness always runs with --test-threads=1 and an empty agent token.
+    unsafe { std::env::set_var("OMNISOLO_AGENT_URL", format!("http://{address}")) };
+    let response = tokio::time::timeout(
+        std::time::Duration::from_secs(8),
+        raw_rpc_response(&fixture, "/api/v1/rpc", Some(&fixture.a)),
+    )
+    .await;
+    server.abort();
+    let _ = server.await;
+    let (status, body) = response.unwrap();
+    assert_eq!(accepted.load(std::sync::atomic::Ordering::SeqCst), 1);
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert!(body.get("result").is_none());
+    assert_eq!(RPC_DISPATCHES.load(std::sync::atomic::Ordering::SeqCst), 0);
+}
+
 static TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 struct PoisonedRegistryFixture;
