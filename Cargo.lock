@@ -6397,6 +6397,9 @@ dependencies = [
 [[package]]
 name = "server_integrations_core"
 version = "0.1.0"
+dependencies = [
+ "server_integrations_omnichannel",
+]
 
 [[package]]
 name = "server_integrations_daily"

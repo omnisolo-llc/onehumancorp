@@ -47,4 +47,3 @@ pub mod google_analytics;
 pub mod outlook_calendar;
 pub mod trello;
 pub mod whatsapp_cloud;
-pub use ::server_integrations_omnichannel as omnichannel;
