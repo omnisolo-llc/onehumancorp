@@ -12,7 +12,7 @@ import sys
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
     'tenant-search': (13, 'OHC_SEARCH_TEST_DATABASE_URL'),
-    'onboarding-durability': (64, 'OHC_SYNC_TEST_DATABASE_URL'),
+    'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
     'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
     'agent-workflow-contract': (9, None),

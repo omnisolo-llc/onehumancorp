@@ -42,6 +42,7 @@ pub(super) async fn setup() -> OnboardingAgent {
     .await
     .unwrap();
     OnboardingAgent {
+        minimax: None,
         db: Arc::new(db::DB {
             pool: pool.clone(),
             store: db::DbStore::Postgres,
@@ -972,6 +973,7 @@ async fn protected_receipt_and_catalog_work_under_forced_rls() {
     assert_eq!(current, role);
     assert!(!superuser && !bypass);
     let scoped = OnboardingAgent {
+        minimax: None,
         db: Arc::new(db::DB {
             pool: pool.clone(),
             store: db::DbStore::Postgres,
@@ -1306,4 +1308,108 @@ async fn expected_owner_precondition_allows_matching_verified_identity_only() {
             }
         );
     }
+}
+
+#[tokio::test]
+async fn missing_provider_intake_does_not_invent_business_data() {
+    let a = setup().await;
+    let result = a.process_intake("I repair bicycles in Bristol").await;
+    assert_eq!(result.err().as_deref(), Some("onboarding_ai_unconfigured"));
+}
+#[tokio::test]
+async fn missing_provider_chat_does_not_claim_completed_setup() {
+    let a = setup().await;
+    let result = a
+        .process_chat(vec![ChatMessage {
+            role: "user".into(),
+            content: "I repair bicycles in Bristol".into(),
+            image_url: None,
+        }])
+        .await;
+    assert_eq!(result.err().as_deref(), Some("onboarding_ai_unconfigured"));
+}
+async fn assert_missing_provider_http(route: &str, body: serde_json::Value) {
+    let a = setup().await;
+    let (app, store) = mounted(&a);
+    let token = store.issue_token(&auth_user("ADMIN")).unwrap();
+    let (status, value) = http(&app, route, "POST", Some(&token), body).await;
+    assert_eq!(
+        status,
+        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        "{value}"
+    );
+    assert_eq!(value["error"], "onboarding_ai_unconfigured");
+    assert!(value["message"].as_str().unwrap().contains("manually"));
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM products")
+        .fetch_one(&a.db.pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
+    assert!(
+        a.prepared_state("tenant-a", "user-a")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    let name: String = sqlx::query_scalar("SELECT name FROM tenants WHERE id='tenant-a'")
+        .fetch_one(&a.db.pool)
+        .await
+        .unwrap();
+    assert_eq!(name, "Original");
+    assert!(a.hub.events.lock().await.is_empty());
+}
+#[tokio::test]
+async fn missing_provider_intake_http_preserves_existing_business() {
+    assert_missing_provider_http(
+        "/intake",
+        json!({"description":"I repair bicycles in Bristol"}),
+    )
+    .await;
+}
+#[tokio::test]
+async fn missing_provider_chat_http_preserves_existing_business() {
+    assert_missing_provider_http(
+        "/chat",
+        json!({"messages":[{"role":"user","content":"I repair bicycles in Bristol"}]}),
+    )
+    .await;
+}
+#[tokio::test]
+async fn missing_provider_zero_click_never_prepares_a_mock_catalog() {
+    assert_missing_provider_http(
+        "/start_zero_click",
+        json!({"prompt":"I repair bicycles in Bristol"}),
+    )
+    .await;
+}
+#[tokio::test]
+async fn manual_reviewed_setup_remains_available_without_a_model() {
+    let a = setup().await;
+    assert!(a.minimax.is_none());
+    let (app, store) = mounted(&a);
+    let token = store.issue_token(&auth_user("ADMIN")).unwrap();
+    let payload = http_request();
+    let (status, value) = http(&app, "/start", "POST", Some(&token), payload.clone()).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "{value}");
+    assert_eq!(value["status"], "prepared");
+    assert_eq!(value["organization_id"], "tenant-a");
+    let rows: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT title,price_cents FROM products WHERE tenant_id='tenant-a' ORDER BY title",
+    )
+    .fetch_all(&a.db.pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        rows,
+        vec![("Reviewed One".into(), 1234), ("Reviewed Two".into(), 5678)]
+    );
+    let name: String = sqlx::query_scalar("SELECT name FROM tenants WHERE id='tenant-a'")
+        .fetch_one(&a.db.pool)
+        .await
+        .unwrap();
+    assert_eq!(name, payload["company_name"].as_str().unwrap());
+    assert!(
+        a.hub.events.lock().await.is_empty(),
+        "manual preparation is not automatic launch"
+    );
 }
