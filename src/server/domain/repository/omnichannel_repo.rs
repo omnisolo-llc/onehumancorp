@@ -26,9 +26,30 @@ pub struct WorkItem {
 }
 
 #[derive(Clone, Debug, FromRow)]
+pub struct Inbox {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow)]
+pub struct Contact {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow)]
 pub struct Conversation {
     pub id: Uuid,
     pub tenant_id: Uuid,
+    pub inbox_id: Option<Uuid>,
+    pub contact_id: Option<Uuid>,
     pub channel: String,
     pub status: String,
     pub created_at: Option<DateTime<Utc>>,
@@ -134,15 +155,19 @@ impl OmniChannelRepo {
     pub async fn create_conversation(
         &self,
         tenant_id: Uuid,
+        inbox_id: Option<Uuid>,
+        contact_id: Option<Uuid>,
         channel: String,
         status: String,
     ) -> Result<Conversation, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, Conversation>(
-            "INSERT INTO conversations (id, tenant_id, channel, status) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, channel, status, created_at, updated_at",
+            "INSERT INTO conversations (id, tenant_id, inbox_id, contact_id, channel, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, tenant_id, inbox_id, contact_id, channel, status, created_at, updated_at",
         )
         .bind(id)
         .bind(tenant_id)
+        .bind(inbox_id)
+        .bind(contact_id)
         .bind(channel)
         .bind(status)
         .fetch_one(&self.db.pool)
@@ -194,7 +219,7 @@ impl OmniChannelRepo {
 
     pub async fn get_conversation(&self, id: Uuid) -> Result<Option<Conversation>, sqlx::Error> {
         let record = sqlx::query_as::<_, Conversation>(
-            "SELECT id, tenant_id, channel, status, created_at, updated_at FROM conversations WHERE id = $1",
+            "SELECT id, tenant_id, inbox_id, contact_id, channel, status, created_at, updated_at FROM conversations WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.db.pool)
@@ -263,6 +288,8 @@ mod tests {
         let conv = Conversation {
             id: Uuid::new_v4(),
             tenant_id: Uuid::new_v4(),
+            inbox_id: None,
+            contact_id: None,
             channel: "Instagram".to_string(),
             status: "OPEN".to_string(),
             created_at: None,
