@@ -258,6 +258,10 @@ jobs:
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         run: bash scripts/fixture-boundary-contract/run.sh
 
+      - name: Reject invented agent credentials in actual startup configuration
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        run: bash scripts/agent-startup-auth-contract/run.sh
+
       - name: Check out the already pinned OpenHarness SDK for isolated tests
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         uses: actions/checkout@v6

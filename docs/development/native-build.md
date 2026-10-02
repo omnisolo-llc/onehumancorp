@@ -48,6 +48,8 @@ Full gates require GNU Make, the pinned Rust/Node toolchains, Python 3 with PyYA
 
 Install Rust with rustup and the pinned Node release. Ensure `$HOME/.cargo/bin` is on PATH on Unix. Use `npm ci` at the repository root, `npm --prefix src/ui/next ci` and `npm --prefix src/cli ci`; none should update a lockfile. Use `--locked` with Cargo in automation. Proto generation uses the workspace build scripts and vendored protoc; do not invoke deleted Bazel targets.
 
+Standalone backend startup requires explicitly supplied `OMNISOLO_AGENT_TOKEN` and `OMNISOLO_AGENT_AUTH_KEY` (at least 32 bytes), using the operator's existing secret-management mechanism. Missing or invalid configuration fails before database initialization; the server never inserts development credentials. `OMNISOLO_AGENT_AUTH_DISABLED` is rejected by production binaries, and SPIFFE mode remains unavailable until verified peer extraction is implemented. The isolated browser runner supplies its own test-only credentials. Cluster mode does not create or overwrite agent credentials.
+
 The default Cargo members are the backend and harness worker. `app` is the Tauri package and is excluded only from focused headless checks. Full `make test` and `make lint` include it and require native desktop dependencies.
 
 ```sh

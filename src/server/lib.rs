@@ -3907,17 +3907,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .as_ref()
         .is_none_or(|database| database.backend() != crate::persistence::DatabaseBackend::MySql);
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
-    if std::env::var("OMNISOLO_AGENT_TOKEN").is_err()
-        && std::env::var("OMNISOLO_AGENT_SPIFFE_ID").is_err()
-    {
-        unsafe {
-            std::env::set_var("OMNISOLO_AGENT_TOKEN", "e2e-dummy-token");
-            std::env::set_var(
-                "OMNISOLO_AGENT_AUTH_KEY",
-                "e2e-dummy-key-that-is-at-least-thirty-two-bytes-long",
-            );
-        }
-    }
     let builtin_agent_auth = if standalone {
         Some(
             omnisolo_builtin_agent::auth::auth_mode_from_env().map_err(|error| {
