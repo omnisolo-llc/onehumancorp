@@ -23,3 +23,4 @@ pub mod quotes;
 pub use money::Money;
 
 pub mod catalog;
+pub mod chat;
