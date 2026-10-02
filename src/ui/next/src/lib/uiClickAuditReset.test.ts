@@ -170,3 +170,32 @@ it('does not let delayed field-edit effects certify an inert submit click', asyn
     expect(document.querySelector('output')).toHaveTextContent('');
   } finally { timers.forEach(clearTimeout); bounds.mockRestore(); document.body.innerHTML = ''; }
 });
+
+it('keeps distinct owned record controls identifiable when their DOM order changes', async () => {
+  const { tagClickTargets } = await import('../../../../e2e/support/ui_click_audit');
+  const original = document.body.innerHTML;
+  const fixture = (namespace: string, records: string[]) => records.map(id => `<section data-testid="triage-card-${namespace}-${id}"><button>Dismiss</button></section>`).join('');
+  const page = { locator: () => ({ evaluateAll: async (read: (elements: Element[], namespace?: string) => unknown, namespace?: string) => read(Array.from(document.querySelectorAll('button')), namespace) }) } as unknown as Page;
+  try {
+    document.body.innerHTML = fixture('audit-case-one', ['first', 'second']);
+    const initial = await tagClickTargets(page, 'audit-case-one');
+    document.body.innerHTML = fixture('audit-case-two', ['second', 'first']);
+    const restored = await tagClickTargets(page, 'audit-case-two');
+    expect(restored[0].key).toBe(initial[1].key);
+    expect(restored[1].key).toBe(initial[0].key);
+    expect(new Set(restored.map(target => target.key)).size).toBe(2);
+  } finally { document.body.innerHTML = original; }
+});
+
+it('maps case-specific UUID ancestry back to the same canonical record identity', async () => {
+  const { tagClickTargets } = await import('../../../../e2e/support/ui_click_audit');
+  const original = document.body.innerHTML;
+  const page = { locator: () => ({ evaluateAll: async (read: (elements: Element[], identity: unknown) => unknown, identity: unknown) => read(Array.from(document.querySelectorAll('button')), identity) }) } as unknown as Page;
+  try {
+    document.body.innerHTML = '<section data-testid="quote-first-generated-uuid"><button>Approve</button></section>';
+    const first = await tagClickTargets(page, 'audit-case-one', { 'first-generated-uuid': 'canonical-quote-uuid' });
+    document.body.innerHTML = '<section data-testid="quote-second-generated-uuid"><button>Approve</button></section>';
+    const second = await tagClickTargets(page, 'audit-case-two', { 'second-generated-uuid': 'canonical-quote-uuid' });
+    expect(second[0].key).toBe(first[0].key);
+  } finally { document.body.innerHTML = original; }
+});

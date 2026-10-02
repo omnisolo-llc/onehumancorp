@@ -285,3 +285,46 @@ export function hasFragmentTarget(href: string): boolean {
   return document.getElementById(name) !== null
     || Array.from(document.getElementsByName(name)).some(element => element.tagName === 'A');
 }
+
+
+export const clickableAuditSelector = [
+  'button:visible:not([disabled])',
+  '[role="button"]:visible:not([aria-disabled="true"])',
+  '[onclick]:visible',
+  'input[type="button"]:visible:not([disabled])',
+  'input[type="submit"]:visible:not([disabled])',
+  'input[type="reset"]:visible:not([disabled])',
+  'summary:visible',
+].join(', ');
+
+export async function tagClickTargets(page: Page, ownerNamespace?: string, canonicalIds: Record<string, string> = {}) {
+  return page.locator(clickableAuditSelector).evaluateAll((elements, { namespace, identifiers }) => {
+    const counts = new Map<string, number>();
+    return elements.filter((element) => {
+      const style = window.getComputedStyle(element);
+      return !element.closest('[aria-hidden="true"], nextjs-portal')
+        && style.pointerEvents !== 'none' && style.opacity !== '0';
+    }).map((element, index) => {
+      const label = element.getAttribute('aria-label') || (element.textContent || '').trim().replace(/\s+/g, ' ')
+        || element.getAttribute('title') || element.id || element.tagName;
+      // Case-owned rows receive new database IDs, but the same canonical
+      // record retains its suffix. Include record ancestry so two Dismiss
+      // buttons cannot swap identities when backend result ordering changes.
+      const canonical = (value: string) => {
+        let result = namespace ? value.split(namespace).join('audit-owner') : value;
+        for (const [generated, original] of Object.entries(identifiers)) result = result.split(generated).join(original);
+        return result;
+      };
+      const record = element.closest('[data-testid]')?.getAttribute('data-testid') || '';
+      const identity = JSON.stringify(namespace
+        ? [element.tagName, canonical(element.id), canonical(label), canonical(record)]
+        : [element.tagName, element.id, label]);
+      const occurrence = counts.get(identity) || 0;
+      counts.set(identity, occurrence + 1);
+      const key = `${identity}:${occurrence}`;
+      element.setAttribute('data-ui-audit-click-index', String(index));
+      element.setAttribute('data-ui-audit-click-key', key);
+      return { index, label, key };
+    });
+  }, { namespace: ownerNamespace, identifiers: canonicalIds });
+}

@@ -21,6 +21,23 @@ export async function e2eDbQuery(query: string, values?: unknown[]) {
   }
 }
 
+// One guarded connection owns the entire fixture transaction. A partial seed
+// must roll back before this pooled connection can serve another test.
+export async function e2eDbTransaction<T>(operation: (query: typeof e2eDbQuery) => Promise<T>): Promise<T> {
+  const client = await testPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await operation(async (query, values) => (await client.query(query, values)).rows);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export const db = {
   query: e2eDbQuery,
 };

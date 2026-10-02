@@ -25,6 +25,7 @@ ALTER TABLE daily_work_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_actions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed DISABLE ROW LEVEL SECURITY;
 
+-- audit-fixture-data:start
 INSERT INTO tenants (id, name, industry, tier, plan_tier, has_claimed_trial_extension)
 VALUES
   ('e2e-tenant', 'OmniSolo E2E Bakery', 'Food and beverage', 'Free', 'Free', false),
@@ -399,6 +400,30 @@ VALUES (
   '{"description":"Reschedule delivery appointment for Order #1042"}'::jsonb,
   '{"action_type":"Proposal","title":"Reschedule delivery for Order #1042","description":"Customer requested shifting delivery from 2pm to 4pm.","suggested_action":"Approve rescheduling"}'::jsonb,
   'PENDING_APPROVAL'
+),
+(
+  'e2e-ops-checklist', 'e2e-tenant', 'operations',
+  '{"description":"Review Daily Prep Checklist","feature_type":"proactive_ops","fixture_source":"canonical-e2e"}'::jsonb,
+  '{"message":"Review Checklist","action_type":"mark_complete","feature_type":"proactive_ops"}'::jsonb,
+  'PENDING_APPROVAL'
+),
+(
+  'e2e-ops-supplier', 'e2e-tenant', 'operations',
+  '{"description":"Follow up on delayed supplier delivery from yesterday","feature_type":"proactive_ops","fixture_source":"canonical-e2e"}'::jsonb,
+  '{"message":"Assign to Staff","action_type":"assign_to_staff","feature_type":"proactive_ops"}'::jsonb,
+  'PENDING_APPROVAL'
+),
+(
+  'e2e-ops-staffing', 'e2e-tenant', 'operations',
+  '{"description":"Staffing alert: Only 1 person scheduled for closing shift.","feature_type":"proactive_ops","fixture_source":"canonical-e2e"}'::jsonb,
+  '{"message":"Draft Schedule Request","action_type":"draft_schedule_request","feature_type":"proactive_ops"}'::jsonb,
+  'PENDING_APPROVAL'
+),
+(
+  'e2e-daily-prep', 'e2e-tenant', 'Operations Agent',
+  '{"description":"Daily Prep Checklist","feature_type":"daily_prep_checklist","fixture_source":"canonical-e2e"}'::jsonb,
+  '{"action_type":"Daily Prep Checklist","message":"Review Daily Prep Checklist"}'::jsonb,
+  'PENDING_APPROVAL'
 )
 ON CONFLICT (id) DO UPDATE
 SET tenant_id = EXCLUDED.tenant_id,
@@ -597,6 +622,8 @@ SET tenant_id = EXCLUDED.tenant_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+-- audit-fixture-data:end
+
 CREATE TABLE IF NOT EXISTS applied_client_mutations (
     client_mutation_id VARCHAR PRIMARY KEY,
     tenant_id VARCHAR NOT NULL,
@@ -786,6 +813,7 @@ ALTER TABLE shift_summaries FORCE ROW LEVEL SECURITY;
 ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS service_item_id UUID;
 ALTER TABLE quote_line_items ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 
+-- audit-fixture-data:start
 INSERT INTO customers (id, tenant_id, name, email, phone)
 VALUES ('648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'e2e-tenant', 'E2E Quoting Customer', 'quoting.cust@example.test', '+15559876543')
 ON CONFLICT (id) DO NOTHING;
@@ -851,6 +879,8 @@ ON CONFLICT (id) DO UPDATE SET
     estimated_value = EXCLUDED.estimated_value,
     priority = EXCLUDED.priority,
     updated_at = CURRENT_TIMESTAMP;
+
+-- audit-fixture-data:end
 
 ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quotes FORCE ROW LEVEL SECURITY;

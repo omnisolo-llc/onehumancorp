@@ -4,10 +4,12 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 import type { ClickEffects } from './support/ui_click_audit';
 import { ATTACHMENT, INVENTORY_TITLE, PROTOCOL, discoverAppRoutes as discoverSourceRoutes } from '../../scripts/ui-click-audit.cjs';
-import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
+import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget, clickableAuditSelector, tagClickTargets } from './support/ui_click_audit';
 import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
 import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui_audit_navigation';
+import { createDashboardAuditCase } from './support/dashboard_audit_fixture';
+import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
 
 const appRoot = path.resolve(__dirname, '../ui/next/src/app');
 function discoverAppRoutes(): string[] { return discoverSourceRoutes(path.resolve(__dirname, '../..')); }
@@ -22,15 +24,7 @@ const clickableCssSelector = [
   'summary',
 ].join(', ');
 
-const clickableSelector = [
-  'button:visible:not([disabled])',
-  '[role="button"]:visible:not([aria-disabled="true"])',
-  '[onclick]:visible',
-  'input[type="button"]:visible:not([disabled])',
-  'input[type="submit"]:visible:not([disabled])',
-  'input[type="reset"]:visible:not([disabled])',
-  'summary:visible',
-].join(', ');
+const clickableSelector = clickableAuditSelector;
 
 const interactiveCssSelector = [
   'a[href]',
@@ -110,26 +104,7 @@ const gotoReady = createAuditNavigation(auditBaseURL, async (page) => {
   }, new URL(auditBaseURL).origin);
 });
 
-async function tagClickTargets(page: Page) {
-  return page.locator(clickableSelector).evaluateAll((elements) => {
-    const counts = new Map<string, number>();
-    return elements.filter((element) => {
-      const style = window.getComputedStyle(element);
-      return !element.closest('[aria-hidden="true"], nextjs-portal')
-        && style.pointerEvents !== 'none' && style.opacity !== '0';
-    }).map((element, index) => {
-      const label = element.getAttribute('aria-label') || (element.textContent || '').trim().replace(/\s+/g, ' ')
-        || element.getAttribute('title') || element.id || element.tagName;
-      const identity = JSON.stringify([element.tagName, element.id, label]);
-      const occurrence = counts.get(identity) || 0;
-      counts.set(identity, occurrence + 1);
-      const key = `${identity}:${occurrence}`;
-      element.setAttribute('data-ui-audit-click-index', String(index));
-      element.setAttribute('data-ui-audit-click-key', key);
-      return { index, label, key };
-    });
-  });
-}
+
 
 async function auditInteractivePurposeForRoute(page: Page, route: string) {
   await gotoReady(page, route);
@@ -183,6 +158,7 @@ type RouteClickAudit = {
   observations: { key: string; completed: boolean; effect: ClickEffects | null; error: string | null }[];
   navigations: AuditNavigationReceipt[];
   exhausted: boolean; failures: string[]; assertionsPassed: boolean;
+  isolation?: { kind: 'case-owned-postgres'; seedDigest: string; cases: { tenantId: string; userId: string; keys: string[] }[] };
   timings?: { phase: string; target?: string; elapsedMs: number }[];
 };
 
@@ -195,6 +171,55 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit:
     try { return await operation(); }
     finally { (audit.timings ??= []).push({ phase, target, elapsedMs: Date.now() - started }); }
   };
+  if (route === '/dashboard' || route === '/') {
+    const browser = sourcePage.context().browser();
+    if (!browser) throw new Error('Dashboard click isolation requires the real test browser');
+    let owned = await timed('seed', () => createDashboardAuditCase(browser, auditBaseURL, sourcePage.viewportSize(), test.info().outputPath('dashboard-audit-videos')));
+    try {
+      await timed('navigate', async () => { audit.navigations.push(await owned.navigate(route)); });
+      const baseline = await timed('discover', () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds));
+      audit.discoveredKeys = baseline.map(target => target.key);
+      audit.isolation = { kind: 'case-owned-postgres', seedDigest: owned.actor.sourceDigest, cases: [] };
+      // This is a finite frozen inventory, not an open-ended enumeration loop.
+      // Budget each independently seeded/authenticated case and its existing
+      // bounded lookup and gestures, rather than raising a flat route timeout.
+      const caseBudget = 30_000;
+      test.setTimeout(Math.max(120_000, (baseline.length + 2) * caseBudget));
+      for (const candidate of baseline) {
+        await test.step(`isolated dashboard control: ${candidate.label}`, async () => {
+          const current = await timed('discover', () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds));
+          assertSameClickInventory(audit.discoveredKeys, current.map(target => target.key));
+          audit.isolation!.cases.push({ tenantId: owned.actor.tenantId, userId: owned.actor.userId, keys: current.map(target => target.key) });
+          const target = await timed('resolve', () => resolveAuditTarget(owned.page, candidate.key, () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds)), candidate.label);
+          audited.add(candidate.key);
+          try {
+            const observed = await timed('observe', () => observeClickEffects(owned.page, target), candidate.label);
+            audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
+            if (!hasMeaningfulClickEffect(observed)) {
+              if (observed.dialogSeen) failures.push(`${route}: "${candidate.label}" only opened a browser dialog`);
+              failures.push(`${route}: "${candidate.label}" produced no observable user effect`);
+            }
+          } catch (error) {
+            audit.observations.push({ key: candidate.key, completed: false, effect: null, error: String(error).split('\n')[0] });
+            failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
+          }
+          await timed('retire', () => owned.close());
+          owned = await timed('seed', () => createDashboardAuditCase(browser, auditBaseURL, sourcePage.viewportSize(), test.info().outputPath('dashboard-audit-videos')));
+          await timed('navigate', async () => { audit.navigations.push(await owned.navigate(route)); });
+        }, { timeout: caseBudget });
+      }
+      // Even the final reset must preserve the full initial inventory. A
+      // destructive click cannot erase another expected target from coverage.
+      const final = await timed('discover', () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds));
+      assertSameClickInventory(audit.discoveredKeys, final.map(target => target.key));
+      audit.isolation.cases.push({ tenantId: owned.actor.tenantId, userId: owned.actor.userId, keys: final.map(target => target.key) });
+      audit.exhausted = true;
+      return { auditedTargets: audited.size, failures };
+    } catch (error) {
+      if (!owned.page.isClosed()) await test.info().attach('dashboard-isolation-failure', { body: await owned.page.screenshot({ fullPage: true }), contentType: 'image/png' });
+      throw error;
+    } finally { await owned.close(); }
+  }
   // Restore with a committed blank document between clicks, retaining one
   // page/video for the route and destroying delayed callbacks from the old realm.
   let page = await sourcePage.context().newPage();
