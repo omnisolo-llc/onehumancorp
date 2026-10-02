@@ -458,8 +458,9 @@ function initLinkInBio() {
         if(response.status!==200 || value?.error!=null || value?.success===false || typeof value?.userId!=='string' || !value.userId || typeof value?.tenantId!=='string' || !value.tenantId || !Number.isFinite(value.expiresAt) || value.expiresAt<=Date.now())throw new Error('Verified private identity unavailable');
         return value;
     }
-    function headers(value) {
-        const h=new Headers({'Content-Type':'application/json','x-ohc-expected-user':value.userId,'x-ohc-expected-tenant':value.tenantId});
+    function headers(value,jsonBody=false) {
+        const h=new Headers({'x-ohc-expected-user':value.userId,'x-ohc-expected-tenant':value.tenantId});
+        if(jsonBody)h.set('Content-Type','application/json');
         if(h.get('x-ohc-expected-user')!==value.userId || h.get('x-ohc-expected-tenant')!==value.tenantId)throw new Error('Identity cannot be represented');
         return h;
     }
@@ -477,7 +478,7 @@ function initLinkInBio() {
                 try{verified=await identity();}catch{if(current===epoch)retire();return;}
                 if(current!==epoch)return;
                 if(verified.userId!==intended.userId || verified.tenantId!==intended.tenantId){retire();return;}
-                const response=await fetch('/api/v1/growth/link-in-bio',{method:'POST',headers:headers(intended),body:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',redirect:'error'});
+                const response=await fetch('/api/v1/growth/link-in-bio',{method:'POST',headers:headers(intended,true),body:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',redirect:'error'});
                 if(current!==epoch)return;
                 if(response.status===401||response.status===403){retire();return;}
                 const body=await response.text();if(current!==epoch)return;

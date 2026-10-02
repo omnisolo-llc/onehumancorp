@@ -13,8 +13,9 @@ async function verifiedIdentity(): Promise<BioOwner> {
   if (response.status !== 200 || data?.error != null || data?.success === false || typeof data?.userId !== 'string' || !data.userId || typeof data?.tenantId !== 'string' || !data.tenantId || !Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now()) throw new Error('Verified profile identity unavailable');
   return data;
 }
-function ownerHeaders(owner: BioOwner): Headers {
-  const headers = new Headers({'Content-Type':'application/json','x-ohc-expected-user':owner.userId,'x-ohc-expected-tenant':owner.tenantId});
+function ownerHeaders(owner: BioOwner, jsonBody = false): Headers {
+  const headers = new Headers({'x-ohc-expected-user':owner.userId,'x-ohc-expected-tenant':owner.tenantId});
+  if (jsonBody) headers.set('Content-Type','application/json');
   if (headers.get('x-ohc-expected-user') !== owner.userId || headers.get('x-ohc-expected-tenant') !== owner.tenantId) throw new Error('Profile identity cannot be represented');
   return headers;
 }
@@ -97,7 +98,7 @@ export default function LinkInBioGeneratorPage() {
       catch {if (active.current && current === epoch.current) retire(); return;}
       if (!active.current || current !== epoch.current) return;
       if (identity.userId !== intended.userId || identity.tenantId !== intended.tenantId) {retire(); return;}
-      const response = await fetch('/api/v1/growth/link-in-bio',{method:'POST',headers:ownerHeaders(intended),body:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',redirect:'error'});
+      const response = await fetch('/api/v1/growth/link-in-bio',{method:'POST',headers:ownerHeaders(intended,true),body:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',redirect:'error'});
       if (!active.current || current !== epoch.current) return;
       if (response.status === 401 || response.status === 403) {retire(); return;}
       const body = await response.text();

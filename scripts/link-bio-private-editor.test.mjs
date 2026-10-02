@@ -79,3 +79,19 @@ for(const root of roots){
  });
 
 }
+
+for(const root of roots){
+ test(`${root}: private GET omits JSON body metadata while POST retains it`,async()=>{
+  const f=await setup(root);try{
+   await waitFor(()=>f.requests.some(r=>r.url.includes('/growth/link-in-bio/')));
+   const read=f.requests.find(r=>r.url.includes('/growth/link-in-bio/'));
+   const readHeaders=new Headers(read.init.headers);
+   assert.equal(readHeaders.get('content-type'),null,'The catch-all proxy must not try to parse an empty GET as JSON');
+   assert.equal(readHeaders.get('x-ohc-expected-user'),owner.userId);assert.equal(readHeaders.get('x-ohc-expected-tenant'),owner.tenantId);
+   await waitFor(()=>f.doc.getElementById('store-name').value===profile.store_name);
+   const input=f.doc.getElementById('store-name');input.value='Explicit private change';input.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));
+   await waitFor(()=>f.requests.some(r=>r.init?.method==='POST'));
+   assert.equal(new Headers(f.requests.find(r=>r.init?.method==='POST').init.headers).get('content-type'),'application/json');
+  }finally{f.close();}
+ });
+}
