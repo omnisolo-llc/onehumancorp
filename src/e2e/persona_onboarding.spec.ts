@@ -28,6 +28,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await page.locator('#step-admin .next-step-btn').click();
 
     await expect(page.locator('#first-offer')).toHaveValue("Custom Birthday Cake");
+    await page.locator('#first-product-price').fill('25.00');
     await page.locator('#step-offer .next-step-btn').click();
 
     await page.locator('#location-input').fill('Portland, OR');
@@ -61,6 +62,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await page.locator('#step-admin .next-step-btn').click();
 
     await expect(page.locator('#first-offer')).toHaveValue("Standard Repair Visit");
+    await page.locator('#first-product-price').fill('25.00');
     await page.locator('#step-offer .next-step-btn').click();
 
     await page.locator('#location-input').fill('Portland, OR');
@@ -110,6 +112,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await page.locator('#step-admin .next-step-btn').click();
 
     await page.locator('#first-offer').fill("Logo Design");
+    await page.locator('#first-product-price').fill('25.00');
     await page.locator('#step-offer .next-step-btn').click();
 
     await page.locator('#location-input').fill('Portland, OR');

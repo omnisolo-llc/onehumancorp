@@ -18,7 +18,7 @@ async function setup(path, fetch, options = {}) {
   const dom = new JSDOM(html, { url: options.url || 'https://workspace.example/setup.html', runScripts: 'outside-only', pretendToBeVisual: true });
   Object.defineProperty(dom.window.navigator,'locks',{configurable:true,value:options.locks===false?undefined:options.locks||createOriginLockManager()});
   dom.window.fetch = (url, request) => url.endsWith('/session-identity') ? Promise.resolve(Response.json({...testOwner,expiresAt:Date.now()+60_000})) : fetch(url,request);
-  const initial = options.stored ?? { work_context: 'Agency', business_name: 'Nora Studio', first_offer: 'Logo Design', location: 'Portland, OR', target_audience: 'Local founders', categories: 'Design', assistant_name: 'Nora' };
+  const initial = options.stored ?? { work_context: 'Agency', business_name: 'Nora Studio', first_offer: 'Logo Design', firstProductPrice: '25.00', location: 'Portland, OR', target_audience: 'Local founders', categories: 'Design', assistant_name: 'Nora' };
   dom.window.localStorage.setItem(draftKey, JSON.stringify({format:1,state:initial,revision:'fixture-acknowledged',acknowledgedRevision:'fixture-acknowledged'}));
   options.prepare?.(dom.window);
   dom.window.HTMLElement.prototype.scrollTo = () => {};

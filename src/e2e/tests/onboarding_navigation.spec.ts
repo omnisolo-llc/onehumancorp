@@ -21,6 +21,7 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.getByTestId('next-step-btn').nth(5).click(); // to step-offer
     await page.locator('#first-offer').fill('Awesome stuff');
+    await page.locator('#first-product-price').fill('25.00');
     await page.getByTestId('next-step-btn').nth(6).click(); // to step-location
     await page.locator('#location-input').fill('Local');
     await page.getByTestId('next-step-btn').nth(7).click(); // to step-target-audience
@@ -86,6 +87,7 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.getByTestId('next-step-btn').nth(5).click();
     await page.locator('#first-offer').fill('Awesome stuff');
+    await page.locator('#first-product-price').fill('25.00');
     await page.getByTestId('next-step-btn').nth(6).click();
     await page.locator('#location-input').fill('Local');
     await page.getByTestId('next-step-btn').nth(7).click();
