@@ -488,12 +488,19 @@ async fn proxy_agent_rpc_handler(
             .into_response();
     }
 
-    let port = std::env::var("OMNISOLO_PORT")
+    // The server's own raw /rpc route is deliberately unavailable because its
+    // legacy task store has no tenant-bound workspace authority. Never infer it
+    // as a working runtime from the HTTP port or silently dispatch elsewhere.
+    let Some(raw_origin) = std::env::var("OMNISOLO_AGENT_URL")
         .ok()
-        .and_then(|p| p.parse::<u16>().ok())
-        .unwrap_or(18789);
-    let default_origin = format!("http://127.0.0.1:{}", port);
-    let raw_origin = std::env::var("OMNISOLO_AGENT_URL").unwrap_or(default_origin);
+        .filter(|origin| !origin.trim().is_empty())
+    else {
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            [("cache-control", "private, no-store")],
+            axum::Json(serde_json::json!({ "error": "Agent runtime is not configured; no work was dispatched" })),
+        ).into_response();
+    };
     let Ok(url) = agent_rpc_url(&raw_origin) else {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
@@ -539,6 +546,16 @@ async fn proxy_agent_rpc_handler(
         )
             .into_response();
     };
+    // Caller authentication has already succeeded through strict middleware.
+    // An agent credential/configuration rejection must not masquerade as expiry
+    // of the browser's independent signed user session or expose its raw body.
+    if matches!(upstream.status().as_u16(), 401 | 403) {
+        return (
+            axum::http::StatusCode::BAD_GATEWAY,
+            [("cache-control", "private, no-store")],
+            axum::Json(serde_json::json!({ "error": "Agent runtime authentication failed; check the server-side runtime configuration" })),
+        ).into_response();
+    }
     if upstream
         .content_length()
         .is_some_and(|length| length > AGENT_RPC_RESPONSE_LIMIT_BYTES as u64)

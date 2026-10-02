@@ -8,7 +8,7 @@ test('marketplace RPC connection failures cannot invent success or replay throug
   const source = await read('src/server/lib.rs');
   const handler = source.slice(source.indexOf('async fn proxy_agent_rpc_handler('), source.indexOf('fn strict_ui_claim_tenant('));
   const start = handler.indexOf('let Ok(upstream) = request.send().await else');
-  const end = handler.indexOf('    };\n    if upstream', start);
+  const end = handler.indexOf('\n    };', start);
   assert.ok(start >= 0 && end > start);
   const boundary = handler.slice(start, end);
   assert.doesNotMatch(boundary, /MP_CLIENT|MockMarketplaceProvider|FALLBACK_APP_SERVER|handle_request|RepoMap/);

@@ -119,6 +119,123 @@ async fn actual_authenticated_rpc_does_not_switch_to_a_global_fallback_after_tra
     assert_eq!(RPC_DISPATCHES.load(std::sync::atomic::Ordering::SeqCst), 0);
 }
 
+struct RestoreRpcEnvironment {
+    url: Option<String>,
+    port: Option<String>,
+}
+impl RestoreRpcEnvironment {
+    fn capture() -> Self {
+        Self {
+            url: std::env::var("OMNISOLO_AGENT_URL").ok(),
+            port: std::env::var("OMNISOLO_PORT").ok(),
+        }
+    }
+}
+impl Drop for RestoreRpcEnvironment {
+    fn drop(&mut self) {
+        // This harness is strictly serial and changes only its own process env.
+        for (key, value) in [
+            ("OMNISOLO_AGENT_URL", &self.url),
+            ("OMNISOLO_PORT", &self.port),
+        ] {
+            unsafe {
+                if let Some(value) = value {
+                    std::env::set_var(key, value);
+                } else {
+                    std::env::remove_var(key);
+                }
+            }
+        }
+    }
+}
+
+async fn assert_internal_rpc_auth_failure_is_not_a_user_session_failure(status: StatusCode) {
+    let fixture = Fixture::new().await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let requests = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let observed = requests.clone();
+    let app = Router::new().route(
+        "/rpc",
+        post(move |headers: axum::http::HeaderMap| {
+            let observed = observed.clone();
+            async move {
+                assert_eq!(headers["x-tenant-id"], "workflow-tenant-a");
+                assert_ne!(headers["x-user-id"], "forged-owner");
+                observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                status
+            }
+        }),
+    );
+    let server = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    let _restore = RestoreRpcEnvironment::capture();
+    unsafe {
+        std::env::set_var("OMNISOLO_AGENT_URL", format!("http://{address}"));
+    }
+    let (received, body) = raw_rpc_response(&fixture, "/api/v1/rpc", Some(&fixture.a)).await;
+    server.abort();
+    let _ = server.await;
+    assert_eq!(
+        received,
+        StatusCode::BAD_GATEWAY,
+        "internal status {status}"
+    );
+    assert_eq!(
+        body["error"],
+        "Agent runtime authentication failed; check the server-side runtime configuration"
+    );
+    assert!(body.get("result").is_none());
+    assert_eq!(requests.load(std::sync::atomic::Ordering::SeqCst), 1);
+    assert!(fixture.store.validate_token(&fixture.a).await.is_ok());
+}
+
+#[tokio::test]
+async fn upstream_rpc_unauthorized_does_not_expire_an_authenticated_browser_session() {
+    assert_internal_rpc_auth_failure_is_not_a_user_session_failure(StatusCode::UNAUTHORIZED).await;
+}
+#[tokio::test]
+async fn upstream_rpc_forbidden_does_not_change_the_authenticated_callers_permissions() {
+    assert_internal_rpc_auth_failure_is_not_a_user_session_failure(StatusCode::FORBIDDEN).await;
+}
+#[tokio::test]
+async fn absent_explicit_agent_runtime_never_calls_the_servers_retired_raw_endpoint() {
+    let fixture = Fixture::new().await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let requests = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let observed = requests.clone();
+    let app = Router::new().route(
+        "/rpc",
+        post(move || {
+            let observed = observed.clone();
+            async move {
+                observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                StatusCode::UNAUTHORIZED
+            }
+        }),
+    );
+    let server = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    let _restore = RestoreRpcEnvironment::capture();
+    unsafe {
+        std::env::remove_var("OMNISOLO_AGENT_URL");
+        std::env::set_var("OMNISOLO_PORT", port.to_string());
+    }
+    let (status, body) = raw_rpc_response(&fixture, "/api/v1/rpc", Some(&fixture.a)).await;
+    server.abort();
+    let _ = server.await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        body["error"],
+        "Agent runtime is not configured; no work was dispatched"
+    );
+    assert_eq!(requests.load(std::sync::atomic::Ordering::SeqCst), 0);
+    assert!(fixture.store.validate_token(&fixture.a).await.is_ok());
+}
+
 static TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 struct PoisonedRegistryFixture;

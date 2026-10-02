@@ -91,7 +91,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_agent_workflow_gate_keeps_its_full_offline_inventory(self):
         minimum, database = gate.GATES['agent-workflow-contract']
-        self.assertGreaterEqual(minimum, 35)
+        self.assertGreaterEqual(minimum, 42)
         self.assertIsNone(database)
         runner = Path(__file__).resolve().parents[1]/'scripts/agent-workflow-contract/run.sh'
         self.assertTrue(runner.is_file())
