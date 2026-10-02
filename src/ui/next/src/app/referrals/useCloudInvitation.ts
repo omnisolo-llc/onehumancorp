@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { hasVerifiedOfflineQueueOwner, subscribeQueueIdentityReadiness } from '../../lib/sync/queueIdentity';
 
 type Owner = { userId: string; tenantId: string; expiresAt: number };
 type Marker = { version: 1; owner: Pick<Owner, 'userId' | 'tenantId'>; operation: string; state: 'pending' | 'created' };
@@ -6,6 +7,8 @@ type View = { phase: 'verifying' | 'ready' | 'requesting' | 'created' | 'held'; 
 const EPOCH_KEY = 'omnisolo_queue_identity_epoch_v2';
 // This is the same metadata/lock namespace as the maintained dashboard bridge.
 const keyFor = (owner: Owner) => 'omnisolo_invite_creation_v1:' + encodeURIComponent(JSON.stringify([owner.userId, owner.tenantId]));
+// Readiness is only a contradiction check, never a replacement identity or write grant.
+const canonicalOwnerChanged = (owner: Owner) => hasVerifiedOfflineQueueOwner() && !hasVerifiedOfflineQueueOwner(owner);
 const sameOwner = (a: Pick<Owner, 'userId' | 'tenantId'>, b: Pick<Owner, 'userId' | 'tenantId'>) => a.userId === b.userId && a.tenantId === b.tenantId;
 function markerFor(key: string, owner: Owner): Marker | null {
   const bytes = localStorage.getItem(key);
@@ -55,6 +58,9 @@ export function useCloudInvitation(onRetire: () => void) {
         show({ phase: 'held', message: 'An invitation request changed in another view. Review existing invitations before retrying.', link: '' });
       }
     };
+    const unsubscribeReadiness = subscribeQueueIdentityReadiness(() => {
+      if (active.current && owner.current && canonicalOwnerChanged(owner.current)) retire();
+    });
     window.addEventListener('omnisolo_auth_changed', retire);
     window.addEventListener('storage', changed);
     window.addEventListener('pagehide', retire);
@@ -62,6 +68,7 @@ export function useCloudInvitation(onRetire: () => void) {
       try {
         const verified = await identity();
         if (!active.current || expected !== epoch.current) return;
+        if (canonicalOwnerChanged(verified)) { retire(); return; }
         owner.current = verified;
         expires.current = setTimeout(retire, Math.min(verified.expiresAt - Date.now(), 2_147_483_647));
         if (!navigator.locks?.request) throw new Error('Coordinated invitation requests unavailable');
@@ -74,13 +81,14 @@ export function useCloudInvitation(onRetire: () => void) {
       }
     })();
     return () => {
-      active.current = false; epoch.current += 1; owner.current = null; clearTimeout(expires.current);
+      active.current = false; epoch.current += 1; owner.current = null; clearTimeout(expires.current); unsubscribeReadiness();
       window.removeEventListener('omnisolo_auth_changed', retire); window.removeEventListener('storage', changed); window.removeEventListener('pagehide', retire);
     };
   }, [retire, show]);
 
   const create = async (invitee: string) => {
     if (!active.current || phase.current !== 'ready' || busy.current || !owner.current || owner.current.expiresAt <= Date.now()) return;
+    if (canonicalOwnerChanged(owner.current)) { retire(); return; }
     const intended = { ...owner.current }; const expected = epoch.current; const key = keyFor(intended); const inviteeId = invitee.trim();
     if (!inviteeId) { show({ phase: 'ready', message: 'Enter the team member or client email before creating an invitation.', link: '' }); return; }
     busy.current = true; show({ phase: 'requesting', message: 'Requesting an invitation…', link: '' });
@@ -95,7 +103,7 @@ export function useCloudInvitation(onRetire: () => void) {
           throw cause;
         }
         if (!active.current || expected !== epoch.current) return;
-        if (!sameOwner(verified, intended)) { retire(); return; }
+        if (!sameOwner(verified, intended) || canonicalOwnerChanged(intended)) { retire(); return; }
         if (markerFor(key, intended)) throw new Error('Previous invitation outcome must be reviewed');
         const headers = new Headers({ 'content-type': 'application/json', 'x-ohc-expected-user': intended.userId, 'x-ohc-expected-tenant': intended.tenantId });
         if (headers.get('x-ohc-expected-user') !== intended.userId || headers.get('x-ohc-expected-tenant') !== intended.tenantId) throw new Error('Identity cannot be bound');
