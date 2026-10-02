@@ -47,6 +47,7 @@ pub mod subscription;
 
 pub mod assistant;
 pub mod inbox;
+pub mod inquiries;
 pub mod integrations_settings;
 pub mod payment_ledger;
 pub mod quotes;
@@ -67,6 +68,7 @@ pub mod tool_integrations;
 pub mod unified_inbox_webhook;
 pub mod unified_ws;
 pub(crate) mod walkup;
+pub mod widget;
 pub mod work_triage;
 mod ws_batch;
 pub(crate) mod ws_compression;

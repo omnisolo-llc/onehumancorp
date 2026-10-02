@@ -3661,6 +3661,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Draft Quote Worker
+    let inquiry_intake_worker = std::sync::Arc::new(
+        crate::workers::inquiry_intake_worker::InquiryIntakeWorker::new(db.clone()),
+    );
+    if legacy_sqlx_background_enabled {
+        inquiry_intake_worker.start();
+    }
+
     let draft_quote_worker = std::sync::Arc::new(
         crate::workers::draft_quote_worker::DraftQuoteWorker::new(db.clone()),
     );
@@ -8731,6 +8738,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     );
     let setup_router: axum::Router =
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
+
+    let widget_router = axum::Router::new().nest("/api/widget", api::widget::router(db.clone()));
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
@@ -9759,12 +9768,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
+        .nest("/api/v1/inquiries", api::inquiries::router().with_state(db.pool.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/field-service-routing", api::field_service_routing::router(db.clone(), hub.clone()))
-        .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
+        .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()).layer(axum::extract::Extension(hub.get_cost_auditor())))
         .nest(
             "/api/v1/proposals",
-            api::proposals::router().with_state(db.pool.clone()).route_layer(
+            api::proposals::router().with_state(db.pool.clone())
+            .layer(axum::extract::Extension(hub.get_cost_auditor()))
+            .route_layer(
                 axum::middleware::from_fn_with_state(
                     http_auth_store.clone(),
                     ::server_auth::strict_bearer_auth_middleware,
@@ -10115,6 +10127,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .merge(health_router)
         .merge(http_auth_router)
         .merge(setup_router)
+        .merge(widget_router)
         .merge(oauth_callback_router)
         .fallback(api_not_found_handler);
 
