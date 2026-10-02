@@ -67,11 +67,11 @@ export default async function ShareCardPage({ searchParams }: Props) {
   // Sanitize for safe HTML injection
   const safeHtmlTarget = targetUrl.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  // Use client-side redirect so crawlers have a chance to read the OG tags
+  // One redirect directive keeps OG metadata available without racing two
+  // document navigations (a refresh plus a script can replace the target twice).
   return (
     <>
       <meta httpEquiv="refresh" content={`0;url=${safeHtmlTarget}`} />
-      <script dangerouslySetInnerHTML={{ __html: `window.location.replace(${JSON.stringify(targetUrl).replace(/</g, '\\u003c')});` }} />
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <p className="text-gray-600 font-medium">Redirecting to <a href={safeHtmlTarget} className="text-[#0071E3] hover:underline">{safeHtmlTarget}</a>...</p>
       </div>

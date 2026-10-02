@@ -30,12 +30,12 @@ describe('share-card destinations', () => {
   });
 });
 
-it('the actual page keeps its metadata refresh, script and visible link on the normalized target', async () => {
+it('the actual page keeps its metadata refresh and visible link on the normalized target', async () => {
   const output = await ShareCardPage({ searchParams: Promise.resolve({ url: 'https://fixture-user:fixture-password@cloud.omnisolo.co/path' }) });
   const { container } = render(output);
   expect(screen.getByRole('link')).toHaveAttribute('href', '/onboarding');
   expect(document.querySelector('meta[http-equiv="refresh"]')).toHaveAttribute('content', '0;url=/onboarding');
-  expect(container.querySelector('script')?.textContent).toBe('window.location.replace("/onboarding");');
+  expect(container.querySelector('script')).toBeNull();
 });
 
 it('a local URL cannot become an external network-path URL in rendered redirect surfaces', async () => {
@@ -43,5 +43,14 @@ it('a local URL cannot become an external network-path URL in rendered redirect 
   const { container } = render(output);
   expect(screen.getByRole('link')).toHaveAttribute('href', '/onboarding');
   expect(document.querySelector('meta[http-equiv="refresh"]')).toHaveAttribute('content', '0;url=/onboarding');
-  expect(container.querySelector('script')?.textContent).toBe('window.location.replace("/onboarding");');
+  expect(container.querySelector('script')).toBeNull();
+});
+
+it('schedules only one automatic document navigation so the destination cannot be replaced twice', async () => {
+  const { container } = render(await ShareCardPage({ searchParams: Promise.resolve({}) }));
+  const refreshes = document.querySelectorAll('meta[http-equiv="refresh"]');
+  const scriptNavigations = Array.from(container.querySelectorAll('script')).filter(script => /location\.(?:replace|assign)|location\s*=/.test(script.textContent || ''));
+  expect(refreshes.length + scriptNavigations.length).toBe(1);
+  expect(refreshes[0]).toHaveAttribute('content', '0;url=/onboarding');
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/onboarding');
 });
