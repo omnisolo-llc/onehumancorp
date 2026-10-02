@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "[Native Chat] Omnichannel Conversation Data Model & Multi-Tenant Boundaries"
+issue_description: "The requested omnichannel conversation data models (Inbox, Contact, Conversation, Message) have already been fully implemented in `src/server/domain/chat/mod.rs` and `src/server/integrations/omnichannel/src/models.rs`, complete with strict `tenant_id` boundaries. In addition, the PostgreSQL migration script `src/server/db/migrations/1009_native_omnichannel_chat.sql` already establishes the tables (`chat_inboxes`, `chat_contacts`, `chat_conversations`, `chat_messages`) with proper Row Level Security (RLS) enforcing multi-tenant isolation. No further implementation is needed as the requirements are already met in the current codebase."
