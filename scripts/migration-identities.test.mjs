@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, writeFile, rm, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdtemp, writeFile, rm, readFile, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,36 @@ test('canonical runtime migrations have unique SQLx versions and preserve schema
   const result = spawnSync('bash', [checker], { cwd: root, encoding: 'utf8', timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr);
+});
+
+test('the POS collision repair preserves historical SQLx checksums', async () => {
+  const directory = path.join(root, 'src/server/migrations');
+  const names = await readdir(directory);
+  // SQLx records SHA-384 over the original SQL bytes. Change schema through an
+  // additive migration rather than rewriting either upstream chat migration.
+  const checksums = {
+    '233_chat_omnichannel.sql': '97321c6b3f5ab689eeffea31a3fa5c3d396563337774a3825d32faaa048cfbfdd3b4c3e5714977ad7f8caec34f0bf789',
+    '236_pos_offline_request_identity.sql': 'fb36c12db63a07f133ac6be6037beb896292d62d16f612177d831e7d1b241503e2b58bfd27719e8dc69b1255f4a6b20a',
+    '1009_native_omnichannel_chat.sql': 'aaa15a53375f57bb82011b2aae513f05335fb7e543e3f1136cd5cb5decbc7a4a3d9b8fdc46f248de33de664da33c8b00',
+  };
+  for (const [name, checksum] of Object.entries(checksums)) {
+    assert.ok(names.includes(name), `preserve the migration identity ${name}`);
+    const sql = await readFile(path.join(directory, name));
+    assert.equal(createHash('sha384').update(sql).digest('hex'), checksum, name);
+  }
+});
+
+test('POS and chat additions retain SQLx numeric dependency order after integration', async () => {
+  const names = await readdir(path.join(root, 'src/server/migrations'));
+  const relevant = names.filter((name) => /_(?:pos_offline_transactions|chat_omnichannel|pos_offline_request_identity|native_omnichannel_chat|chat_sender_identity_text)\.sql$/.test(name));
+  relevant.sort((left, right) => Number.parseInt(left, 10) - Number.parseInt(right, 10));
+  assert.deepEqual(relevant, [
+    '076_pos_offline_transactions.sql',
+    '233_chat_omnichannel.sql',
+    '236_pos_offline_request_identity.sql',
+    '1009_native_omnichannel_chat.sql',
+    '1021_chat_sender_identity_text.sql',
+  ]);
 });
 
 for (const names of [

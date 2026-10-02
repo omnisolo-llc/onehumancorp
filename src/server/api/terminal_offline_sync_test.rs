@@ -31,7 +31,7 @@ async fn fixture() -> PgPool {
         .await
         .unwrap();
     sqlx::raw_sql(include_str!(
-        "../migrations/233_pos_offline_request_identity.sql"
+        "../migrations/236_pos_offline_request_identity.sql"
     ))
     .execute(&pool)
     .await

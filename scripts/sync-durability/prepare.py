@@ -71,7 +71,7 @@ source+='pub fn router(hub:Arc<Hub>)->axum::Router{axum::Router::new().route("/a
 source+='#[cfg(test)] #[tokio::test] '+pos_function('pos_orders_keep_customer_identity_and_notes_tenant_scoped')+'\n}\n'
 source+='\n#[cfg(test)]\n#[path="mounted_test.rs"]\nmod mounted_test;\n'
 (HERE/'generated.rs').write_text(source)
-inputs=[ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',HERE/'README.md',HERE/'source_contract_test.py',API/'pos.rs',ROOT/'src/server/utils/cache.rs',HERE/'prepare.py',HERE/'Cargo.toml',API/'mod.rs',API/'sync_transaction.rs',API/'offline_sync.rs',API/'offline_sync_route_test.rs',HERE/'mounted_test.rs',API/'terminal_api.rs',*API.glob('durable_sync*'),*API.glob('terminal_offline_sync*'),ROOT/'src/server/migrations/233_pos_offline_request_identity.sql',ROOT/'src/server/migrations/234_sync_durable_receipts.sql']
+inputs=[ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',HERE/'README.md',HERE/'source_contract_test.py',API/'pos.rs',ROOT/'src/server/utils/cache.rs',HERE/'prepare.py',HERE/'Cargo.toml',API/'mod.rs',API/'sync_transaction.rs',API/'offline_sync.rs',API/'offline_sync_route_test.rs',HERE/'mounted_test.rs',API/'terminal_api.rs',*API.glob('durable_sync*'),*API.glob('terminal_offline_sync*'),ROOT/'src/server/migrations/236_pos_offline_request_identity.sql',ROOT/'src/server/migrations/234_sync_durable_receipts.sql']
 manifest={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs if p.is_file()}
 (HERE/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(f'Prepared exact-source harness from {len(manifest)} source inputs')
