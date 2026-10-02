@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Native Chat: Implement Rust-based Omnichannel Conversation Engine (Phase 1: Core Models & Migrations)"
+issue_description: "The requested chat entities and migrations to replace Chatwoot with a native system already exist in the codebase. Migrations are present in src/server/db/migrations/233_chat_omnichannel.sql and src/server/migrations/233_chat_omnichannel.sql. The corresponding models and repository logic, including RLS enforcement, are implemented in src/server/services/chat/service.rs and src/server/integrations/omnichannel/src/models.rs, complete with passing unit tests. Therefore, no additional implementation is needed for Phase 1."
