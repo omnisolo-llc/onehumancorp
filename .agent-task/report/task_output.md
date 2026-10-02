@@ -1,3 +1,3 @@
 outcome: no_work
-issue_title: "Native Rust Omnichannel Chat System - Core Architecture"
-issue_description: "According to RESEARCH.md, the core strategic directive is to integrate existing tools instead of rebuilding them. Requests to build native replacements for external services (such as Chatwoot) without explicit authorization, evidence, and an expansion gate must be rejected."
+issue_title: "[Research] Architect Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_description: "Building a native Chatwoot replacement requires the expansion gate as specified in RESEARCH.md. Loaded superpowers skills from revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d. No files modified. Code was not implemented because new scope (Chatwoot replacement/Omnichannel) is blocked. During validation, background processes failed due to 'A successful fresh Next standalone build is required; run npm run build:web.' and Next.js dynamic server usage errors on unchanged routes. Verified background tests completed and removed temporary files."
