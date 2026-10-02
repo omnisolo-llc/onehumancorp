@@ -48,6 +48,12 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+function verifyQuoteFixture(name: string) {
+  if (name === 'quote') vi.mocked(fetch).mockImplementation(async url => String(url).endsWith('/session-identity')
+    ? Response.json({ userId: 'quote-owner', tenantId: 'quote-tenant', expiresAt: Date.now() + 60_000 })
+    : Response.json({ error: 'not_authenticated' }, { status: 401 }));
+}
+
 describe('clipboard feedback follows the actual platform outcome', () => {
   for (const { name, Page, button, prepare } of cases) {
     it(`${name} stays pending until copying succeeds`, async () => {
@@ -55,6 +61,7 @@ describe('clipboard feedback follows the actual platform outcome', () => {
       const writeText = vi.fn<(text: string) => Promise<void>>(() => completion.promise);
       const write = vi.fn<(items: ClipboardItem[]) => Promise<void>>(() => completion.promise);
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText, write } });
+      verifyQuoteFixture(name);
       await act(async () => { render(<TooltipProvider><Page /></TooltipProvider>); });
       prepare();
       const copy = screen.getByRole('button', { name: button });
@@ -74,6 +81,7 @@ describe('clipboard feedback follows the actual platform outcome', () => {
       const writeText = vi.fn<(text: string) => Promise<void>>(() => completion.promise);
       const write = vi.fn<(items: ClipboardItem[]) => Promise<void>>(() => completion.promise);
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText, write } });
+      verifyQuoteFixture(name);
       await act(async () => { render(<TooltipProvider><Page /></TooltipProvider>); });
       prepare();
       fireEvent.click(screen.getByRole('button', { name: button }));
