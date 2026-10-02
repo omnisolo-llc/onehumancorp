@@ -89,6 +89,26 @@ export async function fetchForOwnedBusinessAction(url: string, options: RequestI
     if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This action was not sent.');
   });
 }
+/** Publication status and version-specific revocation share the sealed owner boundary. */
+export async function fetchForOwnedPublication(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  const root = '/api/v1/builder/publications';
+  const uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+  if (!(url === root && method === 'POST')
+    && !(new RegExp('^' + root + '/operations/' + uuid + '$').test(url) && method === 'GET')
+    && !(new RegExp('^' + root + '/' + uuid + '$').test(url) && method === 'DELETE')) throw new Error('Invalid publication destination or method');
+  const intended = expected ? { ...expected } : null;
+  if (!intended || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. Please reopen this view.');
+  const before = epoch;
+  return authenticatedOnboardingFetch(url, { ...options, method }, intended, before, () => {
+    const marker: unknown = onDispatch?.();
+    if (marker && typeof (marker as PromiseLike<unknown>).then === 'function') {
+      void Promise.resolve(marker).catch(() => undefined);
+      throw new Error('Dispatch markers must be saved synchronously');
+    }
+    if (before !== epoch || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. This action was not sent.');
+  });
+}
 export async function fetchForOwnedDefinition(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
   const method = (options.method ?? 'GET').toUpperCase();
   const parsed = new URL(url, 'https://owned.invalid');
