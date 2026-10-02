@@ -1490,6 +1490,7 @@ export default function AIWorkspacePage() {
                   <button
                     id={PAGE_IDS.chatSubmit}
                     type="submit"
+                    disabled={!chatInput.trim()}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-md"
                   >
                     Send
