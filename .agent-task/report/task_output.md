@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "Universal Provider & Local Usage Accounting (F04)"
+issue_description: "The issue requests implementing model usage tracking and reconciliation for all external AI generation paths (F04). However, the `docs/research/native_migration_and_remediation.md` states for F04: 'Metered routes only. Other model, tool, embedding and summarization paths still require complete inventory and reconciliation.' I have inspected the codebase and verified that metered inference paths are indeed capturing usage correctly (via `src/server/harness/middleware/usage_meter.rs` and `src/server/local_generation.rs`). `src/server/api/proposals.rs` now records accurate usage through the `AdapterLlm`. However, there are numerous other LLM integrations like tool agents, visual workflow clients, subagents, and third-party API proxies which do not currently funnel through the `UsageMeter` middleware, and extending the middleware to capture all these disparate calls falls outside the scope of a concrete bound ticket. Implementing a unified accounting layer across all these disparate tools would require a larger architectural refactor and decision on how embedded and standalone agents report usage. A blocked no-work finding is submitted as requested due to missing prerequisites/clarifications to bound the required effort."
