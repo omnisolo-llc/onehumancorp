@@ -3,7 +3,11 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 : "${OHC_PUBLICATION_TEST_DATABASE_URL:?Supply an owned disposable PostgreSQL database}"
 python3 scripts/site-publication/database_guard.py
+python3 scripts/site-publication/test_mount.py
 export OMNISOLO_DATABASE_URL="$OHC_PUBLICATION_TEST_DATABASE_URL" OMNISOLO_STANDALONE_MODE=false
+export NODE_PATH="$PWD/src/ui/next/node_modules${NODE_PATH:+:$NODE_PATH}"
+printf 'null' | node scripts/site-publication/jcs-proof.cjs >/dev/null
+export JWT_SECRET=public-local-publication-regression-signing-key-only
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
 cp Cargo.lock scripts/site-publication/Cargo.lock
 cargo metadata --offline --manifest-path scripts/site-publication/Cargo.toml --format-version 1 >/dev/null

@@ -508,7 +508,7 @@ async fn background_worker_resumes_committed_work_and_stops_on_shutdown() {
 async fn stored_jsonb_normalization_preserves_snapshot_replay_and_worker_progress() {
     let f = Fixture::new(false).await;
     let mut snapshot = f.snapshot("Numeric metadata");
-    snapshot.pages[0].seo_metadata = json!({"zero": -0.0, "nested": [1.0, -0.0, 1e30]});
+    snapshot.pages[0].seo_metadata = json!({"zero": -0.0, "nested": [1.0, -0.0, 1e15, 1e-7]});
     let operation = Uuid::new_v4();
     let receipt = submit_publication(&f.pool, &f.a, operation, None, &snapshot)
         .await
@@ -675,4 +675,115 @@ async fn non_ascii_role_lookalikes_do_not_grant_publication_authority() {
         matches!(result, Err(PublicationError::Unauthorized)),
         "canonical ASCII roles only; database fold={folded}, result={result:?}"
     );
+}
+
+#[tokio::test]
+async fn blocked_owner_cannot_starve_another_tenant_or_prevent_worker_shutdown() {
+    let f = Fixture::new(false).await;
+    let first = submit(&f, "Tenant A reviewed page").await;
+    let mut other = f.snapshot("Tenant B reviewed page");
+    other.pages[0].blocks[0].content["items"][0]["product_id"] = json!(f.product_b);
+    let second = submit_publication(&f.pool, &f.b, Uuid::new_v4(), None, &other)
+        .await
+        .unwrap();
+    let (blocked, owner, eligible) = if first.publication_id < second.publication_id {
+        (&first, &f.a.user_id, &second)
+    } else {
+        (&second, &f.b.user_id, &first)
+    };
+    let mut lock = f.admin.begin().await.unwrap();
+    sqlx::query("SELECT id FROM users WHERE id=$1 FOR UPDATE")
+        .bind(owner)
+        .fetch_one(&mut *lock)
+        .await
+        .unwrap();
+    let (shutdown, signal) = tokio::sync::watch::channel(false);
+    let mut worker = tokio::spawn(crate::builder::publication_worker::run_publication_worker(
+        f.pool.clone(),
+        signal,
+    ));
+    let observed = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        loop {
+            let waiting: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=$1 AND wait_event_type='Lock')").bind(&f.schema).fetch_one(&f.admin).await.unwrap();
+            if waiting { break; }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    }).await.is_ok();
+    let progressed = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+        loop {
+            if current(&f, eligible.site_id).await == Some(eligible.publication_id) {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .is_ok();
+    let blocked_pointer = current(&f, blocked.site_id).await;
+    shutdown.send(true).unwrap();
+    let stopped = tokio::time::timeout(std::time::Duration::from_secs(2), &mut worker)
+        .await
+        .is_ok();
+    if !stopped {
+        worker.abort();
+    }
+    lock.rollback().await.unwrap();
+    if !stopped {
+        let _ = worker.await;
+    }
+    f.finish().await;
+    assert!(
+        observed,
+        "must observe the actual PostgreSQL authority lock wait"
+    );
+    assert!(
+        progressed && stopped,
+        "blocked tenant starved progress={progressed} or shutdown={stopped}"
+    );
+    assert!(
+        blocked_pointer.is_none(),
+        "a timed-out claim must not claim public success"
+    );
+}
+
+#[tokio::test]
+async fn blocked_final_commit_times_out_without_publishing_or_fabricating_failure() {
+    let f = Fixture::new(false).await;
+    let receipt = submit(&f, "Blocked completion").await;
+    let work = discover_publication_work(&f.pool, 64)
+        .await
+        .unwrap()
+        .remove(0);
+    let claim = claim_publication(&f.pool, &work).await.unwrap().unwrap();
+    let mut lock = f.admin.begin().await.unwrap();
+    sqlx::query("SELECT id FROM users WHERE id=$1 FOR UPDATE")
+        .bind(&f.a.user_id)
+        .fetch_one(&mut *lock)
+        .await
+        .unwrap();
+    let pool = f.pool.clone();
+    let mut completion = tokio::spawn(async move { finish_publication(&pool, &claim).await });
+    let result = tokio::time::timeout(std::time::Duration::from_secs(3), &mut completion).await;
+    let bounded = matches!(&result, Ok(Ok(Err(PublicationError::Database(error)))) if error.as_database_error().is_some_and(|database| database.code().as_deref() == Some("55P03")));
+    if result.is_err() {
+        completion.abort();
+    }
+    let status: String =
+        sqlx::query_scalar("SELECT status FROM builder_publications WHERE publication_id=$1")
+            .bind(receipt.publication_id)
+            .fetch_one(&f.admin)
+            .await
+            .unwrap();
+    let pointer = current(&f, receipt.site_id).await;
+    lock.rollback().await.unwrap();
+    if result.is_err() {
+        let _ = completion.await;
+    }
+    f.finish().await;
+    assert!(
+        bounded,
+        "completion must return the actual bounded PostgreSQL lock error"
+    );
+    assert_eq!(status, "processing");
+    assert!(pointer.is_none());
 }

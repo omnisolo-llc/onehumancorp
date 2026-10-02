@@ -79,33 +79,29 @@ impl std::fmt::Display for PublicationError {
 }
 impl std::error::Error for PublicationError {}
 
+pub(crate) async fn limit_publication_read(
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), PublicationError> {
+    sqlx::query("SET LOCAL statement_timeout = '3000ms'")
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("SET LOCAL lock_timeout = '1000ms'")
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
 pub(crate) fn builder_tenant_id(tenant: &str) -> Uuid {
     Uuid::parse_str(tenant)
         .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_DNS, tenant.as_bytes()))
 }
 pub(crate) fn valid_publication_path(path: &str) -> bool {
     path.starts_with('/')
-        && !path.starts_with("//")
+        && (path == "/" || path[1..].split('/').all(|part| !part.is_empty()))
         && path.len() <= 512
         && !path.contains(['%', '?', '#', '\\'])
         && !path.chars().any(char::is_control)
         && !path.split('/').any(|part| part == "." || part == "..")
-}
-fn canonical_value(value: Value) -> Value {
-    match value {
-        Value::Object(values) => {
-            let mut entries: Vec<_> = values.into_iter().collect();
-            entries.sort_by(|a, b| a.0.cmp(&b.0));
-            Value::Object(
-                entries
-                    .into_iter()
-                    .map(|(k, v)| (k, canonical_value(v)))
-                    .collect(),
-            )
-        }
-        Value::Array(values) => Value::Array(values.into_iter().map(canonical_value).collect()),
-        value => value,
-    }
 }
 pub(crate) fn prepare_snapshot(
     snapshot: &SiteSnapshot,
@@ -168,12 +164,11 @@ pub(crate) fn prepare_snapshot(
             "The reviewed site needs a root page",
         ));
     }
-    let value = canonical_value(
-        serde_json::to_value(snapshot)
-            .map_err(|_| PublicationError::Invalid("Invalid snapshot"))?,
-    );
+    let encoded =
+        serde_json::to_vec(snapshot).map_err(|_| PublicationError::Invalid("Invalid snapshot"))?;
+    let value = super::publication_json::decode_publication_json(&encoded)?;
     let bytes =
-        serde_json::to_vec(&value).map_err(|_| PublicationError::Invalid("Invalid snapshot"))?;
+        serde_jcs::to_vec(&value).map_err(|_| PublicationError::Invalid("Invalid snapshot"))?;
     if bytes.len() > 1024 * 1024 {
         return Err(PublicationError::Invalid("Reviewed site exceeds 1 MiB"));
     }
@@ -235,6 +230,7 @@ pub async fn submit_publication(
 ) -> Result<PublicationReceipt, PublicationError> {
     let (snapshot_value, _, _) = prepare_snapshot(snapshot)?;
     let mut tx = pool.begin().await?;
+    limit_publication_read(&mut tx).await?;
     require_current_owner(&mut tx, actor).await?;
     // JSONB normalizes numeric spellings (including negative zero). Bind replay
     // and worker verification to the exact database representation we persist.
@@ -304,4 +300,57 @@ pub async fn submit_publication(
     .await?;
     tx.commit().await?;
     Ok(receipt)
+}
+
+pub async fn read_owned_publication(
+    pool: &PgPool,
+    actor: &PublicationActor,
+    operation_id: Uuid,
+) -> Result<PublicationReceipt, PublicationError> {
+    let mut tx = pool.begin().await?;
+    limit_publication_read(&mut tx).await?;
+    require_current_owner(&mut tx, actor).await?;
+    let row = sqlx::query("SELECT * FROM builder_publications WHERE tenant_id=$1 AND owner_id=$2 AND operation_id=$3 FOR SHARE")
+        .bind(&actor.tenant_id).bind(&actor.user_id).bind(operation_id)
+        .fetch_optional(&mut *tx).await?.ok_or(PublicationError::NotFound)?;
+    let result = receipt(&row)?;
+    tx.commit().await?;
+    Ok(result)
+}
+
+pub async fn revoke_owned_publication(
+    pool: &PgPool,
+    actor: &PublicationActor,
+    publication_id: Uuid,
+) -> Result<PublicationReceipt, PublicationError> {
+    let mut tx = pool.begin().await?;
+    limit_publication_read(&mut tx).await?;
+    require_current_owner(&mut tx, actor).await?;
+    let site_id: Uuid = sqlx::query_scalar("SELECT site_id FROM builder_publications WHERE tenant_id=$1 AND owner_id=$2 AND publication_id=$3")
+        .bind(&actor.tenant_id).bind(&actor.user_id).bind(publication_id)
+        .fetch_optional(&mut *tx).await?.ok_or(PublicationError::NotFound)?;
+    // Preserve the shared owner -> site -> receipt lock order. Revocation does
+    // not require an eligible product: a retired product must not block removal.
+    let mapped = builder_tenant_id(&actor.tenant_id);
+    server_common::auth_utils::set_org_context(&mut *tx, &mapped.to_string()).await?;
+    sqlx::query_scalar::<_,Uuid>("SELECT id FROM builder_sites WHERE id=$1 AND tenant_id=$2 AND publication_tenant_id=$3 FOR UPDATE")
+        .bind(site_id).bind(mapped).bind(&actor.tenant_id)
+        .fetch_optional(&mut *tx).await?.ok_or(PublicationError::NotFound)?;
+    server_common::auth_utils::set_org_context(&mut *tx, &actor.tenant_id).await?;
+    let row = sqlx::query("UPDATE builder_publications SET status='revoked',revoked_at=COALESCE(revoked_at,clock_timestamp()),lease_until=NULL,updated_at=clock_timestamp() WHERE publication_id=$1 AND tenant_id=$2 AND owner_id=$3 RETURNING *")
+        .bind(publication_id).bind(&actor.tenant_id).bind(&actor.user_id)
+        .fetch_optional(&mut *tx).await?.ok_or(PublicationError::NotFound)?;
+    sqlx::query(
+        "UPDATE builder_publication_work SET queued=false WHERE publication_id=$1 AND tenant_id=$2",
+    )
+    .bind(publication_id)
+    .bind(&actor.tenant_id)
+    .execute(&mut *tx)
+    .await?;
+    server_common::auth_utils::set_org_context(&mut *tx, &mapped.to_string()).await?;
+    sqlx::query("UPDATE builder_sites SET current_publication_id=NULL WHERE id=$1 AND tenant_id=$2 AND publication_tenant_id=$3 AND current_publication_id=$4")
+        .bind(site_id).bind(mapped).bind(&actor.tenant_id).bind(publication_id).execute(&mut *tx).await?;
+    let result = receipt(&row)?;
+    tx.commit().await?;
+    Ok(result)
 }

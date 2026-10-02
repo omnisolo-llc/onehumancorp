@@ -935,6 +935,24 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_builder_publication_test
           python3 scripts/focused_ci_gate.py builder-publication
+      - uses: actions/setup-node@v6
+        if: ${{ !cancelled() }}
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install the matching pinned publication digest witness
+        if: ${{ !cancelled() }}
+        run: |
+          python3 scripts/site-publication/verify_node_lock.py
+          npm ci --prefix scripts/site-publication --ignore-scripts --omit=dev --no-audit --no-fund
+      - name: Verify reviewed public HTTP documents and cross-language receipts
+        if: ${{ !cancelled() }}
+        env:
+          OHC_PUBLICATION_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_site_publication_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_site_publication_test
+          python3 scripts/focused_ci_gate.py site-publication
       - name: Verify canonical service creation and committed receipts
         if: ${{ !cancelled() }}
         env:

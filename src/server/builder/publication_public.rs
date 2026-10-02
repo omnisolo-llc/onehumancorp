@@ -1,5 +1,8 @@
 //! Read-only public projection; routing metadata alone grants no content access.
-use super::publication_store::{PublicationError, builder_tenant_id, valid_publication_path};
+use super::publication_store::{
+    PublicationError, PublishedBlock, PublishedPage, SiteSnapshot, builder_tenant_id,
+    limit_publication_read, valid_publication_path,
+};
 use super::publication_worker::{PublicationWorkItem, lock_authority_and_site, snapshot};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -28,23 +31,21 @@ async fn current_pointer(
     pointer.flatten().ok_or(PublicationError::NotFound)
 }
 
-pub async fn read_public_page(
+struct VerifiedPublication {
+    publication_id: Uuid,
+    rendered_sha256: String,
+    reviewed: SiteSnapshot,
+    pages: BTreeMap<String, String>,
+}
+
+async fn read_verified_publication(
     pool: &PgPool,
     site_id: Uuid,
-    path: &str,
-) -> Result<PublicPage, PublicationError> {
-    if !valid_publication_path(path) {
-        return Err(PublicationError::NotFound);
-    }
+) -> Result<VerifiedPublication, PublicationError> {
     let mut tx = pool.begin().await?;
     // A public reader must fail closed instead of occupying a connection
     // indefinitely while an authority or catalogue writer holds its lock.
-    sqlx::query("SET LOCAL statement_timeout = '3000ms'")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL lock_timeout = '1000ms'")
-        .execute(&mut *tx)
-        .await?;
+    limit_publication_read(&mut tx).await?;
     // This projection contains only immutable internal routing metadata. A
     // valid mapping does not establish status, ownership or product eligibility.
     let tenants: Vec<String> = sqlx::query_scalar(
@@ -86,12 +87,108 @@ pub async fn read_public_page(
     {
         return Err(PublicationError::Corrupt);
     }
-    let html = pages.get(path).cloned().ok_or(PublicationError::NotFound)?;
     tx.commit().await?;
-    Ok(PublicPage {
+    Ok(VerifiedPublication {
         publication_id,
         rendered_sha256: expected,
+        reviewed,
+        pages,
+    })
+}
+
+pub async fn read_public_page(
+    pool: &PgPool,
+    site_id: Uuid,
+    path: &str,
+) -> Result<PublicPage, PublicationError> {
+    if !valid_publication_path(path) {
+        return Err(PublicationError::NotFound);
+    }
+    let verified = read_verified_publication(pool, site_id).await?;
+    let html = verified
+        .pages
+        .get(path)
+        .cloned()
+        .ok_or(PublicationError::NotFound)?;
+    Ok(PublicPage {
+        publication_id: verified.publication_id,
+        rendered_sha256: verified.rendered_sha256,
         path: path.into(),
         html,
+    })
+}
+
+/// Product links expose only their explicitly reviewed immutable catalog entry.
+/// Mutable catalog edits cannot silently change an already reviewed public offer.
+pub async fn read_public_product(
+    pool: &PgPool,
+    site_id: Uuid,
+    product_id: Uuid,
+) -> Result<PublicPage, PublicationError> {
+    let verified = read_verified_publication(pool, site_id).await?;
+    let mut selected: Option<&Value> = None;
+    for page in &verified.reviewed.pages {
+        for block in &page.blocks {
+            if !matches!(block.block_type.as_str(), "Catalog" | "ProductGridBlock") {
+                continue;
+            }
+            for item in block
+                .content
+                .get("items")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+            {
+                if item
+                    .get("product_id")
+                    .and_then(Value::as_str)
+                    .and_then(|value| Uuid::parse_str(value).ok())
+                    != Some(product_id)
+                {
+                    continue;
+                }
+                if selected.is_some_and(|prior| prior != item) {
+                    return Err(PublicationError::NotFound);
+                }
+                selected = Some(item);
+            }
+        }
+    }
+    let mut item = selected.cloned().ok_or(PublicationError::NotFound)?;
+    let name = item
+        .get("name")
+        .and_then(Value::as_str)
+        .ok_or(PublicationError::Corrupt)?
+        .to_string();
+    let description = item
+        .get("description")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    item.as_object_mut()
+        .ok_or(PublicationError::Corrupt)?
+        .remove("product_id");
+    let product = SiteSnapshot {
+        domain: None,
+        pages: vec![PublishedPage {
+            path: "/".into(),
+            title: name.chars().take(200).collect(),
+            seo_metadata: serde_json::json!({"@context":"https://schema.org","@type":"Product","name":name,"description":description}),
+            blocks: vec![PublishedBlock {
+                block_type: "ProductGridBlock".into(),
+                sort_order: 0,
+                content: serde_json::json!({"items":[item]}),
+            }],
+        }],
+    };
+    let mut rendered = super::publication_render::render_snapshot(&product, site_id)?;
+    Ok(PublicPage {
+        publication_id: verified.publication_id,
+        rendered_sha256: rendered.sha256,
+        path: format!("/products/{product_id}"),
+        html: rendered
+            .pages
+            .remove("/")
+            .ok_or(PublicationError::Corrupt)?,
     })
 }

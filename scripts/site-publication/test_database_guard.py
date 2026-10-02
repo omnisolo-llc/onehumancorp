@@ -13,9 +13,10 @@ class PublicationDatabaseGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="ohc-publication-preflight-") as directory:
             folder = Path(directory)
             marker = folder / "native-called"
-            cargo = folder / "cargo"
-            cargo.write_text('#!/bin/sh\nprintf called > "$OHC_GUARD_CALLED"\nexit 97\n')
-            cargo.chmod(0o700)
+            for name in ["cargo", "node"]:
+                native = folder / name
+                native.write_text('#!/bin/sh\nprintf called > "$OHC_GUARD_CALLED"\nexit 97\n')
+                native.chmod(0o700)
             env = dict(os.environ, PATH=str(folder) + os.pathsep + os.environ["PATH"], OHC_GUARD_CALLED=str(marker))
             env.pop("OHC_PUBLICATION_TEST_DATABASE_URL", None)
             if url is not None:

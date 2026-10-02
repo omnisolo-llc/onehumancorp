@@ -2,7 +2,7 @@
 use super::publication_render::render_snapshot;
 use super::publication_store::{
     PublicationActor, PublicationError, PublicationReceipt, SiteSnapshot, builder_tenant_id,
-    prepare_snapshot, receipt, require_current_owner,
+    limit_publication_read, prepare_snapshot, receipt, require_current_owner,
 };
 use sqlx::{PgPool, Postgres, Row, Transaction, postgres::PgRow};
 use uuid::Uuid;
@@ -154,6 +154,7 @@ pub(crate) async fn claim_publication(
     work: &PublicationWorkItem,
 ) -> Result<Option<PublicationClaim>, PublicationError> {
     let mut tx = pool.begin().await?;
+    limit_publication_read(&mut tx).await?;
     let Some(initial) = read_job(&mut tx, work, false).await? else {
         return Ok(None);
     };
@@ -225,6 +226,7 @@ pub(crate) async fn finish_publication(
     // but the final database lease/version/authority checks remain mandatory.
     let rendered = render_snapshot(&claim.snapshot, claim.site_id);
     let mut tx = pool.begin().await?;
+    limit_publication_read(&mut tx).await?;
     let initial = read_job(&mut tx, &claim.work, false)
         .await?
         .ok_or(PublicationError::NotFound)?;
@@ -307,29 +309,55 @@ pub(crate) async fn finish_publication(
     Ok(value)
 }
 
+/// Storage cancellation may leave a committed lease or final receipt. A later
+/// poll reconciles that durable state; it never invents a failed/successful write.
+async fn bounded_worker_step<T>(
+    shutdown: &mut tokio::sync::watch::Receiver<bool>,
+    work: impl std::future::Future<Output = Result<T, PublicationError>>,
+) -> Option<Result<T, PublicationError>> {
+    tokio::pin!(work);
+    let deadline = tokio::time::sleep(std::time::Duration::from_secs(5));
+    tokio::pin!(deadline);
+    loop {
+        if *shutdown.borrow() {
+            return None;
+        }
+        tokio::select! {
+            biased;
+            changed = shutdown.changed() => {
+                if changed.is_err() || *shutdown.borrow() { return None; }
+            }
+            _ = &mut deadline => return Some(Err(PublicationError::Database(sqlx::Error::PoolTimedOut))),
+            result = &mut work => return Some(result),
+        }
+    }
+}
+
 pub async fn run_publication_worker(
     pool: PgPool,
     mut shutdown: tokio::sync::watch::Receiver<bool>,
 ) {
     loop {
-        if *shutdown.borrow() {
+        let Some(discovered) =
+            bounded_worker_step(&mut shutdown, discover_publication_work(&pool, 64)).await
+        else {
             return;
-        }
-        match discover_publication_work(&pool, 64).await {
+        };
+        match discovered {
             Ok(work) => {
                 for item in work {
-                    if *shutdown.borrow() {
-                        return;
-                    }
-                    match claim_publication(&pool, &item).await {
-                        Ok(Some(claim)) => {
-                            if let Err(error) = finish_publication(&pool, &claim).await {
-                                tracing::warn!(publication_id=%item.publication_id, error=%error, "Publication completion was not acknowledged");
-                            }
+                    let result = bounded_worker_step(&mut shutdown, async {
+                        if let Some(claim) = claim_publication(&pool, &item).await? {
+                            finish_publication(&pool, &claim).await?;
                         }
-                        Ok(None) => {}
-                        Err(error) => {
-                            tracing::warn!(publication_id=%item.publication_id, error=%error, "Publication claim was not acknowledged")
+                        Ok(())
+                    })
+                    .await;
+                    match result {
+                        None => return,
+                        Some(Ok(())) => {}
+                        Some(Err(error)) => {
+                            tracing::warn!(publication_id=%item.publication_id, error=%error, "Publication processing was not acknowledged")
                         }
                     }
                 }

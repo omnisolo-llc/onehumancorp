@@ -712,3 +712,5 @@ fn direct_fixture_preflight_rejects_unowned_destinations_without_connecting() {
 
 #[path = "public_tests.rs"]
 mod public_tests;
+#[path = "http_tests.rs"]
+mod http_tests;
