@@ -165,7 +165,7 @@ impl ChatService {
         .bind(tenant_id)
         .bind(conversation_id)
         .bind(sender_type)
-        .bind(sender_id)
+        .bind(sender_id.map(|id| id.to_string()))
         .bind(content)
         .fetch_one(&mut *tx)
         .await?;
