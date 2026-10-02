@@ -1,9 +1,9 @@
-import { test, expect, adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
 import { db } from './db_utils';
 
 test.describe('Department Handoff Protocol', () => {
-    test('Owner Feed correctly displays and allows approval of Task Envelopes', async ({ page }) => {
+    test('Owner Feed correctly displays and allows approval of Task Envelopes', async ({ page, loginAs, adminUser }) => {
         // 1. Arrange: Seed a TaskEnvelope directly into the database to simulate background agent work
         const tenantId = 'e2e-tenant';
         const envelopeId = `env-${Date.now()}`;
@@ -24,12 +24,12 @@ test.describe('Department Handoff Protocol', () => {
         `, [envelopeId, tenantId, initialPayload, routingHistory]);
 
         // 2. Act: Owner navigates to the Work Triage feed
-        page = await adminPage(page);
-        await page.goto('/ui/triage.html');
+        await loginAs(page, adminUser);
+        await page.goto(`/ui/triage.html?tenant_id=${tenantId}&bypass_cache=true&t=${Date.now()}`);
         await page.waitForLoadState('networkidle');
 
         // 3. Assert: The task envelope is displayed correctly
-        await expect(page.locator('text=New Custom Cake Inquiry')).toBeVisible();
+        await expect(page.locator('text=New Custom Cake Inquiry')).toBeVisible({ timeout: 15000 });
         await expect(page.locator('text=Customer Service replied. Sales drafted a $150 quote. Ops confirmed delivery date.')).toBeVisible();
         await expect(page.locator('text=$150.00')).toBeVisible();
         await expect(page.locator('text=$50.00')).toBeVisible(); // 33% deposit

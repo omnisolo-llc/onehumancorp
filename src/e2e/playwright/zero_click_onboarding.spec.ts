@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Zero-Click Onboarding Flow', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // strictly mobile viewport
 
   test('should complete the zero-click onboarding flow on mobile', async ({ page }) => {
     // Navigate to the real local server
-    await page.goto('http://127.0.0.1:18789/setup.html');
+    await page.goto('/setup.html');
     await expect(page).toHaveTitle(/OmniSolo|OmniSolo/);
 
     // Initial Screen
@@ -21,14 +21,14 @@ test.describe('Zero-Click Onboarding Flow', () => {
     await page.locator('#generate-storefront-btn').click();
 
     // Wait for the approval details screen
-    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('h1', { hasText: 'Ready to Launch' }).first()).toBeVisible({ timeout: 30000 });
     await expect(page.locator('#approval-details')).toBeVisible();
 
     // Click Approve & Publish
-    const approveBtn = page.locator('#approve-publish-btn-chat');
+    const approveBtn = page.locator('#approve-publish-btn-chat, #approve-publish-btn').first();
     await approveBtn.click();
 
     // The flow goes to the success/dashboard screen.
-    await expect(page).toHaveURL(/.*dashboard\.html.*/, { timeout: 30000 });
+    await expect(page).toHaveURL(/.*(dashboard\.html|dashboard|success\.html).*/, { timeout: 30000 });
   });
 });

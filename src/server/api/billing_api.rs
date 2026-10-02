@@ -142,18 +142,25 @@ pub async fn report_cost_handler(
     let pool = crate::db::get_pool();
 
     if let Some(key) = &req.idempotency_key {
-        let exists: Option<i64> = sqlx::query_scalar(
-            "SELECT 1 FROM usage_idempotency_keys WHERE key = $1 AND tenant_id = $2",
+        let res = sqlx::query(
+            "INSERT INTO usage_idempotency_keys (key, tenant_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         )
         .bind(key)
         .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await
-        .unwrap_or(None);
-        if exists.is_some() {
-            return Ok(Json(
-                serde_json::json!({ "success": true, "status": "duplicate" }),
-            ));
+        .execute(&pool)
+        .await;
+
+        match res {
+            Ok(result) => {
+                if result.rows_affected() == 0 {
+                    return Ok(Json(
+                        serde_json::json!({ "success": true, "status": "duplicate" }),
+                    ));
+                }
+            }
+            Err(_) => {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
         }
     }
 
@@ -186,16 +193,6 @@ pub async fn report_cost_handler(
         labels_value,
     )
     .await;
-
-    if let Some(key) = &req.idempotency_key {
-        let _ = sqlx::query(
-            "INSERT INTO usage_idempotency_keys (key, tenant_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        )
-        .bind(key)
-        .bind(&tenant_id)
-        .execute(&pool)
-        .await;
-    }
 
     Ok(Json(serde_json::json!({ "success": true })))
 }
@@ -858,7 +855,9 @@ pub async fn cost_dashboard_handler(
         budget_limit
     };
 
-    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+    // Dynamically check the billing mode for the tenant. For now assume OHC_Funded, but expose BYOK capability
+    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit)
+        .with_billing_mode(::server_pricing::budget::BillingMode::OhcFunded);
     let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
     let department_tier_usage =

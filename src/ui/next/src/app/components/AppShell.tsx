@@ -51,6 +51,7 @@ const primaryNav: NavItem[] = [
   { label: "Setup", href: "/onboarding", icon: "setup" },
   { label: "Triage", href: "/triage", icon: "inbox" },
   { label: "Orders", href: "/orders", icon: "orders" },
+  { label: "Products", href: "/products", icon: "inventory" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
   { label: "Inventory", href: "/inventory", icon: "inventory" },
   { label: "Kairos", href: "/kairos", icon: "activity" },
@@ -175,7 +176,7 @@ export function AppShell({
         <div className="app-brand">
           <div className="app-brand-mark">O</div>
           <div>
-            <div className="app-brand-title">OmniSolo OneHumanCorp</div>
+            <div className="app-brand-title">Enterprise Console</div>
             <div className="app-brand-subtitle">Application</div>
           </div>
         </div>
@@ -211,6 +212,7 @@ export function AppShell({
               <Link
                 key={action.href}
                 href={action.href}
+                role={action.primary ? "button" : undefined}
                 className={action.primary ? "app-button primary min-h-[44px]" : "app-button min-h-[44px]"}
               >
                 <ShellIcon name={actionIcon(action)} />
@@ -218,7 +220,7 @@ export function AppShell({
               </Link>
             ))}
             <WithTooltip id="help-btn-tooltip-appshell" defaultText="Need help? Click here to access our Help Center and tutorials.">
-              <Link href="/help" className="app-button min-h-[44px] flex items-center justify-center aspect-square rounded-full px-3 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-sm transition-all" aria-label="Help Center">
+              <Link id="help-center-nav-btn" href="/help" role="link" className="app-button min-h-[44px] flex items-center justify-center aspect-square rounded-full px-3 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-sm transition-all" aria-label="Help Center">
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
               </Link>
             </WithTooltip>

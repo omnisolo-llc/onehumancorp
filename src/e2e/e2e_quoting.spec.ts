@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Quoting UI e2e', () => {
   test.use({ viewport: { width: 375, height: 812 } });

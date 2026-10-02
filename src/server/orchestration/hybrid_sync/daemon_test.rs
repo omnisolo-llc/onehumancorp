@@ -785,7 +785,7 @@ async fn test_prune_stuck_queued_items() {
 
     // Verify dead letters were created for running jobs
     let dl_sqlite: (i64,) = sqlx::query_as(
-        "SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_running_sqlite'",
+        "SELECT count(*) FROM department_dead_letters WHERE event_type = 'job_stuck'",
     )
     .fetch_one(&sqlite_pool)
     .await
@@ -793,7 +793,7 @@ async fn test_prune_stuck_queued_items() {
     assert_eq!(dl_sqlite.0, 1);
 
     let dl_pg: (i64,) = sqlx::query_as(
-        "SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_running_pg'",
+        "SELECT count(*) FROM department_dead_letters WHERE event_type = 'job_stuck'",
     )
     .fetch_one(&pg_pool)
     .await
@@ -868,7 +868,7 @@ async fn test_agent_mission_failure_categorization() {
 
     // Verify SQLite mission failure category
     let dl_sqlite: (i64,) = sqlx::query_as(
-        "SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_sqlite_cat'",
+        "SELECT count(*) FROM department_dead_letters WHERE event_type = 'mission_stuck'",
     )
     .fetch_one(&sqlite_pool)
     .await
@@ -877,7 +877,7 @@ async fn test_agent_mission_failure_categorization() {
 
     // Verify PG mission failure category
     let dl_pg: (i64,) = sqlx::query_as(
-        "SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_pg_cat'",
+        "SELECT count(*) FROM department_dead_letters WHERE event_type = 'mission_stuck'",
     )
     .fetch_one(&pg_pool)
     .await

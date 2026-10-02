@@ -7,7 +7,7 @@ INIT_ARGS ?=
 # make init installs project-local tool links, not global default versions.
 export PATH := $(CURDIR)/target/dev-tools/bin:$(CURDIR)/target/dev-tools/venv/bin:$(CURDIR)/.github/test-tools/node_modules/.bin:$(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: help init doctor test test-rust test-backend test-node test-contracts test-e2e build-e2e build-web lint lint-rust lint-backend lint-node
+.PHONY: help init doctor test test-rust test-backend test-node test-contracts test-e2e build-e2e build-web prepare-desktop lint lint-rust lint-backend lint-node
 
 help:
 	@echo 'make init: install/check the pinned native development and test prerequisites'
@@ -30,7 +30,7 @@ test:
 	$(MAKE) test-contracts
 	$(MAKE) test-e2e
 
-test-rust:
+test-rust: prepare-desktop
 	$(CARGO) test --locked --workspace $(RUST_TEST_ARGS)
 
 # A focused headless lane; never substitutes for the full workspace gate.
@@ -49,6 +49,10 @@ test-contracts:
 build-web:
 	$(NPM) run build:web
 
+prepare-desktop:
+	$(MAKE) build-web
+	OMNISOLO_PREBUILT_WEB=target/native-web $(NPM) run desktop:prepare
+
 build-e2e:
 	$(CARGO) build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
 	$(MAKE) build-web
@@ -61,7 +65,7 @@ lint:
 	$(MAKE) lint-rust
 	$(MAKE) lint-node
 
-lint-rust:
+lint-rust: prepare-desktop
 	$(CARGO) fmt --all -- --check
 	$(CARGO) clippy --locked --workspace --all-targets -- -D warnings
 

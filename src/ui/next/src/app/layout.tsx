@@ -36,7 +36,9 @@ export default function RootLayout({
               <PublicAwareApplicationFrame
                 applicationWidgets={
                   <>
-                    <WalkthroughTarget id="omnisolo-help-widget-target"><HelpWidget /></WalkthroughTarget>
+                    <WalkthroughTarget id="omnisolo-help-widget-target">
+                      <HelpWidget />
+                    </WalkthroughTarget>
                     <NetworkStatusIndicator />
                     <SyncManagerInitializer />
                     <NotificationManager />

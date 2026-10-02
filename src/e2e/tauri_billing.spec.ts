@@ -38,11 +38,11 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('h3', { hasText: 'Pro' })).toBeVisible();
     await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
 
-    await expect(page.locator('button:has-text("Manage Plan"), button:has-text("Upgrade to Starter via Stripe")')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Manage Plan', exact: true }).or(page.locator('button:has-text("Upgrade to Starter via Stripe")'))).toBeVisible();
   });
 
   test('Pricing page allows downgrade to Free for paid users', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant" };
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" as const, organizationId: "e2e-tenant-starter" };
     await loginAs(page, starterUser);
 
     await page.goto(`/pricing`);
@@ -50,7 +50,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
     // Verify the Starter plan shows "Manage Plan"
-    const starterBtn = page.locator('button:has-text("Manage Plan"), button:has-text("Upgrade to Starter via Stripe")');
+    const starterBtn = page.getByRole('button', { name: 'Manage Plan', exact: true }).or(page.locator('button:has-text("Upgrade to Starter via Stripe")'));
     await expect(starterBtn).toBeVisible();
     await expect(starterBtn).toHaveText('Manage Plan');
 
@@ -69,8 +69,14 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
     // Verify initial monthly prices
-    const proPrice = page.locator('.omnisolo-growth-card:has-text("Pro") .plan-price');
-    const businessPrice = page.locator('.omnisolo-growth-card:has-text("Business") .plan-price');
+    const proPrice = page
+      .locator('.omnisolo-growth-card')
+      .filter({ has: page.getByRole('heading', { name: 'Pro' }) })
+      .locator('.plan-price');
+    const businessPrice = page
+      .locator('.omnisolo-growth-card')
+      .filter({ has: page.getByRole('heading', { name: 'Business' }) })
+      .locator('.plan-price');
 
     await expect(proPrice).toContainText('$79');
     await expect(proPrice).toContainText('/month');

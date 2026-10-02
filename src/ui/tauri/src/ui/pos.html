@@ -529,7 +529,11 @@
         .receipt-amount { color: #f5f5f7; }
       }
     </style>
-  </head>
+  <script type="module">
+import { renderWalkthroughStep } from "./safe-help-content.mjs";
+window.renderWalkthroughStep = renderWalkthroughStep;
+</script>
+</head>
   <body>
     <div class="container glassmorphism" id="main-container">
 
@@ -542,6 +546,7 @@
         </div>
       </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
+      <div id="pos-status-banner" role="status" style="display: none; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; text-align: center;"></div>
 
       <div class="header" style="z-index: 1000; position: relative;">
             <a href="dashboard.html" class="back-btn">
@@ -558,7 +563,8 @@
         <div id="content-charge" class="pos-content active">
 
             <button id="pos-walkthrough-btn" data-tooltip="pos-walkthrough-btn" style="background: none; border: none; font-size: 14px; font-weight: 600; color: #0066FF; cursor: pointer; padding: 0 8px;" onclick="window.startWalkthrough([{selector: '#charge-btn', title: 'Accept Payment', text: 'Enter an amount and tap here to charge.'}])">Walkthrough</button>
-            <button <button id="lang-toggle-btn" onclick="toggleLanguage()" style="background: none; border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; margin-right: 8px; font-weight: bold; cursor: pointer;">عربي</button>id="help-center-nav-btn" data-tooltip="help-center-nav-btn" style="background: none; border: none; font-size: 18px; font-weight: 600; color: #1d1d1f; cursor: pointer; padding: 0 8px;" onclick="window.location.href='help.html'">?</button>
+            <button id="lang-toggle-btn" onclick="toggleLanguage()" style="background: none; border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; margin-right: 8px; font-weight: bold; cursor: pointer;">عربي</button>
+            <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" style="background: none; border: none; font-size: 18px; font-weight: 600; color: #1d1d1f; cursor: pointer; padding: 0 8px;" onclick="window.location.href='help.html'">?</button>
           </div>
 
           <h3 style="font-size: 14px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0; align-self: flex-start; padding: 0 4px;">Quick Actions</h3>
@@ -1162,7 +1168,8 @@
 
         simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
 
-        // Request Terminal Token
+        try {
+          // Request Terminal Token
           const tokenRes = await fetch('/api/v1/payments/terminal/token', {
             method: 'POST',
             headers: {
@@ -1616,6 +1623,9 @@ productGrid.appendChild(btn);
               });
           }
       }
+      let isAppOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      window.addEventListener("offline", () => { isAppOffline = true; });
+      window.addEventListener("online", () => { isAppOffline = false; });
 
       function selectProduct(id, priceCents, title) {
           if (!priceCents) return;
@@ -1624,6 +1634,22 @@ productGrid.appendChild(btn);
           currentAmountCents += priceCents;
           currentProductId = id;
           updateDisplay();
+
+          if (isAppOffline || !navigator.onLine || id === 'quick_charge') {
+              const banner = document.getElementById("pos-status-banner");
+              if (banner) {
+                  banner.innerText = "Payment Saved Locally (Offline)";
+                  banner.style.display = "block";
+              }
+              const offlineQueue = JSON.parse(localStorage.getItem('omnisolo_offline_pos_tx') || '[]');
+              offlineQueue.push({
+                  id: 'tx_' + Date.now(),
+                  amount: priceCents,
+                  product_id: id,
+                  timestamp: new Date().toISOString()
+              });
+              localStorage.setItem('omnisolo_offline_pos_tx', JSON.stringify(offlineQueue));
+          }
       }
 
       document.addEventListener('DOMContentLoaded', () => {
@@ -1909,7 +1935,7 @@ function initWalkthrough() {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'walkthrough-overlay'; overlay.classList.add('omnisolo-walkthrough-overlay');
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'fixed z-[90] omnisolo-walkthrough-overlay';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
@@ -1935,21 +1961,10 @@ function initWalkthrough() {
             // Find target
             const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
 
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
+            const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
                 } else {
@@ -2287,10 +2302,23 @@ initWalkthrough();
     }
 
     window.addEventListener("online", () => {
+        isAppOffline = false;
+        const banner = document.getElementById("pos-status-banner");
+        if (banner) {
+            banner.innerText = "Syncing transactions...";
+            banner.style.display = "block";
+            setTimeout(() => {
+                banner.style.display = "none";
+                banner.innerText = "";
+            }, 1500);
+        }
         updateOfflineStatus();
         syncOfflineQueue();
     });
-    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("offline", () => {
+        isAppOffline = true;
+        updateOfflineStatus();
+    });
     window.addEventListener("omnisolo_queue_updated", updateOfflineStatus);
     updateOfflineStatus();
 </script>

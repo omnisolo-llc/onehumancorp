@@ -39,10 +39,22 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "https://graph.facebook.com/v19.0".to_string(),
         ),
         metadata_provider(
+            "google_workspace",
+            "Google Workspace",
+            "productivity",
+            "https://www.googleapis.com".to_string(),
+        ),
+        metadata_provider(
             "google_calendar",
             "Google Calendar",
             "calendar",
             "https://www.googleapis.com/calendar/v3".to_string(),
+        ),
+        metadata_provider(
+            "google_workspace",
+            "Google Workspace",
+            "productivity",
+            "https://www.googleapis.com".to_string(),
         ),
         metadata_provider(
             "cal_com",
@@ -169,6 +181,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "Outlook Calendar",
             "calendar",
             "https://graph.microsoft.com/v1.0".to_string(),
+        ),
+        metadata_provider(
+            "trello",
+            "Trello",
+            "project_management",
+            "https://api.trello.com/1".to_string(),
         ),
     ]
 }

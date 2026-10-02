@@ -1,7 +1,9 @@
 {
-  "key_learnings": [
-    "The codebase has a comprehensive set of implementations for the 'Agent Harness' mechanisms requested in the task.",
-    "When randomly selecting a mechanic, it's common for it to already be partially or fully implemented in the current Rust microservice.",
-    "Ensure the tests cover edge cases (e.g., recursive condensation in ClaudeSubagentSpawner)."
+  "key_findings": [
+    "Next.js proxy routes targeting Rust backend APIs should ensure they pass `forwardQuery: true` correctly for GET requests, and `forwardQuery: false` for mutating POST/PUT requests in `proxyBackendRequest`.",
+    "When Next.js routing uses dynamic routes like `/[id]/approve/route.ts`, Next 15+ expects the `params` object parameter in the route handler signature to be wrapped in a Promise, eg: `{ params }: { params: Promise<{ id: string }> }`. Attempting to destructure it as a plain object (`{ id: string }`) will cause TypeScript and Next build failures.",
+    "If Playwright tests fail with `operation not permitted` errors related to Docker, verify if the test environment can spin up containers securely. If not, note the environmental limitation.",
+    "If `make lint` fails while compiling `glib-sys` in headless sandbox environments with pkg-config errors about `glib-2.0.pc` missing, it's often a system-level library misconfiguration or missing dependency rather than a code error.",
+    "The target backend structure dictates placing query actions for APIs (like listing proposals with `list_proposals`) and wiring them precisely to route paths using Axum."
   ]
 }

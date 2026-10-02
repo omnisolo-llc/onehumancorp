@@ -19,6 +19,7 @@ test.describe('Viral Founder Story Loop', () => {
 
     // Wait for the iframe preview to load initially
     await expect(page.locator('#preview-frame')).toBeVisible();
+    await expect(page.locator('#preview-frame')).toHaveAttribute('src', /founder_name=Maya/);
     let frameSrc = await page.locator('#preview-frame').getAttribute('src');
     expect(frameSrc).toContain('founder_name=Maya');
 
@@ -31,13 +32,15 @@ test.describe('Viral Founder Story Loop', () => {
     await page.waitForTimeout(500);
 
     // Check that preview updates in iframe source
+    await expect(page.locator('#preview-frame')).toHaveAttribute('src', /founder_name=Carlos/);
+    await expect(page.locator('#preview-frame')).toHaveAttribute('src', /reward=10%25%20off%20repair/);
     frameSrc = await page.locator('#preview-frame').getAttribute('src');
     expect(frameSrc).toContain('founder_name=Carlos');
     expect(frameSrc).toContain('reward=10%25%20off%20repair');
 
     // Check dark mode
     await page.click('#theme-dark');
-    await page.waitForTimeout(100);
+    await expect(page.locator('#preview-frame')).toHaveAttribute('src', /theme=dark/);
     frameSrc = await page.locator('#preview-frame').getAttribute('src');
     expect(frameSrc).toContain('theme=dark');
 

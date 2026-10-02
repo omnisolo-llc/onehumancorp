@@ -493,3 +493,16 @@ pub struct TerminalSession {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Opportunity {
+    pub id: String,
+    pub tenant_id: String,
+    pub lead_id: Option<String>,
+    pub title: String,
+    pub stage: String,
+    pub estimated_value: Option<i64>,
+    pub priority: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

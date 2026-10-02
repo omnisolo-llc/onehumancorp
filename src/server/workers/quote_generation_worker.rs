@@ -29,6 +29,34 @@ pub struct LineItemRequest {
 
 struct AdapterLlm {}
 
+fn checked_proposal_total(items: &[LineItemRequest]) -> Result<i64, &'static str> {
+    if items.len() > 100 {
+        return Err("At most 100 line items are supported");
+    }
+    items.iter().try_fold(0_i64, |total, item| {
+        if item.description.trim().is_empty()
+            || item.description.len() > 4000
+            || item.quantity <= 0
+            || item.quantity > 1_000_000
+            || item.unit_price_cents < 0
+        {
+            return Err(
+                "Line items require a description, positive bounded quantity and nonnegative price",
+            );
+        }
+        let amount = item
+            .unit_price_cents
+            .checked_mul(i64::from(item.quantity))
+            .ok_or("Line item amount is too large")?;
+        // Optional items are not selected commitments and are excluded from totals.
+        let amount = if item.is_optional { 0 } else { amount };
+        total
+            .checked_add(amount)
+            .filter(|value| *value <= 99_999_999)
+            .ok_or("Proposal total exceeds the supported amount")
+    })
+}
+
 #[cfg(test)]
 fn forced_test_service_item_response(prompt: &str) -> Option<String> {
     let candidate = prompt
@@ -61,17 +89,37 @@ impl ResearcherLlmClient for AdapterLlm {
         #[cfg(not(test))]
         let forced_response: Option<String> = None;
 
-        let response_text = if let Some(response) = forced_response {
-            response
+        let (response_text, usage) = if let Some(response) = forced_response {
+            (response, Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
         } else if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
+            (r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string(), Usage { input_tokens: 10, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
         } else {
-            crate::minimax::LocalLLMClient::new().reason(&prompt).await?
+            let observed = crate::minimax::LocalLLMClient::new()
+                .reason_with_usage(&prompt, req.max_tokens)
+                .await?;
+            let counts = observed
+                .counts
+                .ok_or("Local provider omitted usage; draft accounting requires reconciliation")?;
+            let input_tokens =
+                i32::try_from(counts.input).map_err(|_| "Local input usage exceeds supported range")?;
+            let output_tokens = i32::try_from(counts.output)
+                .map_err(|_| "Local output usage exceeds supported range")?;
+            let cache_read_input_tokens = i32::try_from(counts.cached_input)
+                .map_err(|_| "Local cache usage exceeds supported range")?;
+            (
+                observed.text,
+                Usage {
+                    input_tokens,
+                    output_tokens,
+                    cache_read_input_tokens,
+                    cache_creation_input_tokens: 0,
+                },
+            )
         };
 
         Ok(ChatResponse {
             message: Message::assistant(response_text),
-            usage: Usage::default(),
+            usage,
             stop_reason: "stop".to_string(),
             response_id: None,
         })
@@ -145,7 +193,10 @@ impl QuoteGenerationWorker {
             }
         };
 
-        let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+        let total_amount_cents = match checked_proposal_total(&line_items) {
+            Ok(total) => total,
+            Err(e) => return Err(format!("Invalid quote line items generated: {}", e)),
+        };
         let required_deposit_cents = total_amount_cents / 3;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -223,7 +274,10 @@ impl QuoteGenerationWorker {
                 }
             }
 
-            let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+            let total_amount_cents = match checked_proposal_total(&line_items) {
+                Ok(total) => total,
+                Err(e) => return Err(format!("Invalid quote line items generated after tax: {}", e)),
+            };
             let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
 
             let quote_res = sqlx::query(

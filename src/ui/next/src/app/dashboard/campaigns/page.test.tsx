@@ -74,7 +74,7 @@ describe("CampaignOrchestrationPage", () => {
       </TooltipProvider>,
     );
 
-    await waitFor(() => {
+    await waitFor(async () => {
       expect(screen.queryByText("Campaign Orchestration")).not.toBeNull();
     });
 
@@ -85,8 +85,8 @@ describe("CampaignOrchestrationPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Generate review draft/i }));
 
-    await waitFor(() => {
-      expect(screen.queryByText(/Hi Alice, please review order-1001/)).not.toBeNull();
+    await waitFor(async () => {
+      expect(await screen.findByText(/Hi Alice, please review order-1001/)).not.toBeNull();
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/growth/campaign/generate-review",

@@ -22,7 +22,7 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
 
   test('Displays PO approval in inbox and allows single-tap approval', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText('Action Required')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Action Required', exact: true })).toBeVisible();
     await expect(page.getByText('Operations Map')).toBeVisible();
   });
 });

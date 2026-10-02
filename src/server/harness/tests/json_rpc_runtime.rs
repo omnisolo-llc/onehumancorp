@@ -207,7 +207,7 @@ async fn runtime_rejects_ambiguous_and_malformed_response_frames() {
 #[tokio::test]
 async fn runtime_reports_failed_requests_and_unknown_server_responses() {
     let failed = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell(
-        r#"printf '%s\n' '{"id":1,"error":{"code":-32001,"message":"denied","data":{"reason":"policy"}}}'"#,
+        r#"read line; printf '%s\n' '{"id":1,"error":{"code":-32001,"message":"denied","data":{"reason":"policy"}}}'"#,
     ))
     .await
     .unwrap();

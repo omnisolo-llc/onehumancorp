@@ -53,7 +53,7 @@ export default function InteractivePollGeneratorPage() {
     }
   };
 
-  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/interactive-poll/embed?tenant=${tenant}&q=${encodeURIComponent(question)}&opts=${encodeURIComponent(options.join(','))}&theme=${theme}&email=${requireEmail}&hideBranding=${removeBranding}`;
+  const embedUrl = `/api/v1/growth/interactive-poll/embed?tenant=${tenant}&q=${encodeURIComponent(question)}&opts=${encodeURIComponent(options.join(','))}&theme=${theme}&email=${requireEmail}&hideBranding=${removeBranding}`;
 
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="${requireEmail ? '350' : '280'}" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `
 <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);

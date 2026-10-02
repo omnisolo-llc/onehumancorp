@@ -4,7 +4,7 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
   // Test 1: Simulating Task Creation to Verify No Timeout Failures
   test('verify owner can create a task successfully and UI reflects correct state', async ({ page }) => {
     await page.goto('/tasks');
-    await expect(page.locator('text=Tasks')).toBeVisible();
+    await expect(page.locator('text=Tasks').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'New Task' }).click();
     await page.getByLabel('Title').fill('Task Parity E2E Test');
@@ -17,7 +17,7 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
   // Test 2: Simulating Empty Form Submission and Empty String handling
   test('verify empty task title handles null correctly', async ({ page }) => {
     await page.goto('/tasks');
-    await expect(page.locator('text=Tasks')).toBeVisible();
+    await expect(page.locator('text=Tasks').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'New Task' }).click();
     await page.getByRole('button', { name: 'Save' }).click();

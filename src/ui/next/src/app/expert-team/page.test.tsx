@@ -7,7 +7,7 @@ global.fetch = vi.fn();
 describe("ExpertTeamPage", () => {
   it("renders correctly", () => {
     render(<ExpertTeamPage />);
-    expect(screen.getByText("Collaborative Expert Team")).toBeInTheDocument();
+    expect(screen.getByText("Autonomous Team Coordination")).toBeInTheDocument();
   });
 
   it("handles valid execution", async () => {

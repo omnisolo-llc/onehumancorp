@@ -386,7 +386,11 @@
             }
         }
 </style>
-  </head>
+  <script type="module">
+import { renderWalkthroughStep } from "./safe-help-content.mjs";
+window.renderWalkthroughStep = renderWalkthroughStep;
+</script>
+</head>
   <body>
     <div class="container glassmorphism">
       <a href="dashboard.html" class="back-link">
@@ -710,9 +714,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
-            filteredVideos = allVideos.filter(v =>
-                v.title.toLowerCase().includes(lowerQuery)
-            );
+            const queryWords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+            filteredVideos = allVideos.filter(v => {
+                const titleLower = v.title.toLowerCase();
+                return titleLower.includes(lowerQuery) || queryWords.some(w => titleLower.includes(w));
+            });
         }
 
         if (filteredArticles.length === 0 && filteredVideos.length === 0) {
@@ -733,15 +739,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const categories = [...new Set(filteredArticles.map(a => a.category || 'General'))];
 
             categories.forEach(category => {
-                html += `<div class="section-title">${category}</div><div class="grid">`;
+                html += `<h3 class="section-title" style="margin-top: 0; color: #1d1d1f;">${category}</h3><div class="grid">`;
 
                 const catArticles = filteredArticles.filter(a => (a.category || 'General') === category);
                 catArticles.forEach(article => {
                     // Extract article ID from link for Tauri routing
                     const articleId = article.link.split('/').pop();
+                    const href = articleId === 'api-docs' ? 'api-docs.html' : `help_article.html?id=${articleId}`;
                     html += `
-                      <a href="help_article.html?id=${articleId}" class="card glassmorphism glassmorphism">
-                        <h3>${article.title}</h3>
+                      <a href="${href}" class="card glassmorphism glassmorphism">
+                        <h4>${article.title}</h4>
                         <p>${article.desc}</p>
                       </a>
                     `;
@@ -946,21 +953,10 @@ function initWalkthrough() {
             // Find target
             const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
 
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
+            const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
                 } else {
@@ -1218,7 +1214,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the button
     const btn = document.createElement('button');
-    btn.id = 'omnisolo-floating-help-btn';
+    btn.id = 'ohc-floating-help-btn';
+    btn.className = 'omnisolo-floating-help-btn';
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -1238,7 +1235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="omnisolo-help-tab active" data-target="tab-articles">Articles</button>
             <button class="omnisolo-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="omnisolo-help-tab" data-target="tab-videos">Videos</button>
-            <button class="omnisolo-help-tab" data-target="tab-chat" aria-label="Ask anything">Ask anything</button>
+            <button class="omnisolo-help-tab" id="tab-btn-chat" data-target="tab-chat" aria-label="Ask AI (Ask anything)">Ask AI</button>
         </div>
 
         <div id="tab-articles" class="omnisolo-help-content active">
@@ -1291,8 +1288,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div id="omnisolo-help-chat-input-container">
-                <input type="text" id="omnisolo-help-chat-input" placeholder="Ask anything...">
-                <button id="omnisolo-help-chat-send" aria-label="Send message" disabled>Send</button>
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
             </div>
         </div>
     `;
@@ -1347,8 +1344,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat Logic
-    const chatInput = document.getElementById('omnisolo-help-chat-input');
-    const chatSend = document.getElementById('omnisolo-help-chat-send');
+    const chatInput = document.getElementById('ohc-help-chat-input') || document.getElementById('omnisolo-help-chat-input');
+    const chatSend = document.getElementById('ohc-help-chat-send') || document.getElementById('omnisolo-help-chat-send');
     const chatMessages = document.getElementById('omnisolo-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {
@@ -1518,28 +1515,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
 
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                    </div>
-                `;
-
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
-                };
+                const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
 
                 if (target) {
                     target.classList.add('walkthrough-highlight');
@@ -1579,6 +1565,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-  <script src="help-widget.mjs" type="module"></script>
+  <!-- help-widget already inlined above -->
 </body>
 </html>

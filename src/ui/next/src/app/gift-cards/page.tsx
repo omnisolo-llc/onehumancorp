@@ -51,11 +51,13 @@ export default function GiftCardsPage() {
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Gift Card Value</label>
+                <label htmlFor="gift-card-value" className="block text-sm font-semibold text-gray-700 mb-1">Gift Card Value</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
                   <input
+                    id="gift-card-value"
                     type="number"
+                    aria-label="Gift Card Value"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     className="w-full pl-8 pr-4 py-2 rounded-xl border border-gray-300 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-semibold"
@@ -69,6 +71,7 @@ export default function GiftCardsPage() {
                   <label className="flex items-center gap-3 cursor-pointer">
                       <input
                           type="checkbox"
+                          aria-label="Remove OmniSolo Branding"
                           checked={removeBranding}
                           onChange={() => setRemoveBranding(!removeBranding)}
                           className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
@@ -117,7 +120,7 @@ export default function GiftCardsPage() {
                {!removeBranding && (
                   <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
                      <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`} target="_blank" className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-[30px] saturate-[210%] text-white hover:text-white" style={{ textDecoration: "none" }}>
-                         ⚡ Powered by OmniSolo
+                         <span>⚡ OmniSolo</span><span className="sr-only">Powered by OmniSolo</span>
                      </a>
                   </div>
                )}

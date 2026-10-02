@@ -189,8 +189,13 @@
         .method-post { background: rgba(52, 199, 89, 0.2); }
       }
     </style>
-  </head>
+  <script type="module">
+import { renderWalkthroughStep } from "./safe-help-content.mjs";
+window.renderWalkthroughStep = renderWalkthroughStep;
+</script>
+</head>
   <body>
+    <title style="display: block; width: 1px; height: 1px; overflow: hidden; opacity: 1; position: absolute; left: -9999px;">API Documentation</title>
     <div class="container glassmorphism">
       <a href="dashboard.html" class="back-link">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -205,7 +210,7 @@
         </div>
 
         <div class="backdrop-blur-[20px] saturate-200">
-          <div id="swagger-ui" class="docs-card swagger-ui" style="padding: 0; max-width: 100%; overflow-x: hidden;"></div>
+          <div id="swagger-ui" class="docs-card" style="padding: 0; max-width: 100%; overflow-x: hidden;"></div>
         </div>
       </div>
     </div>
@@ -213,7 +218,7 @@
     <link rel="stylesheet" href="/api/v1/ui/swagger-ui.css" />
     <script src="swagger-ui-bundle.txt"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
+      function initSwagger() {
         if (window.SwaggerUIBundle) {
           const swaggerUI = window.SwaggerUIBundle({
             url: "/api/v1/api-docs-spec",
@@ -223,10 +228,15 @@
             layout: "BaseLayout",
           });
         }
-      });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener("DOMContentLoaded", initSwagger);
+      } else {
+        initSwagger();
+      }
     </script>
     <script>
-document.addEventListener('DOMContentLoaded', () => {
+function initOmniSoloTooltips() {
     // Inject tooltip CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -375,7 +385,12 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(touchTimeout);
         hideTooltip();
     });
-});
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initOmniSoloTooltips);
+} else {
+    initOmniSoloTooltips();
+}
 
 </script>
 
@@ -507,7 +522,7 @@ function initWalkthrough() {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'walkthrough-overlay'; overlay.classList.add('omnisolo-walkthrough-overlay');
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'fixed z-[90] omnisolo-walkthrough-overlay';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
@@ -533,21 +548,10 @@ function initWalkthrough() {
             // Find target
             const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
 
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
+            const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
                 } else {

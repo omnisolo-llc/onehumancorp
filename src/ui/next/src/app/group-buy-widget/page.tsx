@@ -53,8 +53,8 @@ export default function GroupBuyWidgetPage() {
   if (!isClient) return null;
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7] dark:bg-[#1D1D1F]">
-      <div className="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full">
+    <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7] dark:bg-[#1D1D1F] max-w-full overflow-x-hidden">
+      <div className="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full min-w-0">
         <button onClick={() => router.back()} className="mb-6 flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           Back to Dashboard
@@ -70,9 +70,9 @@ export default function GroupBuyWidgetPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-w-0">
           {/* Controls */}
-          <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-[24px] shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-[24px] shadow-sm border border-gray-100 dark:border-gray-700 min-w-0">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product Name</label>
               <input
@@ -181,7 +181,7 @@ export default function GroupBuyWidgetPage() {
                 <textarea
                   readOnly
                   value={embedCode}
-                  className="w-full h-32 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-xs focus:ring-2 focus:ring-pink-500 outline-none resize-none"
+                  className="w-full h-32 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-xs focus:ring-2 focus:ring-pink-500 outline-none resize-none break-all"
                 />
                 <button
                   onClick={handleCopy}
@@ -194,7 +194,7 @@ export default function GroupBuyWidgetPage() {
           </div>
 
           {/* Preview */}
-          <div className="relative flex flex-col items-center justify-center p-8 bg-gray-100 dark:bg-gray-900 rounded-[32px] overflow-hidden border border-gray-200 dark:border-gray-800 min-h-[500px]">
+          <div className="relative flex flex-col items-center justify-center p-8 bg-gray-100 dark:bg-gray-900 rounded-[32px] overflow-hidden border border-gray-200 dark:border-gray-800 min-h-[500px] min-w-0">
             <div className="absolute top-4 left-4 bg-white/80 dark:bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-gray-500 dark:text-gray-400">
               Live Preview
             </div>

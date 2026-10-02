@@ -40,8 +40,10 @@ export default function ViralCouponUnlockPage() {
             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Coupon Settings</h2>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Offer Headline</label>
+              <label htmlFor="offer-headline" className="block text-sm font-medium text-gray-700 mb-2">Offer Headline</label>
               <input
+                id="offer-headline"
+                aria-label="Offer Headline"
                 type="text"
                 value={offerName}
                 onChange={(e) => setOfferName(e.target.value)}
@@ -51,8 +53,10 @@ export default function ViralCouponUnlockPage() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Hidden Coupon Code</label>
+              <label htmlFor="hidden-coupon-code" className="block text-sm font-medium text-gray-700 mb-2">Hidden Coupon Code</label>
               <input
+                id="hidden-coupon-code"
+                aria-label="Hidden Coupon Code"
                 type="text"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value)}
@@ -62,8 +66,11 @@ export default function ViralCouponUnlockPage() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Shares Required to Unlock</label>
+              <label htmlFor="shares-required" className="block text-sm font-medium text-gray-700 mb-2">Shares Required to Unlock</label>
               <input
+                id="shares-required"
+                aria-label="Shares Required to Unlock"
+                placeholder="3"
                 type="number"
                 min="1"
                 max="10"

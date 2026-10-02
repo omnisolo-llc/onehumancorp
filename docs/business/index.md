@@ -5,6 +5,7 @@ This section contains business documentation for the OmniSolo (OmniSolo) platfor
 ## Contents
 
 - [Product Overview](public/index.md) - Product capabilities and features
+- [Verified Business Capabilities](public/verified_business_capabilities.md) - How an owner accomplishes verified business work with OmniSolo
 - [Roadmap](roadmap.md) - Product roadmap and future plans
 - [Vision](../vision/market_strategy.md) - Company vision and strategy
 - [Growth Strategy](growth_strategy_audit.md) - Business growth analysis

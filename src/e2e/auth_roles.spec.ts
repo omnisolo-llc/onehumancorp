@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Database-seeded authentication', () => {
-  test('admin user logs in through the real UI', async ({ page }) => {
+  test('admin user logs in through the real UI', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByText('Welcome back')).toBeVisible();
   });

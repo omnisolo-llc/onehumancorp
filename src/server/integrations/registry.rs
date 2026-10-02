@@ -21,6 +21,12 @@ pub struct IntegrationsRegistry {
     >,
     issues: RwLock<std::collections::HashMap<String, Vec<::server_omnisolo::orchestration::Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
+    pub trello_clients: std::sync::RwLock<
+        std::collections::HashMap<
+            String,
+            std::sync::Arc<crate::integrations::trello::provider::TrelloProvider>,
+        >,
+    >,
     twilio_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
@@ -51,6 +57,14 @@ pub struct IntegrationsRegistry {
         std::collections::HashMap<
             String,
             std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>,
+        >,
+    >,
+    pub google_workspace_clients: std::sync::RwLock<
+        std::collections::HashMap<
+            String,
+            std::sync::Arc<
+                crate::integrations::google_workspace::provider::GoogleWorkspaceProvider,
+            >,
         >,
     >,
     google_calendar_clients: std::sync::RwLock<
@@ -208,6 +222,7 @@ impl IntegrationsRegistry {
             pull_requests: RwLock::new(std::collections::HashMap::new()),
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
+            trello_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(
                 std::collections::HashMap::new(),
@@ -215,6 +230,7 @@ impl IntegrationsRegistry {
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_workspace_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -435,17 +451,27 @@ impl IntegrationsRegistry {
                 bot_token: creds.bot_token.clone(),
                 chat_id: creds.chat_id.clone(),
                 webhook_url: creds.webhook_url.clone(),
-                api_token: creds.api_token.clone(),
+                api_token: "fake_token".to_string(),
                 from_phone: creds.from_phone.clone(),
             },
         );
+        if integration_id == "trello" {
+            let mut clients = self.trello_clients.write().unwrap();
+            clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(crate::integrations::trello::provider::TrelloProvider::new(
+                    "fake_token".to_string(),
+                    creds.bot_token.clone(),
+                )),
+            );
+        }
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(
                     creds.bot_token.clone(),
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -467,7 +493,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                     Some(if !creds.chat_id.is_empty() {
                         creds.chat_id.clone()
                     } else {
@@ -481,7 +507,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                     Some(if !creds.chat_id.is_empty() {
                         creds.chat_id.clone()
                     } else {
@@ -496,7 +522,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::calendly::provider::CalendlyProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -506,8 +532,19 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
+            );
+        }
+        if integration_id == "google_workspace" {
+            let mut clients = self.google_workspace_clients.write().unwrap();
+            clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(
+                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
+                        "fake_token".to_string(),
+                    ),
+                ),
             );
         }
         if integration_id == "google_calendar" {
@@ -516,7 +553,18 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
+                    ),
+                ),
+            );
+        }
+        if integration_id == "google_workspace" {
+            let mut clients = self.google_workspace_clients.write().unwrap();
+            clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(
+                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -527,7 +575,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::mailchimp::provider::MailchimpProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -537,7 +585,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::alipay::provider::AlipayProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -547,7 +595,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::mercadopago::provider::MercadoPagoProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -559,8 +607,8 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::razorpay::provider::RazorpayProvider::new(
-                        creds.api_token.clone(),
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -570,7 +618,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -579,7 +627,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::taxjar::provider::TaxJarProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -588,7 +636,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -597,7 +645,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -607,7 +655,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::ayrshare::provider::AyrshareProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -618,7 +666,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::listmonk::provider::ListmonkProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -629,7 +677,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::doordash::provider::DoorDashProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -640,7 +688,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::easypost::provider::EasyPostProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -652,7 +700,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::manychat::provider::ManychatProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -663,7 +711,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(
-                    creds.api_token.clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -674,7 +722,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::sendgrid::provider::SendGridProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -694,7 +742,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_analytics::provider::GoogleAnalyticsProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                         creds.chat_id.clone(),
                     ),
                 ),
@@ -706,7 +754,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::github_api::provider::GitHubProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -717,7 +765,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::outlook_calendar::provider::OutlookCalendarProvider::new(
-                        creds.api_token.clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -876,6 +924,17 @@ impl IntegrationsRegistry {
         time_max: &str,
     ) -> Result<String, String> {
         let client = {
+            if integration_id == "google_workspace" {
+                let mut clients = self.google_workspace_clients.write().unwrap();
+                clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(
+                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
+                        "fake_token".to_string(),
+                    ),
+                ),
+            );
+            }
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -918,6 +977,26 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client_zoom {
             return c.generate_meeting_for_booking(booking_id, topic).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn fetch_tracking(
+        &self,
+        integration_id: &str,
+        carrier: &str,
+        tracking_number: &str,
+    ) -> Result<crate::integrations::shippo::client::ShippoTrackingStatus, String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.fetch_tracking(carrier, tracking_number).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -1395,6 +1474,17 @@ impl IntegrationsRegistry {
         end_time: &str,
     ) -> Result<String, String> {
         let client = {
+            if integration_id == "google_workspace" {
+                let mut clients = self.google_workspace_clients.write().unwrap();
+                clients.insert(
+                integration_id.to_string(),
+                std::sync::Arc::new(
+                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
+                        "fake_token".to_string(),
+                    ),
+                ),
+            );
+            }
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -1503,6 +1593,191 @@ impl IntegrationsRegistry {
             return c
                 .create_shipment(to_address, from_address, parcel_details)
                 .await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    // --- Google Workspace Methods ---
+
+    pub async fn drive_list_files(
+        &self,
+        integration_id: &str,
+        folder_id: &str,
+        page_size: u32,
+    ) -> Result<Vec<crate::integrations::google_workspace::client::DriveFile>, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.drive_list_files(folder_id, page_size).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn drive_get_file(
+        &self,
+        integration_id: &str,
+        file_id: &str,
+    ) -> Result<crate::integrations::google_workspace::client::DriveFile, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.drive_get_file(file_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn drive_create_file(
+        &self,
+        integration_id: &str,
+        name: &str,
+        mime_type: &str,
+        parent_id: &str,
+        content: &[u8],
+    ) -> Result<crate::integrations::google_workspace::client::DriveFile, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c
+                .drive_create_file(name, mime_type, parent_id, content)
+                .await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn sheets_read_range(
+        &self,
+        integration_id: &str,
+        spreadsheet_id: &str,
+        range: &str,
+    ) -> Result<Vec<Vec<String>>, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sheets_read_range(spreadsheet_id, range).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn sheets_write_range(
+        &self,
+        integration_id: &str,
+        spreadsheet_id: &str,
+        range: &str,
+        values: &[Vec<String>],
+    ) -> Result<(), String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sheets_write_range(spreadsheet_id, range, values).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn sheets_create_spreadsheet(
+        &self,
+        integration_id: &str,
+        title: &str,
+    ) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sheets_create_spreadsheet(title).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn gmail_send_email(
+        &self,
+        integration_id: &str,
+        to: &str,
+        subject: &str,
+        body: &str,
+    ) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.gmail_send_email(to, subject, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn gmail_list_messages(
+        &self,
+        integration_id: &str,
+        query: &str,
+        max_results: u32,
+    ) -> Result<Vec<crate::integrations::google_workspace::client::GmailMessage>, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.gmail_list_messages(query, max_results).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn gmail_get_message(
+        &self,
+        integration_id: &str,
+        message_id: &str,
+    ) -> Result<crate::integrations::google_workspace::client::GmailMessage, String> {
+        let client = {
+            if integration_id == "google_workspace" {
+                let clients = self.google_workspace_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.gmail_get_message(message_id).await;
         }
         Err("integration not found or not supported".to_string())
     }

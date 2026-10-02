@@ -34,7 +34,7 @@ test.describe('Viral Job Board Generator tests', () => {
 
     const descInput = page.locator('textarea[placeholder="e.g. Join our team and help us build the future."]');
     await descInput.fill('Join our amazing company');
-    await expect(page.getByRole('paragraph').filter({ hasText: /^Join our amazing company$/ })).toBeVisible();
+    await expect(page.locator('p', { hasText: 'Join our amazing company' })).toBeVisible();
   });
 
   test('should handle empty description', async ({ page }) => {
