@@ -15,6 +15,7 @@
     "test:billing": "cargo test --locked -p server_services_billing",
     "test:web": "npm --prefix src/ui/next test --",
     "typecheck:web": "npm --prefix src/ui/next run typecheck",
+    "typecheck:e2e": "tsc --noEmit -p playwright.tsconfig.json",
     "test:build": "node --test scripts/native-build.test.mjs scripts/node-runtime.test.mjs",
     "test:contracts": "node scripts/native-contracts.mjs",
     "test:e2e": "node scripts/run-playwright.mjs",

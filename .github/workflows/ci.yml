@@ -296,10 +296,11 @@ jobs:
       - name: Lint JavaScript and TypeScript
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: npm run lint:node
-      - name: Typecheck web and CLI
+      - name: Typecheck web, browser tests and CLI
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: |
           npm run typecheck:web
+          npm run typecheck:e2e
           npm --prefix src/cli run typecheck
       - name: Run all Node, frontend, CLI and desktop UI tests
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
