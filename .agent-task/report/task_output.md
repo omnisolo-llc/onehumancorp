@@ -1,9 +1,7 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
+outcome: blocked
+issue_title: Universal Provider & Local Usage Accounting (F04)
 issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+  The codebase documentation explicitly marks this issue as partially satisfied but it cannot be safely completed at this time.
+  Specific acceptance criteria already satisfied: Provider-native capture preserves known quantities and unknown states; local generation parses actual model counts; proposal adapter no longer substitutes a default zero-usage result.
+  Acceptance criteria that remain unmet or unverified: Other model, tool, embedding and summarization paths still require complete inventory and reconciliation.
+  Why no safe, well-scoped implementation follows from the repository state: The required dependencies, schema changes, and interceptor architecture for these remaining paths are not fully verified or authorized for modification in this pass.
