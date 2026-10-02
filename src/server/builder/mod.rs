@@ -7,4 +7,5 @@ mod builder_test;
 
 pub mod edge;
 
+pub mod publication_render;
 pub mod publication_store;

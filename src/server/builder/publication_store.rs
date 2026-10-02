@@ -99,7 +99,7 @@ fn canonical_value(value: Value) -> Value {
         value => value,
     }
 }
-fn prepare_snapshot(
+pub(crate) fn prepare_snapshot(
     snapshot: &SiteSnapshot,
 ) -> Result<(Value, String, Vec<String>), PublicationError> {
     if snapshot.pages.is_empty() || snapshot.pages.len() > 50 {
