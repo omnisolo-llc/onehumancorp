@@ -726,6 +726,8 @@ async fn simulate_invoice_draft(
         "feature_type": "invoice_draft",
         "project_name": "Website Redesign",
         "milestone_name": "Phase 1 Complete",
+        "is_simulation": true,
+        "simulation_timestamp": chrono::Utc::now().to_rfc3339(),
         "amount_cents": 250000,
         "customer_id": "cust_simulated_invoice_123",
         "inbox_message_id": "msg_simulated_invoice_123",
@@ -781,6 +783,8 @@ async fn simulate_invoice_followup(
     let payload = serde_json::json!({
         "feature_type": "invoice_followup",
         "invoice_id": "inv_simulated_12345",
+        "is_simulation": true,
+        "simulation_timestamp": chrono::Utc::now().to_rfc3339(),
         "original_message": "Invoice inv_simulated_12345 is overdue.",
         "generated_response": "Hi there, just checking in to see if you received invoice inv_simulated_12345. Let us know if you have any questions!",
         "operational_action": "Draft personalized reminder",
@@ -840,6 +844,8 @@ async fn simulate_autonomous_booking_quote(
     let payload = serde_json::json!({
         "feature_type": "autonomous_quote",
         "service": "Emergency Handyman Service",
+        "is_simulation": true,
+        "simulation_timestamp": chrono::Utc::now().to_rfc3339(),
         "customer_inquiry": "My sink is leaking, can you come today?",
         "suggested_price": 180.00,
         "scope": "Emergency leak repair including standard parts.",
@@ -893,6 +899,8 @@ async fn simulate_lead_recovery(
     let payload = serde_json::json!({
         "feature_type": "lead_recovery",
         "description": "A potential customer hasn't received a follow-up in over 2 hours.",
+        "is_simulation": true,
+        "simulation_timestamp": chrono::Utc::now().to_rfc3339(),
         "draft_reply": "Hi there! This is Carlos's assistant. He's on a job right now, but how can we help? We can usually schedule a visit for tomorrow.",
         "inbox_message_id": "msg-lead-recovery"
     });

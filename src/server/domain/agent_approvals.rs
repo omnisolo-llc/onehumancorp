@@ -6,6 +6,7 @@ pub async fn sync_legacy_approval_status(
     state: &str,
     pool: &PgPool,
 ) -> Result<(), sqlx::Error> {
+    // Prevent stale approvals or revokes from applying over already decided states
     if state == "APPROVED" || state == "REJECTED" || state == "DISMISSED" {
         let legacy_status = if state == "APPROVED" {
             "APPROVED"
