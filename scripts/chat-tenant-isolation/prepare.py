@@ -17,7 +17,7 @@ static MIGRATIONS:sqlx::migrate::Migrator=sqlx::migrate!("../../src/server/migra
 async fn actual_chat_migration_is_embedded_with_unchanged_sql_and_checksums(){{
  let disk=sqlx::migrate::Migrator::new(std::path::Path::new({json.dumps(str(source))})).await.unwrap();
  let actual:Vec<_>=MIGRATIONS.iter().collect();let expected:Vec<_>=disk.iter().collect();
- assert_eq!(actual.len(),expected.len());assert!(actual.iter().any(|migration|migration.version==1009));
+ assert_eq!(actual.len(),expected.len());for version in [233,1009,1021,1024]{{assert!(actual.iter().any(|migration|migration.version==version));}}
  for (a,b) in actual.iter().zip(expected){{assert_eq!(a.version,b.version);assert_eq!(a.sql,b.sql);assert_eq!(a.checksum,b.checksum);}}
 }}
 '''

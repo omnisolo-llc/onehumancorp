@@ -9,7 +9,7 @@ database, verifies non-superuser/NOBYPASSRLS identity, and drops its own objects
 The small crate imports the complete actual chat module, original models, service
 methods and their maintained tests. It embeds the same migration directory read
 by the production SQLx macro, checks every SQL/version/checksum, and executes the
-actual native-chat migration in each disposable schema. Registry dependencies
+actual chat migrations 233, 1009, 1021 and 1024 in each disposable schema. Registry dependencies
 must match the repository lockfile. There is no SQL mock, provider call, message
 delivery, or replacement service implementation.
 
@@ -19,11 +19,20 @@ connection across tenants. This gate covers service/data isolation and migration
 discovery; HTTP authentication, live messaging providers and full server acceptance
 remain separate checks.
 
-The gate requires all eight cases, with no ignored or filtered acceptance. Parent
+The gate requires all thirteen cases, with no ignored or filtered acceptance. Parent
 IDs are checked inside the same INSERT statement against the supplied tenant;
 channel, conversation and message writes cannot reference another tenant's rows.
 The regression runs those attempts under both the restricted role and table owner.
 PostgreSQL foreign-key checks alone do not establish that tenant relationship
 ([row-security documentation](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)).
-The existing five methods retain their transaction-local tenant context. This is
-not proof of caller authentication or live message delivery.
+The five write methods and open-conversation reader retain their transaction-local
+tenant context. The reader explicitly checks the conversation tenant and both
+parent tenants even when the database role bypasses RLS, excludes closed rows,
+and sorts by update time with an ID tie-breaker. Database failures remain errors.
+The existing unpaginated method returns all matching conversations rather than
+silently truncating the list.
+
+The content-type migration is additive. Real SQLx upgrade tests cover both an old
+schema and a schema with the column already present, preserve prior message bytes
+and recorded migration checksums, verify the default on new writes, and replay the
+upgrade. This is not proof of caller authentication or live message delivery.

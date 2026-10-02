@@ -41,6 +41,31 @@ fn repository_root() -> PathBuf {
         .to_path_buf()
 }
 
+pub(super) async fn fixture_migrator(content_type: bool) -> sqlx::migrate::Migrator {
+    let source = sqlx::migrate::Migrator::new(repository_root().join("src/server/migrations"))
+        .await
+        .expect("active migrations must load");
+    let versions: &[i64] = if content_type {
+        &[233, 1009, 1021, 1024]
+    } else {
+        &[233, 1009, 1021]
+    };
+    let migrations = versions
+        .iter()
+        .map(|version| {
+            source
+                .iter()
+                .find(|m| m.version == *version)
+                .unwrap_or_else(|| panic!("chat migration {version} must be in the active source"))
+                .clone()
+        })
+        .collect();
+    sqlx::migrate::Migrator {
+        migrations: std::borrow::Cow::Owned(migrations),
+        ..sqlx::migrate::Migrator::DEFAULT
+    }
+}
+
 pub(super) struct ChatFixture {
     pub(super) admin: PgPool,
     pub(super) scoped: PgPool,
@@ -49,22 +74,17 @@ pub(super) struct ChatFixture {
 }
 impl ChatFixture {
     pub(super) async fn new() -> Self {
+        Self::with_content_type(true).await
+    }
+    pub(super) async fn legacy() -> Self {
+        Self::with_content_type(false).await
+    }
+    async fn with_content_type(content_type: bool) -> Self {
         let value = std::env::var("OHC_CHAT_TEST_DATABASE_URL").ok();
         let options = test_database_url(value.as_deref())
             .expect("missing or unsafe disposable chat database prerequisite");
         // Load the actual production source directory, not the historical duplicate tree.
-        let migrations =
-            sqlx::migrate::Migrator::new(repository_root().join("src/server/migrations"))
-                .await
-                .expect("active migrations must load");
-        let migration = migrations
-            .iter()
-            .find(|m| m.version == 1009)
-            .expect("native chat migration1009 must be in the active source");
-        let sender_migration = migrations
-            .iter()
-            .find(|m| m.version == 1021)
-            .expect("chat sender migration1021 must be in the active source");
+        let migrations = fixture_migrator(content_type).await;
         let schema = format!("chat_case_{}", Uuid::new_v4().simple());
         let role = format!("chat_member_{}", Uuid::new_v4().simple());
         let password = Uuid::new_v4().simple().to_string();
@@ -86,14 +106,10 @@ impl ChatFixture {
             .execute(&admin)
             .await
             .unwrap();
-        sqlx::raw_sql(migration.sql.as_ref())
-            .execute(&admin)
+        migrations
+            .run(&admin)
             .await
-            .expect("actual native chat migration must execute");
-        sqlx::raw_sql(sender_migration.sql.as_ref())
-            .execute(&admin)
-            .await
-            .expect("actual chat sender migration must execute after migration1009");
+            .expect("actual chat migrations must execute in SQLx order");
         sqlx::query(&format!("CREATE ROLE {role} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD '{password}'")).execute(&admin).await.unwrap();
         sqlx::raw_sql(&format!("GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA {schema} TO {role};")).execute(&admin).await.unwrap();
         let scoped = PgPoolOptions::new()

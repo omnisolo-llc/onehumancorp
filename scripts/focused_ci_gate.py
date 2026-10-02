@@ -16,7 +16,7 @@ GATES = {
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),
     'agent-definition-contract': (49, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
 
-    'chat-tenant-isolation': (8, 'OHC_CHAT_TEST_DATABASE_URL'),
+    'chat-tenant-isolation': (13, 'OHC_CHAT_TEST_DATABASE_URL'),
     'bootstrap-portable-roles': (9, 'OHC_SETUP_TEST_DATABASE_URL'),
     'link-bio-isolation': (14, 'OHC_BIO_TEST_DATABASE_URL'),
     'tenant-search': (13, 'OHC_SEARCH_TEST_DATABASE_URL'),

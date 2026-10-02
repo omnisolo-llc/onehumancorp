@@ -40,7 +40,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_chat_gate_requires_real_database_and_complete_inventory(self):
         minimum, database = gate.GATES['chat-tenant-isolation']
-        self.assertGreaterEqual(minimum, 8)
+        self.assertGreaterEqual(minimum, 13)
         self.assertEqual(database, 'OHC_CHAT_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         self.assertTrue((root/'scripts/chat-tenant-isolation/run.sh').is_file())

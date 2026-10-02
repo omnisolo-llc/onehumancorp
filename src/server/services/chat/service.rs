@@ -138,6 +138,37 @@ impl ChatService {
         Ok(res)
     }
 
+    pub async fn get_open_conversations(
+        &self,
+        tenant_id: Uuid,
+        inbox_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
+        let res = sqlx::query_as(
+            r#"
+            SELECT c.id, c.tenant_id, c.inbox_id, c.contact_id, c.assignee_id,
+                   c.status, c.created_at, c.updated_at
+            FROM chat_conversations c
+            JOIN chat_inboxes i ON i.id = c.inbox_id AND i.tenant_id = c.tenant_id
+            JOIN chat_contacts p ON p.id = c.contact_id AND p.tenant_id = c.tenant_id
+            WHERE c.tenant_id = $1 AND c.inbox_id = $2 AND c.status = 'open'
+            ORDER BY c.updated_at DESC, c.id ASC
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(inbox_id)
+        .fetch_all(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(res)
+    }
+
     pub async fn send_message(
         &self,
         tenant_id: Uuid,
@@ -176,7 +207,7 @@ impl ChatService {
 
 #[cfg(test)]
 mod tests {
-    use super::super::test_support::{ChatFixture, test_database_url};
+    use super::super::test_support::{ChatFixture, fixture_migrator, test_database_url};
     use super::*;
 
     #[tokio::test]
@@ -423,5 +454,267 @@ mod tests {
         f.finish().await;
         assert!(write.is_err());
         assert!(count.is_err());
+    }
+
+    #[tokio::test]
+    async fn open_conversations_are_tenant_scoped_for_the_restricted_role() {
+        assert_open_conversation_scope(false).await;
+    }
+
+    #[tokio::test]
+    async fn open_conversations_are_tenant_scoped_for_the_database_owner() {
+        assert_open_conversation_scope(true).await;
+    }
+
+    async fn assert_open_conversation_scope(database_owner: bool) {
+        let f = ChatFixture::new().await;
+        let service = ChatService::new(if database_owner {
+            f.admin.clone()
+        } else {
+            f.scoped.clone()
+        });
+        let a = Uuid::new_v4();
+        let b = Uuid::new_v4();
+        let ai = service.create_inbox(a, "A inbox".into()).await.unwrap();
+        let other_ai = service.create_inbox(a, "A other".into()).await.unwrap();
+        let bi = service.create_inbox(b, "B inbox".into()).await.unwrap();
+        let ac = service.create_contact(a, None, None, None).await.unwrap();
+        let bc = service.create_contact(b, None, None, None).await.unwrap();
+        let mut tied = Vec::new();
+        for _ in 0..2 {
+            tied.push(
+                service
+                    .start_conversation(a, ai.id, ac.id, None)
+                    .await
+                    .unwrap()
+                    .id,
+            );
+        }
+        let older = service
+            .start_conversation(a, ai.id, ac.id, None)
+            .await
+            .unwrap();
+        let closed = service
+            .start_conversation(a, ai.id, ac.id, None)
+            .await
+            .unwrap();
+        let other = service
+            .start_conversation(a, other_ai.id, ac.id, None)
+            .await
+            .unwrap();
+        let foreign = service
+            .start_conversation(b, bi.id, bc.id, None)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE chat_conversations SET updated_at='2026-10-02T12:00:00Z'::timestamptz WHERE id=ANY($1)")
+            .bind(&tied).execute(&f.admin).await.unwrap();
+        sqlx::query("UPDATE chat_conversations SET updated_at='2026-10-01T12:00:00Z'::timestamptz WHERE id=$1")
+            .bind(older.id).execute(&f.admin).await.unwrap();
+        sqlx::query("UPDATE chat_conversations SET status='closed', updated_at='2026-10-03T12:00:00Z'::timestamptz WHERE id=$1")
+            .bind(closed.id).execute(&f.admin).await.unwrap();
+        // Historical/imported rows can have tenant-inconsistent parents even
+        // though the current write API rejects them. Reads must fail closed too.
+        for (tenant, inbox, contact) in [(a, bi.id, ac.id), (b, ai.id, bc.id), (a, ai.id, bc.id)] {
+            sqlx::query("INSERT INTO chat_conversations(id,tenant_id,inbox_id,contact_id,status) VALUES($1,$2,$3,$4,'open')")
+                .bind(Uuid::new_v4()).bind(tenant).bind(inbox).bind(contact)
+                .execute(&f.admin).await.unwrap();
+        }
+        let actual = service.get_open_conversations(a, ai.id).await.unwrap();
+        let foreign_inbox = service.get_open_conversations(a, bi.id).await.unwrap();
+        let wrong_tenant = service.get_open_conversations(b, ai.id).await.unwrap();
+        let foreign_actual = service.get_open_conversations(b, bi.id).await.unwrap();
+        let other_actual = service
+            .get_open_conversations(a, other_ai.id)
+            .await
+            .unwrap();
+        let missing = service
+            .get_open_conversations(a, Uuid::new_v4())
+            .await
+            .unwrap();
+        let repeated = service.get_open_conversations(a, ai.id).await.unwrap();
+        let context: Option<String> =
+            sqlx::query_scalar("SELECT NULLIF(current_setting('app.current_tenant_id',true),'')")
+                .fetch_one(&f.scoped)
+                .await
+                .unwrap();
+        f.finish().await;
+        tied.sort();
+        tied.push(older.id);
+        assert_eq!(actual.iter().map(|c| c.id).collect::<Vec<_>>(), tied);
+        assert!(
+            actual
+                .iter()
+                .all(|c| c.tenant_id == a && c.inbox_id == ai.id && c.status == "open")
+        );
+        assert!(
+            foreign_inbox.is_empty(),
+            "another tenant's inbox must not be readable"
+        );
+        assert!(
+            wrong_tenant.is_empty(),
+            "conversation tenant alone cannot authorize a foreign inbox"
+        );
+        assert_eq!(
+            foreign_actual.iter().map(|c| c.id).collect::<Vec<_>>(),
+            vec![foreign.id]
+        );
+        assert_eq!(
+            other_actual.iter().map(|c| c.id).collect::<Vec<_>>(),
+            vec![other.id]
+        );
+        assert!(missing.is_empty());
+        assert_eq!(repeated.iter().map(|c| c.id).collect::<Vec<_>>(), tied);
+        assert_eq!(
+            context, None,
+            "reads must not leak tenant state on the reused connection"
+        );
+    }
+
+    #[tokio::test]
+    async fn open_conversation_sql_failures_are_errors_without_tenant_leakage() {
+        let f = ChatFixture::new().await;
+        let service = ChatService::new(f.scoped.clone());
+        sqlx::query("ALTER TABLE chat_conversations RENAME TO unavailable_chat_conversations")
+            .execute(&f.admin)
+            .await
+            .unwrap();
+        let result = service
+            .get_open_conversations(Uuid::new_v4(), Uuid::new_v4())
+            .await;
+        let context: Option<String> =
+            sqlx::query_scalar("SELECT NULLIF(current_setting('app.current_tenant_id',true),'')")
+                .fetch_one(&f.scoped)
+                .await
+                .unwrap();
+        let next = service
+            .create_inbox(Uuid::new_v4(), "After failed read".into())
+            .await;
+        f.finish().await;
+        assert_eq!(
+            result
+                .unwrap_err()
+                .as_database_error()
+                .unwrap()
+                .code()
+                .as_deref(),
+            Some("42P01")
+        );
+        assert_eq!(context, None);
+        assert!(next.is_ok(), "a failed read must roll back its transaction");
+    }
+
+    #[tokio::test]
+    async fn additive_content_type_migration_preserves_old_messages_and_history() {
+        assert_content_type_upgrade(false).await;
+    }
+
+    #[tokio::test]
+    async fn additive_content_type_migration_preserves_an_existing_column_and_values() {
+        assert_content_type_upgrade(true).await;
+    }
+
+    async fn assert_content_type_upgrade(already_has_column: bool) {
+        let f = ChatFixture::legacy().await;
+        let service = ChatService::new(f.scoped.clone());
+        let tenant = Uuid::new_v4();
+        let inbox = service
+            .create_inbox(tenant, "Upgrade".into())
+            .await
+            .unwrap();
+        let contact = service
+            .create_contact(tenant, None, None, None)
+            .await
+            .unwrap();
+        let conversation = service
+            .start_conversation(tenant, inbox.id, contact.id, None)
+            .await
+            .unwrap();
+        let message = service
+            .send_message(
+                tenant,
+                conversation.id,
+                "contact".into(),
+                Some(contact.id),
+                "Preserve old bytes ✉".into(),
+            )
+            .await
+            .unwrap();
+        let before: Vec<(i64, Vec<u8>)> = sqlx::query_as(
+            "SELECT version,checksum FROM _sqlx_migrations WHERE success ORDER BY version",
+        )
+        .fetch_all(&f.admin)
+        .await
+        .unwrap();
+        if already_has_column {
+            // A database that already received the upstream column must retain
+            // both its existing values and the original migration checksums.
+            sqlx::raw_sql("ALTER TABLE chat_messages ADD COLUMN content_type VARCHAR(50) NOT NULL DEFAULT 'text'")
+                .execute(&f.admin).await.unwrap();
+            sqlx::query("UPDATE chat_messages SET content_type='image' WHERE id=$1")
+                .bind(message.id)
+                .execute(&f.admin)
+                .await
+                .unwrap();
+        }
+        let migrations = fixture_migrator(true).await;
+        migrations.run(&f.admin).await.unwrap();
+        migrations.run(&f.admin).await.unwrap();
+        let saved: (String, String, String) =
+            sqlx::query_as("SELECT content,sender_id,content_type FROM chat_messages WHERE id=$1")
+                .bind(message.id)
+                .fetch_one(&f.admin)
+                .await
+                .unwrap();
+        let next = service
+            .send_message(
+                tenant,
+                conversation.id,
+                "contact".into(),
+                Some(contact.id),
+                "After upgrade".into(),
+            )
+            .await
+            .unwrap();
+        let next_content_type: String =
+            sqlx::query_scalar("SELECT content_type FROM chat_messages WHERE id=$1")
+                .bind(next.id)
+                .fetch_one(&f.admin)
+                .await
+                .unwrap();
+        let after: Vec<(i64, Vec<u8>)> = sqlx::query_as(
+            "SELECT version,checksum FROM _sqlx_migrations WHERE success ORDER BY version",
+        )
+        .fetch_all(&f.admin)
+        .await
+        .unwrap();
+        let foreign_count = f
+            .count_as(Uuid::new_v4(), "chat_messages", message.id)
+            .await;
+        f.finish().await;
+        assert_eq!(
+            before
+                .iter()
+                .map(|(version, _)| *version)
+                .collect::<Vec<_>>(),
+            vec![233, 1009, 1021]
+        );
+        assert_eq!(
+            &after[..before.len()],
+            before.as_slice(),
+            "an additive upgrade must not rewrite applied migration history"
+        );
+        assert_eq!(after.len(), before.len() + 1);
+        let added = migrations.iter().find(|m| m.version == 1024).unwrap();
+        assert_eq!(after.last().unwrap(), &(1024, added.checksum.to_vec()));
+        assert_eq!(
+            saved,
+            (
+                "Preserve old bytes ✉".into(),
+                contact.id.to_string(),
+                if already_has_column { "image" } else { "text" }.into()
+            )
+        );
+        assert_eq!(next_content_type, "text");
+        assert_eq!(foreign_count, 0);
     }
 }
