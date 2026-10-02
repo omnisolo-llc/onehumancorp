@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { createEntitlementOwner, expectEntitlementUnchanged } from './support/entitlement_fixture';
 
 test.describe('Pricing Page', () => {
   test('should display Pricing Plans page', async ({ page }) => {
@@ -39,27 +40,27 @@ test.describe('Pricing Page', () => {
     await expect(page).toHaveURL(/.*\/dashboard/);
   });
 
-  test('should verify upgrade button routes to checkout', async ({ page }) => {
-    await page.goto('/pricing');
-    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
-    await expect(upgradeButton).toBeVisible();
-    await upgradeButton.click();
-    await expect(page).toHaveURL(/.*checkout\.stripe\.com.*/);
-  });
-
-  test('should verify upgrade to Pro button routes to checkout', async ({ page }) => {
-    await page.goto('/pricing');
-    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Pro via Stripe' });
-    await expect(upgradeButton).toBeVisible();
-    await upgradeButton.click();
-    await expect(page).toHaveURL(/.*checkout\.stripe\.com.*/);
-  });
-
-  test('should verify upgrade to Business button routes to checkout', async ({ page }) => {
-    await page.goto('/pricing');
-    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Business via Stripe' });
-    await expect(upgradeButton).toBeVisible();
-    await upgradeButton.click();
-    await expect(page).toHaveURL(/.*checkout\.stripe\.com.*/);
-  });
+  // The native runner intentionally excludes payment credentials. A browser
+  // click cannot manufacture a Stripe session or change the persisted plan.
+  for (const tier of ['Starter', 'Pro', 'Business']) {
+    test(`keeps the real account unchanged when ${tier} checkout is unconfigured`, async ({ page, baseURL }) => {
+      const fixture = await createEntitlementOwner(page, baseURL);
+      await page.goto('/pricing');
+      const upgrade = page.getByRole('button', { name: `Upgrade to ${tier} via Stripe`, exact: true });
+      await expect(upgrade).toBeEnabled();
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const responsePromise = page.waitForResponse(response =>
+          new URL(response.url()).pathname === '/api/v1/billing/create-checkout-session'
+          && response.request().method() === 'POST');
+        await upgrade.click();
+        const response = await responsePromise;
+        expect(response.status()).toBe(503);
+        expect(response.request().postDataJSON()).toEqual({ tier, is_subscription: true, subscription_interval: 'month' });
+        await expect(page.getByRole('alert')).toHaveText('Checkout is unavailable. Your plan has not changed. Please try again.');
+        await expect(page).toHaveURL(/\/pricing$/);
+        await expect(upgrade).toBeEnabled();
+        await expectEntitlementUnchanged(page, fixture);
+      }
+    });
+  }
 });
