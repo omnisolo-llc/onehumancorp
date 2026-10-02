@@ -121,6 +121,9 @@ export async function evaluateAuthMiddleware(
     return next(false, true);
   }
 
+  // Publication reads ignore session credentials entirely; the route and backend recheck public eligibility.
+  if (decision.access === "public" && decision.entry.owner === "publication") return next(false, true);
+
   const session = await validSession(request, dependencies);
   if (decision.access === "public") {
     if (

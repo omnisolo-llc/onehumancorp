@@ -1,11 +1,15 @@
+import {notifyQueueIdentityChange} from '@/lib/sync/queueIdentity';
+import {installBuilderLocks as installOnboardingLocks} from '../builder/testLocks';
+import {initializeWebsiteDraft} from './store';
+import {useOnboardingStore} from '../onboarding/store';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import WebsiteBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() })
-}));
+const push=vi.hoisted(()=>vi.fn());
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }) }));
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(),readQueueOwner:vi.fn(async()=>({userId:'builder-user',tenantId:'builder-tenant'}))}));
 
 
 // Mock TooltipRegistry and help components
@@ -38,9 +42,9 @@ vi.mock('../builder/components', () => ({
 import { useWebsiteBuilderStore } from './store';
 
 describe('WebsiteBuilderPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     global.fetch = vi.fn().mockImplementation(() => Promise.resolve(Response.json({}, { status: 200 })));
-    localStorage.clear();
+    localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks(); push.mockClear(); await initializeWebsiteDraft();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     // Reset zustand store state
     useWebsiteBuilderStore.setState({
@@ -74,7 +78,7 @@ describe('WebsiteBuilderPage', () => {
     expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
 
     // Check local storage init fetching
-    expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/state');
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/state',expect.objectContaining({headers:expect.any(Headers)}));
   });
 
   it('can follow the standard wizard flow', async () => {
@@ -131,97 +135,33 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Next'));
 
     // Step 9
-    fireEvent.click(screen.getByText('Publish my business'));
+    fireEvent.click(screen.getByText('Review workspace setup'));
 
-    // Verify generating screen
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-
-    await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/start', expect.any(Object));
-        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
-    });
-
-    const startCall = (vi.mocked(global.fetch)).mock.calls.find(
-      ([url]: [string]) => url === '/api/v1/onboarding/start',
-    );
-    if (typeof startCall?.[1]?.body !== 'string') throw new Error('Expected JSON onboarding body');
-    const startRequest = JSON.parse(startCall[1].body);
-    expect(startCall[1].headers).toEqual({ 'Content-Type': 'application/json' });
-    expect(startRequest).toEqual(expect.objectContaining({
-      company_name: 'My Shop',
-      company_description: '',
-      selling_categories: ['physical'],
-      payment_pref: 'Online',
-      website_template: 'Modern',
-      domain_choice: 'subdomain',
-      target_audience: '',
-      ai_auto_respond: false,
-    }));
-    expect(startRequest.admin_password).toBeUndefined();
-    expect(startRequest.admin_email).toBeUndefined();
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/onboarding'));
+    expect(vi.mocked(fetch).mock.calls.some(([url])=>url==='/api/v1/onboarding/start')).toBe(false);
+    const transferred=useOnboardingStore.getState();
+    expect(transferred).toEqual(expect.objectContaining({businessName:'My Shop',businessDescription:'',categories:['physical'],websiteTemplate:'Modern',domainChoice:'subdomain',aiAutoRespond:false,firstProductName:'T-Shirt',firstProductPrice:'25.00',step:3}));
+    expect(useWebsiteBuilderStore.getState().paymentMethod).toBe('Online');
+    expect(transferred).not.toHaveProperty('admin_password');expect(transferred).not.toHaveProperty('admin_email');
   });
 
-  it('can follow the instant-build flow', async () => {
-    vi.useRealTimers();
-    // Mock the specific API call for instant build
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/v1/onboarding/intake') {
-        return Promise.resolve(Response.json({
-            business_name: 'Mock Bakery',
-            business_type: 'Online Store',
-            initial_products: [{ name: 'Cake', price: '20.00' }]
-          }, { status: 200 }));
-      }
-      if (url === '/api/v1/onboarding/state') {
-          return Promise.resolve(Response.json({}, { status: 200 }))
-      }
-      return Promise.resolve(Response.json({}, { status: 200 }));
-    });
-
-    render(<WebsiteBuilderPage />);
-
-    fireEvent.click(screen.getByText('Instant Build'));
-    fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Next'));
-
-    // Status changes to 'generating', wait for it
-    await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
-    }, { timeout: 3500 });
+  it('can follow the instant-build flow into canonical review with its description preserved', async () => {
+    vi.useRealTimers();render(<WebsiteBuilderPage/>);
+    fireEvent.click(await screen.findByText('Instant Build'));
+    fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'),{target:{value:'I run a local bakery'}});
+    fireEvent.click(screen.getByText('Review setup options'));
+    await waitFor(()=>expect(push).toHaveBeenCalledWith('/onboarding'));
+    expect(useOnboardingStore.getState()).toEqual(expect.objectContaining({bio:'I run a local bakery',step:-1}));
+    expect(vi.mocked(fetch).mock.calls.some(([url])=>url==='/api/v1/onboarding/intake'||url==='/api/v1/onboarding/start')).toBe(false);
+    expect(screen.queryByText('Success! Your business is live!')).toBeNull();
   });
 
   it('never reports a rejected publication as live', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.useRealTimers();
-    useWebsiteBuilderStore.setState({
-      wizardStep: 9,
-      businessName: 'Rejected Shop',
-      businessType: 'Online Store',
-      productName: 'Product',
-      productPrice: '10.00',
-      paymentMethod: 'online',
-      template: 'Modern',
-      status: 'idle',
-    });
-    global.fetch = vi.fn().mockImplementation((url: string) =>
-      Promise.resolve({
-        ok: url !== '/api/v1/onboarding/start',
-        json: () => Promise.resolve({ error: 'rejected' }),
-      }),
-    );
-
-    render(<WebsiteBuilderPage />);
-    fireEvent.click(await screen.findByText('Publish my business'));
-
-    await waitFor(() => {
-      expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
-      expect(screen.queryByText('Success! Your business is live!')).not.toBeInTheDocument();
-    });
-    consoleErrorSpy.mockRestore();
+    vi.useRealTimers();useWebsiteBuilderStore.setState({businessName:'Rejected Shop',blocks:[{type:'Hero',props:{headline:'Local draft'}}],status:'draft'});
+    vi.mocked(fetch).mockImplementation(async url=>String(url).endsWith('/publish_draft')?Response.json({error:'rejected'},{status:500}):Response.json({}));
+    render(<WebsiteBuilderPage/>);fireEvent.click(await screen.findByText('Save site draft'));
+    expect(await screen.findByText(/site save was not acknowledged/i)).toBeVisible();
+    expect(screen.queryByText('Success! Your business is live!')).toBeNull();expect(screen.queryByText(/Site saved \(/)).toBeNull();
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -270,7 +210,7 @@ describe('WebsiteBuilderPage', () => {
 
     (vi.mocked(global.fetch)).mockImplementation((url: string) => {
       if (url.includes('publish_draft')) {
-        return Promise.resolve(Response.json({ domain: 'testdomain' }, { status: 200 }));
+        return Promise.resolve(Response.json({ id:'33333333-3333-4333-8333-333333333333',domain: 'testdomain' }, { status: 200 }));
       }
       return Promise.resolve(Response.json({}, { status: 200 }));
     });
@@ -278,76 +218,34 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
+      expect(screen.getByText('Save site draft')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('1-Tap Launch'));
+    fireEvent.click(screen.getByText('Save site draft'));
 
     await waitFor(() => {
-      expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
-      expect(screen.getByText('/bio/testdomain')).toBeInTheDocument();
+      expect(screen.getByText(/Site saved.*33333333/)).toBeInTheDocument();
+      expect(screen.getByText(/publishing has not been verified/)).toBeInTheDocument();
+      expect(screen.queryByText('/bio/testdomain')).toBeNull();
     });
   });
 
-  it('handles load from server state', async () => {
-    (vi.mocked(global.fetch)).mockImplementation((url: string) => {
-      if (url.includes('onboarding/state') && url.includes('/api/v1/')) {
-        return Promise.resolve(Response.json({
-            builderState: {
-              bio: 'Test bio',
-              blocks: [{ type: 'Testimonials', props: {} }],
-              status: 'draft'
-            }
-          }, { status: 200 }));
-      }
-      return Promise.resolve(Response.json({}, { status: 200 }));
-    });
-
-    render(<WebsiteBuilderPage />);
-
-    await waitFor(() => {
-      expect(screen.getAllByTestId('draggable-block').length).toBeGreaterThan(0);
-    });
+  it('loads accepted setup fields from real server state while layouts remain local',async()=>{
+    vi.mocked(fetch).mockImplementation(async url=>String(url).endsWith('/state')?Response.json({wizardState:{businessName:'Server Shop',bio:'Test bio',firstProductName:'Service',firstProductPrice:'20.00'}}):Response.json({}));
+    render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');
+    act(()=>useWebsiteBuilderStore.setState({wizardStep:2}));
+    expect(screen.getByDisplayValue('Server Shop')).toBeVisible();expect(screen.getByDisplayValue('Test bio')).toBeVisible();
+    expect(useWebsiteBuilderStore.getState()).toEqual(expect.objectContaining({productName:'Service',productPrice:'20.00',blocks:[]}));
   });
 
-  it('handles sync back to server state on change', async () => {
-    useWebsiteBuilderStore.setState({ status: 'idle' });
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/v1/onboarding/intake') {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            business_name: 'Bakery From Intake',
-            business_type: 'Bakery',
-            initial_products: [{ name: 'Cake', price: '20.00' }],
-            categories: ['physical'],
-          }),
-        });
-      }
-      if (url === '/api/v1/onboarding/start') {
-        return Promise.resolve({ ok: true, json: async () => ({ organization_id: 'org-1' }) });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-    render(<WebsiteBuilderPage />);
-
-    await waitFor(() => { expect(global.fetch).toHaveBeenCalled(); });
-
-    // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
-    fireEvent.click(screen.getByText('Instant Build'));
-    fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Next'));
-
-    // Status changes to 'generating', wait for it
-    await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/start', expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"company_name":"Bakery From Intake"')
-      }));
-    });
+  it('syncs accepted setup fields through the owner-bound gate after an edit',async()=>{
+    vi.useRealTimers();vi.mocked(fetch).mockImplementation(async(_url,options)=>options?.method==='POST'?new Response(null,{status:204}):Response.json({}));
+    render(<WebsiteBuilderPage/>);await screen.findByText('Your business, live in minutes.');act(()=>useWebsiteBuilderStore.setState({wizardStep:2}));
+    fireEvent.change(screen.getByPlaceholderText('What is your business called?'),{target:{value:'Bakery From Edit'}});
+    await waitFor(()=>expect(vi.mocked(fetch).mock.calls.some(([url,options])=>url==='/api/v1/onboarding/state'&&options?.method==='POST')).toBe(true),{timeout:2000});
+    const call=vi.mocked(fetch).mock.calls.find(([url,options])=>url==='/api/v1/onboarding/state'&&options?.method==='POST')!;
+    expect(JSON.parse(String(call[1]?.body))).toEqual(expect.objectContaining({wizardState:expect.objectContaining({businessName:'Bakery From Edit'})}));
+    expect(new Headers(call[1]?.headers).get('x-ohc-expected-user')).toBe('builder-user');expect(new Headers(call[1]?.headers).get('x-ohc-expected-tenant')).toBe('builder-tenant');
+    expect(await screen.findByText(/Setup details saved/)).toBeVisible();
   });
 });

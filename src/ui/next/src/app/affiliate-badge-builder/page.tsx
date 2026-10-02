@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -7,7 +8,7 @@ export default function AffiliateBadgeBuilderPage() {
   const [tenantId, setTenantId] = useState('my-store');
   const [theme, setTheme] = useState('dark');
   const [text, setText] = useState('Powered by OmniSolo');
-  const [copied, setCopied] = useState(false);
+
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
@@ -40,11 +41,8 @@ export default function AffiliateBadgeBuilderPage() {
   ${text}
 </a>`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(embedCode);
+  const handleCopy = () => { void clipboard.copy(embedCode); };
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
@@ -89,6 +87,7 @@ export default function AffiliateBadgeBuilderPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => setTheme('dark')}
+                    aria-pressed={theme === 'dark'}
                     className={`py-3 px-4 rounded-xl border-2 transition-all font-medium flex items-center justify-center gap-2 ${theme === 'dark' ? 'border-gray-900 bg-gray-50 text-gray-900' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}
                   >
                     <div className="w-4 h-4 rounded-full bg-gray-900 border border-gray-700"></div>
@@ -96,6 +95,7 @@ export default function AffiliateBadgeBuilderPage() {
                   </button>
                   <button
                     onClick={() => setTheme('light')}
+                    aria-pressed={theme === 'light'}
                     className={`py-3 px-4 rounded-xl border-2 transition-all font-medium flex items-center justify-center gap-2 ${theme === 'light' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}
                   >
                     <div className="w-4 h-4 rounded-full bg-white border border-gray-300"></div>
@@ -103,6 +103,7 @@ export default function AffiliateBadgeBuilderPage() {
                   </button>
                   <button
                     onClick={() => setTheme('indigo')}
+                    aria-pressed={theme === 'indigo'}
                     className={`py-3 px-4 rounded-xl border-2 transition-all font-medium flex items-center justify-center gap-2 ${theme === 'indigo' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}
                   >
                     <div className="w-4 h-4 rounded-full bg-indigo-600"></div>
@@ -167,10 +168,12 @@ export default function AffiliateBadgeBuilderPage() {
               </pre>
               <button
                 onClick={handleCopy}
+                disabled={clipboard.state === 'pending'}
                 className="absolute top-4 right-4 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold shadow-sm transition-colors text-gray-900 flex items-center gap-2"
               >
-                {copied ? 'Copied!' : 'Copy Code'}
+                {clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
               </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
             </div>
 
             <div className="mt-6 flex flex-col sm:flex-row items-center gap-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">

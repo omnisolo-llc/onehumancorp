@@ -7,6 +7,7 @@ test.describe('Omnibox Global Search', () => {
 
     // Wait for the app shell to be ready
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('omnibox-readiness')).toHaveAttribute('data-ready', 'true');
 
     // Press Cmd+K (Mac) or Ctrl+K (Windows/Linux)
     const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -17,7 +18,12 @@ test.describe('Omnibox Global Search', () => {
     await expect(omniboxInput).toBeVisible();
 
     // Type a query
+    const searchResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/search'
+      && new URL(response.url()).searchParams.get('q') === 'John');
     await omniboxInput.fill('John');
+    const response = await searchResponse;
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, results: expect.any(Array) });
 
     // Wait for the search results or empty state to appear
     // We'll check for the placeholder indicating search finished or results exist
@@ -29,6 +35,7 @@ test.describe('Omnibox Global Search', () => {
   test('should dismiss when pressing Escape', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('omnibox-readiness')).toHaveAttribute('data-ready', 'true');
 
     const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
     await page.keyboard.press(`${modifier}+KeyK`);

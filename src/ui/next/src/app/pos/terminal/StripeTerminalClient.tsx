@@ -2,14 +2,15 @@
 
 
 import { errorMessage } from '@/lib/errors';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { loadStripeTerminal, type Terminal, type Reader } from '@stripe/terminal-js';
 import '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
 import { WalkthroughTarget } from '../../../components/Walkthrough';
 
 interface StripeTerminalClientProps {
-  onSuccess?: () => void;
+  onSuccess?: (amount: number) => void;
+  onQueued?: (amount: number) => void;
   cart?: import("@/lib/business-records").CartItem[];
   amount: number;
   productId: string;
@@ -18,15 +19,24 @@ interface StripeTerminalClientProps {
   onOptimisticRollback?: () => void;
 }
 
-export default function StripeTerminalClient({ amount, productId, cart, tenantId, onOptimisticReserve, onOptimisticRollback, onSuccess }: StripeTerminalClientProps) {
+export default function StripeTerminalClient({ amount, productId, cart, tenantId, onOptimisticReserve, onOptimisticRollback, onSuccess, onQueued }: StripeTerminalClientProps) {
   const [terminal, setTerminal] = useState<Terminal | null>(null);
   const [discoveredReaders, setDiscoveredReaders] = useState<Reader[]>([]);
   const [connectedReader, setConnectedReader] = useState<Reader | null>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [reserving, setReserving] = useState(false);
+  const [offlineQueued, setOfflineQueued] = useState(false);
   const [sessionId] = useState<string | null>(null);
   const [pendingReconciliation, setPendingReconciliation] = useState<{ product_id: string; shortage: number }[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string | null>('tap');
+  const mounted = useRef(false);
+  const offlineAttempt = useRef(0);
+  const offlinePending = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; offlineAttempt.current += 1; };
+  }, []);
 
 
 
@@ -100,6 +110,39 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
   };
 
+  const queueOfflineSale = async (type: 'tap_to_pay' | 'cash_sale') => {
+    if (offlinePending.current || offlineQueued) return;
+    offlinePending.current = true;
+    const attempt = ++offlineAttempt.current;
+    const current = () => mounted.current && offlineAttempt.current === attempt;
+    const failure = type === 'cash_sale' ? 'Failed to save offline cash sale.' : 'Failed to save offline payment.';
+    setReserving(true);
+    setStatus(type === 'cash_sale' ? 'Saving offline cash sale...' : 'Processing offline payment...');
+    const payloads = cart?.length ? cart.map(item => ({
+      amount_cents: item.product.price_cents * item.quantity,
+      product_id: item.product.id,
+      quantity: item.quantity,
+    })) : [{ amount_cents: amount, product_id: productId || 'custom-charge', quantity: 1 }];
+    try {
+      await MutationService.getInstance().executeMutationBatch(
+        type, payloads,
+        () => { if (current()) onOptimisticReserve?.(); },
+        () => { if (current()) onOptimisticRollback?.(); },
+      );
+      if (!current()) return;
+      setOfflineQueued(true);
+      setStatus(type === 'cash_sale' ? 'Saved Offline - Will sync when connected' : 'Payment queued offline. Will sync when network is restored.');
+      onQueued?.(amount);
+    } catch {
+      if (current()) setStatus(failure);
+    } finally {
+      if (current()) {
+        offlinePending.current = false;
+        setReserving(false);
+      }
+    }
+  };
+
   const processPayment = async () => {
     if (!terminal && (typeof window !== 'undefined' && navigator.onLine)) {
       setStatus('Terminal not ready.');
@@ -107,50 +150,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
 
     if (typeof window !== 'undefined' && !navigator.onLine) {
-       // Offline Mode Payment Enqueue
-       setStatus('Processing offline payment...');
-
-       if (cart && cart.length > 0) {
-           cart.forEach(item => {
-               MutationService.getInstance().executeMutation(
-                   'tap_to_pay',
-                   {
-                       amount_cents: item.product.price_cents * item.quantity,
-                       product_id: item.product.id,
-                       quantity: item.quantity,
-                   },
-                   () => {
-                       if (onOptimisticReserve) onOptimisticReserve();
-                   },
-                   () => {
-                       if (onOptimisticRollback) onOptimisticRollback();
-                       setStatus('Failed to save offline payment.');
-                   }
-               );
-           });
-       } else {
-           MutationService.getInstance().executeMutation(
-               'tap_to_pay',
-               {
-                   amount_cents: amount,
-                   product_id: productId || 'custom-charge',
-                   quantity: 1,
-               },
-               () => {
-                   if (onOptimisticReserve) onOptimisticReserve();
-               },
-               () => {
-                   if (onOptimisticRollback) onOptimisticRollback();
-                   setStatus('Failed to save offline payment.');
-               }
-           );
-       }
-
-       setTimeout(() => {
-         setStatus('Payment saved offline. Will sync when network is restored.');
-         if (onSuccess) onSuccess();
-       }, 1500);
-       return;
+      await queueOfflineSale('tap_to_pay');
+      return;
     }
 
     setStatus('Waiting for card tap...');
@@ -189,16 +190,17 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         setStatus('Payment failed: ' + processRes.error.message);
         if (onOptimisticRollback) onOptimisticRollback();
       } else {
-        setStatus('Payment successful! Capturing...');
+        setStatus('Payment authorized. Capturing...');
         try {
             const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ payment_intent_id: res.paymentIntent.id, product_id: productId, lock_id: lockId, amount_cents: amount })
             });
-            if (captureRes.ok) {
+            const captured = await captureRes.json();
+            if (captureRes.ok && captured.success === true && captured.status === 'succeeded') {
                 setStatus('Payment successful!');
-                if (onSuccess) onSuccess();
+                if (mounted.current) onSuccess?.(amount);
             } else {
                 setStatus('Failed to capture intent');
             }
@@ -211,46 +213,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
   const processCashSale = async () => {
      if (typeof window !== 'undefined' && !navigator.onLine) {
-         if (cart && cart.length > 0) {
-             cart.forEach(item => {
-                MutationService.getInstance().executeMutation(
-                    'cash_sale',
-                    {
-                        amount_cents: item.product.price_cents * item.quantity,
-                        product_id: item.product.id,
-                        quantity: item.quantity
-                    },
-                    () => {
-                        if (onOptimisticReserve) onOptimisticReserve();
-                    },
-                    () => {
-                        if (onOptimisticRollback) onOptimisticRollback();
-                        setStatus('Failed to save offline cash sale.');
-                    }
-                );
-             });
-         } else {
-             MutationService.getInstance().executeMutation(
-                 'cash_sale',
-                 {
-                     amount_cents: amount,
-                     product_id: productId || 'custom-charge',
-                     quantity: 1
-                 },
-                 () => {
-                     if (onOptimisticReserve) onOptimisticReserve();
-                 },
-                 () => {
-                     if (onOptimisticRollback) onOptimisticRollback();
-                     setStatus('Failed to save offline cash sale.');
-                 }
-             );
-         }
-         setTimeout(() => {
-           setStatus('Saved Offline - Will sync when connected');
-           if (onSuccess) onSuccess();
-         }, 500);
-         return;
+       await queueOfflineSale('cash_sale');
+       return;
      }
 
      setStatus('Processing cash sale...');
@@ -287,7 +251,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
          }
 
          setStatus('Cash sale recorded.');
-         if (onSuccess) onSuccess();
+         if (mounted.current) onSuccess?.(amount);
      } catch  {
          setStatus('Error processing cash sale');
      }
@@ -409,7 +373,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                 } finally {
                   setReserving(false);
                 }
-              }} id="tap-to-pay-btn" disabled={reserving} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+              }} id="tap-to-pay-btn" disabled={reserving || offlineQueued} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                 {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
               </button>
             </div>
@@ -434,7 +398,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                  } finally {
                    setReserving(false);
                  }
-               }} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+               }} disabled={reserving || offlineQueued} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                  {reserving ? 'Processing...' : `Record Offline Cash Sale ${(amount / 100).toFixed(2)}`}
                </button>
             </div>
@@ -455,7 +419,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    });
                    if (res.ok) {
                      setStatus('Link Sent Successfully');
-                     setTimeout(() => { if (onSuccess) onSuccess(); }, 1500);
+                     setTimeout(() => { if (mounted.current) onSuccess?.(amount); }, 1500);
                    } else {
                      setStatus('Failed to send link');
                    }

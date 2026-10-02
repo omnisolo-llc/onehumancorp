@@ -1,12 +1,12 @@
 import { Pool } from "pg";
+import { verifiedFixtureDatabaseUrl } from "../../scripts/e2e-fixture-database.mjs";
 
 // Importing a browser spec must not connect to a database or prevent --list.
 // Require the isolated test database at the first actual query, not discovery.
 let pool: Pool | undefined;
 function testPool(): Pool {
   if (pool) return pool;
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is required for database-backed E2E tests.");
+  const databaseUrl = verifiedFixtureDatabaseUrl();
   pool = new Pool({ connectionString: databaseUrl, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000 });
   return pool;
 }
@@ -16,6 +16,23 @@ export async function e2eDbQuery(query: string, values?: unknown[]) {
   try {
     const result = await client.query(query, values);
     return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+// One guarded connection owns the entire fixture transaction. A partial seed
+// must roll back before this pooled connection can serve another test.
+export async function e2eDbTransaction<T>(operation: (query: typeof e2eDbQuery) => Promise<T>): Promise<T> {
+  const client = await testPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await operation(async (query, values) => (await client.query(query, values)).rows);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
   } finally {
     client.release();
   }

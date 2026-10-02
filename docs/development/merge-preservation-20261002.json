@@ -1,0 +1,99 @@
+{
+  "head": "8d381ec2482cd7d0265c539ad4f8a28fcec567af",
+  "checks": {
+    "builder_generation_extension_retained": true,
+    "publication_router_after_protected_auth": true,
+    "startup_deterministic_token_absent": true,
+    "workflow_57_gate": true,
+    "receipt_40_gate": true,
+    "publication_81_gate": true,
+    "receipt_sqlite_lifecycle_retained": true,
+    "original_chat_migration_retained": true
+  },
+  "resolutions": [
+    {
+      "commit": "523909e",
+      "source_commit": "3c3c69a",
+      "overlap": [
+        ".github/workflows/ci.yml",
+        "scripts/focused_ci_gate.py",
+        "scripts/test_focused_ci_gate.py",
+        "docs/development/native-build.md"
+      ],
+      "retained": [
+        "all preexisting required jobs and guards",
+        "new PostgreSQL receipt gate and locked host prefetch",
+        "old54 workflow cases plus3 RPC cases; floor57"
+      ],
+      "deliberate_removals": []
+    },
+    {
+      "commit": "25100e6",
+      "source_commit": "6645a202",
+      "overlap": [
+        "src/server/lib.rs"
+      ],
+      "retained": [
+        "existing builder route",
+        "publication API wiring",
+        "GenerationContext Extension for real configured provider draft generation"
+      ],
+      "deliberate_removals": [
+        "synthetic successful generation outputs"
+      ]
+    },
+    {
+      "commit": "4523344",
+      "source_commit": "1d408ae",
+      "overlap": [
+        "src/server/lib.rs",
+        ".github/workflows/ci.yml",
+        "scripts/focused_ci_gate.py"
+      ],
+      "retained": [
+        "strict owner authentication within publication API",
+        "anonymous reviewed published reads outside global bearer route layer",
+        "GenerationContext on builder router",
+        "all previous focused gate inventories"
+      ],
+      "deliberate_removals": [
+        "accidental global authentication of public immutable pages"
+      ]
+    },
+    {
+      "commit": "bcc8780",
+      "source_commit": "ff357ad",
+      "overlap": [
+        "scripts/production-readiness-contract",
+        "pricing and growth routes"
+      ],
+      "retained": [
+        "real persisted paid plan behavior",
+        "billing APIs",
+        "all7 prior unavailable capability assertions plus3 growth regressions"
+      ],
+      "deliberate_removals": [
+        "invented savings",
+        "share-click permanent Pro grants",
+        "fabricated checkout URLs/coupons"
+      ]
+    },
+    {
+      "commit": "8d381ec",
+      "source_commit": "1785abcd",
+      "overlap": [],
+      "retained": [
+        "complete dashboard control inventory",
+        "real mutations and independently seeded records",
+        "exact current signed owner checks"
+      ],
+      "deliberate_removals": [
+        "reuse of mutated backend state between independent control cases"
+      ]
+    }
+  ],
+  "limitations": [
+    "Local dependency installs differ from maintained locks; hosted fresh locked acceptance required.",
+    "No feature-complete or all-tests-pass claim. Full browser issues and active capability work remain tracked."
+  ]
+}

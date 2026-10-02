@@ -65,18 +65,20 @@ describe('ViralCouponUnlockPage', () => {
     expect(codeDisplay).toBeDefined();
 
     // Check if shares update
-    expect(screen.getByText('5 Shares')).toBeDefined();
-    expect(screen.getByText('1 / 5')).toBeDefined();
+    expect(screen.getByText('Configured target: 5 shares')).toBeVisible();
+    expect(screen.getByText(/Share progress is unavailable/)).toBeVisible();
+    expect(screen.queryByText('1 / 5')).toBeNull();
   });
 
-  it('copies link to clipboard', async () => {
+  it('holds copying while no coupon publication exists', async () => {
     render(<ViralCouponUnlockPage />);
 
     const copyBtn = screen.getByRole('button', { name: 'Copy Link' });
     fireEvent.click(copyBtn);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Copied!' })).toBeDefined();
+    expect(copyBtn).toBeDisabled();
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Copied!' })).toBeNull();
   });
 
   it('navigates back to dashboard', () => {

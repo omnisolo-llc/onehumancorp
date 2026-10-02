@@ -23,7 +23,7 @@ export interface AgentActionCardProps {
     approved: boolean,
     editContent?: string,
     event_source?: string,
-  ) => void | Promise<void>;
+  ) => void | boolean | Promise<void | boolean>;
 }
 
 export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queuedActionIds, editingId, editContent, setEditingId, setEditContent, handleDecision: rawHandleDecision }) => {
@@ -43,7 +43,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
         setIsApproved(true);
       }
       setLoadingAction(actionName || (approved ? "approve" : "dismiss"));
-      await rawHandleDecision(id, approved, editContentValue, event_source);
+      const accepted = await rawHandleDecision(id, approved, editContentValue, event_source);
+      if (accepted === false) setIsApproved(false);
     } catch (e) {
       console.error("Decision failed", e);
       setIsApproved(false);
@@ -75,6 +76,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
   const parsedContext = safeJsonParse(approval.context_payload);
   const parsedDirectPayload = safeJsonParse(approval.payload);
   const actionPayload = Object.keys(parsedProposed).length > 0 ? parsedProposed : (Object.keys(parsedDirectPayload).length > 0 ? parsedDirectPayload : parsedContext);
+  const isDailyPrepChecklist = parsedProposed.action_type === "Daily Prep Checklist"
+    || parsedContext.feature_type === "daily_prep_checklist"
+    || actionPayload.feature_type === "daily_prep_checklist";
   const structuredContext = typeof actionPayload.context === "object" && actionPayload.context !== null ? actionPayload.context : {};
 
   if (
@@ -200,7 +204,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 approval.proposed_action?.action_type ||
                 approval.event_source}
         </h3>
-        {(actionPayload?.context ||
+        {(isDailyPrepChecklist || actionPayload?.context ||
           actionPayload
             ?.remaining_stock !== undefined ||
           actionPayload
@@ -1239,10 +1243,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                   }
                 </div>
               </>
-            ) : approval.proposed_action?.action_type ===
-                "Daily Prep Checklist" ||
-              approval.context_payload?.feature_type ===
-                "daily_prep_checklist" ? (
+            ) : isDailyPrepChecklist ? (
               <div className="flex flex-col sm:flex-row gap-3 w-full">
                 <button
                   onClick={() =>
@@ -2241,7 +2242,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
               Dismiss
             </button>
           </div>
-        ) : actionPayload
+        ) : isDailyPrepChecklist || actionPayload
             ?.feature_type === "review" ||
           actionPayload
             ?.feature_type === "order" ||

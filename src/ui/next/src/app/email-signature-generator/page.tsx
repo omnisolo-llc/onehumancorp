@@ -1,5 +1,6 @@
 'use client';
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -18,8 +19,8 @@ export default function EmailSignatureGeneratorPage() {
   const [themeColor, setThemeColor] = useState('#0066FF');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('demo');
+  const clipboard = useClipboardFeedback(JSON.stringify({ name, title, company, phone, email, website, themeColor, removeBranding, tenant }));
 
   React.useEffect(() => {
     const tid = localStorage.getItem('business_display_name');
@@ -27,19 +28,8 @@ export default function EmailSignatureGeneratorPage() {
   }, []);
 
   const handleCopy = () => {
-    const signatureHtml = document.getElementById('signature-preview')?.innerHTML;
-    if (signatureHtml) {
-      const blob = new Blob([signatureHtml], { type: 'text/html' });
-      const data = [new ClipboardItem({ 'text/html': blob })];
-      navigator.clipboard.write(data).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }).catch(err => {
-        console.error('Failed to copy: ', err);
-        // Fallback for some browsers
-        navigator.clipboard.writeText(signatureHtml);
-      });
-    }
+    const signatureHtml = document.getElementById('signature-preview')?.innerHTML || '';
+    void clipboard.copy(signatureHtml, { html: true });
   };
 
   return (
@@ -130,6 +120,7 @@ export default function EmailSignatureGeneratorPage() {
                             <button
                                 key={color}
                                 onClick={() => setThemeColor(color)}
+                                aria-pressed={themeColor === color}
                                 className={`w-8 h-8 rounded-full border-2 transition-transform ${themeColor === color ? 'border-gray-400 scale-110' : 'border-transparent hover:scale-105'}`}
                                 style={{ backgroundColor: color }}
                                 aria-label={`Select color ${color}`}
@@ -232,9 +223,10 @@ export default function EmailSignatureGeneratorPage() {
                  <div className="mt-8 flex justify-center">
                     <button
                         onClick={handleCopy}
+                    disabled={clipboard.state === 'pending'}
                         className="px-8 py-4 bg-[#0066FF] hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 text-lg w-full max-w-md"
                     >
-                        {copied ? (
+                        {clipboard.state === 'copied' ? (
                             <>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                                 Copied to Clipboard!
@@ -246,6 +238,7 @@ export default function EmailSignatureGeneratorPage() {
                             </>
                         )}
                     </button>
+                  {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                  </div>
                  <p className="text-center text-sm text-gray-500 mt-4">
                      Paste directly into Gmail, Outlook, Apple Mail, or your favorite email client.

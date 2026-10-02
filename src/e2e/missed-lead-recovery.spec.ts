@@ -18,7 +18,7 @@ test.describe('Missed Lead Recovery Work Triage UI', () => {
             '{"name": "E2E Missed Lead User", "message": "Need a plumber ASAP for a leaky pipe."}',
             '{"draft_reply": "Hi E2E Missed Lead User, sorry for the delay! We''re currently reviewing your request and will get back to you shortly. Did you still need help?"}',
             'PENDING')
-            ON CONFLICT (id) DO NOTHING
+            ON CONFLICT (id) DO UPDATE SET status = 'PENDING', customer_info = EXCLUDED.customer_info, suggested_actions = EXCLUDED.suggested_actions
         `);
     });
 
@@ -26,7 +26,7 @@ test.describe('Missed Lead Recovery Work Triage UI', () => {
         const p = await adminPage(page, context);
 
         // Go to Triage dashboard
-        await p.goto('/ui/triage.html');
+        await p.goto('/ui/triage.html?bypass_cache=true');
 
         // Wait for list to load
         await p.waitForSelector('.app-list-item');
@@ -37,8 +37,8 @@ test.describe('Missed Lead Recovery Work Triage UI', () => {
         await card.click();
 
         // Verify detail UI
-        await expect(p.locator('text=E2E Missed Lead User')).toBeVisible();
-        await expect(p.locator('text=Need a plumber ASAP for a leaky pipe.')).toBeVisible();
+        await expect(p.locator('#triage-detail').getByText('E2E Missed Lead User', { exact: true })).toBeVisible();
+        await expect(p.locator('#triage-detail').getByText('Need a plumber ASAP for a leaky pipe.', { exact: true })).toBeVisible();
 
         // Verify the generated action message
         const editDraft = p.locator('#edit-draft-reply');
@@ -49,10 +49,13 @@ test.describe('Missed Lead Recovery Work Triage UI', () => {
         await expect(approveBtn).toHaveText(/✨ Take Over/);
 
         // Action taken
+        const decision = p.waitForResponse(response => response.url().includes('/triage/action') && response.request().method() === 'POST');
         await approveBtn.click();
 
         // Expected success
-        await expect(p.locator('.action-status.success')).toBeVisible({ timeout: 5000 });
-        await expect(p.locator('.action-status.success')).toHaveText('Approved!');
+        expect((await decision).status()).toBe(200);
+        await expect(card).toBeHidden();
+        const saved = await db.query('SELECT status FROM daily_work_items WHERE id = $1', ['work-missed-lead-1']);
+        expect(saved[0].status).toBe('APPROVED');
     });
 });

@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures';
-import { aiJudgeScore } from './ai-judge';
+import { judgeGeneratedOutput } from './ai-judge.mock-contract';
 
 test.describe('The Promoter Agent', () => {
-  test('generates marketing copy for a new product and allows 1-tap scheduling', async ({ page, loginAs, unlimitedAdminUser }) => {
+  test('generates marketing copy for a new product and allows 1-tap scheduling', async ({ page, loginAs, unlimitedAdminUser }, testInfo) => {
     // 1. Log in as unlimited admin user
     await loginAs(page, unlimitedAdminUser);
 
@@ -45,9 +45,10 @@ test.describe('The Promoter Agent', () => {
     await expect(approveBtn).toHaveText('Scheduled!');
     await expect(approveBtn).toBeDisabled();
 
-    // 9. AI Judge score verification (optional, checking if it really sounds like marketing)
-    // Here we'll just check if the generated text is somewhat coherent for marketing
-    const score = await aiJudgeScore(firstVariantText, 'Is this a coherent social media marketing post for chocolate truffles?');
+    // 9. This historical quality contract requires a real configured judge.
+    // Missing provider evidence must not receive the helper's legacy fallback score.
+    expect(process.env.MINIMAX_API_KEY, 'An actual configured judge is required; missing evidence cannot earn a score').toBeTruthy();
+    const { score } = await judgeGeneratedOutput(testInfo, { output: firstVariantText, rubric: 'Is this a coherent social media marketing post for chocolate truffles?' });
     expect(score).toBeGreaterThan(7);
   });
 });

@@ -19,11 +19,11 @@ test.describe('Onboarding Wizard E2E Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.addInitScript(() => {
-      window.__TAURI__ = {
+      Object.assign(window, { __TAURI__: {
         core: {
           invoke: async () => null
         }
-      };
+      } });
     });
 
     // Clear local storage to ensure fresh state
@@ -146,7 +146,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForTimeout(500); // Give it time to render the next step
 
     // Jump straight to the name step to test validation
-    await page.evaluate(() => { (window as Window & { goToStep: (step: string, forward: boolean) => void }).goToStep('step-name', false) });
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-name', false) });
 
     const nextButton = page.locator('#step-name .next-step-btn');
     await nextButton.click();
@@ -173,7 +173,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForTimeout(500); // Give it time to render the next step
 
     // Jump straight to the name step to test validation
-    await page.evaluate(() => { (window as Window & { goToStep: (step: string, forward: boolean) => void }).goToStep('step-name', false) });
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-name', false) });
 
     const nameInput = page.locator('#business-name');
     await nameInput.fill("ABC");

@@ -34,6 +34,7 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
@@ -70,12 +71,14 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
       if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
         };
       }
@@ -114,6 +117,7 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
@@ -140,8 +144,9 @@ describe('PricingPage', () => {
     });
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalled();
-      expect(alertMock).toHaveBeenCalledWith('Failed to initiate upgrade. Please try again.');
+      expect(screen.getByRole('alert')).toHaveTextContent('Checkout is unavailable. Your plan has not changed. Please try again.');
+      expect(window.location.href).toBe('');
+      expect(alertMock).not.toHaveBeenCalled();
     });
 
     alertMock.mockRestore();
@@ -175,12 +180,14 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
       if (url.includes('/api/v1/billing/create-billing-portal-session') && options?.method === 'POST') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ url: mockPortalUrl }),
         };
       }
@@ -232,6 +239,7 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
@@ -271,6 +279,7 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Business' }),
         };
       }
@@ -295,12 +304,14 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
       if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
         };
       }
@@ -340,12 +351,14 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
       if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
         };
       }
@@ -405,6 +418,7 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
@@ -447,6 +461,7 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
@@ -476,8 +491,9 @@ describe('PricingPage', () => {
     });
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalled();
-      expect(alertMock).toHaveBeenCalledWith('Failed to initiate upgrade. Please try again.');
+      expect(screen.getByRole('alert')).toHaveTextContent('Checkout is unavailable. Your plan has not changed. Please try again.');
+      expect(window.location.href).toBe('');
+      expect(alertMock).not.toHaveBeenCalled();
     });
 
     alertMock.mockRestore();
@@ -489,6 +505,7 @@ describe('PricingPage', () => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({ current_plan: 'Free' }),
         };
       }

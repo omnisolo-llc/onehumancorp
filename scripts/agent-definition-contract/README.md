@@ -1,0 +1,22 @@
+# Durable agent definition contract
+
+Run `OHC_AGENT_DEFINITION_TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5432/ohc_agent_definition_test python3 scripts/focused_ci_gate.py agent-definition-contract` against an explicitly owned disposable PostgreSQL service. The runner rejects non-loopback IPs, URL options and database names outside ASCII `ohc_*_test` before invoking Cargo or opening a connection. The fixture repeats validation before its first connection. Missing prerequisites fail the gate.
+
+The fixture creates unique schemas and restricted `LOGIN NOSUPERUSER NOBYPASSRLS` roles. Its admin connection must be allowed to create those disposable objects. The existing setup/OIDC writers also require the existing `ohc_bypassrls` migration role. The fixture creates that role only if absent, checks that it is `NOLOGIN BYPASSRLS`, grants access only within the disposable schema, and removes it if it created it. The restricted marketplace role is never a member. This models an existing auth-writer prerequisite; it adds no production grant. Hosted CI uses the disposable SCRAM service.
+
+The gate imports the complete production store, Axum router, blueprint, database connection and portable migration modules. It uses real signed Store tokens and strict bearer middleware, the real canonical SeaORM auth repository, the complete setup functions, and the exact CLI bootstrap function. It extracts the unchanged PostgreSQL pool/reset helper and original legacy-role migration regression. Minimal adapter types omit unrelated server fields; no agent runtime, provider, tool grant or workflow dispatch is involved.
+
+The 49-case inventory covers PostgreSQL and SQLite storage, actual restricted-login FORCE RLS, file close/reopen, independent connection pools, exact/concurrent request replay, commit rollback and response-loss recovery, current authority, role revocation and deletion, immutable public content, private installation snapshots, cursors and byte bounds, and actual setup, CLI, password, OIDC, browser-owner writable-CTE and migration writer paths. Adversarial cases include forged authority values, temporary-table shadowing, disabled SQLite foreign keys, stale recreated keys, inherited repeatable-read sessions, and a caller with a prior user-row lock. The last case deliberately accepts a surfaced deadlock as fail-closed; the advisory gate does not eliminate all lock inversions.
+
+Dependency versions/checksums match the repository Cargo.lock. Generated imports, the derived lock and source manifest are ignored. The runner fingerprints production modules, imported crates, schemas, protobuf inputs and gate wiring before and after execution. Missing source, dependency drift, zero/ignored discovery, reduced inventory and failures are fatal. The wrapper retains execution logs and a failed or passed result. Successful runs also retain the source manifest; source drift is a failure. Six additional SQLite-only authority checks, three preflight guards and three mount guards run before Cargo.
+
+The gate does not certify the full server executable, browser/BFF pairing, a MySQL backend, external registry publication or installed-agent execution. `installed_inactive` is a persisted definition snapshot only. Receipt recovery can prove an existing commit; a missing receipt cannot resolve an in-flight operation. Commit rollback, a lost response and concurrent replay are exercised; a proxy-induced transport failure during COMMIT is not simulated.
+
+The store uses the existing AppDatabase/SeaORM connection and transaction boundary.
+The outer route adapts the already configured pool; it never reconnects or creates
+an alternate in-memory store. PostgreSQL explicitly selects READ COMMITTED before
+context and authority gates. SQLite acquires write intent with a zero-row UPDATE
+before any read snapshot inside SeaORM's deferred transaction; the independent
+pool concurrency and rollback cases exercise this serialization. Foreign keys are
+still verified on the actual transaction connection. No transaction auto-retry is
+introduced. The unchanged backend-neutrality contract must also pass.

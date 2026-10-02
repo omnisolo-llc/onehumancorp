@@ -1,8 +1,7 @@
 import { test, expect } from './fixtures';
-import { adminUser } from './fixtures';
 
 test.describe('Growth Agent Milestone', () => {
-  test('triggers milestone and displays "Share & Earn" card in feed', async ({ page, request, loginAs }) => {
+  test('triggers milestone and displays "Share & Earn" card in feed', async ({ page, request, loginAs, adminUser }) => {
     // 1. Log in
     await loginAs(page, adminUser);
 

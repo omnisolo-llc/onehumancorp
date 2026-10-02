@@ -16,7 +16,8 @@ export default function EventRSVPBuilderPage() {
   const [eventDate, setEventDate] = useState('Saturday, August 15th @ 12 PM');
   const [eventLocation, setEventLocation] = useState('Main Street Plaza');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [hideBranding, setHideBranding] = useState(false);
+  const [requestedBrandingRemoval, setHideBranding] = useState(false);
+  const hideBranding = requestedBrandingRemoval && hasPro;
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -111,12 +112,14 @@ export default function EventRSVPBuilderPage() {
                         <div className="flex gap-2 p-1 bg-gray-100 rounded-lg border border-gray-200 min-h-[44px]">
                             <button
                                 onClick={() => setTheme('light')}
+                                aria-pressed={theme === 'light'}
                                 className={`flex-1 py-1 px-3 rounded-md text-sm font-medium transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                             >
                                 Light
                             </button>
                             <button
                                 onClick={() => setTheme('dark')}
+                                aria-pressed={theme === 'dark'}
                                 className={`flex-1 py-1 px-3 rounded-md text-sm font-medium transition-all ${theme === 'dark' ? 'bg-gray-800 shadow-sm text-white' : 'text-gray-500 hover:text-gray-700'}`}
                             >
                                 Dark

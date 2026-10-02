@@ -79,7 +79,7 @@ describe("authenticated quote routes", () => {
       [expect.any(Request), "/api/v1/quotes/quote-7/accept", {
         forwardQuery: false,
         requestContentType: "application/json",
-        suppressRequestBody: true,
+        transformRequestBody: quoteBackend.validateQuoteAcceptanceBody,
       }],
       [expect.any(Request), "/api/v1/quotes/quote-7/approve", {
         backendMethod: "PATCH",

@@ -58,7 +58,7 @@ describe('Testimonial Widget Generator', () => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
             expect.stringContaining('<iframe src="https://cloud.omnisolo.co/api/v1/growth/testimonial/embed')
         );
-        expect(screen.getByText('Copied!')).toBeDefined();
+        expect(await screen.findByText('Copied!')).toBeDefined();
 
         const closeButton = screen.getByText('Close');
         fireEvent.click(closeButton);

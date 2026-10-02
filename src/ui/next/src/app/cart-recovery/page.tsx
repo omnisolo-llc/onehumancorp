@@ -14,7 +14,6 @@ export default function CartRecoveryPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const { claimTrial, claimError } = useProPlan();
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [trialStatus, setTrialStatus] = useState('');
   const [draftError, setDraftError] = useState<string | null>(null);
 
   const generateDraft = async () => {
@@ -51,13 +50,7 @@ export default function CartRecoveryPage() {
   };
 
   const claimTrialExtension = async () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just set up automated abandoned cart recovery for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
-    setShowSoftPaywall(false);
-    setTrialStatus('Pro access activated.');
-    await generateDraft();
+    await claimTrial();
   };
 
   return (
@@ -73,7 +66,6 @@ export default function CartRecoveryPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-8">
-        {trialStatus && <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800" role="status">{trialStatus}</p>}
         {claimError && <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{claimError}</p>}
         <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl p-6 shadow-sm">
            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Recover Abandoned Carts</h2>
@@ -211,7 +203,7 @@ export default function CartRecoveryPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to activate Pro
+              Check trial availability
             </button>
           </div>
         </div>

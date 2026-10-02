@@ -1,0 +1,22 @@
+[package]
+name = "ohc-voice-provisioning-gate"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+tracing = "0.1"
+async-trait = "0.1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart", "stream"] }
+uuid = { version = "1", features = ["v4"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

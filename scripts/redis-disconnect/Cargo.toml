@@ -1,0 +1,21 @@
+[package]
+name = "ohc-redis-disconnect-regressions"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = { version = "0.8.1", features = ["ws", "multipart"] }
+futures = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.29.0"
+redis = { version = "0.27.6", features = ["tokio-comp", "connection-manager"] }
+flate2 = "1"
+server_config = { path = "../../src/server/config" }
+server_auth = { path = "../../src/server/auth" }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

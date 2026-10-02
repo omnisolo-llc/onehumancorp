@@ -12,5 +12,5 @@
       "@/*": ["./src/ui/next/src/*"]
     }
   },
-  "include": ["playwright.config.ts", "src/e2e/**/*.ts", "src/ui/next/src/e2e/**/*.ts", "src/ui/next/e2e/**/*.ts"]
+  "include": ["playwright.config.ts", "src/e2e/**/*.ts", "src/ui/next/src/e2e/**/*.ts", "src/ui/next/e2e/**/*.ts", "src/ui/next/tests/e2e/**/*.ts"]
 }

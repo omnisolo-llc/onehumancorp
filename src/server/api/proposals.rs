@@ -48,6 +48,8 @@ pub struct DraftAgentRequest {
 }
 
 const GET_PROPOSAL_SQL: &str = "SELECT * FROM proposals WHERE id = $1 AND tenant_id = $2";
+const LIST_PROPOSALS_SQL: &str =
+    "SELECT * FROM proposals WHERE tenant_id = $1 ORDER BY created_at DESC, id DESC LIMIT 100";
 const GET_LINE_ITEMS_SQL: &str = "SELECT pli.* FROM proposal_line_items pli JOIN proposals p ON p.id = pli.proposal_id WHERE pli.proposal_id = $1 AND p.tenant_id = $2";
 const APPROVE_PROPOSAL_SQL: &str = "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND status = 'DRAFT' AND total_amount_cents > 0 RETURNING *";
 
@@ -140,6 +142,7 @@ where
     PgPool: axum::extract::FromRef<S>,
 {
     Router::new()
+        .route("/", get(list_proposals))
         .route("/draft", post(draft_narrative))
         .route("/intake", post(client_intake))
         .route("/draft_agent", post(draft_agent))
@@ -346,6 +349,27 @@ async fn draft_agent(
     }
 
     (StatusCode::OK, Json(serde_json::json!({"id": proposal_id}))).into_response()
+}
+
+async fn list_proposals(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> axum::response::Response {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return status.into_response(),
+    };
+    match sqlx::query_as::<_, Proposal>(LIST_PROPOSALS_SQL)
+        .bind(tenant_id)
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(proposals) => Json(serde_json::json!({ "proposals": proposals })).into_response(),
+        Err(error) => {
+            tracing::error!("Failed to list proposals: {}", error);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 async fn get_proposal(
@@ -621,6 +645,23 @@ mod tests {
     use tower::ServiceExt;
 
     #[tokio::test]
+    async fn proposal_collection_requires_a_non_blank_organization_before_database_access() {
+        for organization_id in [None, Some("  ")] {
+            let response = narrative_app(organization_id)
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/?tenant_id=another-tenant")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        }
+    }
+
+    #[tokio::test]
     async fn approval_requires_owner_authority_before_database_or_payment_access() {
         let response = narrative_app(Some("tenant-a"))
             .oneshot(
@@ -738,6 +779,9 @@ mod tests {
         router_with_narrative_llm(llm)
             .with_state(pool)
             .layer(Extension(claims(organization_id)))
+            .layer(Extension(Arc::new(
+                crate::services::billing::auditor::CostAuditor::new(Default::default()),
+            )))
     }
 
     #[tokio::test]

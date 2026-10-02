@@ -1,5 +1,5 @@
 import { proxyBackendRequest } from "@/lib/auth/backendTransport";
-import { invalidQuoteId, quoteBackendPath } from "../../quoteBackend";
+import { invalidQuoteId, quoteBackendPath, validateQuoteAcceptanceBody } from "../../quoteBackend";
 
 export async function POST(
   request: Request,
@@ -14,6 +14,6 @@ export async function POST(
   return proxyBackendRequest(request, path, {
     forwardQuery: false,
     requestContentType: "application/json",
-    suppressRequestBody: true,
+    transformRequestBody: validateQuoteAcceptanceBody,
   });
 }

@@ -1,1 +1,4 @@
-export { proxyCurrentBackendPath as GET } from "@/app/api/backendCatchAll";
+export {
+  proxyCurrentBackendPath as GET,
+  proxyCurrentBackendPath as POST,
+} from "@/app/api/backendCatchAll";

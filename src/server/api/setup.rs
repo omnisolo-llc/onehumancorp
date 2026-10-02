@@ -289,9 +289,15 @@ async fn bootstrap_postgres(
         .bind(POSTGRES_BOOTSTRAP_LOCK_ID)
         .execute(&mut *transaction)
         .await?;
-    let admin_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM users AS u CROSS JOIN LATERAL unnest(COALESCE(u.roles, ARRAY[]::TEXT[])) AS role(value) WHERE UPPER(role.value) = $1)",
-    )
+    let portable_roles_exist: bool =
+        sqlx::query_scalar("SELECT to_regclass('identity_user_roles') IS NOT NULL")
+            .fetch_one(&mut *transaction)
+            .await?;
+    let admin_exists: bool = sqlx::query_scalar(if portable_roles_exist {
+        "SELECT EXISTS (SELECT 1 FROM users AS u CROSS JOIN LATERAL unnest(COALESCE(u.roles, ARRAY[]::TEXT[])) AS role(value) WHERE UPPER(role.value) = $1) OR EXISTS (SELECT 1 FROM identity_user_roles WHERE UPPER(role_name) = $1)"
+    } else {
+        "SELECT EXISTS (SELECT 1 FROM users AS u CROSS JOIN LATERAL unnest(COALESCE(u.roles, ARRAY[]::TEXT[])) AS role(value) WHERE UPPER(role.value) = $1)"
+    })
     .bind(crate::auth::ROLE_ADMIN)
     .fetch_one(&mut *transaction)
     .await?;
@@ -329,7 +335,7 @@ async fn bootstrap_postgres(
     sqlx::query(
         "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at) VALUES ($1, $2, $3, $4, ARRAY[$5]::TEXT[], TRUE, $6, $7, $7)",
     )
-    .bind(user_id)
+    .bind(&user_id)
     .bind(&request.username)
     .bind(&request.email)
     .bind(&password_hash)
@@ -338,6 +344,18 @@ async fn bootstrap_postgres(
     .bind(now)
     .execute(&mut *transaction)
     .await?;
+    if portable_roles_exist {
+        // Portable authentication reads this table. Persist its fixed role in
+        // the same transaction as the legacy user and initial tenant.
+        sqlx::query(
+            "INSERT INTO identity_user_roles (user_id, role_name, tenant_id, position) VALUES ($1, $2, $3, 0)",
+        )
+        .bind(&user_id)
+        .bind(crate::auth::ROLE_ADMIN)
+        .bind(&request.organization_id)
+        .execute(&mut *transaction)
+        .await?;
+    }
     transaction.commit().await?;
     Ok(BootstrapOutcome::Created)
 }
@@ -348,9 +366,16 @@ async fn bootstrap_sqlite(
     password_hash_slots: Arc<tokio::sync::Semaphore>,
 ) -> Result<BootstrapOutcome, BootstrapError> {
     let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let admin_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM users AS u JOIN json_each(CASE WHEN json_valid(u.roles) THEN u.roles ELSE '[]' END) AS role WHERE UPPER(CAST(role.value AS TEXT)) = ?)",
+    let portable_roles_exist: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'identity_user_roles')",
     )
+    .fetch_one(&mut *transaction)
+    .await?;
+    let admin_exists: bool = sqlx::query_scalar(if portable_roles_exist {
+        "SELECT EXISTS (SELECT 1 FROM users AS u JOIN json_each(CASE WHEN json_valid(u.roles) THEN u.roles ELSE '[]' END) AS role WHERE UPPER(CAST(role.value AS TEXT)) = ?1) OR EXISTS (SELECT 1 FROM identity_user_roles WHERE UPPER(role_name) = ?1)"
+    } else {
+        "SELECT EXISTS (SELECT 1 FROM users AS u JOIN json_each(CASE WHEN json_valid(u.roles) THEN u.roles ELSE '[]' END) AS role WHERE UPPER(CAST(role.value AS TEXT)) = ?1)"
+    })
     .bind(crate::auth::ROLE_ADMIN)
     .fetch_one(&mut *transaction)
     .await?;
@@ -389,7 +414,7 @@ async fn bootstrap_sqlite(
     sqlx::query(
         "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at) VALUES (?, ?, ?, ?, json(?), TRUE, ?, ?, ?)",
     )
-    .bind(user_id)
+    .bind(&user_id)
     .bind(&request.username)
     .bind(&request.email)
     .bind(&password_hash)
@@ -399,6 +424,16 @@ async fn bootstrap_sqlite(
     .bind(now)
     .execute(&mut *transaction)
     .await?;
+    if portable_roles_exist {
+        sqlx::query(
+            "INSERT INTO identity_user_roles (user_id, role_name, tenant_id, position) VALUES (?, ?, ?, 0)",
+        )
+        .bind(&user_id)
+        .bind(crate::auth::ROLE_ADMIN)
+        .bind(&request.organization_id)
+        .execute(&mut *transaction)
+        .await?;
+    }
     transaction.commit().await?;
     Ok(BootstrapOutcome::Created)
 }

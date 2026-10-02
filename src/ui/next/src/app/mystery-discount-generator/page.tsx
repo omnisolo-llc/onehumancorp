@@ -8,7 +8,8 @@ export default function MysteryDiscountGeneratorPage() {
   const router = useRouter();
   const [tenant, setTenant] = useState('my-store');
   const { hasPro } = useProPlan();
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
 

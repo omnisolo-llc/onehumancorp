@@ -1,3 +1,9 @@
+import {beforeEach as beforeLocks} from 'vitest';
+beforeLocks(() => installOnboardingLocks());
+import {installOnboardingLocks} from './testLocks';
+import { initializeOnboardingDraft, markOnboardingDraftFromServer } from './store';
+import { writeOwnedOnboardingItem } from './draftSession';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import { cleanup } from '@testing-library/react';
 /* @vitest-environment jsdom */
 import { render, screen, waitFor, act } from "@testing-library/react";
@@ -8,6 +14,10 @@ import { TooltipProvider } from "../../components/TooltipRegistry";
 import { beforeEach, describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import userEvent from "@testing-library/user-event";
+
+const receipt = { preparation_id: 'prep-1', status: 'prepared', organization_id: 'org-1', user_id: 'user-1', primary_product_id: 'product-1', reviewed_request: {}, catalog: [{ product_id: 'product-1', name: 'Cake', price: '20', description: '', variants: [] }] };
+const preparedResult = { success: true, ...receipt, preparation: receipt };
+const launchedResult = { success: true, ...receipt, status: 'launched', preparation: { ...receipt, status: 'launched' } };
 
 const mockRouterPush = vi.hoisted(() => vi.fn());
 
@@ -36,8 +46,8 @@ describe("OnboardingWizard", () => {
     return view;
   };
 
-  beforeEach(() => {
-    localStorage.clear();
+  beforeEach(async () => {
+    localStorage.clear(); notifyQueueIdentityChange(); await initializeOnboardingDraft();
     mockRouterPush.mockClear();
     useOnboardingStore.setState({
       step: 1,
@@ -52,7 +62,9 @@ describe("OnboardingWizard", () => {
       isLoading: false,
       error: "",
       startResult: null,
+      firstProductName: "", firstProductPrice: "", skipped: false,
     });
+    markOnboardingDraftFromServer();
 
     global.fetch = vi.fn().mockImplementation(() => {
       return Promise.resolve({
@@ -99,7 +111,7 @@ describe("OnboardingWizard", () => {
     // Mock intake success
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
-        return Promise.resolve({ ok: true, json: async () => ({}) });
+        return Promise.resolve({ ok: true, json: async () => launchedResult });
       }
       if (url === "/api/v1/onboarding/intake") {
         return Promise.resolve({
@@ -222,7 +234,7 @@ describe("OnboardingWizard", () => {
     // Mock intake success
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
-        return Promise.resolve({ ok: true, json: async () => ({}) });
+        return Promise.resolve({ ok: true, json: async () => launchedResult });
       }
       if (url === "/api/v1/onboarding/intake") {
         return Promise.resolve({
@@ -238,7 +250,7 @@ describe("OnboardingWizard", () => {
       if (url === "/api/v1/onboarding/start") {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ message: "Success!" }),
+          json: async () => preparedResult,
         });
       }
       return Promise.resolve({
@@ -314,13 +326,13 @@ describe("OnboardingWizard", () => {
       screen.getByText("Website Template");
     });
 
-    const launchButton = screen.getAllByRole("button", { name: /Approve & Publish/i }).pop()!;
+    const launchButton = screen.getAllByRole("button", { name: /Approve & Complete Setup/i }).pop()!;
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
-      screen.getByText("You're Live!");
-      screen.getByText("maya-bakery.cloud.omnisolo.co");
+      screen.getByText("Setup complete");
+      expect(screen.queryByRole("link", { name: "maya-bakery.cloud.omnisolo.co" })).toBeNull();
     });
 
     const startCall = vi
@@ -342,7 +354,7 @@ describe("OnboardingWizard", () => {
     // Mock intake failure
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
-        return Promise.resolve({ ok: true, json: async () => ({}) });
+        return Promise.resolve({ ok: true, json: async () => launchedResult });
       }
       if (url === "/api/v1/onboarding/intake" || url === "/api/v1/onboarding/start") {
         return Promise.resolve({
@@ -427,13 +439,14 @@ describe("OnboardingWizard", () => {
     act(() => {
       useOnboardingStore.setState({
         step: 3,
+        location: 'Portland, OR', targetAudience: 'Local families',
       });
     });
 
     // Mock start failure
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
       if (url === "/api/v1/onboarding/launch") {
-        return Promise.resolve({ ok: true, json: async () => ({}) });
+        return Promise.resolve({ ok: true, json: async () => launchedResult });
       }
       if (url === "/api/v1/onboarding/intake" || url === "/api/v1/onboarding/start") {
         return Promise.resolve(Response.json(
@@ -453,7 +466,7 @@ describe("OnboardingWizard", () => {
       );
     }
 
-    const launchButton = screen.getAllByRole("button", { name: /Approve & Publish/i }).pop()!;
+    const launchButton = screen.getAllByRole("button", { name: /Approve & Complete Setup/i }).pop()!;
 
     await user.click(launchButton);
 
@@ -585,6 +598,7 @@ describe("OnboardingWizard", () => {
         step: 2,
         businessName: "Valid Name",
         businessType: "Bakery",
+        location: 'Portland, OR', targetAudience: 'Local families',
         categories: ["food"],
         domainChoice: "subdomain",
         firstProductName: "Cake",
@@ -662,32 +676,13 @@ describe("OnboardingWizard", () => {
     });
   });
 
-  it("Step 5: Shows Live Screen with correct links", async () => {
-    const user = userEvent.setup({ delay: null });
-    act(() => {
-      useOnboardingStore.setState({
-        step: 5,
-        startResult: {
-          message: "Your business has been successfully launched.",
-        },
-      });
-    });
-
+  it("Step 5: restores verified completion with workspace links and no invented domain", async () => {
+    global.fetch = vi.fn(async (url) => Response.json(String(url).endsWith('/state') ? { preparation: launchedResult.preparation } : {}));
     await renderOnboardingWizard();
-    if (screen.queryByRole("button", { name: "Start My Business" })) {
-      await user.click(
-        screen.getAllByRole("button", { name: "Start My Business" })[0],
-      );
-    }
-
-    await waitFor(() => {
-      screen.getByText("You're Live!");
-      screen.getByText("Your business has been successfully launched.");
-      expect(
-        screen.getByRole("link", { name: /Open Assistant/i }),
-      ).toHaveAttribute("href", "/assistant");
-      screen.getByRole("link", { name: /Preview Storefront/i });
-    });
+    expect(await screen.findByText('Setup complete')).toBeVisible();
+    expect(screen.getByRole('link', { name: /Open Assistant/i })).toHaveAttribute('href', '/assistant');
+    expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeVisible();
+    expect(screen.queryByRole('link', { name: /cloud.omnisolo.co/ })).toBeNull();
   });
 
   it("retries handleSaveDraft on network failure", async () => {
@@ -881,7 +876,7 @@ describe("OnboardingWizard", () => {
     expect(screen.queryByLabelText("Admin Email")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Admin Password")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Approve & Publish/i }),
+      screen.getByRole("button", { name: /Approve & Complete Setup/i }),
     ).toBeEnabled();
   });
 
@@ -979,10 +974,10 @@ describe("OnboardingWizard", () => {
       fetchCalls.push({ url, options });
 
       if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
-        return Promise.resolve(Response.json({ organization_id: "org_123" }, { status: 200 }));
+        return Promise.resolve(Response.json(preparedResult, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/launch")) {
-        return Promise.resolve(Response.json({}, { status: 200 }));
+        return Promise.resolve(Response.json(launchedResult, { status: 200 }));
       }
       if (typeof url === "string" && url.includes("/api/v1/onboarding/state")) {
         return Promise.resolve(Response.json({}, { status: 200 }));
@@ -1009,16 +1004,18 @@ describe("OnboardingWizard", () => {
     const generateBtn = screen.getAllByRole("button", { name: "Generate Storefront" })[0];
     await user.click(generateBtn);
 
-    await waitFor(() => {
-      expect(screen.queryByText(/You're Live!/i)).toBeInTheDocument();
-    }, { timeout: 4000 });
+    const approve = await screen.findByRole('button', { name: /Approve & Complete Setup/i });
+    expect(fetchCalls.some(call => call.url === '/api/v1/onboarding/launch')).toBe(false);
+    expect(localStorage.getItem('has_onboarded')).toBeNull();
+    await user.click(approve);
+    expect(await screen.findByText('Setup complete')).toBeVisible();
 
     const startZeroClickCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/start_zero_click'));
     expect(startZeroClickCall).toBeDefined();
     expect(startZeroClickCall.url).toBe("/api/v1/onboarding/start_zero_click");
-    expect(startZeroClickCall.options.headers).toEqual({
-      "Content-Type": "application/json",
-    });
+    expect(new Headers(startZeroClickCall.options.headers).get('content-type')).toBe('application/json');
+    expect(new Headers(startZeroClickCall.options.headers).get('x-ohc-expected-user')).toBe('user-1');
+    expect(new Headers(startZeroClickCall.options.headers).get('x-ohc-expected-tenant')).toBe('org-1');
     if (typeof startZeroClickCall?.options?.body !== 'string') throw new Error('Expected JSON instant-build request');
     const startZeroBody = JSON.parse(startZeroClickCall.options.body);
     expect(startZeroBody.prompt).toContain("I consult startups in SF.");
@@ -1026,7 +1023,9 @@ describe("OnboardingWizard", () => {
     const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/launch'));
     expect(launchCall).toBeDefined();
     expect(launchCall.url).toBe("/api/v1/onboarding/launch");
-    expect(launchCall.options.headers).toBeUndefined();
+    expect(new Headers(launchCall.options.headers).get('content-type')).toBe('application/json');
+    expect(new Headers(launchCall.options.headers).get('x-ohc-expected-user')).toBe('user-1');
+    expect(JSON.parse(String(launchCall.options.body))).toEqual({ preparation_id: 'prep-1' });
   });
 
   it("Instant Build: displays error when API fails", async () => {
@@ -1142,14 +1141,15 @@ describe("OnboardingWizard", () => {
   it("Step 3: Passes initial_products from localStorage to /api/v1/onboarding/start", async () => {
     const user = userEvent.setup({ delay: null });
 
-    localStorage.setItem(
-      "onboarding_initial_products",
+    writeOwnedOnboardingItem(
+      "products",
       JSON.stringify([{ name: "Custom AI Product", price: "99" }]),
     );
 
     act(() => {
       useOnboardingStore.setState({
         step: 3,
+        location: 'Portland, OR', targetAudience: 'Local families',
       });
     });
 
@@ -1160,11 +1160,11 @@ describe("OnboardingWizard", () => {
         startRequestPayload = JSON.parse(options.body);
         return Promise.resolve({
           ok: true,
-          json: async () => ({ organization_id: "org_123", status: "started" }),
+          json: async () => preparedResult,
         });
       }
       if (url === "/api/v1/onboarding/launch") {
-        return Promise.resolve({ ok: true, json: async () => ({}) });
+        return Promise.resolve({ ok: true, json: async () => launchedResult });
       }
       if (url === "/api/v1/onboarding/state") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -1177,7 +1177,7 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    const launchButton = await screen.findAllByRole("button", { name: /Approve & Publish/i }).then(els => els[0]);
+    const launchButton = await screen.findAllByRole("button", { name: /Approve & Complete Setup/i }).then(els => els[0]);
     await user.click(launchButton);
 
     await waitFor(() => {
@@ -1186,7 +1186,7 @@ describe("OnboardingWizard", () => {
 
     expect(startRequestPayload).toBeDefined();
     expect(startRequestPayload).toHaveProperty('initial_products', [
-      { name: "Custom AI Product", price: "99" },
+      { name: "Custom AI Product", price: "99", description: "", variants: [] },
     ]);
   });
 
@@ -1329,3 +1329,5 @@ describe("OnboardingWizard", () => {
     }, { timeout: 3000 });
   });
 });
+
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(), readQueueOwner: vi.fn(async () => ({ userId: 'user-1', tenantId: 'org-1' })) }));

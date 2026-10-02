@@ -1,61 +1,36 @@
-import { render,screen,fireEvent } from '@testing-library/react';
-import { describe,it,expect,vi,beforeEach,afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { UnlockProFeaturesWidget } from './UnlockProFeaturesWidget';
 
-// Mock clipboard
-Object.assign(navigator, {
-  clipboard: {
-    writeText: vi.fn(),
-  },
-});
-
+const link = 'https://omnisolo.co/invite/recorded-unlock-test';
+let count = 1;
 describe('UnlockProFeaturesWidget', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    Object.defineProperty(window, 'localStorage', {
-      value: {
-        getItem: vi.fn(() => 'test-tenant'),
-      },
-      writable: true
-    });
-    global.fetch = vi.fn().mockResolvedValue(Response.json({
-        total_invites: 1
-      }, { status: 200 }));
+    localStorage.clear(); count = 1;
+    Object.defineProperty(navigator, 'locks', { value: { request: async (_name: string, _options: unknown, callback: (lock: object) => Promise<void>) => callback({}) } });
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    vi.stubGlobal('fetch', vi.fn(async url => url === '/api/v1/auth/session-identity'
+      ? Response.json({ userId: 'test-owner', tenantId: 'test-tenant', expiresAt: Date.now() + 60_000 })
+      : url === '/api/v1/growth/team-invites/aggregated-metrics' ? Response.json({ total_invites: count })
+        : Response.json({ invite_link: link })));
   });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
   it('renders progress bar and title correctly', async () => {
     render(<UnlockProFeaturesWidget />);
-
     expect(await screen.findByText(/Referral Progress/i)).toBeDefined();
     expect(await screen.findByText(/1 \/ 3 Invites/i)).toBeDefined();
+    expect(screen.getByRole('progressbar', { name: 'Recorded invitation progress' })).toHaveAttribute('aria-valuenow', '1');
   });
-
   it('copies share link to clipboard and updates button state', async () => {
     render(<UnlockProFeaturesWidget />);
-    await screen.findByText(/Referral Progress/i);
-
-    const copyButton = screen.getByText(/Copy Invite Link/i).closest('button');
-    expect(copyButton).toBeDefined();
-
-    fireEvent.click(copyButton!);
-
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('test-tenant')
-    );
-
+    const create = screen.getByRole('button', { name: 'Create Invite Link' });
+    await waitFor(() => expect(create).toBeEnabled()); fireEvent.click(create);
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy Invite Link' }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(link);
     expect(await screen.findByText(/Copied Link!/i)).toBeDefined();
   });
-
   it('shows a reached target without claiming Pro entitlement', async () => {
-    global.fetch = vi.fn().mockResolvedValue(Response.json({
-        total_invites: 3
-      }, { status: 200 }));
-    render(<UnlockProFeaturesWidget />);
-
+    count = 3; render(<UnlockProFeaturesWidget />);
     expect(await screen.findByText(/Invite target reached/i)).toBeDefined();
     expect(screen.getByText(/Billing verification is required/)).toBeDefined();
     expect(screen.queryByText(/Pro Features Unlocked!/i)).toBeNull();

@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test('Verify Customer Context Card appears in Inbox when a known customer is selected', async ({ page, loginAs, unlimitedAdminUser }) => {
   // Navigate and login

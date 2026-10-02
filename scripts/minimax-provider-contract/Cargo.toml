@@ -1,0 +1,29 @@
+[package]
+name = "ohc-minimax-provider-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+async-trait = "0.1"
+axum = "0.8.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+server_auth = { path = "../../src/server/auth" }
+server_common = { path = "../../src/server/common" }
+omnisolo_builtin_agent_core = { path = "../../src/agents/builtin/core" }
+omnisolo_builtin_agent_llm = { path = "../../src/agents/builtin/llm" }
+tower = { version = "0.5", features = ["util"] }
+server_pricing = { path = "../../src/server/pricing" }
+server_harness = { path = "../../src/server/harness" }
+tokio-stream = { version = "0.1", features = ["full"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

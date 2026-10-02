@@ -62,14 +62,15 @@ describe('ViralJobBoardGeneratorPage', () => {
     expect(descDisplays.length).toBeGreaterThan(0);
   });
 
-  it('copies link to clipboard', async () => {
+  it('holds copying while no job board publication exists', async () => {
     render(<ViralJobBoardGeneratorPage />);
 
     const copyBtn = screen.getByRole('button', { name: 'Copy Link' });
     fireEvent.click(copyBtn);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Copied!' })).toBeDefined();
+    expect(copyBtn).toBeDisabled();
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Copied!' })).toBeNull();
   });
 
   it('navigates back to dashboard', () => {

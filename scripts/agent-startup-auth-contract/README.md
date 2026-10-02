@@ -1,0 +1,7 @@
+# Actual startup authentication contract
+
+The generator extracts the exact authentication setup between the run_server TLS setup and database initialization. It imports the real builtin-agent auth module. Integration tests execute a child binary compiled without cfg(test), so the production auth-disable prohibition is exercised even when its environment says test or development. Explicit credentials are synthetic test fixtures only; no real credential is created, persisted or transmitted.
+
+Seven subprocess cases require missing/invalid standalone configuration to fail, cluster mode to leave credentials untouched, configured credentials to be preserved, wrong tokens to fail, and unimplemented SPIFFE authentication to remain closed. The auth module’s existing unit tests remain part of the complete workspace suite; this focused gate runs all seven subprocess integration cases. This does not certify full-server startup, network exposure or deployment configuration.
+
+Run bash scripts/agent-startup-auth-contract/run.sh. The focused lock must match the root lock, tests run offline, and source fingerprints must stay unchanged. Full Cargo and deployment acceptance remain required.

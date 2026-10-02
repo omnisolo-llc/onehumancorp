@@ -80,4 +80,28 @@ describe('FeedPage', () => {
       expect(payload.context_payload.summary).toBe('Confirm after calling the customer');
     });
   });
+  it('saves and approves the edited Ambassador draft when the owner chooses Save & Send', async () => {
+    const ambassador = {
+      ...bookingFeedItem,
+      id: 'ambassador-edit-1', event_source: 'Ambassador',
+      context_payload: { feature_type: 'ambassador_reply', original_message: 'Can you help?', source: 'SMS' },
+      proposed_action: { feature_type: 'ambassador_reply', generated_response: 'Original reply' },
+    };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [ambassador] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 })));
+    render(<FeedPage />);
+    await screen.findByTestId('ambassador-reply-card');
+    fireEvent.click(screen.getByTestId('feed-edit-btn'));
+    fireEvent.change(screen.getByTestId('feed-edit-input'), { target: { value: 'Owner-reviewed reply' } });
+    fireEvent.click(screen.getByTestId('feed-save-edit-btn'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('ambassador-reply-card')).toBeNull();
+    });
+    const payload = JSON.parse(String(vi.mocked(fetch).mock.calls[1]?.[1]?.body));
+    expect(payload.state).toBe('APPROVED');
+    expect(payload.proposed_action.feature_type).toBe('ambassador_reply');
+    expect(payload.proposed_action.generated_response).toBe('Owner-reviewed reply');
+  });
+
 });

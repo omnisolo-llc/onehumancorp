@@ -7,9 +7,10 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
   const [tenant, setTenant] = useState('my-business');
   const [title, setTitle] = useState('Special Viral Offer');
   const [theme, setTheme] = useState('light');
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -19,8 +20,7 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
-      const isProLocal = localStorage.getItem('has_pro') === 'true';
-      if (isProLocal || hasPro) {
+      if (hasPro) {
         setRemoveBranding(true);
       }
     }
@@ -35,7 +35,7 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
     };
   }, [hasPro]);
 
-  const isProUser = hasPro || (typeof window !== 'undefined' && localStorage.getItem('has_pro') === 'true');
+  const isProUser = hasPro;
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isProUser) {

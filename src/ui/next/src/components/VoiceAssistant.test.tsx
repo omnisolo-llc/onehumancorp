@@ -107,6 +107,41 @@ describe('VoiceAssistant', () => {
     expect(button).toHaveFocus();
   });
 
+  it('shows truthful feedback when a short tap cancels microphone readiness', async () => {
+    const pending = deferred<TestStream>();
+    getUserMedia.mockReturnValue(pending.promise);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    renderVoiceAssistant();
+    const button = screen.getByRole('button', { name: /voice assistant/i });
+    fireEvent.mouseDown(button);
+    expect(screen.getByRole('status')).toHaveTextContent('Waiting for microphone');
+    fireEvent.mouseUp(button);
+    fireEvent.click(button, { detail: 1 });
+    expect(screen.getByRole('status')).toHaveTextContent('Recording canceled before it started. Hold to speak.');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    await act(async () => pending.reject(new Error('late permission denial')));
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'cancelled');
+    expect(recorderInstances).toHaveLength(0);
+    expect(voiceCommandFetches()).toHaveLength(0);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('releases a microphone granted after cancellation without starting or sending audio', async () => {
+    const pending = deferred<TestStream>();
+    const { stream, tracks } = createStream(2);
+    getUserMedia.mockReturnValue(pending.promise);
+    renderVoiceAssistant();
+    const button = screen.getByRole('button', { name: /voice assistant/i });
+    fireEvent.touchStart(button);
+    fireEvent.touchCancel(button);
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'cancelled');
+    await act(async () => pending.resolve(stream));
+    tracks.forEach(track => expect(track.stop).toHaveBeenCalledTimes(1));
+    expect(recorderInstances).toHaveLength(0);
+    expect(voiceCommandFetches()).toHaveLength(0);
+    expect(screen.getByRole('status')).toHaveTextContent('Recording canceled before it started. Hold to speak.');
+  });
+
   it('releases every track exactly once during a normal mouse stop', async () => {
     const { stream, tracks } = createStream(2);
     const { button, recorder } = await startWithMouse(stream);

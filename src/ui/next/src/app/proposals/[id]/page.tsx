@@ -3,7 +3,7 @@
 import { errorMessage } from '@/lib/errors';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '../../components/AppShell';
 
 interface LineItem {
@@ -28,8 +28,8 @@ interface ProposalResponse {
   line_items: LineItem[];
 }
 
-export default function ProposalReviewPage({ params }: { params: { id: string } }) {
-  const id = params.id;
+export default function ProposalReviewPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [data, setData] = useState<ProposalResponse | null>(null);
   const [loading, setLoading] = useState(true);

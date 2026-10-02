@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import POSTerminal from './page';
 
-vi.mock('./StripeTerminalClient', () => ({ default: () => <div>Payment reader</div> }));
+vi.mock('./StripeTerminalClient', () => ({ default: ({ onQueued, onSuccess }: { onQueued?: (amount: number) => void; onSuccess?: (amount: number) => void }) => <div>Payment reader<button onClick={() => onQueued?.(5000)}>Queue test sale</button><button onClick={() => onSuccess?.(5000)}>Confirm test payment</button></div> }));
 vi.mock('../../../components/LocalizationToggle', () => ({ LocalizationToggle: () => null }));
 vi.mock('../../../lib/sync/SyncManager', () => ({
   SyncManager: { getInstance: () => ({ start: vi.fn(), enqueue: vi.fn().mockResolvedValue(undefined), getQueueLength: vi.fn().mockResolvedValue(0) }) },
@@ -74,5 +74,16 @@ describe('POS terminal identity', () => {
     expect(screen.getByText('STAFF')).toBeVisible();
     await waitFor(() => expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/payments/terminal/session/start')).toHaveLength(1));
     expect(screen.queryByText('Manager')).not.toBeInTheDocument();
+  });
+
+  it('shows an offline queue receipt without saying a payment was charged', async () => {
+    render(<POSTerminal />);
+    await enterPin();
+    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Queue test sale' }));
+    expect(await screen.findByRole('heading', { name: 'Sale queued offline' })).toBeVisible();
+    expect(screen.getByText('The $50.00 sale is saved on this device and still needs to sync.')).toBeVisible();
+    expect(screen.queryByText('Payment Successful!')).toBeNull();
+    expect(screen.queryByText(/was charged/)).toBeNull();
   });
 });

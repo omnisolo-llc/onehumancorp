@@ -23,12 +23,22 @@ test.describe('Share To Unlock Generator Growth Loop', () => {
         await page.locator('input[id="reward"]').fill('Free Shipping');
         await page.locator('input[id="hidden-code"]').fill('FREESHIP');
 
-        // Check for the link copy button
+        // Read the actual platform result and navigate to the configured preview.
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
         await page.locator('button', { hasText: 'Copy Link' }).click();
         await expect(page.locator('text=Copied!')).toBeVisible();
 
-        // Now test the unlock endpoint
-        await page.goto('/unlock?tenant=test-tenant&title=Special+Deal&reward=Free+Shipping&code=FREESHIP');
+        const copied = await page.evaluate(() => navigator.clipboard.readText());
+        const preview = new URL(copied);
+        expect(preview.origin).toBe(new URL(page.url()).origin);
+        expect(preview.pathname).toBe('/unlock');
+        expect(preview.searchParams.get('title')).toBe('Special Deal');
+        expect(preview.searchParams.get('reward')).toBe('Free Shipping');
+        expect(preview.searchParams.get('code')).toBe('FREESHIP');
+        expect(preview.searchParams.get('theme')).toBe('light');
+        await page.goto(copied);
+        await expect(page.getByText('Sharing does not verify reward eligibility')).toBeVisible();
+        await expect(page.locator('#locked-badge')).toContainText('Locked');
 
         await expect(page.locator('h1', { hasText: 'Special Deal' })).toBeVisible();
         await expect(page.locator('text=Free Shipping')).toBeVisible();

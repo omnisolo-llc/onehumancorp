@@ -2,10 +2,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FieldOpsJobsPage from './page';
 
+const enqueue = vi.hoisted(() => vi.fn());
 vi.mock('../../../lib/sync/SyncManager', () => ({
   SyncManager: {
     getInstance: vi.fn(() => ({
-      enqueue: vi.fn(),
+      enqueue,
     })),
   },
 }));
@@ -120,4 +121,23 @@ describe('FieldOpsJobsPage', () => {
     expect(await screen.findByText('Saved Notes:')).toBeInTheDocument();
     expect(screen.getByText(/"Needs new piping"/)).toBeInTheDocument();
   });
+
+it('freezes original observed notes and status before offline edits', async () => {
+  render(<FieldOpsJobsPage />);
+  await screen.findByText('Alice Smith');
+  fireEvent(window, new Event('offline'));
+  fireEvent.change(screen.getAllByPlaceholderText(/E.g., Needs a replacement quote./)[0], { target: { value: 'New notes' } });
+  fireEvent.click(screen.getAllByText('Heading to Job')[0]);
+  expect(enqueue).toHaveBeenCalledWith(expect.objectContaining({ payload: expect.objectContaining({ payload: expect.objectContaining({ expected_status: 'Scheduled', expected_notes: '', notes: 'New notes' }) }) }));
+});
+it('restores an offline job transition when queue storage fails', async () => {
+  enqueue.mockRejectedValueOnce(new Error('Storage unavailable'));
+  render(<FieldOpsJobsPage />);
+  await screen.findByText('Alice Smith');
+  fireEvent(window, new Event('offline'));
+  fireEvent.click(screen.getAllByText('Heading to Job')[0]);
+  expect(await screen.findByRole('alert')).toHaveTextContent('could not be saved');
+  expect(screen.queryByText('Start Work')).not.toBeInTheDocument();
+});
+
 });

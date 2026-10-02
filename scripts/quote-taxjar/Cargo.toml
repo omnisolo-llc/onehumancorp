@@ -1,0 +1,11 @@
+[package]
+name = "ohc-quote-taxjar-recovery"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "macros"] }
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+[lib]
+path = "probe.rs"

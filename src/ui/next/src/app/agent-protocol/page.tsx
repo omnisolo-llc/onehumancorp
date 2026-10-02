@@ -2,7 +2,7 @@
 
 import { errorMessage } from '@/lib/errors';
 
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useRef } from 'react';
 
 type ProtocolTask = { task_id: string; input?: string };
 type ProtocolStep = { step_id: string; status: string; input?: string; output?: string };
@@ -17,43 +17,60 @@ export default function AgentProtocolPage() {
   const [checkpoints, setCheckpoints] = useState<ProtocolCheckpoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unknownCreation, setUnknownCreation] = useState<string | null>(null);
+  const [reviewStatus, setReviewStatus] = useState('');
+  const creating = useRef(false);
 
   const fetchTasks = async () => {
     try {
       const res = await fetch('/api/v1/agents/protocol?method=ap_list_tasks');
       if (!res.ok) throw new Error('Failed to fetch tasks');
       const data = await res.json();
-      setTasks(data.tasks || []);
+      if (!data || !Array.isArray(data.tasks) || data.error != null || data.success === false) throw new Error('The task list could not be verified');
+      setTasks(data.tasks); return true;
     } catch (e: unknown) {
-      setError(errorMessage(e));
+      setError(errorMessage(e)); return false;
     }
   };
 
   const createTask = async () => {
-    if (!taskInput) return;
-    setLoading(true);
+    if (!taskInput.trim() || loading || creating.current || unknownCreation !== null) return;
+    const submittedInput = taskInput;
+    creating.current = true; setLoading(true); setError(null);
+    let unconfirmed = false;
     try {
+      unconfirmed = true;
       const res = await fetch('/api/v1/agents/protocol', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method: 'ap_create_task', params: { input: taskInput } }),
+        body: JSON.stringify({ method: 'ap_create_task', params: { input: submittedInput } }),
       });
+      if (res.status === 401 || res.status === 403) {
+        unconfirmed = false;
+        throw new Error('Task creation was rejected by authentication or permission checks. Your input is retained.');
+      }
       if (!res.ok) throw new Error('Failed to create task');
       const data = await res.json();
-      if (data && data.task_id) {
-        setTasks((prev) => {
-          if (prev.some((t) => t.task_id === data.task_id)) return prev;
-          return [data, ...prev];
-        });
-        setSelectedTaskId(data.task_id);
-      }
+      if (res.status !== 200 || !data || typeof data !== 'object' || Array.isArray(data) || data.error != null || ('success' in data && data.success !== true) || typeof data.task_id !== 'string' || !data.task_id.trim()) throw new Error('Task creation was not acknowledged. Your input is retained.');
+      unconfirmed = false;
+      setTasks((prev) => {
+        if (prev.some((t) => t.task_id === data.task_id)) return prev;
+        return [data, ...prev];
+      });
+      setSelectedTaskId(data.task_id);
       await fetchTasks();
-      setTaskInput('');
+      setTaskInput(current => current === submittedInput ? '' : current);
     } catch (e: unknown) {
+      if (unconfirmed) setUnknownCreation(submittedInput);
       setError(errorMessage(e));
     } finally {
-      setLoading(false);
+      creating.current = false; setLoading(false);
     }
+  };
+
+  const reviewExistingTasks = async () => {
+    setReviewStatus('');
+    if (await fetchTasks()) setReviewStatus('The current task list is loaded. It does not prove whether the unconfirmed request was saved.');
   };
 
   const fetchSteps = async (taskId: string) => {
@@ -153,6 +170,7 @@ export default function AgentProtocolPage() {
         </div>
       )}
 
+      {unknownCreation !== null && <section aria-label="Unconfirmed task creation" className="mb-6 rounded-lg border border-amber-300 p-4"><p>Task creation is unconfirmed. Another Create is held in this view to avoid duplicating the request.</p><p className="whitespace-pre-wrap">Submitted input: {unknownCreation}</p><button type="button" onClick={() => void reviewExistingTasks()}>Review existing tasks</button>{reviewStatus && <p role="status">{reviewStatus}</p>}<p>Review existing tasks before starting a new request. Reloading this page does not establish what happened to the original request.</p></section>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="glassmorphism glass-card bg-white/50 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Tasks</h2>
@@ -167,7 +185,7 @@ export default function AgentProtocolPage() {
             />
             <button
               onClick={createTask}
-              disabled={loading}
+              disabled={loading || !taskInput.trim() || unknownCreation !== null}
               className="bg-[#0071E3] text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-sm transition-colors font-medium"
             >
               Create

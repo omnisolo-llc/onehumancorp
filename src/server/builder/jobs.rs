@@ -120,7 +120,7 @@ async fn execute_publish_site_job(
     let mut conn = super::db::acquire_tenant_conn(pool, tenant_id)
         .await
         .map_err(|e| e.to_string())?;
-    sqlx::query(
+    let updated = sqlx::query(
         "UPDATE builder_sites SET published_at = NOW(), updated_at = NOW() WHERE tenant_id = $1 AND id = $2",
     )
     .bind(tenant_id)
@@ -129,17 +129,25 @@ async fn execute_publish_site_job(
     .await
     .map_err(|e| e.to_string())?;
 
+    if updated.rows_affected() != 1 {
+        return Err("The owned site was not found for publication".to_string());
+    }
+
+    let cache_key = format!("edge_site_{}_{}", tenant_id, site_id);
+    // PostgreSQL delivers transactional notifications only after COMMIT. A
+    // failed write/notification/commit must not publish a cache invalidation.
+    sqlx::query("SELECT pg_notify('edge_cache_invalidation', $1)")
+        .bind(&cache_key)
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?;
+    conn.commit().await.map_err(|e| e.to_string())?;
+
     let cache = crate::builder::edge::get_edge_cache();
     cache
         .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
         .await;
 
-    let cache_key = format!("edge_site_{}_{}", tenant_id, site_id); // Keeping old var for notify to not break it
-    sqlx::query("NOTIFY edge_cache_invalidation, $1")
-        .bind(&cache_key)
-        .execute(&mut *conn)
-        .await
-        .ok();
     info!("Ops Agent: Invalidated edge cache for {}", cache_key);
 
     // Agentic SEO Pre-rendering: Proactively regenerate cache and push directly to edge

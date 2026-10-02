@@ -9,12 +9,15 @@ export default function GiveawayGeneratorPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tenant, setTenant] = useState('DEFAULT');
-  const [giveawayLink, setGiveawayLink] = useState('');
+  const [generated, setGenerated] = useState<{ url: string; requiresPro: boolean } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { hasPro, claimTrial, claimError } = useProPlan();
+  const giveawayLink = generated && (!generated.requiresPro || hasPro) ? generated.url : '';
+  useEffect(() => { if (generated?.requiresPro && !hasPro) setGenerated(null); }, [generated, hasPro]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
+  const brandingRemoved = removeBranding && hasPro;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -26,9 +29,9 @@ export default function GiveawayGeneratorPage() {
   const generateLink = () => {
     setIsGenerating(true);
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
-    const brandingParam = removeBranding ? '&branding=false' : '';
+    const brandingParam = brandingRemoved ? '&branding=false' : '';
     const link = `${origin}/giveaway/enter?tenant=${encodeURIComponent(tenant)}&title=${encodeURIComponent(title || 'Enter our Giveaway!')}&description=${encodeURIComponent(description)}${brandingParam}`;
-    setGiveawayLink(link);
+    setGenerated({ url: link, requiresPro: brandingRemoved });
     setIsGenerating(false);
   };
 
@@ -46,11 +49,7 @@ export default function GiveawayGeneratorPage() {
   };
 
   const claimTrialExtension = async () => {
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just launched a viral giveaway for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
-    setShowSoftPaywall(false);
-    generateLink();
+    await claimTrial();
   };
 
   return (
@@ -109,7 +108,7 @@ export default function GiveawayGeneratorPage() {
                       type="checkbox"
                       id="removeBranding"
                       className="peer sr-only"
-                      checked={removeBranding}
+                      checked={brandingRemoved}
                       onChange={handleRemoveBrandingToggle}
                     />
                     <label
@@ -192,7 +191,7 @@ export default function GiveawayGeneratorPage() {
                          </button>
                      </div>
 
-                     {!removeBranding && (
+                     {!brandingRemoved && (
                      <div className="mt-8">
                         <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OmniSolo</a>
                      </div>
@@ -238,7 +237,7 @@ export default function GiveawayGeneratorPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to activate Pro
+              Check trial availability
             </button>
           </div>
         </div>

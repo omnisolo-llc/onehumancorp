@@ -254,11 +254,11 @@
       <div class="config-panel">
         <div class="form-group">
           <label for="network-name">Network Name</label>
-          <input type="text" id="network-name" value="Guest WiFi" oninput="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';" onchange="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';" onkeyup="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';">
+          <input type="text" id="network-name" disabled value="Guest WiFi" oninput="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';" onchange="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';" onkeyup="if(window.updateWifiNetworkName) window.updateWifiNetworkName(this.value); const p = document.getElementById('preview-network-name'); if (p) p.textContent = this.value || 'WiFi';">
         </div>
 
         <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-          <input type="checkbox" id="remove-branding" style="width: auto;">
+          <input type="checkbox" id="remove-branding" disabled style="width: auto;">
           <label for="remove-branding" style="margin: 0;">Remove "OmniSolo" Badge (Pro)</label>
         </div>
 
@@ -298,7 +298,7 @@
       // State
       let state = {
         hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
-        networkName: 'Guest WiFi',
+        networkName: document.getElementById('network-name').value || 'WiFi',
         removeBranding: false
       };
 
@@ -354,8 +354,10 @@
         window.location.href = '/pricing.html';
       });
 
-      // Initial render
+      // Enable editing only once the handlers and initial preview are ready.
       updatePreview();
+      networkNameInput.disabled = false;
+      removeBrandingCheckbox.disabled = false;
     }
 
     if (document.readyState === 'loading') {

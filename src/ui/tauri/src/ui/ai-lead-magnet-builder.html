@@ -343,7 +343,7 @@
     <div class="header">
       <div>
         <h1>AI Lead Magnet Builder</h1>
-        <div class="subtitle">Turn visitors into leads by offering a free AI-powered audit or report.</div>
+        <div class="subtitle">Preview a lead capture widget. AI processing and delivery require separate configuration.</div>
       </div>
       <button class="nav-btn" onclick="window.location.href='/dashboard.html'">Back to Dashboard</button>
     </div>
@@ -364,7 +364,7 @@
         </div>
 
         <div class="form-group">
-          <label for="magnet-prompt">AI Prompt Logic (Backend)</label>
+          <label for="magnet-prompt">Draft AI prompt (not submitted)</label>
           <textarea id="magnet-prompt" placeholder="e.g. Generate a 3-point SEO plan for the provided URL.">Generate a 3-point SEO plan for the provided input.</textarea>
         </div>
 
@@ -389,7 +389,8 @@
           </div>
         </div>
 
-        <button id="get-code-btn">
+        <p id="builder-availability" role="status">Verifying the widget owner…</p>
+        <button id="get-code-btn" disabled>
           Generate Embed Code
         </button>
       </div>
@@ -402,7 +403,7 @@
           <p class="widget-preview-desc" id="preview-desc">Enter your website URL to get an instant AI-powered SEO review.</p>
           <input type="text" class="widget-input" id="preview-input-label" placeholder="https://yourwebsite.com" readonly>
           <input type="text" class="widget-input" placeholder="Your Email Address" readonly>
-          <button class="widget-btn" id="preview-btn-text">Generate Free Audit</button>
+          <button class="widget-btn" id="preview-btn-text" type="button" disabled title="Preview only; this builder does not run an audit">Generate Free Audit</button>
 
           <a href="#" class="powered-by" id="preview-branding">⚡ OmniSolo</a>
         </div>
@@ -415,8 +416,9 @@
     <div class="modal-content">
       <button class="modal-close" id="close-embed">&times;</button>
       <h2 class="modal-title font-outfit">Embed Your Lead Magnet</h2>
-      <p style="color: #666; margin-bottom: 20px;">Copy and paste this HTML snippet into your website to start capturing leads with AI.</p>
+      <p style="color: #666; margin-bottom: 20px;">Copy this lead form snippet into your website. A captured request does not confirm AI processing or email delivery.</p>
       <textarea class="code-block" id="embed-code" readonly></textarea>
+      <p id="embed-copy-status" role="status"></p>
       <div style="display: flex; gap: 12px;">
         <button id="copy-code-btn">Copy Code</button>
         <button class="btn-secondary" id="close-embed-btn">Close</button>
@@ -430,161 +432,118 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p style="color: #666; margin-bottom: 24px;">Make the Lead Magnet 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p style="color: #666; margin-bottom: 24px;">Removing branding requires a verified Pro plan. Trial unlock is unavailable because this flow cannot verify sharing or a trial entitlement.</p>
 
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <button id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
+        <button id="share-to-unlock-btn" style="background-color: #1DA1F2;">Open X share draft</button>
         <button id="upgrade-btn" onclick="window.location.href='/pricing'">Upgrade to Pro</button>
       </div>
-      <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500;">Verifying...</p>
+      <p role="status" id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500;">Verifying...</p>
     </div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // State
-      let state = {
-        tenant: (() => { try { return localStorage.getItem('tenant') || 'my-store'; } catch(e) { return 'my-store'; } })(),
-        hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
-        title: 'Get a Free Website Audit',
-        desc: 'Enter your website URL to get an instant AI-powered SEO review.',
-        inputLabel: 'https://yourwebsite.com',
-        btnText: 'Generate Free Audit',
-        removeBranding: false
-      };
-
-      // Inputs
-      const titleInput = document.getElementById('magnet-title');
-      const descInput = document.getElementById('magnet-desc');
-      const inputLabelInput = document.getElementById('magnet-input-label');
-      const btnTextInput = document.getElementById('magnet-btn-text');
-      const removeBrandingCheckbox = document.getElementById('remove-branding');
-      const getCodeBtn = document.getElementById('get-code-btn');
-
-      // Previews
-      const previewTitle = document.getElementById('preview-title');
-      const previewDesc = document.getElementById('preview-desc');
-      const previewInputLabel = document.getElementById('preview-input-label');
-      const previewBtnText = document.getElementById('preview-btn-text');
-      const previewBranding = document.getElementById('preview-branding');
-
-      // Modals
-      const embedModal = document.getElementById('embed-modal');
-      const embedCodeTextarea = document.getElementById('embed-code');
-      const closeEmbedBtns = [document.getElementById('close-embed'), document.getElementById('close-embed-btn')];
-      const copyCodeBtn = document.getElementById('copy-code-btn');
-
-      const paywallModal = document.getElementById('paywall-modal');
-      const closePaywallBtn = document.getElementById('close-paywall');
-      const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
-      const softPaywallStatus = document.getElementById('soft-paywall-status');
-
+      const state = { tenant: '', hasPro: false, title: 'Get a Free Website Audit', desc: 'Enter your website URL to get an instant AI-powered SEO review.', inputLabel: 'https://yourwebsite.com', btnText: 'Generate Free Audit', removeBranding: false };
+      const byId = id => document.getElementById(id);
+      const removeBranding = byId('remove-branding');
+      const generate = byId('get-code-btn');
+      const embedModal = byId('embed-modal');
+      const paywall = byId('paywall-modal');
+      const code = byId('embed-code');
+      const copy = byId('copy-code-btn');
+      const copyStatus = byId('embed-copy-status');
+      const share = byId('share-to-unlock-btn');
+      const shareStatus = byId('soft-paywall-status');
+      const availability = byId('builder-availability');
+      let identity = null;
+      let generation = 0;
+      let copyGeneration = 0;
+      let expiry;
+      function resetCopy() { copyGeneration += 1; copyStatus.textContent = ''; copy.textContent = 'Copy Code'; copy.disabled = !identity || !code.value; }
       function updatePreview() {
-        previewTitle.textContent = state.title;
-        previewDesc.textContent = state.desc;
-        previewInputLabel.placeholder = state.inputLabel;
-        previewBtnText.textContent = state.btnText;
-        previewBranding.style.display = state.removeBranding ? 'none' : 'block';
+        byId('preview-title').textContent = state.title;
+        byId('preview-desc').textContent = state.desc;
+        byId('preview-input-label').placeholder = state.inputLabel;
+        byId('preview-btn-text').textContent = state.btnText;
+        byId('preview-branding').style.display = state.removeBranding && state.hasPro ? 'none' : 'block';
       }
-
-      function generateEmbedCode() {
-        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
-        const code = `<iframe src="${origin}/api/v1/growth/lead-magnet/embed?tenant=${state.tenant}&title=${encodeURIComponent(state.title)}&desc=${encodeURIComponent(state.desc)}&btn=${encodeURIComponent(state.btnText)}&input=${encodeURIComponent(state.inputLabel)}&hide_branding=${state.removeBranding}" width="100%" height="300" style="border:none;border-radius:12px;overflow:hidden;" title="OmniSolo Lead Magnet"></iframe>`;
-        embedCodeTextarea.value = code;
+      function invalidate() {
+        generation += 1; clearTimeout(expiry); identity = null;
+        state.tenant = ''; state.hasPro = false; state.removeBranding = false;
+        removeBranding.checked = false; removeBranding.disabled = true;
+        generate.disabled = true; share.disabled = true;
+        code.value = ''; embedModal.classList.remove('active'); paywall.classList.remove('active');
+        resetCopy(); updatePreview();
+        availability.textContent = 'Your session could not be verified. Reload this builder from the signed-in app.';
       }
-
-      titleInput.addEventListener('input', (e) => { state.title = e.target.value; updatePreview(); });
-      descInput.addEventListener('input', (e) => { state.desc = e.target.value; updatePreview(); });
-      inputLabelInput.addEventListener('input', (e) => { state.inputLabel = e.target.value; updatePreview(); });
-      btnTextInput.addEventListener('input', (e) => { state.btnText = e.target.value; updatePreview(); });
-
-      removeBrandingCheckbox.addEventListener('change', (e) => {
-        if (e.target.checked && !state.hasPro) {
-          e.target.checked = false;
-          paywallModal.classList.add('active');
-          return;
-        }
-        state.removeBranding = e.target.checked;
-        updatePreview();
-      });
-
-      getCodeBtn.addEventListener('click', () => {
-        generateEmbedCode();
-        embedModal.classList.add('active');
-      });
-
-      closeEmbedBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          embedModal.classList.remove('active');
-          copyCodeBtn.textContent = 'Copy Code';
-        });
-      });
-
-      copyCodeBtn.addEventListener('click', () => {
-        embedCodeTextarea.select();
-        document.execCommand('copy');
-        copyCodeBtn.textContent = 'Copied!';
-        setTimeout(() => { copyCodeBtn.textContent = 'Copy Code'; }, 2000);
-      });
-
-      closePaywallBtn.addEventListener('click', () => {
-        paywallModal.classList.remove('active');
-      });
-
-      if (shareToUnlockBtn) {
-        shareToUnlockBtn.addEventListener('click', async () => {
-          const tenantId = state.tenant;
-          const message = `Check out my new AI Lead Magnet built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
-          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-          window.open(shareUrl, '_blank');
-
-          shareToUnlockBtn.style.display = 'none';
-          softPaywallStatus.style.display = 'block';
-          softPaywallStatus.innerText = 'Verifying Share...';
-
+      async function readIdentity() {
+        const response = await fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+        const value = await response.json();
+        if (response.status !== 200 || value?.error != null || value?.success === false || typeof value?.userId !== 'string' || !value.userId || typeof value?.tenantId !== 'string' || !value.tenantId || typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('Identity unavailable');
+        return value;
+      }
+      async function loadOwner() {
+        const expected = generation;
+        try {
+          if (!['http:', 'https:'].includes(window.location.protocol)) throw new Error('Signed-in application required');
+          const first = await readIdentity();
+          let plan = null;
           try {
-            let url = '/api/v1/growth/trial-extension/claim';
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
-            }
-            const response = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (response.ok) {
-              softPaywallStatus.innerText = 'Unlocked!';
-              state.hasPro = true;
-              localStorage.setItem('has_pro', 'true');
-
-              setTimeout(() => {
-                paywallModal.classList.remove('active');
-                removeBrandingCheckbox.checked = true;
-                state.removeBranding = true;
-                updatePreview();
-                shareToUnlockBtn.style.display = 'block';
-                softPaywallStatus.style.display = 'none';
-              }, 1500);
-            } else {
-              softPaywallStatus.innerText = 'Failed to claim trial extension.';
-              setTimeout(() => {
-                shareToUnlockBtn.style.display = 'block';
-                softPaywallStatus.style.display = 'none';
-              }, 3000);
-            }
-          } catch (e) {
-            console.error(e);
-            softPaywallStatus.innerText = 'Error claiming trial extension.';
-            setTimeout(() => {
-                shareToUnlockBtn.style.display = 'block';
-                softPaywallStatus.style.display = 'none';
-            }, 3000);
-          }
-        });
+            const headers = new Headers({ 'x-ohc-expected-user': first.userId, 'x-ohc-expected-tenant': first.tenantId });
+            if (headers.get('x-ohc-expected-user') !== first.userId || headers.get('x-ohc-expected-tenant') !== first.tenantId) throw new Error('Identity cannot be bound to this request');
+            const response = await fetch('/api/v1/billing/my-plan', { headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+            const data = await response.json();
+            if (response.status === 200 && data?.error == null && data?.success !== false && typeof data?.current_plan === 'string') plan = data.current_plan.toLowerCase();
+          } catch { /* Unverified plans keep branding. */ }
+          const second = await readIdentity();
+          if (expected !== generation || first.userId !== second.userId || first.tenantId !== second.tenantId) throw new Error('Identity changed');
+          identity = second; state.tenant = second.tenantId;
+          state.hasPro = ['pro', 'business'].includes(plan);
+          removeBranding.disabled = false; generate.disabled = false; share.disabled = false;
+          availability.textContent = plan === null ? 'Plan verification is unavailable. Branding is kept.' : 'Widget owner verified. Trial unlock is unavailable.';
+          expiry = setTimeout(invalidate, Math.min(second.expiresAt - Date.now(), 2147483647));
+        } catch { if (expected === generation) invalidate(); }
       }
-
-      updatePreview();
+      window.addEventListener('omnisolo_auth_changed', invalidate);
+      window.addEventListener('storage', event => { if (event.key === null || event.key === 'omnisolo_queue_identity_epoch_v2') invalidate(); });
+      window.addEventListener('pagehide', invalidate);
+      for (const [id, key] of [['magnet-title', 'title'], ['magnet-desc', 'desc'], ['magnet-input-label', 'inputLabel'], ['magnet-btn-text', 'btnText']]) {
+        byId(id).addEventListener('input', event => { state[key] = event.target.value; resetCopy(); updatePreview(); });
+      }
+      removeBranding.addEventListener('change', event => {
+        if (!identity || event.target.checked && !state.hasPro) { event.target.checked = false; paywall.classList.add('active'); return; }
+        state.removeBranding = event.target.checked; updatePreview();
+      });
+      generate.addEventListener('click', () => {
+        if (!identity || identity.expiresAt <= Date.now()) { invalidate(); return; }
+        const url = new URL('/api/v1/growth/lead-magnet/embed', window.location.origin);
+        for (const [key, value] of Object.entries({ tenant: state.tenant, title: state.title, description: state.desc, buttonText: state.btnText, hideBranding: String(state.removeBranding && state.hasPro) })) url.searchParams.set(key, value);
+        const frame = document.createElement('iframe'); frame.src = url.href; frame.width = '100%'; frame.height = '300'; frame.style.cssText = 'border:none;border-radius:12px;overflow:hidden'; frame.title = 'OmniSolo Lead Magnet';
+        code.value = frame.outerHTML; resetCopy(); embedModal.classList.add('active');
+      });
+      for (const id of ['close-embed', 'close-embed-btn']) byId(id).addEventListener('click', () => { embedModal.classList.remove('active'); resetCopy(); });
+      copy.addEventListener('click', async () => {
+        if (!identity || !code.value || copy.disabled) return;
+        const version = ++copyGeneration; const text = code.value;
+        copy.disabled = true; copyStatus.textContent = 'Copying code…';
+        try {
+          await navigator.clipboard.writeText(text);
+          if (version === copyGeneration) copyStatus.textContent = 'Code copied.';
+        } catch { if (version === copyGeneration) copyStatus.textContent = 'Could not copy the code. Select and copy the snippet.'; }
+        finally { if (version === copyGeneration) copy.disabled = false; }
+      });
+      byId('close-paywall').addEventListener('click', () => paywall.classList.remove('active'));
+      share.addEventListener('click', () => {
+        if (!identity || identity.expiresAt <= Date.now()) { invalidate(); return; }
+        const message = `Explore the OmniSolo lead capture widget: ${window.location.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(state.tenant)}`;
+        const url = new URL('https://twitter.com/intent/tweet'); url.searchParams.set('text', message);
+        try { window.open(url.href, '_blank', 'noopener,noreferrer'); shareStatus.textContent = 'Share draft requested. Posting and trial eligibility are not verified here.'; }
+        catch { shareStatus.textContent = 'The share draft could not be opened. Trial unlock remains unavailable.'; }
+        shareStatus.style.display = 'block';
+      });
+      removeBranding.disabled = true; generate.disabled = true; share.disabled = true; copy.disabled = true;
+      updatePreview(); void loadOwner();
     });
   </script>
   <script src="help-widget.mjs" type="module"></script>

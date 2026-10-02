@@ -43,3 +43,9 @@ describe("NewProposalPage", () => {
     expect(screen.queryByText("undefined")).not.toBeInTheDocument();
   });
 });
+
+test('blank and whitespace topics visibly hold generation without a request',()=>{
+ fetchMock.mockReset();vi.stubGlobal('fetch',fetchMock);render(<NewProposalPage/>);const button=screen.getByRole('button',{name:'Generate Proposal'});expect(button).toBeDisabled();expect(screen.getByRole('status',{name:'Proposal requirements'})).toHaveTextContent(/project brief/i);
+ fireEvent.change(screen.getByLabelText('Project Brief / Topic'),{target:{value:'   '}});expect(button).toBeDisabled();fireEvent.click(button);expect(fetchMock).not.toHaveBeenCalled();
+ fireEvent.change(screen.getByLabelText('Project Brief / Topic'),{target:{value:'Actual reviewed topic'}});expect(button).toBeEnabled();
+});

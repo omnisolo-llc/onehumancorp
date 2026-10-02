@@ -1,0 +1,7 @@
+generated.rs
+source-manifest.json
+Cargo.lock
+target/
+
+__pycache__/
+*.pyc

@@ -9,7 +9,7 @@ test.describe('Documentation UI Verification', () => {
     await expect(page.locator('h1')).toContainText('In-App Help Center');
 
     // Open floating widget
-    const helpBtn = page.locator('#omnisolo-floating-help-btn').first();
+    const helpBtn = page.locator('#ohc-floating-help-btn').first();
     await helpBtn.waitFor({ state: 'visible' });
     await helpBtn.click();
 
@@ -18,12 +18,18 @@ test.describe('Documentation UI Verification', () => {
     await videosTab.waitFor({ state: 'visible' });
     await videosTab.click();
 
-    // Verify video list is populated
-    const videoList = page.locator('.omnisolo-help-content.active #video-list').first();
-    await videoList.waitFor({ state: 'visible' });
-    await expect(videoList).not.toBeEmpty();
-    // Verify it isn't just loading text
-    await expect(videoList).not.toContainText('Loading videos...', { timeout: 10000 });
+    const response = await page.request.get('/api/v1/videos');
+    expect(response.ok()).toBe(true);
+    const videos = await response.json() as Array<{ title: string; video_url: string }>;
+    expect(videos.length).toBeGreaterThan(0);
+    const videoList = page.locator('#ohc-floating-help-widget #video-list');
+    const video = videoList.getByRole('button', { name: new RegExp(videos[0].title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+    await expect(video).toBeVisible();
+    await video.click();
+    await expect(page.locator('#video-modal')).toBeVisible();
+    await expect(page.locator('#video-player')).toHaveAttribute('src', videos[0].video_url);
+    await page.getByRole('button', { name: 'Close video', exact: true }).click();
+    await expect(page.locator('#video-modal')).toBeHidden();
   });
 
   test('Dashboard Walkthrough triggers', async ({ page, loginAs, unlimitedAdminUser }) => {
@@ -43,9 +49,8 @@ test.describe('Documentation UI Verification', () => {
 
     // Close the walkthrough
     const closeBtn = page.locator('.omnisolo-walkthrough-close').first();
-    if (await closeBtn.isVisible()) {
-      await closeBtn.click();
-      await expect(walkthroughBubble).not.toBeVisible();
-    }
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+    await expect(walkthroughBubble).not.toBeVisible();
   });
 });

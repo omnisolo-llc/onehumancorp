@@ -246,7 +246,8 @@
 </head>
 <body>
 
-<div id="app" class="container glassmorphism">
+<p id="private-preview-status" role="status">Loading private preview…</p>
+<div id="app" class="container glassmorphism" hidden>
     <div class="avatar">✨</div>
     <h1 id="title" class="title">Loading...</h1>
     <p id="bio" class="bio"></p>
@@ -265,44 +266,43 @@
             <span>OmniSolo</span>
         </div>
         <div class="badge-content">
-            <p>Want a storefront like this? Get OmniSolo for free and start growing your business.</p>
-            <a id="badge-cta-link" href="#" class="badge-cta">Start Free Trial</a>
+            <p>This is a private business profile. Explore workspace setup.</p>
+            <a id="badge-cta-link" href="#" class="badge-cta">View setup</a>
         </div>
     </div>
 </div>
 
 <script>
+function isSupportedBioUrl(value) {
+    if(typeof value!=='string'||!/^https?:\/\//i.test(value)||/[\s\p{Cc}\\]/u.test(value))return false;
+    try{const url=new URL(value);return (url.protocol==='http:'||url.protocol==='https:')&&url.hostname.length>0;}catch{return false;}
+}
     document.addEventListener('DOMContentLoaded', async () => {
-        // Extract tenant from URL query param or path: /bio/:tenant or ?tenant=:tenant
-        const params = new URLSearchParams(window.location.search);
-        const pathParts = window.location.pathname.split('/');
-        const lastPart = pathParts[pathParts.length - 1];
-        const tenant = params.get('tenant') || (lastPart && !lastPart.endsWith('.html') ? lastPart : 'my-store');
-
-        const titleEl = document.getElementById('title');
-        const bioEl = document.getElementById('bio');
-        const linksEl = document.getElementById('links');
-        const appEl = document.getElementById('app');
-
-        let data = {
-            store_name: 'My Store',
-            bio: 'Welcome to my storefront!',
-            theme: 'gradient',
-            links: [
-                { id: '1', title: 'Visit My Store', url: '/website-builder' },
-                { id: '2', title: 'Book an Appointment', url: '/booking' }
-            ]
-        };
-
+        const titleEl=document.getElementById('title'), bioEl=document.getElementById('bio'), linksEl=document.getElementById('links'), appEl=document.getElementById('app'), statusEl=document.getElementById('private-preview-status');
+        let active=true, expiry;
+        const unavailable=message=>{appEl.hidden=true;titleEl.textContent='';bioEl.textContent='';linksEl.replaceChildren();document.getElementById('badge-cta-link').removeAttribute('href');statusEl.setAttribute('role','alert');statusEl.textContent=message;};
+        const retire=()=>{active=false;clearTimeout(expiry);unavailable('Your session changed. Reload to verify private preview access.');};
+        window.addEventListener('omnisolo_auth_changed',retire);window.addEventListener('pagehide',retire);window.addEventListener('storage',event=>{if(event.key===null||event.key==='omnisolo_queue_identity_epoch_v2')retire();});
+        let tenant, data;
         try {
-            const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
-            if (response.ok) {
-                data = await response.json();
-            }
-        } catch(e) {
-            console.error("Failed to load from API", e);
-        }
-
+            if(!['http:','https:'].includes(location.protocol))throw new Error('Sign in to the owning business in the authenticated app to view this private profile.');
+            const queryTenant=new URLSearchParams(location.search).get('tenant');
+            const last=location.pathname.split('/').pop();tenant=queryTenant || (last && !last.endsWith('.html')?decodeURIComponent(last):'');
+            const identityResponse=await fetch('/api/v1/auth/session-identity',{credentials:'same-origin',cache:'no-store',redirect:'error'});
+            const owner=await identityResponse.json();if(!active)return;
+            if(identityResponse.status!==200 || owner?.error!=null || owner?.success===false || typeof owner?.userId!=='string' || !owner.userId || owner.tenantId!==tenant || !tenant || !Number.isFinite(owner.expiresAt) || owner.expiresAt<=Date.now())throw new Error('Sign in to the owning business to view this private profile.');
+            const expected=new Headers({'x-ohc-expected-user':owner.userId,'x-ohc-expected-tenant':owner.tenantId});
+            if(expected.get('x-ohc-expected-user')!==owner.userId || expected.get('x-ohc-expected-tenant')!==owner.tenantId)throw new Error('Private profile identity is unavailable.');
+            expiry=setTimeout(retire,Math.min(owner.expiresAt-Date.now(),2147483647));
+            const response=await fetch(`/api/v1/growth/link-in-bio/${encodeURIComponent(tenant)}`,{headers:expected,credentials:'same-origin',cache:'no-store',redirect:'error'});
+            if(response.status===404)throw new Error('No saved private profile exists for this business.');
+            if(response.status===401||response.status===403)throw new Error('Sign in to the owning business to view this private profile.');
+            if(response.status!==200)throw new Error('The private profile is unavailable. Try loading it again later.');
+            data=await response.json();if(!active)return;
+            if(data?.error!=null || data?.success===false || typeof data?.store_name!=='string' || typeof data.bio!=='string' || typeof data.theme!=='string' || !Array.isArray(data.links) || data.links.some(link=>!link||typeof link.title!=='string'||typeof link.url!=='string'))throw new Error('The private profile is unavailable.');
+        } catch(error) {if(active)unavailable(error.message || 'The private profile is unavailable.');return;}
+        if(!active)return;
+        appEl.hidden=false;statusEl.textContent='Private preview. Public publication is not available.';
         // Update UI
         titleEl.textContent = data.store_name;
         bioEl.textContent = data.bio;
@@ -334,10 +334,11 @@
         appEl.style.color = styles.color;
 
         data.links.forEach(link => {
-            const a = document.createElement('a');
-            a.href = link.url;
+            const supported = isSupportedBioUrl(link.url);
+            const a = document.createElement(supported ? 'a' : 'span');
+            if(supported)a.href = link.url;else a.setAttribute('aria-disabled','true');
             a.className = 'link-item';
-            a.textContent = link.title;
+            a.textContent = link.title + (supported ? '' : ' (unavailable)');
             a.style.background = styles.linkBg;
             a.style.border = `1px solid ${styles.linkBorder}`;
             a.style.color = styles.color;

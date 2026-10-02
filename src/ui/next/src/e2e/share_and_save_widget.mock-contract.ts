@@ -1,9 +1,9 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Share & Save Widget', () => {
   test('should navigate to widget from dashboard, click share, and reveal discount code', async ({ page, loginAs, unlimitedAdminUser }) => {
     // Navigate to Dashboard
-    await loginAs(unlimitedAdminUser.email, 'password123');
+    await loginAs(page, unlimitedAdminUser);
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 

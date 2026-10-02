@@ -1,11 +1,5 @@
-import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from '@/lib/auth/backendTransport';
 
-export async function GET() {
-  return NextResponse.json({
-    hours_saved: 12,
-    inquiries_handled: 48,
-    appointments_scheduled: 14,
-    carts_recovered: 2,
-    auto_replied: 40
-  });
+export function GET(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, '/api/v1/growth/time-savings', { suppressRequestBody: true });
 }

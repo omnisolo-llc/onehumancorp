@@ -4,7 +4,7 @@ import './current_app_smoke';
 test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);
 
-  const tenantId = adminUser.tenantId;
+  const tenantId = adminUser.organizationId;
 
   // 1. Create a product via API
   const productRes = await request.post('/api/v1/catalog/product', {

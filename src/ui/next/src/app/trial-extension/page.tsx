@@ -1,117 +1,19 @@
 "use client";
 
-import React, { useState } from 'react';
 import Link from 'next/link';
+import { useProPlan } from '../components/useProPlan';
 
 export default function TrialExtensionPage() {
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [hasClaimed, setHasClaimed] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleShareAndClaim = async () => {
-    setIsClaiming(true);
-    setError('');
-
-    const message = "I just set up my AI-powered storefront using OmniSolo OneHumanCorp! 🚀 Get your own assistant-led business hub today. #OmniSolo #SmallBiz";
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-    // Open the share window
-    window.open(shareUrl, '_blank');
-
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.ok) {
-        setHasClaimed(true);
-      } else {
-        alert("Failed to claim trial extension. Please try again.");
-        setError("Failed to claim trial extension. Please try again.");
-      }
-    } catch {
-      alert("Error claiming trial extension. Please check your connection.");
-      setError("Error claiming trial extension. Please check your connection.");
-    } finally {
-      setIsClaiming(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
-      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism backdrop-blur-[30px] saturate-[210%] border-white/40">
-        <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Interactive Pro Activation</h1>
-        <Link href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
-          Back to Dashboard
-        </Link>
-      </header>
-
-      <main className="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center">
-        <div className="w-full glassmorphism rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-white/10 p-8 md:p-12 mb-24 text-center max-w-2xl relative">
-
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
-
-          {!hasClaimed ? (
-            <div className="animate-fade-in">
-              <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
-                ⏳
-              </div>
-              <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-4">Activate Pro Access?</h2>
-              <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-                Share your new storefront on X, then ask the OmniSolo entitlement service to activate Pro access for this account.
-              </p>
-
-              <button
-                onClick={handleShareAndClaim}
-                disabled={isClaiming}
-                className={`w-full md:w-auto px-8 py-4 bg-black hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 mx-auto text-lg ${isClaiming ? 'opacity-70 cursor-wait' : 'hover:-translate-y-1'}`}
-              >
-                {isClaiming ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Verifying Share...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                    Share on X to Activate Pro
-                  </>
-                )}
-              </button>
-              {error && <p className="mt-3 text-sm text-red-600" role="alert">{error}</p>}
-            </div>
-          ) : (
-            <div className="animate-fade-in">
-              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
-                🎉
-              </div>
-              <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-4">Pro Access Activated</h2>
-              <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-                Thank you for sharing. The backend confirmed Pro access for this account.
-              </p>
-
-              <Link href="/dashboard" className="inline-block w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all hover:-translate-y-1 text-lg">
-                Return to Dashboard
-              </Link>
-            </div>
-          )}
-        </div>
-      </main>
-      <div className="mt-8 text-center pb-8"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ OmniSolo</a></div>
-
-      <style dangerouslySetInnerHTML={{__html: `
-
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-      `}} />
-    </div>
-  );
+  const { currentPlan, planError, claimTrial, claimError, refreshPlan } = useProPlan();
+  return <main className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6 md:p-12">
+    <section className="max-w-2xl mx-auto rounded-2xl bg-white dark:bg-gray-900 border p-8 space-y-4">
+      <h1 className="text-3xl font-bold">Plan and Trial Availability</h1>
+      <p role="status" aria-label="Current plan">{currentPlan ? `Current verified plan: ${currentPlan}.` : planError ?? 'Verifying your current plan…'}</p>
+      <p>A current plan can be checked here. Sharing does not verify a new grant or a trial duration.</p>
+      <button type="button" className="app-button" onClick={() => void claimTrial()}>Check trial availability</button>
+      {claimError && <p role="status">{claimError}</p>}
+      <button type="button" className="app-button" onClick={() => void refreshPlan()}>Refresh current plan</button>
+      <div className="flex gap-4"><Link href="/pricing">Review plans</Link><Link href="/dashboard">Back to Dashboard</Link></div>
+    </section>
+  </main>;
 }

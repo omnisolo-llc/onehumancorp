@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LogoutButton } from "./LogoutButton";
+import { invalidateQueueOwner, readQueueOwner } from "../../lib/sync/queueIdentity";
 
 const replace = vi.fn();
 const refresh = vi.fn();
@@ -33,4 +34,18 @@ describe("LogoutButton", () => {
     expect(screen.getByRole("button", { name: /log out/i })).toBeEnabled();
     expect(replace).not.toHaveBeenCalled();
   });
+  it('invalidates the same-tab offline owner before a client-side logout navigation', async () => {
+    invalidateQueueOwner();
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ userId: 'old', tenantId: 't', expiresAt: Date.now() + 60000 }));
+    await readQueueOwner();
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ ok: true }));
+    render(<LogoutButton />);
+    await userEvent.click(screen.getByRole('button', { name: /log out/i }));
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    await expect(readQueueOwner()).rejects.toThrow('identity');
+    vi.restoreAllMocks();
+  });
+
 });

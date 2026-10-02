@@ -9,19 +9,20 @@ const dynamicValues: Record<string, string> = {
   workflowId: "e2e-workflow",
 };
 
-function routeFromPageFile(root: string, file: string): string {
+function routeFromPageFile(root: string, file: string, fixture: { tenant?: string }): string {
   const directory = path.relative(root, path.dirname(file));
   const segments = directory
     .split(path.sep)
     .filter((segment) => segment && !segment.startsWith("(") && !segment.startsWith("@"))
     .map((segment) => {
       const parameter = segment.match(/^\[([^.[\]]+)\]$/)?.[1];
+      if (parameter === "tenant" && fixture.tenant !== undefined) return encodeURIComponent(fixture.tenant);
       return parameter ? (dynamicValues[parameter] ?? `e2e-${parameter}`) : segment;
     });
   return `/${segments.join("/")}`.replace(/\/$/, "") || "/";
 }
 
-export function discoverApplicationRoutes(root = path.resolve(__dirname, "../app")): string[] {
+export function discoverApplicationRoutes(root = path.resolve(__dirname, "../app"), fixture: { tenant?: string } = {}): string[] {
   const pages: string[] = [];
   const walk = (directory: string) => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -31,5 +32,5 @@ export function discoverApplicationRoutes(root = path.resolve(__dirname, "../app
     }
   };
   walk(root);
-  return [...new Set(pages.map((file) => routeFromPageFile(root, file)))].sort();
+  return [...new Set(pages.map((file) => routeFromPageFile(root, file, fixture)))].sort();
 }

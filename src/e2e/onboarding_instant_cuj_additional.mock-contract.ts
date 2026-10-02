@@ -18,11 +18,11 @@ test.describe('Onboarding Instant Build - Additional Details', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.addInitScript(() => {
-      window.__TAURI__ = {
+      Object.assign(window, { __TAURI__: {
         core: {
           invoke: async () => null
         }
-      };
+      } });
     });
 
     // Clear local storage to ensure fresh state

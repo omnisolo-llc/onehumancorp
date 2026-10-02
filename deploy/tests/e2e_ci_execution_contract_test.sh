@@ -378,7 +378,13 @@ require_literal 'compose up -d postgres valkey server server-init' "$compose_scr
 require_literal 'wait server-init' "$compose_script" \
   "Compose smoke must verify server-init's exit status."
 require_literal '/api/v1/dev/seed' "$compose_script" \
-  "Compose smoke must seed its real database through the authenticated API."
+  "Compose smoke must check that the production seed endpoint is absent."
+require_literal 'expect_status 404 "production seed route must be absent"' "$compose_script" \
+  "Compose smoke must reject production fixture routes."
+require_literal 'operational-read.sql' "$compose_script" \
+  "Compose smoke must load explicit isolated SQL fixtures."
+require_literal 'com.docker.compose.project' "$compose_script" \
+  "Compose fixture writes must verify the exact disposable project."
 require_literal 'length > 0' "$compose_script" \
   "Compose smoke must reject empty placeholder data after seeding."
 require_literal 'postgres-data:/var/lib/postgresql/data' "$compose_manifest" \

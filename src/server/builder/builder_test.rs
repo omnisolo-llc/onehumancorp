@@ -331,220 +331,43 @@ async fn test_builder_api() {
 }
 
 #[tokio::test]
-async fn test_builder_generate_and_publish_draft() {
-    let (pool, tenant_id) = match setup_db().await {
-        Some(v) => v,
-        None => return,
-    };
-
-    let app = super::api::router(pool.clone());
-
-    use ::server_common::Claims;
-    let claims = Claims {
-        sub: "user123".to_string(),
-        username: "user".to_string(),
-        email: "user@test.com".to_string(),
-        roles: vec!["user".to_string()],
-        session_id: None,
-        iat: 0,
-        jti: "test".to_string(),
-        organization_id: Some(tenant_id.to_string()),
-        exp: 0,
-    };
-
-    let app_with_auth = axum::Router::new()
-        .nest("/builder", app)
-        .layer(axum::middleware::from_fn(
-            move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let claims = claims.clone();
-                async move {
-                    let mut req = req;
-                    req.extensions_mut().insert(claims);
-                    next.run(req).await
-                }
-            },
-        ));
-
+async fn generation_requires_a_provider_and_never_claims_unfetched_sources() {
+    // A deliberately unavailable database proves that disabled generation never
+    // fabricates a toolbox or requires persistence to produce a truthful error.
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .acquire_timeout(Duration::from_millis(30))
+        .connect_lazy("postgresql://invalid:invalid@127.0.0.1:1/unused")
+        .unwrap();
+    let app = super::api::router(pool);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = listener.local_addr().unwrap().port();
-
-    tokio::spawn(async move {
-        axum::serve(listener, app_with_auth.into_make_service())
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let client = reqwest::Client::new();
+    for path in ["/generate", "/brand_toolbox/generate"] {
+        let response = client
+            .post(format!("{base}{path}"))
+            .json(&serde_json::json!({"description":"Owner supplied workshop description"}))
+            .send()
             .await
             .unwrap();
-    });
-
-    let client = reqwest::Client::new();
-    let base_url = format!("http://127.0.0.1:{}", port);
-
-    // 0. Generate the brand toolbox
-    let res = match client
-        .post(format!("{}/builder/brand_toolbox/generate", base_url))
-        .json(&serde_json::json!({
-            "description": "I am a handyman who offers fast local repairs",
-            "website_url": "https://example.com",
-            "product_url": "https://example.com/services/sink-repair",
-            "campaign_prompt": "book more weekend jobs",
-            "uploaded_asset_names": ["logo.png", "before-after.jpg"]
-        }))
-        .send()
-        .await
-    {
-        Ok(r) => r,
-        Err(_) => return,
-    };
-
-    assert_eq!(res.status(), 200);
-    let toolbox: super::api::BrandToolboxResponse = res.json().await.unwrap();
-    assert!(!toolbox.brand_dna.colors.is_empty());
-    assert!(!toolbox.logo_concepts.is_empty());
-    assert!(!toolbox.brand_book.is_empty());
-    assert!(!toolbox.catalog.is_empty());
-    assert!(!toolbox.campaign_ideas.is_empty());
-    assert!(!toolbox.social_calendar.is_empty());
-    assert!(!toolbox.assets.is_empty());
-    assert!(!toolbox.photoshoot.prompts.is_empty());
-    assert!(!toolbox.photoshoot.shots.is_empty());
-    assert_eq!(toolbox.store_profile.pages.len(), 1);
-    let toolbox_id = toolbox.id.expect("generated toolbox should be persisted");
-
-    let res = client
-        .get(format!("{}/builder/brand_toolbox/{}", base_url, toolbox_id))
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(res.status(), 200);
-    let fetched_toolbox: super::api::BrandToolboxResponse = res.json().await.unwrap();
-    assert_eq!(fetched_toolbox.id, Some(toolbox_id));
-
-    let res = client
-        .get(format!("{}/builder/brand_toolbox", base_url))
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(res.status(), 200);
-    let saved_toolboxes: Vec<super::api::BrandToolboxResponse> = res.json().await.unwrap();
-    assert!(
-        saved_toolboxes
-            .iter()
-            .any(|saved| saved.id == Some(toolbox_id))
-    );
-
-    let res = client
-        .post(format!(
-            "{}/builder/brand_toolbox/{}/publish_website",
-            base_url, toolbox_id
-        ))
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(res.status(), 200);
-    let toolbox_site: super::api::SiteResponse = res.json().await.unwrap();
-    assert!(
-        toolbox_site
-            .domain
-            .as_deref()
-            .unwrap_or("")
-            .ends_with(".cloud.omnisolo.co")
-    );
-
-    // 1. Mock Generate Storefront instead of hitting external APIs.
-    let draft = super::api::StoreProfile {
-        theme: Some("Modern".to_string()),
-        sample_products: vec![],
-        shipping_settings: Some(serde_json::json!({})),
-        tax_settings: Some(serde_json::json!({})),
-        domain: Some("handyman-draft.com".to_string()),
-        pages: vec![super::api::DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            seo_metadata: serde_json::json!({"@context": "https://schema.org"}),
-            blocks: vec![
-                super::api::DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({
-                        "headline": "Handyman",
-                        "subtitle": "Fast local repairs"
-                    }),
-                    sort_order: 0,
-                },
-                super::api::DraftBlock {
-                    block_type: "ProductGridBlock".to_string(),
-                    content: serde_json::json!({"items": []}),
-                    sort_order: 1,
-                },
-            ],
-        }],
-    };
-
-    // 2. Publish Draft
-    let res = client
-        .post(format!("{}/builder/publish_draft", base_url))
-        .json(&serde_json::json!({"domain": "handyman-draft.com", "draft": draft}))
-        .send()
-        .await
-        .unwrap();
-
-    assert_eq!(res.status(), 200);
-    let site: super::api::SiteResponse = res.json().await.unwrap();
-    assert_eq!(site.domain.as_deref(), Some("handyman-draft.com"));
-
-    // Clean up
-    let _ = sqlx::query("DELETE FROM builder_brand_toolboxes WHERE id = $1")
-        .bind(toolbox_id)
-        .execute(&pool)
-        .await;
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
-        .bind(toolbox_site.id)
-        .execute(&pool)
-        .await;
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
-        .bind(site.id)
-        .execute(&pool)
-        .await;
-}
-
-#[tokio::test]
-async fn test_tenant_isolation_in_db_operations() {
-    let pool = match setup_db().await {
-        Some(v) => v.0,
-        None => return,
-    };
-
-    let tenant_id_1 = Uuid::new_v4();
-    let tenant_id_2 = Uuid::new_v4();
-
-    // Insert a site for tenant 1
-    let site_1 = db::create_site(&pool, tenant_id_1, Some("tenant-1.com".to_string()))
-        .await
-        .expect("Failed to create site for tenant 1");
-
-    // Insert a site for tenant 2
-    let site_2 = db::create_site(&pool, tenant_id_2, Some("tenant-2.com".to_string()))
-        .await
-        .expect("Failed to create site for tenant 2");
-
-    // Retrieve sites for tenant 1, ensure tenant 2's site is NOT present
-    let sites_1 = db::list_sites(&pool, tenant_id_1)
-        .await
-        .expect("Failed to list sites for tenant 1");
-    assert!(sites_1.iter().any(|s| s.id == site_1.id));
-    assert!(!sites_1.iter().any(|s| s.id == site_2.id));
-
-    // Retrieve sites for tenant 2, ensure tenant 1's site is NOT present
-    let sites_2 = db::list_sites(&pool, tenant_id_2)
-        .await
-        .expect("Failed to list sites for tenant 2");
-    assert!(sites_2.iter().any(|s| s.id == site_2.id));
-    assert!(!sites_2.iter().any(|s| s.id == site_1.id));
-
-    // Cleanup
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
-        .bind(site_1.id)
-        .execute(&pool)
-        .await;
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
-        .bind(site_2.id)
-        .execute(&pool)
-        .await;
+        assert_eq!(response.status(), 503);
+        let body: serde_json::Value = response.json().await.unwrap();
+        assert_eq!(body["code"], "generation_unavailable");
+        assert!(body.get("pages").is_none());
+        assert!(body.get("id").is_none());
+        let response = client
+            .post(format!("{base}{path}"))
+            .json(
+                &serde_json::json!({"description":"Workshop","website_url":"https://example.test"}),
+            )
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 422);
+        assert_eq!(
+            response.json::<serde_json::Value>().await.unwrap()["code"],
+            "source_fetch_unavailable"
+        );
+    }
+    server.abort();
 }

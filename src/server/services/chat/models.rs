@@ -52,7 +52,7 @@ pub struct ChatMessage {
     pub tenant_id: Uuid,
     pub conversation_id: Uuid,
     pub sender_type: String,
-    pub sender_id: Option<Uuid>,
+    pub sender_id: Option<String>,
     pub content: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

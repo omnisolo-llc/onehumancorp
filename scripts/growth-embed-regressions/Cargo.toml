@@ -1,0 +1,17 @@
+[package]
+name = "ohc-growth-embed-regressions"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+urlencoding = "2"
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "macros"] }
+tokio = { version = "1", features = ["full"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

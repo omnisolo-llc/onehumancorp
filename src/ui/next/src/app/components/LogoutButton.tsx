@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { notifyQueueIdentityChange } from "../../lib/sync/queueIdentity";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export function LogoutButton() {
     if (pending) return;
     setPending(true);
     setError(false);
+    notifyQueueIdentityChange();
     try {
       const response = await fetch("/api/v1/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("logout failed");
@@ -20,7 +22,7 @@ export function LogoutButton() {
     } catch {
       setError(true);
       setPending(false);
-    }
+    } finally { notifyQueueIdentityChange(); }
   }
 
   return (

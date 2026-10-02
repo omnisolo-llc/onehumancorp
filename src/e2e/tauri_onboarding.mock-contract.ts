@@ -29,7 +29,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // We mock the Tauri backend API to allow state save/resume
     const mockTauriBackend = () => {
-      window.__TAURI__ = {
+      Object.assign(window, { __TAURI__: {
         core: {
           invoke: async (cmd, args) => {
             if (cmd === 'get_onboarding_state') {
@@ -58,7 +58,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
             throw new Error(`Unhandled command: ${cmd}`);
           }
         }
-      };
+      } });
     };
     await page.addInitScript(mockTauriBackend);
 
@@ -250,17 +250,14 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // It should load the values, we can skip through
     await newPage.waitForTimeout(500);
-    await newPage.evaluate(() => { if (typeof window.goToStep === 'function') { window.goToStep('step-context', false); } });
+    await newPage.evaluate(() => { if ('goToStep' in window && typeof window.goToStep === 'function') { window.goToStep('step-context', false); } });
     await newPage.waitForTimeout(500);
     // Mock input selection to pass the UI state if the storage wasn't perfectly parsed
-    await newPage.locator('input[value="Local Service"]').evaluate(el => el.checked = true);
+    await newPage.locator('input[value="Local Service"]').check();
     await expect(newPage.locator('input[value="Local Service"]')).toBeChecked();
-    await newPage.evaluate(() => { document.querySelector('#step-context .next-step-btn').click(); });
+    await newPage.locator('#step-context .next-step-btn').click();
 
-    await newPage.evaluate(() => {
-        const el = document.querySelector('#business-categories');
-        if (el) { el.value = 'Handyman'; }
-    });
+    await newPage.locator('#business-categories').selectOption('Handyman');
     await expect(newPage.locator('#business-categories')).toHaveValue('Handyman');
     await newPage.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
 
@@ -398,7 +395,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     });
 
     await page.addInitScript(() => {
-      window.__TAURI__ = {
+      Object.assign(window, { __TAURI__: {
         core: {
           invoke: async (cmd) => {
             if (cmd === 'start_onboarding') {
@@ -407,7 +404,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
             return null;
           }
         }
-      };
+      } });
     });
     await page.goto('http://mock/setup.html');
 
@@ -490,7 +487,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     });
 
     await page.addInitScript(() => {
-      window.__TAURI__ = {
+      Object.assign(window, { __TAURI__: {
         core: {
           invoke: async (cmd) => {
             if (cmd === 'generate_cloud_invite') {
@@ -514,7 +511,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
             throw new Error(`Unhandled command: ${cmd}`);
           }
         }
-      };
+      } });
     });
 
     await page.goto('/dashboard.html');

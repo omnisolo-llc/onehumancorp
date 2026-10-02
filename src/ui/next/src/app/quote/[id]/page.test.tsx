@@ -24,12 +24,18 @@ describe("interactive quote", () => {
     vi.mocked(fetch).mockReset();
   });
 
+  it("loads the resolved route quote without reading asynchronous Next props", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json(quoteResponse));
+    render(<InteractiveQuotePage />);
+    expect(await screen.findByText(/Site visit/)).toBeVisible();
+  });
+
   it("loads and accepts the real quote through versioned endpoints", async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json(quoteResponse))
       .mockResolvedValueOnce(Response.json({ status: "ACCEPTED" }));
 
-    render(<InteractiveQuotePage params={{ id: "quote-7" }} />);
+    render(<InteractiveQuotePage />);
     const user = userEvent.setup();
 
     expect(await screen.findByText(/Site visit/)).toBeVisible();
@@ -49,7 +55,7 @@ describe("interactive quote", () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json(quoteResponse))
       .mockResolvedValueOnce(Response.json({ stripe_payment_link: "https://checkout.example.test/session" }));
-    render(<InteractiveQuotePage params={{ id: "quote-7" }} />);
+    render(<InteractiveQuotePage />);
     await screen.findByText(/Site visit/);
     await userEvent.setup().click(screen.getByRole("button", { name: "Accept quote" }));
     expect(await screen.findByRole("link", { name: "Continue to payment" })).toHaveAttribute("href", "https://checkout.example.test/session");
@@ -57,7 +63,7 @@ describe("interactive quote", () => {
 
   it("does not fabricate quote data when the service is unavailable", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json({ error: "unavailable" }, { status: 503 }));
-    render(<InteractiveQuotePage params={{ id: "quote-7" }} />);
+    render(<InteractiveQuotePage />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("This quote is unavailable.");
     expect(screen.queryByText("Site visit")).toBeNull();

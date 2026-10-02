@@ -19,6 +19,16 @@ describe('LeadMagnetGeneratorPage', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
+  it('marks unconfigured editor-preview actions unavailable with a visible reason', () => {
+    render(<TooltipProvider><LeadMagnetGeneratorPage /></TooltipProvider>);
+    for(const name of ['Download Now']) {
+      const button=screen.getByRole('button',{name});
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription('No downloadable resource is configured in this preview.');
+    }
+    expect(screen.getByText('No downloadable resource is configured in this preview.')).toBeVisible();
+  });
+
   it('renders the configurator with default values', () => {
     render(
       <TooltipProvider>
@@ -68,14 +78,14 @@ describe('LeadMagnetGeneratorPage', () => {
   });
 
   it('removes branding when Pro is active', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+    global.fetch = vi.fn(async url => Response.json(url === '/api/v1/auth/session-identity' ? { userId: 'plan-owner', tenantId: 'plan-tenant', expiresAt: Date.now() + 60000 } : { current_plan: 'Pro' }));
     render(
       <TooltipProvider>
         <LeadMagnetGeneratorPage />
       </TooltipProvider>
     );
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan', expect.objectContaining({ credentials: 'same-origin' })));
     const checkbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Branding/i);
     fireEvent.click(checkbox);
 

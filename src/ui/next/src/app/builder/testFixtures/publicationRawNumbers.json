@@ -1,0 +1,90 @@
+[
+  {
+    "literal": "9007199254740991",
+    "accepted": true
+  },
+  {
+    "literal": "9007199254740991.0",
+    "accepted": true
+  },
+  {
+    "literal": "9007199254740991.1",
+    "accepted": false
+  },
+  {
+    "literal": "-9007199254740991.1",
+    "accepted": false
+  },
+  {
+    "literal": "9007199254740992",
+    "accepted": false
+  },
+  {
+    "literal": "9.007199254740991e15",
+    "accepted": true
+  },
+  {
+    "literal": "9.0071992547409911e15",
+    "accepted": false
+  },
+  {
+    "literal": "90071992547409910e-1",
+    "accepted": true
+  },
+  {
+    "literal": "90071992547409911e-1",
+    "accepted": false
+  },
+  {
+    "literal": "1e-999",
+    "accepted": false
+  },
+  {
+    "literal": "-1e-999",
+    "accepted": false
+  },
+  {
+    "literal": "0e-999",
+    "accepted": true
+  },
+  {
+    "literal": "-0e999",
+    "accepted": true
+  },
+  {
+    "literal": "5e-324",
+    "accepted": true
+  },
+  {
+    "literal": "1e-324",
+    "accepted": false
+  },
+  {
+    "literal": "2.2250738585072014e-308",
+    "accepted": true
+  },
+  {
+    "literal": "1e999",
+    "accepted": false
+  },
+  {
+    "literal": "9e9999",
+    "accepted": false
+  },
+  {
+    "literal": "1e-9999",
+    "accepted": false
+  },
+  {
+    "literal": "0.0000000000000000000e9999",
+    "accepted": true
+  },
+  {
+    "literal": "2.5e-1",
+    "accepted": true
+  },
+  {
+    "literal": "333333333.33333329",
+    "accepted": true
+  }
+]

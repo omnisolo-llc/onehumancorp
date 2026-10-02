@@ -1,7 +1,9 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { downloadContactCard } from '../../lib/contact-vcard';
 import { useRouter } from 'next/navigation';
 import { useProPlan } from '../components/useProPlan';
 
@@ -15,13 +17,18 @@ export default function DigitalBusinessCardGeneratorPage() {
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
   const [themeColor, setThemeColor] = useState('#4F46E5');
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
 
-  const [shareLink, setShareLink] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [storedShareLink, setShareLink] = useState('');
+  const [linkRequiresPro, setLinkRequiresPro] = useState(false);
+  const [cardError, setCardError] = useState('');
+  const identityReady = !!name.trim() && !!title.trim();
   const [tenantId, setTenantId] = useState('my-store');
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
+  const shareLink = storedShareLink && (!linkRequiresPro || hasPro) ? storedShareLink : '';
+  const clipboard = useClipboardFeedback(shareLink);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -30,9 +37,24 @@ export default function DigitalBusinessCardGeneratorPage() {
     }
   }, []);
 
+  useEffect(() => {
+    setShareLink('');
+    setCardError('');
+  }, [name, title, company, phone, email, website, linkedin, themeColor, removeBranding]);
+
+  const saveContact = () => {
+    if (!identityReady) return;
+    try {
+      downloadContactCard({ name, title, company, phone, email, website, linkedin });
+      setCardError('');
+    } catch {
+      setCardError('Could not create the contact file in this browser.');
+    }
+  };
+
   const generateLink = () => {
-    if (!name || !title) {
-      alert('Please fill out at least your name and title.');
+    if (!identityReady) {
+      setCardError('Enter your name and title before creating the card.');
       return;
     }
 
@@ -55,16 +77,11 @@ export default function DigitalBusinessCardGeneratorPage() {
     const base64UrlStr = base64Str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
     const url = `${window.location.origin}/digital-business-card/view?data=${base64UrlStr}`;
+    setLinkRequiresPro(removeBranding);
     setShareLink(url);
   };
 
-  const handleCopy = () => {
-    if (shareLink) {
-      navigator.clipboard.writeText(shareLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  const handleCopy = () => { if (shareLink) void clipboard.copy(shareLink); };
 
   const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -186,7 +203,7 @@ export default function DigitalBusinessCardGeneratorPage() {
                   {['#4F46E5', '#000000', '#E11D48', '#059669', '#D97706'].map((color) => (
                     <button
                       key={color}
-                      onClick={() => setThemeColor(color)}
+                      onClick={() => setThemeColor(color)} aria-pressed={themeColor === color}
                       className={`w-8 h-8 rounded-full transition-all ${themeColor === color ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-[#1E1E1E] scale-110' : 'hover:scale-105'}`}
                       style={{ backgroundColor: color }}
                       aria-label={`Select color ${color}`}
@@ -213,6 +230,7 @@ export default function DigitalBusinessCardGeneratorPage() {
 
               <button
                 onClick={generateLink}
+                disabled={!identityReady}
                 className="w-full mt-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
               >
                 Generate Shareable Link
@@ -244,15 +262,17 @@ export default function DigitalBusinessCardGeneratorPage() {
                 <p className="text-sm font-medium mb-1" style={{ color: themeColor }}>{title || 'Job Title'}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">{company || 'Company Name'}</p>
 
+                {!identityReady && <p id="card-identity-required">Enter your name and title to save or share your card.</p>}
+                {cardError && <p role="alert">{cardError}</p>}
                 {/* Actions */}
                 <div className="flex gap-3 w-full mb-8">
-                  <button
+                  <button onClick={saveContact} disabled={!identityReady} aria-describedby={!identityReady ? "card-identity-required" : undefined}
                     className="flex-1 py-2.5 rounded-full text-white font-semibold text-sm shadow-md flex items-center justify-center gap-1"
                     style={{ backgroundColor: themeColor }}
                   >
                     Save vCard
                   </button>
-                  <button
+                  <button onClick={generateLink} aria-label="Create card link" disabled={!identityReady} aria-describedby={!identityReady ? "card-identity-required" : undefined}
                     className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300"
                   >
                     🔗
@@ -322,10 +342,12 @@ export default function DigitalBusinessCardGeneratorPage() {
                   />
                   <button
                     onClick={handleCopy}
+                    disabled={clipboard.state === 'pending'}
                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors text-xs whitespace-nowrap shadow-sm"
                   >
-                    {copied ? 'Copied!' : 'Copy'}
+                    {clipboard.state === 'copied' ? 'Copied!' : 'Copy'}
                   </button>
+                  {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                 </div>
                 <div className="mt-3 flex justify-center">
                   <Link

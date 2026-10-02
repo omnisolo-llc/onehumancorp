@@ -147,6 +147,7 @@ pub async fn handle_inbox_action(
                         webhook_url: "".to_string(),
                         api_token: api_token.clone(),
                         from_phone: "".to_string(),
+                        ..Default::default()
                     };
                     let _ = registry.connect(integration_id, "", creds);
 

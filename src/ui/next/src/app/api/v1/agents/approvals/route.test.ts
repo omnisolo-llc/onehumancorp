@@ -13,10 +13,6 @@ import { POST as decide } from "./[id]/route";
 import { GET as activity } from "./activity/route";
 import { approvalBackendPath } from "./approvalBackend";
 import { GET as list } from "./route";
-import { POST as simulateBooking } from "./simulate-booking-draft/route";
-import { POST as simulateLeadRecovery } from "./simulate-lead-recovery/route";
-import { POST as simulateQuote } from "./simulate-quote-draft/route";
-import { POST as simulateStockout } from "./simulate-stockout-reorder/route";
 
 const context = (id: string) => ({ params: Promise.resolve({ id }) });
 const request = (path: string, method = "GET") =>
@@ -30,24 +26,35 @@ describe("authenticated approval routes", () => {
     expect(() => approvalBackendPath("../admin")).toThrow("invalid approval ID");
   });
 
-  test("maps list, activity, decision, and simulation endpoints exactly", async () => {
+  test("maps supported list, activity, and decision endpoints exactly", async () => {
     await list(request("/api/v1/agents/approvals?limit=20"));
     await activity(request("/api/v1/agents/approvals/activity"));
     await decide(request("/api/v1/agents/approvals/approval-7", "POST"), context("approval-7"));
-    await simulateBooking(request("/api/v1/agents/approvals/simulate-booking-draft", "POST"));
-    await simulateLeadRecovery(request("/api/v1/agents/approvals/simulate-lead-recovery", "POST"));
-    await simulateQuote(request("/api/v1/agents/approvals/simulate-quote-draft", "POST"));
-    await simulateStockout(request("/api/v1/agents/approvals/simulate-stockout-reorder", "POST"));
 
     expect(proxyBackendRequest.mock.calls.map(([, path]) => path)).toEqual([
       "/api/v1/agents/approvals",
       "/api/v1/agents/approvals/activity",
       "/api/v1/agents/approvals/approval-7",
-      "/api/v1/agents/approvals/simulate-autonomous-booking-quote",
-      "/api/v1/agents/approvals/simulate-lead-recovery",
-      "/api/v1/agents/approvals/simulate-quote-draft",
-      "/api/v1/agents/approvals/simulate-stockout-reorder",
     ]);
+  });
+
+  test.each([
+    "simulate-booking-draft", "simulate-lead-recovery", "simulate-quote-draft", "simulate-stockout-reorder",
+  ])("preserves the backend absence response for retired simulation ID %s", async (id) => {
+    const absent = Response.json(
+      { error: "not_found" },
+      { status: 404, headers: { "cache-control": "private, no-store" } },
+    );
+    proxyBackendRequest.mockResolvedValueOnce(absent);
+    const response = await decide(
+      request(`/api/v1/agents/approvals/${id}`, "POST"), context(id),
+    );
+    expect(response).toBe(absent);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(proxyBackendRequest).toHaveBeenCalledExactlyOnceWith(
+      expect.any(Request), `/api/v1/agents/approvals/${id}`,
+    );
   });
 
   test("rejects invalid IDs before transport", async () => {

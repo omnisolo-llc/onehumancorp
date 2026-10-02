@@ -1,26 +1,54 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useProPlan } from '../components/useProPlan';
 
 export default function ReferralWidgetBuilderPage() {
   const [tenant, setTenant] = useState('my-store');
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro, currentPlan, planError, claimTrial, claimError } = useProPlan();
   const [amount, setAmount] = useState('10');
   const [type, setType] = useState('%');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallStatus, setPaywallStatus] = useState('');
-  const [copied, setCopied] = useState(false);
+  const brandingRemoved = removeBranding && hasPro;
+
+  const [linkCopyStatus, setLinkCopyStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
+  const copySequence = useRef(0);
+  const copyPending = useRef(false);
+  const referralLink = `https://cloud.omnisolo.co/setup.html?ref=${tenant}&promo=ref123`;
+
+  useEffect(() => {
+    copySequence.current += 1;
+    copyPending.current = false;
+    setLinkCopyStatus('idle');
+    return () => { copySequence.current += 1; copyPending.current = false; };
+  }, [referralLink]);
+
+  const handleCopyLink = async () => {
+    if (copyPending.current) return;
+    const sequence = ++copySequence.current;
+    copyPending.current = true;
+    setLinkCopyStatus('copying');
+    try {
+      if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(referralLink);
+      if (sequence === copySequence.current) setLinkCopyStatus('copied');
+    } catch {
+      if (sequence === copySequence.current) setLinkCopyStatus('error');
+    } finally {
+      if (sequence === copySequence.current) copyPending.current = false;
+    }
+  };
+
 
   useEffect(() => {
     try {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
-      const storedPro = localStorage.getItem('has_pro') === 'true';
       setTenant(storedTenant);
-      setHasPro(storedPro);
     } catch {
       // ignore
     }
@@ -35,48 +63,13 @@ export default function ReferralWidgetBuilderPage() {
   };
 
   const handleShareToUnlock = async () => {
-    const message = `Check out my new Referral Program built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenant}`;
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-    try {
-      window.open(shareUrl, '_blank');
-    } catch {
-      // ignore
-    }
-
-    setPaywallStatus('Verifying Share...');
-
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.ok) {
-        setPaywallStatus('Unlocked!');
-        setHasPro(true);
-        localStorage.setItem('has_pro', 'true');
-        setTimeout(() => {
-          setShowPaywall(false);
-          setRemoveBranding(true);
-          setPaywallStatus('');
-        }, 1500);
-      } else {
-        setPaywallStatus('Failed to claim trial extension.');
-        setTimeout(() => setPaywallStatus(''), 3000);
-      }
-    } catch {
-      setPaywallStatus('Error claiming trial extension.');
-      setTimeout(() => setPaywallStatus(''), 3000);
-    }
+    await claimTrial();
   };
 
-  const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co'}/api/v1/growth/customer-referral/embed?tenant=${tenant}&theme=${theme}&give=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&get=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&hide_branding=${removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`;
+  const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co'}/api/v1/growth/customer-referral/embed?tenant=${tenant}&theme=${theme}&give=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&get=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&hide_branding=${brandingRemoved}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`;
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(embedCode);
+  const handleCopyCode = () => { void clipboard.copy(embedCode); };
 
   return (
     <div className="min-h-screen bg-gray-50 font-inter text-gray-900 pb-20">
@@ -130,14 +123,14 @@ export default function ReferralWidgetBuilderPage() {
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   type="button"
-                  onClick={() => setTheme('light')}
+                  onClick={() => setTheme('light')} aria-pressed={theme === 'light'}
                   className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
                 >
                   Light
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTheme('dark')}
+                  onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}
                   className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
                 >
                   Dark
@@ -146,12 +139,14 @@ export default function ReferralWidgetBuilderPage() {
             </div>
 
             <div className="mb-6">
+              {currentPlan === null && <p role="status">{planError ?? 'Verifying your current plan…'}</p>}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   id="remove-branding-checkbox"
                   aria-label='Remove "OmniSolo" Branding'
-                  checked={removeBranding}
+                  checked={brandingRemoved}
+                  disabled={currentPlan === null}
                   onChange={(e) => handleCheckboxChange(e.target.checked)}
                   className="w-4 h-4 text-[#0066FF] border-gray-300 rounded focus:ring-[#0066FF]"
                 />
@@ -188,15 +183,17 @@ export default function ReferralWidgetBuilderPage() {
                     type="text"
                     readOnly
                     aria-label="Referral link preview"
-                    value={`https://cloud.omnisolo.co/setup.html?ref=${tenant}&promo=ref123`}
+                    value={referralLink}
                     className="flex-1 bg-transparent border-none text-xs text-gray-600 dark:text-gray-300 px-2 focus:outline-none"
                   />
-                  <button className="bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold py-2 px-4 rounded-md shadow-sm">
-                    Copy Link
+                  <button onClick={handleCopyLink} disabled={linkCopyStatus === 'copying'} className="bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold py-2 px-4 rounded-md shadow-sm">
+                    {linkCopyStatus === 'copying' ? 'Copying…' : 'Copy Link'}
                   </button>
                 </div>
+                {linkCopyStatus === 'copied' && <p role="status">Link copied</p>}
+                {linkCopyStatus === 'error' && <p role="alert">Could not copy the link. Select the link and copy it manually.</p>}
 
-                {!removeBranding && (
+                {!brandingRemoved && (
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-center">
                     <a
                       href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
@@ -238,10 +235,12 @@ export default function ReferralWidgetBuilderPage() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={handleCopyCode}
+                disabled={clipboard.state === 'pending'}
                 className="flex-1 py-3 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium rounded-xl transition-colors"
               >
-                {copied ? 'Copied!' : 'Copy Code'}
+                {clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
               </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
               <button
                 onClick={() => setShowModal(false)}
                 className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white font-medium rounded-xl hover:bg-gray-200"
@@ -271,15 +270,15 @@ export default function ReferralWidgetBuilderPage() {
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
               Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
-            {paywallStatus ? (
-              <p className="text-indigo-600 font-semibold mb-4 text-sm">{paywallStatus}</p>
+            {claimError ? (
+              <p className="text-indigo-600 font-semibold mb-4 text-sm">{claimError}</p>
             ) : (
               <button
                 type="button"
                 onClick={handleShareToUnlock}
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-md"
               >
-                Share on X to Unlock 7 Days
+                Check trial availability
               </button>
             )}
           </div>

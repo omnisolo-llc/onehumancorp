@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import { proxyBackendRequest, validateJsonRequestBody } from "@/lib/auth/backendTransport";
 import { invalidQuoteId, quoteBackendPath } from "../quoteBackend";
 
 export async function GET(
@@ -19,25 +18,19 @@ export async function GET(
 }
 
 export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } },
-) {
-  const resolvedParams = await Promise.resolve(params);
-  const id = resolvedParams?.id;
-  let body: Record<string, unknown> = {};
+  request: Request,
+  context: { params: Promise<{ id: string }> | { id: string } },
+): Promise<Response> {
+  let path: string;
   try {
-    const raw = await req.json();
-    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
-      body = raw as Record<string, unknown>;
-    }
+    path = quoteBackendPath((await context.params).id);
   } catch {
-    // empty body fallback
+    return invalidQuoteId();
   }
-  const status = typeof body.status === "string" ? body.status : "SENT";
-  return NextResponse.json({
-    id,
-    ...body,
-    status,
+  return proxyBackendRequest(request, path, {
+    backendMethod: "PUT",
+    forwardQuery: false,
+    requestContentType: "application/json",
+    transformRequestBody: validateJsonRequestBody,
   });
 }
-

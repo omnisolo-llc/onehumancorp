@@ -3,16 +3,11 @@ import { test, expect } from './fixtures';
 test.describe("Mobile Payload Optimization", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('supply returns mobile_optimized payload', async ({ page, loginAs, unlimitedAdminUser, request }) => {
+  test('supply returns mobile_optimized payload', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
 
-    // Call the endpoint directly with mobile_optimized=true
-    const response = await request.get('/api/v1/ui/supply?mobile_optimized=true', {
-      headers: {
-        "x-tenant-id": unlimitedAdminUser.tenantId || "e2e-tenant",
-        "Authorization": `Bearer ${unlimitedAdminUser.token || "e2e-token"}`
-      }
-    });
+    // Use the real browser session authenticated by loginAs; do not invent token fields.
+    const response = await page.request.get('/api/v1/ui/supply?mobile_optimized=true');
 
     expect(response.status()).toBe(200);
     const data = await response.json();
@@ -28,15 +23,10 @@ test.describe("Mobile Payload Optimization", () => {
     }
   });
 
-  test('list_jobs returns mobile_optimized payload', async ({ page, loginAs, unlimitedAdminUser, request }) => {
+  test('list_jobs returns mobile_optimized payload', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    // Call the endpoint directly with mobile_optimized=true
-    const response = await request.get('/api/v1/ohc-job-queue/?mobile_optimized=true', {
-      headers: {
-        "x-tenant-id": unlimitedAdminUser.tenantId || "e2e-tenant",
-        "Authorization": `Bearer ${unlimitedAdminUser.token || "e2e-token"}`
-      }
-    });
+    // Use the real browser session authenticated by loginAs; do not invent token fields.
+    const response = await page.request.get('/api/v1/ohc-job-queue/?mobile_optimized=true');
 
     expect(response.status()).toBe(200);
     const data = await response.json();

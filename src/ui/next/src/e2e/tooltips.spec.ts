@@ -209,7 +209,7 @@ test.describe("Tooltips", () => {
 
     const tooltipText = page
       .locator("div", {
-        hasText: "Search for articles, videos, and guides",
+        hasText: "Search for help articles and videos...",
       })
       .last();
 

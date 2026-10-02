@@ -24,6 +24,14 @@ export type PublicApiContract = Readonly<{
 export type PublicRouteEntry =
   | Readonly<{
       method: "GET";
+      invocation: "route-handler";
+      matcher: Readonly<{ kind: "public-site-document"; path: "/api/v1/public/sites/" }>;
+      reason: string;
+      owner: "publication";
+      api: Readonly<{ bodyLimitBytes: 0; responseLimitBytes: 8388608; tenantSource: "current-publication"; replayPolicy: "read-only"; cachePolicy: "no-store" }>;
+    }>
+  | Readonly<{
+      method: "GET";
       invocation: "page";
       matcher: Readonly<{ kind: "exact"; path: string }>;
       reason: string;

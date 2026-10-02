@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../onboarding_fixtures';
 
 test.describe('Onboarding Navigation and Aesthetics', () => {
 
@@ -17,11 +17,11 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await page.getByTestId('team-support').click();
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.getByTestId('next-step-btn').nth(4).click(); // to step-admin
-    await page.locator('#admin-name').fill('Test User');
-    await page.locator('#admin-email').fill('test@test.com');
-    await page.locator('#admin-password').fill('password123');
+    await expect(page.locator('#step-admin')).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.getByTestId('next-step-btn').nth(5).click(); // to step-offer
     await page.locator('#first-offer').fill('Awesome stuff');
+    await page.locator('#first-product-price').fill('25.00');
     await page.getByTestId('next-step-btn').nth(6).click(); // to step-location
     await page.locator('#location-input').fill('Local');
     await page.getByTestId('next-step-btn').nth(7).click(); // to step-target-audience
@@ -51,9 +51,8 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await page.getByTestId('team-support').click();
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.getByTestId('next-step-btn').nth(4).click();
-    await page.locator('#admin-name').fill('Test User');
-    await page.locator('#admin-email').fill('test@test.com');
-    await page.locator('#admin-password').fill('password123');
+    await expect(page.locator('#step-admin')).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.getByTestId('next-step-btn').nth(5).click();
 
     const offerInput = page.locator('#first-offer');
@@ -84,11 +83,11 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await page.getByTestId('team-support').click();
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.getByTestId('next-step-btn').nth(4).click();
-    await page.locator('#admin-name').fill('Test User');
-    await page.locator('#admin-email').fill('test@test.com');
-    await page.locator('#admin-password').fill('password123');
+    await expect(page.locator('#step-admin')).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.getByTestId('next-step-btn').nth(5).click();
     await page.locator('#first-offer').fill('Awesome stuff');
+    await page.locator('#first-product-price').fill('25.00');
     await page.getByTestId('next-step-btn').nth(6).click();
     await page.locator('#location-input').fill('Local');
     await page.getByTestId('next-step-btn').nth(7).click();

@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // A boundary fixture, not a claimed live billing connection.
-const fetchPlan = vi.fn<typeof fetch>(async () => Response.json({ current_plan: 'pro' }));
+const fetchPlan = vi.fn<typeof fetch>(async url => Response.json(url === '/api/v1/auth/session-identity' ? { userId: 'cart-owner', tenantId: 'cart-tenant', expiresAt: Date.now() + 60000 } : { current_plan: 'Pro' }));
 
 describe('CartRecoveryPage', () => {
     beforeEach(() => {
@@ -34,7 +34,8 @@ describe('CartRecoveryPage', () => {
         expect(screen.getByText('Automatic recovery is unavailable until a real campaign dispatcher is connected.')).toBeVisible();
         fireEvent.click(toggle);
         expect(toggle).toBeDisabled();
-        expect(fetchPlan).toHaveBeenCalledTimes(1);
-        expect(fetchPlan).toHaveBeenCalledWith('/api/v1/billing/my-plan');
+        expect(fetchPlan.mock.calls.map(([url]) => url)).toEqual(['/api/v1/auth/session-identity', '/api/v1/billing/my-plan']);
+        expect(fetchPlan).toHaveBeenCalledWith('/api/v1/billing/my-plan', expect.objectContaining({ credentials: 'same-origin' }));
+        expect(fetchPlan.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
     });
 });

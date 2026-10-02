@@ -9,23 +9,26 @@ function UnlockContent() {
   const campaignTitle = searchParams.get('title') || 'Secret Deal';
   const reward = searchParams.get('reward') || '20% Off';
   const hiddenCode = searchParams.get('code') || 'SECRET';
-  const shareMessage = searchParams.get('msg') || 'I just unlocked a secret discount!';
+  const shareMessage = searchParams.get('msg') || 'Preview this configured offer.';
   const theme = searchParams.get('theme') || 'light';
 
   const isUnlocked = false;
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
-  const encodedMessage = encodeURIComponent(`${shareMessage} https://cloud.omnisolo.co/unlock?tenant=${tenant}&title=${encodeURIComponent(campaignTitle)}&reward=${encodeURIComponent(reward)}&code=${encodeURIComponent(hiddenCode)}&msg=${encodeURIComponent(shareMessage)}`);
-
-  const handleShareX = () => {
-    window.open(`https://twitter.com/intent/tweet?text=${encodedMessage}`, '_blank', 'width=550,height=420');
-    setVerificationError('Reward verification is unavailable. The code remains locked.');
+  const openShare = (provider: 'x' | 'whatsapp') => {
+    const parameters = new URLSearchParams({ tenant, title: campaignTitle, reward, code: hiddenCode, msg: shareMessage, theme });
+    const preview = new URL(`/unlock?${parameters}`, window.location.origin);
+    const intent = new URL(provider === 'x' ? 'https://twitter.com/intent/tweet' : 'https://wa.me/');
+    intent.searchParams.set('text', `${shareMessage} ${preview.href}`);
+    try {
+      window.open(intent.href, '_blank', 'noopener,noreferrer');
+      setVerificationError('Reward verification is unavailable. The code remains locked.');
+    } catch {
+      setVerificationError('The share draft could not be opened. Reward verification is unavailable.');
+    }
   };
-
-  const handleShareWhatsApp = () => {
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-    setVerificationError('Reward verification is unavailable. The code remains locked.');
-  };
+  const handleShareX = () => openShare('x');
+  const handleShareWhatsApp = () => openShare('whatsapp');
 
   const getThemeStyles = () => {
     return theme === 'light'
@@ -48,7 +51,7 @@ function UnlockContent() {
             </h1>
 
             <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
-                {isUnlocked ? 'Congratulations! Here is your reward:' : 'Unlock your special reward:'} <br/>
+                {isUnlocked ? 'Congratulations! Here is your reward:' : 'Configured offer:'} <br/>
                 <strong className="text-purple-500 text-lg mt-1 block">{reward}</strong>
             </p>
 
@@ -75,7 +78,7 @@ function UnlockContent() {
 
              {!isUnlocked ? (
                  <div className="w-full space-y-3 mb-6 animate-fade-in">
-                    <p className="text-center text-xs font-medium uppercase tracking-wider mb-4 opacity-70">Share to reveal code</p>
+                    <p className="text-center text-xs font-medium uppercase tracking-wider mb-4 opacity-70">Sharing does not verify reward eligibility</p>
                     <button
                         onClick={handleShareX}
                         className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
@@ -97,7 +100,7 @@ function UnlockContent() {
             )}
 
             <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide hover:underline opacity-70 hover:opacity-100 transition-opacity" style={{ color: '#6b7280' }}>
+                <a href={`/api/v1/growth/referrals/click?${new URLSearchParams({ target: '/onboarding', ref: tenant })}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide hover:underline opacity-70 hover:opacity-100 transition-opacity" style={{ color: '#6b7280' }}>
                     ⚡ OmniSolo <span className="sr-only">(Powered by OmniSolo)</span>
                 </a>
             </div>

@@ -118,6 +118,16 @@ static DAILY_WORK_CACHE: std::sync::OnceLock<
     ::server_utils::cache::HybridCache<Vec<serde_json::Value>>,
 > = std::sync::OnceLock::new();
 
+pub(crate) async fn invalidate_daily_work_cache(tenant_id: &str) {
+    if let Some(cache) = DAILY_WORK_CACHE.get() {
+        for mobile in [false, true] {
+            cache
+                .invalidate(&format!("daily_work:{tenant_id}:mobile:{mobile}"))
+                .await;
+        }
+    }
+}
+
 pub async fn get_daily_work_handler(
     State(db): State<Arc<DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
@@ -589,6 +599,40 @@ pub async fn approve_daily_work_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn daily_work_cache_invalidation_preserves_other_tenants() {
+        let tenant = format!("daily-work-cache-{}", Uuid::new_v4());
+        let other = format!("daily-work-other-{}", Uuid::new_v4());
+        let cache = DAILY_WORK_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        for owner in [&tenant, &other] {
+            for mobile in [false, true] {
+                cache
+                    .set(
+                        &format!("daily_work:{owner}:mobile:{mobile}"),
+                        vec![serde_json::json!({"id": "pending-work"})],
+                        std::time::Duration::from_secs(60),
+                    )
+                    .await;
+            }
+        }
+        invalidate_daily_work_cache(&tenant).await;
+        for mobile in [false, true] {
+            assert!(
+                cache
+                    .get(&format!("daily_work:{tenant}:mobile:{mobile}"))
+                    .await
+                    .is_none()
+            );
+            assert!(
+                cache
+                    .get(&format!("daily_work:{other}:mobile:{mobile}"))
+                    .await
+                    .is_some()
+            );
+        }
+        invalidate_daily_work_cache(&other).await;
+    }
 
     #[test]
     fn daily_work_authority_comes_only_from_signed_claims() {

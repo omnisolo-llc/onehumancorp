@@ -1,0 +1,5 @@
+/Cargo.lock
+/generated.rs
+/source-manifest.json
+/auth_sqlite.sql
+/__pycache__/

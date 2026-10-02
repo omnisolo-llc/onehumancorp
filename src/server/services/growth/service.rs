@@ -449,60 +449,13 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<GrowthIdRequest>,
     ) -> Result<Response<Referral>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await?;
-        let req = request.into_inner();
-
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        let _row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
-            .bind(&req.id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
-
-        // Implement Credit Attribution: "both get 14 days free Pro trial extension"
-        // In OmniSolo, this is represented by upgrading to Pro and setting the has_claimed_trial_extension flag.
-        let _ = sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1::uuid OR id = (SELECT tenant_id::uuid FROM referrals WHERE id = $2)")
-            .bind(&org_id)
-            .bind(&req.id)
-            .execute(&mut *tx)
-            .await;
-
-        let ledger_id = Uuid::new_v4().to_string();
-        let payload = serde_json::json!({
-            "referral_id": req.id,
-            "reward_type": "14_day_pro_trial",
-            "description": "Referral conversion: Both parties received 14 days of Pro credit."
-        });
-
-        let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, event_type, payload) VALUES ($1, $2, $3, $4, $5)")
-            .bind(&ledger_id)
-            .bind(&org_id)
-            .bind("Growth")
-            .bind("ReferralConversion")
-            .bind(payload)
-            .execute(&mut *tx)
-            .await;
-
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(Referral {
-            id: _row.get("id"),
-            user_id: _row.get("user_id"),
-            referral_code: _row.get("referral_code"),
-            clicks: _row.get("clicks"),
-            conversions: _row.get("conversions"),
-            created_at_unix: _row.get("created_at_unix"),
-        }))
+        self.get_org_id(request.metadata()).await?;
+        // A referral ID alone does not verify a conversion or grant eligibility.
+        // Preserve the existing conversion history and paid plan until a durable,
+        // expiring, idempotent grant can be recorded in the same transaction.
+        Err(Status::failed_precondition(
+            "Referral conversion and trial rewards are unavailable until a verified conversion and durable expiring grant can be recorded. No conversion, plan, or credit was changed.",
+        ))
     }
 
     async fn get_downloads(
@@ -897,6 +850,43 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn conversion_without_a_verified_grant_never_connects_to_storage() {
+        let pool = crate::db::secure_pg_pool_options()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://fixture:fixture@127.0.0.1:1/ohc_unavailable")
+            .unwrap();
+        let (event_tx, mut events) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
+        let anonymous = service
+            .convert_referral(Request::new(GrowthIdRequest {
+                id: "unverified".into(),
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(anonymous.code(), tonic::Code::Unauthenticated);
+        for _ in 0..2 {
+            let mut request = Request::new(GrowthIdRequest {
+                id: "unverified".into(),
+            });
+            request.metadata_mut().insert(
+                "x-spiffe-id",
+                "spiffe://omnisolo.io/org/fixture-owner/agent/agent1"
+                    .parse()
+                    .unwrap(),
+            );
+            let error = service.convert_referral(request).await.unwrap_err();
+            assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+            assert!(
+                error
+                    .message()
+                    .contains("No conversion, plan, or credit was changed")
+            );
+        }
+        assert!(events.try_recv().is_err());
+    }
+
+    #[tokio::test]
     async fn test_referral_flow() {
         let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
@@ -955,7 +945,7 @@ mod tests {
         )
         .fetch_one(&service.pool)
         .await
-        .unwrap_or_else(|_| "free".to_string());
+        .unwrap();
         assert_eq!(org_tier, "free", "Plan should not upgrade on click");
 
         let mut conv_req = Request::new(GrowthIdRequest {
@@ -967,21 +957,30 @@ mod tests {
                 .parse()
                 .unwrap(),
         );
-        let conv_resp = service
-            .convert_referral(conv_req)
-            .await
-            .unwrap()
-            .into_inner();
-        assert_eq!(conv_resp.conversions, 1);
+        let error = service.convert_referral(conv_req).await.unwrap_err();
+        assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+        let conversions: i64 =
+            sqlx::query_scalar("SELECT conversions::bigint FROM referrals WHERE id = $1")
+                .bind(&resp.id)
+                .fetch_one(&service.pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            conversions, 0,
+            "Unverified conversion must not change history"
+        );
 
-        // Verify plan is upgraded to pro after conversion
+        // An unverified conversion must preserve the existing plan.
         let upgraded_tier: String = sqlx::query_scalar(
             "SELECT plan_tier FROM tenants WHERE id = '00000000-0000-0000-0000-000000000001'::uuid",
         )
         .fetch_one(&service.pool)
         .await
-        .unwrap_or_else(|_| "free".to_string());
-        assert_eq!(upgraded_tier, "pro", "Plan should upgrade on conversion");
+        .unwrap();
+        assert_eq!(
+            upgraded_tier, "free",
+            "Unverified conversion cannot grant Pro"
+        );
 
         let mut list_req = Request::new(EmptyRequest {});
         list_req.metadata_mut().insert(

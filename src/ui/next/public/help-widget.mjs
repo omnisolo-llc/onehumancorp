@@ -2,6 +2,8 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
 
 // --- Global Tooltip & Walkthrough Logic ---
 
+if (!window.__OMNISOLO_LEGACY_TOOLTIPS_INITIALIZED) {
+    window.__OMNISOLO_LEGACY_TOOLTIPS_INITIALIZED = true;
     // Tooltips
     const defaultTooltips = {
         "nav-store": "Your Storefront. This is where you manage what you sell.",
@@ -20,6 +22,24 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
     });
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'omnisolo-tooltip';
+    tooltipEl.id = 'omnisolo-legacy-tooltip';
+    tooltipEl.setAttribute('role', 'tooltip');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+    let tooltipTarget = null;
+    const clearTooltipDescription = () => {
+        if (!tooltipTarget) return;
+        const ids = (tooltipTarget.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== tooltipEl.id);
+        if (ids.length) tooltipTarget.setAttribute('aria-describedby', ids.join(' '));
+        else tooltipTarget.removeAttribute('aria-describedby');
+        tooltipTarget = null;
+    };
+    const describeTooltipTarget = target => {
+        if (tooltipTarget !== target) clearTooltipDescription();
+        tooltipTarget = target;
+        const ids = new Set((target.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+        ids.add(tooltipEl.id);
+        target.setAttribute('aria-describedby', [...ids].join(' '));
+    };
     if (document.body) document.body.appendChild(tooltipEl);
     else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltipEl));
 
@@ -43,12 +63,29 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
 
         tooltipEl.style.top = `${top}px`;
         tooltipEl.style.left = `${left}px`;
+        describeTooltipTarget(e.target.closest?.('[data-tooltip], [data-tooltip-id], [id]') || e.target);
+        tooltipEl.setAttribute('aria-hidden', 'false');
         tooltipEl.classList.add('visible');
     }
 
     function hideTooltip() {
         tooltipEl.classList.remove('visible');
+        tooltipEl.setAttribute('aria-hidden', 'true');
+        clearTooltipDescription();
     }
+
+    document.addEventListener('focusin', e => {
+        const target = e.target.closest?.('[data-tooltip], [data-tooltip-id]');
+        if (!target) return;
+        const id = target.getAttribute('data-tooltip-id') || target.id;
+        showTooltip(e, window.OMNISOLO_TOOLTIPS?.[id] || target.getAttribute('data-tooltip'));
+    });
+    document.addEventListener('focusout', e => {
+        if (e.target.closest?.('[data-tooltip], [data-tooltip-id]')) hideTooltip(true);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') hideTooltip(true);
+    });
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip], [id]');
@@ -96,6 +133,8 @@ import { renderHelpMessage, renderHelpVideos, renderWalkthroughStep } from './sa
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
+
+}
 
     // Walkthroughs
     if (!window.startWalkthrough) {

@@ -226,12 +226,13 @@ export default function FlashSaleGeneratorPage() {
                                     <span className="text-xs text-white font-bold">Click to copy</span>
                                 </div>
                             </div>
-                            <button
-                                className="bg-[#FF3B30] hover:bg-[#E02424] text-white font-bold px-4 min-h-[44px] min-w-[44px] text-sm transition-colors shadow-md"
+                            <button disabled aria-describedby="flash-sale-preview-note"
+                                className="disabled:opacity-60 disabled:cursor-not-allowed bg-[#FF3B30] hover:bg-[#E02424] text-white font-bold px-4 min-h-[44px] min-w-[44px] text-sm transition-colors shadow-md"
                             >
                                 Shop Now
                             </button>
                         </div>
+                        <p id="flash-sale-preview-note" className="mt-2 text-sm text-gray-500">No checkout destination is configured in this preview.</p>
                     </div>
                 </div>
 

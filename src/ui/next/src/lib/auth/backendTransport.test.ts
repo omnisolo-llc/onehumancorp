@@ -578,3 +578,32 @@ it('bounds SSE bytes and does not forward an oversized chunk', async () => {
   await expect(response.body!.getReader().read()).rejects.toThrow('limit exceeded');
   expect(cancel).toHaveBeenCalledOnce();
 });
+
+describe('offline owner precondition', () => {
+  it.each([
+    { 'x-ohc-expected-user': 'another-user', 'x-ohc-expected-tenant': 'tenant-7' },
+    { 'x-ohc-expected-user': 'user-7', 'x-ohc-expected-tenant': 'another-tenant' },
+    { 'x-ohc-expected-user': 'user-7' },
+  ])('rejects a queued owner mismatch before backend I/O', async headers => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ success: true }));
+    const deps = await dependencies(fetchImpl);
+    const response = await proxyAuthenticatedRequest(await request(deps, '/api/v1/sync/events', {
+      method: 'POST', headers, body: '{}',
+    }), '/api/v1/sync/events', deps);
+    expect(response.status).toBe(409);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('uses the sealed session as authority and does not forward the precondition', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ success: true }));
+    const deps = await dependencies(fetchImpl);
+    const response = await proxyAuthenticatedRequest(await request(deps, '/api/v1/sync/events', {
+      method: 'POST', headers: { 'x-ohc-expected-user': 'user-7', 'x-ohc-expected-tenant': 'tenant-7', 'x-user-id': 'spoofed' }, body: '{}',
+    }), '/api/v1/sync/events', deps);
+    expect(response.status).toBe(200);
+    const headers = fetchImpl.mock.calls[0][1]?.headers as Headers;
+    expect(headers.get('x-user-id')).toBe('user-7');
+    expect(headers.has('x-ohc-expected-user')).toBe(false);
+    expect(headers.has('x-ohc-expected-tenant')).toBe(false);
+  });
+});

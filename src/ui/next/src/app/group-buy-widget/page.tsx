@@ -18,7 +18,8 @@ export default function GroupBuyWidgetPage() {
   const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
-  const [hideBranding, setHideBranding] = useState(false);
+  const [requestedBrandingRemoval, setHideBranding] = useState(false);
+  const hideBranding = requestedBrandingRemoval && hasPro;
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -238,15 +239,16 @@ export default function GroupBuyWidgetPage() {
                   </div>
                 </div>
 
-                <button className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-pink-500/30 transition-all transform hover:scale-[1.02] active:scale-95">
+                <button disabled aria-describedby="group-buy-preview-note" className="disabled:opacity-60 disabled:cursor-not-allowed w-full py-4 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-pink-500/30 transition-all transform hover:scale-[1.02] active:scale-95">
                   Join Group Buy
                 </button>
 
                 <div className="mt-4 text-center">
-                  <button className={`text-sm font-semibold underline decoration-2 underline-offset-2 ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
+                  <button disabled aria-describedby="group-buy-preview-note" className={`disabled:opacity-60 disabled:cursor-not-allowed text-sm font-semibold underline decoration-2 underline-offset-2 ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
                     Share with friends
                   </button>
                 </div>
+                <p id="group-buy-preview-note" className="mt-2 text-sm text-gray-500">Joining and sharing are unavailable in this editor preview.</p>
               </div>
 
               {!hideBranding && (

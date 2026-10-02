@@ -1,46 +1,20 @@
 import { expect, test } from './fixtures';
-import { db } from './db_utils';
+import { seedFeedItem } from './feed-fixtures';
 
 test.describe('Unified Agent Feed Mobile MVP', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test.beforeEach(async () => {
-    await db.query(`
-      INSERT INTO agent_feed_items (
-        id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at
-      )
-      VALUES 
-      (
-        'e2e-feed-mobile-card-1',
-        'e2e-tenant',
-        'Ambassador',
-        '{"feature_type":"ambassador_reply","source":"Instagram","past_orders":"Returning Customer","context_used":"Prefers vegan options.","original_message":"Do you have gluten free?"}'::jsonb,
-        '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"Instagram","past_orders":"Returning Customer","context_used":"Prefers vegan options.","original_message":"Do you have gluten free?","generated_response":"Yes, we have gluten free options."}'::jsonb,
-        'PENDING_APPROVAL',
-        CURRENT_TIMESTAMP,
-        CURRENT_TIMESTAMP
-      ),
-      (
-        'e2e-feed-mobile-card-2',
-        'e2e-tenant',
-        'Ambassador',
-        '{"feature_type":"ambassador_reply","source":"SMS","past_orders":"New Customer","context_used":"Wedding cake inquiry","original_message":"Can I get a quote?"}'::jsonb,
-        '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"SMS","past_orders":"New Customer","context_used":"Wedding cake inquiry","original_message":"Can I get a quote?","generated_response":"I would be delighted to help with your wedding cake quote."}'::jsonb,
-        'PENDING_APPROVAL',
-        CURRENT_TIMESTAMP,
-        CURRENT_TIMESTAMP
-      )
-      ON CONFLICT (id) DO UPDATE SET
-        lifecycle_state = 'PENDING_APPROVAL',
-        context_payload = EXCLUDED.context_payload,
-        proposed_action = EXCLUDED.proposed_action,
-        created_at = CURRENT_TIMESTAMP,
-        updated_at = CURRENT_TIMESTAMP;
-    `);
+  let feedItemId: string;
+  test.beforeEach(async ({ page, loginAs, adminUser }, testInfo) => {
+    await loginAs(page, adminUser);
+    feedItemId = await seedFeedItem(page, {
+      event_source: 'operations',
+      context_payload: { description: 'Review the mobile owner action', feature_type: testInfo.testId },
+      proposed_action: { message: 'Prepare the reviewed task', feature_type: testInfo.testId },
+    }, adminUser.organizationId);
   });
 
-  test('displays feed and ensures no horizontal scroll on mobile', async ({ page, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
+  test('displays feed and ensures no horizontal scroll on mobile', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard');
     await page.waitForLoadState('domcontentloaded');
@@ -64,9 +38,8 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     }
   });
 
-  test('should allow approving an action card in the feed', async ({ page, loginAs, adminUser }) => {
+  test('should allow approving an action card in the feed', async ({ page }) => {
     test.setTimeout(180000);
-    await loginAs(page, adminUser);
 
     // Navigate to dashboard
     await page.goto('/dashboard');
@@ -76,7 +49,8 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
     // Look for approve buttons in the feed
-    const approveButtons = feedContainer.locator('button:has-text("Approve")');
+    const card = feedContainer.getByTestId(`triage-card-${feedItemId}`);
+    const approveButtons = card.getByTestId('feed-approve-btn');
     // We expect there to be at least one card generated for triage
     await expect(approveButtons.first()).toBeVisible({ timeout: 15000 });
 
@@ -94,14 +68,13 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
 
     // Expect the card to disappear or change state, count should be less
     await expect(async () => {
-       const newCount = await page.locator('#unified-agent-feed-section').locator('button:has-text("Approve")').count();
+       const newCount = await approveButtons.count();
        expect(newCount).toBeLessThan(initialCount);
     }).toPass({ timeout: 10000 });
   });
 
-  test('should allow dismissing an action card in the feed', async ({ page, loginAs, adminUser }) => {
+  test('should allow dismissing an action card in the feed', async ({ page }) => {
     test.setTimeout(180000);
-    await loginAs(page, adminUser);
 
     // Navigate to dashboard
     await page.goto('/dashboard');
@@ -111,7 +84,8 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
     // Look for dismiss/reject buttons in the feed
-    const rejectButtons = feedContainer.locator('button:has-text("Dismiss"), button:has-text("Reject"), button:has-text("Deny")');
+    const card = feedContainer.getByTestId(`triage-card-${feedItemId}`);
+    const rejectButtons = card.getByTestId('feed-dismiss-btn');
     // We expect there to be at least one card generated for triage
     await expect(rejectButtons.first()).toBeVisible({ timeout: 15000 });
 
@@ -122,7 +96,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
 
     // Expect the card to disappear or change state, count should be less
     await expect(async () => {
-       const newCount = await page.locator('#unified-agent-feed-section').locator('button:has-text("Dismiss"), button:has-text("Reject"), button:has-text("Deny")').count();
+       const newCount = await rejectButtons.count();
        expect(newCount).toBeLessThan(initialCount);
     }).toPass({ timeout: 10000 });
   });

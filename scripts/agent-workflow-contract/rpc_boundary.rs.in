@@ -1,0 +1,106 @@
+// Only terminal execution is replaced. The generated wrapper compiles the actual
+// JSON-RPC HTTP handler, router constructor, main mount and outer auth layers.
+// A dispatch receipt proves reachability, not durable task/tenant isolation.
+static RPC_DISPATCHES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+pub mod agent {
+    #[derive(Default)]
+    pub struct AgentRunConfig {
+        _private: (),
+    }
+    pub struct Agent {
+        pub sona_matcher:
+            Option<std::sync::Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
+    }
+    impl Agent {
+        pub fn new(_: std::sync::Arc<crate::llm::ollama::OllamaClient>, _: Vec<()>) -> Self {
+            Self { sona_matcher: None }
+        }
+    }
+}
+pub mod llm {
+    pub mod ollama {
+        pub struct OllamaClient;
+        impl OllamaClient {
+            pub fn new(_: &str) -> Self {
+                Self
+            }
+        }
+    }
+}
+pub mod codex_runner {
+    pub struct Runner;
+    impl Runner {
+        pub fn new(_: std::sync::Arc<crate::agent::Agent>) -> Self {
+            Self
+        }
+        pub async fn run_async(
+            &self,
+            _: &str,
+        ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            panic!("This authorization probe must never run a provider or agent")
+        }
+        pub fn run_sync_blocking(
+            &self,
+            _: &str,
+        ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            panic!("This authorization probe must never run a provider or agent")
+        }
+    }
+    pub struct AppServer;
+    impl AppServer {
+        pub fn new(_: std::sync::Arc<Runner>) -> Self {
+            Self
+        }
+        pub async fn handle_request(&self, input: &str) -> String {
+            let request: serde_json::Value = serde_json::from_str(input).unwrap();
+            assert_eq!(request["method"], "ap_list_tasks");
+            crate::RPC_DISPATCHES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            serde_json::json!({"jsonrpc":"2.0","id":request["id"],"result":{"dispatch_observed":true}}).to_string()
+        }
+    }
+}
+pub mod goose {
+    pub struct SampleExtension;
+    #[derive(Default)]
+    pub struct GooseMcpRegistry;
+    impl GooseMcpRegistry {
+        pub fn new() -> Self {
+            Self
+        }
+        pub fn register(&mut self, _: std::sync::Arc<SampleExtension>) {
+            panic!("No tool registry may be initialized by this probe")
+        }
+        pub fn get_specs(&self) -> Vec<serde_json::Value> {
+            unreachable!()
+        }
+        pub async fn execute_extension(
+            &self,
+            _: &str,
+            _: serde_json::Value,
+        ) -> Result<serde_json::Value, String> {
+            unreachable!()
+        }
+    }
+}
+pub mod aider_repomap {
+    pub struct RepoMap;
+    impl RepoMap {
+        pub fn new(_: &str) -> Self {
+            panic!("No workspace may be inspected by this probe")
+        }
+        pub fn generate_map(&self) -> Result<String, String> {
+            unreachable!()
+        }
+    }
+}
+
+pub mod sona_patterns {
+    #[derive(Default)]
+    pub struct PatternMatcher;
+    impl PatternMatcher {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+}

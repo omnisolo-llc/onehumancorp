@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralGoalTrackerPage from './page';
 
@@ -14,7 +14,7 @@ describe('ViralGoalTrackerPage', () => {
     vi.clearAllMocks();
     Object.assign(navigator, {
       clipboard: {
-        writeText: vi.fn(),
+        writeText: vi.fn().mockResolvedValue(undefined),
       },
     });
 
@@ -53,7 +53,7 @@ describe('ViralGoalTrackerPage', () => {
     fireEvent.change(rewardInput, { target: { value: 'Exclusive Sticker' } });
     expect(screen.getByDisplayValue('Exclusive Sticker')).toBeDefined();
     // preview update
-    expect(screen.getByText('Unlock: Exclusive Sticker')).toBeDefined();
+    expect(screen.getByText('Configured reward: Exclusive Sticker')).toBeDefined();
   });
 
   it('toggles theme', () => {
@@ -63,12 +63,12 @@ describe('ViralGoalTrackerPage', () => {
     expect(screen.getByDisplayValue('Dark')).toBeDefined();
   });
 
-  it('copies embed code to clipboard', () => {
+  it('copies embed code to clipboard', async () => {
     render(<ViralGoalTrackerPage />);
     const copyButton = screen.getByRole('button', { name: /Copy Embed Code/i });
     fireEvent.click(copyButton);
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByText('Copied to Clipboard!')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Copied to Clipboard!')).toBeVisible());
   });
 
   it('shows paywall when removing branding without pro', () => {

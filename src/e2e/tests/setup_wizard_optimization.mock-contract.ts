@@ -16,15 +16,15 @@ test.describe('Onboarding Wizard Optimization', () => {
 
   test('validates domain name correctly', async ({ page }) => {
     // Wait for the scripts to load
-    await page.waitForFunction(() => window.goToStep !== undefined);
+    await page.waitForFunction(() => 'goToStep' in window && typeof window.goToStep === 'function');
 
-    await page.evaluate(() => { window.goToStep('step-domain'); });
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-domain'); });
     const domainInput = page.locator('#domain-name');
 
     await domainInput.fill('invalid_domain!');
     await page.locator('#step-domain .next-step-btn').click();
 
-    const isValid = await page.evaluate(() => window.validateStep('step-domain'));
+    const isValid = await page.evaluate(() => { if (!('validateStep' in window) || typeof window.validateStep !== 'function') throw new Error('Wizard validation is unavailable'); const result: unknown = window.validateStep('step-domain'); if (typeof result !== 'boolean') throw new Error('Wizard validation returned an invalid result'); return result; });
     expect(isValid).toBe(false);
 
     await expect(page.locator('#domain-error')).toBeVisible();
@@ -47,8 +47,8 @@ test.describe('Onboarding Wizard Optimization', () => {
   });
 
   test('validates domain name visual structure properly', async ({ page }) => {
-    await page.waitForFunction(() => window.goToStep !== undefined);
-    await page.evaluate(() => { window.goToStep('step-domain'); });
+    await page.waitForFunction(() => 'goToStep' in window && typeof window.goToStep === 'function');
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-domain'); });
     const domainInputContainer = page.locator('#step-domain .glass-control.glassmorphism').first();
     const spanSuffix = domainInputContainer.locator('span');
 
@@ -57,8 +57,8 @@ test.describe('Onboarding Wizard Optimization', () => {
   });
 
   test('validates domain name min length correctly', async ({ page }) => {
-    await page.waitForFunction(() => window.goToStep !== undefined);
-    await page.evaluate(() => { window.goToStep('step-domain'); });
+    await page.waitForFunction(() => 'goToStep' in window && typeof window.goToStep === 'function');
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-domain'); });
     const domainInput = page.locator('#domain-name');
 
     await domainInput.fill('ab');
@@ -68,8 +68,8 @@ test.describe('Onboarding Wizard Optimization', () => {
   });
 
   test('validates domain error goes away', async ({ page }) => {
-    await page.waitForFunction(() => window.goToStep !== undefined);
-    await page.evaluate(() => { window.goToStep('step-domain'); });
+    await page.waitForFunction(() => 'goToStep' in window && typeof window.goToStep === 'function');
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-domain'); });
     const domainInput = page.locator('#domain-name');
 
     await domainInput.fill('ab');
@@ -82,8 +82,8 @@ test.describe('Onboarding Wizard Optimization', () => {
   });
 
   test('validates domain name does not accept special chars', async ({ page }) => {
-    await page.waitForFunction(() => window.goToStep !== undefined);
-    await page.evaluate(() => { window.goToStep('step-domain'); });
+    await page.waitForFunction(() => 'goToStep' in window && typeof window.goToStep === 'function');
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-domain'); });
     const domainInput = page.locator('#domain-name');
 
     await domainInput.fill('test domain');
@@ -93,8 +93,8 @@ test.describe('Onboarding Wizard Optimization', () => {
   });
 
   test('validates domain error goes away dynamically', async ({ page }) => {
-    await page.waitForFunction(() => window.goToStep !== undefined);
-    await page.evaluate(() => { window.goToStep('step-domain'); });
+    await page.waitForFunction(() => 'goToStep' in window && typeof window.goToStep === 'function');
+    await page.evaluate(() => { if (!('goToStep' in window) || typeof window.goToStep !== 'function') throw new Error('Wizard navigation is unavailable'); window.goToStep('step-domain'); });
     const domainInput = page.locator('#domain-name');
 
     await domainInput.fill('ab');

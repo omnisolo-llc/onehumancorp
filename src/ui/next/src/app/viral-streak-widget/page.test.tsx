@@ -61,24 +61,19 @@ describe('ViralStreakWidgetPage', () => {
     const titleDisplays = screen.getAllByText('7-Day Coffee Run');
     expect(titleDisplays.length).toBeGreaterThan(0);
 
-    const goalDisplays = screen.getAllByText(/Hit 5 days to unlock/);
+    const goalDisplays = screen.getAllByText(/Configured goal: 5 days/);
     expect(goalDisplays.length).toBeGreaterThan(0);
 
     const rewardDisplays = screen.getAllByText(/Free Donut/);
     expect(rewardDisplays.length).toBeGreaterThan(0);
   });
 
-  it('copies embed code to clipboard', async () => {
+  it('does not copy an embed for an unavailable streak endpoint', () => {
     render(<ViralStreakWidgetPage />);
-
     const getCodeBtn = screen.getByRole('button', { name: 'Get Embed Code' });
-    fireEvent.click(getCodeBtn);
-
-    const copyBtn = screen.getByRole('button', { name: 'Copy Code' });
-    fireEvent.click(copyBtn);
-
-    expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Copied!' })).toBeDefined();
+    expect(getCodeBtn).toBeDisabled(); fireEvent.click(getCodeBtn);
+    expect(screen.queryByRole('button', { name: 'Copy Code' })).toBeNull();
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
   });
 
   it('shows paywall when removing branding without pro', () => {

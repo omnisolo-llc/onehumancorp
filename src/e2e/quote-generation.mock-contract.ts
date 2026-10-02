@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 
+const tenantId = `tenant-${Math.random().toString(36).substring(7)}`;
+
 test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
-  const tenantId = `tenant-${Math.random().toString(36).substring(7)}`;
 
   test('Agent receives inquiry, drafts quote based on catalog, owner approves via mobile UI', async ({ page, request }) => {
     // Ensure baseURL works out of the box by not hardcoding ports

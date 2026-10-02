@@ -326,19 +326,30 @@ expect_status 401 "protected API with a wrong-jwt must be denied" \
 CURL=(curl --fail --silent --show-error --connect-timeout 5 --max-time 30)
 "${CURL[@]}" "${BASE_URL}/healthz"
 "${CURL[@]}" "${BASE_URL}/readyz"
-seed_response="$("${CURL[@]}" -X POST "${BASE_URL}/api/v1/dev/seed" \
-  "${auth_headers[@]}" \
-  -H 'Content-Type: application/json' \
-  --data-binary '{"scenario":"launch-readiness"}')"
-printf '%s' "${seed_response}" | jq -e '.ok == true' >/dev/null
+expect_status 404 "production seed route must be absent" \
+  -X POST "${BASE_URL}/api/v1/dev/seed" "${auth_headers[@]}" \
+  -H 'Content-Type: application/json' --data-binary '{"scenario":"launch-readiness"}'
+
+# The fixture can only target the database in this disposable Compose project.
+fixture_database_id="$(compose ps -q postgres)"
+[[ -n "${fixture_database_id}" ]] || { echo "missing Compose fixture database" >&2; exit 1; }
+[[ "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "${fixture_database_id}")" == "${PROJECT_NAME}" ]] || {
+  echo "refusing to seed a database outside the current disposable Compose project" >&2; exit 1;
+}
+[[ "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.service" }}' "${fixture_database_id}")" == postgres ]] || {
+  echo "refusing to seed a non-Postgres fixture service" >&2; exit 1;
+}
+docker exec -i "${fixture_database_id}" psql -v ON_ERROR_STOP=1 -U ohc -d ohc \
+  -v tenant_id="${SETUP_ADMIN_INIT_ORGANIZATION_ID}" \
+  < "${REPO_ROOT}/deploy/tests/fixtures/operational-read.sql"
 
 dashboard_response="$("${CURL[@]}" "${auth_headers[@]}" "${protected_url}")"
 orders_response="$("${CURL[@]}" "${auth_headers[@]}" "${BASE_URL}/api/v1/ui/orders?tenant_id=${SETUP_ADMIN_INIT_ORGANIZATION_ID}")"
 inbox_response="$("${CURL[@]}" "${auth_headers[@]}" "${BASE_URL}/api/v1/ui/inbox/messages?tenant_id=${SETUP_ADMIN_INIT_ORGANIZATION_ID}")"
 supply_response="$("${CURL[@]}" "${auth_headers[@]}" "${BASE_URL}/api/v1/ui/supply?tenant_id=${SETUP_ADMIN_INIT_ORGANIZATION_ID}")"
 printf '%s' "${dashboard_response}" | jq -e '.total_sales != null' >/dev/null
-printf '%s' "${orders_response}" | jq -e 'type == "array" and length > 0' >/dev/null
-printf '%s' "${inbox_response}" | jq -e 'type == "array" and length > 0' >/dev/null
-printf '%s' "${supply_response}" | jq -e '.vendors | type == "array" and length > 0' >/dev/null
+printf '%s' "${orders_response}" | jq -e 'type == "array" and length > 0 and any(.[]; .id == "compose-fixture-order")' >/dev/null
+printf '%s' "${inbox_response}" | jq -e 'type == "array" and length > 0 and any(.[]; .id == "compose-fixture-inbox")' >/dev/null
+printf '%s' "${supply_response}" | jq -e '.vendors | type == "array" and length > 0 and any(.[]; .id == "compose-fixture-vendor")' >/dev/null
 
 log "Docker Compose E2E checks passed."

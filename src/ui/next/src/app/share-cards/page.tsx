@@ -14,7 +14,7 @@ export default function ShareCardsPage() {
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const { hasPro, claimTrial, claimError } = useProPlan();
-  const [trialStatus, setTrialStatus] = useState<string | null>(null);
+  const brandingRemoved = removeBranding && hasPro;
 
   useEffect(() => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'my-store' : 'my-store';
@@ -31,13 +31,7 @@ export default function ShareCardsPage() {
   };
 
   const claimTrialExtension = async () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
-    setShowSoftPaywall(false);
-    setTrialStatus('Pro access activated.');
-    setRemoveBranding(true);
+    await claimTrial();
   };
 
   const getThemeStyles = () => {
@@ -53,7 +47,7 @@ export default function ShareCardsPage() {
     }
   };
 
-  const shareText = `Check out my storefront: ${storeName} - ${tagline} ${shareLink}${!removeBranding ? '\n\n⚡ Powered by OmniSolo' : ''}`;
+  const shareText = `Check out my storefront: ${storeName} - ${tagline} ${shareLink}${!brandingRemoved ? '\n\n⚡ Powered by OmniSolo' : ''}`;
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
@@ -74,11 +68,6 @@ export default function ShareCardsPage() {
         {claimError && <p className="text-sm text-red-600" role="status">{claimError}</p>}
         {/* Editor Settings */}
         <section className="w-full md:w-1/3 flex flex-col gap-6">
-            {trialStatus && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium">
-                    {trialStatus}
-                </div>
-            )}
             <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Card Settings</h2>
                 <div className="flex flex-col gap-4">
@@ -122,8 +111,8 @@ export default function ShareCardsPage() {
                             )}
                         </label>
                         <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" name="toggle" id="remove-branding" checked={removeBranding} onChange={handleToggleBranding} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300" style={{ transform: removeBranding ? 'translateX(100%)' : 'translateX(0)', borderColor: removeBranding ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}/>
-                            <label htmlFor="remove-branding" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer" style={{ backgroundColor: removeBranding ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}></label>
+                            <input type="checkbox" name="toggle" id="remove-branding" checked={brandingRemoved} onChange={handleToggleBranding} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300" style={{ transform: brandingRemoved ? 'translateX(100%)' : 'translateX(0)', borderColor: brandingRemoved ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}/>
+                            <label htmlFor="remove-branding" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer" style={{ backgroundColor: brandingRemoved ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}></label>
                         </div>
                     </div>
                 </div>
@@ -217,7 +206,7 @@ export default function ShareCardsPage() {
                  </div>
 
                  <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center opacity-80">
-                     <span className="text-sm font-semibold tracking-wider uppercase">{removeBranding ? '' : 'Powered by OmniSolo'}</span>
+                     <span className="text-sm font-semibold tracking-wider uppercase">{brandingRemoved ? '' : 'Powered by OmniSolo'}</span>
                      <span className="text-sm font-medium">{shareLink.replace('https://', '')}</span>
                  </div>
              </div>
@@ -264,7 +253,7 @@ export default function ShareCardsPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to activate Pro
+              Check trial availability
             </button>
           </div>
         </div>

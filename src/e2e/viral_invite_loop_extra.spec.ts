@@ -1,67 +1,61 @@
 import { test, expect } from './fixtures';
+import { createRecordedInvitation, requireLoopbackUrl } from './support/recorded_invitation';
 
-test.describe('Viral Invite Loop on Dashboard Page', () => {
-  test('should display Invite & Earn section', async ({ page, loginAs, unlimitedAdminUser }) => {
+test.beforeEach(async ({ baseURL }) => {
+  expect(baseURL).toBeTruthy();
+  requireLoopbackUrl(baseURL!);
+});
+
+test.describe('Recorded Invitations on Dashboard', () => {
+  test('shows the real invitation action without unverified reward promises', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.getByRole('heading', { name: 'Invite & Earn' })).toBeVisible();
-    await expect(page.getByText('They get 1 month free, you get $50 credit.')).toBeVisible();
+    const widget = page.getByTestId('dashboard-viral-invite-widget');
+    await expect(widget.getByRole('heading', { name: 'Invite a Business Owner' })).toBeVisible();
+    await expect(widget).not.toContainText('$50');
+    await expect(widget).not.toContainText('1 month free');
+    await expect(widget.getByRole('status', { name: 'Dashboard invitation status' })).toContainText('verified account');
+    await expect(page.locator('#dashboard-invite-btn')).toBeEnabled();
   });
 
-  test('should show generate link button and it generates link', async ({ page, loginAs, unlimitedAdminUser }) => {
+  test('displays the exact recorded link and retains the no-repeat hold after reload', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    const inviteBtn = page.locator('#dashboard-invite-btn');
-    await expect(inviteBtn).toBeVisible();
-
-    await inviteBtn.click();
-
-    const linkInput = page.locator('#dashboard-invite-link');
-    await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/cloud.omnisolo.co\/invite\/.+/);
-  });
-
-  test('should copy generated link to clipboard', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    await page.locator('#dashboard-invite-btn').click();
-
-    const copyBtn = page.locator('#dashboard-copy-btn');
-    await expect(copyBtn).toBeVisible();
-
-    // Test copy logic
-    await copyBtn.click();
-    await expect(copyBtn).toHaveText('Copied!');
-  });
-
-  test('should share generated link on X (Twitter)', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    await page.evaluate(() => {
-        // Mock window.open to avoid actually opening twitter in tests
-        window.open = function(url) {
-            window.lastOpenedUrl = url;
-            return window;
-        };
+    let invitationPosts = 0;
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/api/v1/growth/cloud-bridge/invite' && request.method() === 'POST') invitationPosts += 1;
     });
+    const link = await createRecordedInvitation(page);
+    await expect(page.locator('#dashboard-invite-link')).toHaveValue(link);
+    await page.reload();
+    await expect(page.getByRole('status', { name: 'Dashboard invitation status' })).toContainText('already created');
+    await expect(page.locator('#dashboard-invite-btn')).toBeDisabled();
+    await expect(page.locator('#dashboard-invite-link')).toHaveCount(0);
+    expect(invitationPosts).toBe(1);
+  });
 
-    await page.locator('#dashboard-invite-btn').click();
+  test('copies only the confirmed link through the actual clipboard', async ({ page, context, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    const link = await createRecordedInvitation(page);
+    requireLoopbackUrl(page.url());
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+    await page.bringToFront();
+    await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
+    await page.locator('#dashboard-copy-btn').click();
+    await expect(page.locator('#dashboard-copy-btn')).toHaveText('Copied!');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+  });
 
-    const shareXBtn = page.locator('#dashboard-share-x-btn');
-    await expect(shareXBtn).toBeVisible();
-    await shareXBtn.click();
-
-    // Verify window.open was called with twitter intent
-    const lastOpenedUrl = await page.evaluate(() => window.lastOpenedUrl);
-    expect(lastOpenedUrl).toContain('twitter.com/intent/tweet');
-    expect(lastOpenedUrl).toContain('cloud.omnisolo.co/invite');
+  test('exposes the exact confirmed link in a real X share-intent anchor', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    const link = await createRecordedInvitation(page);
+    const share = page.getByTestId('dashboard-viral-invite-widget').getByRole('link', { name: 'Share on X', exact: true });
+    await expect(share).toBeVisible();
+    const href = await share.getAttribute('href');
+    expect(href).not.toBeNull();
+    const intent = new URL(href!);
+    expect(intent.origin + intent.pathname).toBe('https://twitter.com/intent/tweet');
+    expect(intent.searchParams.get('text')).toBe(`Join me on OmniSolo OneHumanCorp: ${link}`);
+    await expect(share).toHaveAttribute('target', '_blank');
+    await expect(share).toHaveAttribute('rel', 'noopener noreferrer');
+    // The intent is prepared here; this test does not post to an external account.
   });
 });

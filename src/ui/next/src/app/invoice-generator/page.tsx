@@ -7,6 +7,7 @@ export default function InvoiceGeneratorPage() {
   const [clientName, setClientName] = useState('');
   const [projectDetails, setProjectDetails] = useState('');
   const [amount, setAmount] = useState('');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [transactionCurrency, setTransactionCurrency] = useState('USD');
@@ -25,11 +26,19 @@ export default function InvoiceGeneratorPage() {
     setTenantId(tenant);
   }, []);
 
+  const invalidateGeneratedInvoice = () => {
+    setShareLink('');
+    setCopied(false);
+  };
+
   const generateLink = () => {
-    if (!clientName || !projectDetails || !amount) {
-      alert('Please fill out all fields.');
-      return;
-    }
+    invalidateGeneratedInvoice();
+    const errors: Record<string, string> = {};
+    if (!clientName.trim()) errors.clientName = 'Enter a client name.';
+    if (!projectDetails.trim()) errors.projectDetails = 'Enter the project details.';
+    if (!amount.trim() || !Number.isFinite(Number(amount)) || Number(amount) <= 0) errors.amount = 'Enter a valid amount greater than zero.';
+    setValidationErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     const data = {
       tenant: tenantId,
@@ -50,6 +59,11 @@ export default function InvoiceGeneratorPage() {
 
     const url = `${window.location.origin}/invoice-generator/view?data=${base64UrlStr}`;
     setShareLink(url);
+  };
+
+  const clearValidationError = (field: string) => {
+    invalidateGeneratedInvoice();
+    setValidationErrors(previous => { const next = { ...previous }; delete next[field]; return next; });
   };
 
   const handleCopy = () => {
@@ -81,10 +95,13 @@ export default function InvoiceGeneratorPage() {
                 id="client-name"
                 type="text"
                 value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
+                onChange={(e) => { setClientName(e.target.value); clearValidationError('clientName'); }}
+                aria-invalid={Boolean(validationErrors.clientName)}
+                aria-describedby={validationErrors.clientName ? 'client-name-error' : undefined}
                 placeholder="e.g. Acme Corp"
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+              {validationErrors.clientName && <p id="client-name-error" className="mt-2 text-sm text-red-700">{validationErrors.clientName}</p>}
             </div>
 
             <div>
@@ -92,11 +109,14 @@ export default function InvoiceGeneratorPage() {
               <textarea
                 id="project-details"
                 value={projectDetails}
-                onChange={(e) => setProjectDetails(e.target.value)}
+                onChange={(e) => { setProjectDetails(e.target.value); clearValidationError('projectDetails'); }}
+                aria-invalid={Boolean(validationErrors.projectDetails)}
+                aria-describedby={validationErrors.projectDetails ? 'project-details-error' : undefined}
                 placeholder="e.g. Website Redesign and SEO Optimization"
                 rows={4}
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+              {validationErrors.projectDetails && <p id="project-details-error" className="mt-2 text-sm text-red-700">{validationErrors.projectDetails}</p>}
             </div>
 
 
@@ -106,7 +126,7 @@ export default function InvoiceGeneratorPage() {
                 <input
                   type="text"
                   value={baseCurrency}
-                  onChange={(e) => setBaseCurrency(e.target.value)}
+                  onChange={(e) => { setBaseCurrency(e.target.value); invalidateGeneratedInvoice(); }}
                   placeholder="e.g. USD"
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
@@ -116,7 +136,7 @@ export default function InvoiceGeneratorPage() {
                 <input
                   type="text"
                   value={transactionCurrency}
-                  onChange={(e) => setTransactionCurrency(e.target.value)}
+                  onChange={(e) => { setTransactionCurrency(e.target.value); invalidateGeneratedInvoice(); }}
                   placeholder="e.g. EUR"
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
@@ -129,10 +149,13 @@ export default function InvoiceGeneratorPage() {
                 id="amount"
                 type="number"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => { setAmount(e.target.value); clearValidationError('amount'); }}
+                aria-invalid={Boolean(validationErrors.amount)}
+                aria-describedby={validationErrors.amount ? 'amount-error' : undefined}
                 placeholder="e.g. 1500.00"
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+              {validationErrors.amount && <p id="amount-error" className="mt-2 text-sm text-red-700">{validationErrors.amount}</p>}
             </div>
 
 
@@ -143,7 +166,7 @@ export default function InvoiceGeneratorPage() {
                       Split this payment
                   </div>
                   <div className="relative">
-                      <input type="checkbox" className="sr-only" checked={isSplitEnabled} onChange={(e) => setIsSplitEnabled(e.target.checked)} />
+                      <input type="checkbox" className="sr-only" checked={isSplitEnabled} onChange={(e) => { setIsSplitEnabled(e.target.checked); invalidateGeneratedInvoice(); }} />
                       <div className={`block w-10 h-6 rounded-full transition-colors ${isSplitEnabled ? 'bg-indigo-500' : 'bg-gray-300'}`}></div>
                       <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isSplitEnabled ? 'transform translate-x-4' : ''}`}></div>
                   </div>
@@ -157,7 +180,7 @@ export default function InvoiceGeneratorPage() {
                               type="text"
                               placeholder="e.g. Sarah (Artist)"
                               value={splitContact}
-                              onChange={(e) => setSplitContact(e.target.value)}
+                              onChange={(e) => { setSplitContact(e.target.value); invalidateGeneratedInvoice(); }}
                               className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                           />
                       </div>
@@ -168,7 +191,7 @@ export default function InvoiceGeneratorPage() {
                               min="1"
                               max="99"
                               value={splitPercentage}
-                              onChange={(e) => setSplitPercentage(parseInt(e.target.value))}
+                              onChange={(e) => { setSplitPercentage(parseInt(e.target.value)); invalidateGeneratedInvoice(); }}
                               className="w-full accent-indigo-600"
                           />
                       </div>
@@ -182,6 +205,7 @@ export default function InvoiceGeneratorPage() {
               )}
             </div>
 
+            {Object.keys(validationErrors).length > 0 && <p role="alert" className="text-sm text-red-700">Review the highlighted invoice details.</p>}
             <button
               onClick={generateLink}
               className="mt-4 w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all self-start text-sm flex items-center justify-center gap-2"

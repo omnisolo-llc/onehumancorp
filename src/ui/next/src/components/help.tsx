@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState, useEffect, useRef, ReactNode } from "react";
+import React, { createContext, useContext, useMemo, useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import DOMPurify from 'dompurify';
 import { usePathname, useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
@@ -58,6 +58,24 @@ function isSafeLink(url: unknown): url is string {
   );
 }
 
+function resolvedHelpLink(value: unknown): string | undefined {
+  if (!isSafeLink(value)) return undefined;
+  // The mounted chat API still returns this legacy query form. The maintained
+  // Help Center does not display query-selected articles; use its detail route.
+  if (value.startsWith('/help?')) {
+    const query = new URLSearchParams(value.slice('/help?'.length));
+    if (query.has('article')) {
+      const article = query.get('article');
+      if (!article || !/^[A-Za-z0-9_-]+$/.test(article)) return undefined;
+      // These two chat-era IDs predate the mounted article API's identifiers.
+      const currentArticle = article === 'my-store-1' ? 'add-products'
+        : article === 'payments-1' ? 'accept-payments' : article;
+      return `/help/${currentArticle}`;
+    }
+  }
+  return value;
+}
+
 function normalizeArticles(data: unknown): HelpArticle[] {
   if (!Array.isArray(data)) return [];
   return data.flatMap((item) => {
@@ -94,7 +112,7 @@ function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
   const link = isRecord(data.link) ? data.link : undefined;
   return {
     text: data.reply,
-    linkUrl: isSafeLink(link?.url) ? link.url : undefined,
+    linkUrl: resolvedHelpLink(link?.url),
     linkTitle: typeof link?.title === "string" && link.title.trim() ? link.title : undefined
   };
 }
@@ -288,6 +306,19 @@ export function HelpWidget() {
     }
   }, [startWalkthrough]);
   const nextMessageId = useRef(1);
+  const chatGeneration = useRef(0);
+  const chatRequest = useRef<AbortController | null>(null);
+  const [chatPending, setChatPending] = useState(false);
+  const cancelChatRequest = useCallback(() => {
+    chatGeneration.current += 1;
+    chatRequest.current?.abort();
+    chatRequest.current = null;
+    setChatPending(false);
+  }, []);
+  useEffect(() => {
+    setChatPending(false);
+    return () => { chatGeneration.current += 1; chatRequest.current?.abort(); chatRequest.current = null; };
+  }, [pathname]);
 
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>(DEFAULT_HELP_ARTICLES);
 
@@ -329,40 +360,51 @@ export function HelpWidget() {
       .catch(() => {});
   }, [pathname]);
 
+  const closeHelp = () => {
+    cancelChatRequest();
+    setOpen(false);
+    setActiveVideo(null);
+    document.getElementById('omnisolo-floating-help-btn')?.focus();
+  };
+  useEffect(() => {
+    if (!open && !activeVideo) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (activeVideo) setActiveVideo(null);
+      else {
+        cancelChatRequest(); setOpen(false);
+        document.getElementById('omnisolo-floating-help-btn')?.focus();
+      }
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [open, activeVideo, cancelChatRequest]);
+
   const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const val = chatInput.trim();
-    if (!val) return;
-
-    setChatInput("");
-    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
-
-    if (val.toLowerCase().includes("operation")) {
-      setChatMessages(prev => [
-        ...prev,
-        {
-          id: `bot-${nextMessageId.current++}`,
-          role: "bot",
-          text: "I have routed your request to the Operations department.",
-          linkUrl: "/inbox",
-          linkTitle: "Check your inbox for updates →",
-        },
-      ]);
-      return;
-    }
-
+    if (!val || chatRequest.current) return;
+    const generation = chatGeneration.current;
+    const controller = new AbortController();
+    chatRequest.current = controller; setChatPending(true);
+    setChatInput('');
+    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: 'user', text: val }]);
     try {
-      const response = await fetch("/api/v1/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
-      if (!response.ok) throw new Error("Failed to fetch chat reply");
-      const data = await response.json();
-      const reply = normalizeChatReply(data);
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
-    } catch  {
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
+      const response = await fetch('/api/v1/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: val }), signal: controller.signal });
+      if (!response.ok) throw new Error('Failed to fetch chat reply');
+      const reply = normalizeChatReply(await response.json());
+      if (generation !== chatGeneration.current || controller.signal.aborted) return;
+      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: 'bot', ...reply }]);
+    } catch {
+      if (generation === chatGeneration.current && !controller.signal.aborted) setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: 'bot', text: "Sorry, I'm having trouble connecting right now." }]);
+    } finally {
+      if (chatRequest.current === controller) { chatRequest.current = null; setChatPending(false); }
     }
   };
 
   const clearChat = () => {
+    cancelChatRequest();
+    setChatInput('');
     const isTest = typeof window !== 'undefined' && window.location.search.includes('test_chat=true');
     setChatMessages([
       {
@@ -409,7 +451,7 @@ export function HelpWidget() {
       >
         <button
           id="ohc-help-btn-text"
-          onClick={() => setOpen(!open)}
+          onClick={() => open ? closeHelp() : setOpen(true)}
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-[30px] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-sm hover:bg-white text-xs font-semibold cursor-pointer min-h-[44px]"
           aria-label="Help"
         >
@@ -418,7 +460,7 @@ export function HelpWidget() {
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             id="omnisolo-floating-help-btn"
-            onClick={() => setOpen(!open)}
+            onClick={() => open ? closeHelp() : setOpen(true)}
             className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px] relative cursor-pointer"
             aria-label="Open help chat"
           >
@@ -461,7 +503,7 @@ export function HelpWidget() {
             ))}
             <button
               id="omnisolo-floating-help-close"
-              onClick={() => setOpen(false)}
+              onClick={closeHelp}
               className="absolute right-2 top-2 p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded-full transition-colors z-10 min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Close Help Widget"
             >
@@ -587,7 +629,7 @@ export function HelpWidget() {
                   <button
                     id="ohc-help-chat-send"
                     type="submit"
-                    disabled={!chatInput.trim()}
+                    disabled={!chatInput.trim() || chatPending}
                     className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                     aria-label="Send message"
                   >

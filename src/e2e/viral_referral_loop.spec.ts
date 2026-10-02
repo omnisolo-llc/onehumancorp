@@ -10,7 +10,7 @@ test.describe('Viral Referral Loop', () => {
         await page.goto('/dashboard.html');
 
         // Click on Referral Dashboard link
-        const referralLink = page.locator('#generate-link-btn');
+        const referralLink = page.getByRole('link', { name: 'Referral Dashboard', exact: true });
         await expect(referralLink).toBeVisible();
         await referralLink.click();
 

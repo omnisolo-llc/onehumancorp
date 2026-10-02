@@ -6,6 +6,7 @@ pub mod env_verifier;
 pub mod onboarding_agent;
 pub mod personas;
 pub mod preflight;
+pub mod preparation;
 pub mod provisioner;
 pub mod validation;
 pub mod wizard;

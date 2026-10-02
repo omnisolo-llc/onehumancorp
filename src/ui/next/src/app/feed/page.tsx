@@ -86,7 +86,7 @@ export default function FeedPage() {
       return i;
     }));
 
-    await handleAction(id, 'PENDING_APPROVAL', updatedProposed, updatedContext);
+    await handleAction(id, isAmbassador ? 'APPROVED' : 'PENDING_APPROVAL', updatedProposed, updatedContext);
     setEditingId(null);
   };
 

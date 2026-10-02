@@ -23,7 +23,7 @@ test.describe('Omnichannel Unified Inbox Event and UI', () => {
     await page.goto('/inbox');
     await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
 
-    await expect(page.getByText('whatsapp')).first().toBeVisible();
-    await expect(page.getByText('Do you have vegan options?')).first().toBeVisible();
+    await expect(page.getByText('whatsapp').first()).toBeVisible();
+    await expect(page.getByText('Do you have vegan options?').first()).toBeVisible();
   });
 });

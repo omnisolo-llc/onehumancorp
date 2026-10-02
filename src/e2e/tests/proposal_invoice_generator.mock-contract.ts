@@ -1,20 +1,13 @@
-import { test, expect } from '@playwright/test';
-import { e2eConfig, setupTenantAndUser } from '../playwright.config';
+import { test, expect } from '../fixtures';
 
 test.describe('Agentic Proposal & Invoice Generator for Service Agencies', () => {
-  let context: import("@playwright/test").BrowserContext;
-
-  test.beforeEach(async ({ browser }) => {
-    context = await setupTenantAndUser(browser);
-  });
-
-  test('draft proposal, approve, and verify auto-generated invoice', async () => {
-    const page = await context.newPage();
+  test('draft proposal, approve, and verify auto-generated invoice', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.setViewportSize({ width: 375, height: 812 });
 
     // 1. Simulate the backend having autonomously drafted a proposal for an inquiry.
     // We mock the backend creating it by calling the draft_agent endpoint directly in test
-    const response = await page.request.post(`${e2eConfig.baseURL}/api/v1/proposals/draft_agent`, {
+    const response = await page.request.post(`/api/v1/proposals/draft_agent`, {
       data: {
         inquiry: "Can you design a new logo for ACME Corp?",
         customer_id: "test-customer-acme-123",
@@ -27,7 +20,7 @@ test.describe('Agentic Proposal & Invoice Generator for Service Agencies', () =>
     expect(proposalId).toBeDefined();
 
     // 2. Nora opens OmniSolo app and navigates to review AI-generated proposal
-    await page.goto(`${e2eConfig.baseURL}/proposals/${proposalId}`);
+    await page.goto(`/proposals/${proposalId}`);
     await page.waitForLoadState('networkidle');
 
     // 3. Review UI
@@ -47,7 +40,7 @@ test.describe('Agentic Proposal & Invoice Generator for Service Agencies', () =>
     await expect(page.locator('text=Stripe Payment Link')).toBeVisible();
 
     // 6. Navigate to /finance and verify invoice is auto-generated
-    await page.goto(`${e2eConfig.baseURL}/finance`);
+    await page.goto(`/finance`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('h1', { hasText: 'Finance & Invoicing' })).toBeVisible();

@@ -27,8 +27,8 @@ describe("Integrations", () => {
 
   it("does not call an unimplemented OAuth contract or mark it connected", async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+      if (url === '/api/v1/integrations') return Promise.resolve(Response.json({ success: true, integrations: [] }));
+      return Promise.resolve(Response.json({}, { status: 503 }));
     });
 
     render(<Integrations />);
@@ -42,9 +42,9 @@ describe("Integrations", () => {
 
   it('requires Twilio credentials and explicit backend connection confirmation', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'pending' }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+      if (url === '/api/v1/integrations') return Promise.resolve(Response.json({ success: true, integrations: [] }));
+      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve(Response.json({ success: true, status: 'pending' }));
+      return Promise.resolve(Response.json({}, { status: 503 }));
     });
     render(<Integrations />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
@@ -66,9 +66,9 @@ describe("Integrations", () => {
 
   it('marks Twilio connected only when the backend confirms it is usable', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'connected', usable: true }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+      if (url === '/api/v1/integrations') return Promise.resolve(Response.json({ success: true, integrations: [] }));
+      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve(Response.json({ success: true, status: 'connected', usable: true }));
+      return Promise.resolve(Response.json({}, { status: 503 }));
     });
     render(<Integrations />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));

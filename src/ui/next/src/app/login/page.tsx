@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, type FormEvent, useEffect, useState } from "react";
 import { PublicAuthShell } from "@/app/components/PublicAuthShell";
+import { notifyQueueIdentityChange } from "@/lib/sync/queueIdentity";
 import { safeReturnPath } from "@/lib/auth/url";
 
 const GENERIC_ERROR = "We couldn't sign you in. Check your details and try again.";
@@ -63,6 +64,7 @@ function LoginForm() {
     }
     setPending(true);
     setError(null);
+    notifyQueueIdentityChange();
     try {
       const response = await fetch(`/api/v1/auth/login?next=${encodeURIComponent(next)}`, {
         method: "POST",
@@ -79,6 +81,7 @@ function LoginForm() {
     } catch {
       setError(GENERIC_ERROR);
     } finally {
+      notifyQueueIdentityChange();
       setPending(false);
     }
   }
@@ -186,6 +189,7 @@ function LoginForm() {
                     className="min-h-[50px] rounded-lg border border-gray-300 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-800 transition hover:border-[#0066FF] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                     href={`/api/v1/auth/oidc/${provider.key}?next=${encodeURIComponent(next)}`}
                     key={provider.key}
+                    onClick={notifyQueueIdentityChange}
                   >
                     Continue with {provider.display_name}
                   </Link>

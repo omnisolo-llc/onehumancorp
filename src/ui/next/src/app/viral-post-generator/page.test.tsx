@@ -46,7 +46,7 @@ describe('ViralPostGeneratorPage', () => {
 
   it('renders correctly', () => {
     render(<ViralPostGeneratorPage />);
-    expect(screen.getByText('Promoter Agent Post Generator 🚀')).toBeDefined();
+    expect(screen.getByText('Social Post Template 🚀')).toBeDefined();
   });
 
   it('generates a post', () => {
@@ -66,7 +66,7 @@ describe('ViralPostGeneratorPage', () => {
     expect(screen.getAllByText(/Powered by OmniSolo/).length).toBeGreaterThan(0);
   });
 
-  it('copies to clipboard', () => {
+  it('copies to clipboard', async () => {
     render(<ViralPostGeneratorPage />);
 
     const productNameInput = screen.getByPlaceholderText('e.g. Signature Coffee Blend');
@@ -82,7 +82,7 @@ describe('ViralPostGeneratorPage', () => {
     fireEvent.click(copyBtn);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByText('Copied!')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Copied!')).toBeDefined());
   });
 
   it('shows paywall when toggling remove branding', () => {
@@ -91,20 +91,27 @@ describe('ViralPostGeneratorPage', () => {
     fireEvent.click(checkbox);
 
     expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'Share on X to Unlock for Free' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Check trial availability' })).toBeDefined();
   });
 
-  it('claims trial extension through the backend', async () => {
+  it('keeps trial activation unavailable without a grant mutation', async () => {
     render(<ViralPostGeneratorPage />);
     const checkbox = screen.getByRole('checkbox');
     fireEvent.click(checkbox);
 
-    const shareBtn = screen.getByRole('button', { name: 'Share on X to Unlock for Free' });
+    const shareBtn = screen.getByRole('button', { name: 'Check trial availability' });
     fireEvent.click(shareBtn);
 
-    expect(window.open).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank');
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/trial-extension/claim', { method: 'POST' }));
-    await waitFor(() => expect(screen.queryByText('Upgrade to Pro')).toBeNull());
+    expect(window.open).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText(/durable grant is not verified/)).toBeVisible());
+    expect(vi.mocked(fetch).mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
+    expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
     expect(window.localStorage.setItem).not.toHaveBeenCalled();
   });
+  it('shows required input guidance and disables empty or whitespace generation',()=>{
+    render(<ViralPostGeneratorPage/>);const button=screen.getByRole('button',{name:'Generate Post'});expect(button).toBeDisabled();expect(screen.getByRole('status',{name:'Post requirements'})).toHaveTextContent(/product name.*key benefit/i);
+    fireEvent.change(screen.getByPlaceholderText('e.g. Signature Coffee Blend'),{target:{value:'  '}});fireEvent.change(screen.getByPlaceholderText('e.g. a bold start to your morning'),{target:{value:'Actual benefit'}});expect(button).toBeDisabled();fireEvent.click(button);expect(screen.queryByRole('button',{name:'Copy to Clipboard'})).not.toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('e.g. Signature Coffee Blend'),{target:{value:'Actual product'}});expect(button).toBeEnabled();fireEvent.click(button);expect(screen.getByText(/Introducing the new Actual product/)).toBeInTheDocument();
+  });
+
 });

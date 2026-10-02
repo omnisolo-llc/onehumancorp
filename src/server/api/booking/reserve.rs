@@ -515,6 +515,10 @@ async fn handle_reserve(
             .into_response();
     }
 
+    // Only publish the new feed state after the reservation and its approval
+    // item are durable. Invalidate every cached page for this tenant.
+    crate::invalidate_agent_feed_caches(&tenant_id).await;
+
     (
         StatusCode::OK,
         Json(ReserveResponse {

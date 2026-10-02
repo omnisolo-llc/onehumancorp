@@ -6,9 +6,13 @@ test.describe('Customer Subscription Portal', () => {
     // Since we don't have a guaranteed seeded subscription ID, we will check if it handles "not found"
     // correctly from the backend rather than the mock data.
     const fakeId = 'sub_9999999999';
-    await page.goto(`/customer/subscriptions/${fakeId}`);
+    const [response] = await Promise.all([
+      page.waitForResponse((response) => new URL(response.url()).pathname === `/api/v1/subscriptions/${fakeId}`),
+      page.goto(`/customer/subscriptions/${fakeId}`),
+    ]);
+    expect(response.status()).toBe(404);
 
     // The UI should show "Subscription not found." if it correctly hit the backend and got 404
-    await expect(page.locator('text="Subscription not found."')).toBeVisible();
+    await expect(page.getByText('Subscription details unavailable.', { exact: true })).toBeVisible();
   });
 });

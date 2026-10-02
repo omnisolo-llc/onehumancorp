@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './onboarding_fixtures';
 
 test.describe('Persona-Driven Onboarding E2E', () => {
 
@@ -14,7 +14,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(page.locator('input[value="Storefront"]')).toBeChecked();
     await page.locator('#step-context .next-step-btn').click();
 
-    await expect(page.locator('#business-categories')).toHaveValue('Home Baker');
+    await expect(page.locator('#business-categories')).toHaveValue('Bakery');
     await page.locator('#step-categories .next-step-btn').click();
 
     await expect(page.locator('#business-name')).toHaveValue("Maya's Bakery");
@@ -23,12 +23,12 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(page.locator('#assistant-tone')).toHaveValue("Friendly");
     await page.locator('#step-assistant .next-step-btn').click();
 
-    await page.locator('#admin-name').fill('Admin');
-    await page.locator('#admin-email').fill('maya@example.com');
-    await page.locator('#admin-password').fill('securepassword123');
+    await expect(page.locator('#step-admin')).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.locator('#step-admin .next-step-btn').click();
 
     await expect(page.locator('#first-offer')).toHaveValue("Custom Birthday Cake");
+    await page.locator('#first-product-price').fill('25.00');
     await page.locator('#step-offer .next-step-btn').click();
 
     await page.locator('#location-input').fill('Portland, OR');
@@ -57,12 +57,12 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(page.locator('#assistant-tone')).toHaveValue("Concise");
     await page.locator('#step-assistant .next-step-btn').click();
 
-    await page.locator('#admin-name').fill('Admin');
-    await page.locator('#admin-email').fill('carlos@example.com');
-    await page.locator('#admin-password').fill('securepassword123');
+    await expect(page.locator('#step-admin')).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.locator('#step-admin .next-step-btn').click();
 
     await expect(page.locator('#first-offer')).toHaveValue("Standard Repair Visit");
+    await page.locator('#first-product-price').fill('25.00');
     await page.locator('#step-offer .next-step-btn').click();
 
     await page.locator('#location-input').fill('Portland, OR');
@@ -107,12 +107,12 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.locator('#step-assistant .next-step-btn').click();
 
-    await page.locator('#admin-name').fill('Admin');
-    await page.locator('#admin-email').fill('nora@example.com');
-    await page.locator('#admin-password').fill('securepassword123');
+    await expect(page.locator('#step-admin')).toBeVisible();
+    await expect(page.locator('input[type="password"], #admin-email, #admin-name')).toHaveCount(0);
     await page.locator('#step-admin .next-step-btn').click();
 
     await page.locator('#first-offer').fill("Logo Design");
+    await page.locator('#first-product-price').fill('25.00');
     await page.locator('#step-offer .next-step-btn').click();
 
     await page.locator('#location-input').fill('Portland, OR');

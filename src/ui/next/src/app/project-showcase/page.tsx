@@ -14,8 +14,9 @@ export default function ProjectShowcasePage() {
   const [afterImage, setAfterImage] = useState('');
   const [ctaLink, setCtaLink] = useState('');
 
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
 

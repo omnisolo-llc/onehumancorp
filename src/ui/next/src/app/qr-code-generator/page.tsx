@@ -80,7 +80,7 @@ export default function QRCodeGeneratorPage() {
                     <button
                       key={c}
                       aria-label={`Select color ${c}`}
-                      onClick={() => setQrColor(c)}
+                      onClick={() => setQrColor(c)} aria-pressed={qrColor === c}
                       className={`w-10 h-10 rounded-full border-2 transition-transform ${qrColor === c ? 'scale-110 border-gray-400' : 'border-transparent'}`}
                       style={{ backgroundColor: c }}
                     />

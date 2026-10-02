@@ -3,7 +3,7 @@
 import { WithTooltip } from "./TooltipRegistry";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
-type VoiceStatus = "idle" | "listening" | "processing" | "success" | "error";
+type VoiceStatus = "idle" | "requesting" | "cancelled" | "listening" | "processing" | "success" | "error";
 
 export function VoiceAssistant() {
   const [isRecording, setIsRecording] = useState(false);
@@ -80,6 +80,8 @@ export function VoiceAssistant() {
     wantsRecordingRef.current = true;
     pendingRequestRef.current = true;
     const session = ++sessionRef.current;
+    setTranscription("");
+    setStatus("requesting");
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -138,6 +140,7 @@ export function VoiceAssistant() {
     if (pendingRequestRef.current && !recordingRef.current) {
       pendingRequestRef.current = false;
       sessionRef.current += 1;
+      setStatus("cancelled");
       return;
     }
     const mediaRecorder = mediaRecorderRef.current;
@@ -249,9 +252,9 @@ export function VoiceAssistant() {
           aria-atomic="true"
         >
           <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${status === 'listening' ? 'bg-red-500 animate-pulse' : status === 'processing' ? 'bg-blue-500 animate-bounce' : status === 'error' ? 'bg-red-600' : 'bg-green-500'}`} />
+            <div className={`w-3 h-3 rounded-full ${status === 'listening' ? 'bg-red-500 animate-pulse' : status === 'processing' ? 'bg-blue-500 animate-bounce' : status === 'error' ? 'bg-red-600' : status === 'success' ? 'bg-green-500' : 'bg-gray-500'}`} />
             <span className="text-sm font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-              {status === 'listening' ? 'Listening...' : status === 'processing' ? 'Processing command...' : status === 'error' ? 'Error. Try again.' : 'Action Prepared!'}
+              {status === 'requesting' ? 'Waiting for microphone...' : status === 'cancelled' ? 'Recording canceled before it started. Hold to speak.' : status === 'listening' ? 'Listening...' : status === 'processing' ? 'Processing command...' : status === 'error' ? 'Error. Try again.' : 'Action Prepared!'}
             </span>
           </div>
           {transcription && (

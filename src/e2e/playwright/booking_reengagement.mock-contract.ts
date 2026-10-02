@@ -4,7 +4,7 @@ import { adminPage } from '../fixtures';
 test.describe('Automated Re-engagement Agent for Service Bookings', () => {
   test('should detect dormant customer and create re-engagement task', async ({ page }) => {
     // 1. Manually trigger the dormant logic or create seed data that represents a dormant user.
-    await adminPage(page).goto('/');
+    await (await adminPage(page)).goto('/');
 
     // Simulate DB insertion for a dormant customer
     const insertRes = await page.evaluate(async () => {

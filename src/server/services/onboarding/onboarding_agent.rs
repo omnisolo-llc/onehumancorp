@@ -30,6 +30,37 @@ const USER_ONBOARDING_STATE_FIELDS: &[&str] = &[
     "error",
 ];
 
+const LEGACY_DRAFT_TEXT_FIELDS: &[&str] = &[
+    "business_name",
+    "work_context",
+    "assistant_name",
+    "assistant_tone",
+    "tagline",
+    "first_offer",
+    "target_audience",
+    "template_selection",
+    "domain",
+    "instant_bio",
+    "instant_image_url",
+];
+fn valid_legacy_text(name: &str, value: &serde_json::Value) -> bool {
+    value.as_str().is_some_and(|text| {
+        text.chars().count()
+            <= if name == "instant_image_url" {
+                2048
+            } else {
+                4000
+            }
+    })
+}
+fn valid_draft_capabilities(value: &serde_json::Value) -> bool {
+    value.as_object().is_some_and(|object| {
+        ["draft", "schedule", "inventory"]
+            .iter()
+            .all(|key| object.get(*key).is_none_or(serde_json::Value::is_boolean))
+    })
+}
+
 const SYSTEM_ONBOARDING_STATE_FIELDS: &[&str] = &[
     "onboarding_goal_seconds",
     "unified_storefront",
@@ -46,6 +77,40 @@ const SYSTEM_ONBOARDING_STATE_FIELDS: &[&str] = &[
     "status",
 ];
 
+fn valid_chat_history(value: &serde_json::Value) -> bool {
+    let Some(messages) = value.as_array() else {
+        return false;
+    };
+    if messages.len() > 20 {
+        return false;
+    }
+    let mut total = 0usize;
+    messages.iter().all(|message| {
+        let Some(role) = message.get("role").and_then(|v| v.as_str()) else {
+            return false;
+        };
+        let Some(content) = message.get("content").and_then(|v| v.as_str()) else {
+            return false;
+        };
+        let count = content.chars().count();
+        total = total.saturating_add(count);
+        matches!(role, "user" | "assistant") && count <= 4000 && total <= 12000
+    })
+}
+pub(crate) fn valid_draft_state(value: &serde_json::Value) -> bool {
+    value.get("chatMessages").is_none_or(valid_chat_history)
+        && value.get("chat_history").is_none_or(valid_chat_history)
+        && value
+            .get("capabilities")
+            .is_none_or(valid_draft_capabilities)
+        && LEGACY_DRAFT_TEXT_FIELDS.iter().all(|name| {
+            value
+                .get(*name)
+                .is_none_or(|field| valid_legacy_text(name, field))
+        })
+        && value.get("wizardState").is_none_or(valid_draft_state)
+}
+
 fn sanitize_onboarding_object(
     value: &serde_json::Value,
     allow_system_fields: bool,
@@ -60,6 +125,28 @@ fn sanitize_onboarding_object(
                 name.clone(),
                 sanitize_onboarding_object(field, allow_system_fields),
             );
+        } else if matches!(name.as_str(), "chatMessages" | "chat_history")
+            && valid_chat_history(field)
+        {
+            let messages = field
+                .as_array()
+                .expect("validated array")
+                .iter()
+                .map(|message| json!({"role":message["role"],"content":message["content"]}))
+                .collect::<Vec<_>>();
+            output.insert(name.clone(), json!(messages));
+        } else if LEGACY_DRAFT_TEXT_FIELDS.contains(&name.as_str())
+            && valid_legacy_text(name, field)
+        {
+            output.insert(name.clone(), field.clone());
+        } else if name == "capabilities" && valid_draft_capabilities(field) {
+            let mut selected = serde_json::Map::new();
+            for key in ["draft", "schedule", "inventory"] {
+                if let Some(value) = field.get(key) {
+                    selected.insert(key.to_string(), value.clone());
+                }
+            }
+            output.insert(name.clone(), serde_json::Value::Object(selected));
         } else if USER_ONBOARDING_STATE_FIELDS.contains(&name.as_str())
             || (allow_system_fields && SYSTEM_ONBOARDING_STATE_FIELDS.contains(&name.as_str()))
         {
@@ -188,27 +275,7 @@ impl OnboardingAgent {
 
         let minimax = match self.minimax.as_ref() {
             Some(m) => m,
-            None => {
-                // E2E Test / Local adapter mock fallback when no LLM is configured
-                let combined_input = user_messages
-                    .iter()
-                    .map(|m| {
-                        let mut text = m.content.clone();
-                        if let Some(url) = &m.image_url {
-                            text.push_str(&format!("\nImage provided: {}", url));
-                        }
-                        text
-                    })
-                    .collect::<Vec<String>>()
-                    .join("\n");
-                let intake_data = self.process_intake(&combined_input).await?;
-
-                return Ok(ChatResponse {
-                    is_complete: true,
-                    reply: "Give me a minute... I'm building your business.".to_string(),
-                    intake_data: Some(intake_data),
-                });
-            }
+            None => return Err("onboarding_ai_unconfigured".into()),
         };
 
         let mut conversation_history = String::new();
@@ -302,41 +369,7 @@ Your response:",
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
         let minimax = match self.minimax.as_ref() {
             Some(m) => m,
-            None => {
-                // E2E Test / Local adapter mock fallback when no LLM is configured
-                return Ok(IntakeData {
-                    business_name: "Mock Business".to_string(),
-                    business_type: "Mock Type".to_string(),
-                    categories: vec!["physical".to_string()],
-                    initial_products: vec![
-                        IntakeProduct {
-                            name: "Mock Product 1".to_string(),
-                            price: "10.00".to_string(),
-                            description: Some("Description for Product 1".to_string()),
-                            variants: None,
-                        },
-                        IntakeProduct {
-                            name: "Mock Product 2".to_string(),
-                            price: "20.00".to_string(),
-                            description: Some("Description for Product 2".to_string()),
-                            variants: None,
-                        },
-                        IntakeProduct {
-                            name: "Mock Product 3".to_string(),
-                            price: "30.00".to_string(),
-                            description: Some("Description for Product 3".to_string()),
-                            variants: None,
-                        },
-                    ],
-                    location: Some("Mock Location".to_string()),
-                    target_audience: Some("Mock Audience".to_string()),
-                    initial_tasks: Some(vec!["Follow up with new leads".to_string()]),
-                    sample_customer_name: Some("Sample Customer".to_string()),
-                    sample_customer_email: Some("sample@example.com".to_string()),
-                    deposit_percentage: Some(50),
-                    lead_time_days: Some(3),
-                });
-            }
+            None => return Err("onboarding_ai_unconfigured".into()),
         };
 
         let prompt = format!(
@@ -473,6 +506,9 @@ Your response:",
         current_step: i32,
         state_json: &serde_json::Value,
     ) -> Result<(), String> {
+        if !valid_draft_state(state_json) {
+            return Err("invalid_onboarding_draft".into());
+        }
         self.save_onboarding_state_internal(tenant_id, user_id, current_step, state_json, false)
             .await
     }
@@ -508,7 +544,19 @@ Your response:",
 
         use sqlx::Row;
 
-        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+        // A missing row cannot be locked by SELECT FOR UPDATE. Materialize it
+        // in this transaction first so concurrent initial saves wait for the
+        // winner, then merge its committed state using the existing policy.
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at) VALUES ($1, $2, 0, '{}'::jsonb, CURRENT_TIMESTAMP) ON CONFLICT (tenant_id, user_id) DO NOTHING",
+        )
+        .bind(tenant_id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2 FOR UPDATE")
             .bind(tenant_id)
             .bind(user_id)
             .fetch_optional(&mut *tx)
@@ -592,71 +640,18 @@ Your response:",
         tenant_id: &str,
         user_id: &str,
     ) -> Result<serde_json::Value, String> {
-        let cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
-        let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| {
-            ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client())
-        });
-        tracing::debug!(
-            "Attempting to get onboarding state from cache for key: {}",
-            cache_key
-        ); // pii-safe
-        if let Some(cached_state) = cache.get(&cache_key).await {
-            let cached_state = sanitize_stored_onboarding_state(&cached_state);
-            tracing::debug!(
-                "Onboarding cache hit for tenant_id={} user_id={}",
-                tenant_id,
-                user_id
-            );
-            tracing::debug!("Cache hit for onboarding state key: {}", cache_key); // pii-safe
-            return Ok(cached_state);
+        let (preparation, stored, step, updated_at) =
+            super::preparation::read_state(&self.db.pool, tenant_id, user_id)
+                .await
+                .map_err(|e| e.to_string())?;
+        let mut state = sanitize_stored_onboarding_state(&stored);
+        state["step"] = json!(step);
+        if let Some(updated_at) = updated_at {
+            state["updated_at"] = json!(updated_at.timestamp_millis());
         }
-        tracing::debug!("Cache miss for onboarding state key: {}", cache_key); // pii-safe
-
-        let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
-        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        use sqlx::Row;
-
-        let row = sqlx::query(
-            "SELECT current_step, state_json, updated_at FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
-        )
-        .bind(tenant_id)
-        .bind(user_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        let state = if let Some(record) = row {
-            let stored_state: serde_json::Value = record.get("state_json");
-            let mut state = sanitize_stored_onboarding_state(&stored_state);
-            let current_step: i32 = record.get("current_step");
-            if let Some(obj) = state.as_object_mut() {
-                obj.insert("step".to_string(), serde_json::json!(current_step));
-
-                // Add updated_at from DB
-                if let Ok(updated_at) =
-                    record.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at")
-                {
-                    obj.insert(
-                        "updated_at".to_string(),
-                        serde_json::json!(updated_at.timestamp_millis()),
-                    );
-                }
-            }
-            state
-        } else {
-            serde_json::json!({ "step": 0 })
-        };
-
-        cache
-            .set(
-                &cache_key,
-                state.clone(),
-                std::time::Duration::from_secs(3600),
-            )
-            .await;
+        state["preparation"] = preparation
+            .map(|p| p.public())
+            .unwrap_or(serde_json::Value::Null);
         Ok(state)
     }
 
@@ -681,372 +676,241 @@ Your response:",
         org_id: String,
         user_id: String,
     ) -> Result<StartOnboardingResponse, String> {
-        let start_time = std::time::Instant::now();
-        let business_type = req.business_type.clone();
-        let company_name = req.company_name.clone();
-
-        let identity_is_active = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND tenant_id = $2 AND active = TRUE)",
-        )
-        .bind(&user_id)
-        .bind(&org_id)
-        .fetch_one(&self.db.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-        if !identity_is_active {
-            return Err(
-                "Authenticated user is not an active member of the organization".to_string(),
-            );
-        }
-
-        let domain_choice = req.domain_choice.clone();
-        let location = req.location.clone();
-
-        let req_first_product_name = req.first_product_name.clone();
-        let req_first_product_price = req.first_product_price.clone();
-        let req_price_type = req.price_type.clone();
-        let org_id_clone1 = org_id.clone();
-        let org_id_clone2 = org_id.clone();
-        let business_type_clone = business_type.clone();
-
-        let req_deposit_percentage = req.deposit_percentage;
-        let req_lead_time_days = req.lead_time_days;
-
-        let agent_clone_product = self.clone();
-        let req_initial_products = req.initial_products.clone();
-
-        let product_future = tokio::task::spawn(async move {
-            if !req_initial_products.is_empty() {
-                for product in req_initial_products {
-                    let variants_converted: Option<Vec<IntakeProductVariant>> =
-                        if product.variants.is_empty() {
-                            None
-                        } else {
-                            Some(
-                                product
-                                    .variants
-                                    .into_iter()
-                                    .map(|v| IntakeProductVariant {
-                                        name: v.name,
-                                        price_modifier: v.price_modifier,
-                                    })
-                                    .collect(),
-                            )
-                        };
-
-                    let payload = serde_json::json!({
-                        "name": product.name,
-                        "price": product.price,
-                        "price_type": req_price_type,
-                        "business_type": business_type_clone,
-                        "description": product.description,
-                        "variants": variants_converted,
-                        "deposit_percentage": req_deposit_percentage,
-                        "lead_time_days": req_lead_time_days,
-                    });
-
-                    let job_id = uuid::Uuid::new_v4().to_string();
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
-                         VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)"
-                    )
-                    .bind(&job_id)
-                    .bind(&org_id_clone1)
-                    .bind("onboarding_generate_catalog")
-                    .bind(sqlx::types::Json(payload))
-                    .execute(&agent_clone_product.db.pool)
-                    .await
-                    {
-                        tracing::error!("Failed to enqueue catalog generation job: {}", e);
-                    }
-                }
-                Ok(())
-            } else if !req_first_product_name.is_empty() {
-                agent_clone_product
-                    .create_product(
-                        &org_id_clone1,
-                        &IntakeProduct {
-                            name: req_first_product_name,
-                            price: req_first_product_price,
-                            description: None,
-                            variants: None,
-                        },
-                        &req_price_type,
-                        &business_type_clone,
-                        req_deposit_percentage,
-                        req_lead_time_days,
-                    )
-                    .await
-            } else {
-                agent_clone_product
-                    .generate_initial_products(&org_id_clone1, &business_type_clone)
-                    .await
-            }
-        });
-
-        let agent_clone_seed = self.clone();
-        let req_ai_agents = req.ai_agents.clone();
-        let req_ai_auto_respond = req.ai_auto_respond;
-        let seed_future = tokio::task::spawn(async move {
-            agent_clone_seed
-                .seed_default_agents(&org_id_clone2, &req_ai_agents, req_ai_auto_respond)
-                .await
-        });
-
-        let org_id_clone3 = org_id.clone();
-        let pool = self.db.pool.clone();
-        let hub_clone = self.hub.clone();
-        let company_name_clone = company_name.clone();
-        let business_type_clone_2 = business_type.clone();
-
-        let publish_events_future = tokio::task::spawn(async move {
-            // Subscribe default AI Agents to specific tenant events dynamically
-            let event_topics = vec![
-                ("The Manager", "tenant.booking.created"),
-                ("The Manager", "tenant.order.placed"),
-                ("The Promoter", "tenant.product.created"),
-                ("The Salesperson", "tenant.lead.created"),
-                ("The Ambassador", "tenant.message.received"),
-                ("The Accountant", "tenant.payment.success"),
-                ("The Protector", "tenant.contract.signed"),
-                ("The Advisor", "tenant.report.generated"),
-                ("The Scout", "tenant.seo.optimized"),
-            ];
-
-            let start_events = std::time::Instant::now();
-            let mut topic_futures = vec![];
-            for (agent_role, topic) in event_topics {
-                let query = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
-                    .bind(org_id_clone3.to_string())
-                    .bind(agent_role)
-                    .bind(topic);
-                let pool = pool.clone();
-                topic_futures.push(tokio::spawn(async move {
-                    let _ = query.execute(&pool).await;
-                }));
-            }
-            futures::future::join_all(topic_futures).await;
-            tracing::info!(
-                "publish_events_future event_topics inserts took: {} us",
-                start_events.elapsed().as_micros()
-            );
-
-            // Trigger KAIROS Orchestration for initial artifacts
-            let storefront_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
-                agent_id: "system".to_string(),
-                action: "GenerateStorefront".to_string(),
-                status: "pending".to_string(),
-                payload: serde_json::to_vec(&json!({
-                    "organization_id": org_id_clone3,
-                    "company_name": company_name_clone,
-                    "business_type": business_type_clone_2,
-                }))
-                .unwrap_or_default(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
-            let _ = hub_clone
-                .publish_teammate_event("promoter_inbox".to_string(), storefront_event)
-                .await;
-
-            let policy_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
-                agent_id: "system".to_string(),
-                action: "GeneratePolicies".to_string(),
-                status: "pending".to_string(),
-                payload: serde_json::to_vec(&json!({
-                    "organization_id": org_id_clone3,
-                    "company_name": company_name_clone,
-                }))
-                .unwrap_or_default(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
-            let _ = hub_clone
-                .publish_teammate_event("protector_inbox".to_string(), policy_event)
-                .await;
-
-            // Schedule the weekly health report via the internal task queue for The Advisor
-            let scheduled_at = chrono::Utc::now() + chrono::Duration::days(7);
-            let payload = serde_json::json!({
-                "agent_role": "The Advisor",
-                "task": "weekly_health_report",
-                "tenant_id": org_id_clone3.clone()
-            });
-            if let Err(e) = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $2, NULL, $3, 'QUEUED', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                .bind(uuid::Uuid::new_v4().to_string())
-                .bind(&org_id_clone3)
-                .bind(sqlx::types::Json(payload))
-                .bind(scheduled_at.naive_utc())
-                .execute(&pool)
-                .await
-            {
-                ::server_telemetry::record_error_signal("[bug] Failed to schedule weekly health report");
-                tracing::error!("Failed to schedule weekly health report: {}", e); // pii-safe
-            }
-
-            Ok::<(), String>(())
-        });
-
-        let (product_res_res, seed_res_res, events_res_res) =
-            tokio::join!(product_future, seed_future, publish_events_future);
-
-        let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
-        let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
-
-        let events_res = events_res_res.unwrap_or_else(|e| Err(e.to_string()));
-        if let Err(e) = events_res {
-            tracing::warn!("Failed to publish onboarding events (non-fatal): {}", e);
-        }
-
-        product_res?;
-        seed_res?;
-
-        let updated = sqlx::query("UPDATE tenants SET name = $1, subdomain = $2 WHERE id = $3")
-            .bind(&company_name)
-            .bind(&domain_choice)
-            .bind(&org_id)
-            .execute(&self.db.pool)
+        let prepared = self
+            .prepare_onboarding_for_identity(req, &org_id, &user_id, &[], None, None)
             .await
             .map_err(|e| e.to_string())?;
-        if updated.rows_affected() != 1 {
-            return Err("Authenticated organization was not found".to_string());
-        }
-
-        let flags_json = onboarding_feature_state(&req, &company_name, &business_type, &location);
-
-        // Provision initial Agent Feed items (Action Required)
-        let feed_id = uuid::Uuid::new_v4().to_string();
-        let feed_payload = serde_json::json!({
-            "description": format!("Welcome to OmniSolo! I've set up your {} business. Click here to review your new storefront.", business_type),
-            "feature_type": "onboarding_welcome",
-            "company_name": company_name
-        });
-
-        if let Err(e) = sqlx::query(
-            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL')"
-        )
-        .bind(&feed_id)
-        .bind(&org_id)
-        .bind("system")
-        .bind(&feed_payload)
-        .bind(serde_json::json!({"action_type": "review_storefront"}))
-        .execute(&self.db.pool)
-        .await {
-            tracing::error!("Failed to create initial feed item: {}", e);
-        }
-
-        self.save_onboarding_state_internal(&org_id, &user_id, 1, &flags_json, true)
-            .await?;
-
-        crate::telemetry::track_onboarding_step(
-            &org_id,
-            "start_onboarding",
-            start_time.elapsed().as_millis() as u64,
-        );
         Ok(StartOnboardingResponse {
             success: true,
-            message: format!(
-                "Successfully onboarded {} as a {}!",
-                company_name, business_type
-            ),
-            organization_id: org_id,
-            user_id,
+            message: "Local business setup prepared; review before launch.".into(),
+            organization_id: prepared.organization_id,
+            user_id: prepared.user_id,
         })
     }
 
-    async fn create_product(
+    pub async fn prepare_onboarding_for_identity(
         &self,
+        req: StartOnboardingRequest,
         org_id: &str,
+        user_id: &str,
+        identities: &[super::preparation::ProductIdentity],
+        previous: Option<&str>,
+        source_identity: Option<&str>,
+    ) -> Result<super::preparation::Preparation, super::preparation::Error> {
+        let start_time = std::time::Instant::now();
+        let mut products = vec![];
+        if !req.initial_products.is_empty() {
+            if !identities.is_empty() && identities.len() != req.initial_products.len() {
+                return Err(super::preparation::Error::Invalid(
+                    "invalid_catalog_identity",
+                ));
+            }
+            for (index, product) in req.initial_products.iter().enumerate() {
+                let identity = identities.get(index).cloned().unwrap_or_default();
+                products.push(Self::catalog_product(
+                    &IntakeProduct {
+                        name: product.name.clone(),
+                        price: product.price.clone(),
+                        description: Some(product.description.clone()),
+                        variants: Some(
+                            product
+                                .variants
+                                .iter()
+                                .map(|v| IntakeProductVariant {
+                                    name: v.name.clone(),
+                                    price_modifier: v.price_modifier.clone(),
+                                })
+                                .collect(),
+                        ),
+                    },
+                    &req.price_type,
+                    &req.business_type,
+                    req.deposit_percentage,
+                    req.lead_time_days,
+                    identity,
+                )?);
+            }
+        } else if !req.first_product_name.trim().is_empty() {
+            products.push(Self::catalog_product(
+                &IntakeProduct {
+                    name: req.first_product_name.clone(),
+                    price: req.first_product_price.clone(),
+                    description: None,
+                    variants: None,
+                },
+                &req.price_type,
+                &req.business_type,
+                req.deposit_percentage,
+                req.lead_time_days,
+                Default::default(),
+            )?);
+        } else {
+            products = Self::default_catalog(&req.business_type);
+        }
+        let mut flags =
+            onboarding_feature_state(&req, &req.company_name, &req.business_type, &req.location);
+        flags["status"] = json!("prepared");
+        flags["storefront_status"] = json!("awaiting_launch");
+        flags["policies_status"] = json!("awaiting_launch");
+        // Required local rows and the protected receipt commit together. No mesh
+        // or provider activation occurs until the separate reviewed launch.
+        let prepared = super::preparation::prepare(
+            &self.db.pool,
+            org_id,
+            user_id,
+            &req,
+            &products,
+            previous,
+            source_identity,
+            flags,
+        )
+        .await?;
+        self.invalidate_onboarding_cache(org_id, user_id).await;
+        crate::telemetry::track_onboarding_step(
+            org_id,
+            "start_onboarding",
+            start_time.elapsed().as_millis() as u64,
+        );
+        Ok(prepared)
+    }
+
+    pub async fn prepared_state(
+        &self,
+        tenant: &str,
+        user: &str,
+    ) -> Result<Option<super::preparation::Preparation>, super::preparation::Error> {
+        super::preparation::read(&self.db.pool, tenant, user).await
+    }
+
+    pub async fn launch_preparation(
+        &self,
+        tenant: &str,
+        user: &str,
+        id: &str,
+    ) -> Result<super::preparation::Preparation, super::preparation::Error> {
+        let mut prepared = super::preparation::launch(&self.db.pool, tenant, user, id).await?;
+        // Each durable envelope is claimed before the first publication attempt.
+        // Hub cannot prove delivery; never relabel this as completed automation.
+        match super::preparation::claim_notifications(&self.db.pool, tenant, user, id).await {
+            Ok(events) => {
+                if !events.is_empty() {
+                    prepared.notification_status = "delivery_unconfirmed".into();
+                }
+                for event in events {
+                    let event_payload = serde_json::to_vec(&event.payload)
+                        .map_err(|_| super::preparation::Error::Invalid("invalid_notification"))?;
+                    let envelope = ::server_omnisolo::orchestration::TeammateMeshEvent {
+                        agent_id: "system".into(),
+                        action: event.action.clone(),
+                        status: if event.action == "ProductCreated"
+                            || event.action == "ProductUpdated"
+                        {
+                            "success"
+                        } else {
+                            "pending"
+                        }
+                        .into(),
+                        payload: event_payload,
+                        msg_id: event.msg_id,
+                    };
+                    if let Err(error) = self
+                        .hub
+                        .publish_teammate_event(event.channel, envelope)
+                        .await
+                    {
+                        tracing::warn!(
+                            "Onboarding notification requires reconciliation: {}",
+                            error
+                        );
+                    }
+                }
+            }
+            Err(error) => {
+                tracing::warn!(
+                    "Committed setup notification claim requires reconciliation: {}",
+                    error
+                );
+                prepared.notification_status = "reconciliation".into();
+            }
+        }
+        self.invalidate_onboarding_cache(tenant, user).await;
+        Ok(prepared)
+    }
+
+    async fn invalidate_onboarding_cache(&self, tenant: &str, user: &str) {
+        let cache =
+            ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        cache
+            .invalidate(&format!("agent_onboarding_state_v2_{}_{}", tenant, user))
+            .await;
+        let dashboard = crate::services::dashboard::service::ONBOARDING_STATE_CACHE
+            .get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        dashboard
+            .invalidate(&format!("onboarding_state_{}", tenant))
+            .await;
+    }
+
+    fn catalog_product(
         product: &IntakeProduct,
         price_type: &str,
         business_type: &str,
         deposit_percentage: Option<i32>,
         lead_time_days: Option<i32>,
-    ) -> Result<(), String> {
-        let name = product.name.as_str();
-        let price_str = product.price.as_str();
-        let description = product.description.as_deref();
-        let variants = product.variants.as_ref();
-        let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
-        let strategy = match business_type {
-            "Service Business" => "booking",
-            _ => "physical",
-        };
-
-        let id = format!("prod-{}", uuid::Uuid::new_v4());
-        let mut meta = json!({"price_type": price_type});
-
-        if let Some(m) = meta.as_object_mut() {
-            if let Some(dp) = deposit_percentage {
-                m.insert("deposit_percentage".to_string(), json!(dp));
-                // A deposit rule is not a provider-created checkout session.
-                // Payment setup must use the verified payment workflow later.
-                m.insert(
-                    "deposit_payment_status".to_string(),
-                    json!("not_configured"),
-                );
+        identity: super::preparation::ProductIdentity,
+    ) -> Result<super::preparation::CatalogProduct, super::preparation::Error> {
+        let mut metadata = json!({"price_type":price_type});
+        if let Some(n) = deposit_percentage {
+            if !(0..=100).contains(&n) {
+                return Err(super::preparation::Error::Invalid(
+                    "invalid_deposit_percentage",
+                ));
             }
-            if let Some(lt) = lead_time_days {
-                m.insert("lead_time_days".to_string(), json!(lt));
-            }
+            metadata["deposit_percentage"] = json!(n);
+            metadata["deposit_payment_status"] = json!("not_configured");
         }
-
-        sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-            .bind(&id)
-            .bind(org_id)
-            .bind(name)
-            .bind(description.unwrap_or("Added during onboarding"))
-            .bind(price_cents)
-            .bind(strategy)
-            .bind(meta)
-            .execute(&self.db.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if let Some(vars) = variants {
-            for variant in vars {
-                let variant_id = format!("var-{}", uuid::Uuid::new_v4());
-                let var_price_modifier =
-                    (variant.price_modifier.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
-                sqlx::query("INSERT INTO product_variants (id, tenant_id, product_id, name, sku, price_modifier, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                    .bind(&variant_id)
-                    .bind(org_id)
-                    .bind(&id)
-                    .bind(&variant.name)
-                    .bind("")
-                    .bind(var_price_modifier)
-                    .bind(0)
-                    .execute(&self.db.pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+        if let Some(n) = lead_time_days {
+            if !(0..=3650).contains(&n) {
+                return Err(super::preparation::Error::Invalid("invalid_lead_time_days"));
             }
+            metadata["lead_time_days"] = json!(n);
         }
-
-        let event_payload = json!({
-            "product_id": id,
-            "name": name,
-            "organization_id": org_id,
-        });
-
-        let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
-            agent_id: "system".to_string(),
-            action: "ProductCreated".to_string(),
-            status: "success".to_string(),
-            payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-
-        let _ = self
-            .hub
-            .publish_teammate_event("products_inbox".to_string(), event)
-            .await;
-
-        Ok(())
+        let variants = product.variants.as_deref().unwrap_or_default();
+        if !identity.variant_ids.is_empty() && identity.variant_ids.len() != variants.len() {
+            return Err(super::preparation::Error::Invalid(
+                "invalid_variant_identity",
+            ));
+        }
+        let variants = variants
+            .iter()
+            .enumerate()
+            .map(|(index, v)| {
+                Ok(super::preparation::CatalogVariant {
+                    variant_id: identity.variant_ids.get(index).cloned().flatten(),
+                    name: v.name.clone(),
+                    cents: super::preparation::money(&v.price_modifier, true)?,
+                })
+            })
+            .collect::<Result<Vec<_>, super::preparation::Error>>()?;
+        Ok(super::preparation::CatalogProduct {
+            product_id: identity.product_id,
+            name: product.name.clone(),
+            description: product
+                .description
+                .clone()
+                .unwrap_or_else(|| "Added during onboarding".into()),
+            cents: super::preparation::money(&product.price, false)?,
+            item_type: if business_type == "Service Business" {
+                "booking"
+            } else {
+                "physical"
+            }
+            .into(),
+            metadata,
+            variants,
+        })
     }
 
-    async fn generate_initial_products(
-        &self,
-        org_id: &str,
-        business_type: &str,
-    ) -> Result<(), String> {
+    fn default_catalog(business_type: &str) -> Vec<super::preparation::CatalogProduct> {
         let products = match business_type {
             "Home Baker" | "Bakery" => vec![
                 (
@@ -10130,110 +9994,36 @@ Your response:",
             )],
         };
 
-        let mut futures = vec![];
-        for (name, desc, price, strategy) in products {
-            let id = format!("prod-{}", uuid::Uuid::new_v4());
-            let org_id = org_id.to_string();
-            let name = name.to_string();
-            let desc = desc.to_string();
-            let strategy = strategy.to_string();
-            let pool = self.db.pool.clone();
-
-            let hub = self.hub.clone();
-            futures.push(tokio::spawn(async move {
-                sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                    .bind(&id)
-                    .bind(&org_id)
-                    .bind(&name)
-                    .bind(&desc)
-                    .bind(price)
-                    .bind(&strategy)
-                    .bind(json!({}))
-                    .execute(&pool)
-                    .await?;
-
-                let event_payload = json!({
-                    "product_id": id,
-                    "name": name,
-                    "organization_id": org_id,
-                });
-
-                let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
-                    agent_id: "system".to_string(),
-                    action: "ProductCreated".to_string(),
-                    status: "success".to_string(),
-                    payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                };
-
-                let _ = hub.publish_teammate_event("products_inbox".to_string(), event).await;
-                Ok::<_, sqlx::Error>(())
-            }));
-        }
-
-        for f in futures {
-            f.await
-                .map_err(|e| e.to_string())?
-                .map_err(|e| e.to_string())?;
-        }
-
-        Ok(())
+        products
+            .into_iter()
+            .map(
+                |(name, description, cents, item_type)| super::preparation::CatalogProduct {
+                    product_id: None,
+                    name: name.into(),
+                    description: description.into(),
+                    cents,
+                    item_type: item_type.into(),
+                    metadata: json!({}),
+                    variants: vec![],
+                },
+            )
+            .collect()
     }
 
-    async fn seed_default_agents(
+    #[cfg(test)]
+    async fn generate_initial_products(
         &self,
         org_id: &str,
-        ai_agents: &[String],
-        ai_auto_respond: bool,
+        business_type: &str,
     ) -> Result<(), String> {
-        let default_agents = vec![
-            ("Operations", "The Manager", "Operations"),
-            ("Marketing & Advertising", "The Promoter", "Marketing"),
-            ("Sales & Acquisition", "The Salesperson", "Sales"),
-            ("Customer Success", "The Ambassador", "CustomerSuccess"),
-            ("Finance & Payments", "The Accountant", "Finance"),
-            ("Legal & Compliance", "The Protector", "Legal"),
-            ("Business Advisory", "The Advisor", "Advisory"),
-            ("Discovery & SEO", "The Scout", "Discovery"),
-        ];
-
-        let start_seed = std::time::Instant::now();
-        let mut futures = vec![];
-        for (name, role, role_id) in default_agents {
-            // Only add agents requested by the user, unless the array is empty (add all)
-            if !ai_agents.is_empty() && !ai_agents.contains(&name.to_string()) {
-                continue;
-            }
-
-            let id = format!("{}-{}", org_id, role_id.to_lowercase());
-            let status = if ai_auto_respond { "ACTIVE" } else { "IDLE" };
-            let query = sqlx::query("INSERT INTO agents (id, tenant_id, name, role, status, provider_type) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status, provider_type = EXCLUDED.provider_type WHERE agents.tenant_id = EXCLUDED.tenant_id")
-                .bind(id)
-                .bind(org_id.to_string())
-                .bind(name)
-                .bind(role)
-                .bind(status)
-                .bind("builtin");
-
-            let pool = self.db.pool.clone();
-            futures.push(tokio::spawn(async move {
-                let result = query.execute(&pool).await.map_err(|e| e.to_string())?;
-                if result.rows_affected() == 1 {
-                    Ok(())
-                } else {
-                    Err("Agent identity belongs to another tenant".to_string())
-                }
-            }));
-        }
-
-        for f in futures {
-            f.await.map_err(|e| e.to_string())??;
-        }
-        tracing::info!(
-            "seed_default_agents inserts took: {} us",
-            start_seed.elapsed().as_micros()
-        );
-
+        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, org_id)
+            .await
+            .map_err(|e| e.to_string())?;
+        super::preparation::save_catalog(&mut tx, org_id, &Self::default_catalog(business_type))
+            .await
+            .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }
@@ -10254,7 +10044,8 @@ pub fn onboarding_feature_state(
         .selling_categories
         .iter()
         .any(|category| category == "physical" || category == "digital")
-        || !req.first_product_name.trim().is_empty();
+        || !req.first_product_name.trim().is_empty()
+        || !req.initial_products.is_empty();
     let has_food = business_type == "Restaurant / Food"
         || business_type == "Food Cart"
         || req
@@ -10365,10 +10156,9 @@ mod tests {
         Some(db)
     }
 
-    async fn start_authenticated_test_onboarding(
+    async fn authenticated_test_identity(
         agent: &OnboardingAgent,
-        request: StartOnboardingRequest,
-    ) -> Result<StartOnboardingResponse, String> {
+    ) -> Result<(String, String), String> {
         let suffix = uuid::Uuid::new_v4().simple().to_string();
         let tenant_id = format!("onboarding-test-tenant-{suffix}");
         let user_id = format!("onboarding-test-user-{suffix}");
@@ -10389,6 +10179,14 @@ mod tests {
         .execute(&agent.db.pool)
         .await
         .map_err(|error| error.to_string())?;
+        Ok((tenant_id, user_id))
+    }
+
+    async fn start_authenticated_test_onboarding(
+        agent: &OnboardingAgent,
+        request: StartOnboardingRequest,
+    ) -> Result<StartOnboardingResponse, String> {
+        let (tenant_id, user_id) = authenticated_test_identity(agent).await?;
         agent
             .start_onboarding_for_identity(request, &tenant_id, &user_id)
             .await
@@ -10404,11 +10202,12 @@ mod tests {
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub.clone());
 
-        let tenant_id = "test_cache_invalidation_tenant";
-        let user_id = "test_cache_invalidation_user";
+        let (tenant, user) = authenticated_test_identity(&agent).await.unwrap();
+        let tenant_id = tenant.as_str();
+        let user_id = user.as_str();
 
         // Save initial state using agent
-        let state1 = serde_json::json!({"test_key": "val1"});
+        let state1 = serde_json::json!({"businessName": "val1"});
         agent
             .save_onboarding_state(tenant_id, user_id, 1, &state1)
             .await
@@ -10458,7 +10257,7 @@ mod tests {
         );
 
         // Save updated state using agent (this should invalidate both caches)
-        let state2 = serde_json::json!({"test_key": "val2"});
+        let state2 = serde_json::json!({"businessName": "val2"});
         agent
             .save_onboarding_state(tenant_id, user_id, 2, &state2)
             .await
@@ -10657,7 +10456,7 @@ mod tests {
             .await;
         assert_eq!(
             cross_tenant_result,
-            Err("Authenticated user is not an active member of the organization".to_string())
+            Err("active_authenticated_owner_required".to_string())
         );
 
         let other_tenant_name =
@@ -10670,30 +10469,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_process_intake_and_variants() {
+    async fn test_reviewed_intake_json_and_variants() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
         };
         let (tx, _) = tokio::sync::mpsc::channel(10);
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let mut agent = OnboardingAgent::new(db.clone(), hub);
+        let agent = OnboardingAgent::new(db.clone(), hub);
 
-        if std::env::var("MINIMAX_API_KEY").is_err() {
-            agent.minimax = Some(std::sync::Arc::new(MinimaxClient::new(
-                "fake-key".to_string(),
-            )));
-        }
-
+        // Parse a reviewed model-response fixture with the same typed JSON decoder
+        // used by process_intake. No provider request belongs in this DB test.
         let input = "I sell custom vegan cakes in Austin, Texas. Maya's Cakes.";
-        let res = agent.process_intake(input).await;
-        assert!(res.is_ok());
-        let data = res.unwrap();
-
+        let data: IntakeData = serde_json::from_str(
+            r#"{
+            "business_name":"Maya's Cakes", "business_type":"Home Baker",
+            "categories":["physical"], "location":"Austin, Texas",
+            "initial_products":[{"name":"Vegan cake","price":"45.00",
+                "description":"Reviewed custom cake",
+                "variants":[{"name":"Vanilla","price_modifier":"0.29"}]}]
+        }"#,
+        )
+        .unwrap();
         assert_eq!(data.business_name, "Maya's Cakes");
-        assert!(!data.initial_products.is_empty());
+        assert_eq!(data.initial_products[0].price, "45.00");
 
-        // Also test creating the variants via start_onboarding directly with the mocked data
+        // Persist the complete parsed collection and its variants through the real service.
         let req = StartOnboardingRequest {
             business_type: data.business_type,
             company_name: data.business_name,
@@ -10773,25 +10574,10 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_process_intake() {
-        let db = match setup_test_db().await {
-            Some(db) => db,
-            None => return,
-        };
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let mut agent = OnboardingAgent::new(db.clone(), hub);
-
-        // Mock MinimaxClient if we could, but here we'll just check if it handles configured key
-        if std::env::var("MINIMAX_API_KEY").is_err() {
-            // Setup a fake one for testing if not present
-            agent.minimax = Some(Arc::new(MinimaxClient::new("fake-key".to_string())));
-        }
-
-        // This test will likely fail without a real API key if it actually calls the API,
-        // but we want to verify the method existence and basic logic.
-        // In a real scenario we'd use a trait and mock it.
+    #[test]
+    fn test_intake_json_requires_business_fields() {
+        assert!(serde_json::from_str::<IntakeData>(r#"{"initial_products":[]}"#).is_err());
+        assert!(repair_truncated_json(r#"{"business_name":"Incomplete""#).is_err());
     }
 
     #[test]
@@ -10935,7 +10721,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_onboarding_state_caching() {
+    async fn test_get_onboarding_state_reads_committed_rows() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -10944,17 +10730,18 @@ mod tests {
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub);
 
-        let tenant_id = "test_cache_tenant";
-        let user_id = "test_cache_user";
+        let (tenant, user) = authenticated_test_identity(&agent).await.unwrap();
+        let tenant_id = tenant.as_str();
+        let user_id = user.as_str();
 
         // Pre-fill state in DB
-        let state = serde_json::json!({"test_key": "test_value"});
+        let state = serde_json::json!({"businessName": "test_value"});
         agent
             .save_onboarding_state(tenant_id, user_id, 2, &state)
             .await
             .unwrap();
 
-        // Fetch once - should query DB and cache
+        // Protected recovery reads the current committed row.
         let start1 = std::time::Instant::now();
         let res1 = agent
             .get_onboarding_state(tenant_id, user_id)
@@ -10964,11 +10751,11 @@ mod tests {
 
         assert_eq!(res1.get("step").and_then(|v| v.as_i64()), Some(2));
         assert_eq!(
-            res1.get("test_key").and_then(|v| v.as_str()),
+            res1.get("businessName").and_then(|v| v.as_str()),
             Some("test_value")
         );
 
-        // Update directly in DB (bypass cache logic to prove cache is working)
+        // Simulate another writer committing a newer step.
         let _ = sqlx::query(
             "UPDATE onboarding_state SET current_step = 3 WHERE tenant_id = $1 AND user_id = $2",
         )
@@ -10978,7 +10765,7 @@ mod tests {
         .await
         .unwrap();
 
-        // Fetch second time - should use cache and get step 2, not 3
+        // Recovery must see the newer commit rather than returning a stale cache.
         let start2 = std::time::Instant::now();
         let res2 = agent
             .get_onboarding_state(tenant_id, user_id)
@@ -10987,8 +10774,8 @@ mod tests {
         let _elapsed2 = start2.elapsed();
         assert_eq!(
             res2.get("step").and_then(|v| v.as_i64()),
-            Some(2),
-            "Should return cached step 2"
+            Some(3),
+            "Must return the committed step 3"
         );
 
         // Now save using the agent which invalidates the cache
@@ -11020,7 +10807,8 @@ mod tests {
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub);
 
-        let org_id = "test-org-products";
+        let (tenant, _) = authenticated_test_identity(&agent).await.unwrap();
+        let org_id = tenant.as_str();
 
         // Test Bakery
         agent
@@ -11039,7 +10827,8 @@ mod tests {
         );
 
         // Test Handyman
-        let org_id2 = "test-org-handyman";
+        let (tenant2, _) = authenticated_test_identity(&agent).await.unwrap();
+        let org_id2 = tenant2.as_str();
         agent
             .generate_initial_products(org_id2, "Handyman")
             .await

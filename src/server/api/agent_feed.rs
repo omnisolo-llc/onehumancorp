@@ -421,9 +421,7 @@ pub async fn create_feed_item(
         .await
     {
         Ok(item) => {
-            let cache = get_agent_feed_cache();
-            let tag = format!("agent_feed_tenant:{}", tenant_id);
-            cache.invalidate_by_tag(&tag).await;
+            crate::invalidate_agent_feed_caches(&tenant_id).await;
 
             // Publish to Redis Pub/Sub
             if let Some(client) = get_redis_client() {
@@ -576,9 +574,7 @@ async fn update_feed_item_state(
                 }
             }
 
-            let cache = get_agent_feed_cache();
-            let tag = format!("agent_feed_tenant:{}", tenant_id);
-            cache.invalidate_by_tag(&tag).await;
+            crate::invalidate_agent_feed_caches(&tenant_id).await;
             (StatusCode::OK, Json(updated_item)).into_response()
         }
         Err(e) => {

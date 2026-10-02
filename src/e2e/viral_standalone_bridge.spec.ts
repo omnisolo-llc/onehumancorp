@@ -1,7 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import type { Request } from '@playwright/test';
 
 test.describe('Viral Standalone Bridge', () => {
-  test('should navigate to dashboard and generate a referral link', async ({ page }) => {
+  test('creates one recorded invitation and exposes matching copy and share intents', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    const invitationRequests: Request[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && /\/api\/v1\/growth\/(?:cloud-bridge\/invite|team-invites)$/.test(new URL(request.url()).pathname)) invitationRequests.push(request);
+    });
     // Navigate to the success.html page being served by tauri
     await page.goto('/success.html');
 
@@ -13,7 +19,7 @@ test.describe('Viral Standalone Bridge', () => {
 
     // Wait for navigation
     // We should be on dashboard.html
-await expect(page).toHaveURL(/.*dashboard(\.html)?/);
+    await expect(page).toHaveURL(/.*dashboard(\.html)?/);
 
     // Verify standalone mode badge
     await expect(page.getByText('Standalone Mode (Zero Data Leakage)')).toBeVisible();
@@ -24,12 +30,23 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     // Click to generate link
     const generateBtn = page.getByRole('button', { name: 'Get My Invite Link' });
     await expect(generateBtn).toBeVisible();
+    await expect(generateBtn).toBeEnabled();
+    const responsePromise = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/growth/cloud-bridge/invite' && response.request().method() === 'POST');
     await generateBtn.click();
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
+    const receipt = await response.json();
+    expect(receipt.error).toBeUndefined();
+    expect(receipt.success).not.toBe(false);
+    expect(receipt.invite_link).toMatch(/^https:\/\/(cloud\.)?omnisolo\.co\/invite\/[^/?#]+$/);
+    expect(receipt.invite_link).not.toMatch(/\/(fallback|default)$/);
+    expect(invitationRequests).toHaveLength(1);
+    expect(invitationRequests[0].postDataJSON()).toEqual({ invitee_id: 'pending' });
 
     // Check generated link input and action buttons
     const linkInput = page.locator('#referral-link');
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/(cloud\.)?omnisolo(\.network|\.co)\/invite\//);
+    await expect(linkInput).toHaveValue(receipt.invite_link);
 
     const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await expect(copyBtn).toBeVisible();
@@ -42,28 +59,33 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     await copyBtn.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
-    // Verify the clipboard content includes the link and the "OmniSolo" branding
-    // Playwright evaluates clipboard via API in headed mode or context config but we can check visual drift here
-    // since the original test skips clipboard API evaluation due to permissions in headless mode sometimes.
-    const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
-    if (clipboardText) {
-      expect(clipboardText).toContain('Join my team on OmniSolo!');
-      expect(clipboardText).toMatch(/https:\/\/(cloud\.)?omnisolo(\.network|\.co)\/invite\//);
-      expect(clipboardText).toContain('⚡ OmniSolo');
-    }
+    const inviteLink = await linkInput.inputValue();
+    const expectedShareText = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${inviteLink}\n\n⚡ OmniSolo`;
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboardText).toBe(expectedShareText);
 
     // Verify WhatsApp Share opens new tab with the correct URL
     const whatsappBtn = page.getByRole('button', { name: 'Share on WhatsApp' });
-    const [popup] = await Promise.all([
+    const shareRequest = page.context().waitForEvent('request', request =>
+      new URL(request.url()).hostname === 'wa.me');
+    const [popup, request] = await Promise.all([
       page.waitForEvent('popup'),
+      shareRequest,
       whatsappBtn.click()
     ]);
 
-    // Check URL contains wa.me and the encoded viral loop text
-    const popupUrl = popup.url();
-    // wa.me gets expanded to api.whatsapp.com by the browser often
-    expect(popupUrl).toMatch(/wa\.me|api\.whatsapp\.com/);
-    expect(popupUrl).toContain('Powered+by+OmniSolo');
-      expect(popupUrl).toContain(encodeURIComponent('https://cloud.omnisolo.co/invite/'));
+    // Validate the app's original share intent before WhatsApp rewrites its URL.
+    const shareUrl = new URL(request.url());
+    expect(shareUrl.protocol).toBe('https:');
+    expect(shareUrl.searchParams.get('text')).toBe(expectedShareText);
+    await popup.close();
+    expect(invitationRequests).toHaveLength(1);
+
+    // Reload never creates another invitation or reconstructs a receipt from local metadata.
+    await page.reload();
+    await expect(page.locator('#generate-link-btn')).toBeDisabled();
+    await expect(page.locator('#invite-link-status')).toContainText('already created');
+    await expect(page.locator('#referral-link')).toHaveValue('');
+    expect(invitationRequests).toHaveLength(1);
   });
 });

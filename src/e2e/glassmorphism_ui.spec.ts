@@ -9,7 +9,7 @@ test.describe('Glassmorphism UI Premium Design Standards', () => {
             const computed = window.getComputedStyle(node);
             return {
                 backdropFilter: computed.backdropFilter,
-                webkitBackdropFilter: computed.webkitBackdropFilter,
+                webkitBackdropFilter: computed.getPropertyValue('-webkit-backdrop-filter'),
                 backgroundColor: computed.backgroundColor,
                 borderRadius: computed.borderRadius
             };

@@ -20,9 +20,13 @@ test.describe('Tauri Billing & Pricing UI', () => {
     // Verify Estimated Next Bill
     await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
 
-    // Verify the presence of specific buttons
+    // Follow the actual in-document cost destination.
     await expect(page.locator('button', { hasText: 'Upgrade' })).toBeVisible();
-    await expect(page.locator('button#view-detailed-costs')).toBeVisible();
+    const details = page.getByRole('link', { name: 'View Detailed Costs' });
+    await expect(details).toHaveAttribute('href', '#cost-breakdown-section');
+    await details.click();
+    await expect(page).toHaveURL(/#cost-breakdown-section$/);
+    await expect(page.getByRole('heading', { name: 'Cost Breakdown', exact: true })).toBeInViewport();
   });
 
   test('Pricing page loads and displays tiers', async ({ page, adminUser, loginAs }) => {

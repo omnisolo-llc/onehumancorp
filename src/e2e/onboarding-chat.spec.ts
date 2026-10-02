@@ -1,10 +1,8 @@
-import * as nativePathModule from 'node:path';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './onboarding_fixtures';
 
 test.describe('Onboarding Wizard Chat Flow', () => {
   test.beforeEach(async ({ page }) => {
-    const htmlPath = nativePathModule.resolve('src/ui/tauri/src/ui/setup.html');
-    await page.goto(`file://${htmlPath}`);
+    await page.goto('/setup.html');
   });
 
   test('Verify chat bubble premium styling and flexbox layout', async ({ page }) => {

@@ -1,32 +1,18 @@
 import { test, expect } from './fixtures';
-import { db } from './db_utils';
+import { randomUUID } from 'node:crypto';
+import { seedFeedItem } from './feed-fixtures';
 
 test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
   // Use loginAs fixture which handles authentication
   test('displays customer context in the Ambassador Reply Card', async ({ page, loginAs, adminUser }) => {
-    await db.query(`
-      INSERT INTO agent_feed_items (
-        id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at
-      )
-      VALUES (
-        'e2e-feed-ambassador-reply',
-        'e2e-tenant',
-        'Ambassador',
-        '{"feature_type":"ambassador_reply","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?"}'::jsonb,
-        '{"feature_type":"ambassador_reply","action_type":"DraftForReview","source":"Instagram","past_orders":"Returning Customer (2 past orders).","context_used":"Customer prefers vegan options.","original_message":"Do you have vegan options?","generated_response":"Yes! We have a full vegan pastry selection."}'::jsonb,
-        'PENDING_APPROVAL',
-        CURRENT_TIMESTAMP,
-        CURRENT_TIMESTAMP
-      )
-      ON CONFLICT (id) DO UPDATE SET
-        lifecycle_state = 'PENDING_APPROVAL',
-        context_payload = EXCLUDED.context_payload,
-        proposed_action = EXCLUDED.proposed_action,
-        created_at = CURRENT_TIMESTAMP,
-        updated_at = CURRENT_TIMESTAMP;
-    `);
-
     await loginAs(page, adminUser);
+    const inquiry = `Vegan options inquiry ${randomUUID()}`;
+    await seedFeedItem(page, {
+      event_source: 'Ambassador',
+      context_payload: { feature_type: 'ambassador_reply', source: 'Instagram', past_orders: 'Returning Customer (2 past orders).', context_used: 'Customer prefers vegan options.', original_message: inquiry },
+      proposed_action: { feature_type: 'ambassador_reply', action_type: 'DraftForReview', generated_response: 'Yes! We have a full vegan pastry selection.' },
+    }, adminUser.organizationId);
+
     // Navigate to dashboard
     await page.goto('/dashboard');
 
@@ -34,7 +20,7 @@ test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
     await expect(page.locator('#unified-agent-feed-section')).toBeVisible();
 
     // Verify the ambassador reply card is rendered (seeded in e2e-seed.sql)
-    const card = page.locator('[data-testid="ambassador-reply-card"]').first();
+    const card = page.getByTestId('ambassador-reply-card').filter({ hasText: inquiry });
     await expect(card).toBeVisible({ timeout: 15000 });
 
     // Check if the context section is rendered

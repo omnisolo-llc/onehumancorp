@@ -402,23 +402,34 @@ mod tests {
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
-        // create table in pg test pool if not exists (although normally migrations would be run)
-        let _ = sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS task_dependencies (
-                task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
-                depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
-                PRIMARY KEY (task_id, depends_on_task_id)
-            );
-            "#,
-        )
-        .execute(&pg_pool)
-        .await;
+        // These cases exercise the SQLite branch. The required PostgreSQL
+        // handle is only a placeholder: fail immediately if a test accidentally
+        // uses it, rather than waiting for an unrelated localhost database.
+        pg_pool.close().await;
 
         Arc::new(DB {
             pool: pg_pool,
             store: DbStore::Sqlite(pool),
         })
+    }
+
+    #[tokio::test]
+    async fn sqlite_fixture_has_its_own_schema_and_no_postgres_connection() {
+        let db = setup_test_db().await;
+        assert!(db.pool.is_closed());
+        let DbStore::Sqlite(pool) = &db.store else {
+            panic!("SQLite fixture must select the SQLite repository branch");
+        };
+        let tables: Vec<(String,)> = sqlx::query_as(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('tasks', 'task_dependencies') ORDER BY name",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            tables,
+            vec![("task_dependencies".to_string(),), ("tasks".to_string(),)]
+        );
     }
 
     #[tokio::test]

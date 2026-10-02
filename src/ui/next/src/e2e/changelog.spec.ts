@@ -18,7 +18,7 @@ test.describe('Release Notes & Changelog', () => {
         await expect(page.locator('h2', { hasText: /^v?[0-9]/ }).first()).toBeVisible();
 
         const brokenImages = await page.locator('img').evaluateAll((images) => images
-            .filter((image) => !image.complete || image.naturalWidth === 0)
+            .filter((image) => !(image instanceof HTMLImageElement) || !image.complete || image.naturalWidth === 0)
             .map((image) => image.getAttribute('src')));
         expect(brokenImages).toEqual([]);
 

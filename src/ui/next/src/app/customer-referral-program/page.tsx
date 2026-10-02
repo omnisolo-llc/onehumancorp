@@ -5,6 +5,7 @@ import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { cloudUrl } from '../../lib/branding';
+import { useClipboardFeedback } from '../../hooks/useClipboardFeedback';
 
 export default function CustomerReferralProgramPage() {
   const router = useRouter();
@@ -12,9 +13,9 @@ export default function CustomerReferralProgramPage() {
   const [getAmount, setGetAmount] = useState('10');
   const [tenant, setTenant] = useState('my-store');
   const [showModal, setShowModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {
@@ -23,20 +24,19 @@ export default function CustomerReferralProgramPage() {
 
   }, []);
 
-  const embedUrl = cloudUrl(`/api/v1/growth/customer-referral/embed?tenant=${encodeURIComponent(tenant)}&give=${encodeURIComponent(giveAmount)}&get=${encodeURIComponent(getAmount)}&hideBranding=${removeBranding}`);
+  const embedParams = new URLSearchParams({ tenant, give: giveAmount, get: getAmount, hide_branding: String(removeBranding) });
+  const embedUrl = cloudUrl(`/api/v1/growth/customer-referral/embed?${embedParams}`).replaceAll('&', '&amp;').replaceAll('"', '&quot;');
 
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="250" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `
 <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="${cloudUrl(`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
+
+  const clipboard = useClipboardFeedback(`${showModal}:${embedCode}`);
 
   const handleGenerate = () => {
     setShowModal(true);
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const handleCopy = () => { void clipboard.copy(embedCode); };
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] p-4 md:p-8 font-inter">
@@ -148,25 +148,25 @@ export default function CustomerReferralProgramPage() {
                   🎁
                 </div>
                 <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Give ${giveAmount}, Get ${getAmount}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Give your friends ${giveAmount} off their first order, and get ${getAmount} when they purchase.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Configured customer discount: ${giveAmount}. Configured referral reward: ${getAmount}. Eligibility and reward fulfilment are not verified in this preview.</p>
 
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
                   <span className="text-sm font-mono text-gray-500 dark:text-gray-400 flex-1 truncate select-all px-2">
-                    {cloudUrl(`/ref/${encodeURIComponent(tenant.slice(0, 6))}`)}
+                    Customer-specific referral link is unavailable.
                   </span>
-                  <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-md transition-colors">
+                  <button disabled className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-md transition-colors">
                     Copy
                   </button>
                 </div>
 
                 <div className="flex items-center justify-center gap-3 mb-6">
-                  <button aria-label="Share on WhatsApp" className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center hover:opacity-90 transition-opacity">
+                  <button disabled aria-label="Share on WhatsApp" className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center hover:opacity-90 transition-opacity">
                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                   </button>
-                  <button aria-label="Share on X" className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:opacity-90 transition-opacity">
+                  <button disabled aria-label="Share on X" className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:opacity-90 transition-opacity">
                      𝕏
                   </button>
-                  <button aria-label="Share on Facebook" className="w-10 h-10 rounded-full bg-[#0066FF] text-white flex items-center justify-center hover:opacity-90 transition-opacity">
+                  <button disabled aria-label="Share on Facebook" className="w-10 h-10 rounded-full bg-[#0066FF] text-white flex items-center justify-center hover:opacity-90 transition-opacity">
                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                   </button>
                 </div>
@@ -234,15 +234,18 @@ export default function CustomerReferralProgramPage() {
               </pre>
               <button
                 onClick={handleCopy}
+                disabled={clipboard.state === 'pending'}
                 className="absolute top-4 right-4 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-semibold shadow-sm transition-colors text-gray-900 dark:text-white flex items-center gap-2"
               >
-                {copied ? 'Copied!' : 'Copy Code'}
+                {clipboard.state === 'pending' ? 'Copying…' : clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
               </button>
             </div>
 
+            {clipboard.message && <p role="status">{clipboard.message}</p>}
+
             <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-700 dark:text-blue-400">
               <span className="text-xl">ℹ️</span>
-              <p className="text-sm">The <strong>Powered by OmniSolo</strong> badge helps us grow the community. If a new business owner signs up through your widget, you earn $50 in platform credits!</p>
+              <p className="text-sm">The <strong>Powered by OmniSolo</strong> badge links to onboarding. Attribution and reward eligibility require verified referral records; embedding this widget does not grant credits.</p>
             </div>
           </div>
         </div>

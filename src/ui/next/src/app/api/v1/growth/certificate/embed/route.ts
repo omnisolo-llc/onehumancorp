@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const title = searchParams.get("title") || "Certificate of Achievement";
@@ -14,7 +23,7 @@ export async function GET(req: NextRequest) {
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -71,13 +80,13 @@ export async function GET(req: NextRequest) {
 </head>
 <body>
   <div class="cert-card">
-    <h1>${title}</h1>
+    <h1>${escapeHtml(title)}</h1>
     <p>This certifies that</p>
-    <div class="recipient">${recipient}</div>
+    <div class="recipient">${escapeHtml(recipient)}</div>
     <p>has successfully completed</p>
-    <h2>${course}</h2>
+    <h2>${escapeHtml(course)}</h2>
     <footer>
-      <a href="/onboarding?ref=${encodeURIComponent(tenant)}">⚡ OmniSolo</a>
+      <a href="/onboarding?ref=${escapeHtml(encodeURIComponent(tenant))}">⚡ OmniSolo</a>
     </footer>
   </div>
 </body>

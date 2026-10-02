@@ -33,7 +33,12 @@ describe("login page", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ username: "Alice", password: "correct horse", organization_id: "tenant-7" }),
     });
-    expect(storage).not.toHaveBeenCalled();
+    expect(storage).toHaveBeenCalledTimes(2);
+    for (const [key, value] of storage.mock.calls) {
+      expect(key).toBe('omnisolo_queue_identity_epoch_v2');
+      expect(value).toMatch(/^[a-f0-9-]{36}$/);
+      expect(value).not.toMatch(/Alice|correct horse|tenant-7/);
+    }
   });
 
   it("supports keyboard submission and omits an empty organization", async () => {

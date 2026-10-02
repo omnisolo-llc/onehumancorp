@@ -126,7 +126,25 @@ async fn migration_backfills_normalized_identity_email_claims() {
 #[tokio::test]
 async fn migration_backfills_portable_roles_from_existing_json_users() {
     let database = AppDatabase::connect("sqlite::memory:").await.unwrap();
-    migration::migrate(&database).await.unwrap();
+    // This is a genuinely pre-conversion database, not a new legacy-only grant
+    // inserted after the normalized-role migration has already completed.
+    let schema = sea_orm::Schema::new(sea_orm::DatabaseBackend::Sqlite);
+    database
+        .connection()
+        .execute(
+            sea_orm::DatabaseBackend::Sqlite
+                .build(&schema.create_table_from_entity(entities::user::Entity)),
+        )
+        .await
+        .unwrap();
+    database
+        .connection()
+        .execute(Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "ALTER TABLE users ADD COLUMN roles TEXT NOT NULL DEFAULT '[]'".to_owned(),
+        ))
+        .await
+        .unwrap();
     insert_user(&database, "existing-user", "tenant-a", "roles@example.test").await;
 
     migration::migrate(&database).await.unwrap();
@@ -145,6 +163,27 @@ async fn migration_backfills_portable_roles_from_existing_json_users() {
         .map(|row| row.try_get::<String>("", "role_name").unwrap())
         .collect::<Vec<_>>();
     assert_eq!(roles, vec!["ADMIN"]);
+    database
+        .connection()
+        .execute(Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "DELETE FROM identity_user_roles WHERE user_id='existing-user'".to_owned(),
+        ))
+        .await
+        .unwrap();
+    migration::migrate(&database).await.unwrap();
+    let roles = database
+        .connection()
+        .query_all(Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "SELECT role_name FROM identity_user_roles WHERE user_id='existing-user'".to_owned(),
+        ))
+        .await
+        .unwrap();
+    assert!(
+        roles.is_empty(),
+        "repeated startup must not restore a revoked canonical role from the legacy mirror"
+    );
 }
 
 #[test]

@@ -154,8 +154,8 @@ A: The platform supports OpenAI-compatible providers, MiniMax (`minimax`), Anthr
 **Q: Is my data stored persistently?**
 A: Yes, in Cloud Mode all data is saved securely in PostgreSQL (with optional vector memory sync), while in Standalone Desktop Mode data is saved locally to your encrypted SQLite database.
 
-**Q: How do I reset demo data?**
-A: You can reload the seeded demo scenario from the settings menu or via the developer API endpoint `/api/v1/dev/seed`.
+**Q: Can I load demo records into my installation?**
+A: Production and normal development servers do not expose fixture seeding or simulation endpoints. Developers can run `make test-e2e` to exercise the actual app with a newly created, disposable fixture database. This does not modify an existing installation.
 
 **Q: How do I run OmniSolo on my desktop?**
 A: OmniSolo provides a native Tauri v2 desktop application (`bazelisk run //src/ui/tauri:app`) supporting both standalone local execution and remote cloud connections.

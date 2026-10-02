@@ -10,6 +10,21 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('ShareToUnlockGeneratorPage', () => {
+  it('exposes the chosen theme and repeating selection leaves its link unchanged', () => {
+    render(<ShareToUnlockGeneratorPage />);
+    const light=screen.getByRole('button',{name:'Light'});
+    const dark=screen.getByRole('button',{name:'Dark'});
+    expect(light).toHaveAttribute('aria-pressed','true');
+    expect(dark).toHaveAttribute('aria-pressed','false');
+    fireEvent.click(dark);
+    expect(light).toHaveAttribute('aria-pressed','false');
+    expect(dark).toHaveAttribute('aria-pressed','true');
+    const link=screen.getByText(/http.*theme=dark/).textContent;
+    fireEvent.click(dark);
+    expect(screen.getByText(/http.*theme=dark/).textContent).toBe(link);
+    expect(dark).toHaveAttribute('aria-pressed','true');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
