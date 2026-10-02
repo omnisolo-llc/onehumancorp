@@ -392,3 +392,47 @@ test.each([
   expect(screen.getByRole('button', { name: 'Start Tour' })).toBeDisabled();
   expect(screen.queryByText('No tour is configured for this page.')).not.toBeInTheDocument();
 });
+
+test('reset is available only when it can change the actual task filters', async () => {
+  renderAssistantPage();
+  await screen.findByText("Create this week's operating brief");
+  const reset = screen.getByRole('button', { name: 'Reset task filters' });
+  expect(reset).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Search tasks'), { target: { value: 'downloads' } });
+  expect(reset).toBeEnabled();
+  expect(screen.queryByText("Create this week's operating brief")).toBeNull();
+  fireEvent.click(reset);
+  expect(screen.getByLabelText('Search tasks')).toHaveValue('');
+  expect(screen.getByText("Create this week's operating brief")).toBeDefined();
+  expect(reset).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Task status filter'), { target: { value: 'blocked' } });
+  fireEvent.change(screen.getByLabelText('Task date filter'), { target: { value: 'today' } });
+  expect(reset).toBeEnabled();
+  fireEvent.click(reset);
+  expect(screen.getByLabelText('Task status filter')).toHaveValue('all');
+  expect(screen.getByLabelText('Task date filter')).toHaveValue('all');
+  expect(reset).toBeDisabled();
+});
+
+test('task selection reflects real detail selection and cannot repeat a no-op choice', async () => {
+  renderAssistantPage();
+  await screen.findByText("Create this week's operating brief");
+  const first = screen.getByRole('button', { name: /Create this week's operating brief/ });
+  const second = screen.getByRole('button', { name: /Organize Downloads by file type/ });
+  expect(first).toHaveAttribute('aria-pressed', 'true');
+  expect(first).toBeDisabled();
+  expect(second).toHaveAttribute('aria-pressed', 'false');
+  expect(second).toBeEnabled();
+  fireEvent.click(second);
+  expect(second).toHaveAttribute('aria-pressed', 'true');
+  expect(second).toBeDisabled();
+  expect(first).toHaveAttribute('aria-pressed', 'false');
+  expect(first).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Conversation' }));
+  expect(screen.getByRole('heading', { name: 'Organize Downloads by file type' })).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: 'Task List' }));
+  fireEvent.click(screen.getByRole('button', { name: /Create this week's operating brief/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Conversation' }));
+  expect(screen.getByRole('heading', { name: "Create this week's operating brief" })).toBeDefined();
+  expect(screen.getByText('I am gathering context and drafting the brief.')).toBeDefined();
+});
