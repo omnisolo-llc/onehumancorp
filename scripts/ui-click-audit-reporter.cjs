@@ -6,7 +6,7 @@ class ClickCoverageReporter {
   onBegin(config, suite) {
     this.root = process.env.OHC_CLICK_AUDIT_ROOT || path.resolve(__dirname, '..');
     this.context = JSON.parse(process.env.OHC_CLICK_AUDIT_CONTEXT || 'null');
-    assertSource(this.root, this.context);
+    this.sourceSnapshot=assertSource(this.root, this.context);
     const shard = config.shard || { current: 1, total: 1 };
     this.file = path.join(process.env.OHC_CLICK_AUDIT_DIRECTORY || path.join(this.root, 'test-results/click-receipts'), `shard-${shard.current}.json`);
     if (fs.existsSync(this.file) || fs.existsSync(`${this.file}.pending`)) throw new Error('Click coverage receipt already exists; preserve it and use a fresh run directory');
@@ -30,11 +30,18 @@ class ClickCoverageReporter {
     try {
       if (!this.receipt) throw new Error('Click coverage reporter never began');
       if (this.problem) throw this.problem;
-      assertSource(this.root, this.context);
+      assertSource(this.root, this.context, this.sourceSnapshot);
       this.receipt.complete = true;
       this.receipt.runStatus = result.status;
       this.flush();
     } catch (error) {
+      if (this.receipt) {
+        this.receipt.complete=false;
+        this.receipt.runStatus='failed';
+        this.receipt.reporterError=String(error.message).slice(0,1000);
+        if (error.sourceDiagnostics) this.receipt.sourceDiagnostics=error.sourceDiagnostics;
+        try {this.flush();} catch(writeError) {console.error(`Click coverage diagnostics could not be retained: ${writeError.message}`);}
+      }
       console.error(`Click coverage reporter failed: ${error.message}`);
       return { status: 'failed' };
     }

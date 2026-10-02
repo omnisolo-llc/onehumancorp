@@ -55,19 +55,20 @@ function completeSelection(args) {
   return true;
 }
 
-function sourceIdentity(root) {
+function sourceIdentity(root, captureFiles = false) {
   const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
   const files = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).split('\0').filter(Boolean).sort();
   requireTrue(/^[a-f0-9]{40,64}$/.test(commit) && files.length > 0, 'actual Git source identity required');
-  const digest = crypto.createHash('sha256');
+  const digest = crypto.createHash('sha256'), sourceFiles = Object.create(null);
   for (const file of files) {
     const full = path.join(root, file), stat = fs.lstatSync(full);
     requireTrue(stat.isFile() || stat.isSymbolicLink(), `unsupported tracked source ${file}`);
     const bytes = stat.isSymbolicLink() ? Buffer.from(fs.readlinkSync(full)) : fs.readFileSync(full);
     digest.update(JSON.stringify([file, stat.isSymbolicLink() ? 'link' : 'file', bytes.length]));
     digest.update(bytes);
+    if (captureFiles) sourceFiles[file] = { kind: stat.isSymbolicLink() ? 'link' : 'file', bytes: bytes.length, sha256: hash(bytes) };
   }
-  return { commit, sourceDigest: digest.digest('hex') };
+  return { commit, sourceDigest: digest.digest('hex'), ...(captureFiles ? { files: sourceFiles } : {}) };
 }
 function makeRunContext(root, environment = process.env) {
   const identity = sourceIdentity(root), routes = discoverAppRoutes(root);
@@ -84,12 +85,52 @@ function validateContext(context) {
     && typeof context.runId === 'string' && /^[A-Za-z0-9_-]+$/.test(context.runId) && typeof context.attempt === 'string' && /^[1-9]\d*$/.test(context.attempt), 'invalid run/source context');
   requireTrue(uniqueStrings(context.routes, 'source routes').length > 0, 'empty source route inventory');
 }
-function assertSource(root, context) {
-  validateContext(context);
-  const current = sourceIdentity(root), routes = discoverAppRoutes(root);
-  requireTrue(current.commit === context.commit && current.sourceDigest === context.sourceDigest
-    && exact(routes, context.routes) && hash(JSON.stringify(routes)) === context.inventoryDigest, 'source or route inventory changed during execution');
+// Diagnostics never substitute for the full digest. Keep the complete failure
+// and report at most100 changed paths, hashes only, with explicit omitted counts.
+function describeSourceDrift(root, context, before, observed) {
+  const afterFiles=observed?.files || Object.create(null);
+  let commit=observed?.commit || null, diagnosticError=null;
+  if (!observed) {
+    try {
+      commit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+      const files=execFileSync('git',['ls-files','-z'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024}).split('\0').filter(Boolean);
+      for (const file of files) {
+        try {
+          const full=path.join(root,file), stat=fs.lstatSync(full);
+          if (!stat.isFile() && !stat.isSymbolicLink()) {afterFiles[file]={kind:'unsupported'}; continue;}
+          const bytes=stat.isSymbolicLink()?Buffer.from(fs.readlinkSync(full)):fs.readFileSync(full);
+          afterFiles[file]={kind:stat.isSymbolicLink()?'link':'file',bytes:bytes.length,sha256:hash(bytes)};
+        } catch(error) {afterFiles[file]=error.code==='ENOENT'?null:{kind:'unreadable',error:String(error.code || 'read_failed').slice(0,80)};}
+      }
+    } catch(error) {diagnosticError=String(error.message).slice(0,500);}
+  }
+  const previous=before?.files || Object.create(null), changes=[];
+  for (const file of [...new Set([...Object.keys(previous),...Object.keys(afterFiles)])].sort()) {
+    const prior=previous[file] || null, current=afterFiles[file] || null;
+    if (!exact(prior,current)) changes.push({path:file.slice(0,1024),...(file.length>1024?{pathTruncated:true}:{}),before:prior,after:current});
+  }
+  let routes=null;
+  try {routes=discoverAppRoutes(root);} catch(error) {diagnosticError ||= String(error.message).slice(0,500);}
+  const added=routes?.filter(route=>!context.routes.includes(route)) || [], removed=routes?context.routes.filter(route=>!routes.includes(route)):[];
+  return { commitBefore:context.commit,commitAfter:commit,sourceDigestBefore:context.sourceDigest,sourceDigestAfter:observed?.sourceDigest || null,
+    filesBefore:Object.keys(previous).length,filesAfter:Object.keys(afterFiles).length,changedFiles:changes.length,changes:changes.slice(0,100),omittedChanges:Math.max(0,changes.length-100),
+    routesAdded:added.slice(0,100).map(route=>route.slice(0,1024)),routesRemoved:removed.slice(0,100).map(route=>route.slice(0,1024)),omittedRoutes:Math.max(0,added.length-100)+Math.max(0,removed.length-100),diagnosticError };
 }
+function assertSource(root, context, before) {
+  validateContext(context);
+  let current;
+  try {
+    current=sourceIdentity(root,true);
+    const routes=discoverAppRoutes(root);
+    requireTrue(current.commit === context.commit && current.sourceDigest === context.sourceDigest
+      && exact(routes, context.routes) && hash(JSON.stringify(routes)) === context.inventoryDigest, 'source or route inventory changed during execution');
+    return current;
+  } catch(error) {
+    if (before) error.sourceDiagnostics=describeSourceDrift(root,context,before,current);
+    throw error;
+  }
+}
+
 function meaningful(effect) {
   const keys = ['changed', 'requestSeen', 'downloadSeen', 'fileChooserSeen', 'popupSeen', 'validationSeen', 'dialogSeen', 'decisionSeen'];
   requireTrue(effect && keys.every(key => typeof effect[key] === 'boolean')
