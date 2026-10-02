@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Native Rust Omnichannel Chat: Core Data Model & Multitenancy"
+issue_description: "The foundational PostgreSQL schema and core Rust data structures for the Native OHC Omnichannel Chat system have already been implemented in the codebase. Specifically, the migration script `src/server/migrations/233_chat_omnichannel.sql` includes the required tables (`chat_inboxes`, `chat_channels`, `chat_contacts`, `chat_conversations`, `chat_messages`) with `tenant_id` columns and Row Level Security (RLS) policies. The corresponding Rust structs (`Inbox`, `Contact`, `Conversation`, `Message`) and unit tests are present in `src/server/domain/chat/mod.rs`."
