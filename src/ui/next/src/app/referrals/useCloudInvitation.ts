@@ -116,5 +116,7 @@ export function useCloudInvitation(onRetire: () => void) {
       if (active.current && expected === epoch.current) show({ phase: 'held', message: dispatched ? 'The invitation result could not be confirmed or saved. Review existing invitations before trying again.' : 'Invitation creation is held. Verify your session and review any earlier request before trying again.', link: '' });
     } finally { if (expected === epoch.current) busy.current = false; }
   };
-  return { ...view, create };
+  // A copy lets read-only consumers share this verified lifetime without
+  // changing the authority retained for invitation creation.
+  return { ...view, create, verifiedOwner: owner.current ? { ...owner.current } : null };
 }
