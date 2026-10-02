@@ -172,7 +172,14 @@ async fn row(
     sql: &str,
     values: Vec<Value>,
 ) -> Result<Option<QueryResult>, Error> {
-    Ok(tx.query_one(statement(tx, sql, values)).await?)
+    let sql = if tx.get_database_backend() == sea_orm::DatabaseBackend::Postgres
+        && sql.starts_with("SELECT * FROM tenant_workflow_receipts ")
+    {
+        format!("{sql} FOR UPDATE")
+    } else {
+        sql.to_owned()
+    };
+    Ok(tx.query_one(statement(tx, &sql, values)).await?)
 }
 fn fingerprint(
     tenant: &str,
@@ -275,11 +282,6 @@ impl ReceiptStore {
         authority: &Authority,
         write: bool,
     ) -> Result<(DatabaseTransaction, i64), Error> {
-        // PostgreSQL admission remains unavailable until its forced-RLS migration
-        // and restricted-role contract are verified. No backend fallback exists.
-        if self.database.connection().get_database_backend() != sea_orm::DatabaseBackend::Sqlite {
-            return Err(Error::Unavailable);
-        }
         if authority.tenant_id.trim().is_empty()
             || authority.tenant_id.trim() != authority.tenant_id
             || authority.tenant_id.eq_ignore_ascii_case("system")
@@ -295,36 +297,90 @@ impl ReceiptStore {
         {
             return Err(Error::Forbidden);
         }
-        let tx = self.database.connection().begin().await?;
-        if write {
-            // Obtain SQLite write intent before the first read snapshot. No row
-            // is changed and no row-level trigger is invoked by this statement.
-            execute(
-                &tx,
-                "UPDATE tenant_workflow_receipts SET id=id WHERE 0",
-                vec![],
-            )
-            .await?;
-        }
-        let enabled = row(&tx, "PRAGMA foreign_keys", vec![])
-            .await?
-            .ok_or(Error::Unavailable)?;
-        if enabled
-            .try_get_by_index::<i64>(0)
-            .map_err(|_| Error::Unavailable)?
-            != 1
-        {
-            return Err(Error::Unavailable);
-        }
-        let clock = row(
-            &tx,
-            "SELECT CAST(strftime('%s','now') AS INTEGER) AS now",
-            vec![],
-        )
-        .await?
-        .ok_or(Error::Unavailable)?;
-        let now: i64 = field(&clock, "now")?;
+        let tx = match self.database.connection().get_database_backend() {
+            sea_orm::DatabaseBackend::Sqlite => {
+                let tx = self.database.connection().begin().await?;
+                if write {
+                    // Acquire write intent before the first SQLite read snapshot.
+                    execute(
+                        &tx,
+                        "UPDATE tenant_workflow_receipts SET id=id WHERE 0",
+                        vec![],
+                    )
+                    .await?;
+                }
+                let enabled = row(&tx, "PRAGMA foreign_keys", vec![])
+                    .await?
+                    .ok_or(Error::Unavailable)?;
+                if enabled
+                    .try_get_by_index::<i64>(0)
+                    .map_err(|_| Error::Unavailable)?
+                    != 1
+                {
+                    return Err(Error::Unavailable);
+                }
+                tx
+            }
+            sea_orm::DatabaseBackend::Postgres => {
+                // Reuse the canonical tenant context, including removal of any
+                // assumed system role. A signed tenant never grants bypass RLS.
+                let tx = server_auth::seaorm_store::begin_tenant_transaction(
+                    self.database.connection(),
+                    &authority.tenant_id,
+                )
+                .await
+                .map_err(|_| Error::Unavailable)?;
+                execute(&tx, "SET LOCAL statement_timeout = '3000ms'", vec![]).await?;
+                execute(&tx, "SET LOCAL lock_timeout = '1000ms'", vec![]).await?;
+                let isolation = row(&tx, "SHOW transaction_isolation", vec![])
+                    .await?
+                    .ok_or(Error::Unavailable)?;
+                if field::<String>(&isolation, "transaction_isolation")? != "read committed" {
+                    // Stale repeatable-read snapshots cannot attest to current
+                    // authority after waiting. Do not silently change pool policy.
+                    return Err(Error::Unavailable);
+                }
+                // Canonical authority precedes receipt locks. The actor lock
+                // also serializes duplicate admission for the same actor.
+                row(
+                    &tx,
+                    "SELECT id FROM users WHERE id=$1 AND tenant_id=$2 FOR UPDATE",
+                    vec![(&authority.actor_id).into(), (&authority.tenant_id).into()],
+                )
+                .await?;
+                tx.query_all(statement(&tx, "SELECT role_name FROM identity_user_roles WHERE user_id=$1 AND tenant_id=$2 ORDER BY role_name FOR SHARE", vec![(&authority.actor_id).into(), (&authority.tenant_id).into()])).await?;
+                tx
+            }
+            sea_orm::DatabaseBackend::MySql => return Err(Error::Unavailable),
+        };
+        let now = Self::clock(&tx).await?;
         Ok((tx, now))
+    }
+
+    async fn clock(tx: &DatabaseTransaction) -> Result<i64, Error> {
+        let sql = match tx.get_database_backend() {
+            sea_orm::DatabaseBackend::Sqlite => {
+                "SELECT CAST(strftime('%s','now') AS INTEGER) AS now"
+            }
+            sea_orm::DatabaseBackend::Postgres => {
+                "SELECT floor(extract(epoch FROM clock_timestamp()))::bigint AS now"
+            }
+            _ => return Err(Error::Unavailable),
+        };
+        let value = row(tx, sql, vec![]).await?.ok_or(Error::Unavailable)?;
+        field(&value, "now")
+    }
+
+    async fn recheck_before_commit(
+        tx: &DatabaseTransaction,
+        authority: &Authority,
+    ) -> Result<(), Error> {
+        if tx.get_database_backend() == sea_orm::DatabaseBackend::Postgres {
+            // Token revocation can be inserted without changing the user row.
+            // Use a new statement snapshot after any blocked receipt write.
+            Self::require_authority(tx, authority, Self::clock(tx).await?).await?;
+        }
+        Ok(())
     }
 
     async fn require_authority(
@@ -390,6 +446,19 @@ impl ReceiptStore {
         input: AdmittedAnalysis,
         request: RequestMetadata,
     ) -> Result<Reservation, Error> {
+        tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            self.reserve_inner(input, request),
+        )
+        .await
+        .map_err(|_| Error::Unavailable)?
+    }
+
+    async fn reserve_inner(
+        &self,
+        input: AdmittedAnalysis,
+        request: RequestMetadata,
+    ) -> Result<Reservation, Error> {
         if request.request_id.is_nil() {
             return Err(Error::Invalid);
         }
@@ -410,6 +479,7 @@ impl ReceiptStore {
         if let Some(prior) = row(&tx, "SELECT * FROM tenant_workflow_receipts WHERE tenant_id=$1 AND actor_id=$2 AND request_id=$3", vec![(&authority.tenant_id).into(), (&authority.actor_id).into(), (&request_id).into()]).await? {
             let prior = decode(prior)?;
             if !prior.payload.matches_request(&input, &request) { return Err(Error::Conflict); }
+            Self::recheck_before_commit(&tx, &authority).await?;
             tx.commit().await?;
             return Ok(Reservation { receipt: prior.receipt, admitted: None, authority });
         }
@@ -425,6 +495,7 @@ impl ReceiptStore {
         )?;
         execute(&tx, "INSERT INTO tenant_workflow_receipts(id,tenant_id,actor_id,request_id,fingerprint,payload,token_id,token_expires_at,session_id,phase,generation,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'queued',0,$10,$10)", vec![(&id).into(), (&authority.tenant_id).into(), (&authority.actor_id).into(), request_id.into(), hash.into(), serde_json::to_string(&payload).map_err(|_| Error::Invalid)?.into(), (&authority.token_id).into(), authority.expires_at.into(), authority.session_id.clone().into(), now.into()]).await?;
         let actual = decode(row(&tx, "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2 AND actor_id=$3", vec![id.into(), (&authority.tenant_id).into(), (&authority.actor_id).into()]).await?.ok_or(Error::Corrupt)?)?;
+        Self::recheck_before_commit(&tx, &authority).await?;
         tx.commit().await?;
         Ok(Reservation {
             receipt: actual.receipt,
@@ -437,6 +508,19 @@ impl ReceiptStore {
     /// The caller must obtain it from actual execution; this method performs no
     /// provider work and cannot make an unknown provider attempt safe to retry.
     pub(crate) async fn finish(
+        &self,
+        proof: &CompletionProof,
+        outcome: &super::AnalysisOutcome,
+    ) -> Result<Receipt, Error> {
+        tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            self.finish_inner(proof, outcome),
+        )
+        .await
+        .map_err(|_| Error::Unavailable)?
+    }
+
+    async fn finish_inner(
         &self,
         proof: &CompletionProof,
         outcome: &super::AnalysisOutcome,
@@ -473,6 +557,11 @@ impl ReceiptStore {
         )
         .await?
         .ok_or(Error::NotFound)?;
+        let now = if tx.get_database_backend() == sea_orm::DatabaseBackend::Postgres {
+            Self::clock(&tx).await?
+        } else {
+            now
+        };
         let generation: i64 = field(&saved, "generation")?;
         let nonce: Option<String> = field(&saved, "lease")?;
         let expires: Option<i64> = field(&saved, "lease_expires_at")?;
@@ -505,6 +594,7 @@ impl ReceiptStore {
                 return Err(Error::Conflict);
             }
             // A terminal replay is read-only: don't reopen or re-run a trigger.
+            Self::recheck_before_commit(&tx, &proof.authority).await?;
             tx.commit().await?;
             return Ok(saved.receipt);
         }
@@ -534,6 +624,15 @@ impl ReceiptStore {
             return Err(Error::Conflict);
         }
         let actual = decode(row(&tx, "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2 AND actor_id=$3", vec![(&proof.receipt.id).into(), (&proof.authority.tenant_id).into(), (&proof.authority.actor_id).into()]).await?.ok_or(Error::Corrupt)?)?;
+        if !authority_lost {
+            Self::recheck_before_commit(&tx, &proof.authority).await?;
+            if tx.get_database_backend() == sea_orm::DatabaseBackend::Postgres
+                && actual.receipt.phase == StoredPhase::Completed
+                && Self::clock(&tx).await? >= expires.ok_or(Error::Corrupt)?
+            {
+                return Err(Error::Unavailable);
+            }
+        }
         tx.commit().await?;
         // Recording that a claimed effect is uncertain isn't authority to
         // disclose private task data after the actor's access was revoked.
@@ -544,6 +643,15 @@ impl ReceiptStore {
     }
 
     pub(crate) async fn get(&self, authority: &Authority, id: &str) -> Result<Receipt, Error> {
+        tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            self.get_inner(authority, id),
+        )
+        .await
+        .map_err(|_| Error::Unavailable)?
+    }
+
+    async fn get_inner(&self, authority: &Authority, id: &str) -> Result<Receipt, Error> {
         if Uuid::parse_str(id).is_err() {
             return Err(Error::Invalid);
         }
@@ -555,10 +663,16 @@ impl ReceiptStore {
         )
         .await?
         .ok_or(Error::NotFound)?;
+        let now = if tx.get_database_backend() == sea_orm::DatabaseBackend::Postgres {
+            Self::clock(&tx).await?
+        } else {
+            now
+        };
         let generation: i64 = field(&saved, "generation")?;
         let nonce: Option<String> = field(&saved, "lease")?;
         let expires: Option<i64> = field(&saved, "lease_expires_at")?;
         let mut actual = decode(saved)?;
+        Self::require_authority(&tx, authority, now).await?;
         if actual.receipt.phase == StoredPhase::Dispatching && expires.ok_or(Error::Corrupt)? <= now
         {
             if generation != 1 || nonce.is_none() {
@@ -578,6 +692,7 @@ impl ReceiptStore {
                 .ok_or(Error::Corrupt)?,
             )?;
         }
+        Self::recheck_before_commit(&tx, authority).await?;
         tx.commit().await?;
         Ok(actual.receipt)
     }
@@ -586,6 +701,15 @@ impl ReceiptStore {
         &self,
         reservation: Reservation,
     ) -> Result<Option<DispatchLease>, Error> {
+        tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            self.claim_inner(reservation),
+        )
+        .await
+        .map_err(|_| Error::Unavailable)?
+    }
+
+    async fn claim_inner(&self, reservation: Reservation) -> Result<Option<DispatchLease>, Error> {
         let (tx, now) = self.transaction(&reservation.authority, true).await?;
         let Some(admitted) = reservation.admitted else {
             tx.commit().await?;
@@ -595,6 +719,13 @@ impl ReceiptStore {
         if prior.receipt != reservation.receipt {
             return Err(Error::Conflict);
         }
+        let now = if tx.get_database_backend() == sea_orm::DatabaseBackend::Postgres {
+            let now = Self::clock(&tx).await?;
+            Self::require_authority(&tx, &admitted.authority, now).await?;
+            now
+        } else {
+            now
+        };
         let nonce = Uuid::new_v4().to_string();
         let changed = execute(&tx, "UPDATE tenant_workflow_receipts SET phase='dispatching',generation=generation+1,lease=$1,lease_expires_at=$2,updated_at=$3 WHERE id=$4 AND tenant_id=$5 AND actor_id=$6 AND fingerprint=$7 AND phase='queued' AND generation=0", vec![(&nonce).into(), (now+120).into(), now.into(), (&prior.receipt.id).into(), (&admitted.authority.tenant_id).into(), (&admitted.authority.actor_id).into(), prior.fingerprint.into()]).await?;
         if changed != 1 {
@@ -602,6 +733,7 @@ impl ReceiptStore {
             return Ok(None);
         }
         let actual = decode(row(&tx, "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2 AND actor_id=$3", vec![prior.receipt.id.into(), (&admitted.authority.tenant_id).into(), (&admitted.authority.actor_id).into()]).await?.ok_or(Error::Corrupt)?)?;
+        Self::recheck_before_commit(&tx, &admitted.authority).await?;
         tx.commit().await?;
         Ok(Some(DispatchLease {
             receipt: actual.receipt,

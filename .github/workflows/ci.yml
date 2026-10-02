@@ -956,6 +956,18 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_agent_definition_test
           python3 scripts/focused_ci_gate.py agent-definition-contract
+      - name: Fetch locked receipt PostgreSQL contract dependencies
+        if: ${{ !cancelled() }}
+        timeout-minutes: 5
+        run: bash scripts/agent-receipt-postgres-contract/fetch.sh
+      - name: Verify durable PostgreSQL execution receipts and SQLite lifecycle parity
+        if: ${{ !cancelled() }}
+        env:
+          OHC_AGENT_RECEIPT_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_agent_receipt_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_agent_receipt_test
+          python3 scripts/focused_ci_gate.py agent-receipt-postgres-contract
       - name: Verify agent workflow tenant isolation and requested tasks offline
         if: ${{ !cancelled() }}
         env:
