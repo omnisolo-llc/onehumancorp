@@ -41,7 +41,7 @@ describe('PreOrderWidgetPage', () => {
     expect(screen.getAllByText('Upgrade to Pro')).toBeDefined();
 
     // Check if viral loop option is present
-    expect(screen.getByText('Share on X to Unlock')).toBeDefined();
+    expect(screen.getByText('Check trial availability')).toBeDefined();
 
     // Checkbox should be un-checked
     expect((checkbox as HTMLInputElement).checked).toBe(false);

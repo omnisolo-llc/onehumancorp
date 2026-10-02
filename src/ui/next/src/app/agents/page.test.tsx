@@ -311,7 +311,7 @@ test('supports interactive tab transitions and toggling grid extensions', async 
   expect(screen.getByRole('button', { name: /Stripe Connected/i })).toBeDefined();
 });
 
-test('closes the paywall only after the trial API confirms activation', async () => {
+test('keeps the paywall open when no durable trial grant can be verified', async () => {
   const openSpy = vi.fn();
   vi.stubGlobal('open', openSpy);
 
@@ -323,13 +323,14 @@ test('closes the paywall only after the trial API confirms activation', async ()
   // Paywall dialog should appear
   expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeDefined();
   
-  // Click share on X
-  fireEvent.click(screen.getByText('Share on X to activate Pro'));
+  // Check availability without a grant request or an external share.
+  fireEvent.click(screen.getByText('Check trial availability'));
   await waitFor(() => {
-    expect(mockFetch).toHaveBeenCalledWith('/api/v1/growth/trial-extension/claim', { method: 'POST' });
-    expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).toBeNull();
+    expect(screen.getByText(/durable grant is not verified/)).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
   });
-  expect(openSpy).toHaveBeenCalled();
+  expect(openSpy).not.toHaveBeenCalled();
+  expect(mockFetch.mock.calls.some(([url]) => url === '/api/v1/growth/trial-extension/claim')).toBe(false);
   vi.unstubAllGlobals();
 });
 

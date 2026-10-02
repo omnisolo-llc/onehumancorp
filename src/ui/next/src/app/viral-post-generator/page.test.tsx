@@ -91,20 +91,21 @@ describe('ViralPostGeneratorPage', () => {
     fireEvent.click(checkbox);
 
     expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'Share on X to Unlock for Free' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Check trial availability' })).toBeDefined();
   });
 
-  it('claims trial extension through the backend', async () => {
+  it('keeps trial activation unavailable without a grant mutation', async () => {
     render(<ViralPostGeneratorPage />);
     const checkbox = screen.getByRole('checkbox');
     fireEvent.click(checkbox);
 
-    const shareBtn = screen.getByRole('button', { name: 'Share on X to Unlock for Free' });
+    const shareBtn = screen.getByRole('button', { name: 'Check trial availability' });
     fireEvent.click(shareBtn);
 
-    expect(window.open).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank');
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/trial-extension/claim', { method: 'POST' }));
-    await waitFor(() => expect(screen.queryByText('Upgrade to Pro')).toBeNull());
+    expect(window.open).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText(/durable grant is not verified/)).toBeVisible());
+    expect(vi.mocked(fetch).mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
+    expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
     expect(window.localStorage.setItem).not.toHaveBeenCalled();
   });
   it('shows required input guidance and disables empty or whitespace generation',()=>{

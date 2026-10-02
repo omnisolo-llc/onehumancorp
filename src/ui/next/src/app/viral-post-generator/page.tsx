@@ -10,23 +10,19 @@ export default function ViralPostGeneratorPage() {
   const router = useRouter();
   const [productName, setProductName] = useState('');
   const [keyBenefit, setKeyBenefit] = useState('');
-  const [generatedPost, setGeneratedPost] = useState('');
+  const [generated, setGenerated] = useState<{ text: string; requiresPro: boolean } | null>(null);
   const { hasPro, claimTrial, claimError } = useProPlan();
+  const generatedPost = generated && (!generated.requiresPro || hasPro) ? generated.text : '';
+  useEffect(() => { if (generated?.requiresPro && !hasPro) setGenerated(null); }, [generated, hasPro]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [destination, setDestination] = useState('');
   const clipboard = useClipboardFeedback(generatedPost);
   const copied = clipboard.state === 'copied';
   const [removeBranding, setRemoveBranding] = useState(false);
-  const [tenantId, setTenantId] = useState('my-store');
+  const brandingRemoved = removeBranding && hasPro;
   const destinationValid = destination === '' || isSupportedBioUrl(destination);
   const canGenerate = Boolean(productName.trim() && keyBenefit.trim() && destinationValid);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const tenant = localStorage.getItem('business_display_name') || 'my-store';
-      setTenantId(tenant);
-    }
-  }, []);
 
   const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!hasPro) {
@@ -40,16 +36,12 @@ export default function ViralPostGeneratorPage() {
   const handleGenerate = () => {
     if (!canGenerate) return;
     const link = destination ? `\n\nLearn more: ${destination}` : '';
-    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.${link}\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`;
-    setGeneratedPost(post);
+    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.${link}\n\n${!brandingRemoved ? '⚡ Powered by OmniSolo' : ''}`;
+    setGenerated({ text: post, requiresPro: brandingRemoved });
   };
 
   const claimTrialExtension = async () => {
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenantId}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
-    setRemoveBranding(true);
-    setShowPaywall(false);
+    await claimTrial();
   };
 
   return (
@@ -122,7 +114,7 @@ export default function ViralPostGeneratorPage() {
                         <input
                             type="checkbox"
                             aria-label='Remove "OmniSolo" branding'
-                            checked={removeBranding}
+                            checked={brandingRemoved}
                             onChange={handleBrandingToggle}
                             className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                         />
@@ -218,7 +210,7 @@ export default function ViralPostGeneratorPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" style={{ width: '20px', height: '20px' }} fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to Unlock for Free
+              Check trial availability
             </button>
             {claimError && <p className="mt-3 text-sm text-red-600" role="status">{claimError}</p>}
           </div>

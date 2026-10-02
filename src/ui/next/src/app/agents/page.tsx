@@ -305,15 +305,11 @@ export default function AgentsPage() {
             <button
               type="button"
               onClick={async () => {
-                if (typeof window !== 'undefined') {
-                  window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OmniSolo%20Expert%20Center', '_blank');
-                }
                 await claimTrial();
-                setShowPaywall(false);
               }}
               className="mt-3 w-full rounded-xl border border-amber-250 bg-amber-50/50 dark:bg-amber-900/25 px-4 py-3 text-sm font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
             >
-              Share on X to activate Pro
+              Check trial availability
             </button>
             {claimError && <p className="mt-2 text-sm text-red-600" role="alert">{claimError}</p>}
             <button type="button" onClick={() => setShowPaywall(false)} className="mt-3 w-full text-sm font-semibold text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300">
