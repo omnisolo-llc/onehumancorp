@@ -1,40 +1,10 @@
 import { test, expect } from './fixtures';
-import type { Page } from '@playwright/test';
-
-function requireLoopbackUrl(value: string) {
-  const url = new URL(value);
-  expect(['http:', 'https:']).toContain(url.protocol);
-  expect(['localhost', '127.0.0.1', '[::1]']).toContain(url.hostname);
-}
+import { createRecordedInvitation, requireLoopbackUrl } from './support/recorded_invitation';
 
 test.beforeEach(async ({ baseURL }) => {
   expect(baseURL).toBeTruthy();
   requireLoopbackUrl(baseURL!);
 });
-
-async function createRecordedInvitation(page: Page): Promise<string> {
-  requireLoopbackUrl(page.url());
-  const button = page.locator('#dashboard-invite-btn');
-  await expect(button).toBeEnabled();
-  const responsePromise = page.waitForResponse(response =>
-    new URL(response.url()).pathname === '/api/v1/growth/cloud-bridge/invite'
-    && response.request().method() === 'POST');
-  await button.click();
-  const response = await responsePromise;
-  expect(response.status()).toBe(200);
-  expect(response.request().postDataJSON()).toEqual({ invitee_id: 'pending' });
-  const receipt: unknown = await response.json();
-  if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)
-    || !('invite_link' in receipt) || typeof receipt.invite_link !== 'string') {
-    throw new Error('Invitation response lacks a confirmed link');
-  }
-  expect('success' in receipt ? receipt.success : undefined).not.toBe(false);
-  expect(('error' in receipt ? receipt.error : null) ?? null).toBeNull();
-  expect(receipt.invite_link).toMatch(/^https:\/\/(cloud\.)?omnisolo\.co\/invite\/[^/?#]+$/);
-  expect(receipt.invite_link).not.toMatch(/\/(fallback|default)$/);
-  await expect(page.locator('#dashboard-invite-link')).toHaveValue(receipt.invite_link);
-  return receipt.invite_link;
-}
 
 test.describe('Recorded Invitations on Dashboard', () => {
   test('shows the real invitation action without unverified reward promises', async ({ page, loginAs, unlimitedAdminUser }) => {
@@ -77,7 +47,7 @@ test.describe('Recorded Invitations on Dashboard', () => {
   test('exposes the exact confirmed link in a real X share-intent anchor', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     const link = await createRecordedInvitation(page);
-    const share = page.getByRole('link', { name: 'Share on X', exact: true });
+    const share = page.getByTestId('dashboard-viral-invite-widget').getByRole('link', { name: 'Share on X', exact: true });
     await expect(share).toBeVisible();
     const href = await share.getAttribute('href');
     expect(href).not.toBeNull();
