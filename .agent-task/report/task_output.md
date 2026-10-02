@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "Scout: Tool Integration Research - Stripe"
+issue_description: "The issue requested Stripe integration research and implementation. The backend logic to generate Stripe payment links and the secure connection method are satisfied. However, it requires a webhook listener to receive Stripe payment confirmations and update internal record statuses, and UI real-time reflections, which are not currently implemented and verified. Since the core connection integration is already implemented but the full acceptance criteria are unverified/unmet, and the task description contradicts the actual code state by treating Stripe as entirely unimplemented, no safe, well-scoped implementation follows from the repository state."
