@@ -1,0 +1,4 @@
+outcome: no_work
+issue_title: "GitHub Issue #36504: [Native Chat] Implement Rust Omnichannel Chat System to replace Chatwoot"
+issue_description: |
+  The feature to replace Chatwoot with a native Rust omnichannel chat system is already substantially present in the codebase. As confirmed during exploration, the service layer in src/server/services/chat/service.rs and src/server/domain/repository/omnichannel_repo.rs is already implemented. Furthermore, the implementation of specific channel adapters for Instagram/WhatsApp ingestion is explicitly blocked because the required external sandbox credentials (e.g., Meta Cloud API for WhatsApp/Instagram) are not available in the environment. Mocks are forbidden and end-to-end sandbox verification cannot be completed. Therefore, this task is blocked and reported as a 'no-work' finding.
