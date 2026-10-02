@@ -62,19 +62,15 @@ pub struct IntegrationsRegistry {
     pub google_workspace_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
-            std::sync::Arc<crate::integrations::google_workspace::provider::GoogleWorkspaceProvider>,
+            std::sync::Arc<
+                crate::integrations::google_workspace::provider::GoogleWorkspaceProvider,
+            >,
         >,
     >,
     google_calendar_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
             std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>,
-        >,
-    >,
-    google_workspace_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::google_workspace::provider::GoogleWorkspaceProvider>,
         >,
     >,
     mailchimp_clients: std::sync::RwLock<
@@ -236,7 +232,6 @@ impl IntegrationsRegistry {
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_workspace_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            google_workspace_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -558,17 +553,6 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
-        }
-        if integration_id == "google_workspace" {
-            let mut clients = self.google_workspace_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
                         creds.api_token.clone(),
                     ),
                 ),
@@ -929,18 +913,7 @@ impl IntegrationsRegistry {
         time_max: &str,
     ) -> Result<String, String> {
         let client = {
-            if integration_id == "google_workspace" {
-            let mut clients = self.google_workspace_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
-        }
-        if integration_id == "google_calendar" {
+            if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -1479,18 +1452,7 @@ impl IntegrationsRegistry {
         end_time: &str,
     ) -> Result<String, String> {
         let client = {
-            if integration_id == "google_workspace" {
-            let mut clients = self.google_workspace_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
-        }
-        if integration_id == "google_calendar" {
+            if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -1660,7 +1622,9 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.drive_create_file(name, mime_type, parent_id, content).await;
+            return c
+                .drive_create_file(name, mime_type, parent_id, content)
+                .await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -1784,7 +1748,6 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-
 }
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
