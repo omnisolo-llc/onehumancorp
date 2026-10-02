@@ -17,8 +17,9 @@ export default function InteractivePollGeneratorPage() {
   const [tenant, setTenant] = useState('my-store');
   const [showModal, setShowModal] = useState(false);
 
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {

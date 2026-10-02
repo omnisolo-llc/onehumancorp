@@ -8,10 +8,11 @@ export default function ReferralFabBuilder() {
   const [reward, setReward] = useState("$10");
   const [themeColor, setThemeColor] = useState("#2563eb");
   const [tenantId, setTenantId] = useState("my-business");
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {

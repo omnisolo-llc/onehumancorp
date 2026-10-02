@@ -13,9 +13,10 @@ export default function LeadMagnetGeneratorPage() {
   const [buttonText, setButtonText] = useState('Download Now');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {

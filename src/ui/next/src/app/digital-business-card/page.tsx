@@ -17,15 +17,18 @@ export default function DigitalBusinessCardGeneratorPage() {
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
   const [themeColor, setThemeColor] = useState('#4F46E5');
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
 
-  const [shareLink, setShareLink] = useState('');
-  const clipboard = useClipboardFeedback(shareLink);
+  const [storedShareLink, setShareLink] = useState('');
+  const [linkRequiresPro, setLinkRequiresPro] = useState(false);
   const [cardError, setCardError] = useState('');
   const identityReady = !!name.trim() && !!title.trim();
   const [tenantId, setTenantId] = useState('my-store');
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
+  const shareLink = storedShareLink && (!linkRequiresPro || hasPro) ? storedShareLink : '';
+  const clipboard = useClipboardFeedback(shareLink);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -74,6 +77,7 @@ export default function DigitalBusinessCardGeneratorPage() {
     const base64UrlStr = base64Str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
     const url = `${window.location.origin}/digital-business-card/view?data=${base64UrlStr}`;
+    setLinkRequiresPro(removeBranding);
     setShareLink(url);
   };
 

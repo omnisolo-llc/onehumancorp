@@ -16,7 +16,8 @@ export default function EventRSVPBuilderPage() {
   const [eventDate, setEventDate] = useState('Saturday, August 15th @ 12 PM');
   const [eventLocation, setEventLocation] = useState('Main Street Plaza');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [hideBranding, setHideBranding] = useState(false);
+  const [requestedBrandingRemoval, setHideBranding] = useState(false);
+  const hideBranding = requestedBrandingRemoval && hasPro;
 
   // Modal State
   const [showModal, setShowModal] = useState(false);

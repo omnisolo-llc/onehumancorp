@@ -16,7 +16,8 @@ export default function TestimonialWidgetGenerator() {
   const [showModal, setShowModal] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const { hasPro } = useProPlan();
-  const [hideBranding, setHideBranding] = useState(false);
+  const [requestedBrandingRemoval, setHideBranding] = useState(false);
+  const hideBranding = requestedBrandingRemoval && hasPro;
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {

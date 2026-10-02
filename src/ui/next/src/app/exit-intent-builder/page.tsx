@@ -20,9 +20,10 @@ export default function ExitIntentBuilder() {
   );
   const [buttonText, setButtonText] = useState("Claim My 10% Off");
   const [themeColor, setThemeColor] = useState("#2563eb");
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
 
   const previewRef = useRef<HTMLDivElement>(null);
 
