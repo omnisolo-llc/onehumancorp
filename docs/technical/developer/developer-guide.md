@@ -198,13 +198,12 @@ Services:
 | Redis | 6379 | redis://localhost:6379 |
 | PostgreSQL | 5432 | postgres://localhost:5432/ohc |
 
-### 2 — Seed demo data
+### 2 — Use real records or an isolated test run
 
-```bash
-curl -s -X POST http://localhost:8080/api/v1/dev/seed \
-  -H 'Content-Type: application/json' \
-  -d '{"scenario":"launch-readiness"}' | jq .
-```
+The normal server has no demo-seeding HTTP API. Enter your own business records
+through the application. For automated verification, `make test-e2e` builds the
+app and creates its own disposable PostgreSQL/Valkey fixtures; it never seeds an
+existing installation. See [the native build guide](../../development/native-build.md).
 
 ### 3 — Open the dashboard
 

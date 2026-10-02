@@ -245,7 +245,7 @@ async fn launches_real_pinned_server_with_bounded_health_and_session_lifecycle()
         .with_isolation_parent(parent.clone())
         .with_readiness(Duration::from_secs(10), Duration::from_millis(20))
         .with_request_timeout(Duration::from_secs(3));
-    let adapter = OpenCodeHttpAdapter::spawn(config, selection(), "https://llmapi.omnisolo.co/v1")
+    let adapter = OpenCodeHttpAdapter::spawn(config, selection(), "http://127.0.0.1:9/v1")
         .await
         .unwrap();
 
@@ -428,7 +428,7 @@ async fn explicit_shutdown_reaps_managed_process_before_removing_isolated_home()
         .with_isolation_parent(parent.clone())
         .with_readiness(Duration::from_secs(10), Duration::from_millis(20))
         .with_request_timeout(Duration::from_secs(3));
-    let adapter = OpenCodeHttpAdapter::spawn(config, selection(), "https://llmapi.omnisolo.co/v1")
+    let adapter = OpenCodeHttpAdapter::spawn(config, selection(), "http://127.0.0.1:9/v1")
         .await
         .unwrap();
     let isolated_root = adapter.isolated_root().unwrap().to_owned();

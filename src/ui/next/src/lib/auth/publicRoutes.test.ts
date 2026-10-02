@@ -42,8 +42,17 @@ const postFrameworkAsset = { method: "POST", invocation: "asset", matcher: { kin
 void [routeHandlerWithoutApi, pageWithApi, pageWithFrameworkPrefix, postFrameworkAsset];
 
 describe("bootstrap public contracts", () => {
-  it("declares all and only the bootstrap public contracts", () => {
+  it("declares all and only the reviewed public contracts", () => {
     expect(PUBLIC_ROUTE_ENTRIES).toEqual([
+  {
+    method: "GET",
+    invocation: "route-handler",
+    matcher: { kind: "public-site-document", path: "/api/v1/public/sites/" },
+    reason: "read only a currently eligible reviewed publication document",
+    owner: "publication",
+    api: { bodyLimitBytes: 0, responseLimitBytes: 8388608, tenantSource: "current-publication", replayPolicy: "read-only", cachePolicy: "no-store" },
+  },
+
       {
         method: "GET",
         invocation: "page",
@@ -212,4 +221,8 @@ describe("bootstrap public contracts", () => {
       status: 400,
     });
   });
+});
+it('permits an anonymous read of a canonical publication document without opening private bio data', () => {
+  expect(classifyRequest({ method: 'GET', pathname: '/api/v1/public/sites/30000000-0000-4000-8000-000000000003', invocation: 'route-handler' }).access).toBe('public');
+  expect(classifyRequest({ method: 'GET', pathname: '/bio/tenant-a', invocation: 'page' }).access).toBe('protected');
 });

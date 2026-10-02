@@ -1,5 +1,5 @@
 use crate::integrations::registry::IntegrationsRegistry;
-use axum::{Json, extract::State, response::IntoResponse};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -18,34 +18,26 @@ pub struct ConnectIntegrationRes {
     pub usable: bool,
 }
 
-pub async fn connect_whatsapp_cloud_api(
-    State(registry): State<Arc<IntegrationsRegistry>>,
-    Json(payload): Json<ConnectWhatsAppCloudApiReq>,
-) -> impl IntoResponse {
-    let creds = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
-        integration_id: "whatsapp_cloud_api".to_string(),
-        base_url: "".to_string(),
-        bot_token: "".to_string(),
-        chat_id: payload.phone_number_id.unwrap_or_default(),
-        webhook_url: "".to_string(),
-        api_token: payload.api_token.unwrap_or_default(),
-        from_phone: payload.display_phone_number.unwrap_or_default(),
-    };
-
-    match registry.connect("whatsapp_cloud_api", "", creds) {
-        Ok(_) => Json(ConnectIntegrationRes {
-            success: true,
-            message: "WhatsApp Cloud API connected successfully".to_string(),
-            status: "connected".to_string(),
-            usable: true,
-        }),
-        Err(e) => Json(ConnectIntegrationRes {
+fn verification_unavailable() -> impl IntoResponse {
+    // Registry construction is configuration, not provider verification. This
+    // route has no verified-connection receipt or durable credential flow yet.
+    (
+        StatusCode::NOT_IMPLEMENTED,
+        Json(ConnectIntegrationRes {
             success: false,
-            message: format!("Failed to connect: {}", e),
-            status: "disconnected".to_string(),
+            message: "Secure provider verification is unavailable. No connection was established."
+                .to_string(),
+            status: "pending_verification".to_string(),
             usable: false,
         }),
-    }
+    )
+}
+
+pub async fn connect_whatsapp_cloud_api(
+    State(_registry): State<Arc<IntegrationsRegistry>>,
+    Json(_payload): Json<ConnectWhatsAppCloudApiReq>,
+) -> impl IntoResponse {
+    verification_unavailable()
 }
 
 #[derive(Deserialize)]
@@ -58,34 +50,8 @@ pub struct ConnectWhatsAppReq {
 }
 
 pub async fn connect_whatsapp(
-    State(registry): State<Arc<IntegrationsRegistry>>,
-    Json(payload): Json<ConnectWhatsAppReq>,
+    State(_registry): State<Arc<IntegrationsRegistry>>,
+    Json(_payload): Json<ConnectWhatsAppReq>,
 ) -> impl IntoResponse {
-    let integration_id = payload
-        .integration_id
-        .unwrap_or_else(|| "whatsapp".to_string());
-    let creds = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
-        integration_id: integration_id.clone(),
-        base_url: payload.base_url.unwrap_or_default(),
-        bot_token: payload.bot_token.unwrap_or_default(),
-        chat_id: "".to_string(),
-        webhook_url: "".to_string(),
-        api_token: payload.api_token.unwrap_or_default(),
-        from_phone: payload.from_phone.unwrap_or_default(),
-    };
-
-    match registry.connect(&integration_id, "", creds) {
-        Ok(_) => Json(ConnectIntegrationRes {
-            success: true,
-            message: "WhatsApp connected successfully".to_string(),
-            status: "connected".to_string(),
-            usable: true,
-        }),
-        Err(e) => Json(ConnectIntegrationRes {
-            success: false,
-            message: format!("Failed to connect: {}", e),
-            status: "disconnected".to_string(),
-            usable: false,
-        }),
-    }
+    verification_unavailable()
 }

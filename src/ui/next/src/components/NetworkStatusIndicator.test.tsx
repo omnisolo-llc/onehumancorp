@@ -1,68 +1,32 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import '@testing-library/jest-dom';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NetworkStatusIndicator } from './NetworkStatusIndicator';
-
-// Mock SyncManager to avoid complex dependencies
-vi.mock('../lib/sync/SyncManager', () => ({
-  SyncManager: {
-    getInstance: vi.fn(() => ({
-      getQueueLength: vi.fn().mockResolvedValue(0),
-    })),
-  },
-}));
-
-// Mock WithTooltip since we just want to test NetworkStatusIndicator wrapper
-vi.mock('./TooltipRegistry', () => ({
-  WithTooltip: ({ children }: { children: React.ReactNode }) => <div data-testid="tooltip-mock">{children}</div>,
-}));
-
+const readSummary = vi.hoisted(() => vi.fn());
+vi.mock('../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ getQueueSummary: readSummary }) } }));
+vi.mock('./TooltipRegistry', () => ({ WithTooltip: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+beforeEach(() => {
+  readSummary.mockResolvedValue({ pending: 0, needsAttention: 0, reconciliation: 0, legacyHeld: 0, storageUnavailable: false });
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+});
+afterEach(() => vi.restoreAllMocks());
 describe('NetworkStatusIndicator', () => {
-  let originalOnLine: boolean;
-
-  beforeAll(() => {
-    // Save original navigator.onLine value
-    originalOnLine = navigator.onLine;
+  it('shows offline without claiming unverified local persistence', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    await act(async () => { render(<NetworkStatusIndicator />); });
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.queryByText(/Changes saved locally/)).not.toBeInTheDocument();
   });
-
-  afterAll(() => {
-    // Restore original navigator.onLine value
-    Object.defineProperty(navigator, 'onLine', {
-      value: originalOnLine,
-      configurable: true,
-    });
+  it('separates pending, blocked, reconciliation and unowned counts without payload details', async () => {
+    readSummary.mockResolvedValue({ pending: 2, needsAttention: 3, reconciliation: 1, legacyHeld: 4, storageUnavailable: false });
+    await act(async () => { render(<NetworkStatusIndicator />); });
+    expect(screen.getByText(/Pending: 2/)).toHaveTextContent('Needs attention: 3');
+    expect(screen.getByText(/Reconciliation: 1/)).toHaveTextContent('Unassigned: 4');
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
   });
-
-  it('renders correctly when offline and syncQueueLength is 0', async () => {
-    Object.defineProperty(navigator, 'onLine', {
-      value: false,
-      configurable: true,
-    });
-
-    await act(async () => {
-      render(<NetworkStatusIndicator />);
-    });
-
-    // Check if the offline text is present
-    expect(screen.getByText('Offline - Changes saved locally')).toBeInTheDocument();
-  });
-
-  it('applies the new Translucent Glass CSS classes', async () => {
-    Object.defineProperty(navigator, 'onLine', {
-      value: false,
-      configurable: true,
-    });
-
-    await act(async () => {
-      render(<NetworkStatusIndicator />);
-    });
-
-    // Verify the div contains the specific Translucent Glass classes
-    const container = screen.getByText('Offline - Changes saved locally').closest('div');
-    expect(container).toHaveClass('bg-[rgba(255,255,255,0.65)]');
-    expect(container).toHaveClass('backdrop-blur-[30px]');
-    expect(container).toHaveClass('saturate-[210%]');
-    expect(container).toHaveClass('border-[rgba(255,255,255,0.4)]');
+  it('shows unavailable storage rather than an empty or completed queue', async () => {
+    readSummary.mockRejectedValue(new Error('Unavailable'));
+    await act(async () => { render(<NetworkStatusIndicator />); });
+    expect(screen.getByText(/Queue status unavailable/)).toBeInTheDocument();
   });
 });

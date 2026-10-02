@@ -1,7 +1,13 @@
 "use client";
+import { PublicationPanel } from '../builder/PublicationPanel';
+import { layoutPublicationSnapshot } from '../builder/layoutPublicationSnapshot';
+import { invalidateOnboardingSession } from '../onboarding/draftSession';
 import type { BuilderBlock, BlockProperties, GeneratedBlock } from '@/lib/builder-types';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { openBuilderEditor, releaseBuilderEditor, builderScopeActive, assertBuilderEditor, readBuilderDraft, writeBuilderDraft, hasHeldBuilderLegacy, publishOwnedLayout, type BuilderScope } from '../builder/ownedDraft';
+import { canonicalRequest } from '../onboarding/contracts';
+import { subscribeOnboardingInvalidation, fetchForOwnedBusinessAction } from '../onboarding/draftSession';
 import { SmartBlock, DraggableBlock, ActionSheet } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
@@ -12,6 +18,15 @@ export default function StorefrontBuilderPage() {
   const [blocks, setBlocks] = useState<BuilderBlock[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live" | "chat">("idle");
   const [liveUrl, setLiveUrl] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [sessionError, setSessionError] = useState('');
+  const [heldLegacy, setHeldLegacy] = useState(false);
+  const scope = useRef<BuilderScope | null>(null);
+  const [viewScope, setViewScope] = useState<BuilderScope | null>(null);
+  const operationEpoch = useRef(0);
+  const busy = useRef(false);
+  type LayoutDraft = { bio: string; blocks: BuilderBlock[]; status: 'idle' | 'draft' | 'chat' };
+  const localDraft = useRef<LayoutDraft>({ bio: '', blocks: [], status: 'idle' });
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
@@ -37,88 +52,59 @@ export default function StorefrontBuilderPage() {
   }, [selectedBlockIndex]);
 
   useEffect(() => {
-    const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
-    setTenantId(savedTenantId);
-
-    const savedBio = localStorage.getItem("omnisolo_builder_bio");
-    if (savedBio) setBio(savedBio);
-
-    const savedStatus = localStorage.getItem("omnisolo_builder_status") as "idle" | "generating" | "draft" | "live";
-    if (savedStatus) setStatus(savedStatus);
-
-    const savedBlocks = localStorage.getItem("omnisolo_builder_blocks");
-    if (savedBlocks) {
+    let disposed = false;
+    let loadVersion = 0; let editor: BuilderScope | null = null;
+    const load = async () => {
+      const version = ++loadVersion; setLoaded(false); setSessionError('');
       try {
-        setBlocks(JSON.parse(savedBlocks));
-      } catch (e) {
-        console.error("Failed to parse saved blocks", e);
-      }
-    }
-
-    const savedLiveUrl = localStorage.getItem("omnisolo_builder_liveUrl");
-    if (savedLiveUrl) setLiveUrl(savedLiveUrl);
+        const verified = await openBuilderEditor('storefront-builder-draft');
+        if (disposed || version !== loadVersion) { releaseBuilderEditor(verified); return; }
+        releaseBuilderEditor(editor); editor = verified;
+        const cached = readBuilderDraft<LayoutDraft>('storefront-builder-draft', verified);
+        const value = cached?.data ?? { bio: '', blocks: [], status: 'idle' };
+        if (typeof value.bio !== 'string' || !Array.isArray(value.blocks) || !['idle','draft','chat'].includes(value.status)) throw new Error('This saved layout could not be read. Its original copy remains held.');
+        scope.current = verified; setViewScope(verified); localDraft.current = { ...value, status: value.blocks.length ? 'draft' : 'idle' };
+        setBio(value.bio); setBlocks(value.blocks); setStatus(value.blocks.length ? 'draft' : 'idle'); setTenantId(verified.owner.tenantId);
+        setHeldLegacy(hasHeldBuilderLegacy()); setLoaded(true);
+        setSaveMessage('Layout drafts stay on this device; server layout saving is unavailable.');
+      } catch (error) { if (!disposed && version === loadVersion) setSessionError(error instanceof Error ? error.message : 'Verify your session before using the builder.'); }
+    };
+    const clear = (restart: boolean) => {
+      loadVersion += 1; operationEpoch.current += 1; busy.current = false; releaseBuilderEditor(editor); scope.current = null; setViewScope(null);
+      localDraft.current = { bio: '', blocks: [], status: 'idle' };
+      setBio(''); setBlocks([]); setStatus('idle'); setLiveUrl(''); setTenantId(''); setSelectedBlockIndex(null); setEditingBlockContent(null); setChatMessage(''); setSaveMessage(''); setLoaded(false);
+      if (restart) void load(); else setSessionError('Your session could not be verified. Your saved layout remains held.');
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(clear);
+    void load();
+    return () => { disposed = true; loadVersion += 1; operationEpoch.current += 1; busy.current = false; releaseBuilderEditor(editor); unsubscribe(); };
   }, []);
 
-  useEffect(() => {
-    // Only save to server if there's actual state to save that deviates from idle
-    if (status !== 'idle' || bio !== '' || blocks.length > 0) {
-      let saveMessageTimer: ReturnType<typeof setTimeout> | undefined;
-      let disposed = false;
-      const payload = {
-        builderState: { bio, blocks, status }
-      };
-
-      const timer = setTimeout(() => {
-        fetch('/api/v1/onboarding/state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-        .then(res => {
-            if (res.ok && !disposed) {
-                setSaveMessage("Draft Saved!");
-                saveMessageTimer = setTimeout(() => setSaveMessage(""), 3000);
-            }
-        })
-        .catch(err => console.error('Failed to sync builder state', err));
-      }, 1000); // debounce 1s
-
-      return () => {
-        clearTimeout(timer);
-        disposed = true;
-        if (saveMessageTimer) clearTimeout(saveMessageTimer);
-      };
-    }
-  }, [bio, blocks, status]);
-
-  // Read state from server on mount
-  useEffect(() => {
-    fetch('/api/v1/onboarding/state')
-    .then(res => res.ok ? res.json() : null)
-    .then(data => {
-      if (data && data.builderState) {
-        if (data.builderState.bio) setBio(data.builderState.bio);
-        if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
-        if (data.builderState.status) setStatus(data.builderState.status);
-      }
-    })
-    .catch(err => {
-      if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('Failed to fetch'))) return;
-      console.error('Failed to load builder state', err);
-    });
-  }, []);
+  const persistLayout = (change: Partial<LayoutDraft>) => {
+    if (!builderScopeActive(viewScope)) return;
+    localDraft.current = { ...localDraft.current, ...change };
+    try {
+      writeBuilderDraft('storefront-builder-draft', localDraft.current, viewScope);
+      setSaveMessage('Saved on this device. Server layout draft saving is unavailable.');
+    } catch (error) { setSaveMessage(error instanceof Error ? error.message : 'This device could not save your latest edits.'); }
+  };
 
   const updateBio = (newBio: string) => {
+    if (!builderScopeActive(viewScope)) return;
     setBio(newBio);
-    localStorage.setItem("omnisolo_builder_bio", newBio);
+    persistLayout({ bio: newBio });
   };
 
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live" | "chat") => {
+    if (!builderScopeActive(viewScope)) return;
     setStatus(newStatus);
-    localStorage.setItem("omnisolo_builder_status", newStatus);
+    localDraft.current = { ...localDraft.current, status: newStatus === 'live' || newStatus === 'generating' ? (localDraft.current.blocks.length ? 'draft' : 'idle') : newStatus };
   };
 
+  const navigateStatus = (value: 'idle' | 'draft' | 'chat') => { operationEpoch.current += 1; busy.current = false; updateStatus(value); };
+
   const handleSaveBlock = () => {
+    if (!builderScopeActive(viewScope)) return;
     if (selectedBlockIndex !== null && editingBlockContent) {
       const newBlocks = [...blocks];
       newBlocks[selectedBlockIndex] = {
@@ -126,44 +112,49 @@ export default function StorefrontBuilderPage() {
         props: editingBlockContent
       };
       setBlocks(newBlocks);
-      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
+      persistLayout({ blocks: newBlocks });
       setSelectedBlockIndex(null);
-      setSaveMessage("Changes saved!");
-      setTimeout(() => setSaveMessage(""), 3000);
     }
   };
 
   const addBlock = (type: string) => {
+    if (!builderScopeActive(viewScope)) return;
     let defaultProps = {};
-    if (type === "Hero") defaultProps = { headline: "New Section", copy: "Add some text here." };
-    if (type === "Catalog") defaultProps = { items: [{ name: "New Product", price: "$0", description: "Description here" }] };
-    if (type === "Booking") defaultProps = { title: "Book a Time", availability: "Available all week" };
-    if (type === "Contact") defaultProps = { email: "contact@example.com", phone: "555-0199" };
-    if (type === "Referral") defaultProps = { offerTitle: "Refer & Earn", offerDescription: "Get 20% off" };
+    if (type === "Hero") defaultProps = { headline: "", copy: "" };
+    if (type === "Catalog") defaultProps = { items: [{ name: "", price: "", description: "" }] };
+    if (type === "Booking") defaultProps = { title: "", availability: "", booking_url: "" };
+    if (type === "Contact") defaultProps = { email: "", phone: "" };
+    if (type === "Referral") defaultProps = { offerTitle: "", offerDescription: "" };
 
     const newBlocks = [...blocks, { type, props: defaultProps }];
     setBlocks(newBlocks);
-    localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
+    persistLayout({ blocks: newBlocks });
     setIsAddBlockOpen(false);
     setSelectedBlockIndex(newBlocks.length - 1);
   };
 
   const handleGenerate = async () => {
+    const current = viewScope;
+    if (!builderScopeActive(current) || busy.current) return;
+    busy.current = true; const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current && builderScopeActive(current);
     setStatus("generating");
 
     try {
-      const response = await fetch('/api/v1/builder/generate', {
+      const response = await fetchForOwnedBusinessAction('/api/v1/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: bio })
-      });
+      }, current.owner);
 
+      if (!active()) return;
       if (!response.ok) {
         updateStatus("idle");
         return;
       }
 
       const data = await response.json();
+      if (!active()) return;
       const blocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === 'HeroBlock' ? 'Hero' :
               b.block_type === 'ProductGridBlock' ? 'Catalog' :
@@ -172,22 +163,24 @@ export default function StorefrontBuilderPage() {
         props: b.content
       }));
       setBlocks(blocks);
-      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(blocks));
+      persistLayout({ blocks });
       updateStatus("draft");
     } catch (error) {
+      if (!active()) return;
       console.error("Failed to generate storefront", error);
-      updateStatus("idle");
-    }
+      updateStatus("idle"); setSaveMessage("The layout could not be generated. Your local draft remains held.");
+    } finally { if (active()) busy.current = false; }
   };
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
+    if (!builderScopeActive(viewScope)) return;
     if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
 
     setBlocks(prev => {
       const newBlocks = [...prev];
       const [moved] = newBlocks.splice(fromIndex, 1);
       newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
+      persistLayout({ blocks: newBlocks });
       return newBlocks;
     });
 
@@ -199,19 +192,25 @@ export default function StorefrontBuilderPage() {
   };
 
   const handleAgentChat = async () => {
-    if (!chatMessage.trim()) return;
+    const current = viewScope;
+    if (!builderScopeActive(current) || busy.current) return;
+    busy.current = true; const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current && builderScopeActive(current);
+    if (!chatMessage.trim()) { busy.current = false; return; }
     setStatus("generating");
     try {
-      const response = await fetch("/api/v1/builder/generate", {
+      const response = await fetchForOwnedBusinessAction("/api/v1/builder/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: `${bio}. Update request: ${chatMessage}. Note: Maintain a 375px optimized card-based mobile UI.` })
-      });
+      }, current.owner);
+      if (!active()) return;
       if (!response.ok) {
         updateStatus("idle");
         return;
       }
       const data = await response.json();
+      if (!active()) return;
       const newBlocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
         type: b.block_type === "HeroBlock" ? "Hero" :
               b.block_type === "ProductGridBlock" ? "Catalog" :
@@ -220,16 +219,22 @@ export default function StorefrontBuilderPage() {
         props: b.content
       }));
       setBlocks(newBlocks);
-      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
+      persistLayout({ blocks: newBlocks });
       setChatMessage("");
       updateStatus("draft");
     } catch (error) {
+      if (!active()) return;
       console.error("Failed to update storefront via agent", error);
-      updateStatus("draft");
-    }
+      updateStatus("draft"); setSaveMessage("The layout update could not be confirmed. Your local draft remains held.");
+    } finally { if (active()) busy.current = false; }
   };
 
   const handleLaunch = async () => {
+    const current = viewScope;
+    if (!builderScopeActive(current) || busy.current) return;
+    busy.current = true; const epoch = ++operationEpoch.current;
+    const active = () => epoch === operationEpoch.current && builderScopeActive(current);
+    const layoutFingerprint = canonicalRequest({ blocks, bio });
     try {
       const draftBlocks = blocks.map((b, i) => ({
         block_type: b.type === 'Hero' ? 'HeroBlock' :
@@ -257,24 +262,14 @@ export default function StorefrontBuilderPage() {
           }
       };
 
-      const response = await fetch('/api/v1/builder/publish_draft', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-      });
-      if (response.ok) {
-        const data = await response.json();
-        updateStatus("live");
-        const url = `/bio/${data.domain || 'myshop'}`;
-        setLiveUrl(url);
-        localStorage.setItem("omnisolo_builder_liveUrl", url);
-      } else {
-        console.error('Failed to publish');
-      }
-    } catch (error) {
-      console.error('Error publishing:', error);
-    }
+      const site = await publishOwnedLayout(current, payload);
+      if (active()) setSaveMessage(canonicalRequest({ blocks: localDraft.current.blocks, bio: localDraft.current.bio }) === layoutFingerprint ? `Site saved (${site.id}); publishing has not been verified.` : `Earlier layout saved (${site.id}); newer edits remain local. Publishing has not been verified.`);
+    } catch (error) { if (active()) setSaveMessage(error instanceof Error ? error.message : 'Site save could not be confirmed.'); }
+    finally { if (active()) busy.current = false; }
   };
+
+  if (sessionError) return <div role="alert">{sessionError}</div>;
+  if (!loaded) return <div role="status">Verifying your builder session…</div>;
 
   if (status === "idle") {
     return (
@@ -289,6 +284,7 @@ export default function StorefrontBuilderPage() {
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <WalkthroughTarget id="storefront-title">
                 <div className="text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-1">Welcome to OmniSolo Smart Builder</div>
+                {heldLegacy && <p role="status">An older builder draft remains held on this device.</p>}
                 <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2" aria-label="Welcome to OmniSolo OneHumanCorp Smart Builder">Welcome to OmniSolo OneHumanCorp Smart Builder</h1>
               </WalkthroughTarget>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
@@ -358,8 +354,8 @@ export default function StorefrontBuilderPage() {
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">You're Live!</h1>
-          <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
+          <h1 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Site save recorded</h1>
+          <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Publishing has not been verified.</p>
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
@@ -368,7 +364,7 @@ export default function StorefrontBuilderPage() {
 
           <button
             className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
-            onClick={() => updateStatus("idle")}
+            onClick={() => navigateStatus("idle")}
           >
             Go to Dashboard
           </button>
@@ -385,7 +381,7 @@ export default function StorefrontBuilderPage() {
               <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7]">Marketing Agent</h2>
                   <button
-                      onClick={() => updateStatus("draft")}
+                      onClick={() => navigateStatus("draft")}
                       className="text-gray-500 hover:text-gray-700"
                   >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -477,6 +473,13 @@ export default function StorefrontBuilderPage() {
               <SmartBlock {...b} />
             </DraggableBlock>
           ))}
+          <PublicationPanel channel="storefront-builder" expectedOwner={viewScope?.owner ?? null}
+            getSnapshot={() => layoutPublicationSnapshot({ title: 'Home', bio: localDraft.current.bio, blocks: localDraft.current.blocks })}
+            isEditorCurrent={() => {
+              if (!builderScopeActive(viewScope) || scope.current !== viewScope) return false;
+              try { assertBuilderEditor(viewScope, 'storefront-builder-draft'); return true; } catch { return false; }
+            }}
+            onRetired={() => invalidateOnboardingSession(false)} />
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
           <div className="text-center mt-4 mb-8">
@@ -490,13 +493,13 @@ export default function StorefrontBuilderPage() {
               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Add Block
             </button>
-            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg><span>Agent</span> <span className="inline text-xs font-normal opacity-75">(Ask Agent to Edit)</span></button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+            <button onClick={() => navigateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg><span>Agent</span> <span className="inline text-xs font-normal opacity-75">(Ask Agent to Edit)</span></button></div><WithTooltip id="launch-btn-tooltip" defaultText="Save this private site draft. Public publication requires a separate review.">
             <button
               id="launch-btn"
               className="w-full bg-[#0071E3] text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
               onClick={handleLaunch}
             >
-              <span>1-Tap Launch</span>
+              <span>Save site draft</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </button>
           </WithTooltip>
@@ -547,7 +550,7 @@ export default function StorefrontBuilderPage() {
                       <button
                         className="w-full py-2 bg-gray-100 dark:bg-gray-800 text-sm font-semibold rounded-lg text-gray-700 dark:text-gray-200"
                         onClick={() => {
-                          const newItems = [...editingBlockContent[key], { name: 'New Item', price: '$0', description: 'Description' }];
+                          const newItems = [...editingBlockContent[key], { name: '', price: '', description: '' }];
                           setEditingBlockContent({ ...editingBlockContent, [key]: newItems });
                         }}
                       >
@@ -591,7 +594,7 @@ export default function StorefrontBuilderPage() {
                 onClick={() => {
                   const newBlocks = blocks.filter((_, i) => i !== selectedBlockIndex);
                   setBlocks(newBlocks);
-                  localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
+                  persistLayout({ blocks: newBlocks });
                   setSelectedBlockIndex(null);
                 }}
               >

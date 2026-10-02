@@ -1,6 +1,7 @@
 'use client';
 
 import { useState,useEffect } from 'react';
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 
@@ -10,12 +11,15 @@ export default function TipJarWidgetGenerator() {
   const [displayName, setDisplayName] = useState('Creator Name');
   const [message, setMessage] = useState('Buy me a coffee! Your support helps me create more content.');
   const [amounts, setAmounts] = useState('5, 10, 20');
+  const [previewSelection, setPreviewSelection] = useState<number | null>(null);
+  const [previewCustomAmount, setPreviewCustomAmount] = useState('');
+  useEffect(() => { setPreviewSelection(null); }, [amounts]);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [removeBranding, setRemoveBranding] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [copied, setCopied] = useState(false);
+
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -25,11 +29,8 @@ export default function TipJarWidgetGenerator() {
   const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/tip-jar/embed?tenant=${encodeURIComponent(tenant)}&name=${encodeURIComponent(displayName)}&message=${encodeURIComponent(message)}&amounts=${encodeURIComponent(amounts)}&theme=${theme}&branding=${!removeBranding}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="320" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(embedCode);
+  const handleCopy = () => { void clipboard.copy(embedCode); };
 
   const getThemeStyles = () => {
       if (theme === 'dark') {
@@ -174,6 +175,8 @@ export default function TipJarWidgetGenerator() {
                                 return (
                                     <button
                                         key={idx}
+                                        onClick={() => { setPreviewSelection(idx); setPreviewCustomAmount(''); }}
+                                        aria-pressed={previewSelection === idx}
                                         className="px-4 py-2 rounded-full border text-sm font-medium transition-all"
                                         style={{
                                             borderColor: theme === 'dark' ? '#4b5563' : '#e5e7eb',
@@ -191,6 +194,8 @@ export default function TipJarWidgetGenerator() {
                             <input
                                 type="number"
                                 placeholder="Custom amount"
+                                value={previewCustomAmount}
+                                onChange={(event) => { setPreviewCustomAmount(event.target.value); setPreviewSelection(null); }}
                                 className="w-full px-4 py-2 border rounded-l-lg text-sm focus:outline-none"
                                 style={{
                                     borderColor: theme === 'dark' ? '#4b5563' : '#e5e7eb',
@@ -198,10 +203,11 @@ export default function TipJarWidgetGenerator() {
                                     color: theme === 'dark' ? '#f9fafb' : '#111827'
                                 }}
                             />
-                            <button className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-r-lg text-sm hover:bg-indigo-700 transition-colors">
+                            <button disabled aria-describedby="tip-preview-unavailable" className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-r-lg text-sm hover:bg-indigo-700 transition-colors">
                                 Tip
                             </button>
                         </div>
+                        <p id="tip-preview-unavailable">Preview only. No payment is collected here.</p>
 
                         {!removeBranding && (
                             <div className={`mt-2 pt-3 border-t text-center text-xs ${theme === 'dark' ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500'}`}>
@@ -246,6 +252,7 @@ export default function TipJarWidgetGenerator() {
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
                             onClick={handleCopy}
+                disabled={clipboard.state === 'pending'}
                             className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-indigo-600 transition-colors"
                             title="Copy to clipboard"
                         >
@@ -257,10 +264,12 @@ export default function TipJarWidgetGenerator() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
+                disabled={clipboard.state === 'pending'}
                         className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium min-h-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
-                        {copied ? 'Copied!' : 'Copy Code'}
+                        {clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
                     </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                     <button
                         onClick={() => setShowModal(false)}
                         className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium min-h-[44px] transition-colors"

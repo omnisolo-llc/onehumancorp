@@ -55,4 +55,14 @@ describe('AgentActionCard', () => {
     expect(screen.getByTestId('save-proposal')).toBeInTheDocument();
     expect(screen.getByTestId('cancel-edit-proposal')).toBeInTheDocument();
   });
+  it('renders the daily prep task controls once instead of unreachable generic actions', () => {
+    const approval = { ...defaultApproval, event_source: 'Operations Agent', context_payload: { feature_type: 'daily_prep_checklist', description: 'Daily Prep Checklist' }, proposed_action: { action_type: 'Daily Prep Checklist', message: 'Review Daily Prep Checklist' } };
+    render(<AgentActionCard approval={approval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Mark Complete' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Assign to Staff' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Dismiss task' })).toBeVisible();
+    expect(screen.getAllByTestId('feed-approve-btn')).toHaveLength(1);
+    expect(screen.getAllByTestId('feed-dismiss-btn')).toHaveLength(1);
+  });
+
 });

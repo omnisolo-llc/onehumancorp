@@ -12,8 +12,9 @@ export default function BirthdayClubBuilder() {
   const [discountAmount, setDiscountAmount] = useState('15');
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {

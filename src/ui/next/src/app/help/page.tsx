@@ -74,12 +74,12 @@ export default function HelpCenterPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
-        <h1
+        <h2
           data-testid="help-center-title"
           className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight"
         >
           In-App Help Center
-        </h1>
+        </h2>
 
         <div className="mb-8 sm:mb-10 w-full max-w-2xl mx-auto block">
           <div className="w-full relative block">

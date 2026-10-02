@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
+import { createRecordedOrderOwner, captureRecordedOrders } from './support/recorded_order_fixture';
 
 test('growth_referral_widget_milestone', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);
@@ -7,23 +8,16 @@ test('growth_referral_widget_milestone', async ({ page, request, loginAs, adminU
 });
 
 test.describe('Growth Referral Widget Milestone UI', () => {
-  test('should display 10th order milestone alert and card on Team Page', async ({ page, loginAs, unlimitedAdminUser }) => {
-    // Login
-    await loginAs(page, unlimitedAdminUser);
-
+  test('keeps an actual empty business free of invented order milestones', async ({ page, baseURL }) => {
+    const owner = await createRecordedOrderOwner(page, baseURL, 0);
+    const reading = captureRecordedOrders(page, owner);
     // Navigate to /team where the widget is embedded
     await page.goto('/team');
-    await page.waitForLoadState('networkidle');
+    await reading;
 
-    // Verify milestone banner exists
-    await expect(page.getByRole('heading', { name: /10th Order! Share your success/i })).toBeVisible();
-
-    // Verify WhatsApp share button exists
-    await expect(page.getByRole('link', { name: /Share to WhatsApp/i })).toBeVisible();
-
-    // Verify the milestone card image is loaded
-    const milestoneImage = page.locator('img[alt="10th Order Milestone"]');
-    await expect(milestoneImage).toBeVisible();
-    await expect(milestoneImage).toHaveAttribute('src', /milestone_id=10th_order/);
+    await expect(page.getByText('No recorded orders yet.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Share to WhatsApp/i })).toHaveCount(0);
+    await expect(page.getByRole('img', { name: '10th Order Milestone' })).toHaveCount(0);
+    await expect(page.locator('[src*="milestone_id=10th_order"]')).toHaveCount(0);
   });
 });

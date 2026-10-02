@@ -21,14 +21,13 @@ export default function SocialProofNudgePage() {
   const [customerLocation, setCustomerLocation] = useState('');
   const [timeAgo, setTimeAgo] = useState('just now');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const { hasPro, confirmPro } = useProPlan();
+  const { hasPro, claimTrial, claimError } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
   const [entitlementError, setEntitlementError] = useState<string | null>(null);
 
-  const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRemoveBranding = () => {
     if (!hasPro) {
-      e.preventDefault();
       setShowPaywall(true);
     }
   };
@@ -45,17 +44,8 @@ export default function SocialProofNudgePage() {
   };
 
   const claimTrialExtension = async () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
-      if (!response.ok) throw new Error('Pro activation is unavailable.');
-      confirmPro();
-      setShowPaywall(false);
-    } catch {
-      setEntitlementError('Pro activation is unavailable.');
-    }
+    try { await claimTrial(); }
+    catch { setEntitlementError('Trial activation is unavailable.'); }
   };
 
   return (
@@ -244,9 +234,9 @@ export default function SocialProofNudgePage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to activate Pro
+              Check trial availability
             </button>
-            {entitlementError && <p className="mt-3 text-sm text-red-600" role="status">{entitlementError}</p>}
+            {(claimError || entitlementError) && <p className="mt-3 text-sm text-red-600" role="status">{claimError || entitlementError}</p>}
           </div>
         </div>
       )}

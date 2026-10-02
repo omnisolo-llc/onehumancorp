@@ -18,14 +18,10 @@ describe('LinkInBioGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        store_name: 'Existing Store',
-        bio: 'Existing Bio',
-        theme: 'dark',
-        links: [{ title: 'Existing Link', url: 'https://existing.com' }],
-      }),
+    global.fetch = vi.fn(async (url, options) => {
+      if (url === '/api/v1/auth/session-identity') return Response.json({userId:'member',tenantId:'owned-tenant',expiresAt:Date.now()+60_000});
+      if (options?.method === 'POST') return new Response('',{status:200});
+      return Response.json({store_name:'Existing Store',bio:'Existing Bio',theme:'dark',links:[{title:'Existing Link',url:'https://existing.com'}]});
     });
 
     Object.assign(navigator, {
@@ -49,6 +45,24 @@ describe('LinkInBioGeneratorPage', () => {
         expect(screen.getByDisplayValue('Existing Link')).toBeDefined();
         expect(screen.getByDisplayValue('https://existing.com')).toBeDefined();
     });
+  });
+
+  it('exposes exclusive theme selection and restores it through real theme clicks', async () => {
+    await act(async () => { render(<LinkInBioGeneratorPage />); });
+    const light = screen.getByRole('button', { name: 'Light' });
+    const dark = screen.getByRole('button', { name: 'Dark' });
+    expect(dark).toHaveAttribute('aria-pressed', 'true');
+    expect(light).toHaveAttribute('aria-pressed', 'false');
+    const preview = screen.getByRole('link', { name: 'Existing Link' });
+    expect(preview).toHaveClass('bg-[#222222]');
+    fireEvent.click(light);
+    expect(light).toHaveAttribute('aria-pressed', 'true');
+    expect(dark).toHaveAttribute('aria-pressed', 'false');
+    expect(preview).toHaveClass('bg-white');
+    fireEvent.click(dark);
+    expect(dark).toHaveAttribute('aria-pressed', 'true');
+    expect(light).toHaveAttribute('aria-pressed', 'false');
+    expect(preview).toHaveClass('bg-[#222222]');
   });
 
   it('adds and removes links', async () => {
@@ -87,7 +101,7 @@ describe('LinkInBioGeneratorPage', () => {
         render(<LinkInBioGeneratorPage />);
     });
 
-    const saveBtn = screen.getByText('Save & Publish');
+    const saveBtn = screen.getByText('Save private configuration');
 
     await act(async () => {
         fireEvent.click(saveBtn);
@@ -104,12 +118,12 @@ describe('LinkInBioGeneratorPage', () => {
         render(<LinkInBioGeneratorPage />);
     });
 
-    const copyBtn = screen.getByText('Copy Link');
+    const copyBtn = screen.getByText('Copy saved private preview link');
 
     await act(async () => {
         fireEvent.click(copyBtn);
     });
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('/bio/my-store'));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/bio/owned-tenant`);
   });
 });

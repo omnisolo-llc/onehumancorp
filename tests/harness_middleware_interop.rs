@@ -26,6 +26,27 @@ async fn mysql_harness_middleware_migration_is_idempotent() {
         .await
         .expect("reapply MySQL harness middleware migration");
 
+    // Reapply the extension itself, exercising its existing-column dynamic SQL
+    // branch as well as the normal already-recorded migration fast path.
+    sqlx::query("DELETE FROM harness_middleware_schema_migrations WHERE version = ?")
+        .bind(server_lib::db::sql_middleware::HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+        .execute(&pool)
+        .await
+        .expect("reset only the disposable fixture extension marker");
+    server_lib::db::sql_middleware::run_mysql_harness_middleware_migration(&pool)
+        .await
+        .expect("reapply MySQL extension with existing resolved-model column");
+
+    let resolved_model_columns: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM information_schema.columns \
+         WHERE table_schema = DATABASE() AND table_name = 'harness_model_bindings' \
+         AND column_name = 'resolved_model' AND data_type = 'json'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("verify dynamic migration created the resolved-model JSON column");
+    assert_eq!(resolved_model_columns, 1);
+
     let table_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM information_schema.tables \
          WHERE table_schema = DATABASE() \

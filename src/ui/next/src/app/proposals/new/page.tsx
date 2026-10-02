@@ -59,11 +59,16 @@ export default function NewProposalPage() {
       <button
         type="button"
         onClick={generateProposal}
-        disabled={loading}
+        disabled={loading || !topic.trim()}
+        aria-describedby="proposal-requirements"
         className="bg-indigo-600 text-white px-6 py-2 rounded shadow hover:bg-indigo-700 disabled:opacity-50"
       >
         {loading ? "Drafting..." : "Generate Proposal"}
       </button>
+
+      <p id="proposal-requirements" role="status" aria-label="Proposal requirements" className="mt-3 text-sm text-gray-600">
+        {loading ? 'Drafting the supplied project brief.' : topic.trim() ? 'Ready to request a proposal draft.' : 'Enter a project brief to generate a proposal.'}
+      </p>
 
       {error ? (
         <p className="mt-6 text-sm font-medium text-red-700" role="alert">

@@ -1,0 +1,35 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
+import ViralPost from '../viral-post-generator/page';
+import Giveaway from '../giveaway/page';
+const plan = vi.hoisted(() => ({ hasPro: true, claimTrial: vi.fn().mockResolvedValue(false), claimError: null }));
+vi.mock('./useProPlan', () => ({ useProPlan: () => plan }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+beforeEach(() => { plan.hasPro = true; localStorage.clear(); });
+it('retires an unbranded generated post when verified Pro is lost, preserving editable fields', () => {
+  const view = render(<ViralPost />);
+  fireEvent.change(screen.getByPlaceholderText('e.g. Signature Coffee Blend'), { target: { value: 'Owner product' } });
+  fireEvent.change(screen.getByPlaceholderText('e.g. a bold start to your morning'), { target: { value: 'Owner benefit' } });
+  fireEvent.click(screen.getByRole('checkbox')); fireEvent.click(screen.getByRole('button', { name: 'Generate Post' }));
+  expect(screen.getByText(/Introducing the new Owner product/)).not.toHaveTextContent('Powered by OmniSolo');
+  plan.hasPro = false; view.rerender(<ViralPost />);
+  expect(screen.queryByRole('button', { name: 'Copy to Clipboard' })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Introducing the new Owner product/)).not.toBeInTheDocument();
+  expect(screen.getByPlaceholderText('e.g. Signature Coffee Blend')).toHaveValue('Owner product');
+  plan.hasPro = true; view.rerender(<ViralPost />);
+  expect(screen.queryByRole('button', { name: 'Copy to Clipboard' })).not.toBeInTheDocument();
+  plan.hasPro = false; view.rerender(<ViralPost />); fireEvent.click(screen.getByRole('button', { name: 'Generate Post' }));
+  expect(screen.getByText(/Introducing the new Owner product/)).toHaveTextContent('Powered by OmniSolo');
+});
+it('retires an unbranded giveaway URL when verified Pro is lost and only regenerates from current eligibility', () => {
+  const view = render(<Giveaway />); fireEvent.change(screen.getByPlaceholderText('e.g. Win a $100 Gift Card!'), { target: { value: 'Owner prize' } });
+  fireEvent.click(screen.getByRole('checkbox')); fireEvent.click(screen.getByRole('button', { name: 'Generate Giveaway Link' }));
+  expect(screen.getByDisplayValue(/branding=false/)).toBeVisible();
+  plan.hasPro = false; view.rerender(<Giveaway />);
+  expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue(/branding=false/)).not.toBeInTheDocument();
+  expect(screen.getByPlaceholderText('e.g. Win a $100 Gift Card!')).toHaveValue('Owner prize');
+  plan.hasPro = true; view.rerender(<Giveaway />); expect(screen.queryByDisplayValue(/branding=false/)).not.toBeInTheDocument();
+  plan.hasPro = false; view.rerender(<Giveaway />); fireEvent.click(screen.getByRole('button', { name: 'Generate Giveaway Link' }));
+  expect((screen.getByDisplayValue(/giveaway\/enter/) as HTMLInputElement).value).not.toContain('branding=false');
+});

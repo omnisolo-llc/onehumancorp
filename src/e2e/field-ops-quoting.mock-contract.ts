@@ -5,7 +5,7 @@ test.describe('Autonomous Field Service Quoting & Deposit Engine', () => {
 
   test('Owner sees service lead trigger a quote draft, deposit requirement, and provisional slot', async ({ browser }) => {
     const context = await browser.newContext();
-    const page = await adminPage(context);
+    const page = await adminPage(await context.newPage());
 
     await page.goto('/dashboard');
     await page.setViewportSize({ width: 375, height: 667 });
@@ -48,7 +48,7 @@ test.describe('Autonomous Field Service Quoting & Deposit Engine', () => {
 
   test('Customer deposit payment confirms booking and finalizes lead', async ({ browser }) => {
       const context = await browser.newContext();
-      const page = await adminPage(context);
+      const page = await adminPage(await context.newPage());
 
       // We simulate the Stripe webhook success to finalize the booking
       // We will send a mock checkout.session.completed with the required metadata

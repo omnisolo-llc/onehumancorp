@@ -58,6 +58,7 @@ pub use omnisolo_builtin_agent_llm as llm;
 pub use omnisolo_builtin_agent_tools as tools;
 pub mod mesh;
 pub mod proto;
+pub mod tenant_analysis;
 pub use service::start_builtin_agent;
 
 pub mod checkpointer;

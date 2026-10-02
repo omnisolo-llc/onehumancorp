@@ -1,12 +1,12 @@
 use async_trait::async_trait;
-use serde_json::json;
-use lazy_static::lazy_static;
 use regex::Regex;
-use std::sync::OnceLock;
+use serde_json::json;
+use std::sync::{LazyLock, OnceLock};
 
-lazy_static! {
-    static ref BSUID_REGEX: Regex = Regex::new(r"^[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}$").unwrap();
-}
+static BSUID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}$")
+        .expect("the fixed BSUID expression is valid")
+});
 
 pub(crate) fn build_whatsapp_payload(to: &str, body: &str) -> serde_json::Value {
     if BSUID_REGEX.is_match(to) {

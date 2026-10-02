@@ -1,10 +1,13 @@
+import { initializeOnboardingDraft } from './store';
+import { ownedOnboardingKey } from './draftSession';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 /* @vitest-environment jsdom */
 import { useOnboardingStore } from './store';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('useOnboardingStore', () => {
-  beforeEach(() => {
-    localStorage.clear();
+  beforeEach(async () => {
+    localStorage.clear(); notifyQueueIdentityChange(); await initializeOnboardingDraft();
     useOnboardingStore.setState({
       step: 1,
       businessDescription: '',
@@ -85,8 +88,8 @@ describe('useOnboardingStore', () => {
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v4'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
+    // The state is persisted in localStorage under ownedOnboardingKey('draft')!
+    const storedState = JSON.parse(localStorage.getItem(ownedOnboardingKey('draft')!) || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
@@ -95,14 +98,14 @@ describe('useOnboardingStore', () => {
   it('never persists the administrator password', () => {
     useOnboardingStore.getState().setStep(2);
 
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
+    const storedState = JSON.parse(localStorage.getItem(ownedOnboardingKey('draft')!) || '{}');
     expect(storedState.state.adminPassword).toBeUndefined();
     expect(JSON.stringify(storedState)).not.toContain('NeverPersist123');
   });
 
-  it('purges administrator passwords from legacy persisted state', async () => {
+  it('purges administrator passwords from old-schema owner-bound state', async () => {
     localStorage.setItem(
-      'onboarding-storage-v4',
+      ownedOnboardingKey('draft')!,
       JSON.stringify({
         state: { step: 2, adminPassword: 'LegacySecret123' },
         version: 4,
@@ -112,8 +115,23 @@ describe('useOnboardingStore', () => {
     await useOnboardingStore.persist.rehydrate();
 
     expect(useOnboardingStore.getState()).not.toHaveProperty('adminPassword');
-    expect(localStorage.getItem('onboarding-storage-v4')).not.toContain(
+    expect(localStorage.getItem(ownedOnboardingKey('draft')!)).not.toContain(
       'LegacySecret123',
     );
   });
 });
+
+it('does not persist in-flight, error, or completion claims with a business draft', () => {
+ useOnboardingStore.setState({ step: 5, isLoading: true, error: 'Old failure', startResult: { message: 'Old success' }, businessName: 'Keep business' });
+ const state = JSON.parse(localStorage.getItem(ownedOnboardingKey('draft')!)!).state;
+ expect(state.isLoading).toBeUndefined(); expect(state.error).toBeUndefined(); expect(state.startResult).toBeUndefined();
+ expect(state.step).toBe(3); expect(state.businessName).toBe('Keep business');
+});
+it('purges stale runtime fields and credentials from the current owner-bound version', async () => {
+ localStorage.setItem(ownedOnboardingKey('draft')!, JSON.stringify({ version: 6, state: { step: 5, isLoading: true, startResult: { status: 'launched' }, adminPassword: 'stale-secret', businessName: 'Kept' } }));
+ await useOnboardingStore.persist.rehydrate();
+ const state = useOnboardingStore.getState();
+ expect(state.step).toBe(3); expect(state.isLoading).toBe(false); expect(state.startResult).toBeNull(); expect(state).not.toHaveProperty('adminPassword'); expect(state.businessName).toBe('Kept');
+});
+
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(), readQueueOwner: vi.fn(async () => ({ userId: 'user-1', tenantId: 'tenant-1' })) }));

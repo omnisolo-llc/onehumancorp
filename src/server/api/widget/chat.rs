@@ -1,17 +1,19 @@
 use crate::db::DB;
-use crate::domain::repository::omnichannel_repo::OmniChannelRepo;
-use axum::{
-    Json,
-    extract::{Path, State},
+use crate::domain::repository::omnichannel_repo::{
+    Conversation, Message, MessageCursor, MessagePage, OmniChannelRepo, WidgetChatError,
 };
-use serde::{Deserialize, Serialize};
+use axum::{
+    Extension, Json,
+    extract::{Path, Query, State},
+    http::StatusCode,
+};
+use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct WidgetChatState {
     pub repo: OmniChannelRepo,
 }
-
 impl WidgetChatState {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
@@ -21,101 +23,97 @@ impl WidgetChatState {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CreateConversationRequest {
     pub tenant_id: Uuid,
-    pub channel: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct CreateConversationResponse {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub channel: String,
-    pub status: String,
+    pub inbox_id: Uuid,
+    pub contact_id: Uuid,
 }
 
 pub async fn create_conversation(
     State(state): State<Arc<WidgetChatState>>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(req): Json<CreateConversationRequest>,
-) -> Result<Json<CreateConversationResponse>, axum::http::StatusCode> {
-    let channel = req.channel.unwrap_or_else(|| "widget".to_string());
-
-    match state
+) -> Result<Json<Conversation>, StatusCode> {
+    let tenant = verified_tenant(&claims, req.tenant_id)?;
+    state
         .repo
-        .create_conversation(req.tenant_id, None, None, channel, "OPEN".to_string())
+        .create_conversation(tenant, req.inbox_id, req.contact_id)
         .await
-    {
-        Ok(conv) => Ok(Json(CreateConversationResponse {
-            id: conv.id,
-            tenant_id: conv.tenant_id,
-            channel: conv.channel,
-            status: conv.status,
-        })),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
-    }
+        .map(Json)
+        .map_err(status)
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CreateMessageRequest {
     pub tenant_id: Uuid,
     pub conversation_id: Uuid,
-    pub direction: Option<String>,
-    pub content: String,
-}
-
-#[derive(Serialize)]
-pub struct CreateMessageResponse {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub conversation_id: Uuid,
-    pub direction: String,
     pub content: String,
 }
 
 pub async fn create_message(
     State(state): State<Arc<WidgetChatState>>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(req): Json<CreateMessageRequest>,
-) -> Result<Json<CreateMessageResponse>, axum::http::StatusCode> {
-    let direction = req.direction.unwrap_or_else(|| "INBOUND".to_string());
-
-    match state
+) -> Result<Json<Message>, StatusCode> {
+    let tenant = verified_tenant(&claims, req.tenant_id)?;
+    // Strict middleware rechecks this actor's current stored membership. An
+    // account ID is opaque text, never a request-provided or invented UUID.
+    state
         .repo
-        .create_message(req.tenant_id, req.conversation_id, direction, req.content)
+        .create_message(tenant, req.conversation_id, &claims.sub, req.content)
         .await
-    {
-        Ok(msg) => Ok(Json(CreateMessageResponse {
-            id: msg.id,
-            tenant_id: msg.tenant_id,
-            conversation_id: msg.conversation_id,
-            direction: msg.direction,
-            content: msg.content,
-        })),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
-    }
+        .map(Json)
+        .map_err(status)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HistoryQuery {
+    limit: Option<usize>,
+    cursor: Option<String>,
 }
 
 pub async fn get_messages(
     State(state): State<Arc<WidgetChatState>>,
-    Path((_tenant_id, conversation_id)): Path<(Uuid, Uuid)>,
-) -> Result<Json<Vec<CreateMessageResponse>>, axum::http::StatusCode> {
-    match state
+    Extension(claims): Extension<::server_common::Claims>,
+    Path((tenant_id, conversation_id)): Path<(Uuid, Uuid)>,
+    Query(query): Query<HistoryQuery>,
+) -> Result<Json<MessagePage>, StatusCode> {
+    let tenant = verified_tenant(&claims, tenant_id)?;
+    let cursor = query
+        .cursor
+        .as_deref()
+        .map(MessageCursor::decode)
+        .transpose()
+        .map_err(status)?;
+    state
         .repo
-        .get_messages_by_conversation_id(conversation_id)
+        .get_messages_by_conversation_id(tenant, conversation_id, query.limit.unwrap_or(50), cursor)
         .await
-    {
-        Ok(messages) => {
-            let res = messages
-                .into_iter()
-                .map(|msg| CreateMessageResponse {
-                    id: msg.id,
-                    tenant_id: msg.tenant_id,
-                    conversation_id: msg.conversation_id,
-                    direction: msg.direction,
-                    content: msg.content,
-                })
-                .collect();
-            Ok(Json(res))
-        }
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        .map(Json)
+        .map_err(status)
+}
+
+fn verified_tenant(claims: &::server_common::Claims, target: Uuid) -> Result<Uuid, StatusCode> {
+    let raw = claims
+        .organization_id
+        .as_deref()
+        .ok_or(StatusCode::FORBIDDEN)?;
+    let tenant = Uuid::parse_str(raw).map_err(|_| StatusCode::FORBIDDEN)?;
+    // Never collapse distinct raw account IDs by trimming or case normalization.
+    if raw != tenant.to_string() || tenant != target {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok(tenant)
+}
+fn status(error: WidgetChatError) -> StatusCode {
+    match error {
+        WidgetChatError::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
+        WidgetChatError::NotFound => StatusCode::NOT_FOUND,
+        WidgetChatError::InvalidRequest => StatusCode::BAD_REQUEST,
+        WidgetChatError::Corrupt => StatusCode::INTERNAL_SERVER_ERROR,
+        WidgetChatError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }

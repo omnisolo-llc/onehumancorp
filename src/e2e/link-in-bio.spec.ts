@@ -1,78 +1,39 @@
-import { expect } from '@playwright/test';
-import { test } from './fixtures';
+import { test, expect } from './fixtures';
+import { createLinkBioActor } from './link_bio_owner';
 
-test.describe('Link-in-Bio Generator E2E', () => {
-    test('should allow member to customize and save link-in-bio', async ({ memberPage }) => {
-        // Navigate to Dashboard
-        await memberPage.goto('/ui/dashboard.html');
-
-        // Click Link-in-Bio Generator
-        await memberPage.click('#link-in-bio-link');
-
-        // Wait for Link-in-Bio page
-        await expect(memberPage).toHaveURL(/.*link-in-bio-generator.html/);
-
-        // Edit store name
-        await memberPage.fill('#store-name', 'My Awesome Bakery');
-
-        // Edit bio
-        await memberPage.fill('#bio-text', 'The best cookies in town.');
-
-        // Select 'dark' theme
-        await memberPage.click('.theme-btn[data-theme="dark"]');
-
-        // Verify preview updates
-        await expect(memberPage.locator('#preview-title')).toHaveText('My Awesome Bakery');
-        await expect(memberPage.locator('#preview-bio')).toHaveText('The best cookies in town.');
-
-        // Copy Link
-        await memberPage.click('#copy-btn');
-        await expect(memberPage.locator('#copy-btn')).toHaveText('Copied Link!');
-
-        // Wait a little for saveState to flush (it has a 500ms debounce)
-        await memberPage.waitForTimeout(1000);
-
-        // Now load the bio.html directly to see if the API actually saved it
-        // and if it loads successfully from the backend
-        const tenantId = 'e2e-tenant'; // In our fixture
-        await memberPage.goto(`/ui/bio.html?tenant=${tenantId}`);
-
-        // Wait for it to fetch
-        await memberPage.waitForTimeout(1000);
-
-        // Verify it loaded
-        await expect(memberPage.locator('#title')).toHaveText('My Awesome Bakery');
-        await expect(memberPage.locator('#bio')).toHaveText('The best cookies in town.');
-
-        // Verify Powered by link (it is an ohc-badge in bio.html)
-        const poweredByBadge = memberPage.locator('#ohc-badge');
-        await expect(poweredByBadge).toBeVisible();
-        await expect(poweredByBadge).toContainText('OmniSolo');
-
-        // Go back and toggle the remove branding switch
-        await memberPage.goto('/ui/link-in-bio-generator.html');
-        await memberPage.waitForTimeout(1000); // Wait for data to load
-
-        // Wait for preview to render the badge
-        const previewPoweredBy = memberPage.locator('#powered-by-link');
-        await expect(previewPoweredBy).toBeVisible();
-        await expect(previewPoweredBy).toHaveAttribute('href', /\/api\/v1\/growth\/referrals\/click/);
-        await expect(previewPoweredBy).toHaveAttribute('href', /source=bio_page/);
-
-        // Click the toggle to remove branding
-        await memberPage.locator('label', { has: memberPage.locator('#remove-branding-toggle') }).click();
-
-        // Wait for saveState to flush
-        await memberPage.waitForTimeout(1000);
-
-        // Ensure preview hides it
-        await expect(previewPoweredBy).toBeHidden();
-
-        // Go back to public page to ensure it's hidden there too
-        await memberPage.goto(`/ui/bio.html?tenant=${tenantId}`);
-        await memberPage.waitForTimeout(1000);
-
-        const hiddenPoweredByBadge = memberPage.locator('#ohc-badge');
-        await expect(hiddenPoweredByBadge).toBeHidden();
-    });
+test.describe('Private Link-in-Bio Configuration', () => {
+  test('allows a member to save and reload their own private profile', async ({ page, memberUser, baseURL }) => {
+    const memberPage=page;
+    const actor=await createLinkBioActor(memberPage,baseURL,memberUser);
+    await memberPage.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:new URL(baseURL!).origin});
+    await memberPage.goto('/ui/dashboard.html');
+    await memberPage.click('#link-in-bio-link');
+    await expect(memberPage).toHaveURL(/link-in-bio-generator.html/);
+    const save=memberPage.waitForResponse(response=>new URL(response.url()).pathname==='/api/v1/growth/link-in-bio' && response.request().method()==='POST' && response.request().postDataJSON().store_name==='My Awesome Bakery' && response.request().postDataJSON().bio==='The best cookies in town.' && response.request().postDataJSON().theme==='dark');
+    await memberPage.fill('#store-name','My Awesome Bakery');
+    await memberPage.fill('#bio-text','The best cookies in town.');
+    await memberPage.click('.theme-btn[data-theme="dark"]');
+    await expect(memberPage.locator('#preview-title')).toHaveText('My Awesome Bakery');
+    await expect(memberPage.locator('#preview-bio')).toHaveText('The best cookies in town.');
+    const saved=await save;expect(saved.status()).toBe(200);expect(await saved.text()).toBe('');
+    expect(saved.request().postDataJSON().tenant_id).toBe(actor.tenantId);
+    expect(saved.request().headers()['x-ohc-expected-user']).toBe(actor.userId);
+    await expect(memberPage.locator('#private-profile-status')).toContainText('Saved private configuration');
+    await memberPage.bringToFront();await expect.poll(()=>memberPage.evaluate(()=>document.hasFocus())).toBe(true);await memberPage.click('#copy-btn');
+    await expect(memberPage.locator('#copy-btn')).toHaveText('Copied private preview link');
+    expect(await memberPage.evaluate(()=>navigator.clipboard.readText())).toBe(`${new URL(baseURL!).origin}/bio/${encodeURIComponent(actor.tenantId)}`);
+    await memberPage.goto(`/ui/bio.html?tenant=${encodeURIComponent(actor.tenantId)}`);
+    await expect(memberPage.locator('#title')).toHaveText('My Awesome Bakery');
+    await expect(memberPage.locator('#bio')).toHaveText('The best cookies in town.');
+    await expect(memberPage.locator('#private-preview-status')).toContainText('Private preview');
+    const badge=memberPage.locator('#ohc-badge');await expect(badge).toBeVisible();await expect(badge).toContainText('OmniSolo');
+    await memberPage.goto('/ui/link-in-bio-generator.html');
+    await expect(memberPage.locator('#store-name')).toHaveValue('My Awesome Bakery');
+    const previewBadge=memberPage.locator('#powered-by-link');await expect(previewBadge).toBeVisible();
+    await expect(previewBadge).toHaveAttribute('href',/\/api\/v1\/growth\/referrals\/click/);await expect(previewBadge).toHaveAttribute('href',/source=bio_page/);
+    const brandingSave=memberPage.waitForResponse(response=>new URL(response.url()).pathname==='/api/v1/growth/link-in-bio' && response.request().method()==='POST' && response.request().postDataJSON().remove_branding===true);
+    await memberPage.locator('label',{has:memberPage.locator('#remove-branding-toggle')}).click();
+    const brandingResponse=await brandingSave;expect(brandingResponse.status()).toBe(200);expect(await brandingResponse.text()).toBe('');await expect(previewBadge).toBeHidden();
+    await memberPage.goto(`/ui/bio.html?tenant=${encodeURIComponent(actor.tenantId)}`);await expect(memberPage.locator('#title')).toHaveText('My Awesome Bakery');await expect(badge).toBeHidden();
+  });
 });

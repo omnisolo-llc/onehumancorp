@@ -38,6 +38,7 @@ describe('Agent Protocol UI', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       json: async () => ({ task_id: 'task-1' }), // create response
     });
 

@@ -10,6 +10,15 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('EmailSignatureGeneratorPage', () => {
+  it('exposes color choice and keeps a repeated selection idempotent', () => {
+    render(<EmailSignatureGeneratorPage />);
+    const blue=screen.getByRole('button',{name:'Select color #0066FF'}); const green=screen.getByRole('button',{name:'Select color #34C759'});
+    expect(blue).toHaveAttribute('aria-pressed','true'); expect(green).toHaveAttribute('aria-pressed','false');
+    fireEvent.click(green);
+    expect(blue).toHaveAttribute('aria-pressed','false'); expect(green).toHaveAttribute('aria-pressed','true');
+    fireEvent.click(green); expect(green).toHaveAttribute('aria-pressed','true');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();

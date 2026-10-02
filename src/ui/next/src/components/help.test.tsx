@@ -539,7 +539,8 @@ describe('HelpWidget', () => {
     const input = screen.getByPlaceholderText('Ask anything...');
     await user.type(input, '{Escape}');
 
-    expect(screen.queryByText('Ask anything...')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Ask anything...')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open help chat' })).toHaveFocus();
   });
 
   it('does not render protocol-relative agent links', async () => {
@@ -565,6 +566,87 @@ describe('HelpWidget', () => {
       expect(screen.getByText('Here is a link')).toBeInTheDocument();
     });
     expect(screen.queryByText('Read the full article →')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['/help?article=my-store-1', '/help/add-products'],
+    ['/help?article=payments-1', '/help/accept-payments'],
+    ['/help?article=marketing-tools', '/help/marketing-tools'],
+    ['/help?article=../settings', null],
+  ])('routes legacy Help article response %s to an existing article page', async (url, expected) => {
+    vi.mocked(fetch).mockImplementation(request => Promise.resolve(Response.json(
+      String(request).includes('/api/v1/chat')
+        ? { reply: 'Recorded Help answer', link: { url, title: 'Open article' } }
+        : [],
+    )));
+    const user = userEvent.setup();
+    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByRole('button', { name: 'Ask AI (Ask anything)' }));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'How do I add a product?');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Recorded Help answer')).toBeVisible();
+    if (expected) expect(screen.getByRole('link', { name: 'Open article' })).toHaveAttribute('href', expected);
+    else expect(screen.queryByRole('link', { name: 'Open article' })).not.toBeInTheDocument();
+  });
+
+  it('sends Operations questions to the actual Help API instead of inventing a department handoff', async () => {
+    const user = userEvent.setup();
+    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByRole('button', { name: 'Ask AI (Ask anything)' }));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'How do Operations work?');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(fetch).toHaveBeenCalledWith('/api/v1/chat', expect.objectContaining({ method: 'POST', body: JSON.stringify({ message: 'How do Operations work?' }) }));
+    expect(await screen.findByText('Hello from AI')).toBeVisible();
+    expect(screen.queryByText('I have routed your request to the Operations department.')).not.toBeInTheDocument();
+  });
+  it('ignores a late reply after Clear chat and permits a fresh message', async () => {
+    let resolve!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementation(url => String(url).includes('/api/v1/chat') ? new Promise<Response>(done => { resolve = done; }) : Promise.resolve(Response.json([])));
+    const user = userEvent.setup();
+    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByRole('button', { name: 'Ask AI (Ask anything)' }));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'First question');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await user.click(screen.getByRole('button', { name: 'Clear chat' }));
+    await act(async () => resolve(Response.json({ reply: 'Old reply' })));
+    expect(screen.queryByText('Old reply')).not.toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'Fresh question');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled();
+  });
+  it('does not send another message while the current reply is pending', async () => {
+    let resolve!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementation(url => String(url).includes('/api/v1/chat') ? new Promise<Response>(done => { resolve = done; }) : Promise.resolve(Response.json([])));
+    const user = userEvent.setup();
+    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByRole('button', { name: 'Ask AI (Ask anything)' }));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'First');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'Second');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+    await act(async () => resolve(Response.json({ reply: 'First answer' })));
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled();
+  });
+
+  it('releases pending chat state after navigation while ignoring the old route reply', async () => {
+    let resolve!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementation(url => String(url).includes('/api/v1/chat') ? new Promise<Response>(done => { resolve = done; }) : Promise.resolve(Response.json([])));
+    const user = userEvent.setup();
+    const view = () => <TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>;
+    const { rerender } = render(view());
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByRole('button', { name: 'Ask AI (Ask anything)' }));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'Old route question');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    navigationMocks.pathname = '/help';
+    rerender(view());
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'New route question');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled();
+    await act(async () => resolve(Response.json({ reply: 'Old route answer' })));
+    expect(screen.queryByText('Old route answer')).not.toBeInTheDocument();
   });
 
 });

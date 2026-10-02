@@ -1,7 +1,7 @@
 use ::server_pricing::compression::minify_json_prompt;
 use ::server_pricing::deduplication::{DeduplicationResult, RequestDeduplicator};
 use ::server_pricing::prompt_caching::PromptCache;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::pin::Pin;
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -70,6 +70,7 @@ pub fn get_circuit_breaker() -> &'static CircuitBreaker {
 pub struct MinimaxClient {
     api_key: String,
     url: String,
+    embed_url: String,
     cache: PromptCache,
     deduplicator: std::sync::Arc<RequestDeduplicator>,
 }
@@ -88,46 +89,34 @@ struct MinimaxMessage {
     content: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct MinimaxResponse {
-    choices: Vec<Choice>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Choice {
-    message: MessageContent,
-}
-
-#[derive(Debug, Deserialize)]
-struct MessageContent {
-    content: String,
-}
-
 impl MinimaxClient {
-    pub fn is_mock_key(api_key: &str) -> bool {
-        api_key == "fake-key"
-            || api_key.starts_with("ci-")
-            || api_key.starts_with("mock")
-            || api_key.starts_with("test")
-            || api_key.contains("placeholder")
-            || api_key.is_empty()
-            || cfg!(test)
-    }
-
-    pub fn is_mock(&self) -> bool {
-        Self::is_mock_key(&self.api_key)
+    fn validate_credentials(&self) -> Result<(), String> {
+        let key = self.api_key.trim().to_ascii_lowercase();
+        if key.is_empty()
+            || key == "fake-key"
+            || key.starts_with("dummy")
+            || key.starts_with("ci-")
+            || key.starts_with("mock")
+            || key.starts_with("test")
+            || key.contains("placeholder")
+        {
+            return Err("MiniMax requires a configured provider credential".into());
+        }
+        Ok(())
     }
 
     pub fn new(api_key: String) -> Self {
         MinimaxClient {
             api_key,
-            url: "https://api.minimax.chat/v1/chat/completions".to_string(),
+            url: "https://api.minimax.io/v1/chat/completions".to_string(),
+            embed_url: "https://api.minimax.chat/v1/embeddings".to_string(),
             cache: PromptCache::new(Duration::from_secs(300)),
             deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), // 5 minute TTL
         }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        self.validate_credentials()?;
         let prompt_clone = prompt.to_string();
         let deduplicator = self.deduplicator.clone();
 
@@ -159,144 +148,12 @@ impl MinimaxClient {
             return Ok(cached.text);
         }
 
-        if self.is_mock() {
-            let lower_prompt = optimized_prompt.to_lowercase();
-            if lower_prompt.contains("maya") {
-                return Ok(r#"{
-                    "business_name": "Maya's Cakes",
-                    "business_type": "Bakery",
-                    "categories": ["food", "physical"],
-                    "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00", "variants": [{"name": "6-inch", "price_modifier": "0.00"}, {"name": "8-inch", "price_modifier": "15.00"}]}],
-                    "suggested_features": ["menu", "booking", "online_store"]
-                }"#.to_string());
-            } else if lower_prompt.contains("alex") || lower_prompt.contains("art shop") {
-                return Ok(r#"{
-                    "business_name": "Alex Art",
-                    "business_type": "Retail",
-                    "categories": ["art"],
-                    "initial_products": [{"name": "Painting", "price": "100.00"}],
-                    "suggested_features": ["online_store"]
-                }"#
-                .to_string());
-            } else if lower_prompt.contains("carlos") {
-                return Ok(r#"{
-                    "business_name": "Carlos Plumbing",
-                    "business_type": "Service",
-                    "categories": ["service"],
-                    "initial_products": [{"name": "Pipe Fix", "price": "80.00"}],
-                    "suggested_features": ["booking"]
-                }"#
-                .to_string());
-            } else if lower_prompt.contains("e2e_mock_trigger_expert_team_analysis")
-                || (lower_prompt.contains("comprehensive business plan")
-                    && lower_prompt.contains("chart: required"))
-            {
-                if lower_prompt.contains("synthesize") {
-                    return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
-                } else if lower_prompt.contains("researcher")
-                    || lower_prompt.contains("financial")
-                    || lower_prompt.contains("strategic")
-                    || lower_prompt.contains("process")
-                    || lower_prompt.contains("quality")
-                    || lower_prompt.contains("expert")
-                {
-                    let rand_num = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos();
-                    let role = if lower_prompt.contains("researcher") {
-                        "Chapter 1 Chapter 2 unique words "
-                    } else if lower_prompt.contains("financial") {
-                        "Chapter 3 Chapter 4 unique terms "
-                    } else if lower_prompt.contains("strategic") {
-                        "Chapter 5 Chapter 6 unique ideas "
-                    } else if lower_prompt.contains("process") {
-                        "Chapter 7 unique process "
-                    } else {
-                        "Chapter 8 unique quality "
-                    };
-                    return Ok(format!("{}{}", role, rand_num));
-                }
-                return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
-            } else if lower_prompt.contains("e2e_mock_trigger_expert_team_failure")
-                || lower_prompt.contains("short task")
-            {
-                return Ok("Short output".to_string());
-            } else if lower_prompt.contains("marketing_strategist")
-                || lower_prompt.contains("marketing strategist")
-            {
-                return Ok(r#"{
-                    "agent_id": "marketing_strategist",
-                    "role": "Marketing Strategist",
-                    "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
-                    "handoff_to": ["sales_engineer"],
-                    "confidence": 0.95
-                }"#.to_string());
-            } else if lower_prompt.contains("sales_engineer")
-                || lower_prompt.contains("sales engineer")
-            {
-                return Ok(r#"{
-                    "agent_id": "sales_engineer",
-                    "role": "Sales Engineer",
-                    "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
-                    "handoff_to": ["operations_planner"],
-                    "confidence": 0.95
-                }"#.to_string());
-            } else if lower_prompt.contains("operations_planner")
-                || lower_prompt.contains("operations planner")
-            {
-                return Ok(r#"{
-                    "agent_id": "operations_planner",
-                    "role": "Operations Planner",
-                    "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
-                    "handoff_to": ["quality_reviewer"],
-                    "confidence": 0.95
-                }"#.to_string());
-            } else if lower_prompt.contains("quality_reviewer")
-                || lower_prompt.contains("quality reviewer")
-            {
-                return Ok(r#"{
-                    "agent_id": "quality_reviewer",
-                    "role": "Quality Reviewer",
-                    "contribution": "Final review resolves the prior agent contributions into launch steps.",
-                    "handoff_to": [],
-                    "confidence": 0.95
-                }"#.to_string());
-            } else if lower_prompt.contains("customer success ambassador")
-                || lower_prompt.contains("check-in message")
-            {
-                let name = if lower_prompt.contains("sarah") {
-                    "Sarah"
-                } else {
-                    "there"
-                };
-                return Ok(format!(
-                    "Hi {}, it's been a while! We wanted to check in and see how you're doing. Let us know if you need anything.",
-                    name
-                ));
-            } else {
-                return Ok(r#"{
-                    "business_name": "Generic Business",
-"priority": "urgent",
-"context_summary": "Customer needs sink fixed tomorrow",
-"action_type": "Draft Booking",
-"action_payload": "I can fix it tomorrow at 2 PM.",
-"feature_type": "instagram_dm",
-                    "business_type": "Retail",
-                    "categories": ["physical"],
-                    "initial_products": [{"name": "Item 1", "price": "10.00"}],
-                    "suggested_features": ["online_store"]
-                }"#
-                .to_string());
-            }
-        }
-
         let cb = get_circuit_breaker();
         if !cb.allow() {
             return Err("circuit breaker open".to_string());
         }
 
-        let client = reqwest::Client::new();
+        let client = provider_http_client()?;
 
         let request_body = MinimaxRequest {
             model: std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string()),
@@ -307,261 +164,334 @@ impl MinimaxClient {
             stream: Some(false),
         };
 
-        let mut last_err = String::new();
-        for _ in 0..3 {
-            let response_future = client
-                .post(&self.url)
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .json(&request_body)
-                .send();
-            let response = tokio::time::timeout(Duration::from_secs(60), response_future)
-                .await
-                .map_err(|e| e.to_string())
-                .and_then(|r| r.map_err(|e| e.to_string()));
-
-            match response {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        let result: MinimaxResponse =
-                            resp.json().await.map_err(|e| e.to_string())?;
-                        cb.record_success();
-                        if let Some(choice) = result.choices.first() {
-                            let content = choice.message.content.clone();
-                            // 3. Update Cache
-                            self.cache
-                                .set(&optimized_prompt, &content, optimized_prompt.len() / 4); // rough token estimate
-                            return Ok(content);
-                        } else {
-                            last_err = "empty response from minimax".to_string();
-                            cb.record_failure();
-                            tokio::time::sleep(Duration::from_secs(1)).await;
-                            continue;
-                        }
-                    } else {
-                        if resp.status().as_u16() >= 500 {
-                            last_err = format!("API overloaded (status {})", resp.status());
-                            tokio::time::sleep(Duration::from_secs(2)).await;
-                            continue;
-                        }
-                        cb.record_failure();
-                        let status = resp.status();
-                        let text = resp.text().await.unwrap_or_default();
-                        last_err = format!("API error (status {}): {}", status, text);
-                        tokio::time::sleep(Duration::from_secs(1)).await;
-                        continue;
-                    }
-                }
-                Err(e) => {
-                    cb.record_failure();
-                    last_err = e.to_string();
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    continue;
-                }
-            }
+        let content = async {
+            let body = send_inference(
+                client
+                    .post(&self.url)
+                    .bearer_auth(&self.api_key)
+                    .json(&request_body),
+            )
+            .await?;
+            let result: serde_json::Value =
+                serde_json::from_slice(&body).map_err(|_| "MiniMax returned malformed JSON")?;
+            completed_minimax_text(&result)
         }
-
-        Err(format!("failed after 3 retries: {}", last_err))
+        .await
+        .inspect_err(|_| cb.record_failure())?;
+        cb.record_success();
+        self.cache
+            .set(&optimized_prompt, &content, optimized_prompt.len() / 4);
+        Ok(content)
     }
 
     pub async fn reason_stream(
         &self,
         prompt: &str,
     ) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
-        let api_key = self.api_key.clone();
-        let url = self.url.clone();
+        if let Err(error) = self.validate_credentials() {
+            return Box::pin(tokio_stream::once(Err(error)));
+        }
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
             PromptCache::truncate_context(prompt, 2000)
         };
-
-        let (tx, rx) = tokio::sync::mpsc::channel(100);
-
-        // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self
+        if let (Some(cached), _) = self
             .cache
             .get_with_cost_cents(&optimized_prompt, "minimax-text-01")
         {
-            tracing::info!(
-                "Prompt cache hit in stream (saved ~{} tokens)",
-                cached.token_count
-            ); // pii-safe
-            let cached_text = cached.text.clone();
-            tokio::spawn(async move {
-                let _ = tx.send(Ok(cached_text)).await;
-            });
-            return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
+            return Box::pin(tokio_stream::once(Ok(cached.text)));
         }
-
-        if self.is_mock() {
-            let (tx, rx) = tokio::sync::mpsc::channel(1);
-            tokio::spawn(async move {
-                let mock_json = r#"{"choices": [{"delta": {"content": "{\"business_name\": \"Generic Business\"}"}}]}"#;
-                let mock_response = format!("data: {}\n\ndata: [DONE]\n\n", mock_json);
-                for line in mock_response.lines() {
-                    if let Some(json_str) = line.strip_prefix("data: ") {
-                        let _ = tx.send(Ok(json_str.to_string())).await;
-                    }
-                }
-            });
-            return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
-        }
-
+        let api_key = self.api_key.clone();
+        let url = self.url.clone();
+        let request_body = MinimaxRequest {
+            model: std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string()),
+            messages: vec![MinimaxMessage {
+                role: "user".to_string(),
+                content: optimized_prompt,
+            }],
+            stream: Some(true),
+        };
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
         tokio::spawn(async move {
-            let client = reqwest::Client::new();
-            let request_body = MinimaxRequest {
-                model: "MiniMax-M2.7".to_string(),
-                messages: vec![MinimaxMessage {
-                    role: "user".to_string(),
-                    content: optimized_prompt,
-                }],
-                stream: Some(true),
-            };
-
-            let response = client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {}", api_key))
-                .json(&request_body)
-                .send()
-                .await;
-
-            match response {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        let mut stream = resp.bytes_stream();
-                        use tokio_stream::StreamExt;
-                        while let Some(chunk_res) = stream.next().await {
-                            match chunk_res {
-                                Ok(chunk) => {
-                                    let text = String::from_utf8_lossy(&chunk).to_string();
-                                    // Parse SSE data: data: {"choices": [{"delta": {"content": "..."}}]}
-                                    // Note: lossy conversion might corrupt characters split across chunks.
-                                    // Ideally use a stateful UTF-8 decoder.
-                                    for line in text.lines() {
-                                        if let Some(json_str) = line.strip_prefix("data: ") {
-                                            if json_str == "[DONE]" {
-                                                break;
-                                            }
-                                            if let Ok(val) =
-                                                serde_json::from_str::<serde_json::Value>(json_str)
-                                                && let Some(content) =
-                                                    val["choices"][0]["delta"]["content"].as_str()
-                                            {
-                                                let _ = tx.send(Ok(content.to_string())).await;
-                                            }
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    let _ = tx.send(Err(e.to_string())).await;
-                                }
-                            }
-                        }
-                    } else {
-                        let _ = tx
-                            .send(Err(format!("Stream error: {}", resp.status())))
-                            .await;
-                    }
-                }
-                Err(e) => {
-                    let _ = tx.send(Err(e.to_string())).await;
-                }
+            if let Err(error) = stream_minimax(&url, &api_key, &request_body, &tx).await {
+                let _ = tx.send(Err(error)).await;
             }
         });
-
         Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx))
     }
 
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
+        self.validate_credentials()?;
+        validate_embedding_input(text)?;
         let cb = get_circuit_breaker();
         if !cb.allow() {
-            return Err("circuit breaker open".to_string());
+            return Err("circuit breaker open".into());
         }
-
-        if self.is_mock() {
-            return Ok(vec![0.1; 1536]);
-        }
-
-        let client = reqwest::Client::new();
-
         let request_body = serde_json::json!({
-            "model": "embo-01",
-            "type": "db",
-            "texts": [text]
+            "model": "embo-01", "type": "db", "texts": [text]
         });
+        let embedding = async {
+            let body = send_inference(
+                provider_http_client()?
+                    .post(&self.embed_url)
+                    .bearer_auth(&self.api_key)
+                    .json(&request_body),
+            )
+            .await?;
+            let result: serde_json::Value =
+                serde_json::from_slice(&body).map_err(|_| "MiniMax returned malformed JSON")?;
+            validate_minimax_envelope(&result)?;
+            let vectors = result["vectors"]
+                .as_array()
+                .filter(|vectors| vectors.len() == 1)
+                .ok_or("MiniMax must return exactly one vector for one input")?;
+            parse_embedding(&vectors[0])
+        }
+        .await
+        .inspect_err(|_| cb.record_failure())?;
+        cb.record_success();
+        Ok(embedding)
+    }
+}
 
-        let mut last_err = String::new();
-        for _ in 0..3 {
-            let response_future = client
-                .post("https://api.minimax.chat/v1/embeddings")
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .json(&request_body)
-                .send();
-            let response = tokio::time::timeout(Duration::from_secs(60), response_future)
-                .await
-                .map_err(|e| e.to_string())
-                .and_then(|r| r.map_err(|e| e.to_string()));
+fn provider_http_client() -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|_| "Cannot configure provider transport".into())
+}
 
-            match response {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        let result: serde_json::Value =
-                            resp.json().await.map_err(|e| e.to_string())?;
+const MAX_PROVIDER_RESPONSE_BYTES: usize = 10 * 1024 * 1024;
+const MAX_PROVIDER_TEXT_BYTES: usize = 8 * 1024 * 1024;
+const MAX_EMBEDDING_INPUT_BYTES: usize = 1024 * 1024;
+const MAX_EMBEDDING_DIMENSIONS: usize = 65_536;
 
-                        // Handle Minimax base_resp envelope
-                        if let Some(base_resp) = result.get("base_resp") {
-                            let code = base_resp
-                                .get("status_code")
-                                .and_then(|c| c.as_i64())
-                                .unwrap_or(0);
-                            if code != 0 && code != 1000 {
-                                cb.record_failure();
-                                let msg = base_resp
-                                    .get("status_msg")
-                                    .and_then(|m| m.as_str())
-                                    .unwrap_or("unknown error");
-                                last_err = format!("API error (status {}): {}", code, msg);
-                                tokio::time::sleep(Duration::from_secs(1)).await;
-                                continue;
-                            }
-                        }
+async fn send_inference(request: reqwest::RequestBuilder) -> Result<Vec<u8>, String> {
+    // Even a timeout or HTTP 5xx may follow accepted, billable inference.
+    // Never redispatch automatically; callers must make an explicit new attempt.
+    let mut response = request
+        .send()
+        .await
+        .map_err(|_| "Provider outcome is unknown; no automatic retry was made")?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "Provider returned HTTP {}; no automatic retry was made",
+            response.status().as_u16()
+        ));
+    }
+    if response
+        .content_length()
+        .is_some_and(|length| length > MAX_PROVIDER_RESPONSE_BYTES as u64)
+    {
+        return Err("Provider response exceeded the safety limit".into());
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(
+        |_| "Provider response was interrupted; outcome is unknown and no automatic retry was made",
+    )? {
+        if body.len().saturating_add(chunk.len()) > MAX_PROVIDER_RESPONSE_BYTES {
+            return Err("Provider response exceeded the safety limit".into());
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(body)
+}
 
-                        cb.record_success();
-                        if let Some(vectors) = result["vectors"].as_array()
-                            && let Some(vector) = vectors.first()
-                            && let Some(array) = vector.as_array()
-                        {
-                            let f32_vec: Vec<f32> =
-                                array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
-                            return Ok(f32_vec);
-                        }
-                        return Err("invalid response format".to_string());
-                    } else {
-                        if resp.status().as_u16() >= 500 {
-                            last_err = format!("API overloaded (status {})", resp.status());
-                            tokio::time::sleep(Duration::from_secs(2)).await;
-                            continue;
-                        }
-                        cb.record_failure();
-                        last_err = format!("API error (status {})", resp.status());
-                        tokio::time::sleep(Duration::from_secs(1)).await;
-                        continue;
-                    }
+fn validate_embedding_input(text: &str) -> Result<(), String> {
+    if text.trim().is_empty() || text.len() > MAX_EMBEDDING_INPUT_BYTES {
+        return Err("Embedding input must be nonempty and within the size limit".into());
+    }
+    Ok(())
+}
+
+fn validate_minimax_envelope(value: &serde_json::Value) -> Result<(), String> {
+    if value.get("error").is_some_and(|error| !error.is_null()) {
+        return Err("MiniMax returned an API error".into());
+    }
+    if let Some(base) = value.get("base_resp")
+        && base.get("status_code").and_then(serde_json::Value::as_i64) != Some(0)
+    {
+        return Err("MiniMax returned an unsuccessful provider status".into());
+    }
+    Ok(())
+}
+
+fn completed_minimax_text(value: &serde_json::Value) -> Result<String, String> {
+    validate_minimax_envelope(value)?;
+    let choice = &value["choices"][0];
+    if choice["finish_reason"].as_str() != Some("stop") {
+        return Err("MiniMax did not complete the requested response".into());
+    }
+    let text = choice["message"]["content"]
+        .as_str()
+        .filter(|text| !text.trim().is_empty() && text.len() <= MAX_PROVIDER_TEXT_BYTES)
+        .ok_or("MiniMax did not return nonempty text")?;
+    Ok(text.to_string())
+}
+
+fn parse_embedding(value: &serde_json::Value) -> Result<Vec<f32>, String> {
+    let array = value
+        .as_array()
+        .filter(|array| !array.is_empty() && array.len() <= MAX_EMBEDDING_DIMENSIONS)
+        .ok_or("Provider did not return a nonempty embedding")?;
+    array
+        .iter()
+        .map(|value| {
+            value
+                .as_f64()
+                .map(|number| number as f32)
+                .filter(|number| number.is_finite())
+                .ok_or_else(|| "Provider embedding contains an invalid numeric value".into())
+        })
+        .collect()
+}
+
+// SSE transport chunks are arbitrary bytes, not complete JSON or UTF-8 frames.
+// Keep partial lines/events until their delimiters arrive and require both the
+// provider's successful finish reason and the protocol's final marker.
+#[derive(Default)]
+struct MinimaxStreamDecoder {
+    pending: Vec<u8>,
+    data: String,
+    has_text: bool,
+    finished: bool,
+    ended: bool,
+}
+impl MinimaxStreamDecoder {
+    fn push(&mut self, bytes: &[u8]) -> Result<Vec<String>, String> {
+        const MAX_EVENT: usize = 1024 * 1024;
+        if self.pending.len().saturating_add(bytes.len()) > MAX_EVENT {
+            return Err("MiniMax stream event exceeded the safety limit".into());
+        }
+        self.pending.extend_from_slice(bytes);
+        let mut output = Vec::new();
+        while let Some(end) = self.pending.iter().position(|byte| *byte == b'\n') {
+            let line: Vec<_> = self.pending.drain(..=end).collect();
+            let line = std::str::from_utf8(&line[..line.len() - 1])
+                .map_err(|_| "MiniMax stream contains invalid UTF-8")?;
+            let line = line.strip_suffix('\r').unwrap_or(line);
+            if line.is_empty() {
+                if let Some(content) = self.event()? {
+                    output.push(content);
                 }
-                Err(e) => {
-                    cb.record_failure();
-                    last_err = e.to_string();
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    continue;
+                if self.ended {
+                    break;
                 }
+            } else if let Some(data) = line.strip_prefix("data:") {
+                let data = data.strip_prefix(' ').unwrap_or(data);
+                if self.data.len().saturating_add(data.len()).saturating_add(1) > MAX_EVENT {
+                    return Err("MiniMax stream event exceeded the safety limit".into());
+                }
+                self.data.push_str(data);
+                self.data.push('\n');
             }
         }
-
-        Err(format!("failed after 3 retries: {}", last_err))
+        Ok(output)
     }
+
+    fn event(&mut self) -> Result<Option<String>, String> {
+        if self.data.is_empty() {
+            return Ok(None);
+        }
+        let data = std::mem::take(&mut self.data);
+        let data = data.trim_end_matches('\n');
+        if data == "[DONE]" {
+            if !self.finished || !self.has_text {
+                return Err("MiniMax stream ended without completed nonempty text".into());
+            }
+            self.ended = true;
+            return Ok(None);
+        }
+        let value: serde_json::Value =
+            serde_json::from_str(data).map_err(|_| "MiniMax stream contains malformed JSON")?;
+        validate_minimax_envelope(&value)?;
+        let choices = value["choices"]
+            .as_array()
+            .ok_or("MiniMax stream is missing choices")?;
+        // The optional usage-only event has no choices.
+        let Some(choice) = choices.first() else {
+            return Ok(None);
+        };
+        if choices.len() != 1
+            || choice
+                .get("index")
+                .is_some_and(|index| index.as_u64() != Some(0))
+        {
+            return Err("MiniMax stream returned an unexpected choice sequence".into());
+        }
+        if self.finished {
+            return Err("MiniMax stream returned choice data after completion".into());
+        }
+        if let Some(reason) = choice
+            .get("finish_reason")
+            .filter(|reason| !reason.is_null())
+        {
+            if reason.as_str() != Some("stop") {
+                return Err("MiniMax stream stopped before completing the response".into());
+            }
+            self.finished = true;
+        }
+        let content = choice["delta"].get("content");
+        match content {
+            None | Some(serde_json::Value::Null) => Ok(None),
+            Some(serde_json::Value::String(text)) => {
+                self.has_text |= !text.trim().is_empty();
+                Ok((!text.is_empty()).then(|| text.clone()))
+            }
+            Some(_) => Err("MiniMax stream contains invalid text content".into()),
+        }
+    }
+
+    fn finish(self) -> Result<(), String> {
+        if self.ended {
+            Ok(())
+        } else {
+            Err("MiniMax stream was interrupted before confirmed completion".into())
+        }
+    }
+}
+
+async fn stream_minimax(
+    url: &str,
+    api_key: &str,
+    request: &MinimaxRequest,
+    tx: &tokio::sync::mpsc::Sender<Result<String, String>>,
+) -> Result<(), String> {
+    let response = provider_http_client()?
+        .post(url)
+        .bearer_auth(api_key)
+        .json(request)
+        .send()
+        .await
+        .map_err(|_| "MiniMax stream outcome is unknown; no automatic retry was made")?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "MiniMax stream returned HTTP {}",
+            response.status().as_u16()
+        ));
+    }
+    let mut stream = response.bytes_stream();
+    let mut decoder = MinimaxStreamDecoder::default();
+    let mut received = 0usize;
+    use tokio_stream::StreamExt;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|_| "MiniMax stream response was interrupted")?;
+        received = received.saturating_add(chunk.len());
+        if received > 10 * 1024 * 1024 {
+            return Err("MiniMax stream exceeded the safety limit".into());
+        }
+        for content in decoder.push(&chunk)? {
+            if tx.send(Ok(content)).await.is_err() {
+                return Ok(());
+            }
+        }
+        if decoder.ended {
+            break;
+        }
+    }
+    decoder.finish()
 }
 
 #[path = "local_generation.rs"]
@@ -645,90 +575,40 @@ impl LocalLLMClient {
             return Ok(cached.text);
         }
 
-        let client = reqwest::Client::new();
+        let client = provider_http_client()?;
         let req_body = serde_json::json!({
             "model": self.model,
             "prompt": optimized_prompt,
             "stream": false,
         });
 
-        let mut last_err = String::new();
-        for _ in 0..3 {
-            let response_future = client.post(&self.endpoint).json(&req_body).send();
-            let response = tokio::time::timeout(Duration::from_secs(60), response_future)
-                .await
-                .map_err(|e| e.to_string())
-                .and_then(|r| r.map_err(|e| e.to_string()));
-
-            match response {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        let result_res: Result<serde_json::Value, _> =
-                            resp.json().await.map_err(|e| e.to_string());
-                        if let Ok(result) = result_res {
-                            if let Some(response) = result["response"].as_str() {
-                                cb.record_success();
-                                self.cache.set(
-                                    &optimized_prompt,
-                                    response,
-                                    optimized_prompt.len() / 4,
-                                );
-                                return Ok(response.to_string());
-                            } else {
-                                last_err = "missing response field".to_string();
-                            }
-                        } else {
-                            last_err = "invalid JSON response".to_string();
-                        }
-                    } else {
-                        if resp.status().as_u16() >= 500 {
-                            last_err = format!("API overloaded (status {})", resp.status());
-                            tokio::time::sleep(Duration::from_secs(2)).await;
-                            continue;
-                        }
-                        last_err = format!("local LLM error (status {})", resp.status());
-                    }
-                }
-                Err(e) => {
-                    last_err = e;
-                }
-            }
-            cb.record_failure();
-            tokio::time::sleep(Duration::from_secs(1)).await;
+        let result = async {
+            let body = send_inference(client.post(&self.endpoint).json(&req_body)).await?;
+            local_generation::parse_generation(&body, &self.model)
         }
-
-        Err(format!("failed after 3 retries: {}", last_err))
+        .await
+        .inspect_err(|_| cb.record_failure())?;
+        cb.record_success();
+        self.cache
+            .set(&optimized_prompt, &result.text, optimized_prompt.len() / 4);
+        Ok(result.text)
     }
 
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
-        let client = reqwest::Client::new();
-        let req_body = serde_json::json!({
-            "model": self.model,
-            "prompt": text,
-        });
-
-        let resp = client
-            .post(&self.embed_endpoint)
-            .json(&req_body)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!(
-                "local LLM embedding error (status {})",
-                resp.status()
-            ));
-        }
-
-        let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-        let embedding = result["embedding"]
-            .as_array()
-            .ok_or("missing embedding field")?;
-        let f32_vec: Vec<f32> = embedding
-            .iter()
-            .map(|v| v.as_f64().unwrap() as f32)
-            .collect();
-        Ok(f32_vec)
+        validate_embedding_input(text)?;
+        let req_body = serde_json::json!({ "model": self.model, "prompt": text });
+        let body = send_inference(
+            provider_http_client()?
+                .post(&self.embed_endpoint)
+                .json(&req_body),
+        )
+        .await?;
+        let result: serde_json::Value =
+            serde_json::from_slice(&body).map_err(|_| "Local model returned malformed JSON")?;
+        parse_embedding(&result["embedding"])
     }
 }
+
+#[cfg(test)]
+#[path = "minimax_tests.rs"]
+mod truthful_provider_tests;

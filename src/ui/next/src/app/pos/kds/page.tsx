@@ -1,7 +1,7 @@
 "use client";
 import type { OrderRecord, SaleProduct } from '@/lib/business-records';
 
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useRef } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function KDSPage() {
@@ -10,6 +10,8 @@ export default function KDSPage() {
   const [language, setLanguage] = useState<'en' | 'ar'>('en');
   const [isOffline, setIsOffline] = useState(false);
   const [syncing] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const pending = useRef(new Set<string>());
 
   // Network listener
   useEffect(() => {
@@ -67,42 +69,32 @@ export default function KDSPage() {
     loadData();
   }, []);
 
+  const cache = (key: string, value: unknown) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Queue persistence is checked separately. */ } };
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
-    // Optimistic UI Update
-    setOrders(prev => {
-       const next = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
-       if (typeof window !== 'undefined') {
-          localStorage.setItem('omnisolo_pos_kds_orders', JSON.stringify(next));
-       }
-       return next;
-    });
-
-    const event = {
-      type: 'UPDATE_ORDER_STATUS',
-      payload: { order_id: orderId, status: newStatus },
-      timestamp: new Date().toISOString(),
-    };
-
-    await SyncManager.getInstance().enqueue(event);
+    const key = `order:${orderId}`;
+    const original = orders.find(order => order.id === orderId);
+    if (!original || pending.current.has(key)) return;
+    pending.current.add(key); setQueueError(null);
+    setOrders(current => { const next = current.map(order => order.id === orderId ? { ...order, status: newStatus } : order); cache('omnisolo_pos_kds_orders', next); return next; });
+    try {
+      await SyncManager.getInstance().enqueue({ type: 'UPDATE_ORDER_STATUS', payload: { order_id: orderId, status: newStatus, expected_status: original.status, ...(original.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original.base_version !== undefined || original.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: new Date().toISOString() });
+    } catch {
+      setOrders(current => { const next = current.map(order => order.id === orderId ? { ...order, status: original.status } : order); cache('omnisolo_pos_kds_orders', next); return next; });
+      setQueueError('This change could not be saved. Check your connection and local storage.');
+    } finally { pending.current.delete(key); }
   };
-
   const handleToggleSoldOut = async (itemId: string, isSoldOut: boolean) => {
-    // Optimistic UI Update
-    setInventory(prev => {
-       const next = prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i);
-       if (typeof window !== 'undefined') {
-          localStorage.setItem('omnisolo_pos_kds_inventory', JSON.stringify(next));
-       }
-       return next;
-    });
-
-    const event = {
-      type: 'TOGGLE_SOLD_OUT',
-      payload: { item_id: itemId, is_sold_out: isSoldOut },
-      timestamp: new Date().toISOString(),
-    };
-
-    await SyncManager.getInstance().enqueue(event);
+    const key = `product:${itemId}`;
+    const original = inventory.find(item => item.id === itemId);
+    if (!original || pending.current.has(key)) return;
+    pending.current.add(key); setQueueError(null);
+    setInventory(current => { const next = current.map(item => item.id === itemId ? { ...item, is_sold_out: isSoldOut } : item); cache('omnisolo_pos_kds_inventory', next); return next; });
+    try {
+      await SyncManager.getInstance().enqueue({ type: 'TOGGLE_SOLD_OUT', payload: { item_id: itemId, is_sold_out: isSoldOut, expected_is_sold_out: original.is_sold_out, ...(original.updated_at ? { expected_updated_at: original.updated_at } : {}), ...(original.base_version !== undefined || original.version !== undefined ? { base_version: original.base_version ?? original.version } : {}) }, timestamp: new Date().toISOString() });
+    } catch {
+      setInventory(current => { const next = current.map(item => item.id === itemId ? { ...item, is_sold_out: original.is_sold_out } : item); cache('omnisolo_pos_kds_inventory', next); return next; });
+      setQueueError('This change could not be saved. Check your connection and local storage.');
+    } finally { pending.current.delete(key); }
   };
 
   const toggleLanguage = () => {
@@ -157,6 +149,7 @@ export default function KDSPage() {
           </button>
         </div>
 
+        {queueError && <p role="alert">{queueError}</p>}
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-20 flex flex-col md:flex-row gap-6">
 

@@ -12,7 +12,7 @@ test.describe('Dashboard CUJ', () => {
   test('Persona: Business Owner can view sales and customer metrics', async ({ page }) => {
     await page.goto('/dashboard');
 
-    await expect(page.getByText(/Total Sales/i)).toBeVisible();
+    await expect(page.locator('#total-sales-tooltip').getByText('Total Sales', { exact: true })).toBeVisible();
     await expect(page.getByText('Customers', { exact: true })).toBeVisible();
   });
 

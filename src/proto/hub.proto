@@ -1506,6 +1506,10 @@ message ConnectIntegrationRequest {
   string webhook_url = 5;
   string api_token = 6;
   string from_phone = 7;
+  // Explicit provider key/secret pairs, such as Razorpay. These are never
+  // inferred from api_token, bot_token, or other unrelated credential fields.
+  string api_key = 8;
+  string api_secret = 9;
 }
 
 message DisconnectIntegrationRequest {

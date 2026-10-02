@@ -7,12 +7,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Node build/discovery tests are owned by test:scripts (part of make test).
 // Keep this runner focused on checks Cargo and Node test discovery cannot find.
 const checks = [
+  ['python3', '-m', 'unittest', 'scripts/test_focused_ci_gate.py'],
+  ['python3', 'scripts/agent_feed_query_regression.py'],
+  ['python3', 'scripts/catalog-edit/source_contract_test.py'],
+  ['python3', 'scripts/sync-durability/source_contract_test.py'],
   ['python3', '.github/scripts/check_checkout_paths_test.py'],
   ['bash', '.github/scripts/check_repo_hygiene_test.sh'],
   ['bash', '.github/scripts/check_repo_hygiene.sh'],
   ['bash', 'deploy/tests/deploy_artifacts_test.sh'],
   ['bash', 'deploy/tests/e2e_ci_execution_contract_test.sh', 'deploy/tests/kind_e2e_test.sh', 'deploy/tests/docker_compose_e2e_test.sh', 'deploy/helm/omnisolo/templates/backend-deployment.yaml', 'deploy/helm/omnisolo/values.yaml', 'deploy/docker/server-init/bootstrap-admin.sh', 'deploy/docker-compose.yml'],
-  ['bash', 'deploy/tests/operational_api_contract_test.sh', 'deploy/scripts/omnisolo-agent-wizard.sh', 'deploy/scripts/omnisolo-seed-data.sh'],
+  ['bash', 'deploy/tests/operational_api_contract_test.sh', 'deploy/scripts/omnisolo-agent-wizard.sh'],
   ['bash', 'deploy/tests/tls_certificates_test.sh', 'deploy/tests/support/generate_test_tls.sh'],
   ['bash', 'scripts/api_versioning_docs_test.sh'],
   ['bash', 'src/server/production_feature_contract_test.sh'],

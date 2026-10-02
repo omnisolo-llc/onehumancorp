@@ -2300,6 +2300,7 @@ class _Completions:
             json.dump({
                 "model": kwargs.get("model"),
                 "max_completion_tokens": kwargs.get("max_completion_tokens"),
+                "max_tokens": kwargs.get("max_tokens"),
                 "openai_key_in_env": "OPENAI_API_KEY" in os.environ,
                 "home": os.environ.get("HOME"),
             }, stream)
@@ -2364,7 +2365,14 @@ class AsyncOpenAI:
     let record: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&real.record_path).unwrap()).unwrap();
     assert_eq!(record["model"], "gpt-6-luna");
-    assert_eq!(record["max_completion_tokens"], 12_345);
+    // This pinned SDK selects the wire keyword by model-name prefix. Verify
+    // the immutable budget reaches exactly one supported token-limit field.
+    let output_limits: Vec<_> = ["max_tokens", "max_completion_tokens"]
+        .iter()
+        .filter_map(|key| record.get(key).filter(|value| !value.is_null()))
+        .collect();
+    assert_eq!(output_limits.len(), 1, "exactly one output token limit");
+    assert_eq!(output_limits[0], 12_345);
     assert_eq!(record["openai_key_in_env"], false);
     assert!(record["home"].as_str().unwrap().starts_with("/tmp/"));
 }

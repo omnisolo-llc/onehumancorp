@@ -1,0 +1,10 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {JSDOM,VirtualConsole} from 'jsdom';
+const roots=['src/ui/next/public','src/ui/next/public/ui','src/ui/tauri/src/ui'];
+const owner={userId:'member-a',tenantId:'owned / & tenant',expiresAt:Date.now()+600000};const profile={store_name:'Actual private business',bio:'Private details',theme:'dark',links:[],remove_branding:false};
+const turn=()=>new Promise(r=>setImmediate(r));
+async function setup(root,reply){const dom=new JSDOM(await readFile(new URL(`../${root}/bio.html`,import.meta.url),'utf8'),{url:'http://127.0.0.1:39151/ui/bio.html?tenant='+encodeURIComponent(owner.tenantId),runScripts:'dangerously',virtualConsole:new VirtualConsole(),beforeParse(w){w.Headers=Headers;w.fetch=async url=>url==='/api/v1/auth/session-identity'?Response.json(owner):reply();}});await turn();await turn();return dom;}
+for(const root of roots){
+ test(`${root}: renders an actual authenticated private preview`,async()=>{const dom=await setup(root,()=>Response.json(profile));try{assert.equal(dom.window.document.getElementById('title').textContent,profile.store_name);assert.equal(dom.window.document.getElementById('app').hidden,false);}finally{dom.window.close();}});
+ for(const status of [401,403,404,503])test(`${root}: HTTP${status} cannot invent a default public profile`,async()=>{const dom=await setup(root,()=>new Response('',{status}));try{const d=dom.window.document;assert.equal(d.getElementById('app').hidden,true);assert.match(d.getElementById('private-preview-status').textContent,status===404?/No saved private profile/:status===401||status===403?/owning business/:/unavailable/);}finally{dom.window.close();}});
+ test(`${root}: account retirement removes a confirmed private preview`,async()=>{const dom=await setup(root,()=>Response.json(profile));try{dom.window.dispatchEvent(new dom.window.Event('omnisolo_auth_changed'));assert.equal(dom.window.document.getElementById('app').hidden,true);assert.equal(dom.window.document.getElementById('title').textContent,'');}finally{dom.window.close();}});
+}

@@ -1,19 +1,19 @@
 import { test } from './fixtures';
 
-test('Generate visual screenshots for User Guide', async ({ page }) => {
+test('Generate visual screenshots for User Guide', async ({ page }, testInfo) => {
   await page.goto('/dashboard');
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(5000); // Give the UI time to settle
 
   // Mobile Screenshot
   await page.setViewportSize({ width: 375, height: 800 });
-  await page.screenshot({ path: 'docs/app/ux_audit_375.png' });
+  await page.screenshot({ path: testInfo.outputPath('ux_audit_375.png') });
 
   // Tablet Screenshot
   await page.setViewportSize({ width: 768, height: 1024 });
-  await page.screenshot({ path: 'docs/app/ux_audit_768.png' });
+  await page.screenshot({ path: testInfo.outputPath('ux_audit_768.png') });
 
   // Desktop Screenshot
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.screenshot({ path: 'docs/app/ux_audit_1440.png' });
+  await page.screenshot({ path: testInfo.outputPath('ux_audit_1440.png') });
 });

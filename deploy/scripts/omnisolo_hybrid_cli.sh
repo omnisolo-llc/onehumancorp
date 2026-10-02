@@ -24,7 +24,6 @@ while true; do
     echo -e "  5) Provision AI Agent"
     echo -e "  6) Standalone DB Health Check"
     echo -e "  7) Launch Cloud Start"
-    echo -e "  8) Seed Database with Mock Data"
     echo -e "  9) Check Swarm Status"
     echo -e "  10) Verify Setup"
     echo -e "  0) Exit"
@@ -47,7 +46,6 @@ while true; do
             fi
             ;;
         7) (set -e; bash "$SCRIPT_DIR/omnisolo-cloud-start.sh") || echo -e "${PURPLE}Cloud Start returned non-zero exit status ($?).${RESET}" ;;
-        8) (set -e; bash "$SCRIPT_DIR/omnisolo-seed-data.sh") || echo -e "${PURPLE}Data Seeder returned non-zero exit status ($?).${RESET}" ;;
         9) (set -e; bash "$SCRIPT_DIR/omnisolo-swarm-status.sh") || echo -e "${PURPLE}Swarm Status returned non-zero exit status ($?).${RESET}" ;;
         10) (set -e; bash "$SCRIPT_DIR/omnisolo-verify-setup.sh") || echo -e "${PURPLE}Verify Setup returned non-zero exit status ($?).${RESET}" ;;
         0) echo "Exiting..."; exit 0 ;;

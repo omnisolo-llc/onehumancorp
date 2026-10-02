@@ -1,0 +1,19 @@
+{
+  "definition": {
+    "description": "Line one\nQuoted \"text\" and café",
+    "digest": "8d8b6a0f3c8dd87ff0f4c16ae217c4a552f1123980681e7440311c8fe6ff1b93",
+    "id": "5fcb2f22-9bda-4f75-9aa5-707e578facf1",
+    "name": "研究者 🦀",
+    "role": "技術 writer",
+    "source": "community",
+    "system_prompt": "Preserve\nUnicode 界 and slash / literally.\nNo tools.",
+    "version": 1,
+    "visibility": "public"
+  },
+  "organization_id": "definition-a",
+  "replayed": false,
+  "request_id": "e99ee446-01bc-4e7d-aaf5-6a3d49f5ff07",
+  "status": "published",
+  "success": true,
+  "user_id": "30bb515e1a7e1c60"
+}

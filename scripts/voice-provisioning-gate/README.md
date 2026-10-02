@@ -1,0 +1,23 @@
+# Standalone voice provisioning gate
+
+Run `bash scripts/voice-provisioning-gate/run.sh` with the repository toolchain and cached dependencies. The wrapper stops on any failure, derives the focused lock from the repository lock, rejects version/checksum drift, imports the complete production voice router, Twilio client, settings store and atomic file writer, and verifies source inputs do not change during execution. It does not compile the full server or replace repository acceptance gates.
+
+## Deployment and authority boundary
+
+The existing settings store is instance-global JSON. Hosted deployments use PostgreSQL and can run multiple replicas; a local file is not shared provisioning authority. Voice reads, preference writes and provisioning therefore reject hosted or multitenant mode. The existing standalone/admin policy is reused, with a nonempty verified actor and tenant required. No identity is taken from request JSON or custom headers. The application router continues to supply the normal authenticated `Claims` extension.
+
+Standalone configuration selects local SQLite. Only that local settings-path scope can provision; independent stores sharing the same path contend through exclusive file creation. This does not claim a desktop-wide single-instance guarantee or coordinate distinct settings paths. The hold is beside the actual persistent settings file and is exclusively created before any provider effect. Voice reads and transitions hold a same-path advisory file lock plus the Store write lock while loading the persisted snapshot and checking receipt/legacy state. Provider I/O occurs after this short lock is released; confirmation reacquires it and checks the pending record. Busy or unavailable locks fail closed without waiting or retrying. This serializes voice operations sharing one settings path, not unrelated settings writers or distinct instance paths. It is bound to tenant, actor, provider account and an operation UUID. A pending, corrupt, interrupted or mismatched record cannot start another attempt. Unknown outcomes remain held after reload or restart; there is deliberately no automatic retry, expiry, reset or success inferred from a GET. A provider change also requires reconciliation. Deleting or editing a record is not a supported recovery procedure.
+
+A complete provider acknowledgement is persisted to settings before the record becomes confirmed. If either write fails, the operation stays held. A confirmed record can return the already recorded number only while the persisted configuration matches it. Existing legacy numbers are preserved as unverified configuration and cannot authorize another purchase. Preference updates persist only supplied preference fields before changing in-memory state. They re-read and atomically preserve the persisted provider-owned number even when an older client sends a stale full snapshot or a second Store has an older in-memory view; the UI likewise merges only its acknowledged field.
+
+Hosted tenant-scoped provisioning and a safe operator reconciliation workflow remain unavailable capabilities. This change does not add billing policy, phone-number purchasing authority, provider verification infrastructure, rewards or grants.
+
+## Proof boundaries
+
+The focused router tests use the actual Axum handlers with trusted `Claims` fixture extensions and explicit deployment flags. They verify missing authentication, non-admin/hosted denial, cross-tenant/actor/account isolation, independent store contention, restart holds, filesystem failures, legacy preservation and configuration gating. This is not a complete JWT middleware test.
+
+Positive provider acknowledgements and lost replies use the actual production HTTP client against a loopback TCP recorder with synthetic account/resource identifiers. No live provider, real credential, account, SMS, WhatsApp message or phone purchase is involved. Negative-only effect sentinels are used to establish that denied paths never dispatch. No successful provider response is manufactured by an in-process provider implementation.
+
+UI regressions check real response-status handling, disabled unverified controls, failed-save preservation and reload holds. Hosted browser journeys assert the actual unavailable contracts without starting Meta login or provisioning a phone. Browser execution remains a separate CI gate; local types and component tests do not certify those journeys.
+
+The guard uses the stable standard-library [File::try_lock API](https://doc.rust-lang.org/std/fs/struct.File.html#method.try_lock). Locks release when their file handle closes; the separate pending operation record survives process exit and never expires automatically.

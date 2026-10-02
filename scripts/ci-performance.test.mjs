@@ -103,3 +103,43 @@ for (const [name, mutate] of [
     assert.equal(result.status, 1); assert.equal(result.report, undefined);
   });
 }
+
+function browserOverlapFixture() {
+  const jobs = [job(1, 'Native backend binaries', '00', '04'), job(2, 'Native Next production build', '00', '03'),
+    job(3, 'PostgreSQL tenant isolation', '00', '16'),
+    ...Array.from({ length: 12 }, (_, index) => job(10 + index, `Native real-stack Playwright ${index + 1}/12`, index % 2 ? '06' : '05', index % 2 ? '18' : '15')),
+    job(99, 'CI Required', '21', '21', { status: 'in_progress', conclusion: null })];
+  return [{ total_count: jobs.length, jobs }];
+}
+test('actual PostgreSQL/browser overlap is measured once across all twelve shards', async () => {
+  const result = await run(browserOverlapFixture());
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(result.report.browser_postgres, {
+    measurement_complete: true, browser_shards: 12, missing_shards: [],
+    postgres_browser_overlap_seconds: 660, first_browser_after_postgres_seconds: -660,
+    browser_wait_after_artifacts_seconds: 60,
+  });
+});
+test('missing or skipped browser shards never become a complete scheduling measurement', async () => {
+  const missing = browserOverlapFixture(); missing[0].jobs = missing[0].jobs.filter(row => row.id !== 21); missing[0].total_count--;
+  const result = await run(missing);
+  assert.deepEqual(result.report.browser_postgres, {
+    measurement_complete: false, browser_shards: 11, missing_shards: [12],
+    postgres_browser_overlap_seconds: null, first_browser_after_postgres_seconds: null,
+    browser_wait_after_artifacts_seconds: null,
+  });
+  const skipped = browserOverlapFixture(); skipped[0].jobs.find(row => row.id === 21).conclusion = 'skipped';
+  const held = await run(skipped);
+  assert.equal(held.report.browser_postgres.measurement_complete, false);
+  assert.equal(held.report.browser_postgres.postgres_browser_overlap_seconds, null);
+});
+test('sequential browser scheduling records zero overlap rather than implying a speedup', async () => {
+  const input = browserOverlapFixture(); input[0].jobs.find(row => row.id === 3).completed_at = '2026-09-19T10:04:00Z';
+  const result = await run(input);
+  assert.equal(result.report.browser_postgres.postgres_browser_overlap_seconds, 0);
+  assert.equal(result.report.browser_postgres.first_browser_after_postgres_seconds, 60);
+});
+test('duplicate scheduling identities cannot produce timing evidence', async () => {
+  const input = browserOverlapFixture(); input[0].jobs.push(job(100, 'PostgreSQL tenant isolation', '00', '16')); input[0].total_count++;
+  assert.equal((await run(input)).status, 1);
+});

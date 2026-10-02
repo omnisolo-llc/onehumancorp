@@ -37,9 +37,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isConfirmedUsableConnection(value: unknown): boolean {
-  if (!isRecord(value) || value.success !== true) return false;
-  if (value.status === "connected" && value.usable === true) return true;
-  return isRecord(value.integration) && value.integration.status === "connected" && value.integration.usable === true;
+  if (!isRecord(value) || value.success !== true || value.error != null) return false;
+  if (value.status !== undefined && value.status !== "connected") return false;
+  if (value.usable !== undefined && value.usable !== true) return false;
+  if (value.integration !== undefined && (!isRecord(value.integration) || (value.integration.success !== undefined && value.integration.success !== true) || value.integration.error != null || value.integration.status !== "connected" || value.integration.usable !== true)) return false;
+  return value.status === "connected" && value.usable === true || isRecord(value.integration);
+}
+
+function isConfiguredConnection(value: unknown): boolean {
+  if (!isRecord(value) || value.success !== true || value.error != null) return false;
+  if (value.status !== undefined && value.status !== "configured") return false;
+  if (value.usable !== undefined && value.usable !== false) return false;
+  if (value.integration !== undefined && (!isRecord(value.integration) || value.integration.success === false || value.integration.error != null || value.integration.status !== "configured" || (value.integration.usable !== undefined && value.integration.usable !== false))) return false;
+  return value.status === "configured" || isRecord(value.integration);
 }
 
 export default function Integrations() {
@@ -52,15 +62,20 @@ export default function Integrations() {
     async function loadIntegrations() {
       try {
         const res = await fetch("/api/v1/integrations");
-        if (res.ok) {
+        if (res.status === 200) {
           const data = await res.json();
-          if (data && data.success && Array.isArray(data.integrations)) {
+          if (data && data.success === true && data.error == null && Array.isArray(data.integrations)) {
             const connectedIds = data.integrations
-              .filter((i: unknown) => isRecord(i) && typeof i.id === "string" && i.status === "connected" && i.usable === true)
+              .filter((i: unknown) => isRecord(i) && i.error == null && typeof i.id === "string" && i.status === "connected" && i.usable === true)
+              .map((i: Record<string, unknown>) => i.id);
+            const configuredIds = data.integrations
+              .filter((i: unknown) => isRecord(i) && i.error == null && i.success !== false && typeof i.id === "string" && i.status === "configured" && (i.usable === undefined || i.usable === false))
               .map((i: Record<string, unknown>) => i.id);
 
             setIntegrations(prev => prev.map(integration =>
-              connectedIds.includes(integration.id)
+              configuredIds.includes(integration.id)
+                ? { ...integration, status: "configured" }
+                : connectedIds.includes(integration.id)
                 ? { ...integration, status: "connected" }
                 : integration
             ));
@@ -90,6 +105,10 @@ export default function Integrations() {
 
   const handleConnect = async (id: string) => {
     const integration = integrations.find((item) => item.id === id);
+    if (integration?.status === 'configured') {
+      setStatusMessage(`${integration.name} is configured locally. Provider verification is still required.`);
+      return;
+    }
     if (integration?.status === 'connected') {
       setStatusMessage(`${integration.name} settings are ready to manage.`);
       return;
@@ -109,43 +128,6 @@ export default function Integrations() {
       setStatusMessage("Continue with Meta to connect WhatsApp Cloud API.");
       return;
     }
-    if (id === "ayrshare") {
-      let promptVal: string | null = null;
-      try {
-        if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
-          promptVal = window.prompt("Enter your Ayrshare API key:");
-        }
-      } catch {
-        promptVal = null;
-      }
-      if (typeof promptVal === 'string') {
-        setIntegrations(prev => prev.map(integration =>
-          integration.id === 'ayrshare' ? { ...integration, status: "connected" } : integration
-        ));
-        router.push('/inbox');
-        return;
-      }
-      setStatusMessage("Ayrshare connection is unavailable until secure provider verification is configured.");
-      return;
-    }
-    if (['cal_com', 'resend', 'mercadopago', 'whereby', 'front'].includes(id)) {
-      let promptVal: string | null = null;
-      try {
-        if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
-          promptVal = window.prompt(`Enter your ${integration?.name || id} API key:`);
-        }
-      } catch {
-        promptVal = null;
-      }
-      if (typeof promptVal === 'string') {
-        setIntegrations(prev => prev.map(item =>
-          item.id === id ? { ...item, status: "connected" } : item
-        ));
-        return;
-      }
-      setStatusMessage(`${integration?.name || id} connection is unavailable until secure provider verification is configured.`);
-      return;
-    }
     if (id === 'meta') {
       setShowWhatsAppCloudApiModal(true);
       setStatusMessage("Continue with Meta to connect Facebook and Instagram.");
@@ -154,21 +136,33 @@ export default function Integrations() {
     setStatusMessage(`${integration?.name || id} connection is unavailable until secure provider verification is configured.`);
   };
 
+  const recordConfiguredConnection = (id: string, result: unknown): boolean => {
+    if (!isConfiguredConnection(result)) return false;
+    setIntegrations(prev => prev.map(integration => integration.id === id ? { ...integration, status: "configured" } : integration));
+    const name = integrations.find(integration => integration.id === id)?.name || id;
+    setStatusMessage(`${name} is configured locally. Provider verification is still required.`);
+    return true;
+  };
+
   const saveTwilioIntegration = async () => {
-    if (process.env.NODE_ENV === 'test' && (!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean))) {
+    if (!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean)) {
       setStatusMessage('Twilio credentials and at least one channel are required.');
       return;
     }
     try {
-      if (twilioCreds.accountSid.trim() && twilioCreds.authToken.trim()) {
-        const response = await fetch('/api/v1/integrations/twilio/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bot_token: twilioCreds.accountSid.trim(), api_token: twilioCreds.authToken.trim() }),
-        });
-        if (!response.ok) throw new Error('Twilio Conversations connection is unavailable.');
-        if (!isConfirmedUsableConnection(await response.json())) throw new Error('Unconfirmed Twilio connection');
+      const response = await fetch('/api/v1/integrations/twilio/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bot_token: twilioCreds.accountSid.trim(), api_token: twilioCreds.authToken.trim() }),
+      });
+      if (response.status !== 200) throw new Error('Twilio Conversations connection is unavailable.');
+      const result: unknown = await response.json();
+      if (recordConfiguredConnection('twilio', result)) {
+        setTwilioCreds({ accountSid: '', authToken: '' });
+        setShowTwilioModal(false);
+        return;
       }
+      if (!isConfirmedUsableConnection(result)) throw new Error('Unconfirmed Twilio connection');
       setTwilioCreds({ accountSid: '', authToken: '' });
       setIntegrations(prev => prev.map(integration =>
         integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
@@ -197,7 +191,15 @@ export default function Integrations() {
         })
       });
 
-      if (!res.ok || !isConfirmedUsableConnection(await res.json())) {
+      // Finish reading the finite response even on a rejection. A status alone
+      // must not leave its body unread while the UI reports a final outcome.
+      const result: unknown = await res.json();
+      if (res.status === 200 && recordConfiguredConnection('whatsapp', result)) {
+        setWhatsappTwilioCreds({ accountSid: '', authToken: '', phoneNumber: '' });
+        setShowWhatsAppModal(false);
+        return;
+      }
+      if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
         setStatusMessage("Failed to connect Twilio for WhatsApp.");
         return;
       }
@@ -253,8 +255,15 @@ export default function Integrations() {
           })
         });
 
-        if (!res.ok || !isConfirmedUsableConnection(await res.json())) {
-          setStatusMessage("Failed to connect WhatsApp Cloud API.");
+        const result = await res.json();
+        if (res.status === 200 && recordConfiguredConnection('whatsapp_cloud_api', result)) {
+          setShowWhatsAppCloudApiModal(false);
+          return;
+        }
+        if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
+          setStatusMessage(result?.status === 'pending_verification'
+            ? 'Secure provider verification is unavailable. No WhatsApp connection was established.'
+            : "WhatsApp Cloud API connection could not be confirmed.");
           return;
         }
         setIntegrations(prev => prev.map(integration =>
@@ -265,16 +274,18 @@ export default function Integrations() {
         router.push('/inbox');
       };
 
-      if (typeof window !== "undefined" && window.FB) {
+      if (typeof window !== "undefined" && typeof window.FB?.login === 'function') {
         window.FB.login((response) => {
           if (response.authResponse) {
-            doBackendConnect(response.authResponse.accessToken);
+            void doBackendConnect(response.authResponse.accessToken).catch(() => {
+              setStatusMessage('WhatsApp Cloud API connection could not be confirmed.');
+            });
           } else {
             setStatusMessage("WhatsApp Cloud API connection cancelled.");
           }
         }, { scope: 'whatsapp_business_management,whatsapp_business_messaging' });
       } else {
-        await doBackendConnect("offline_fallback_token");
+        setStatusMessage('WhatsApp connection is unavailable because Meta sign-in is not configured.');
       }
     } catch  {
       setStatusMessage("Failed to connect WhatsApp Cloud API.");
@@ -381,7 +392,7 @@ export default function Integrations() {
               </p>
 
               <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
-                Notice: Offline fallback mode enabled when Facebook Meta SDK is unreachable.
+        Meta sign-in must be available, and the server must verify the provider connection before it is usable.
               </div>
 
               <button
@@ -462,7 +473,7 @@ export default function Integrations() {
 
               <button
                 onClick={saveTwilioIntegration}
-                disabled={(process.env.NODE_ENV === 'test' && (!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim())) || !Object.values(twilioChannels).some(Boolean)}
+                disabled={!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean)}
                 className="w-full bg-[#0f766e] hover:bg-[#0d645d] disabled:cursor-not-allowed disabled:opacity-50 text-white py-3 rounded-xl font-bold text-sm shadow-sm transition-colors"
               >
                 Save & Connect
@@ -524,7 +535,7 @@ export default function Integrations() {
                       ? "bg-gray-50 dark:bg-zinc-800 text-gray-750 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-zinc-700"
                       : "text-white shadow-sm bg-[#0f766e] hover:bg-[#0d645d] border-none"
                   }`}>
-                  {integration.status === 'connected' ? 'Manage' : 'Connect'}
+                  {integration.status === 'connected' ? 'Manage' : integration.status === 'configured' ? 'Review' : 'Connect'}
                 </button>
               </div>
             ))}
