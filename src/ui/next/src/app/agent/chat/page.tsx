@@ -92,6 +92,7 @@ export default function AgentChatPage() {
           type="button"
           aria-label="Send message"
           onClick={handleSend}
+          disabled={!input.trim()}
           className="px-6 py-2 bg-[#0066FF] text-white rounded-xl font-medium text-sm hover:bg-[#0052cc] transition-colors self-end min-h-[44px]"
         >
           Send

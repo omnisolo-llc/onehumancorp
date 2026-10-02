@@ -1016,7 +1016,7 @@ export default function OnboardingWizard() {
                     <button
                       id="chat-send-btn"
                       onClick={handleSendChatMessage}
-                      disabled={isLoading}
+                      disabled={isLoading || (!chatInput.trim() && !chatImageUrl.trim())}
                       className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
                     >
                       Send
