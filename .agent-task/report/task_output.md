@@ -1,9 +1,3 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
-issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: []
+outcome: blocked
+issue_title: "Universal Provider & Local Usage Accounting (F04)"
+issue_description: "The issue (F04) requested implementing strict model usage tracking and reconciliation for all AI paths, including removing hardcoded values in api/proposals.rs, implementing an interception layer in proxy streaming, and plumbing identifiers to the ledger. This issue was already fully implemented. 1. src/server/api/proposals.rs correctly relies on LocalLLMClient::new().reason_with_usage(...) and does not mock token quantities (except in explicit cfg(test) contexts). 2. src/server/api/quotes.rs and background workers (e.g., draft_quote_worker.rs) likewise rely on the native usage meter response and pass metrics to CostAuditor. 3. src/server/harness/middleware/provider_facade.rs already features a complete UsageCapture stream interception mechanism that parses explicit token metrics, and correctly delegates to the UsageLedger and RequestMeter through meter.finish(...). There is no safe, well-scoped implementation missing from the repository state related to F04. Thus, a blocked no-work finding is returned."
