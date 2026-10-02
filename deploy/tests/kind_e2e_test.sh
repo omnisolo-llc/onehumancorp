@@ -44,6 +44,43 @@ curl_bounded() {
     "$@"
 }
 
+# Negative safety coverage for capabilities that do not have a real legacy
+# implementation yet. Their positive acceptance remains in readiness-gaps.json.
+assert_unavailable_capability() {
+  local backend_url="$1" method="$2" path="$3" capability="$4" payload="${5:-}"
+  [[ -n "${payload}" ]] || payload='{}'
+  local body headers status
+  body="$(mktemp)"
+  headers="$(mktemp)"
+  if ! status="$(curl_bounded -sS --retry 0 -X "${method}" \
+    "${auth_headers[@]}" -H 'Content-Type: application/json' \
+    -d "${payload}" -D "${headers}" -o "${body}" -w '%{http_code}' \
+    "${backend_url}${path}")"; then
+    rm -f "${body}" "${headers}"
+    echo "${path}: unavailable-capability probe transport failed" >&2
+    return 1
+  fi
+  if [[ "${status}" != "501" ]] \
+    || ! tr -d '\r' < "${headers}" | grep -Eiq '^cache-control:[[:space:]]*no-store[[:space:]]*$' \
+    || ! jq -e --arg capability "${capability}" '
+      .success == false
+      and .code == "capability_unavailable"
+      and .capability == $capability
+      and (.message | type == "string" and length > 0)
+      and (has("id") | not)
+      and (has("organization") | not)
+      and (has("totalCostUSD") | not)
+      and (has("receipt") | not)
+      and (has("status") | not)
+    ' "${body}" >/dev/null; then
+    echo "${path}: expected explicit noncacheable501 without a fabricated result; got HTTP ${status}" >&2
+    rm -f "${body}" "${headers}"
+    return 1
+  fi
+  rm -f "${body}" "${headers}"
+  log "  ${path}: negative safety contract passed; capability still unimplemented"
+}
+
 record_failure() {
   FAILED_LINE="$1"
   FAILED_COMMAND="$2"
@@ -423,10 +460,8 @@ run_rest_smoke_tests() {
     '.vendors | any(.[]; .id == $id and .name == "Kind deployment fixture vendor")' >/dev/null
   log "  production fixture isolation and persisted supply record ✓"
 
-# --- dashboard ---
-  dashboard="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/dashboard")"
-  echo "${dashboard}" | grep -q '"organization"' || { echo "dashboard missing 'organization'" >&2; exit 1; }
-  log "  /api/v1/dashboard ✓"
+# --- legacy dashboard remains explicitly unavailable ---
+  assert_unavailable_capability "${backend_url}" GET /api/v1/dashboard organization_dashboard
 
 # --- agents list ---
   agents="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/agents")"
@@ -468,54 +503,20 @@ run_rest_smoke_tests() {
   echo "${meetings}" | grep -q '\[' || { echo "meetings response not a JSON array" >&2; exit 1; }
   log "  /api/v1/meetings ✓"
 
-# --- costs ---
-  costs="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/costs")"
-  echo "${costs}" | grep -q '"totalCostUSD"' || { echo "costs missing totalCostUSD" >&2; exit 1; }
-  log "  /api/v1/costs ✓"
-
-# --- approval flow ---
-  approval_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/approvals/request" \
-    "${auth_headers[@]}" \
-    -H 'Content-Type: application/json' \
-    -d '{"agentId":"swe-1","action":"deploy-to-production","reason":"E2E test","estimatedCostUsd":0.01,"riskLevel":"low"}')"
-  echo "${approval_response}" | grep -q '"id"' || { echo "approval create failed: ${approval_response}" >&2; exit 1; }
-  approval_id="$(echo "${approval_response}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)"
-  log "  /api/v1/approvals/request ✓ (id=${approval_id})"
-
-  curl_bounded -sf -X PUT "${backend_url}/api/v1/approvals/decide" \
-    "${auth_headers[@]}" \
-    -H 'Content-Type: application/json' \
-    -d "{\"approvalId\":\"${approval_id}\",\"decision\":\"approve\",\"decidedBy\":\"e2e-test\"}" >/dev/null
-  log "  /api/v1/approvals/decide ✓"
-
-# --- warm handoff ---
-  handoff_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/handoffs" \
-    "${auth_headers[@]}" \
-    -H 'Content-Type: application/json' \
-    -d '{"fromAgentId":"swe-1","toHumanRole":"MANAGER","intent":"need-review","failedAttempts":1,"currentState":"blocked"}')"
-  echo "${handoff_response}" | grep -q '"id"' || { echo "handoff create failed: ${handoff_response}" >&2; exit 1; }
-  log "  /api/v1/handoffs ✓"
-
-# --- billing costs ---
-  costs2="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/costs")"
-  echo "${costs2}" | grep -q '"totalCostUSD"' || { echo "costs2 missing totalCostUSD" >&2; exit 1; }
-  log "  /api/v1/costs (post-hire) ✓"
-
-# --- skill pack import ---
-  skill_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/skills/import" \
-    "${auth_headers[@]}" \
-    -H 'Content-Type: application/json' \
-    -d '{"name":"E2E Skill Pack","domain":"testing","description":"e2e","source":"custom","roles":[{"role":"SOFTWARE_ENGINEER","basePrompt":"e2e prompt"}]}')"
-  echo "${skill_response}" | grep -q '"id"' || { echo "skill import failed: ${skill_response}" >&2; exit 1; }
-  log "  /api/v1/skills/import ✓"
-
-# --- org snapshot ---
-  snapshot_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/snapshots/create" \
-    "${auth_headers[@]}" \
-    -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-snapshot"}')"
-  echo "${snapshot_response}" | grep -q '"id"' || { echo "snapshot create failed: ${snapshot_response}" >&2; exit 1; }
-  log "  /api/v1/snapshots/create ✓"
+# --- explicit negative capability contracts; genuine happy paths remain open ---
+  assert_unavailable_capability "${backend_url}" GET /api/v1/costs cost_summary
+  assert_unavailable_capability "${backend_url}" POST /api/v1/approvals/request approval_request \
+    '{"intent":"test","requestedBy":"e2e-test"}'
+  assert_unavailable_capability "${backend_url}" PUT /api/v1/approvals/decide approval_decision \
+    '{"approvalId":"unavailable-probe","decision":"approve","decidedBy":"e2e-test"}'
+  assert_unavailable_capability "${backend_url}" POST /api/v1/handoffs handoff_creation \
+    '{"fromAgentId":"swe-1","toHumanRole":"MANAGER","intent":"need-review","failedAttempts":1,"currentState":"blocked"}'
+  # Retain the second post-hire billing probe; no synthetic zero cost is accepted.
+  assert_unavailable_capability "${backend_url}" GET /api/v1/costs cost_summary
+  assert_unavailable_capability "${backend_url}" POST /api/v1/skills/import skill_import \
+    '{"name":"E2E Skill Pack","domain":"testing","description":"e2e","source":"custom","roles":[{"role":"SOFTWARE_ENGINEER","basePrompt":"e2e prompt"}]}'
+  assert_unavailable_capability "${backend_url}" POST /api/v1/snapshots/create snapshot_creation \
+    '{"label":"e2e-snapshot"}'
 
   stop_port_forward
   log "  ${mode_name} smoke ✓"
