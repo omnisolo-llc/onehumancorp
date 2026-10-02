@@ -10,6 +10,7 @@ import { E2E_ADMIN_USER } from './identities';
 import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui_audit_navigation';
 import { createDashboardAuditCase } from './support/dashboard_audit_fixture';
 import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
+import { runFiniteClickInventory, FINITE_CLICK_CASE_BUDGET } from '../../scripts/ui-audit-inventory.cjs';
 
 const appRoot = path.resolve(__dirname, '../ui/next/src/app');
 function discoverAppRoutes(): string[] { return discoverSourceRoutes(path.resolve(__dirname, '../..')); }
@@ -159,6 +160,7 @@ type RouteClickAudit = {
   navigations: AuditNavigationReceipt[];
   exhausted: boolean; failures: string[]; assertionsPassed: boolean;
   isolation?: { kind: 'case-owned-postgres'; seedDigest: string; cases: { tenantId: string; userId: string; keys: string[] }[] };
+  finiteInventory?: { caseBudgetMs: number; targetCount: number };
   timings?: { phase: string; target?: string; elapsedMs: number }[];
 };
 
@@ -225,6 +227,34 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit:
   let page = await sourcePage.context().newPage();
   try {
     await timed('navigate', async () => { audit.navigations.push(await gotoReady(page, route)); });
+    if (route === '/api-docs') {
+      const baseline = await timed('discover', () => tagClickTargets(page));
+      audit.discoveredKeys = baseline.map(target => target.key);
+      audit.finiteInventory = { caseBudgetMs: FINITE_CLICK_CASE_BUDGET, targetCount: baseline.length };
+      test.setTimeout(Math.max(120_000, (baseline.length + 2) * FINITE_CLICK_CASE_BUDGET));
+      await runFiniteClickInventory(baseline, {
+        discover: () => timed('discover', () => tagClickTargets(page)),
+        visit: async (candidate: { key: string; label: string }) => {
+          const target = await timed('resolve', () => resolveAuditTarget(page, candidate.key, () => tagClickTargets(page)), candidate.label);
+          audited.add(candidate.key);
+          try {
+            const observed = await timed('observe', () => observeClickEffects(page, target), candidate.label);
+            audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
+            if (!hasMeaningfulClickEffect(observed)) failures.push(`${route}: "${candidate.label}" produced no observable user effect`);
+          } catch (error) {
+            audit.observations.push({ key: candidate.key, completed: false, effect: null, error: String(error).split('\n')[0] });
+            failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
+          }
+        },
+        reset: async () => {
+          page = await timed('retire', () => replaceAuditDocument(page));
+          await timed('navigate', async () => { audit.navigations.push(await gotoReady(page, route)); });
+        },
+        step: (candidate: { label: string }, operation: () => Promise<void>, timeout: number) => test.step(`finite API documentation control: ${candidate.label}`, operation, { timeout }),
+      });
+      audit.exhausted = true;
+      return { auditedTargets: audited.size, failures };
+    }
     while (true) {
       const candidates = await timed('discover', () => tagClickTargets(page));
       for (const target of candidates) if (!audit.discoveredKeys.includes(target.key)) audit.discoveredKeys.push(target.key);
@@ -307,6 +337,12 @@ test.describe('comprehensive UI contract', () => {
         continue;
       }
 
+      if (route === '/orders/e2e-seeded-record') {
+        // The dynamic example is a persisted order, not a tolerated missing
+        // record. Wait for its actual read instead of accepting a loading shell.
+        await expect(page.getByRole('heading', { name: 'Order Summary', exact: true })).toBeVisible();
+        await expect(page.getByText('e2e-seeded-record', { exact: true })).toBeVisible();
+      }
       const bodyText = await visibleText(page);
       if (/404|not found|application error|failed to load/i.test(bodyText)) {
         failures.push(`${routeLabel(route)}: visible error text found`);

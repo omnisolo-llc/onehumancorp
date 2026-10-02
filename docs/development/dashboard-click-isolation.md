@@ -58,3 +58,20 @@ unchanged. This is a bounded execution allowance, not a measured performance
 claim. The original 90-second non-convergence cutoff remains on other routes.
 Actual wall time and all target observations must come from the source-bound
 hosted run. Local unit tests cannot certify PostgreSQL/browser acceptance.
+
+## Finite API-documentation inventory
+
+The API documentation page's default view is a finite inventory of operation
+expansion controls and the normal app-shell controls. The previous shared90s
+cutoff failed after31of35controls even though discovery had already converged.
+It now freezes the complete discovered key set, checks that same set before each
+click and after the final reset, and runs each control exactly once in its own
+bounded30s lookup/action/reset step. The route budget is derived from the actual
+inventory, not a larger arbitrary convergence cutoff. Existing timing receipts
+remain mandatory; `finiteInventory` records the count and per-case budget. This
+is a coverage repair, not a performance certification; actual hosted timings
+must be read before claiming the new full inventory is accepted.
+
+The dynamic order page uses the real canonical `e2e-seeded-record` order and the
+load contract requires its Order Summary and exact record ID. It does not accept
+an invented `e2e-id` or whitelist a missing-order error.
