@@ -18,41 +18,42 @@ interface BioConfig {
 
 export default function PublicBioPage() {
   const params = useParams();
-  const tenant = params.tenant as string;
+  const tenant = typeof params.tenant === 'string' ? params.tenant : '';
+  const [error, setError] = useState('');
   const [config, setConfig] = useState<BioConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchConfig = async () => {
+    let active = true; let expiry: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
+    const retired = () => {active=false;controller.abort();clearTimeout(expiry);setConfig(null);setLoading(false);setError('Your session changed. Reload to verify private preview access.');};
+    const storage = (event: StorageEvent) => {if(event.key === null || event.key === 'omnisolo_queue_identity_epoch_v2') retired();};
+    window.addEventListener('omnisolo_auth_changed',retired);window.addEventListener('storage',storage);window.addEventListener('pagehide',retired);
+    setConfig(null);setLoading(true);setError('');
+    void(async()=>{
       try {
-        const res = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
-        if (res.ok) {
-          const data = await res.json();
-          setConfig(data);
-        } else {
-          // Defaults if not found
-          setConfig({
-            store_name: tenant,
-            bio: 'Welcome to my storefront!',
-            theme: 'light',
-            links: [{ title: 'Visit Store', url: '/' }]
-          });
-        }
-      } catch  {
-         setConfig({
-            store_name: tenant,
-            bio: 'Welcome to my storefront!',
-            theme: 'light',
-            links: [{ title: 'Visit Store', url: '/' }]
-          });
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (tenant) {
-      fetchConfig();
-    }
+        const identityResponse = await fetch('/api/v1/auth/session-identity',{credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal});
+        const owner = await identityResponse.json();
+        if(!active)return;
+        if(identityResponse.status !== 200 || owner?.error != null || owner?.success === false || typeof owner?.userId !== 'string' || !owner.userId || owner.tenantId !== tenant || !tenant || !Number.isFinite(owner.expiresAt) || owner.expiresAt <= Date.now()) throw new Error('Sign in to the owning business to view this private profile.');
+        const headers = new Headers({'x-ohc-expected-user':owner.userId,'x-ohc-expected-tenant':owner.tenantId});
+        if(headers.get('x-ohc-expected-user')!==owner.userId || headers.get('x-ohc-expected-tenant')!==owner.tenantId)throw new Error('Private profile identity is unavailable.');
+        expiry=setTimeout(retired,Math.min(owner.expiresAt-Date.now(),2147483647));
+        const response = await fetch(`/api/v1/growth/link-in-bio/${encodeURIComponent(tenant)}`,{headers,credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal});
+        if(response.status === 404)throw new Error('No saved private profile exists for this business.');
+        if(response.status === 401 || response.status === 403)throw new Error('Sign in to the owning business to view this private profile.');
+        if(response.status !== 200)throw new Error('The private profile is unavailable. Try loading it again later.');
+        const data = await response.json();
+        if(!active)return;
+        if(data?.error != null || data?.success === false || typeof data?.store_name !== 'string' || typeof data.bio !== 'string' || typeof data.theme !== 'string' || !Array.isArray(data.links) || data.links.some((link:Link|null)=>!link || typeof link.title !== 'string' || typeof link.url !== 'string'))throw new Error('The private profile is unavailable.');
+        setConfig(data);
+      } catch (cause) {if(active){setConfig(null);setError(cause instanceof Error ? cause.message : 'The private profile is unavailable.');}}
+      finally{if(active)setLoading(false);}
+    })();
+    return()=>{active=false;controller.abort();clearTimeout(expiry);window.removeEventListener('omnisolo_auth_changed',retired);window.removeEventListener('storage',storage);window.removeEventListener('pagehide',retired);};
   }, [tenant]);
+
+  if(error)return <div role="alert" className="min-h-screen flex items-center justify-center">{error}</div>;
 
   if (loading || !config) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black text-gray-500">Loading...</div>;
@@ -90,7 +91,7 @@ export default function PublicBioPage() {
         {!config.remove_branding && (
           <div className="mt-12 pt-8">
             <a
-              href={`/onboarding?ref=linkinbio_${tenant}`}
+              href={`/onboarding?ref=${encodeURIComponent(`linkinbio_${tenant}`)}`}
               className={`text-sm font-semibold flex items-center justify-center gap-1 hover:underline ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
             >
               ⚡ OmniSolo

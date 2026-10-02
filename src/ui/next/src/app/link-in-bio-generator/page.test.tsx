@@ -18,14 +18,10 @@ describe('LinkInBioGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        store_name: 'Existing Store',
-        bio: 'Existing Bio',
-        theme: 'dark',
-        links: [{ title: 'Existing Link', url: 'https://existing.com' }],
-      }),
+    global.fetch = vi.fn(async (url, options) => {
+      if (url === '/api/v1/auth/session-identity') return Response.json({userId:'member',tenantId:'owned-tenant',expiresAt:Date.now()+60_000});
+      if (options?.method === 'POST') return new Response('',{status:200});
+      return Response.json({store_name:'Existing Store',bio:'Existing Bio',theme:'dark',links:[{title:'Existing Link',url:'https://existing.com'}]});
     });
 
     Object.assign(navigator, {
@@ -87,7 +83,7 @@ describe('LinkInBioGeneratorPage', () => {
         render(<LinkInBioGeneratorPage />);
     });
 
-    const saveBtn = screen.getByText('Save & Publish');
+    const saveBtn = screen.getByText('Save private configuration');
 
     await act(async () => {
         fireEvent.click(saveBtn);
@@ -104,12 +100,12 @@ describe('LinkInBioGeneratorPage', () => {
         render(<LinkInBioGeneratorPage />);
     });
 
-    const copyBtn = screen.getByText('Copy Link');
+    const copyBtn = screen.getByText('Copy saved private preview link');
 
     await act(async () => {
         fireEvent.click(copyBtn);
     });
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('/bio/my-store'));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/bio/owned-tenant`);
   });
 });

@@ -19,6 +19,12 @@ class FocusedGateTests(unittest.TestCase):
         self.assertEqual(database, 'OHC_SETUP_TEST_DATABASE_URL')
         self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/bootstrap-portable-roles/run.sh').is_file())
 
+    def test_link_bio_gate_requires_all_private_database_cases(self):
+        minimum, database = gate.GATES['link-bio-isolation']
+        self.assertGreaterEqual(minimum, 11)
+        self.assertEqual(database, 'OHC_BIO_TEST_DATABASE_URL')
+        self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/link-bio-isolation/run.sh').is_file())
+
     def test_tenant_search_gate_runs_all_real_database_cases(self):
         minimum, database = gate.GATES['tenant-search']
         self.assertGreaterEqual(minimum, 13)
