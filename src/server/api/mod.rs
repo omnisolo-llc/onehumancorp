@@ -68,7 +68,7 @@ pub mod tool_integrations;
 pub mod unified_inbox_webhook;
 pub mod unified_ws;
 pub(crate) mod walkup;
+pub mod widget;
 pub mod work_triage;
 mod ws_batch;
 pub(crate) mod ws_compression;
-pub mod widget;
