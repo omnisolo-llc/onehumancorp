@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Native Rust Omnichannel Chat System Replication"
+issue_description: "The requested feature to replicate Chatwoot functionality using a native Rust omnichannel architecture has already been fully implemented. Evidence includes the existence of src/server/services/inbox/service.rs which implements UnifiedThread and UnifiedMessage with tenant_id Row Level Security (RLS). The PostgreSQL schema migrations (e.g. src/server/db/migrations/166_fix_missing_rls_final.sql) enforce this RLS on unified_threads. Core Rust services for ingesting messages and triggering AI triage are present. Unverified criteria: 1-tap approve functionality for AI drafted replies and frontend inbox shell."
