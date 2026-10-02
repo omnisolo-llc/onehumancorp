@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Native Rust Omnichannel Chat System"
+issue_description: "The native Rust omnichannel chat system data models and core APIs are already implemented in the codebase. Migrations 1009_native_omnichannel_chat.sql and 233_chat_omnichannel.sql define chat_inboxes, chat_channels, chat_contacts, chat_conversations, and chat_messages with strict multi-tenant RLS. The core service layer is implemented in src/server/services/chat/service.rs. The remaining requirement for Playwright E2E tests for the 375px width screen has an unverified status since they are not executed here, and the UI without mock data is not fully verified."
