@@ -355,16 +355,17 @@ fn bind_stream_options(payload: &mut Value, path: &str) -> Result<(), &'static s
         .as_object_mut()
         .ok_or("request body must be an object")?;
     if let Some(stream) = object.get("stream").and_then(Value::as_bool)
-        && stream {
-            let options = object
-                .entry("stream_options")
-                .or_insert_with(|| serde_json::json!({}));
-            if let Some(options_obj) = options.as_object_mut() {
-                options_obj.insert("include_usage".to_owned(), Value::Bool(true));
-            } else {
-                return Err("stream_options must be an object");
-            }
+        && stream
+    {
+        let options = object
+            .entry("stream_options")
+            .or_insert_with(|| serde_json::json!({}));
+        if let Some(options_obj) = options.as_object_mut() {
+            options_obj.insert("include_usage".to_owned(), Value::Bool(true));
+        } else {
+            return Err("stream_options must be an object");
         }
+    }
     Ok(())
 }
 
@@ -383,13 +384,14 @@ async fn forward(
     body: Option<Bytes>,
 ) -> Response {
     if let Some(meter) = state.meter.as_ref()
-        && meter.scope.payer == super::usage_ledger::PayerMode::NativeSubscription {
-            return error_response(
-                StatusCode::FORBIDDEN,
-                "Provider-permitted native-client subscription hosting is not supported for proxying. \
+        && meter.scope.payer == super::usage_ledger::PayerMode::NativeSubscription
+    {
+        return error_response(
+            StatusCode::FORBIDDEN,
+            "Provider-permitted native-client subscription hosting is not supported for proxying. \
                  Session-token relay, pooling, silent paid fallback, and rebilling direct inference are disabled.",
-            );
-        }
+        );
+    }
 
     let upstream_api_key = if let Some(meter) = state
         .meter

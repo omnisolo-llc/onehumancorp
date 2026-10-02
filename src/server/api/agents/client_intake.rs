@@ -182,12 +182,13 @@ async fn handle_client_intake(
             }
             drafted_message = response.message.content;
             if let Some(price) = suggested_price
-                && !drafted_message.contains(&format!("{:.2}", price)) {
-                    drafted_message = format!(
-                        "{} The estimated scope will cost around ${:.2}.",
-                        drafted_message, price
-                    );
-                }
+                && !drafted_message.contains(&format!("{:.2}", price))
+            {
+                drafted_message = format!(
+                    "{} The estimated scope will cost around ${:.2}.",
+                    drafted_message, price
+                );
+            }
         }
     }
 

@@ -62,7 +62,9 @@ pub struct IntegrationsRegistry {
     pub google_workspace_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
-            std::sync::Arc<crate::integrations::google_workspace::provider::GoogleWorkspaceProvider>,
+            std::sync::Arc<
+                crate::integrations::google_workspace::provider::GoogleWorkspaceProvider,
+            >,
         >,
     >,
     google_calendar_clients: std::sync::RwLock<
@@ -74,7 +76,9 @@ pub struct IntegrationsRegistry {
     google_workspace_clients: std::sync::RwLock<
         std::collections::HashMap<
             String,
-            std::sync::Arc<crate::integrations::google_workspace::provider::GoogleWorkspaceProvider>,
+            std::sync::Arc<
+                crate::integrations::google_workspace::provider::GoogleWorkspaceProvider,
+            >,
         >,
     >,
     mailchimp_clients: std::sync::RwLock<
@@ -930,8 +934,8 @@ impl IntegrationsRegistry {
     ) -> Result<String, String> {
         let client = {
             if integration_id == "google_workspace" {
-            let mut clients = self.google_workspace_clients.write().unwrap();
-            clients.insert(
+                let mut clients = self.google_workspace_clients.write().unwrap();
+                clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
@@ -939,8 +943,8 @@ impl IntegrationsRegistry {
                     ),
                 ),
             );
-        }
-        if integration_id == "google_calendar" {
+            }
+            if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -1480,8 +1484,8 @@ impl IntegrationsRegistry {
     ) -> Result<String, String> {
         let client = {
             if integration_id == "google_workspace" {
-            let mut clients = self.google_workspace_clients.write().unwrap();
-            clients.insert(
+                let mut clients = self.google_workspace_clients.write().unwrap();
+                clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
@@ -1489,8 +1493,8 @@ impl IntegrationsRegistry {
                     ),
                 ),
             );
-        }
-        if integration_id == "google_calendar" {
+            }
+            if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -1660,7 +1664,9 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.drive_create_file(name, mime_type, parent_id, content).await;
+            return c
+                .drive_create_file(name, mime_type, parent_id, content)
+                .await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -1784,7 +1790,6 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-
 }
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
