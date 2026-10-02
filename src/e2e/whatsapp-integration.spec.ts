@@ -73,7 +73,7 @@ test.describe('WhatsApp Integration UI', () => {
     expect(response.status()).toBe(501);
     expect(await response.json()).toMatchObject({ success: false, status: 'pending_verification', usable: false });
     await expect(page.getByText('Failed to connect Twilio for WhatsApp.', { exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp API', exact: true })).toBeVisible();
     await expect(page.getByText('Twilio for WhatsApp connected.', { exact: true })).toHaveCount(0);
     await expect(integrationCard(page, 'Twilio for WhatsApp').getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/integrations$/);

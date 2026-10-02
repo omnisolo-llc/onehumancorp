@@ -160,7 +160,10 @@ export default function Integrations() {
         })
       });
 
-      if (res.status !== 200 || !isConfirmedUsableConnection(await res.json())) {
+      // Finish reading the finite response even on a rejection. A status alone
+      // must not leave its body unread while the UI reports a final outcome.
+      const result: unknown = await res.json();
+      if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
         setStatusMessage("Failed to connect Twilio for WhatsApp.");
         return;
       }
