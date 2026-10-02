@@ -48,10 +48,15 @@ pub mod builder {pub use crate::generation_source as generation;pub use crate::{
  }).unwrap()
 }
 '''+tenant_source+'\n}\n',adapter,readers,'#[cfg(test)]#[path="test.rs"]mod tests;']
+for name in ['capabilities','connection','entities','migration']:
+ parts.append(f'#[path={json.dumps(str(ROOT / "src/server/persistence" / (name+".rs")))}] pub mod {name};')
+parts.append('pub mod persistence { pub use crate::{capabilities,connection,entities,migration}; pub use connection::AppDatabase; }')
 (HERE/'generated.rs').write_text('\n'.join(parts))
 inputs=[ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'.github/workflows/ci.yml',ROOT/'scripts/focused_ci_gate.py',ROOT/'scripts/test_focused_ci_gate.py',ROOT/'src/server/migrations/001_initial.sql',ROOT/'src/server/lib.rs',ROOT/'src/server/workflow_execution.rs',ROOT/'src/server/builder/generation.rs',ROOT/'src/server/builder/api.rs',ROOT/'src/server/builder/builder_test.rs',ROOT/'src/server/builder/db.rs',ROOT/'src/server/builder/publication_json.rs',ROOT/'src/server/builder/publication_store.rs',ROOT/'src/server/migrations/059_brand_toolboxes.sql']
 for package in ['auth','common','config','harness','omnisolo','pricing','utils']:
  inputs.extend(p for p in (ROOT/'src/server'/package).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml'))
 inputs.extend(p for p in (ROOT/'src/agents/builtin').rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml'))
+inputs.extend(p for p in (ROOT/'src/server/persistence').rglob('*') if p.is_file() and p.suffix in {'.rs','.sql'})
+inputs.extend(p for p in (ROOT/'src/server/workflow_execution').rglob('*.rs'))
 inputs.extend(p for p in HERE.iterdir() if p.is_file() and p.name not in ['generated.rs','source-manifest.json'])
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(inputs))},indent=2)+'\n')

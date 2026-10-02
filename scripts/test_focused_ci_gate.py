@@ -14,12 +14,27 @@ SPEC.loader.exec_module(gate)
 class FocusedGateTests(unittest.TestCase):
     def test_builder_generation_requires_real_http_and_owned_storage(self):
         minimum, database = gate.GATES['builder-generation-contract']
-        self.assertGreaterEqual(minimum, 32)
+        self.assertGreaterEqual(minimum, 47)
         self.assertEqual(database, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         workflow = (root/'.github/workflows/ci.yml').read_text()
         self.assertIn('python3 scripts/focused_ci_gate.py builder-generation-contract', workflow)
         self.assertIn('bash scripts/builder-generation-contract/fetch.sh', workflow)
+
+    def test_builder_generation_preserves_receipt_storage_compile_inputs(self):
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        folder = root/'scripts/builder-generation-contract'
+        runpy.run_path(str(folder/'prepare.py'))
+        generated = (folder/'generated.rs').read_text()
+        manifest = json.loads((folder/'source-manifest.json').read_text())
+        self.assertIn('pub mod persistence {', generated)
+        for name in ['capabilities', 'connection', 'entities', 'migration']:
+            self.assertIn(f'pub mod {name};', generated)
+        required = list((root/'src/server/workflow_execution').rglob('*.rs'))
+        required += [p for p in (root/'src/server/persistence').rglob('*') if p.is_file() and p.suffix in {'.rs', '.sql'}]
+        for source in required:
+            self.assertIn(str(source.relative_to(root)), manifest)
 
     def test_widget_chat_requires_the_complete_owned_database_gate(self):
         minimum, database = gate.GATES['widget-chat-contract']
