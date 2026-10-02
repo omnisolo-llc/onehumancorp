@@ -239,14 +239,16 @@ jobs:
           path: target/ci-logs/lint-backend.log
           if-no-files-found: error
           retention-days: 7
+      - name: Create the isolated database required by native chat tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+        run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_chat_service_test
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         env:
           OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_chat_service_test
-          PGPASSWORD: ignored_fixture
-        run: |
-          createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_chat_service_test
-          make test-backend
+        run: make test-backend
 
       - name: Check out the already pinned OpenHarness SDK for isolated tests
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
