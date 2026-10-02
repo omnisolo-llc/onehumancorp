@@ -1,7 +1,0 @@
-issue_title: "F14"
-issue_description: "F14: No measured representative serving costs or owner outcomes. Current behavior: Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence. Status is Blocked (Verified no-work outcome)."
-issue_priority: ""
-issue_category: ""
-issue_type: ""
-issue_label: ""
-assignees: ""
