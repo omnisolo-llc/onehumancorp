@@ -49,8 +49,8 @@ describe('LinkInBioGeneratorPage', () => {
 
   it('exposes exclusive theme selection and restores it through real theme clicks', async () => {
     await act(async () => { render(<LinkInBioGeneratorPage />); });
-    const light = screen.getByRole('button', { name: 'Light', exact: true });
-    const dark = screen.getByRole('button', { name: 'Dark', exact: true });
+    const light = screen.getByRole('button', { name: 'Light' });
+    const dark = screen.getByRole('button', { name: 'Dark' });
     expect(dark).toHaveAttribute('aria-pressed', 'true');
     expect(light).toHaveAttribute('aria-pressed', 'false');
     const preview = screen.getByRole('link', { name: 'Existing Link' });

@@ -383,7 +383,7 @@ test('keeps the approval navigation purpose stable when its asynchronous count a
   mockFetch.mockImplementation((url: string, ...args: unknown[]) =>
     url === '/api/v1/agents/approvals' ? approvals : original(url, ...args));
   render(<TooltipProvider><AgentsPage /></TooltipProvider>);
-  const button = screen.getByRole('button', { name: 'Needs Approval', exact: true });
+  const button = screen.getByRole('button', { name: 'Needs Approval' });
   await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/approvals', expect.anything()));
   await act(async () => resolveApprovals(Response.json({ pending_approvals: [
     { id: 'pending-1', department: 'sales', description: 'Review a quote', status: 'Draft' },
