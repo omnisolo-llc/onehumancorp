@@ -129,7 +129,9 @@ export function PublicationPanel(props: PublicationPanelProps) {
     if (current()) { setReview(null); setSaved(result); setReceiptChecked(true); setMessage(operationStatus(result)); }
   });
   const blocked = saved && (['publish_unknown', 'revoke_unknown'].includes(saved.phase) || ['pending', 'processing'].includes(saved.receipt?.status ?? ''));
-  const canUse = ready && loaded && !held;
+  // Bind visible private content during render, before passive effect cleanup can run.
+  const ownerMatches = !!scope.current && !!props.expectedOwner && sameOwner(scope.current.owner, props.expectedOwner) && builderScopeActive(scope.current);
+  const canUse = ready && loaded && !held && ownerMatches;
   const path = canUse && receiptChecked ? publishedSitePath(saved) : null;
   return <section aria-label="Website publication" className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-white/10">
     <h2 className="font-semibold">Public website</h2>

@@ -1,3 +1,4 @@
+import { useLayoutEffect } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { notifyQueueIdentityChange, readQueueOwner } from '@/lib/sync/queueIdentity';
@@ -111,4 +112,15 @@ it('does not show a cached published link on remount before a fresh status recei
   status = 'revoked'; fireEvent.click(screen.getByRole('button', { name: 'Check publication status' }));
   expect(await screen.findByText(/This publication version is revoked/)).toBeVisible();
   expect(screen.queryByRole('link', { name: 'Open published website' })).toBeNull();
+});
+
+it('hides an old owner review in the render that receives a different editor owner', async () => {
+  let observed: string | null = null;
+  function Observed({ expected }: { expected: QueueOwner }) {
+    useLayoutEffect(() => { observed = document.querySelector('[aria-label="Public website snapshot"]')?.textContent ?? null; }, [expected]);
+    return <Panel {...props()} expectedOwner={expected} />;
+  }
+  const a = { ...owner }; const view = render(<Observed expected={a} />); await reviewed();
+  view.rerender(<Observed expected={{ userId: 'new-editor', tenantId: 'new-workspace' }} />);
+  expect(observed).toBeNull();
 });
