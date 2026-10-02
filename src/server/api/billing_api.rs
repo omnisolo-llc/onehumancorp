@@ -142,14 +142,18 @@ pub async fn report_cost_handler(
     let pool = crate::db::get_pool();
 
     if let Some(key) = &req.idempotency_key {
-        let exists: Option<i64> = sqlx::query_scalar("SELECT 1 FROM usage_idempotency_keys WHERE key = $1 AND tenant_id = $2")
-            .bind(key)
-            .bind(&tenant_id)
-            .fetch_optional(&pool)
-            .await
-            .unwrap_or(None);
+        let exists: Option<i64> = sqlx::query_scalar(
+            "SELECT 1 FROM usage_idempotency_keys WHERE key = $1 AND tenant_id = $2",
+        )
+        .bind(key)
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None);
         if exists.is_some() {
-            return Ok(Json(serde_json::json!({ "success": true, "status": "duplicate" })));
+            return Ok(Json(
+                serde_json::json!({ "success": true, "status": "duplicate" }),
+            ));
         }
     }
 
