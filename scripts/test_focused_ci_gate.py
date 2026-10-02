@@ -18,6 +18,12 @@ class FocusedGateTests(unittest.TestCase):
         self.assertEqual(database,'OHC_AGENT_DEFINITION_TEST_DATABASE_URL')
         self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/agent-definition-contract/run.sh').is_file())
 
+    def test_appointment_reads_require_the_full_real_database_inventory(self):
+        minimum,database=gate.GATES['operations-appointments']
+        self.assertGreaterEqual(minimum,11)
+        self.assertEqual(database,'OHC_APPOINTMENTS_TEST_DATABASE_URL')
+        self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/operations-appointments/run.sh').is_file())
+
     def test_chat_gate_requires_real_database_and_complete_inventory(self):
         minimum, database = gate.GATES['chat-tenant-isolation']
         self.assertGreaterEqual(minimum, 8)

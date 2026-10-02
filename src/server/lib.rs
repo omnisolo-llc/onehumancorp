@@ -9187,7 +9187,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
-        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
+        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone(), http_auth_store.clone()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
