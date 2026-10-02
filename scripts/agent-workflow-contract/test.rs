@@ -53,6 +53,7 @@ impl workflow_execution::TextInference for RecordingInference {
 struct Fixture {
     _guard: tokio::sync::MutexGuard<'static, ()>,
     app: Router,
+    store: Arc<server_auth::Store>,
     a: String,
     b: String,
     staff: String,
@@ -108,12 +109,13 @@ impl Fixture {
             .with_state(hub)
             .layer(axum::Extension(execution))
             .route_layer(axum::middleware::from_fn_with_state(
-                store,
+                store.clone(),
                 server_auth::strict_bearer_auth_middleware,
             ));
         Self {
             _guard: guard,
             app,
+            store,
             a: tokens.remove(0),
             b: tokens.remove(0),
             staff: tokens.remove(0),
@@ -553,4 +555,74 @@ async fn execution_policy_reports_only_configured_text_capabilities_to_an_owner(
             expected
         );
     }
+}
+
+#[tokio::test]
+async fn an_owner_role_removed_after_token_issue_cannot_register_idle_metadata() {
+    let f = Fixture::new().await;
+    let signed = f.store.validate_token(&f.a).await.unwrap();
+    assert!(signed.roles.iter().any(|role| role == "owner"));
+    f.store
+        .update_user(
+            &signed.sub,
+            None,
+            Some(vec!["staff".into()]),
+            None,
+            "workflow-tenant-a",
+        )
+        .await
+        .unwrap();
+    let (status, _) = f
+        .request(
+            "POST",
+            "/api/v1/agents/hire",
+            Some(&f.a),
+            serde_json::json!({"name":"Idle agent","role":"Operations"}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, agents) = f
+        .request(
+            "GET",
+            "/api/v1/agents/",
+            Some(&f.admin),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(agents, serde_json::json!([]));
+    assert!(get_workflow_registry().read().unwrap().is_empty());
+    assert!(DISPATCHES.read().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn a_disabled_user_with_an_unexpired_token_cannot_register_idle_metadata() {
+    let f = Fixture::new().await;
+    let signed = f.store.validate_token(&f.a).await.unwrap();
+    assert!(signed.exp > chrono::Utc::now().timestamp());
+    f.store
+        .update_user(&signed.sub, None, None, Some(false), "workflow-tenant-a")
+        .await
+        .unwrap();
+    let (status, _) = f
+        .request(
+            "POST",
+            "/api/v1/agents/hire",
+            Some(&f.a),
+            serde_json::json!({"name":"Idle agent","role":"Operations"}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, agents) = f
+        .request(
+            "GET",
+            "/api/v1/agents/",
+            Some(&f.admin),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(agents, serde_json::json!([]));
+    assert!(get_workflow_registry().read().unwrap().is_empty());
+    assert!(DISPATCHES.read().unwrap().is_empty());
 }
