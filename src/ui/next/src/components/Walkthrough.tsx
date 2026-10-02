@@ -5,6 +5,7 @@ import { WithTooltip } from './TooltipRegistry';
 
 export type Step = {
   targetId: string;
+  target_id?: string;
   title: string;
   content: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
@@ -25,7 +26,8 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
     if (!isOpen || steps.length === 0) return;
 
     const currentStep = steps[currentStepIndex];
-    const targetElement = document.getElementById(currentStep.targetId);
+    const targetId = currentStep.targetId || currentStep.target_id || '';
+    const targetElement = document.getElementById(targetId);
     setTargetRect(null);
 
     if (targetElement) {

@@ -63,14 +63,21 @@ ALTER TABLE quotes ADD COLUMN IF NOT EXISTS follow_up_count INTEGER DEFAULT 0;
 
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='total_amount') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='total_amount')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='total_amount_cents') THEN
         ALTER TABLE quotes RENAME COLUMN total_amount TO total_amount_cents;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='required_deposit') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='required_deposit')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='required_deposit_cents') THEN
         ALTER TABLE quotes RENAME COLUMN required_deposit TO required_deposit_cents;
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='checkout_url') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='checkout_url')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='stripe_payment_link') THEN
         ALTER TABLE quotes RENAME COLUMN checkout_url TO stripe_payment_link;
     END IF;
 END
 $$;
+
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS total_amount_cents BIGINT DEFAULT 0;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS required_deposit_cents BIGINT DEFAULT 0;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS stripe_payment_link TEXT;

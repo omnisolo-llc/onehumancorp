@@ -29,7 +29,7 @@ const CHILD_MODE_ENV: &str = "OMNISOLO_OPENHANDS_TEST_CHILD";
 fn selection(effort: ReasoningEffort) -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "portable-openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(effort),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: Some(400_000),
@@ -73,10 +73,7 @@ fn portable_model_and_selected_base_url_translate_to_openhands_llm_config() {
             {"name":"terminal"}, {"name":"file_editor"}, {"name":"task_tracker"}
         ])
     );
-    assert_eq!(
-        prepared.body["agent"]["llm"]["model"],
-        "openai/gpt-5.6-luna"
-    );
+    assert_eq!(prepared.body["agent"]["llm"]["model"], "openai/gpt-6-luna");
     assert_eq!(
         prepared.body["agent"]["llm"]["base_url"],
         "https://llmapi.omnisolo.co/v1"
@@ -301,8 +298,8 @@ fn all_pinned_conversation_error_classifications_remain_typed_and_retryable() {
 #[test]
 fn model_base_url_and_dialect_validation_is_strict() {
     for model in [
-        " gpt-5.6-luna",
-        "gpt-5.6-luna ",
+        " gpt-6-luna",
+        "gpt-6-luna ",
         "gpt 5",
         "openai/",
         "openai/gpt/extra",
@@ -434,7 +431,7 @@ impl FakeResponsesProvider {
                             "object": "response",
                             "created_at": 1,
                             "status": "completed",
-                            "model": "gpt-5.6-luna",
+                            "model": "gpt-6-luna",
                             "output": [{
                                 "id": "fc_openhands_e2e",
                                 "type": "function_call",
@@ -623,7 +620,7 @@ async fn serve_mock_request(
                 json!({
                     "id": id,
                     "execution_status": "idle",
-                    "agent": {"llm": {"model": "openai/gpt-5.6-luna"}},
+                    "agent": {"llm": {"model": "openai/gpt-6-luna"}},
                     "detail": if matches!(mode, MockMode::SecretBoundary) {
                         "created with exact-configured-secret"
                     } else {
@@ -1082,7 +1079,7 @@ async fn one_server_accepts_distinct_per_conversation_model_base_and_dialect() {
     assert_eq!(creates.len(), 2);
     assert_eq!(
         creates[0].body["agent"]["llm"]["model"],
-        "openai/gpt-5.6-luna"
+        "openai/gpt-6-luna"
     );
     assert_eq!(
         creates[0].body["agent"]["llm"]["base_url"],
@@ -1234,7 +1231,7 @@ async fn installed_pinned_server_executes_a_real_provider_prompt_when_available(
             .any(|request| request.path.ends_with("/responses"))
     );
     assert!(provider_requests.iter().any(|request| {
-        request.body["model"] == "openai/gpt-5.6-luna" || request.body["model"] == "gpt-5.6-luna"
+        request.body["model"] == "openai/gpt-6-luna" || request.body["model"] == "gpt-6-luna"
     }));
     adapter.shutdown().await.unwrap();
 }

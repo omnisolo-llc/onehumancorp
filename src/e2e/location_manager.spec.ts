@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Location Manager Escalation Flow', () => {
   test('Jun can view local tasks and escalate an issue', async ({ page }) => {
@@ -6,7 +6,7 @@ test.describe('Location Manager Escalation Flow', () => {
     await page.goto('/location-dashboard');
 
     // Verify dashboard elements
-    await expect(page.locator('h1')).toHaveText('Location Dashboard');
+    await expect(page.locator('h1').first()).toHaveText('Location Dashboard');
 
     // Verify tasks are present
     await expect(page.getByText('Restock coffee beans')).toBeVisible();

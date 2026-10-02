@@ -18,14 +18,14 @@ test.describe('KAIROS AI OS Orchestration (Phase 4)', () => {
 
   test('Test 4: Verify the Today\'s Sales section is displayed', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText('Total Sales')).toBeVisible();
+    await expect(page.getByText('Total Sales').first()).toBeVisible();
   });
 
   test('Test 5: Complete end-to-end CUJ logging in and checking sections', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Business Analytics' })).toBeVisible();
-    await expect(page.getByText('Total Sales')).toBeVisible();
+    await expect(page.getByText('Total Sales').first()).toBeVisible();
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });

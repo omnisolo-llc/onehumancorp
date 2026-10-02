@@ -123,12 +123,12 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(results).toBeVisible();
 
     // The chat widget should also be there
-    const chatBtn = page.locator('#ohc-floating-help-btn').first();
+    const chatBtn = page.locator('#omnisolo-floating-help-btn').first().first();
     await expect(chatBtn).toBeVisible();
     await chatBtn.click({ force: true });
 
     // The chat widget should open
-    const chatWidget = page.locator('#ohc-floating-help-widget').first();
+    const chatWidget = page.locator('#ohc-floating-help-widget, #omnisolo-floating-help-widget').first();
     await expect(chatWidget).toBeVisible();
 
     // Switch to Ask AI tab

@@ -36,7 +36,7 @@ test.describe('Viral Exit-Intent Loop', () => {
 
     // 6. Test Paywall logic
     const brandingToggle = page.locator('#branding-toggle');
-    await brandingToggle.click({force: true}); // The slider overlaps it
+    await brandingToggle.evaluate((el) => (el as HTMLInputElement).click());
 
     // Ensure the paywall modal opens
     const upgradeButton = page.getByRole('button', { name: 'Upgrade to Pro' });
@@ -55,6 +55,7 @@ test.describe('Viral Exit-Intent Loop', () => {
     // 7. Verify "Back to Dashboard" footer link
     const backLink = page.locator('a.back-link', { hasText: 'Back to Dashboard' });
     await expect(backLink).toBeVisible();
+    await backLink.scrollIntoViewIfNeeded();
     await backLink.click();
 
     // Verify we're back

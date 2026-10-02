@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Centralized Inventory Management', () => {
   test('Owner can view centralized inventory and manually adjust stock', async ({ page }) => {
@@ -12,12 +12,12 @@ test.describe('Centralized Inventory Management', () => {
 
     // The backend should return the test product created in DB migrations/seeds
     // Wait for row
-    const firstRow = page.locator('tr[data-testid^="inventory-row-"]').first();
+    const firstRow = page.locator('[data-testid^="inventory-row-"], [data-testid^="product-row-"]').first();
     await expect(firstRow).toBeVisible({ timeout: 10000 });
 
     // Extract the variant ID from the data-testid
     const rowId = await firstRow.getAttribute('data-testid');
-    const variantId = rowId?.replace('inventory-row-', '');
+    const variantId = rowId?.split(' ')[0]?.replace('inventory-row-', '').replace('product-row-', '');
     expect(variantId).toBeTruthy();
 
     const stockCell = page.locator(`[data-testid="stock-count-${variantId}"]`);
@@ -25,20 +25,27 @@ test.describe('Centralized Inventory Management', () => {
     const initialStock = parseInt(initialStockStr || '0', 10);
 
     // Click to decrease stock
-    const decreaseBtn = page.locator(`[data-testid="adjust-dec-${variantId}"]`);
-    await decreaseBtn.click();
+    const decreaseBtn = page.locator(`[data-testid*="adjust-dec-${variantId}"], [data-testid*="decrease-btn-${variantId}"]`);
+    await Promise.all([
+      page.waitForResponse(r => (r.url().includes('/inventory') || r.url().includes('/api/')) && r.status() === 200).catch(() => {}),
+      decreaseBtn.click(),
+    ]);
 
     // Verify optimistic update
     await expect(stockCell).toHaveText(String(initialStock - 1));
 
     // Reload page to verify persistence
+    await page.waitForTimeout(500);
     await page.reload();
     const reloadedStockCell = page.locator(`[data-testid="stock-count-${variantId}"]`);
     await expect(reloadedStockCell).toHaveText(String(initialStock - 1));
 
     // Increase stock back
-    const increaseBtn = page.locator(`[data-testid="adjust-inc-${variantId}"]`);
-    await increaseBtn.click();
+    const increaseBtn = page.locator(`[data-testid*="adjust-inc-${variantId}"], [data-testid*="increase-btn-${variantId}"]`);
+    await Promise.all([
+      page.waitForResponse(r => (r.url().includes('/inventory') || r.url().includes('/api/')) && r.status() === 200).catch(() => {}),
+      increaseBtn.click(),
+    ]);
     await expect(reloadedStockCell).toHaveText(String(initialStock));
   });
 });

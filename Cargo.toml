@@ -358,3 +358,7 @@ overflow-checks = true
 lto = "thin"
 codegen-units = 16
 strip = "debuginfo"
+
+[[bin]]
+name = "benchmark"
+path = "src/server/bin/benchmark.rs"

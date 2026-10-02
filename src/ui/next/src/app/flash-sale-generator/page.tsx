@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function FlashSaleGeneratorPage() {
   const router = useRouter();
   const [saleTitle, setSaleTitle] = useState('Weekend Flash Sale!');
-  const [discountCode, setDiscountCode] = useState('SAVE20');
+  const [discountCode, setDiscountCode] = useState('FLASH20');
   const [discountPercent, setDiscountPercent] = useState('20');
   const [endDate, setEndDate] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -100,15 +100,17 @@ export default function FlashSaleGeneratorPage() {
                             value={discountPercent}
                             onChange={(e) => setDiscountPercent(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
-                            placeholder="20"
+                            placeholder="e.g. 20"
                         />
                     </div>
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date & Time</label>
+                    <label htmlFor="flash-sale-end-date" className="block text-sm font-medium text-gray-700 mb-2">End Date & Time</label>
                     <input
+                        id="flash-sale-end-date"
                         type="datetime-local"
+                        aria-label="End Date & Time"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
@@ -235,7 +237,7 @@ export default function FlashSaleGeneratorPage() {
 
                 <div className="mt-4 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-                        ⚡ Powered by OmniSolo
+                        ⚡ OmniSolo
                     </a>
                 </div>
             </div>

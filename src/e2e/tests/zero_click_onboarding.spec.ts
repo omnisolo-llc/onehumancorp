@@ -22,7 +22,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await chatInput.press('Enter');
 
     // The app should automatically transition to provisioning state or approval
-    const approvalHeading = page.locator('h1', { hasText: 'Ready to Launch' });
+    const approvalHeading = page.locator('h1', { hasText: 'Ready to Launch' }).first();
     const successHeading = page.getByRole('heading', { name: /You're Live!/ });
 
     // In chat flow we may skip straight or show approval, wait for one

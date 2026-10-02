@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Integrations from "./page";
 
@@ -49,7 +50,7 @@ describe("Integrations", () => {
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
 
-    const connect = screen.getByRole('button', { name: 'Connect Twilio' });
+    const connect = screen.getByRole('button', { name: 'Save & Connect' });
     expect(connect).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
     fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
@@ -74,7 +75,7 @@ describe("Integrations", () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
     fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
     fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Connect Twilio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save & Connect' }));
 
     expect(await screen.findByText('Twilio Conversations connected.')).toBeDefined();
     expect(push).toHaveBeenCalledWith('/inbox');

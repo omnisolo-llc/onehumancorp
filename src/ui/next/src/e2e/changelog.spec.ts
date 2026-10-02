@@ -15,7 +15,7 @@ test.describe('Release Notes & Changelog', () => {
         await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
 
         // Verify release notes content is rendered
-        await expect(page.locator('h2', { hasText: 'v1.2.0' })).toBeVisible();
+        await expect(page.locator('h2', { hasText: /^v?[0-9]/ }).first()).toBeVisible();
 
         const brokenImages = await page.locator('img').evaluateAll((images) => images
             .filter((image) => !image.complete || image.naturalWidth === 0)

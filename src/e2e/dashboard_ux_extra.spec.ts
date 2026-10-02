@@ -25,8 +25,8 @@ test.describe('Navigation', () => {
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+  test('should display login page', async ({ anonymousPage }) => {
+    await anonymousPage.goto('/login');
+    await expect(anonymousPage.getByRole('heading', { name: 'Login' })).toBeVisible();
   });
 });

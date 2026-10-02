@@ -30,7 +30,7 @@ test.describe('Cloud-Bridge Referral Loop', () => {
     await expect(page.getByRole('heading', { name: 'Grow Your Team' })).toBeVisible();
 
     // Click to generate link
-    const generateBtn = page.getByRole('button', { name: 'Invite to Cloud Team' });
+    const generateBtn = page.getByRole('button', { name: /Invite to Cloud Team|Unlock Cloud Collaboration/ });
     await expect(generateBtn).toBeVisible();
     await generateBtn.click();
 

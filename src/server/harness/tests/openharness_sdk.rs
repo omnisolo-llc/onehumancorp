@@ -18,7 +18,7 @@ use server_harness::middleware::openharness::{
 fn resolved_model() -> OpenHarnessResolvedModel {
     OpenHarnessResolvedModel {
         provider: "openai".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         base_url: "https://llmapi.omnisolo.co/v1".to_owned(),
         reasoning_effort: "max".to_owned(),
         api_dialect: "openai_responses".to_owned(),
@@ -47,7 +47,7 @@ fn resolved_prompt_codec_carries_the_complete_immutable_model_contract() {
     let frame = serde_json::to_value(&command).unwrap();
 
     assert_eq!(frame["resolved_model"]["provider"], "openai");
-    assert_eq!(frame["resolved_model"]["model_id"], "gpt-5.6-luna");
+    assert_eq!(frame["resolved_model"]["model_id"], "gpt-6-luna");
     assert_eq!(frame["resolved_model"]["reasoning_effort"], "max");
     assert_eq!(frame["resolved_model"]["api_dialect"], "openai_responses");
     assert_eq!(frame["resolved_model"]["context_window_tokens"], 400_000);
@@ -85,7 +85,7 @@ fn command_codec_encodes_session_prompt_steer_cancel_and_shutdown_frames() {
                 "prompt-1",
                 "native-session-1",
                 "Inspect the repository",
-                "gpt-5.6-luna",
+                "gpt-6-luna",
                 "https://llmapi.omnisolo.co/v1",
                 "bypass",
                 "/workspace/project",
@@ -97,7 +97,7 @@ fn command_codec_encodes_session_prompt_steer_cancel_and_shutdown_frames() {
                 "prompt":"Inspect the repository",
                 "resolved_model":{
                     "provider":"openai",
-                    "model_id":"gpt-5.6-luna",
+                    "model_id":"gpt-6-luna",
                     "base_url":"https://llmapi.omnisolo.co/v1",
                     "reasoning_effort":"max",
                     "api_dialect":"openai_chat_completions",
@@ -146,7 +146,7 @@ fn command_codec_writes_one_jsonl_frame_and_rejects_credential_bearing_urls() {
         "prompt-1",
         "session-1",
         "Inspect the repository",
-        "gpt-5.6-luna",
+        "gpt-6-luna",
         "https://llmapi.omnisolo.co/v1",
         "bypass",
         "/workspace/project",
@@ -167,7 +167,7 @@ fn command_codec_writes_one_jsonl_frame_and_rejects_credential_bearing_urls() {
             "prompt-1",
             "session-1",
             "Inspect the repository",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             base_url,
             "bypass",
             "/workspace/project",
@@ -714,7 +714,7 @@ for line in sys.stdin:
             "prompt-runtime-1",
             "retained-runtime-session",
             "wait for steering",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "bypass",
             "/workspace/project",
@@ -746,7 +746,7 @@ for line in sys.stdin:
             "prompt-runtime-2",
             "retained-runtime-session",
             "wait for cancellation",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "accept_edits",
             "/workspace/project",
@@ -992,8 +992,8 @@ async def run(
         sandbox_mode=None,
         _provider=None,
         **kwargs):
-    if model == "gpt-5.6-luna" and _provider is None:
-        raise KeyError("Unknown model 'gpt-5.6-luna'; static registry rejected it")
+    if model == "gpt-6-luna" and _provider is None:
+        raise KeyError("Unknown model 'gpt-6-luna'; static registry rejected it")
     from harness.core.engine import load_toml_config
     from harness.providers.registry import MODELS
     tool_key = subprocess.check_output(
@@ -1037,7 +1037,7 @@ async def run(
         "provider auth error": FakeProviderError(f"unauthorized {secret}", 401),
         "provider rate error": FakeProviderError("rate limited", 429),
         "provider context error": FakeProviderError("maximum context length exceeded", 400),
-        "provider unknown model": KeyError("unknown model gpt-5.6-luna"),
+        "provider unknown model": KeyError("unknown model gpt-6-luna"),
         "provider reasoning error": UnsupportedReasoningError("reasoning effort unsupported"),
         "provider timeout": asyncio.TimeoutError("provider timed out"),
         "provider rejection": FakeProviderError("request rejected", 400),
@@ -1350,7 +1350,7 @@ async fn sdk_boundary_isolates_config_scrubs_tool_environment_and_redacts_final_
         .find(|value| value["kind"] == "run")
         .unwrap();
     assert_eq!(run["provider"], "openai");
-    assert_eq!(run["model"], "gpt-5.6-luna");
+    assert_eq!(run["model"], "gpt-6-luna");
     assert_eq!(run["injected_provider_key_present"], true);
     assert_eq!(run["openai_key_in_env"], false);
     assert_eq!(run["tool_subprocess_key_in_env"], false);
@@ -1624,7 +1624,7 @@ async fn assert_nonfinite_result_is_terminal_error(prompt: &str, suffix: &str) {
             &prompt_id,
             &session_id,
             prompt,
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "bypass",
             "/workspace/project",
@@ -1700,7 +1700,7 @@ async fn arbitrary_openai_model_uses_direct_provider_instead_of_static_registry(
             "prompt-custom-model",
             &session_id,
             "custom model prompt",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "bypass",
             "/workspace/project",
@@ -1738,7 +1738,7 @@ async fn arbitrary_openai_model_uses_direct_provider_instead_of_static_registry(
         .find(|record| record["kind"] == "run")
         .unwrap();
     assert_eq!(run["provider"], "openai");
-    assert_eq!(run["model"], "gpt-5.6-luna");
+    assert_eq!(run["model"], "gpt-6-luna");
     assert_eq!(run["base_url"], "https://llmapi.omnisolo.co/v1");
     assert_eq!(run["permission_mode"], "bypass");
     assert_eq!(run["registered_model"]["provider"], "openai");
@@ -1746,7 +1746,7 @@ async fn arbitrary_openai_model_uses_direct_provider_instead_of_static_registry(
     assert_eq!(run["registered_model"]["max_output_tokens"], 16_384);
     assert_eq!(run["api_key_present"], false);
     assert_eq!(run["injected_provider"], true);
-    assert_eq!(run["injected_provider_model"], "gpt-5.6-luna");
+    assert_eq!(run["injected_provider_model"], "gpt-6-luna");
     assert_eq!(
         run["injected_provider_base_url"],
         "https://llmapi.omnisolo.co/v1"
@@ -1870,7 +1870,7 @@ async fn system_and_progress_events_do_not_kill_the_prompt_stream() {
             "prompt-lifecycle",
             &session_id,
             "emit lifecycle events",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "bypass",
             "/workspace/project",
@@ -1978,7 +1978,7 @@ async fn fake_sdk_sidecar_streams_controls_redacts_and_exits_cleanly() {
             "prompt-1",
             &native_session_id,
             "normal prompt",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "bypass",
             "/workspace/project",
@@ -2043,7 +2043,7 @@ async fn fake_sdk_sidecar_streams_controls_redacts_and_exits_cleanly() {
             "prompt-2",
             &native_session_id,
             "wait for cancellation",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "accept_edits",
             "/workspace/project",
@@ -2078,7 +2078,7 @@ async fn fake_sdk_sidecar_streams_controls_redacts_and_exits_cleanly() {
             "prompt-3",
             &native_session_id,
             "emit malformed event",
-            "gpt-5.6-luna",
+            "gpt-6-luna",
             "https://llmapi.omnisolo.co/v1",
             "plan",
             "/workspace/project",
@@ -2136,7 +2136,7 @@ async fn fake_sdk_sidecar_streams_controls_redacts_and_exits_cleanly() {
         .find(|record| record["kind"] == "run" && record["prompt"] == "normal prompt")
         .unwrap();
     assert_eq!(first_run["provider"], "openai");
-    assert_eq!(first_run["model"], "gpt-5.6-luna");
+    assert_eq!(first_run["model"], "gpt-6-luna");
     assert_eq!(first_run["base_url"], "https://llmapi.omnisolo.co/v1");
     assert_eq!(first_run["permission_mode"], "bypass");
     assert_eq!(first_run["cwd"], "/workspace/project");
@@ -2363,7 +2363,7 @@ class AsyncOpenAI:
     assert!(bridge.child.wait().await.unwrap().success());
     let record: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&real.record_path).unwrap()).unwrap();
-    assert_eq!(record["model"], "gpt-5.6-luna");
+    assert_eq!(record["model"], "gpt-6-luna");
     assert_eq!(record["max_completion_tokens"], 12_345);
     assert_eq!(record["openai_key_in_env"], false);
     assert!(record["home"].as_str().unwrap().starts_with("/tmp/"));

@@ -31,7 +31,7 @@ export default function ViralJobBoardGeneratorPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Viral Job Board Generator 📢</h1>
+        <h1 aria-label="Viral Job Board Generator" className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Viral Job Board Generator 📢</h1>
         <button
           onClick={() => router.push('/dashboard')}
           className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors"
@@ -133,9 +133,7 @@ export default function ViralJobBoardGeneratorPage() {
                 <h2 className="text-2xl font-bold font-outfit text-center mb-2">
                   {boardTitle || 'We are hiring!'}
                 </h2>
-                <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
-                  {description || 'Join our team.'}
-                </p>
+                <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>{description || 'Join our team.'}</p>
 
                 <div className="w-full space-y-3 mb-6">
                   <div className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50/10 transition-colors" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>

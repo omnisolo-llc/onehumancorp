@@ -19,7 +19,7 @@ test.describe('Milestone Alerts', () => {
         await expect(page.locator('h1', { hasText: 'Success Milestones 🏆' })).toBeVisible();
 
         // Click a milestone and test share options
-        await expect(page.locator('text=First Sale!')).toBeVisible();
+        await expect(page.getByRole('heading', { name: /First Sale/i })).toBeVisible();
 
         await expect(page.locator('text=Invite a friend')).toBeVisible();
         await expect(page.locator('text=Download Achievement')).toBeVisible();

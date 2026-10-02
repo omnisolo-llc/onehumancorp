@@ -28,3 +28,6 @@ pub mod proactive_operations_worker;
 pub mod customer_memory_worker;
 pub mod subscription_health_job;
 pub mod subscription_health_worker;
+
+pub mod draft_quote_worker;
+pub mod inquiry_intake_worker;

@@ -56,8 +56,9 @@ export default function ShareToUnlockGeneratorPage() {
                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Campaign Settings</h2>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Title</label>
+                    <label htmlFor="campaign-title" className="block text-sm font-medium text-gray-700 mb-2">Campaign Title</label>
                     <input
+                        id="campaign-title"
                         type="text"
                         value={campaignTitle}
                         onChange={(e) => setCampaignTitle(e.target.value)}
@@ -67,8 +68,9 @@ export default function ShareToUnlockGeneratorPage() {
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Reward Description</label>
+                    <label htmlFor="reward" className="block text-sm font-medium text-gray-700 mb-2">Reward Description</label>
                     <input
+                        id="reward"
                         type="text"
                         value={reward}
                         onChange={(e) => setReward(e.target.value)}
@@ -78,8 +80,9 @@ export default function ShareToUnlockGeneratorPage() {
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hidden Discount Code</label>
+                    <label htmlFor="hidden-code" className="block text-sm font-medium text-gray-700 mb-2">Hidden Discount Code</label>
                     <input
+                        id="hidden-code"
                         type="text"
                         value={hiddenCode}
                         onChange={(e) => setHiddenCode(e.target.value)}

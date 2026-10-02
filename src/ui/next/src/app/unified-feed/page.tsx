@@ -166,20 +166,18 @@ export default function UnifiedFeed() {
     editedPayload?: string,
   ) => {
     setProcessingId(itemId);
+    setFeedItems((prev) => prev.filter((i) => i.workItem.id !== itemId));
     try {
       const payload: { state: string; edited_payload?: string } = { state: action };
       if (editedPayload) {
         payload.edited_payload = editedPayload;
       }
 
-      const res = await fetch(`/api/v1/agent-feed/${itemId}`, {
+      await fetch(`/api/v1/agent-feed/${itemId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        setFeedItems((prev) => prev.filter((i) => i.workItem.id !== itemId));
-      }
     } catch (e) {
       console.error(e);
     } finally {

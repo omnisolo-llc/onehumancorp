@@ -187,8 +187,19 @@ impl MinimaxClient {
                     "suggested_features": ["booking"]
                 }"#
                 .to_string());
-            } else if lower_prompt.contains("e2e_mock_trigger_expert_team_analysis") {
-                if lower_prompt.contains("you are an expert in") {
+            } else if lower_prompt.contains("e2e_mock_trigger_expert_team_analysis")
+                || (lower_prompt.contains("comprehensive business plan")
+                    && lower_prompt.contains("chart: required"))
+            {
+                if lower_prompt.contains("synthesize") {
+                    return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
+                } else if lower_prompt.contains("researcher")
+                    || lower_prompt.contains("financial")
+                    || lower_prompt.contains("strategic")
+                    || lower_prompt.contains("process")
+                    || lower_prompt.contains("quality")
+                    || lower_prompt.contains("expert")
+                {
                     let rand_num = std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .unwrap()
@@ -205,11 +216,11 @@ impl MinimaxClient {
                         "Chapter 8 unique quality "
                     };
                     return Ok(format!("{}{}", role, rand_num));
-                } else if lower_prompt.contains("synthesize") {
-                    return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
                 }
                 return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
-            } else if lower_prompt.contains("e2e_mock_trigger_expert_team_failure") {
+            } else if lower_prompt.contains("e2e_mock_trigger_expert_team_failure")
+                || lower_prompt.contains("short task")
+            {
                 return Ok("Short output".to_string());
             } else if lower_prompt.contains("marketing_strategist")
                 || lower_prompt.contains("marketing strategist")

@@ -422,7 +422,7 @@ async fn handle_create_product(
     .bind(price_cents)
     .bind(payload.is_subscribable.unwrap_or(false))
     .bind(payload.subscription_frequency.clone())
-    .bind(payload.subscription_discount_percent)
+    .bind(payload.subscription_discount_percent.unwrap_or(0))
     .execute(&mut *tx)
     .await;
 

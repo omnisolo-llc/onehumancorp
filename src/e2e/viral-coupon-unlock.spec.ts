@@ -5,6 +5,7 @@ test.describe('Viral Coupon Unlock Loop', () => {
   test('should generate a share-to-unlock coupon loop', async ({ page }) => {
     // Navigate to dashboard
     await adminPage(page);
+    await page.goto('/dashboard.html');
 
     // Click the new Viral Coupon Unlock link
     await page.click('a#viral-coupon-unlock-link');

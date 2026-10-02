@@ -51,7 +51,7 @@ test.describe('Viral Referral Loop', () => {
 
     await expect(page.getByRole('heading', { name: 'Grow Your Team' })).toBeVisible();
 
-    const altBtn = page.getByRole('button', { name: 'Invite to Cloud Team' });
+    const altBtn = page.getByRole('button', { name: /Invite to Cloud Team|Unlock Cloud Collaboration/ });
     await expect(altBtn).toBeVisible();
     await altBtn.click();
 

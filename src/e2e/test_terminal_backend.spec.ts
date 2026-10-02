@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Terminal Backend E2E Test', () => {
   test('Agent Terminal correctly loads and switches backend without mock data', async ({ page }) => {
-    await page.goto('http://127.0.0.1:8080/agent-terminal');
+    await page.goto('/agent-terminal');
 
     // Wait for the UI to load
     await expect(page.locator('h1:has-text("Assistant-First Shell")')).toBeVisible();

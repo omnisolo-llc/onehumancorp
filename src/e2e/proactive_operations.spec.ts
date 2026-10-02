@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Proactive Operations Task Feed', () => {
-  test('Persona: Jun the Location Manager opens app and interacts with proactive ops tasks', async ({ page }) => {
+  test('Persona: Jun the Location Manager opens app and interacts with proactive ops tasks', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
 
     await page.waitForTimeout(2000);
@@ -24,11 +25,12 @@ test.describe('Proactive Operations Task Feed', () => {
     await expect(staffingCard).toBeVisible();
 
     await checklistCard.locator('button', { hasText: 'Review Checklist' }).click();
-    await supplierCard.locator('button', { hasText: 'Assign to Staff' }).click();
-    await staffingCard.locator('button', { hasText: 'Draft Schedule Request' }).click();
+    await expect(checklistCard).not.toBeVisible({ timeout: 10000 });
 
-    await expect(checklistCard).not.toBeVisible();
-    await expect(supplierCard).not.toBeVisible();
-    await expect(staffingCard).not.toBeVisible();
+    await supplierCard.locator('button', { hasText: 'Assign to Staff' }).click();
+    await expect(supplierCard).not.toBeVisible({ timeout: 10000 });
+
+    await staffingCard.locator('button', { hasText: 'Draft Schedule Request' }).click();
+    await expect(staffingCard).not.toBeVisible({ timeout: 10000 });
   });
 });

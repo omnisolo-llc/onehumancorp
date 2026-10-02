@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Work-Intake Widget Viral Loop', () => {
   test('should display the soft paywall modal and handle share bypass', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    await page.goto('/work-intake-widget');
+    await page.goto('/work-intake-widget.html');
 
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Work-Intake Widget 📋' })).toBeVisible();
