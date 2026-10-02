@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "[Research] Architect Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_description: "According to RESEARCH.md, the core strategic directive is to integrate existing tools instead of rebuilding them. Requests to build native replacements for external services (such as Chatwoot) without explicit authorization, evidence, and an expansion gate must be rejected. Furthermore, documentation shows Chatwoot has already been removed in previous plans (e.g., docs/superpowers/plans/2026-07-13-chatwoot-removal.md). Therefore, we should not proceed with building a native Rust Omnichannel Chat System as requested in this issue."
