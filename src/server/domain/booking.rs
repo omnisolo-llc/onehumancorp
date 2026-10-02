@@ -94,6 +94,8 @@ pub async fn handle_autonomous_quote_action(
         .and_then(|v| v.as_str())
         .unwrap_or("Emergency Handyman Service");
 
+    let mut generated_booking_id = None;
+
     if !proposed_slot_id.is_empty() {
         // We have an approved slot, let's insert it into the booking_slots and bookings table.
         let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
@@ -104,6 +106,7 @@ pub async fn handle_autonomous_quote_action(
             .with_timezone(&chrono::Utc);
 
         let booking_id = uuid::Uuid::new_v4().to_string();
+        generated_booking_id = Some(booking_id.clone());
 
         sqlx::query(
             "INSERT INTO bookings (id, tenant_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, 'scheduled')"
@@ -179,15 +182,21 @@ pub async fn handle_autonomous_quote_action(
         .to_string();
     let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str());
 
+    // Insert into quotes (generate ID early so we can use it for idempotency)
+    let quote_id = uuid::Uuid::new_v4().to_string();
+
     let mut stripe_payment_link = String::new();
     if deposit_amount_cents > 0 {
         let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
         let stripe_client = StripeClient::new(api_key);
 
         // Generate an idempotent checkout session
-        let operation_id = format!("booking-deposit-{}", uuid::Uuid::new_v4());
+        let operation_id = format!("quote-deposit-{}", quote_id);
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("booking_deposit".to_string(), "true".to_string());
+        metadata.insert("quote_id".to_string(), quote_id.clone());
+        if let Some(bid) = generated_booking_id {
+            metadata.insert("booking_id".to_string(), bid.to_string());
+        }
         let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {
             name: service,
             reference: customer_id,
@@ -220,9 +229,6 @@ Your booking deposit is pending. A payment link will be sent shortly.",
             );
         }
     }
-
-    // Insert into quotes
-    let quote_id = uuid::Uuid::new_v4().to_string();
     let payment_link_opt = if stripe_payment_link.is_empty() {
         None
     } else {
