@@ -1,3 +1,11 @@
 outcome: no_work
-issue_title: "Native Rust Omnichannel Chat System - Core Architecture"
-issue_description: "According to RESEARCH.md, the core strategic directive is to integrate existing tools instead of rebuilding them. Requests to build native replacements for external services (such as Chatwoot) without explicit authorization, evidence, and an expansion gate must be rejected."
+issue_title: "[Research] Architect Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_description: |
+  The requested Native Rust Omnichannel Chat System is already fully implemented in the codebase.
+
+  Implementation Evidence:
+  - Core Schema and RLS: `src/server/migrations/233_chat_omnichannel.sql`
+  - Domain Models: `src/server/integrations/omnichannel/src/models.rs`
+  - Adapter Traits: `src/server/integrations/omnichannel/src/traits.rs`
+  - Routing & Repositories: `src/server/integrations/omnichannel/src/router.rs` and `src/server/integrations/omnichannel/src/repository.rs`
+  - Chat Services & Inbox Listing: `src/server/services/chat/service.rs`
