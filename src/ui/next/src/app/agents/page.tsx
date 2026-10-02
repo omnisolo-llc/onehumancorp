@@ -119,6 +119,10 @@ export default function AgentsPage() {
     { targetId: 'activate-agent-btn', title: 'Activate your AI Support Agent', content: 'Click here to activate your AI Support Agent.' }
   ];
   const [workflows, setWorkflows] = useState<WorkflowRecord[]>([]);
+  const [workflowCursors, setWorkflowCursors] = useState<Array<string | null>>([null]);
+  const [nextWorkflowCursor, setNextWorkflowCursor] = useState<string | null>(null);
+  const [resultRecord, setResultRecord] = useState<WorkflowRecord | undefined>();
+  const workflowCursor = workflowCursors.at(-1) ?? null;
   const [readState, setReadState] = useState<ReadState>('unverified');
   const [feed, setFeed] = useState<ApprovalItem[]>([]);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
@@ -149,7 +153,7 @@ export default function AgentsPage() {
   );
   const reads = useRef(0);
   const retireView = useCallback(() => {
-    reads.current += 1; setWorkflows([]); setFeed([]); setApprovals([]); setPanel('browse'); setQuery(''); setOutputFormat('Brief'); setReadState('unverified');
+    reads.current += 1; setWorkflowCursors([null]); setNextWorkflowCursor(null); setResultRecord(undefined); setWorkflows([]); setFeed([]); setApprovals([]); setPanel('browse'); setQuery(''); setOutputFormat('Brief'); setReadState('unverified');
     setRunMessage(''); setRunError(''); setTaskPrompt(''); setContextReferences(''); setAttachments('');
     setCustomProvider(''); setWorkDirectory(''); setTaskConstraints('');
     setModel('Auto'); setMode('Ask'); setWorkspace('No workspace access'); setEnabledSkills([]); setEnabledConnectors([]);
@@ -161,15 +165,26 @@ export default function AgentsPage() {
     const sequence = ++reads.current; setReadState('loading');
     try {
       const [approvalsData, feedData, workflowsData] = await Promise.all([
-        readSnapshot('/api/v1/agents/approvals'), readSnapshot('/api/v1/agents/approvals/activity'), readSnapshot('/api/v1/agents/workflows'),
-      ]) as [{ pending_approvals?: unknown }, { pending_approvals?: unknown }, { workflows?: unknown }];
+        readSnapshot('/api/v1/agents/approvals'), readSnapshot('/api/v1/agents/approvals/activity'), readSnapshot(workflowCursor ? `/api/v1/agents/workflows?before=${encodeURIComponent(workflowCursor)}` : '/api/v1/agents/workflows'),
+      ]) as [{ pending_approvals?: unknown }, { pending_approvals?: unknown }, { workflows?: unknown; next_cursor?: unknown }];
       if (sequence !== reads.current) return;
       if (!Array.isArray(approvalsData.pending_approvals) || !Array.isArray(feedData.pending_approvals) || !Array.isArray(workflowsData.workflows) || !approvalsData.pending_approvals.every(isApproval) || !feedData.pending_approvals.every(isApproval) || !workflowsData.workflows.every(isWorkflow)) throw new Error('Invalid agent data');
+      const cursor = workflowsData.next_cursor;
+      if (cursor != null && (typeof cursor !== 'string' || !/^[0-9]{1,12}:[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(cursor) || cursor === workflowCursor || workflowsData.workflows.length === 0)) throw new Error('Invalid workflow cursor');
+      let focused = workflowsData.workflows.find(item => item.id === runMessage);
+      if (runMessage && !focused) {
+        try {
+          const detail = await readSnapshot(`/api/v1/agents/workflows/${runMessage}`) as {workflow?: unknown};
+          if (isWorkflow(detail?.workflow) && detail.workflow.id === runMessage) focused = detail.workflow;
+        } catch { /* A missing detail never invents a result or hides valid history. */ }
+      }
+      if (sequence !== reads.current) return;
+      setResultRecord(focused); setNextWorkflowCursor(typeof cursor === 'string' ? cursor : null);
       setApprovals(approvalsData.pending_approvals); setFeed(feedData.pending_approvals); setWorkflows(workflowsData.workflows); setReadState('ready');
     } catch {
       if (sequence === reads.current) { setReadState('unavailable'); setRunError('Could not refresh agent records. No empty or successful result has been inferred.'); }
     }
-  }, [readSnapshot, ready]);
+  }, [readSnapshot, ready, workflowCursor, runMessage]);
   useEffect(() => { void fetchAll(); return () => { reads.current += 1; }; }, [fetchAll, revision]);
   useAuthenticatedPolling({ onPoll: fetchAll, enabled: ready });
   const unsupported = mode !== 'Ask' || workspace !== 'No workspace access' || enabledSkills.length > 0 || enabledConnectors.length > 0 || !!contextReferences.trim() || !!attachments.trim() || !!customProvider.trim() || !!workDirectory.trim() || outputFormat !== 'Brief' || !!taskConstraints.trim() || selected.kind === 'team';
@@ -186,8 +201,8 @@ export default function AgentsPage() {
     await execution.start({ name: selected.name, role: selected.role, model, task: taskPrompt });
   }
   useEffect(() => {
-    if (execution.receipt) { setRunMessage(execution.receipt.workflow_id); setPanel('results'); void fetchAll(); }
-  }, [execution.receipt, fetchAll]);
+    if (execution.receipt) { setRunMessage(execution.receipt.workflow_id); setPanel('results'); }
+  }, [execution.receipt]);
   async function startWorkflow(name: string, task: string) {
     let parsed: unknown;
     try { parsed = JSON.parse(task); } catch { /* Plain text is the supported input. */ }
@@ -344,7 +359,7 @@ export default function AgentsPage() {
             <ResultsPanel
               selected={selected}
               workflowId={runMessage}
-              record={readState === 'ready' ? workflows.find(item => item.id === runMessage) : undefined}
+              record={readState === 'ready' ? resultRecord : undefined}
               resultTab={selectedResultTab}
               setResultTab={setSelectedResultTab}
             />
@@ -353,7 +368,7 @@ export default function AgentsPage() {
           {panel === 'remote' && <RemotePanel />}
           {panel === 'data' && <DataPanel />}
           {panel === 'operations' && <><OperationsPanel selectedId={selectedDepartment} showAll={() => setSelectedDepartment(null)} /><AgentMetrics /></>}
-          {panel === 'workflows' && <WorkflowsPanel readState={readState} workflows={workflows} onSave={startWorkflow} />}
+          {panel === 'workflows' && <WorkflowsPanel readState={readState} workflows={workflows} onSave={startWorkflow} older={nextWorkflowCursor ? () => setWorkflowCursors(values => [...values, nextWorkflowCursor]) : undefined} newer={workflowCursors.length > 1 ? () => setWorkflowCursors(values => values.slice(0, -1)) : undefined} />}
           {panel === 'feed' && <FeedPanel readState={readState} feed={feed} />}
           {panel === 'approvals' && <ApprovalsPanel readState={readState} approvals={approvals} decideApproval={decideApproval} />}
         </section>
@@ -394,7 +409,7 @@ export default function AgentsPage() {
           <ResultsPanel
             selected={selected}
             workflowId={runMessage}
-            record={readState === 'ready' ? workflows.find(item => item.id === runMessage) : undefined}
+            record={readState === 'ready' ? resultRecord : undefined}
             resultTab={selectedResultTab}
             setResultTab={setSelectedResultTab}
             compact
@@ -1321,11 +1336,15 @@ function CreateWorkflowForm({ onSave }: { onSave: (name: string, task: string) =
   );
 }
 
-function WorkflowsPanel({ workflows, onSave, readState }: { readState: ReadState; workflows: WorkflowRecord[]; onSave: (name: string, task: string) => Promise<void> }) {
+function WorkflowsPanel({ workflows, onSave, readState, older, newer }: { readState: ReadState; workflows: WorkflowRecord[]; onSave: (name: string, task: string) => Promise<void>; older?: () => void; newer?: () => void }) {
   return (
     <section className="border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
       <SectionHeader title="Workflows" detail="Accepted text analyses and their actual execution status. Visual tool workflows require an execution policy that is not available here." />
 
+      <div className="my-3 flex gap-3" aria-label="Workflow history pages">
+        <button type="button" disabled={readState !== 'ready' || !newer} onClick={newer}>Newer analyses</button>
+        <button type="button" disabled={readState !== 'ready' || !older} onClick={older}>Older analyses</button>
+      </div>
       <CreateWorkflowForm onSave={onSave} />
 
       <div className="mb-8">
@@ -1342,7 +1361,9 @@ function WorkflowsPanel({ workflows, onSave, readState }: { readState: ReadState
                 <StatusPill>{workflow.status}</StatusPill>
               </div>
               <p className="mt-1 text-xs font-bold uppercase text-zinc-500">{workflow.workflow}</p>
-              <p className="mt-2 text-sm text-zinc-700">{workflow.task}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">{workflow.task}</p>
+              {workflow.output && <pre className="mt-2 whitespace-pre-wrap text-sm">{workflow.output}</pre>}
+              {workflow.error && <p role="status">{workflow.error}</p>}
               <div className="mt-2 text-xs text-zinc-500">
                 <span className="font-semibold text-zinc-600">Execution mode</span>
                 {workflow.command ? `: ${workflow.command}` : ': text analysis'}

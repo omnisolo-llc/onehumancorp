@@ -5,6 +5,8 @@ export OMNISOLO_AGENT_TOKEN= OMNISOLO_MULTITENANT=false OMNISOLO_AGENT_URL=http:
 export JWT_SECRET=public-local-agent-workflow-regression-signing-key-only
 export OMNISOLO_STANDALONE_MODE=false OMNISOLO_DATABASE_URL=sqlite::memory:
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0
+export NODE_PATH="$PWD/scripts/agent-workflow-contract/node_modules:$PWD/src/ui/next/node_modules${NODE_PATH:+:$NODE_PATH}"
+python3 scripts/agent-workflow-contract/verify_node_lock.py
 python3 scripts/agent-workflow-contract/test_receipt_schema.py
 cp Cargo.lock scripts/agent-workflow-contract/Cargo.lock
 cargo metadata --offline --manifest-path scripts/agent-workflow-contract/Cargo.toml --format-version 1 >/dev/null

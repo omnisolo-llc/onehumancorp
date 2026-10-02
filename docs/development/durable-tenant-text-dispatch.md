@@ -23,10 +23,21 @@ under the same key is a conflict. Replays do not register another agent, acquire
 another execution capability or reserve another budget. The original provider,
 model, payer, tariff and ceiling remain part of the immutable receipt payload.
 
-`GET /api/v1/agents/workflows` returns the newest 100 receipts in the signed
-tenant. `GET /api/v1/agents/workflows/{id}` reads one receipt, and
+`GET /api/v1/agents/workflows` preserves the `workflows` array of complete
+records and adds `next_cursor`. Pages default to 20, accept `limit=1..20` and
+`before=<created_at>:<canonical UUID>`, and fit within 1 MiB after JSON escaping.
+An included receipt always retains all task/output text. Maximum accepted text
+fits below 512 KiB per record; no valid record can cause a nonadvancing page.
+Cursors use immutable timestamp/ID ordering, including ties, and need not refer
+to an extant row. An exhausted page returns an empty array and null cursor.
+The Next history UI offers older/newer pages and preserves full result text.
+
+`GET /api/v1/agents/workflows/by-request/{request_uuid}` performs direct exact
+lookup by current tenant and actor, even for requests older than every history
+page. Another actor or tenant receives not-found; malformed, nil or noncanonical
+UUIDs are rejected. Lost-ack recovery uses this endpoint and never scans history. `GET /api/v1/agents/workflows/{id}` reads one receipt, and
 `POST /api/v1/agents/workflows/{id}/cancel` cancels an unclaimed request or records
-an unknown outcome for a claimed request. All three revalidate current canonical
+an unknown outcome for a claimed request. All receipt endpoints revalidate current canonical
 owner/admin authority. A caller-supplied tenant, actor or provider is never an
 authorization source. A hired receipt includes its stable agent correlation ID.
 

@@ -24,7 +24,7 @@ python3 scripts/focused_ci_gate.py agent-workflow-contract
 ```
 
 The required PostgreSQL security CI job also runs this offline gate. The wrapper
-requires at least 94 executed tests, rejects failures/skips/filters, and retains
+requires at least 97 executed tests, rejects failures/skips/filters, and retains
 the log plus source manifest. `make test` checks the mandatory CI registration
 through the native-contract discovery guard; it does not claim that discovery is
 runtime acceptance.
@@ -45,3 +45,9 @@ baseline evidence. The raw legacy endpoint is explicitly unavailable until a
 tenant-bound runtime exists; the supported tenant text workflow API remains.
 
 Three actual proxy regressions distinguish signed browser authentication from a configured agent runtime returning401/403, preserve current caller token validity and prohibit default self-proxying into the retired raw endpoint. An absent explicit runtime is503 before any request; agent authorization rejection is502/no-store. These are truthful error contracts and do not certify a functional legacy agent operation.
+
+Readback cases use 105 persisted receipts, exact actor-bound request UUIDs,
+timestamp/ID cursor traversal, and complete maximum-size escaped task/output.
+A pinned Node 22/TypeScript witness executes the production sealed-session proxy
+against chunked loopback HTTP bytes and its real 2 MiB response limit. The witness
+uses only the already-locked TypeScript package, installed in the existing CI lane.

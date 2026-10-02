@@ -22,7 +22,12 @@ beforeEach(() => {
     if (url.endsWith('/session-identity')) return Response.json({ ...owner, expiresAt: Date.now() + 60_000 });
     if (url === '/api/v1/agents/execution-policy') return Response.json({ available: configured, mode: 'text_analysis', workspace_access: false, tools: [], policy: configured ? { provider: 'ollama', model: 'configured-model', max_output_tokens: 2048 } : null });
     if (url === '/api/v1/agents/hire') return submit();
-    if (url === '/api/v1/agents/workflows') return Response.json({ workflows: workflowRows });
+    if (url === '/api/v1/agents/workflows') return Response.json({ workflows: workflowRows, next_cursor: null });
+    if (url.startsWith('/api/v1/agents/workflows/')) {
+      const byRequest = url.includes('/by-request/'), id = url.split('/').at(-1);
+      const workflow = workflowRows.find(value => value && typeof value === 'object' && (byRequest ? (value as {request_id?:unknown}).request_id === id : (value as {id?:unknown}).id === id));
+      return Response.json(workflow ? {workflow} : {error:'not_found'}, {status:workflow?200:404});
+    }
     if (url.includes('/api/v1/agents/approvals')) return Response.json({ pending_approvals: [] });
     return Response.json({});
   }));
@@ -254,4 +259,36 @@ test('a different actor receipt cannot clear an unresolved request marker', asyn
   expect(screen.getByRole('button', { name: 'Start task' })).toBeDisabled();
   expect(screen.queryByRole('button', { name: 'Prepare another task' })).not.toBeInTheDocument();
   expect(mutations()).toHaveLength(1);
+});
+
+test('lost acknowledgement recovery reads its exact request even when history omits the old receipt', async () => {
+  submit = async () => { throw new TypeError('connection ended'); };
+  const view = await open(); await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
+  expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
+  const requestId = new Headers(mutations()[0][1]!.headers).get('idempotency-key');
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, options) => (url === `/api/v1/agents/workflows/by-request/${requestId}` || url === `/api/v1/agents/workflows/${receipt.workflow_id}`) ? Promise.resolve(Response.json({ workflow: { id: receipt.workflow_id, request_id: requestId, actor_id: firstOwner.userId, agent_id: receipt.agent_id, name: 'Old accepted work', task: 'Supplied task', workflow: 'analysis', status: 'completed', output: 'Complete old output' } })) : original(url, options));
+  workflowRows = [];
+  view.unmount(); await open();
+  expect(await screen.findByText(/Previously accepted text analysis/)).toBeVisible();
+  expect(vi.mocked(fetch).mock.calls.some(([url])=>url===`/api/v1/agents/workflows/by-request/${requestId}`)).toBe(true);
+  expect((await screen.findAllByText('Complete old output')).length).toBeGreaterThan(0);
+  expect(mutations()).toHaveLength(1);
+});
+
+test('workflow history pages retain complete old output and expose newer navigation', async () => {
+  const cursor = '1800000000:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const first = {id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',name:'New page analysis',task:'New complete task',workflow:'analysis',status:'completed',output:'New complete output'};
+  const old = {id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',name:'Old page analysis',task:'Old complete task',workflow:'analysis',status:'completed',output:'Old complete output'};
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, options) => String(url).startsWith('/api/v1/agents/workflows?') ? Promise.resolve(Response.json({workflows:[old],next_cursor:null})) : url === '/api/v1/agents/workflows' ? Promise.resolve(Response.json({workflows:[first],next_cursor:cursor})) : original(url, options));
+  await open(); fireEvent.click(screen.getByRole('button', {name:'Workflows'}));
+  expect(await screen.findByRole('heading',{name:'New page analysis'})).toBeVisible();
+  fireEvent.click(screen.getByRole('button',{name:'Older analyses'}));
+  expect(await screen.findByRole('heading',{name:'Old page analysis'})).toBeVisible();
+  expect(screen.getByText('Old complete output')).toBeVisible();
+  expect(screen.getByRole('button',{name:'Older analyses'})).toBeDisabled();
+  fireEvent.click(screen.getByRole('button',{name:'Newer analyses'}));
+  expect(await screen.findByRole('heading',{name:'New page analysis'})).toBeVisible();
 });

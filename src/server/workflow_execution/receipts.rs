@@ -18,6 +18,42 @@ pub(crate) struct RequestMetadata {
     pub agent_role: Option<String>,
 }
 
+/// Additive list contract: full records, at most 20 plus one lookahead row.
+/// Legacy identity query parameters are ignored, never used as authority.
+#[derive(Default, Deserialize)]
+pub(crate) struct ReceiptQuery {
+    pub limit: Option<u32>,
+    pub before: Option<String>,
+}
+impl ReceiptQuery {
+    fn bounds(&self) -> Result<(i64, String, i64), Error> {
+        let limit = self.limit.unwrap_or(20);
+        if !(1..=20).contains(&limit) {
+            return Err(Error::Invalid);
+        }
+        let (timestamp, id) = match &self.before {
+            None => (i64::MAX, String::new()),
+            Some(cursor) => {
+                let (timestamp, id) = cursor.split_once(':').ok_or(Error::Invalid)?;
+                let parsed = timestamp.parse::<i64>().map_err(|_| Error::Invalid)?;
+                if !(0..=253_402_300_799).contains(&parsed) || parsed.to_string() != timestamp {
+                    return Err(Error::Invalid);
+                }
+                canonical_request_uuid(id)?;
+                (parsed, id.to_owned())
+            }
+        };
+        Ok((timestamp, id, i64::from(limit) + 1))
+    }
+}
+fn canonical_request_uuid(value: &str) -> Result<Uuid, Error> {
+    let id = Uuid::parse_str(value).map_err(|_| Error::Invalid)?;
+    if id.is_nil() || id.to_string() != value {
+        return Err(Error::Invalid);
+    }
+    Ok(id)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum StoredPhase {
@@ -587,14 +623,35 @@ impl ReceiptStore {
         }).await.map_err(|_| Error::Unavailable)?
     }
 
-    pub(crate) async fn list(&self, authority: &Authority) -> Result<Vec<Receipt>, Error> {
+    pub(crate) async fn by_request_id(
+        &self,
+        authority: &Authority,
+        request_id: &str,
+    ) -> Result<Receipt, Error> {
+        canonical_request_uuid(request_id)?;
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let (tx,_) = self.transaction(authority,true).await?;
+            let saved=row(&tx,"SELECT id FROM tenant_workflow_receipts WHERE tenant_id=$1 AND actor_id=$2 AND request_id=$3",vec![(&authority.tenant_id).into(),(&authority.actor_id).into(),request_id.into()]).await?.ok_or(Error::NotFound)?;
+            let id:String=field(&saved,"id")?;
+            Self::recheck_before_commit(&tx,authority).await?;
+            tx.commit().await?;
+            self.get(authority,&id).await
+        }).await.map_err(|_|Error::Unavailable)?
+    }
+
+    pub(crate) async fn list(
+        &self,
+        authority: &Authority,
+        query: &ReceiptQuery,
+    ) -> Result<Vec<Receipt>, Error> {
+        let (before, id, limit) = query.bounds()?;
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             let (tx, now) = self.transaction(authority, true).await?;
             // Queued work has no effect. A process lost before claim cannot
             // resume the old capability. Claimed work remains uncertain.
             execute(&tx, "UPDATE tenant_workflow_receipts SET phase='cancelled',generation=1,updated_at=$1,error='cancelled' WHERE tenant_id=$2 AND phase='queued' AND created_at<=$3", vec![now.into(), (&authority.tenant_id).into(), (now-120).into()]).await?;
             execute(&tx, "UPDATE tenant_workflow_receipts SET phase='outcome_unknown',generation=2,updated_at=$1,error='lease_expired' WHERE tenant_id=$2 AND phase='dispatching' AND lease_expires_at<=$1", vec![now.into(), (&authority.tenant_id).into()]).await?;
-            let rows = tx.query_all(statement(&tx,"SELECT * FROM tenant_workflow_receipts WHERE tenant_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100",vec![(&authority.tenant_id).into()])).await?;
+            let rows = tx.query_all(statement(&tx,"SELECT * FROM tenant_workflow_receipts WHERE tenant_id=$1 AND (created_at<$2 OR (created_at=$2 AND id<$3)) ORDER BY created_at DESC,id DESC LIMIT $4",vec![(&authority.tenant_id).into(),before.into(),id.into(),limit.into()])).await?;
             let result=rows.into_iter().map(|r| decode(r).map(|r|r.receipt)).collect::<Result<Vec<_>,_>>()?;
             Self::recheck_before_commit(&tx,authority).await?;
             tx.commit().await?;

@@ -907,3 +907,63 @@ async fn forced_rls_postgres_worker_uses_the_configured_pool_and_settles_actual_
     drop(ledger);
     f.close().await;
 }
+
+#[tokio::test]
+async fn postgres_readback_pagination_and_exact_actor_request_lookup_preserve_forced_rls() {
+    use crate::workflow_execution::receipts::ReceiptQuery;
+    let f = Fixture::open().await;
+    let authority = f.authority(0).await;
+    let mut saved = Vec::new();
+    for _ in 0..25 {
+        let reserved = f
+            .store
+            .reserve(f.admitted(0).await, request(Uuid::new_v4()))
+            .await
+            .unwrap();
+        saved.push(reserved.receipt().clone());
+    }
+    let target = &saved[0];
+    assert_eq!(
+        f.store
+            .by_request_id(&authority, &target.request_id)
+            .await
+            .unwrap()
+            .id,
+        target.id
+    );
+    for identity in [1, 2] {
+        assert!(matches!(
+            f.store
+                .by_request_id(&f.authority(identity).await, &target.request_id)
+                .await,
+            Err(Error::NotFound)
+        ));
+    }
+    let mut query = ReceiptQuery {
+        limit: Some(7),
+        before: None,
+    };
+    let mut ids = std::collections::HashSet::new();
+    loop {
+        let rows = f.store.list(&authority, &query).await.unwrap();
+        assert!(rows.len() <= 8);
+        for row in rows.iter().take(7) {
+            assert!(ids.insert(row.id.clone()));
+        }
+        if rows.len() <= 7 {
+            break;
+        }
+        query.before = Some(format!("{}:{}", rows[6].created_at, rows[6].id));
+    }
+    assert_eq!(ids.len(), 25);
+    assert!(
+        f.store
+            .list(&f.authority(1).await, &ReceiptQuery::default())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    query.before = Some("0:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa".into());
+    assert!(f.store.list(&authority, &query).await.unwrap().is_empty());
+    f.close().await;
+}

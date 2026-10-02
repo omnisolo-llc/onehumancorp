@@ -69,8 +69,19 @@ export async function fetchForOnboardingOwner(url: string, options: RequestInit,
   return authenticatedOnboardingFetch(url, options, expected, before);
 }
 /** Read only the maintained business snapshots through the same sealed owner boundary. */
+function workflowReadDestination(url: string): boolean {
+  const uuid = '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}';
+  if (new RegExp(`^/api/v1/agents/workflows/(?:by-request/)?${uuid}$`).test(url)) return !url.endsWith('00000000-0000-0000-0000-000000000000');
+  if (!url.startsWith('/api/v1/agents/workflows?') || url.length > 160 || url.includes('#')) return false;
+  const parsed = new URL(url, 'https://owned.invalid');
+  const keys = [...parsed.searchParams.keys()];
+  if (keys.some(key => !['limit', 'before'].includes(key)) || new Set(keys).size !== keys.length) return false;
+  const limit = parsed.searchParams.get('limit'), before = parsed.searchParams.get('before');
+  return (limit === null || /^(?:[1-9]|1[0-9]|20)$/.test(limit)) &&
+    (before === null || new RegExp(`^[0-9]{1,12}:${uuid}$`).test(before) && !before.endsWith('00000000-0000-0000-0000-000000000000'));
+}
 export async function fetchForOwnedBusinessRead(url: string, expected: DraftOwner | null): Promise<Response> {
-  if (!['/api/v1/billing/my-plan', '/api/v1/pos/orders', '/api/v1/pos/inventory', '/api/v1/agents/execution-policy', '/api/v1/agents/workflows', '/api/v1/agents/approvals', '/api/v1/agents/approvals/activity', '/api/v1/walkthrough/store-setup'].includes(url)) throw new Error('Invalid business read destination');
+  if (!['/api/v1/billing/my-plan', '/api/v1/pos/orders', '/api/v1/pos/inventory', '/api/v1/agents/execution-policy', '/api/v1/agents/workflows', '/api/v1/agents/approvals', '/api/v1/agents/approvals/activity', '/api/v1/walkthrough/store-setup'].includes(url) && !workflowReadDestination(url)) throw new Error('Invalid business read destination');
   const intended = expected ? { ...expected } : null;
   if (!intended || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. Please reopen this view.');
   return authenticatedOnboardingFetch(url, { method: 'GET' }, intended, epoch);

@@ -73,6 +73,7 @@ for text, name in [
     (server, 'async fn list_workflows_handler('),
     (server, 'async fn create_workflow_handler('),
     (server, 'async fn workflow_receipt_handler('),
+    (server, 'async fn workflow_request_receipt_handler('),
     (server, 'async fn cancel_workflow_handler('),
     (hire, 'async fn hire_handler('),
     (hire, 'async fn execution_policy_handler('),
@@ -123,8 +124,10 @@ for name in ['anthropic','openai','ollama']:
 parts.append('pub mod llm_wire_contract {\n'+'\n'.join(wire)+'\n}')
 parts += ['#[cfg(test)]#[path="test.rs"]mod tests;']
 (HERE/'generated.rs').write_text('\n\n'.join(parts)+'\n')
-inputs = [ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/api/agents/hire.rs',ROOT/'src/server/workflow_execution.rs',ROOT/'src/server/hub.rs']
-inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py','rpc_boundary.rs.in','test_receipt_schema.py']]
+inputs = [ROOT/'.github/workflows/ci.yml',ROOT/'scripts/focused_ci_gate.py',ROOT/'scripts/test_focused_ci_gate.py',ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/api/agents/hire.rs',ROOT/'src/server/workflow_execution.rs',ROOT/'src/server/hub.rs']
+inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py','rpc_boundary.rs.in','test_receipt_schema.py','proxy-readback-proof.cjs','package.json','package-lock.json','verify_node_lock.py']]
+inputs += [p for p in (ROOT/'src/ui/next/src/lib/auth').glob('*') if p.is_file() and p.suffix in ('.ts','.json')]
+inputs += [ROOT/'src/ui/next/package.json',ROOT/'src/ui/next/package-lock.json',ROOT/'package-lock.json']
 inputs += [p for p in (ROOT/'src/proto').rglob('*.proto')]
 inputs += [p for p in (ROOT/'src/server/workflow_execution').rglob('*.rs')]
 inputs += [p for p in (ROOT/'src/server/persistence').rglob('*') if p.suffix in ['.rs','.sql']]

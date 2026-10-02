@@ -336,6 +336,10 @@ impl Fixture {
             )
             .route("/api/v1/agents/hire", post(hire_handler))
             .route(
+                "/api/v1/agents/workflows/by-request/{id}",
+                get(workflow_request_receipt_handler),
+            )
+            .route(
                 "/api/v1/agents/workflows/{id}",
                 get(workflow_receipt_handler),
             )
@@ -374,7 +378,7 @@ impl Fixture {
             headers.insert("authorization", format!("Bearer {token}").parse().unwrap());
             result.extend(
                 self.execution
-                    .list_receipts(&claims, &headers)
+                    .list_receipts(&claims, &headers, &Default::default())
                     .await
                     .unwrap()
                     .into_iter()
@@ -2059,4 +2063,231 @@ async fn exact_provider_json_reader_bounds_announced_and_chunked_bodies_before_p
             .unwrap_err();
         assert!(error.to_string().contains("byte limit"), "{error}");
     }
+}
+
+async fn seed_readback_receipts(
+    f: &Fixture,
+    count: usize,
+    large: bool,
+) -> Vec<workflow_execution::receipts::Receipt> {
+    let claims = f.store.validate_token(&f.a).await.unwrap();
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert("authorization", format!("Bearer {}", f.a).parse().unwrap());
+    let mut receipts = Vec::new();
+    for index in 0..count {
+        let task = if large {
+            "\u{0002}".repeat(16000)
+        } else {
+            "Readback storage fixture".into()
+        };
+        let reserved = f
+            .execution
+            .prepare(
+                &claims,
+                &headers,
+                &task,
+                workflow_execution::receipts::RequestMetadata {
+                    request_id: uuid::Uuid::new_v4(),
+                    name: format!("Owned receipt {index}"),
+                    workflow: "analysis".into(),
+                    requested_model: "Auto".into(),
+                    agent_role: Some("Text analyst".into()),
+                },
+            )
+            .await
+            .unwrap();
+        let lease = f
+            .execution
+            .receipt_store()
+            .unwrap()
+            .claim(reserved)
+            .await
+            .unwrap()
+            .unwrap();
+        receipts.push(
+            f.execution
+                .receipt_store()
+                .unwrap()
+                .finish(
+                    &lease.completion_proof(),
+                    &workflow_execution::AnalysisOutcome::Completed(if large {
+                        "\u{0001}".repeat(64000)
+                    } else {
+                        format!("Stored output {index}")
+                    }),
+                )
+                .await
+                .unwrap(),
+        );
+    }
+    receipts
+}
+
+#[tokio::test]
+async fn readback_by_exact_request_id_finds_older_than_one_hundred_and_fences_actor_tenant() {
+    let f = Fixture::new().await;
+    let receipts = seed_readback_receipts(&f, 105, false).await;
+    let oldest = receipts
+        .iter()
+        .min_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)))
+        .unwrap();
+    let path = format!("/api/v1/agents/workflows/by-request/{}", oldest.request_id);
+    let (status, body) = f
+        .request("GET", &path, Some(&f.a), serde_json::Value::Null)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "direct request read must not depend on newest100 history"
+    );
+    assert_eq!(body["workflow"]["id"], oldest.id);
+    for token in [&f.b, &f.admin] {
+        assert_eq!(
+            f.request("GET", &path, Some(token), serde_json::Value::Null)
+                .await
+                .0,
+            StatusCode::NOT_FOUND
+        );
+    }
+    for key in [
+        "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA",
+        "00000000-0000-0000-0000-000000000000",
+        "not-a-uuid",
+    ] {
+        assert_eq!(
+            f.request(
+                "GET",
+                &format!("/api/v1/agents/workflows/by-request/{key}"),
+                Some(&f.a),
+                serde_json::Value::Null
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+}
+
+#[tokio::test]
+async fn readback_pages_preserve_tied_timestamps_empty_last_page_and_stale_cursors() {
+    let f = Fixture::new().await;
+    let records = seed_readback_receipts(&f, 105, false).await;
+    assert!(
+        records
+            .windows(2)
+            .any(|r| r[0].created_at == r[1].created_at)
+    );
+    let mut path = "/api/v1/agents/workflows?limit=7".to_string();
+    let mut ids = std::collections::HashSet::new();
+    loop {
+        let (status, body) = f
+            .request("GET", &path, Some(&f.a), serde_json::Value::Null)
+            .await;
+        assert_eq!(status, StatusCode::OK);
+        let rows = body["workflows"].as_array().unwrap();
+        assert!(rows.len() <= 7, "client page limit must be enforced");
+        for row in rows {
+            assert!(ids.insert(row["id"].as_str().unwrap().to_owned()));
+        }
+        match body["next_cursor"].as_str() {
+            Some(cursor) => {
+                assert!(!rows.is_empty());
+                path = format!("/api/v1/agents/workflows?limit=7&before={cursor}");
+            }
+            None => break,
+        }
+    }
+    assert_eq!(ids.len(), 105);
+    let (status, empty) = f
+        .request(
+            "GET",
+            "/api/v1/agents/workflows?before=0:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(empty["workflows"], serde_json::json!([]));
+    assert!(empty["next_cursor"].is_null());
+    for query in [
+        "limit=0",
+        "limit=21",
+        "limit=7&limit=8",
+        "before=bad",
+        "before=0:00000000-0000-0000-0000-000000000000",
+    ] {
+        assert_eq!(
+            f.request(
+                "GET",
+                &format!("/api/v1/agents/workflows?{query}"),
+                Some(&f.a),
+                serde_json::Value::Null
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+}
+
+#[tokio::test]
+async fn readback_large_escaped_complete_receipts_pass_the_real_authenticated_proxy_limit() {
+    use tokio::io::AsyncWriteExt;
+    let f = Fixture::new().await;
+    let records = seed_readback_receipts(&f, 8, true).await;
+    let mut path = "/api/v1/agents/workflows".to_string();
+    let mut ids = std::collections::HashSet::new();
+    loop {
+        let (status, body) = f
+            .request("GET", &path, Some(&f.a), serde_json::Value::Null)
+            .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(serde_json::to_vec(&body).unwrap().len() <= 1_048_576);
+        let mut child = tokio::process::Command::new("node")
+            .kill_on_drop(true)
+            .arg("scripts/agent-workflow-contract/proxy-readback-proof.cjs")
+            .current_dir(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."))
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&body).unwrap())
+            .await
+            .unwrap();
+        let result =
+            tokio::time::timeout(std::time::Duration::from_secs(15), child.wait_with_output())
+                .await
+                .unwrap()
+                .unwrap();
+        assert!(
+            result.status.success(),
+            "actual proxy proof: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        for row in body["workflows"].as_array().unwrap() {
+            assert_eq!(row["task"], "\u{0002}".repeat(16000));
+            assert_eq!(row["output"], "\u{0001}".repeat(64000));
+            assert!(ids.insert(row["id"].as_str().unwrap().to_owned()));
+        }
+        match body["next_cursor"].as_str() {
+            Some(cursor) => path = format!("/api/v1/agents/workflows?before={cursor}"),
+            None => break,
+        }
+    }
+    assert_eq!(ids.len(), records.len());
+    let (status, detail) = f
+        .request(
+            "GET",
+            &format!("/api/v1/agents/workflows/{}", records[0].id),
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(detail["workflow"]["output"], "\u{0001}".repeat(64000));
 }

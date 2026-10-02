@@ -79,11 +79,11 @@ export function useTenantAnalysis(retireView: () => void) {
             // Browser storage supplies only a reference. Current authenticated
             // server data must confirm it before this view acknowledges it.
             try {
-              const lookup = await fetchForOwnedBusinessRead('/api/v1/agents/workflows', expected);
+              const lookup = await fetchForOwnedBusinessRead(acknowledged ? `/api/v1/agents/workflows/${acknowledged.workflow_id}` : `/api/v1/agents/workflows/by-request/${requestId}`, expected);
               const snapshot = record(await lookup.json());
               if (!current(expected, token, epoch)) return;
-              const rows = snapshot?.workflows;
-              const matching = lookup.ok && Array.isArray(rows) ? rows.map(record).filter(row => row?.actor_id === expected.userId && (acknowledged ? row?.id === acknowledged.workflow_id : row?.request_id === requestId)) : [];
+              const row = record(snapshot?.workflow);
+              const matching = lookup.ok && row?.actor_id === expected.userId && (acknowledged ? row.id === acknowledged.workflow_id : row.request_id === requestId) ? [row] : [];
               if (matching.length === 1 && readOwnedOnboardingItem(REQUEST) === pending && typeof matching[0]?.status === 'string' && ['queued', 'running', 'completed', 'failed', 'cancelled', 'outcome_unknown'].includes(matching[0].status)) {
                 const confirmed = acknowledged ?? receiptFrom({ id: matching[0].agent_id, agent_id: matching[0].agent_id, workflow_id: matching[0].id, status: 'queued' });
                 if (confirmed) {

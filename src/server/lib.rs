@@ -1465,6 +1465,7 @@ async fn list_workflows_handler(
     axum::extract::Extension(execution): axum::extract::Extension<
         std::sync::Arc<workflow_execution::WorkflowExecution>,
     >,
+    axum::extract::Query(query): axum::extract::Query<workflow_execution::receipts::ReceiptQuery>,
     headers: axum::http::HeaderMap,
     claims: Option<axum::extract::Extension<::server_common::Claims>>,
 ) -> impl axum::response::IntoResponse {
@@ -1475,13 +1476,44 @@ async fn list_workflows_handler(
             axum::Json(serde_json::json!({"error":"Authentication required"})),
         );
     };
-    match execution.list_receipts(&claims.0, &headers).await {
-        Ok(receipts) => (
-            StatusCode::OK,
-            axum::Json(
-                serde_json::json!({"workflows":receipts.into_iter().map(WorkflowRecord::from).collect::<Vec<_>>()}),
-            ),
-        ),
+    match execution.list_receipts(&claims.0, &headers, &query).await {
+        Ok(receipts) => {
+            // Maximum accepted task/output text, including JSON control escapes,
+            // fits below 512 KiB per receipt. Reserve 256 bytes for the envelope
+            // and cursor; never clip fields or advance past a withheld record.
+            let mut bytes = 256usize;
+            let mut workflows = Vec::new();
+            let mut last_cursor = None;
+            let mut next_cursor = None;
+            for receipt in receipts {
+                let cursor = format!("{}:{}", receipt.created_at, receipt.id);
+                let value = serde_json::json!(WorkflowRecord::from(receipt));
+                let size = serde_json::to_vec(&value)
+                    .expect("workflow record serializes")
+                    .len()
+                    + 1;
+                if workflows.len() >= query.limit.unwrap_or(20) as usize || bytes + size > 1_048_576
+                {
+                    if workflows.is_empty() {
+                        return (
+                            StatusCode::SERVICE_UNAVAILABLE,
+                            axum::Json(
+                                serde_json::json!({"error":"Workflow receipt exceeds the supported response bound"}),
+                            ),
+                        );
+                    }
+                    next_cursor = last_cursor;
+                    break;
+                }
+                bytes += size;
+                workflows.push(value);
+                last_cursor = Some(cursor);
+            }
+            (
+                StatusCode::OK,
+                axum::Json(serde_json::json!({"workflows":workflows,"next_cursor":next_cursor})),
+            )
+        }
         Err(error) => (
             error.status(),
             axum::Json(serde_json::json!({"error":error.message()})),
@@ -1559,6 +1591,36 @@ async fn workflow_receipt_handler(
         );
     };
     match execution.get_receipt(&claims.0, &headers, &id).await {
+        Ok(receipt) => (
+            StatusCode::OK,
+            axum::Json(serde_json::json!({"workflow":WorkflowRecord::from(receipt)})),
+        ),
+        Err(error) => (
+            error.status(),
+            axum::Json(serde_json::json!({"error":error.message()})),
+        ),
+    }
+}
+
+async fn workflow_request_receipt_handler(
+    axum::extract::Extension(execution): axum::extract::Extension<
+        std::sync::Arc<workflow_execution::WorkflowExecution>,
+    >,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    headers: axum::http::HeaderMap,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
+) -> impl axum::response::IntoResponse {
+    use axum::http::StatusCode;
+    let Some(claims) = claims else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({"error":"Authentication required"})),
+        );
+    };
+    match execution
+        .receipt_by_request_id(&claims.0, &headers, &id)
+        .await
+    {
         Ok(receipt) => (
             StatusCode::OK,
             axum::Json(serde_json::json!({"workflow":WorkflowRecord::from(receipt)})),
@@ -9135,6 +9197,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .route("/api/v1/agents/workflows/{id}",axum::routing::get(workflow_receipt_handler).layer(axum::Extension(workflow_execution.clone())))
+        .route("/api/v1/agents/workflows/by-request/{id}",axum::routing::get(workflow_request_receipt_handler).layer(axum::Extension(workflow_execution.clone())))
         .route("/api/v1/agents/workflows/{id}/cancel",axum::routing::post(cancel_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .nest("/api/v1/agents", api::agents::hire::router(hub.clone()).layer(axum::Extension(workflow_execution.clone())))
         .merge(api::agents::definitions::router(

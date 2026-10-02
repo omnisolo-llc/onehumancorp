@@ -179,9 +179,10 @@ impl WorkflowExecution {
         &self,
         claims: &Claims,
         headers: &HeaderMap,
+        query: &super::receipts::ReceiptQuery,
     ) -> Result<Vec<Receipt>, Error> {
         let authority = self.authorize(claims, headers).await?;
-        let receipts = self.receipt_store()?.list(&authority).await?;
+        let receipts = self.receipt_store()?.list(&authority, query).await?;
         let reconciliation = tokio::time::timeout(std::time::Duration::from_secs(5), async {
             for receipt in &receipts {
                 self.reconcile_receipt(receipt).await;
@@ -194,6 +195,20 @@ impl WorkflowExecution {
             );
         }
         Ok(receipts)
+    }
+    pub(crate) async fn receipt_by_request_id(
+        &self,
+        claims: &Claims,
+        headers: &HeaderMap,
+        request_id: &str,
+    ) -> Result<Receipt, Error> {
+        let authority = self.authorize(claims, headers).await?;
+        let receipt = self
+            .receipt_store()?
+            .by_request_id(&authority, request_id)
+            .await?;
+        self.reconcile_receipt(&receipt).await;
+        Ok(receipt)
     }
     pub(crate) async fn get_receipt(
         &self,
