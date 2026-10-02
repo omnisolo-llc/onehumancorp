@@ -1,7 +1,3 @@
-issue_title: ⚡ Bolt: [blocked no-work finding: charging for compute and AI API usage]
-issue_description: "This is a blocked / no-work outcome due to missing prerequisites and owner economic/metric data. The codebase lacks baseline economics and actual owner outcome data. There are missing prerequisites (owner economic/metric data, real transaction usage)."
-issue_priority: high
-issue_category: research
-issue_type: blocked
-issue_label: blocked-no-work
-assignees: []
+outcome: no_work
+issue_title: "Implement Native Rust Omnichannel Chat & AI Agent Inbox"
+issue_description: "The requested feature, replacing Chatwoot with a native Rust omnichannel messaging system, is already complete and exists in the codebase. Found existing implementations such as `src/server/services/omnichannel_service.rs` and `src/server/api/omnichannel_webhook.rs`. No dummy changes are permitted."
