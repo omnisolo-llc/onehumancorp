@@ -6,7 +6,7 @@ test.describe('Agentic Automated Quoting & Proposal Generator', () => {
   test('draft quote with AI from inbox message on mobile view', async ({ browser }) => {
     // 1. Context setup and login
     const context = await browser.newContext();
-    const page = await adminPage(context);
+    const page = await adminPage(await context.newPage());
 
     // Mobile viewport (375px)
     await page.setViewportSize({ width: 375, height: 812 });
