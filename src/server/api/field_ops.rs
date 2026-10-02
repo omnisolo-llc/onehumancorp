@@ -1,6 +1,6 @@
 use axum::{Json, Router, extract::State};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use std::sync::Arc;
 
 #[derive(Clone)]
