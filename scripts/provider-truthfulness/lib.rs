@@ -18,6 +18,8 @@ pub mod orchestration {
         pub webhook_url: String,
         pub api_token: String,
         pub from_phone: String,
+        pub api_key: String,
+        pub api_secret: String,
     }
 }
 pub mod integrations {

@@ -3,6 +3,24 @@ pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     vec![
         metadata_provider(
+            "slack",
+            "Slack",
+            "messaging",
+            "https://slack.com/api".to_string(),
+        ),
+        metadata_provider(
+            "telegram",
+            "Telegram",
+            "messaging",
+            "https://api.telegram.org".to_string(),
+        ),
+        metadata_provider(
+            "discord",
+            "Discord Webhooks",
+            "messaging",
+            "https://discord.com/api/webhooks".to_string(),
+        ),
+        metadata_provider(
             "taxjar",
             "TaxJar",
             "finance",

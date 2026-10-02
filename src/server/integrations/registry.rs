@@ -1,12 +1,18 @@
 use chrono::Utc;
 use std::sync::RwLock;
 
+#[path = "registry_config.rs"]
+mod config;
+use config::{RegistryConnectionInput, validate_registry_connection};
+
 pub struct IntegrationCredentials {
     pub bot_token: String,
     pub chat_id: String,
     pub webhook_url: String,
     pub api_token: String,
     pub from_phone: String,
+    pub api_key: String,
+    pub api_secret: String,
 }
 
 pub struct IntegrationsRegistry {
@@ -263,7 +269,7 @@ impl IntegrationsRegistry {
         if integration_id.is_empty() {
             return Err("integrationId is required".to_string());
         }
-        Ok(())
+        Err("Provider verification is not implemented in this registry; configuration alone is not a verified connection".to_string())
     }
 
     pub fn chat_messages(
@@ -434,13 +440,45 @@ impl IntegrationsRegistry {
         base_url: &str,
         creds: ::server_omnisolo::orchestration::ConnectIntegrationRequest,
     ) -> Result<::server_omnisolo::orchestration::IntegrationInstance, String> {
+        validate_registry_connection(RegistryConnectionInput {
+            integration_id,
+            base_url,
+            bot_token: &creds.bot_token,
+            webhook_url: &creds.webhook_url,
+            api_token: &creds.api_token,
+            api_key: &creds.api_key,
+            api_secret: &creds.api_secret,
+        })
+        .map_err(str::to_string)?;
+        if !creds.integration_id.is_empty() && creds.integration_id != integration_id {
+            return Err("Integration identity does not match the configuration target".to_string());
+        }
+        if integration_id == "nats" && tokio::runtime::Handle::try_current().is_err() {
+            return Err("NATS configuration requires an active runtime".to_string());
+        }
+        let catalog_id = if integration_id == "whatsapp" {
+            "whatsapp_cloud_api"
+        } else {
+            integration_id
+        };
+        let metadata = crate::integrations::catalog::get_catalog()
+            .into_iter()
+            .find(|provider| provider.metadata.id == catalog_id)
+            .ok_or_else(|| {
+                "Integration configuration is not supported for this provider".to_string()
+            })?
+            .metadata;
         let mut insts = self.instances.write().unwrap();
         let inst = ::server_omnisolo::orchestration::IntegrationInstance {
             id: integration_id.to_string(),
-            name: integration_id.to_string(),
-            category: "default".to_string(),
-            status: "connected".to_string(),
-            base_url: base_url.to_string(),
+            name: metadata.name,
+            category: metadata.category,
+            status: "configured".to_string(),
+            base_url: if integration_id == "nats" {
+                base_url.to_string()
+            } else {
+                metadata.base_url
+            },
         };
         insts.insert(integration_id.to_string(), inst.clone());
 
@@ -453,6 +491,8 @@ impl IntegrationsRegistry {
                 webhook_url: creds.webhook_url.clone(),
                 api_token: creds.api_token.clone(),
                 from_phone: creds.from_phone.clone(),
+                api_key: creds.api_key.clone(),
+                api_secret: creds.api_secret.clone(),
             },
         );
         if integration_id == "trello" {
@@ -596,8 +636,8 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::razorpay::provider::RazorpayProvider::new(
-                        creds.api_token.clone(),
-                        creds.api_token.clone(),
+                        creds.api_key.clone(),
+                        creds.api_secret.clone(),
                     ),
                 ),
             );
@@ -1787,6 +1827,110 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn invalid_configuration_never_creates_an_instance_or_credentials() {
+        let registry = IntegrationsRegistry::new();
+        let initial = registry.instances().len();
+        for integration_id in ["unknown", "restic", "razorpay", "twilio"] {
+            let result = registry.connect(integration_id, "", Default::default());
+            assert!(result.is_err());
+        }
+        assert_eq!(registry.instances().len(), initial);
+        assert!(registry.credentials.read().unwrap().is_empty());
+        assert!(registry.razorpay_clients.read().unwrap().is_empty());
+        assert!(registry.twilio_clients.read().unwrap().is_empty());
+    }
+
+    #[test]
+    fn invalid_reconfiguration_preserves_the_previous_local_configuration() {
+        let registry = IntegrationsRegistry::new();
+        let request = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
+            integration_id: "twilio".into(),
+            bot_token: "local-test-account".into(),
+            api_token: "local-test-input".into(),
+            ..Default::default()
+        };
+        let configured = registry.connect("twilio", "", request).unwrap();
+        assert_eq!(configured.status, "configured");
+        assert_eq!(configured.category, "sms");
+        assert_eq!(configured.name, "Twilio SMS");
+        let client = registry
+            .twilio_clients
+            .read()
+            .unwrap()
+            .get("twilio")
+            .cloned()
+            .unwrap();
+        assert!(registry.connect("twilio", "", Default::default()).is_err());
+        assert!(std::sync::Arc::ptr_eq(
+            &client,
+            registry
+                .twilio_clients
+                .read()
+                .unwrap()
+                .get("twilio")
+                .unwrap()
+        ));
+        assert!(
+            registry
+                .credentials
+                .read()
+                .unwrap()
+                .get("twilio")
+                .unwrap()
+                .api_token
+                == "local-test-input"
+        );
+        assert!(
+            registry
+                .instances
+                .read()
+                .unwrap()
+                .get("twilio")
+                .unwrap()
+                .status
+                == "configured"
+        );
+    }
+
+    #[test]
+    fn razorpay_stores_only_the_explicit_key_and_secret_pair() {
+        let registry = IntegrationsRegistry::new();
+        let request = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
+            integration_id: "razorpay".into(),
+            api_token: "unrelated-legacy-input".into(),
+            api_key: "local-test-key".into(),
+            api_secret: "local-test-input".into(),
+            ..Default::default()
+        };
+        let configured = registry.connect("razorpay", "", request).unwrap();
+        assert_eq!(configured.status, "configured");
+        assert!(
+            registry
+                .razorpay_clients
+                .read()
+                .unwrap()
+                .contains_key("razorpay")
+        );
+        let credentials = registry.credentials.read().unwrap();
+        let saved = credentials.get("razorpay").unwrap();
+        assert!(saved.api_key == "local-test-key");
+        assert!(saved.api_secret == "local-test-input");
+    }
+
+    #[test]
+    fn configuration_is_not_a_successful_provider_verification() {
+        let registry = IntegrationsRegistry::new();
+        for integration_id in ["", "unknown", "twilio", "razorpay"] {
+            assert!(
+                registry
+                    .test_connection(integration_id, Default::default())
+                    .is_err()
+            );
+        }
+    }
+
     #[tokio::test]
     async fn test_twilio_integration() {
         let registry = IntegrationsRegistry::new();
@@ -1798,6 +1942,7 @@ mod tests {
             webhook_url: "".to_string(),
             api_token: "test_token".to_string(),
             from_phone: "+1234567890".to_string(),
+            ..Default::default()
         };
         registry
             .connect("twilio", "https://api.twilio.com", creds)

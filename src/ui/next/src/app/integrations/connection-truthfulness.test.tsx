@@ -41,6 +41,7 @@ it.each([
   { status: 202, body: { success: true, status: 'connected', usable: true } },
   { status: 200, body: { success: true, integration: { success: false, status: 'connected', usable: true } } },
   { status: 200, body: { success: true, status: 'connected', usable: true, integration: { success: false, status: 'connected', usable: true } } },
+  { status: 200, body: { success: true, status: 'configured', usable: true } },
 ])('an unconfirmed Twilio response cannot install a connected state: %j', async fixture => {
   vi.mocked(fetch).mockImplementation(async url => String(url).endsWith('/twilio/connect')
     ? Response.json(fixture.body, { status: fixture.status })
@@ -52,6 +53,32 @@ it.each([
   fireEvent.click(screen.getByRole('button', { name: 'Save & Connect' }));
   expect(await screen.findByText('Twilio Conversations connection could not be confirmed.')).toBeVisible();
   expect(screen.queryByText('Twilio Conversations connected.')).toBeNull(); expect(push).not.toHaveBeenCalled();
+});
+it('a configured receipt stays unverified and does not repeat configuration on review', async () => {
+  vi.mocked(fetch).mockImplementation(async url => String(url).endsWith('/twilio/connect')
+    ? Response.json({ success: true, status: 'configured', usable: false })
+    : Response.json({ success: true, integrations: [] }));
+  render(<Integrations />); await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/v1/integrations'));
+  fireEvent.click(within(card('Twilio Conversations')).getByRole('button', { name: 'Connect' }));
+  fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'synthetic-account' } });
+  fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'synthetic-token' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save & Connect' }));
+  expect(await screen.findByText('Twilio Conversations is configured locally. Provider verification is still required.')).toBeVisible();
+  expect(within(card('Twilio Conversations')).getByText('configured', { exact: true })).toBeVisible();
+  fireEvent.click(within(card('Twilio Conversations')).getByRole('button', { name: 'Review' }));
+  expect(screen.queryByText('Twilio Conversations connected.')).toBeNull();
+  expect(push).not.toHaveBeenCalled();
+  expect(vi.mocked(fetch).mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(1);
+});
+it('a configured list entry stays visibly unverified after reload without a retry loop', async () => {
+  vi.mocked(fetch).mockImplementation(async () => Response.json({ success: true, integrations: [{ id: 'twilio', status: 'configured', usable: false }] }));
+  render(<Integrations />);
+  const review = await within(card('Twilio Conversations')).findByRole('button', { name: 'Review' });
+  fireEvent.click(review); fireEvent.click(review);
+  expect(within(card('Twilio Conversations')).getByText('configured', { exact: true })).toBeVisible();
+  expect(screen.getByText('Twilio Conversations is configured locally. Provider verification is still required.')).toBeVisible();
+  expect(vi.mocked(fetch).mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
+  expect(push).not.toHaveBeenCalled();
 });
 it('retains the existing nested verified receipt compatibility', async () => {
   vi.mocked(fetch).mockImplementation(async url => String(url).endsWith('/twilio/connect')

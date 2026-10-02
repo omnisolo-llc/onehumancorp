@@ -44,6 +44,14 @@ function isConfirmedUsableConnection(value: unknown): boolean {
   return value.status === "connected" && value.usable === true || isRecord(value.integration);
 }
 
+function isConfiguredConnection(value: unknown): boolean {
+  if (!isRecord(value) || value.success !== true || value.error != null) return false;
+  if (value.status !== undefined && value.status !== "configured") return false;
+  if (value.usable !== undefined && value.usable !== false) return false;
+  if (value.integration !== undefined && (!isRecord(value.integration) || value.integration.success === false || value.integration.error != null || value.integration.status !== "configured" || (value.integration.usable !== undefined && value.integration.usable !== false))) return false;
+  return value.status === "configured" || isRecord(value.integration);
+}
+
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
   const router = useRouter();
@@ -60,9 +68,14 @@ export default function Integrations() {
             const connectedIds = data.integrations
               .filter((i: unknown) => isRecord(i) && i.error == null && typeof i.id === "string" && i.status === "connected" && i.usable === true)
               .map((i: Record<string, unknown>) => i.id);
+            const configuredIds = data.integrations
+              .filter((i: unknown) => isRecord(i) && i.error == null && i.success !== false && typeof i.id === "string" && i.status === "configured" && (i.usable === undefined || i.usable === false))
+              .map((i: Record<string, unknown>) => i.id);
 
             setIntegrations(prev => prev.map(integration =>
-              connectedIds.includes(integration.id)
+              configuredIds.includes(integration.id)
+                ? { ...integration, status: "configured" }
+                : connectedIds.includes(integration.id)
                 ? { ...integration, status: "connected" }
                 : integration
             ));
@@ -92,6 +105,10 @@ export default function Integrations() {
 
   const handleConnect = async (id: string) => {
     const integration = integrations.find((item) => item.id === id);
+    if (integration?.status === 'configured') {
+      setStatusMessage(`${integration.name} is configured locally. Provider verification is still required.`);
+      return;
+    }
     if (integration?.status === 'connected') {
       setStatusMessage(`${integration.name} settings are ready to manage.`);
       return;
@@ -119,6 +136,14 @@ export default function Integrations() {
     setStatusMessage(`${integration?.name || id} connection is unavailable until secure provider verification is configured.`);
   };
 
+  const recordConfiguredConnection = (id: string, result: unknown): boolean => {
+    if (!isConfiguredConnection(result)) return false;
+    setIntegrations(prev => prev.map(integration => integration.id === id ? { ...integration, status: "configured" } : integration));
+    const name = integrations.find(integration => integration.id === id)?.name || id;
+    setStatusMessage(`${name} is configured locally. Provider verification is still required.`);
+    return true;
+  };
+
   const saveTwilioIntegration = async () => {
     if (!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean)) {
       setStatusMessage('Twilio credentials and at least one channel are required.');
@@ -131,7 +156,13 @@ export default function Integrations() {
         body: JSON.stringify({ bot_token: twilioCreds.accountSid.trim(), api_token: twilioCreds.authToken.trim() }),
       });
       if (response.status !== 200) throw new Error('Twilio Conversations connection is unavailable.');
-      if (!isConfirmedUsableConnection(await response.json())) throw new Error('Unconfirmed Twilio connection');
+      const result: unknown = await response.json();
+      if (recordConfiguredConnection('twilio', result)) {
+        setTwilioCreds({ accountSid: '', authToken: '' });
+        setShowTwilioModal(false);
+        return;
+      }
+      if (!isConfirmedUsableConnection(result)) throw new Error('Unconfirmed Twilio connection');
       setTwilioCreds({ accountSid: '', authToken: '' });
       setIntegrations(prev => prev.map(integration =>
         integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
@@ -163,6 +194,11 @@ export default function Integrations() {
       // Finish reading the finite response even on a rejection. A status alone
       // must not leave its body unread while the UI reports a final outcome.
       const result: unknown = await res.json();
+      if (res.status === 200 && recordConfiguredConnection('whatsapp', result)) {
+        setWhatsappTwilioCreds({ accountSid: '', authToken: '', phoneNumber: '' });
+        setShowWhatsAppModal(false);
+        return;
+      }
       if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
         setStatusMessage("Failed to connect Twilio for WhatsApp.");
         return;
@@ -220,6 +256,10 @@ export default function Integrations() {
         });
 
         const result = await res.json();
+        if (res.status === 200 && recordConfiguredConnection('whatsapp_cloud_api', result)) {
+          setShowWhatsAppCloudApiModal(false);
+          return;
+        }
         if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
           setStatusMessage(result?.status === 'pending_verification'
             ? 'Secure provider verification is unavailable. No WhatsApp connection was established.'
@@ -495,7 +535,7 @@ export default function Integrations() {
                       ? "bg-gray-50 dark:bg-zinc-800 text-gray-750 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-zinc-700"
                       : "text-white shadow-sm bg-[#0f766e] hover:bg-[#0d645d] border-none"
                   }`}>
-                  {integration.status === 'connected' ? 'Manage' : 'Connect'}
+                  {integration.status === 'connected' ? 'Manage' : integration.status === 'configured' ? 'Review' : 'Connect'}
                 </button>
               </div>
             ))}
