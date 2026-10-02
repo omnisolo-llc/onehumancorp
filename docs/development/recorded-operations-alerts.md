@@ -55,10 +55,15 @@ operations proposals inside its guarded disposable database.
 
 ## Verification boundaries
 
-The Rust module contains actual SQLite tests for empty/unconfigured accounts,
+The production-used `proactive_operations_storage.rs` module contains actual SQLite tests for empty/unconfigured accounts,
 tenant isolation, concurrent/restarted worker dedupe, source changes, preserved
 owner decisions, bounded batch progress and read errors. Source guards reject the
 previous hardcoded production claims. PostgreSQL SQL must additionally be tested
 against the real production-shaped tables, including conflict races and source
 rechecks. The complete hosted Rust/browser gates remain acceptance criteria;
-formatting and extracted SQL probes alone do not certify the compiled worker.
+formatting and extracted SQL probes alone do not certify the compiled worker. A
+source-linked minimal native probe can compile this storage module with real
+PostgreSQL/SQLite pools and root-lock-matching dependency versions, without
+fabricated application/database/cache implementations. Its result covers the
+storage core; root worker auth, polling/cache wiring and hosted acceptance stay
+separate.

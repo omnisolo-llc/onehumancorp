@@ -7,7 +7,7 @@ import { e2eDbQuery, e2eDbTransaction } from './db_utils';
 // Execute the actual production SQL against PostgreSQL's real types, locking
 // and uniqueness rules. This is a storage contract, not a mocked worker run.
 test('recorded operations storage enforces tenant facts, concurrent dedupe and source rechecks', async () => {
-  const source = readFileSync(path.resolve(__dirname, '../server/workers/proactive_operations_worker.rs'), 'utf8');
+  const source = readFileSync(path.resolve(__dirname, '../server/workers/proactive_operations_storage.rs'), 'utf8');
   const sql = (name: string) => {
     const match = source.match(new RegExp(`const ${name}: &str = r#"([\\s\\S]*?)"#;`));
     if (!match) throw new Error(`Production operation SQL ${name} is missing`);

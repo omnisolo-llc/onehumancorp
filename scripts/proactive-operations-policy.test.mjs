@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 const source = name => readFileSync(new URL(`../src/server/workers/${name}.rs`, import.meta.url), 'utf8');
 
 test('production proactive operations never manufactures supplier or staffing facts', () => {
-  const worker = source('proactive_operations_worker');
+  const worker = source('proactive_operations_worker') + source('proactive_operations_storage');
   assert.doesNotMatch(worker, /Follow up on delayed supplier delivery from yesterday|Only 1 person scheduled for closing shift|Generate the 3 specific CUJ tasks/);
 });
 
