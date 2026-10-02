@@ -12,6 +12,12 @@ import { canonicalRequest, normalizeReviewedProducts, observedWebsite, readDraft
 import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
 
+function requiredReviewContext(location: unknown, targetAudience: unknown): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (typeof location !== 'string' || !location.trim()) errors.location = 'Location is required to prepare your workspace.';
+  if (typeof targetAudience !== 'string' || !targetAudience.trim()) errors.targetAudience = 'Target audience is required to prepare your workspace.';
+  return errors;
+}
 
 export default function OnboardingWizard() {
   const router = useRouter();
@@ -614,6 +620,13 @@ export default function OnboardingWizard() {
       const signature = canonicalRequest(request);
       let receipt = prepared.current;
       if (!receipt || preparedDraft.current !== signature) {
+        const contextErrors = requiredReviewContext(request.location, request.target_audience);
+        if (Object.keys(contextErrors).length > 0) {
+          setValidationErrors(contextErrors);
+          setValidationError('Please fix the errors before continuing.');
+          updateState({ step: 2 });
+          return;
+        }
         const payload = receipt ? {
           ...request, replaces_preparation_id: receipt.preparation_id,
           initial_products: receipt.catalog.map(product => ({
@@ -1680,6 +1693,25 @@ export default function OnboardingWizard() {
                     </p>
                   )}
                 </div>
+                {([['location', 'Location', location], ['targetAudience', 'Target Audience', targetAudience]] as const).map(([field, label, value]) => (
+                  <div key={field}>
+                    <label htmlFor={`review-${field}`} className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">{label}</label>
+                    <input
+                      id={`review-${field}`}
+                      type="text"
+                      maxLength={4000}
+                      value={value}
+                      aria-invalid={Boolean(validationErrors[field])}
+                      aria-describedby={validationErrors[field] ? `review-${field}-error` : undefined}
+                      onChange={event => {
+                        updateState({ [field]: event.target.value });
+                        setValidationErrors(previous => { const next = { ...previous }; delete next[field]; return next; });
+                      }}
+                      className={`w-full p-3 sm:p-4 border ${validationErrors[field] ? 'border-[#FF3B30]' : 'focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    />
+                    {validationErrors[field] && <p id={`review-${field}-error`} className="text-[#FF3B30] text-xs mt-1">{validationErrors[field]}</p>}
+                  </div>
+                ))}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Categories (Comma separated)
@@ -1762,6 +1794,7 @@ export default function OnboardingWizard() {
                     let hasError = false;
                     const newErrors: Record<string, string> = {
                       ...validationErrors,
+                      ...requiredReviewContext(location, targetAudience),
                     };
                     if (String(businessName || "").trim().length < 3) {
                       newErrors.businessName = "Must be at least 3 characters.";

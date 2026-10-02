@@ -439,6 +439,7 @@ describe("OnboardingWizard", () => {
     act(() => {
       useOnboardingStore.setState({
         step: 3,
+        location: 'Portland, OR', targetAudience: 'Local families',
       });
     });
 
@@ -597,6 +598,7 @@ describe("OnboardingWizard", () => {
         step: 2,
         businessName: "Valid Name",
         businessType: "Bakery",
+        location: 'Portland, OR', targetAudience: 'Local families',
         categories: ["food"],
         domainChoice: "subdomain",
         firstProductName: "Cake",
@@ -1147,6 +1149,7 @@ describe("OnboardingWizard", () => {
     act(() => {
       useOnboardingStore.setState({
         step: 3,
+        location: 'Portland, OR', targetAudience: 'Local families',
       });
     });
 
