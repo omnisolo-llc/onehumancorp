@@ -83,6 +83,14 @@ pub(crate) fn builder_tenant_id(tenant: &str) -> Uuid {
     Uuid::parse_str(tenant)
         .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_DNS, tenant.as_bytes()))
 }
+pub(crate) fn valid_publication_path(path: &str) -> bool {
+    path.starts_with('/')
+        && !path.starts_with("//")
+        && path.len() <= 512
+        && !path.contains(['%', '?', '#', '\\'])
+        && !path.chars().any(char::is_control)
+        && !path.split('/').any(|part| part == "." || part == "..")
+}
 fn canonical_value(value: Value) -> Value {
     match value {
         Value::Object(values) => {
@@ -117,14 +125,7 @@ pub(crate) fn prepare_snapshot(
     let mut paths = BTreeSet::new();
     let mut products = BTreeSet::new();
     for page in &snapshot.pages {
-        if !page.path.starts_with('/')
-            || page.path.starts_with("//")
-            || page.path.len() > 512
-            || page.path.contains(['?', '#', '\\'])
-            || page.path.chars().any(char::is_control)
-            || page.path.split('/').any(|s| s == "." || s == "..")
-            || !paths.insert(page.path.clone())
-        {
+        if !valid_publication_path(&page.path) || !paths.insert(page.path.clone()) {
             return Err(PublicationError::Invalid(
                 "Publication paths must be unique local document paths",
             ));
@@ -293,11 +294,14 @@ pub async fn submit_publication(
     let row=sqlx::query("INSERT INTO builder_publications(publication_id,tenant_id,owner_id,operation_id,site_id,requested_site_id,site_version,snapshot,snapshot_sha256,product_ids) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *")
         .bind(Uuid::new_v4()).bind(&actor.tenant_id).bind(&actor.user_id).bind(operation_id).bind(saved_site).bind(site_id).bind(version).bind(snapshot_value).bind(digest).bind(products).fetch_one(&mut *tx).await?;
     let receipt = receipt(&row)?;
-    sqlx::query("INSERT INTO builder_publication_work(publication_id,tenant_id) VALUES($1,$2)")
-        .bind(receipt.publication_id)
-        .bind(&actor.tenant_id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "INSERT INTO builder_publication_work(publication_id,tenant_id,site_id) VALUES($1,$2,$3)",
+    )
+    .bind(receipt.publication_id)
+    .bind(&actor.tenant_id)
+    .bind(receipt.site_id)
+    .execute(&mut *tx)
+    .await?;
     tx.commit().await?;
     Ok(receipt)
 }

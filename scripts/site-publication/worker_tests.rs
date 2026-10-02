@@ -258,7 +258,12 @@ async fn deleting_tenant_removes_routing_and_prevents_a_late_completion() {
             .is_empty()
     );
     assert!(finish_publication(&f.pool, &claim).await.is_err());
-    assert!(current(&f, receipt.site_id).await.is_none());
+    let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM builder_sites WHERE id=$1")
+        .bind(receipt.site_id)
+        .fetch_one(&f.admin)
+        .await
+        .unwrap();
+    assert_eq!(remaining, 0, "tenant cleanup must remove the owned draft");
     f.finish().await;
 }
 
@@ -286,12 +291,14 @@ async fn forged_and_missing_routing_metadata_never_authorize_another_tenant() {
             .unwrap()
             .is_none()
     );
-    let result =
-        sqlx::query("INSERT INTO builder_publication_work(publication_id,tenant_id) VALUES($1,$2)")
-            .bind(Uuid::new_v4())
-            .bind(&f.a.tenant_id)
-            .execute(&f.admin)
-            .await;
+    let result = sqlx::query(
+        "INSERT INTO builder_publication_work(publication_id,tenant_id,site_id) VALUES($1,$2,$3)",
+    )
+    .bind(Uuid::new_v4())
+    .bind(&f.a.tenant_id)
+    .bind(receipt.site_id)
+    .execute(&f.admin)
+    .await;
     assert!(result.is_err());
     let result =
         sqlx::query("UPDATE builder_publication_work SET tenant_id=$2 WHERE publication_id=$1")
@@ -548,9 +555,10 @@ async fn invalid_stored_snapshots_are_quarantined_without_starving_later_work() 
         };
         sqlx::query("INSERT INTO builder_publications(publication_id,tenant_id,owner_id,operation_id,site_id,site_version,snapshot,snapshot_sha256,product_ids) VALUES($1,$2,$3,$1,$4,$5,$6,$7,'{}')")
             .bind(id).bind(&f.a.tenant_id).bind(&f.a.user_id).bind(valid.site_id).bind(i as i64+1).bind(corrupt).bind(digest).execute(&f.admin).await.unwrap();
-        sqlx::query("INSERT INTO builder_publication_work(publication_id,tenant_id) VALUES($1,$2)")
+        sqlx::query("INSERT INTO builder_publication_work(publication_id,tenant_id,site_id) VALUES($1,$2,$3)")
             .bind(id)
             .bind(&f.a.tenant_id)
+            .bind(valid.site_id)
             .execute(&f.admin)
             .await
             .unwrap();
@@ -614,12 +622,14 @@ async fn terminal_routing_cleanup_preserves_published_content_after_authority_re
     .fetch_one(&f.admin)
     .await
     .unwrap();
-    sqlx::query("INSERT INTO builder_publication_work(publication_id,tenant_id) VALUES($1,$2)")
-        .bind(receipt.publication_id)
-        .bind(&f.a.tenant_id)
-        .execute(&f.admin)
-        .await
-        .unwrap();
+    sqlx::query(
+        "UPDATE builder_publication_work SET queued=true WHERE publication_id=$1 AND tenant_id=$2",
+    )
+    .bind(receipt.publication_id)
+    .bind(&f.a.tenant_id)
+    .execute(&f.admin)
+    .await
+    .unwrap();
     sqlx::query("DELETE FROM identity_user_roles WHERE user_id=$1")
         .bind(&f.a.user_id)
         .execute(&f.admin)

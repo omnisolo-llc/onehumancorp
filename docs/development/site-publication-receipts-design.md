@@ -25,9 +25,9 @@ An authenticated owner can publish the reviewed site, recover its status after r
 
 ## Catalog publication scope
 
-A published site may expose only product IDs explicitly present in its reviewed catalog blocks. Validate each ID against the current tenant before committing the snapshot. Literal reviewed catalog content remains literal content; it grants no lookup permission to another product. The public product endpoint requires membership in a published snapshot, with tenant and product bound together. Newly created unrelated products remain private until selected and republished. Price/availability reads for selected products use current owned catalog rows, preserving the existing catalog-edit/cache-invalidating workflow.
+A published site may expose only product IDs explicitly present in its reviewed catalog blocks. Validate each ID against the current tenant before committing the snapshot. Literal reviewed catalog content remains literal content; it grants no lookup permission to another product. The public product endpoint requires membership in a published snapshot, with tenant and product bound together. Newly created unrelated products remain private until selected and republished. Prices remain snapshot values by default. A future live-price option must be explicitly selected during the owner's publication review, default off, and bound to the selected products and a policy version in the immutable snapshot and receipt. A private price edit must never become public solely to satisfy a cache-invalidation test. Descriptions, names, layout and product membership remain immutable until republished.
 
-The existing SEO browser fixture must create and select its real product before publication, then retain its anonymous access, exact JSON-LD, tenant denial and cache invalidation assertions. It must not manufacture `published_at` or bypass the real publish action.
+The existing SEO browser fixture must create and select its real product before publication, then retain its anonymous access, exact JSON-LD, tenant denial and cache invalidation assertions. An updated price requires a new explicit publication unless a separately tested live-price review/receipt contract is selected in the actual UI. The fixture must not manufacture `published_at` or bypass the real publish action.
 
 ## Rendering and compatibility
 

@@ -6,6 +6,8 @@ ALTER TABLE builder_sites ADD COLUMN IF NOT EXISTS current_publication_id UUID;
 -- reviewed legacy content must be saved as a newly bound publication site.
 ALTER TABLE builder_sites ADD COLUMN IF NOT EXISTS publication_tenant_id TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_builder_sites_publication_tenant ON builder_sites(id, publication_tenant_id);
+ALTER TABLE builder_sites ADD CONSTRAINT builder_publication_tenant_exists
+FOREIGN KEY (publication_tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS builder_publications (
     publication_id UUID PRIMARY KEY,
@@ -29,12 +31,17 @@ CREATE TABLE IF NOT EXISTS builder_publications (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (tenant_id, owner_id, operation_id),
     UNIQUE (publication_id, tenant_id),
+    UNIQUE (publication_id, tenant_id, site_id),
     UNIQUE (site_id, site_version),
     UNIQUE (site_id, publication_id),
     FOREIGN KEY (site_id,tenant_id) REFERENCES builder_sites(id,publication_tenant_id) ON DELETE CASCADE,
     CHECK (status <> 'processing' OR (lease_token IS NOT NULL AND lease_until IS NOT NULL)),
     CHECK (status <> 'published' OR (rendered_pages IS NOT NULL AND rendered_sha256 IS NOT NULL))
 );
+ALTER TABLE builder_sites ADD CONSTRAINT builder_current_publication_belongs_to_site
+FOREIGN KEY (id,current_publication_id) REFERENCES builder_publications(site_id,publication_id)
+ON DELETE SET NULL (current_publication_id);
+
 CREATE INDEX IF NOT EXISTS idx_builder_publications_pending ON builder_publications(status, lease_until, created_at);
 ALTER TABLE builder_publications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE builder_publications FORCE ROW LEVEL SECURITY;
@@ -79,11 +86,26 @@ FOR EACH ROW EXECUTE FUNCTION protect_builder_publication_tenant();
 CREATE TABLE IF NOT EXISTS builder_publication_work (
     publication_id UUID PRIMARY KEY,
     tenant_id TEXT NOT NULL,
-    FOREIGN KEY (publication_id,tenant_id) REFERENCES builder_publications(publication_id,tenant_id) ON DELETE CASCADE
+    site_id UUID NOT NULL,
+    queued BOOLEAN NOT NULL DEFAULT TRUE,
+    FOREIGN KEY (publication_id,tenant_id,site_id) REFERENCES builder_publications(publication_id,tenant_id,site_id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_builder_publication_work_site ON builder_publication_work(site_id);
+CREATE INDEX IF NOT EXISTS idx_builder_publication_work_queued ON builder_publication_work(publication_id) WHERE queued;
+CREATE OR REPLACE FUNCTION protect_builder_publication_routing() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF ROW(NEW.publication_id,NEW.tenant_id,NEW.site_id) IS DISTINCT FROM ROW(OLD.publication_id,OLD.tenant_id,OLD.site_id)
+    THEN RAISE EXCEPTION 'Publication routing identity is immutable'; END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER protect_builder_publication_routing BEFORE UPDATE ON builder_publication_work
+FOR EACH ROW EXECUTE FUNCTION protect_builder_publication_routing();
 REVOKE ALL ON builder_publication_work FROM PUBLIC;
 ALTER TABLE builder_publication_work ENABLE ROW LEVEL SECURITY;
 ALTER TABLE builder_publication_work FORCE ROW LEVEL SECURITY;
 CREATE POLICY publication_work_discovery ON builder_publication_work FOR SELECT USING (true);
 CREATE POLICY publication_work_insert ON builder_publication_work FOR INSERT WITH CHECK (tenant_id=current_setting('app.current_tenant',true));
 CREATE POLICY publication_work_delete ON builder_publication_work FOR DELETE USING (tenant_id=current_setting('app.current_tenant',true));
+
+CREATE POLICY publication_work_retire ON builder_publication_work FOR UPDATE USING (tenant_id=current_setting('app.current_tenant',true)) WITH CHECK (tenant_id=current_setting('app.current_tenant',true));

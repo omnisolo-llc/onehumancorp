@@ -31,7 +31,7 @@ pub(crate) async fn discover_publication_work(
             "Invalid publication discovery limit",
         ));
     }
-    let rows = sqlx::query("SELECT publication_id,tenant_id FROM builder_publication_work ORDER BY publication_id LIMIT $1")
+    let rows = sqlx::query("SELECT publication_id,tenant_id FROM builder_publication_work WHERE queued ORDER BY publication_id LIMIT $1")
         .bind(limit).fetch_all(pool).await?;
     rows.into_iter()
         .map(|row| {
@@ -66,11 +66,13 @@ async fn remove_routing(
     work: &PublicationWorkItem,
 ) -> Result<(), PublicationError> {
     server_common::auth_utils::set_org_context(&mut **tx, &work.tenant_id).await?;
-    sqlx::query("DELETE FROM builder_publication_work WHERE publication_id=$1 AND tenant_id=$2")
-        .bind(work.publication_id)
-        .bind(&work.tenant_id)
-        .execute(&mut **tx)
-        .await?;
+    sqlx::query(
+        "UPDATE builder_publication_work SET queued=false WHERE publication_id=$1 AND tenant_id=$2",
+    )
+    .bind(work.publication_id)
+    .bind(&work.tenant_id)
+    .execute(&mut **tx)
+    .await?;
     Ok(())
 }
 
@@ -91,7 +93,9 @@ async fn fail_job(
     Ok(())
 }
 
-fn snapshot(row: &PgRow) -> Result<(SiteSnapshot, String, Vec<String>), PublicationError> {
+pub(crate) fn snapshot(
+    row: &PgRow,
+) -> Result<(SiteSnapshot, String, Vec<String>), PublicationError> {
     let snapshot: SiteSnapshot =
         serde_json::from_value(row.try_get("snapshot")?).map_err(|_| PublicationError::Corrupt)?;
     let (_, digest, products) = prepare_snapshot(&snapshot)?;
@@ -103,11 +107,12 @@ fn snapshot(row: &PgRow) -> Result<(SiteSnapshot, String, Vec<String>), Publicat
     Ok((snapshot, digest, products))
 }
 
-async fn lock_authority_and_site(
+pub(crate) async fn lock_authority_and_site(
     tx: &mut Transaction<'_, Postgres>,
     work: &PublicationWorkItem,
     row: &PgRow,
     products: &[String],
+    exclusive_site: bool,
 ) -> Result<i64, PublicationError> {
     let actor = PublicationActor {
         user_id: row.try_get("owner_id")?,
@@ -129,9 +134,17 @@ async fn lock_authority_and_site(
     }
     let mapped = builder_tenant_id(&actor.tenant_id);
     server_common::auth_utils::set_org_context(&mut **tx, &mapped.to_string()).await?;
-    let version = sqlx::query_scalar("SELECT publication_generation FROM builder_sites WHERE id=$1 AND tenant_id=$2 AND publication_tenant_id=$3 FOR UPDATE")
-        .bind(row.try_get::<Uuid, _>("site_id")?).bind(mapped).bind(&actor.tenant_id)
-        .fetch_optional(&mut **tx).await?;
+    let query = if exclusive_site {
+        "SELECT publication_generation FROM builder_sites WHERE id=$1 AND tenant_id=$2 AND publication_tenant_id=$3 FOR UPDATE"
+    } else {
+        "SELECT publication_generation FROM builder_sites WHERE id=$1 AND tenant_id=$2 AND publication_tenant_id=$3 FOR SHARE"
+    };
+    let version = sqlx::query_scalar(query)
+        .bind(row.try_get::<Uuid, _>("site_id")?)
+        .bind(mapped)
+        .bind(&actor.tenant_id)
+        .fetch_optional(&mut **tx)
+        .await?;
     server_common::auth_utils::set_org_context(&mut **tx, &actor.tenant_id).await?;
     version.ok_or(PublicationError::NotFound)
 }
@@ -163,7 +176,7 @@ pub(crate) async fn claim_publication(
             return Err(error);
         }
     };
-    let generation = match lock_authority_and_site(&mut tx, work, &initial, &products).await {
+    let generation = match lock_authority_and_site(&mut tx, work, &initial, &products, true).await {
         Ok(version) => version,
         Err(error) => {
             if !matches!(error, PublicationError::Database(_)) {
@@ -222,22 +235,22 @@ pub(crate) async fn finish_publication(
     {
         return Err(PublicationError::Conflict);
     }
-    let generation = match lock_authority_and_site(&mut tx, &claim.work, &initial, &products).await
-    {
-        Ok(version) => version,
-        Err(error) => {
-            if !matches!(error, PublicationError::Database(_)) {
-                fail_job(
-                    tx,
-                    &claim.work,
-                    Some(claim.lease_token),
-                    "publication_authority_unavailable",
-                )
-                .await?;
+    let generation =
+        match lock_authority_and_site(&mut tx, &claim.work, &initial, &products, true).await {
+            Ok(version) => version,
+            Err(error) => {
+                if !matches!(error, PublicationError::Database(_)) {
+                    fail_job(
+                        tx,
+                        &claim.work,
+                        Some(claim.lease_token),
+                        "publication_authority_unavailable",
+                    )
+                    .await?;
+                }
+                return Err(error);
             }
-            return Err(error);
-        }
-    };
+        };
     let row = read_job(&mut tx, &claim.work, true)
         .await?
         .ok_or(PublicationError::NotFound)?;
