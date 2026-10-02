@@ -18,6 +18,19 @@ class FocusedGateTests(unittest.TestCase):
         self.assertEqual(database,'OHC_AGENT_DEFINITION_TEST_DATABASE_URL')
         self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/agent-definition-contract/run.sh').is_file())
 
+    def test_chat_gate_requires_real_database_and_complete_inventory(self):
+        minimum, database = gate.GATES['chat-tenant-isolation']
+        self.assertGreaterEqual(minimum, 8)
+        self.assertEqual(database, 'OHC_CHAT_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        self.assertTrue((root/'scripts/chat-tenant-isolation/run.sh').is_file())
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertIn('python3 scripts/focused_ci_gate.py chat-tenant-isolation', workflow)
+        native = workflow.split('  native-test:', 1)[1].split('  native-node:', 1)[0]
+        self.assertIn('OHC_CHAT_TEST_DATABASE_URL:', native)
+        self.assertIn('ohc_chat_service_test', native)
+        self.assertIn('make test-backend', native)
+
     def test_bootstrap_portable_role_gate_is_mandatory_and_complete(self):
         self.assertIn('bootstrap-portable-roles', gate.GATES)
         minimum, database = gate.GATES['bootstrap-portable-roles']
