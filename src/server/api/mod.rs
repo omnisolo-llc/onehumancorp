@@ -79,3 +79,4 @@ pub mod telemetry_settings;
 pub mod stripe_webhook_security;
 
 pub mod voice_provisioning;
+pub mod widget;
