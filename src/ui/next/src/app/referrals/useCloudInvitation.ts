@@ -26,7 +26,7 @@ async function identity(): Promise<Owner> {
 function confirmedLink(value: unknown): string | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
-  if (body.error != null || body.success === false || typeof body.invite_link !== 'string') return null;
+  if (body.error != null || ('success' in body && body.success !== true) || typeof body.invite_link !== 'string') return null;
   try {
     const url = new URL(body.invite_link);
     if (url.protocol !== 'https:' || !['omnisolo.co', 'cloud.omnisolo.co'].includes(url.hostname) || url.port || url.username || url.password || url.search || url.hash || !/^\/invite\/[^/]+$/.test(url.pathname) || /\/(fallback|default)$/.test(url.pathname)) return null;

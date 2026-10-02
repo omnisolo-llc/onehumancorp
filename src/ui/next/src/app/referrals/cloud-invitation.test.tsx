@@ -32,7 +32,8 @@ async function create() {
   fireEvent.change(screen.getByPlaceholderText('team-member@example.com'), { target: { value: 'member@example.test' } });
   await act(async () => { fireEvent.click(button); });
 }
-it('displays only the actual owner-bound invitation receipt', async () => {
+it.each([undefined, true])('displays the actual owner-bound invitation receipt with success=%j', async success => {
+  inviteReply = async () => Response.json({ invite_link: receipt, ...(success === undefined ? {} : { success }) });
   render(<ReferralsPage />); await create();
   expect(posts()).toHaveLength(1);
   const options = posts()[0][1]!; const headers = new Headers(options.headers);
@@ -81,6 +82,10 @@ it('unmount prevents a late response from updating the replacement view', async 
 });
 it.each([
   { status: 200, body: { invite_link: receipt, error: 'denied' } },
+  { status: 200, body: { invite_link: receipt, success: 0 } },
+  { status: 200, body: { invite_link: receipt, success: 'false' } },
+  { status: 200, body: { invite_link: receipt, success: 'true' } },
+  { status: 200, body: { invite_link: receipt, success: null } },
   { status: 202, body: { invite_link: receipt } },
   { status: 200, body: { invite_link: 'https://untrusted.test/invite/record' } },
   { status: 200, body: { invite_link: 'https://omnisolo.co/invite/fallback' } },
