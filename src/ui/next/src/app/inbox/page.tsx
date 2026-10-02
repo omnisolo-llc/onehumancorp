@@ -2,11 +2,12 @@
 
 
 import { errorMessage } from '@/lib/errors';
-import { Fragment, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, Suspense, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
+import { QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
 
 type Message = {
   id: string;
@@ -161,16 +162,44 @@ function InboxWorkspace({
   sourceLabel: string;
 }) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const requestedId = searchParams.get('messageId') || null;
+  const [selection, setSelection] = useState<{ request: string | null; id: string | null }>({ request: requestedId, id: requestedId });
+  const selectedId = selection.request === requestedId ? selection.id : requestedId;
   const [showOriginal, setShowOriginal] = useState(false);
-  const [actionStatus, setActionStatus] = useState("");
-  const [manualReply, setManualReply] = useState("");
+  const [actionStatus, setViewActionStatus] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState(() => new Map<string, string>());
+  const activeMessage = useRef<string | null>(null);
+  const sessionEpoch = useRef(0);
 
+  useEffect(() => {
+    setSelection({ request: requestedId, id: requestedId });
+  }, [requestedId]);
 
   const selected = useMemo(() => {
     if (messages.length === 0) return null;
-    return messages.find((m) => m.id === selectedId) || messages[0];
+    return selectedId === null ? messages[0] : messages.find((m) => m.id === selectedId) || null;
   }, [messages, selectedId]);
+  useEffect(() => {
+    setShowOriginal(false); setViewActionStatus('');
+  }, [selected?.id, requestedId]);
+  activeMessage.current = selected?.id ?? null;
+  const renderedEpoch = sessionEpoch.current;
+  const draftId = selected?.id ?? null;
+  const manualReply = draftId ? replyDrafts.get(draftId) ?? '' : '';
+  const setManualReply = (value: string | ((previous: string) => string)) => {
+    if (!draftId || renderedEpoch !== sessionEpoch.current) return;
+    setReplyDrafts(previous => new Map(previous).set(draftId, typeof value === 'function' ? value(previous.get(draftId) ?? '') : value));
+  };
+  const setActionStatus = (value: string) => {
+    if (renderedEpoch === sessionEpoch.current && activeMessage.current === draftId) setViewActionStatus(value);
+  };
+  useEffect(() => {
+    const clear = () => { sessionEpoch.current += 1; setReplyDrafts(new Map()); setViewActionStatus(''); };
+    const storage = (event: StorageEvent) => { if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) clear(); };
+    window.addEventListener('omnisolo_auth_changed', clear); window.addEventListener('storage', storage);
+    return () => { sessionEpoch.current += 1; activeMessage.current = null; window.removeEventListener('omnisolo_auth_changed', clear); window.removeEventListener('storage', storage); };
+  }, []);
 
   const [pendingApprovals, setPendingApprovals] = useState<{ id: string; payload?: { inbox_message_id?: string; drafted_response?: string; draft_reply?: string } | string }[]>([]);
 
@@ -232,6 +261,7 @@ function InboxWorkspace({
 
   async function handleSendManualReply(inboxMessageId: string) {
     if (!manualReply.trim()) return;
+    const submittedReply = manualReply;
     try {
       setActionStatus("Sending reply...");
       const res = await fetch(`/api/v1/ui/omni_inbox/action`, {
@@ -240,12 +270,13 @@ function InboxWorkspace({
         body: JSON.stringify({
           message_id: inboxMessageId,
           approved: true,
-          edited_reply: manualReply
+          edited_reply: submittedReply
         })
       });
       if (res.ok) {
         setActionStatus("Manual reply sent.");
-        setManualReply("");
+        if (renderedEpoch === sessionEpoch.current) setReplyDrafts(previous => previous.get(inboxMessageId) === submittedReply
+          ? new Map(previous).set(inboxMessageId, '') : previous);
       } else {
         setActionStatus("Failed to send manual reply.");
       }
@@ -351,7 +382,7 @@ function InboxWorkspace({
                   key={message.id}
                   type="button"
                   onClick={() => {
-                    setSelectedId(message.id);
+                    setSelection({ request: requestedId, id: message.id });
                     setShowOriginal(false);
                   }}
                   className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[8px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
@@ -401,7 +432,7 @@ function InboxWorkspace({
               <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
             </div>
             {!selected ? (
-              <div className="app-empty p-8 text-center text-gray-500">Select a database-backed message to inspect it.</div>
+              <div className="app-empty p-8 text-center text-gray-500">{selectedId ? 'The requested message is unavailable in this workspace.' : 'Select a database-backed message to inspect it.'}</div>
             ) : (
               <div className="app-panel-body p-5">
                 <div className="mb-4 flex items-center justify-between">
@@ -613,11 +644,13 @@ export default function InboxPage() {
   }, []);
 
   return (
+    <Suspense fallback={<InboxLoadingState />}>
     <PowerSyncProvider
       fallback={<InboxLoadingState />}
       unsupportedFallback={<ApiInboxFallback />}
     >
       <PowerSyncInboxContent />
     </PowerSyncProvider>
+    </Suspense>
   );
 }
