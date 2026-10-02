@@ -6,3 +6,5 @@ pub mod jobs;
 mod builder_test;
 
 pub mod edge;
+
+pub mod publication_store;

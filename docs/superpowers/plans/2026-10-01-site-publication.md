@@ -57,7 +57,7 @@ Interfaces: `render_snapshot(snapshot: &SiteSnapshot) -> Result<RenderedSite, Pu
 
 Files: `builder/api.rs`, new `builder/publication_http.rs`, narrow `lib.rs` mounts, `api/storefront_delivery.rs`; same harness plus source-wiring guards.
 
-Interfaces: authenticated POST publication uses `{operation_id, site_id?, snapshot}`; authenticated GET receipt uses operation UUID and current owner. A dedicated public GET resolves a server-generated publication UUID/path; authenticated recovery instead uses the owner-scoped operation UUID. Existing product GET requires that product's membership in a current eligible published snapshot.
+Interfaces: authenticated POST publication uses `{operation_id, site_id?, snapshot}`; authenticated GET receipt uses operation UUID and current owner. A dedicated public GET resolves a stable server-generated site UUID/path to its current committed publication snapshot; authenticated recovery instead uses the owner-scoped operation UUID. Existing product GET requires that product's membership in a current eligible published snapshot.
 
 - [ ] Add actual-router red cases proving synthetic claims, implicit edit publication and unauthenticated mutation are rejected
 - [ ] Remove synthetic fallback and automatic publish calls from ordinary edits; preserve owned draft editing and authenticated previews
@@ -68,10 +68,11 @@ Interfaces: authenticated POST publication uses `{operation_id, site_id?, snapsh
 
 ## Stage 4: Builder status and recovery UI
 
-Files: `src/ui/next/src/app/builder/ownedDraft.ts`, its tests, `website-builder/page.tsx`, `storefront-builder/page.tsx`, associated component tests and authenticated BFF contracts.
+Files: `src/ui/next/src/app/builder/ownedDraft.ts`, its tests, `website-builder/page.tsx`, `storefront-builder/page.tsx`, `builder/page.tsx`, associated component tests and authenticated BFF contracts.
 
 - [ ] Add failing tests for one durable operation UUID, real pending/published receipt transitions, reload recovery and conflicting payload reuse
 - [ ] Pass the existing locally persisted operation UUID to the server; hold unknown mutations and use read-only receipt recovery without automatic POST retry
+- [ ] Migrate all three active publication callers; remove the legacy caller's invented cloud URL and unsupported default referral offer
 - [ ] Render saved/pending/published/reconciliation separately; display only the receipt's verified public URL
 - [ ] Add owner-retirement and delayed-body regressions, including a returning owner and a later edited draft
 - [ ] Run focused tests, full Next types/lint and a combined one-worker frontend aggregate when the shared window is available; review before checkpoint
