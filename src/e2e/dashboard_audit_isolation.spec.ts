@@ -8,6 +8,17 @@ test('a real dismiss in one dashboard case cannot erase another required control
   if (!baseURL) throw new Error('The isolated app base URL is required');
   const first = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
   try {
+    // These factual records intentionally do not satisfy either active
+    // operations rule. Workers remain enabled during the browser audit.
+    expect(await e2eDbQuery(`SELECT
+      (SELECT count(*)::int FROM raw_materials WHERE tenant_id LIKE $1
+        AND reorder_threshold>0 AND current_quantity<reorder_threshold) AS low_stock,
+      (SELECT count(*)::int FROM (
+        SELECT tenant_id, customer_id FROM bookings WHERE tenant_id LIKE $1
+        GROUP BY tenant_id, customer_id
+        HAVING count(*)>1 AND max(start_time)<CURRENT_TIMESTAMP-INTERVAL '14 days'
+      ) AS dormant_sources) AS dormant_customers`, [`${first.actor.namespace}-%`]))
+      .toEqual([{ low_stock: 0, dormant_customers: 0 }]);
     await first.navigate();
     const baseline = (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key);
     const firstId = `${first.actor.namespace}-e2e-feed-churn`;
