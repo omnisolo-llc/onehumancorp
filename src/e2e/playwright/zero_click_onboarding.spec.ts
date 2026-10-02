@@ -1,5 +1,5 @@
 import { test, expect } from '../onboarding_fixtures';
-import {captureSetupPost,completeManualSetup,expectLaunchedSetup,expectPreparedSetup,verifiedSetupOwner} from '../support/legacy_manual_setup';
+import {captureSetupPost,captureSetupLaunch,completeManualSetup,expectLaunchedSetup,expectPreparedSetup,verifiedSetupOwner} from '../support/legacy_manual_setup';
 
 test.describe('Zero-Click Onboarding Flow', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // strictly mobile viewport
@@ -31,9 +31,11 @@ test.describe('Zero-Click Onboarding Flow', () => {
       // A configured provider must supply its real prepared receipt; it is never mocked here.
       const id=expectPreparedSetup(reply,owner);
       const approval=page.locator('#step-approval');await expect(approval).toBeVisible();
-      const launch=captureSetupPost(page,'launch');
-      const [launched]=await Promise.all([launch,approval.getByRole('button',{name:'Approve & Complete Setup'}).click()]);
-      await expectLaunchedSetup(page,launched,id,owner);
+      const launch=await captureSetupLaunch(page);
+      try {
+        const [launched]=await Promise.all([launch.response,approval.getByRole('button',{name:'Approve & Complete Setup'}).click()]);
+        await expectLaunchedSetup(page,launched,id,owner);
+      } finally { await launch.dispose(); }
     }
 
     // The acknowledged local setup leads to the dashboard.

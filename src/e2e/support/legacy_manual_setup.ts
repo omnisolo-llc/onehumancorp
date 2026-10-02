@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
+import { captureDurablePost, type DurablePostReceipt } from './durable_post_receipt';
 export type SetupOwner = {
     userId: string;
     tenantId: string;
@@ -8,6 +9,7 @@ export type SetupReply = {
     status: number;
     body: Record<string, unknown>;
 };
+type SetupLaunchReply = SetupReply & Pick<DurablePostReceipt, 'requestBody' | 'expectedUser' | 'expectedTenant'>;
 export function requireLocalSetup(page: Page) {
     const url = new URL(page.url());
     expect(['http:', 'https:']).toContain(url.protocol);
@@ -38,6 +40,13 @@ export function captureSetupPost(page: Page, path: string): Promise<SetupReply> 
     return page.waitForResponse(response => new URL(response.url()).origin === origin && new URL(response.url()).pathname === `/api/v1/onboarding/${path}` && response.request().method() === 'POST')
         .then(async (response) => ({ status: response.status(), body: object(JSON.parse(await response.text())) }));
 }
+export async function captureSetupLaunch(page: Page) {
+    requireLocalSetup(page);
+    const capture = await captureDurablePost(page, '/api/v1/onboarding/launch');
+    const response = capture.response.then(receipt => ({ ...receipt, body: object(JSON.parse(receipt.body)) }));
+    void response.catch(() => undefined);
+    return { ...capture, response };
+}
 export function expectPreparedSetup(reply: SetupReply, owner: SetupOwner): string {
     expect(reply.status).toBe(200);
     expect(reply.body).toMatchObject({ success: true, status: 'prepared', organization_id: owner.tenantId, user_id: owner.userId });
@@ -46,7 +55,10 @@ export function expectPreparedSetup(reply: SetupReply, owner: SetupOwner): strin
     expect(object(reply.body.preparation)).toMatchObject({ preparation_id: id, status: 'prepared', organization_id: owner.tenantId, user_id: owner.userId });
     return id;
 }
-export async function expectLaunchedSetup(page: Page, reply: SetupReply, id: string, owner: SetupOwner) {
+export async function expectLaunchedSetup(page: Page, reply: SetupLaunchReply, id: string, owner: SetupOwner) {
+    expect(object(JSON.parse(reply.requestBody))).toEqual({ preparation_id: id });
+    expect(reply.expectedUser).toBe(owner.userId);
+    expect(reply.expectedTenant).toBe(owner.tenantId);
     expect(reply.status).toBe(200);
     expect(reply.body).toMatchObject({ success: true, status: 'launched', preparation_id: id, organization_id: owner.tenantId, user_id: owner.userId });
     expect(reply.body.error ?? null).toBeNull();
@@ -87,11 +99,14 @@ export async function enterManualSetup(page: Page, source: 'chat' | 'instant', p
 export async function completeManualSetup(page: Page, source: 'chat' | 'instant', prompt: string, owner: SetupOwner) {
     await enterManualSetup(page, source, prompt);
     requireLocalSetup(page);
-    // Read both finite receipts as they arrive, before the final automatic navigation.
-    const preparing = captureSetupPost(page, 'start');
-    const launching = captureSetupPost(page, 'launch');
-    const [prepared, launched] = await Promise.all([preparing, launching, page.locator('#finish-btn').click()]);
-    const id = expectPreparedSetup(prepared, owner);
-    expect(object(prepared.body.preparation).reviewed_request).toMatchObject({ company_name: 'Owner-entered Service Studio', first_product_name: 'Owner-entered first service', first_product_price: '35.00', location: 'Austin, TX', target_audience: 'Local customers' });
-    await expectLaunchedSetup(page, launched, id, owner);
+    // Configure passive durable observation before the action; navigation may
+    // otherwise discard the renderer's actual launch response body.
+    const launching = await captureSetupLaunch(page);
+    try {
+        const preparing = captureSetupPost(page, 'start');
+        const [prepared, launched] = await Promise.all([preparing, launching.response, page.locator('#finish-btn').click()]);
+        const id = expectPreparedSetup(prepared, owner);
+        expect(object(prepared.body.preparation).reviewed_request).toMatchObject({ company_name: 'Owner-entered Service Studio', first_product_name: 'Owner-entered first service', first_product_price: '35.00', location: 'Austin, TX', target_audience: 'Local customers' });
+        await expectLaunchedSetup(page, launched, id, owner);
+    } finally { await launching.dispose(); }
 }

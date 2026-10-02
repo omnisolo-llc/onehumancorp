@@ -1,5 +1,5 @@
 import { test, expect } from '../onboarding_fixtures';
-import {captureSetupPost,completeManualSetup,expectLaunchedSetup,expectPreparedSetup,verifiedSetupOwner} from '../support/legacy_manual_setup';
+import {captureSetupPost,captureSetupLaunch,completeManualSetup,expectLaunchedSetup,expectPreparedSetup,verifiedSetupOwner} from '../support/legacy_manual_setup';
 
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
@@ -33,9 +33,12 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
       const approval=page.locator('#step-approval');
       await expect(approval.getByRole('heading',{name:'Ready to Launch'})).toBeVisible({timeout:45000});
       await expect(approval.locator('#approval-details')).not.toBeEmpty();
-      const preparation=captureSetupPost(page,'start');const launch=captureSetupPost(page,'launch');
-      const [prepared,launched]=await Promise.all([preparation,launch,approval.getByRole('button',{name:'Approve & Complete Setup'}).click()]);
-      const id=expectPreparedSetup(prepared,identity);await expectLaunchedSetup(page,launched,id,identity);
+      const launch=await captureSetupLaunch(page);
+      try {
+        const preparation=captureSetupPost(page,'start');
+        const [prepared,launched]=await Promise.all([preparation,launch.response,approval.getByRole('button',{name:'Approve & Complete Setup'}).click()]);
+        const id=expectPreparedSetup(prepared,identity);await expectLaunchedSetup(page,launched,id,identity);
+      } finally { await launch.dispose(); }
     }
     await expect(page).toHaveURL(/\/dashboard(?:\.html)?$/, { timeout: 60000 });
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
