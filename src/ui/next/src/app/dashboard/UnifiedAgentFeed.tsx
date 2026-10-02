@@ -610,6 +610,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           />
           <button
             type="submit"
+            disabled={!chatInput.trim()}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
           >
             Send

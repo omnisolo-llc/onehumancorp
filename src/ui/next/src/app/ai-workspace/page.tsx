@@ -386,7 +386,7 @@ export default function AIWorkspacePage() {
     };
     setReminders((prev) => [...prev, newRem]);
     setNewReminderText('');
-    showToast('Reminder set.', 'success');
+    showToast('Reminder draft added to this view. No notification was scheduled.', 'success');
   };
 
   // Toggle habit checkbox
@@ -795,6 +795,7 @@ export default function AIWorkspacePage() {
                 {/* Reminders Widgets */}
                 <div className="p-6 rounded-2xl border border-white/20 dark:border-slate-800/40 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-sm">
                   <h2 className="text-lg font-bold mb-3 font-outfit text-slate-900 dark:text-white">Reminders</h2>
+                  <p className="text-xs text-slate-500 mb-3">Sample reminders and your drafts are kept only in this view. They are not saved or scheduled.</p>
                   
                   <div className="space-y-2 mb-4">
                     {reminders.map((rem) => (
@@ -823,7 +824,7 @@ export default function AIWorkspacePage() {
                       onChange={(e) => setNewReminderText(e.target.value)}
                       className="w-full px-3 py-1.5 bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg text-xs"
                     />
-                    <button type="submit" className="w-full py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-lg text-xs font-bold transition-all">
+                    <button type="submit" disabled={!newReminderText.trim()} className="w-full py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
                       Add Reminder
                     </button>
                   </form>
