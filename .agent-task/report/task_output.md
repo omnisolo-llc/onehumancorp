@@ -1,7 +1,3 @@
-issue_title: ⚡ Bolt: [blocked no-work finding: charging for compute and AI API usage]
-issue_description: "This is a blocked / no-work outcome due to missing prerequisites and owner economic/metric data. The codebase lacks baseline economics and actual owner outcome data. There are missing prerequisites (owner economic/metric data, real transaction usage)."
-issue_priority: high
-issue_category: research
-issue_type: blocked
-issue_label: blocked-no-work
-assignees: []
+outcome: no_work
+issue_title: 'GitHub Issue #36633: [Omnichannel] Implement Native Rust Replacement'
+issue_description: 'The native Rust Omnichannel Chat system is already fully implemented. The exact schema requested (chat_inboxes, chat_channels, chat_contacts, chat_conversations, chat_messages with tenant_id and RLS) was added in migration 1009_native_omnichannel_chat.sql. The exact Rust models and data access layers were added in src/server/services/chat/models.rs and src/server/services/chat/service.rs. Furthermore, comprehensive endpoints for webhook handling and routing messages (e.g. src/server/api/omnichannel_webhook.rs and src/server/api/omni_inbox_webhook.rs) already exist, along with numerous E2E tests and mock contracts demonstrating this functionality.'
