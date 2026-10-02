@@ -1,3 +1,4 @@
+use super::proactive_operations_polling::{bound_postgres_transaction, scan_tenants};
 use super::proactive_operations_storage::{ScanCounts, scan_postgres, scan_sqlite};
 use crate::db::{DB, DbStore};
 use std::sync::Arc;
@@ -22,6 +23,7 @@ impl ProactiveOperationsWorker {
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await?;
+                bound_postgres_transaction(&mut tx).await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, tenant).await?;
                 let result = scan_postgres(&mut tx, tenant).await?;
                 tx.commit().await?;
@@ -31,42 +33,44 @@ impl ProactiveOperationsWorker {
         }
     }
 
-    async fn poll_batch(&self, after: &str) -> Result<String, sqlx::Error> {
+    async fn poll_batch(&self, after: &mut String) -> Result<(), sqlx::Error> {
         let tenants: Vec<String> = match &self.db.store {
             DbStore::Postgres => {
                 sqlx::query_scalar("SELECT id FROM tenants WHERE id>$1 ORDER BY id LIMIT $2")
-                    .bind(after)
+                    .bind(after.as_str())
                     .bind(TENANTS_PER_POLL)
                     .fetch_all(&self.db.pool)
                     .await?
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query_scalar("SELECT id FROM tenants WHERE id>?1 ORDER BY id LIMIT ?2")
-                    .bind(after)
+                    .bind(after.as_str())
                     .bind(TENANTS_PER_POLL)
                     .fetch_all(pool)
                     .await?
             }
         };
-        for tenant in &tenants {
-            let changes = match self.scan_tenant(tenant).await {
-                Ok(changes) => changes,
-                Err(error) => {
-                    tracing::warn!(event="operations.tenant_alert_scan_failed", tenant_id=%tenant, %error, "This tenant's operational facts were not verified");
-                    continue;
+        let results = scan_tenants(
+            after,
+            &tenants,
+            TENANTS_PER_POLL as usize,
+            |tenant| async move {
+                let changes = self.scan_tenant(&tenant).await?;
+                if changes.created > 0 || changes.retired > 0 {
+                    crate::api::agent_feed::get_agent_feed_cache()
+                        .invalidate_by_tag(&format!("agent_feed_tenant:{tenant}"))
+                        .await;
                 }
-            };
-            if changes.created > 0 || changes.retired > 0 {
-                crate::api::agent_feed::get_agent_feed_cache()
-                    .invalidate_by_tag(&format!("agent_feed_tenant:{tenant}"))
-                    .await;
+                Ok(())
+            },
+        )
+        .await;
+        for (tenant, result) in results {
+            if let Err(error) = result {
+                tracing::warn!(event="operations.tenant_alert_scan_failed", tenant_id=%tenant, %error, "Operational scan did not finish; committed observations, if any, remain recorded");
             }
         }
-        Ok(if tenants.len() == TENANTS_PER_POLL as usize {
-            tenants.last().cloned().unwrap_or_default()
-        } else {
-            String::new()
-        })
+        Ok(())
     }
 
     pub fn start(&self) {
@@ -85,9 +89,10 @@ impl ProactiveOperationsWorker {
             let mut after = String::new();
             loop {
                 interval.tick().await;
-                match tokio::time::timeout(Duration::from_secs(30), worker.poll_batch(&after)).await
+                match tokio::time::timeout(Duration::from_secs(30), worker.poll_batch(&mut after))
+                    .await
                 {
-                    Ok(Ok(next)) => after = next,
+                    Ok(Ok(())) => {}
                     Ok(Err(error)) => {
                         tracing::warn!(event="operations.alert_scan_failed", %error, "Operational facts were not verified")
                     }

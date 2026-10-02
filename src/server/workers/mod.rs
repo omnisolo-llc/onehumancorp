@@ -23,6 +23,7 @@ pub mod agent_action_worker;
 pub mod booking_reengagement_job;
 #[cfg(test)]
 mod invoice_followup_worker_test;
+mod proactive_operations_polling;
 mod proactive_operations_storage;
 pub mod proactive_operations_worker;
 
