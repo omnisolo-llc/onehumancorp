@@ -973,6 +973,18 @@ jobs:
         env:
           CARGO_TARGET_DIR: target
         run: python3 scripts/focused_ci_gate.py agent-workflow-contract
+      - name: Fetch locked builder-generation contract dependencies
+        if: ${{ !cancelled() }}
+        timeout-minutes: 5
+        run: bash scripts/builder-generation-contract/fetch.sh
+      - name: Verify authentic builder generation and saved brand drafts
+        if: ${{ !cancelled() }}
+        env:
+          OHC_BUILDER_GENERATION_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_builder_generation_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_builder_generation_test
+          python3 scripts/focused_ci_gate.py builder-generation-contract
       - name: Verify active Stripe webhook ingress offline
         if: ${{ !cancelled() }}
         env:

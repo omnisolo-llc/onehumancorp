@@ -9076,7 +9076,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
-        .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
+        .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
         .merge(crate::builder::publication_http::router(
             db.pool.clone(),
             http_auth_store.clone(),

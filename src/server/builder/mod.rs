@@ -16,3 +16,5 @@ pub mod publication_public;
 
 pub mod publication_http;
 pub mod publication_json;
+
+pub mod generation;
