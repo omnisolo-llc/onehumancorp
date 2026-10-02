@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/publish_draft'])(
+it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'])(
   'sends %s through the verified owner boundary and acknowledges dispatch', async url => {
     const expected = await openOnboardingSession();
     const dispatched = vi.fn();
@@ -26,7 +26,7 @@ it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builde
     expect(dispatched).toHaveBeenCalledOnce();
   },
 );
-it.each(['https://other.example/api/v1/booking/services', '/api/v1/booking/services?tenant=other', '/api/v1/onboarding/state'])(
+it.each(['https://other.example/api/v1/booking/services', '/api/v1/booking/services?tenant=other', '/api/v1/onboarding/state', '/api/v1/agents/hire?tenant=other'])(
   'never sends owner data to unapproved destination %s', async url => {
     const expected = await openOnboardingSession();
     const count = vi.mocked(fetch).mock.calls.length;

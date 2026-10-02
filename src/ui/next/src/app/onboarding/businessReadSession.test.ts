@@ -11,9 +11,9 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-it('reads only supported POS snapshots with exact verified owner headers and private transport', async () => {
+it('reads only supported owned business snapshots with exact verified owner headers and private transport', async () => {
   const expected = await openOnboardingSession();
-  for (const url of ['/api/v1/pos/orders', '/api/v1/pos/inventory']) {
+  for (const url of ['/api/v1/pos/orders', '/api/v1/pos/inventory', '/api/v1/agents/execution-policy', '/api/v1/agents/workflows', '/api/v1/agents/approvals', '/api/v1/agents/approvals/activity']) {
     await fetchForOwnedBusinessRead(url, expected);
     const call = vi.mocked(fetch).mock.calls.find(([target]) => target === url);
     expect(call?.[1]).toMatchObject({ method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
@@ -25,7 +25,7 @@ it('reads only supported POS snapshots with exact verified owner headers and pri
 it('rejects external, query-bearing and unsupported destinations without sending private data', async () => {
   const expected = await openOnboardingSession();
   const before = vi.mocked(fetch).mock.calls.length;
-  for (const url of ['https://other.example/api/v1/pos/orders', '//other.example/api/v1/pos/orders', '/api/v1/pos/orders?tenant=other', '/api/v1/onboarding/state']) {
+  for (const url of ['https://other.example/api/v1/pos/orders', '//other.example/api/v1/pos/orders', '/api/v1/pos/orders?tenant=other', '/api/v1/onboarding/state', '/api/v1/agents/execution-policy?tenant=other']) {
     await expect(fetchForOwnedBusinessRead(url, expected)).rejects.toThrow('Invalid business read destination');
   }
   expect(fetch).toHaveBeenCalledTimes(before);

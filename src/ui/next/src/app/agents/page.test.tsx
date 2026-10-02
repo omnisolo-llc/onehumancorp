@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
-import { expect, test, vi, beforeEach } from 'vitest';
+import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import AgentsPage from './page';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
+import { installOnboardingLocks } from '../onboarding/testLocks';
 import { TooltipProvider } from '../../components/TooltipRegistry';
 
 const mockFetch = vi.fn();
@@ -25,11 +27,14 @@ class MockWebSocket {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  installOnboardingLocks(); localStorage.clear(); notifyQueueIdentityChange();
   eventSources.length = 0;
   global.fetch = mockFetch;
   vi.stubGlobal('WebSocket', MockWebSocket);
   vi.stubGlobal('EventSource', class { addEventListener() {} close() {} });
   mockFetch.mockImplementation((url: string) => {
+    if (url.endsWith('/session-identity')) return Promise.resolve(Response.json({ userId: 'agents-owner', tenantId: 'agents-tenant', expiresAt: Date.now() + 60_000 }));
+    if (url === '/api/v1/agents/execution-policy') return Promise.resolve(Response.json({ available: true, mode: 'text_analysis', workspace_access: false, tools: [], policy: { provider: 'ollama', model: 'configured-model', max_output_tokens: 2048 } }));
     if (url.includes('/api/v1/agents/workflows')) {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
     }
@@ -55,10 +60,10 @@ beforeEach(() => {
         ok: true,
         status: 201,
         json: async () => ({
-          id: 'agent-growth',
-          status: 'running',
-          agent_id: 'agent-growth',
-          workflow_id: 'workflow-growth',
+          id: 'agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          status: 'queued',
+          agent_id: 'agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          workflow_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
           message: 'Hired Growth Strategist',
         }),
       });
@@ -92,7 +97,7 @@ test('summons an expert into the task composer and starts a hire workflow', asyn
   fireEvent.click(within(growthCard).getByRole('button', { name: /Summon/i }));
 
   expect(screen.getByText('Growth Strategist is ready')).toBeDefined();
-  expect(screen.getByDisplayValue('MiniMax-M3')).toBeDefined();
+  expect(screen.getByLabelText('Model')).toHaveValue('Auto');
   expect(screen.getByText('Ask')).toBeDefined();
   expect(screen.getByText('Craft')).toBeDefined();
   expect(screen.getByText('Plan')).toBeDefined();
@@ -111,7 +116,7 @@ test('summons an expert into the task composer and starts a hire workflow', asyn
       }),
     );
   });
-  expect(await screen.findByText('workflow-growth')).toBeDefined();
+  expect(await screen.findByText(/Text analysis queued: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/)).toBeVisible();
 });
 
 test('shows result inspection and extension surfaces from Workbuddy', async () => {
@@ -150,11 +155,10 @@ test('covers every Workbuddy efficient-tip feature surface', async () => {
   expect(screen.getByText('Task constraints')).toBeDefined();
   expect(screen.getByText('Custom provider')).toBeDefined();
   expect(screen.getAllByText('Local Ollama').length).toBeGreaterThan(0);
-  expect(screen.getByText('Vision')).toBeDefined();
-  expect(screen.getByText('Tool use')).toBeDefined();
-  expect(screen.getByText('Long context')).toBeDefined();
+  expect(screen.getByText('Text analysis')).toBeVisible();
+  expect(screen.getByText(/Workspace actions, expert teams, skills and connectors are not executable/)).toBeVisible();
   expect(screen.getByText('Work directory')).toBeDefined();
-  expect(screen.getByText('Parallel tasks')).toBeDefined();
+  expect(screen.queryByText('Parallel tasks')).not.toBeInTheDocument();
 
   const growthCard = screen.getByTestId('expert-card-growth-strategist');
   fireEvent.click(within(growthCard).getByRole('button', { name: 'Details' }));
@@ -202,6 +206,8 @@ test('covers every Workbuddy efficient-tip feature surface', async () => {
 
 test('preserves approvals and activity feed operations without an unauthenticated socket', async () => {
   mockFetch.mockImplementation((url: string) => {
+    if (url.endsWith('/session-identity')) return Promise.resolve(Response.json({ userId: 'agents-owner', tenantId: 'agents-tenant', expiresAt: Date.now() + 60_000 }));
+    if (url === '/api/v1/agents/execution-policy') return Promise.resolve(Response.json({ available: true, mode: 'text_analysis', workspace_access: false, tools: [], policy: { provider: 'ollama', model: 'configured-model', max_output_tokens: 2048 } }));
     if (url.includes('/api/v1/agents/approvals/activity')) {
       return Promise.resolve({
         ok: true,
@@ -249,7 +255,7 @@ test('preserves approvals and activity feed operations without an unauthenticate
   expect(screen.getByText('Approve & Send')).toBeDefined();
 });
 
-test('sends Workbuddy context, attachment, model, and output controls in the hire payload', async () => {
+test('keeps unsupported context, attachment, endpoint and output selections visible without submitting them', async () => {
   await act(async () => { render(<TooltipProvider><AgentsPage /></TooltipProvider>); });
 
   fireEvent.change(await screen.findByLabelText('Context references'), {
@@ -272,21 +278,11 @@ test('sends Workbuddy context, attachment, model, and output controls in the hir
   });
   fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
 
-  await waitFor(() => {
-    expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/hire', expect.objectContaining({ method: 'POST' }));
-  });
-
-  const hireCall = mockFetch.mock.calls.find(([url]) => url === '/api/v1/agents/hire');
-  expect(hireCall).toBeDefined();
-  const payload = JSON.parse(hireCall![1].body);
-  expect(payload).toMatchObject({
-    contextReferences: '@orders @inventory @launch-plan',
-    attachments: 'launch-screenshot.png, revenue.csv',
-    customProvider: 'https://llm.example.com/v1',
-    workDirectory: '/workspace/launch-room',
-    outputFormat: 'Spreadsheet',
-    taskConstraints: 'Budget under $500; draft before sending',
-  });
+  expect(screen.getByRole('button', { name: 'Start task' })).toBeDisabled();
+  expect(mockFetch.mock.calls.filter(([url]) => url === '/api/v1/agents/hire')).toHaveLength(0);
+  expect(screen.getByLabelText('Attachments')).toHaveValue('launch-screenshot.png, revenue.csv');
+  expect(screen.getByLabelText('Work directory')).toHaveValue('/workspace/launch-room');
+  expect(screen.getByText(/Workspace, tools, connectors, attachments/)).toBeVisible();
 });
 
 test('supports interactive tab transitions and toggling grid extensions', async () => {
@@ -297,9 +293,10 @@ test('supports interactive tab transitions and toggling grid extensions', async 
   expect(screen.getByText('Skill Market')).toBeDefined();
 
   // Toggle skill inside grid to disable or enable it
-  const skillButton = screen.getByRole('button', { name: /Web Research Enabled/i });
+  const skillButton = screen.getByRole('button', { name: /Web Research Installed/i });
   fireEvent.click(skillButton);
-  // It should be disabled/unselected now, displaying status "Installed"
+  expect(screen.getByRole('button', { name: /Web Research Enabled/i })).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: /Web Research Enabled/i }));
   expect(screen.getByRole('button', { name: /Web Research Installed/i })).toBeDefined();
 
   // Navigate to Connectors
@@ -307,8 +304,10 @@ test('supports interactive tab transitions and toggling grid extensions', async 
   expect(screen.getByText('Connector Center')).toBeDefined();
 
   // Toggle connector
-  const connectorButton = screen.getByRole('button', { name: /Stripe Selected/i });
+  const connectorButton = screen.getByRole('button', { name: /Stripe Connected/i });
   fireEvent.click(connectorButton);
+  expect(screen.getByRole('button', { name: /Stripe Selected/i })).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: /Stripe Selected/i }));
   expect(screen.getByRole('button', { name: /Stripe Connected/i })).toBeDefined();
 });
 
@@ -372,3 +371,5 @@ test('unsupported task media and result actions explain their unavailable state'
     }
   }
 });
+
+afterEach(() => vi.unstubAllGlobals());

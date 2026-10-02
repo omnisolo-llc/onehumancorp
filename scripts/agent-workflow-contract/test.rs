@@ -32,6 +32,24 @@ impl Drop for PoisonedRegistryFixture {
         get_workflow_registry().write().unwrap().clear();
     }
 }
+struct RecordingInference;
+impl workflow_execution::TextInference for RecordingInference {
+    fn infer<'a>(
+        &'a self,
+        input: &'a workflow_execution::AdmittedAnalysis,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, ()>> + Send + 'a>> {
+        Box::pin(async move {
+            assert_ne!(input.tenant_id(), "system");
+            assert!(!input.actor_id().is_empty());
+            assert_eq!(input.policy().model, "configured-model");
+            Ok(format!(
+                "Recorded text-only result for {}: {}",
+                input.tenant_id(),
+                input.task()
+            ))
+        })
+    }
+}
 struct Fixture {
     _guard: tokio::sync::MutexGuard<'static, ()>,
     app: Router,
@@ -66,14 +84,29 @@ impl Fixture {
             tokens.push(store.issue_token(&owner).unwrap());
         }
         let hub = Arc::new(Hub::default());
+        let execution = Arc::new(workflow_execution::WorkflowExecution::configured(
+            store.clone(),
+            workflow_execution::AnalysisPolicy::new(
+                "ollama".into(),
+                "configured-model".into(),
+                512,
+            )
+            .unwrap(),
+            Arc::new(RecordingInference),
+        ));
         let app = Router::new()
             .route(
                 "/api/v1/agents/workflows",
                 get(list_workflows_handler).post(create_workflow_handler),
             )
             .route("/api/v1/agents/hire", post(hire_handler))
+            .route(
+                "/api/v1/agents/execution-policy",
+                get(execution_policy_handler),
+            )
             .route("/api/v1/agents/", get(list_agents_handler))
             .with_state(hub)
+            .layer(axum::Extension(execution))
             .route_layer(axum::middleware::from_fn_with_state(
                 store,
                 server_auth::strict_bearer_auth_middleware,
@@ -120,6 +153,26 @@ impl Fixture {
             )
             .await
             .unwrap();
+        // Wait for this fixture's actual queued lifecycle to finish before
+        // reusing global registry state in the next serialized HTTP case.
+        tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            loop {
+                let pending = get_workflow_registry()
+                    .read()
+                    .map(|records| {
+                        records
+                            .iter()
+                            .any(|record| matches!(record.status.as_str(), "queued" | "running"))
+                    })
+                    .unwrap_or(false);
+                if !pending {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
         let status = response.status();
         let bytes = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
         (
@@ -138,7 +191,7 @@ async fn the_production_admin_role_can_start_work_for_its_signed_tenant() {
             "POST",
             path,
             Some(&f.admin),
-            serde_json::json!({"name":"Administrator work","role":"Operations","task":"Prepare an owner report"}),
+            if path.ends_with("/hire") { serde_json::json!({"name":"Administrator work","role":"Operations","task":"Prepare an owner report"}) } else { serde_json::json!({"name":"Administrator work","task":"Prepare an owner report"}) },
         ).await;
         statuses.push(status);
     }
@@ -163,7 +216,7 @@ async fn assert_registry_failure_creates_no_work(path: &str) {
         "POST",
         path,
         Some(&f.a),
-        serde_json::json!({"name":"Unavailable registry","role":"Operations","task":"Must not become untracked work"}),
+        if path.ends_with("/hire") { serde_json::json!({"name":"Unavailable registry","role":"Operations","task":"Must not become untracked work"}) } else { serde_json::json!({"name":"Unavailable registry","task":"Must not become untracked work"}) },
     ).await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
     assert!(DISPATCHES.read().unwrap().is_empty());
@@ -200,7 +253,7 @@ async fn signed_workflow_reads_stay_with_the_creating_tenant() {
         (&f.a, "owner-a-private-work"),
         (&f.b, "owner-b-private-work"),
     ] {
-        let (status,_)=f.request("POST","/api/v1/agents/workflows",Some(token),serde_json::json!({"name":name,"task":format!("Prepare {name}"),"workflow":"ohc_review_branch"})).await;
+        let (status,_)=f.request("POST","/api/v1/agents/workflows",Some(token),serde_json::json!({"name":name,"task":format!("Prepare {name}"),"workflow":"expert_task"})).await;
         assert_eq!(status, StatusCode::ACCEPTED);
     }
     let (_, a) = f
@@ -283,7 +336,7 @@ async fn forged_headers_without_a_valid_bearer_create_no_work_or_agents() {
 async fn ordinary_tenant_members_cannot_start_owner_work() {
     let f = Fixture::new().await;
     for path in ["/api/v1/agents/workflows", "/api/v1/agents/hire"] {
-        let (status,_)=f.request("POST",path,Some(&f.staff),serde_json::json!({"name":"unapproved","role":"Operations","task":"must not dispatch"})).await;
+        let (status,_)=f.request("POST",path,Some(&f.staff),if path.ends_with("/hire") { serde_json::json!({"name":"unapproved","role":"Operations","task":"must not dispatch"}) } else { serde_json::json!({"name":"unapproved","task":"must not dispatch"}) }).await;
         assert_eq!(status, StatusCode::FORBIDDEN);
     }
     assert!(get_workflow_registry().read().unwrap().is_empty());
@@ -312,4 +365,192 @@ async fn an_explicit_empty_task_does_not_fall_back_to_paid_generic_work() {
         )
         .await;
     assert_eq!(agents, serde_json::json!([]));
+}
+
+#[tokio::test]
+async fn registration_without_a_task_stays_idle_and_creates_no_workflow() {
+    let f = Fixture::new().await;
+    let (status, receipt) = f
+        .request(
+            "POST",
+            "/api/v1/agents/hire",
+            Some(&f.a),
+            serde_json::json!({"name":"Idle specialist","role":"Operations"}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(receipt["status"], "idle");
+    assert_eq!(receipt["workflow_id"], "");
+    assert!(get_workflow_registry().read().unwrap().is_empty());
+    assert!(DISPATCHES.read().unwrap().is_empty());
+    let (_, agents) = f
+        .request(
+            "GET",
+            "/api/v1/agents/",
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(agents.as_array().unwrap().len(), 1);
+    assert_eq!(agents[0]["id"], receipt["id"]);
+    assert_eq!(agents[0]["status"], "IDLE");
+    let (_, other) = f
+        .request(
+            "GET",
+            "/api/v1/agents/",
+            Some(&f.b),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(other, serde_json::json!([]));
+}
+
+#[tokio::test]
+async fn unsupported_task_capabilities_are_rejected_before_any_registration() {
+    let f = Fixture::new().await;
+    let (status, _) = f.request("POST", "/api/v1/agents/hire", Some(&f.a), serde_json::json!({"name":"Unsupported specialist","role":"Operations","task":"Inspect private files","workspace":"other-business","workDirectory":"/private","connectors":["Stripe"],"skills":["Shell"],"customProvider":"https://unapproved.invalid/v1"})).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(get_workflow_registry().read().unwrap().is_empty());
+    assert!(DISPATCHES.read().unwrap().is_empty());
+    let (_, agents) = f
+        .request(
+            "GET",
+            "/api/v1/agents/",
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(agents, serde_json::json!([]));
+}
+
+#[tokio::test]
+async fn completed_analysis_updates_only_its_existing_owned_agent() {
+    let f = Fixture::new().await;
+    let (status, receipt) = f.request("POST", "/api/v1/agents/hire", Some(&f.a), serde_json::json!({"name":"Owned analysis","role":"Operations","task":"Analyze this supplied text","model":"Auto"})).await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(receipt["status"], "queued");
+    let (_, agents) = f
+        .request(
+            "GET",
+            "/api/v1/agents/",
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(agents[0]["id"], receipt["agent_id"]);
+    assert_eq!(agents[0]["status"], "COMPLETED");
+    let (_, workflows) = f
+        .request(
+            "GET",
+            "/api/v1/agents/workflows",
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(workflows["workflows"][0]["status"], "completed");
+    assert_eq!(workflows["workflows"][0]["model"], "configured-model");
+    assert_eq!(workflows["workflows"][0]["provider"], "ollama");
+}
+
+#[tokio::test]
+async fn status_updates_do_not_cross_tenants_or_resurrect_removed_agents() {
+    let hub = Hub::default();
+    hub.register_agent(server_omnisolo::orchestration::Agent {
+        id: "owned".into(),
+        name: "Owned".into(),
+        role: "Operations".into(),
+        organization_id: "tenant-a".into(),
+        status: "QUEUED".into(),
+        provider_type: "builtin".into(),
+    })
+    .await;
+    assert!(
+        !hub.update_agent_status("owned", "tenant-b", "COMPLETED")
+            .await
+    );
+    assert_eq!(hub.get_agent("owned").await.unwrap().status, "QUEUED");
+    assert!(
+        hub.update_agent_status("owned", "tenant-a", "COMPLETED")
+            .await
+    );
+    hub.fire_agent("owned").await;
+    assert!(
+        !hub.update_agent_status("owned", "tenant-a", "COMPLETED")
+            .await
+    );
+    assert!(hub.get_agent("owned").await.is_none());
+}
+
+#[tokio::test]
+async fn late_completion_cannot_overwrite_a_terminal_unknown_result() {
+    let f = Fixture::new().await;
+    let (_, receipt) = f
+        .request(
+            "POST",
+            "/api/v1/agents/workflows",
+            Some(&f.a),
+            serde_json::json!({"name":"Analysis","task":"Text only"}),
+        )
+        .await;
+    let id = receipt["workflow"]["id"].as_str().unwrap();
+    get_workflow_registry()
+        .write()
+        .unwrap()
+        .iter_mut()
+        .find(|record| record.id == id)
+        .unwrap()
+        .status = "outcome_unknown".into();
+    assert!(!set_workflow_result(
+        id,
+        "completed",
+        Some("late untrusted result".into()),
+        None
+    ));
+    assert_eq!(
+        get_workflow_registry()
+            .read()
+            .unwrap()
+            .iter()
+            .find(|record| record.id == id)
+            .unwrap()
+            .status,
+        "outcome_unknown"
+    );
+}
+
+#[tokio::test]
+async fn execution_policy_reports_only_configured_text_capabilities_to_an_owner() {
+    let f = Fixture::new().await;
+    let (status, policy) = f
+        .request(
+            "GET",
+            "/api/v1/agents/execution-policy",
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(policy["available"], true);
+    assert_eq!(policy["policy"]["model"], "configured-model");
+    assert_eq!(policy["policy"]["provider"], "ollama");
+    assert_eq!(policy["workspace_access"], false);
+    assert_eq!(policy["tools"], serde_json::json!([]));
+    assert!(DISPATCHES.read().unwrap().is_empty());
+    assert!(get_workflow_registry().read().unwrap().is_empty());
+    for (token, expected) in [
+        (None, StatusCode::UNAUTHORIZED),
+        (Some(f.staff.as_str()), StatusCode::FORBIDDEN),
+    ] {
+        assert_eq!(
+            f.request(
+                "GET",
+                "/api/v1/agents/execution-policy",
+                token,
+                serde_json::Value::Null
+            )
+            .await
+            .0,
+            expected
+        );
+    }
 }

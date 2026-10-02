@@ -20,7 +20,7 @@ GATES = {
     'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
     'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
-    'agent-workflow-contract': (9, None),
+    'agent-workflow-contract': (33, None),
     'stripe-webhook-security': (22, None),
     'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
     'service-creation': (6, 'OHC_SERVICE_TEST_DATABASE_URL'),

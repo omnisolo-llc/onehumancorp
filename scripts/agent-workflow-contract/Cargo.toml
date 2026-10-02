@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 [workspace]
 [dependencies]
+async-trait = "0.1"
+omnisolo_builtin_agent_core = { path = "../../src/agents/builtin/core" }
+omnisolo_builtin_agent_llm = { path = "../../src/agents/builtin/llm" }
 axum = "0.8.1"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
