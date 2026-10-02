@@ -10,12 +10,13 @@ function fixture() {
   const goto = vi.fn(async (url: string) => { current = url; return { status: (): number => 200 }; });
   const fill = vi.fn();
   const waitForFunction = vi.fn().mockResolvedValue({ dispose: vi.fn() });
+  const waitForURL = vi.fn(async () => { current = 'https://fixture.test/onboarding'; });
   const page = { context: () => context, request, goto, url: () => current,
-    waitForFunction, waitForLoadState: vi.fn().mockResolvedValue(undefined), waitForTimeout: vi.fn().mockResolvedValue(undefined), evaluate: fill } as unknown as Page;
+    waitForURL, waitForFunction, waitForLoadState: vi.fn().mockResolvedValue(undefined), waitForTimeout: vi.fn().mockResolvedValue(undefined), evaluate: fill } as unknown as Page;
   const authenticate = vi.fn().mockResolvedValue(undefined);
   const navigate = createAuditNavigation('https://fixture.test', authenticate);
   const emit = (name: string, event: unknown) => listeners.get(name)?.forEach(fn => fn(event));
-  return { page, context, request, goto, fill, waitForFunction, authenticate, navigate, emit,
+  return { page, context, request, goto, fill, waitForFunction, waitForURL, authenticate, navigate, emit,
     setUrl: (url: string) => { current = url; } };
 }
 
@@ -142,4 +143,34 @@ it('fails permanent initialization rather than repeating a navigation or user ac
   expect(f.goto).toHaveBeenCalledTimes(1);
   expect(f.authenticate).toHaveBeenCalledTimes(1);
   expect(f.fill).not.toHaveBeenCalled();
+});
+
+it('waits for the declared share-card redirect before discovery and records both routes', async () => {
+  const f = fixture();
+  let release!: () => void;
+  f.waitForURL.mockImplementation(() => new Promise<void>(resolve => { release = () => { f.setUrl('https://fixture.test/onboarding'); resolve(); }; }));
+  const complete = vi.fn();
+  const navigation = f.navigate(f.page, '/share-card').then(value => { complete(value); return value; });
+  await new Promise(resolve => setTimeout(resolve, 5));
+  expect(complete).not.toHaveBeenCalled();
+  expect(f.fill).not.toHaveBeenCalled();
+  release();
+  expect(await navigation).toEqual({ requestedUrl: 'https://fixture.test/share-card', finalUrl: 'https://fixture.test/onboarding', redirected: true });
+  expect(f.goto).toHaveBeenCalledTimes(1);
+});
+it.each(['https://outside.test/page', '//outside.test/page', '/share-card?url=https%3A%2F%2Foutside.test', '/share-card?url=%2Fshare-card'])('rejects an unclassified audit destination before authentication or navigation: %s', async route => {
+  const f = fixture();
+  await expect(f.navigate(f.page, route)).rejects.toThrow(/destination|redirect/i);
+  expect(f.authenticate).not.toHaveBeenCalled(); expect(f.goto).not.toHaveBeenCalled();
+});
+it('refuses a wrong final share-card path instead of enumerating its controls', async () => {
+  const f = fixture();
+  f.waitForURL.mockImplementation(async () => { f.setUrl('https://fixture.test/other'); });
+  await expect(f.navigate(f.page, '/share-card')).rejects.toThrow(/destination|route/i);
+  expect(f.fill).not.toHaveBeenCalled(); expect(f.goto).toHaveBeenCalledTimes(1);
+});
+it('an unresolved share-card redirect fails without repeating navigation or clicking', async () => {
+  const f = fixture(); f.waitForURL.mockRejectedValue(new Error('redirect timeout'));
+  await expect(f.navigate(f.page, '/share-card')).rejects.toThrow('redirect timeout');
+  expect(f.goto).toHaveBeenCalledTimes(1); expect(f.fill).not.toHaveBeenCalled();
 });

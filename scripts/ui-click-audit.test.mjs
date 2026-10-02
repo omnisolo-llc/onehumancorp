@@ -9,11 +9,11 @@ const require = createRequire(import.meta.url);
 const protocol = require('./ui-click-audit.cjs');
 const { PROTOCOL, ATTACHMENT, CLICK_TITLE, INVENTORY_TITLE, PURPOSE_TITLE, GLOBAL_TITLES, CONTRACT_FILE, validateReceipts, makeRunContext, readReceipts } = protocol;
 const effect = { changed: true, requestSeen: false, downloadSeen: false, fileChooserSeen: false, popupSeen: false, validationSeen: false, dialogSeen: false, decisionSeen: false };
-function fixture() {
-  const context = { protocol: PROTOCOL, commit: 'a'.repeat(40), sourceDigest: 'b'.repeat(64), inventoryDigest: 'c'.repeat(64), runId: 'run-1', attempt: '1', routes: ['/', '/second'] };
+function fixture(routes = ['/', '/second']) {
+  const context = { protocol: PROTOCOL, commit: 'a'.repeat(40), sourceDigest: 'b'.repeat(64), inventoryDigest: 'c'.repeat(64), runId: 'run-1', attempt: '1', routes };
   const item = (id, title, attachment) => ({ id, title, file: CONTRACT_FILE, status: 'passed', expectedStatus: 'passed', retry: 0, attachments: attachment ? [attachment] : [] });
-  const route = route => ({ protocol: PROTOCOL, kind: 'route', route, discoveredKeys: ['actual-button'], observations: [{ key: 'actual-button', completed: true, effect: { ...effect }, error: null }], exhausted: true, failures: [], assertionsPassed: true });
-  const tests = [item('a', CLICK_TITLE + '/', route('/')), item('b', CLICK_TITLE + '/second', route('/second')), item('declaration', INVENTORY_TITLE, { protocol: PROTOCOL, kind: 'inventory', routes: context.routes, assertionsPassed: true })];
+  const route = route => ({ navigations: Array.from({ length: 2 }, () => ({ requestedUrl: `https://fixture.test${route}`, finalUrl: `https://fixture.test${protocol.expectedAuditPath(route)}`, redirected: protocol.expectedAuditPath(route) !== route })), protocol: PROTOCOL, kind: 'route', route, discoveredKeys: ['actual-button'], observations: [{ key: 'actual-button', completed: true, effect: { ...effect }, error: null }], exhausted: true, failures: [], assertionsPassed: true });
+  const tests = [item('a', CLICK_TITLE + routes[0], route(routes[0])), item('b', CLICK_TITLE + routes[1], route(routes[1])), item('declaration', INVENTORY_TITLE, { protocol: PROTOCOL, kind: 'inventory', routes: context.routes, assertionsPassed: true })];
   tests.push(...[...context.routes.map(route => PURPOSE_TITLE + route), ...GLOBAL_TITLES].map((title, index) => item(`contract-${index}`, title)));
   const shards = [tests.slice(0, 1), tests.slice(1)].map((selected, index) => ({ protocol: PROTOCOL, context: structuredClone(context), shard: { index: index + 1, total: 2 }, selection: selected.map(({ id, title, file }) => ({ id, title, file })), tests: structuredClone(selected), complete: true, runStatus: 'passed' }));
   return { context, shards };
@@ -61,7 +61,7 @@ const corruptions = [
   ['false inventory declaration', f => f.shards[1].tests[1].attachments[0].routes = ['/']],
   ['missing distinct global assertion', f => { f.shards[1].tests.pop(); f.shards[1].selection.pop(); }],
   ['skipped purpose assertion', f => f.shards[1].tests[2].status = 'skipped'],
-  ['no actual targets anywhere', f => { for (const s of f.shards) for (const t of s.tests) if (t.attachments[0]?.kind === 'route') Object.assign(t.attachments[0], { observations: [], discoveredKeys: [] }); }],
+  ['no actual targets anywhere', f => { for (const s of f.shards) for (const t of s.tests) if (t.attachments[0]?.kind === 'route') Object.assign(t.attachments[0], { observations: [], discoveredKeys: [], navigations: t.attachments[0].navigations.slice(0, 1) }); }],
 ];
 for (const [name, mutate] of corruptions) test(`refuses ${name}`, () => { const f = fixture(); mutate(f); assert.throws(() => validateReceipts(f.shards, f.context, 2)); });
 
@@ -193,4 +193,41 @@ test('a recorded trusted-click focus effect is meaningful while plain preparatio
  const f=fixture(); const effect=f.shards[0].tests[0].attachments[0].observations[0].effect; effect.changed=false; effect.focusSeen=true;
  assert.equal(validateReceipts(f.shards,f.context,2).targets,2);
  effect.focusSeen=false; assert.throws(()=>validateReceipts(f.shards,f.context,2),/no meaningful/);
+});
+
+test('refuses route coverage without navigation evidence', () => {
+  const f = fixture();
+  delete f.shards[0].tests[0].attachments[0].navigations;
+  assert.throws(() => validateReceipts(f.shards, f.context, 2), /navigation/i);
+});
+test('refuses navigation evidence for another origin or unexpected destination path', () => {
+  for (const finalUrl of ['https://other.test/dashboard', 'https://fixture.test/unrelated']) {
+    const f = fixture();
+    f.shards[0].tests[0].attachments[0].navigations = [
+      { requestedUrl: 'https://fixture.test/', finalUrl, redirected: true },
+      { requestedUrl: 'https://fixture.test/', finalUrl, redirected: true },
+    ];
+    assert.throws(() => validateReceipts(f.shards, f.context, 2), /navigation/i);
+  }
+});
+
+
+test('accepts the source-classified share redirect with all final-page targets observed', () => {
+  const f = fixture(['/share-card', '/second']);
+  assert.equal(validateReceipts(f.shards, f.context, 2).targets, 2);
+});
+for (const [name, mutate] of [
+  ['parameterized share redirect', n => { n.requestedUrl += '?url=%2Fother'; }],
+  ['fragment on share redirect', n => { n.requestedUrl += '#other'; }],
+  ['credentials', n => { n.requestedUrl = 'https://user:pass@fixture.test/share-card'; }],
+  ['false redirect flag', n => { n.redirected = false; }],
+]) test(`refuses ${name} navigation evidence`, () => {
+  const f = fixture(['/share-card', '/second']);
+  mutate(f.shards[0].tests[0].attachments[0].navigations[0]);
+  assert.throws(() => validateReceipts(f.shards, f.context, 2), /navigation/i);
+});
+test('requires a separate verified navigation after each observed target', () => {
+  const f = fixture(['/share-card', '/second']);
+  f.shards[0].tests[0].attachments[0].navigations.pop();
+  assert.throws(() => validateReceipts(f.shards, f.context, 2), /navigation/i);
 });

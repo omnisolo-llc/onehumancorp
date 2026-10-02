@@ -17,6 +17,8 @@ const GLOBAL_TITLES = [
   'all visible interactive elements are usable and named',
   'layouts do not overflow or overlap click targets on desktop and mobile',
 ];
+// Only these source-defined pages intentionally redirect before any control discovery.
+function expectedAuditPath(route) { return route === '/' ? '/dashboard' : route === '/share-card' ? '/onboarding' : route; }
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 function requireTrue(condition, reason) { if (!condition) throw new Error(`Click coverage: ${reason}`); }
 function exact(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
@@ -189,6 +191,18 @@ function validateReceipts(receipts, context, totalShards) {
         requireTrue(meaningful(observation.effect), 'target has no meaningful observed click effect');
         observed.add(observation.key); targets += 1;
       }
+      requireTrue(Array.isArray(audit.navigations) && audit.navigations.length === discovered.length + 1, 'navigation evidence must cover initial discovery and every document reset');
+      for (const navigation of audit.navigations) {
+        requireTrue(navigation && typeof navigation.requestedUrl === 'string' && typeof navigation.finalUrl === 'string', 'invalid navigation evidence');
+        let requested, final;
+        try { requested = new URL(navigation.requestedUrl); final = new URL(navigation.finalUrl); }
+        catch { throw new Error('Click coverage: invalid navigation URL'); }
+        requireTrue(['http:', 'https:'].includes(requested.protocol) && !requested.username && !requested.password
+          && !final.username && !final.password && requested.origin === final.origin
+          && requested.pathname === route && final.pathname === expectedAuditPath(route)
+          && (route !== '/share-card' || (!requested.search && !requested.hash))
+          && navigation.redirected === (requested.href !== final.href), 'navigation destination or redirect evidence differs from the classified source route');
+      }
       covered.add(route);
     }
   }
@@ -219,7 +233,7 @@ function writeReceipt(file, value) {
   fs.writeFileSync(pending, JSON.stringify(value, null, 2) + '\n', { flag: 'wx' });
   fs.renameSync(pending, file);
 }
-module.exports = { PROTOCOL, ATTACHMENT, CLICK_TITLE, INVENTORY_TITLE, PURPOSE_TITLE, GLOBAL_TITLES, CONTRACT_FILE, discoverAppRoutes,
+module.exports = { PROTOCOL, ATTACHMENT, CLICK_TITLE, INVENTORY_TITLE, PURPOSE_TITLE, GLOBAL_TITLES, CONTRACT_FILE, discoverAppRoutes, expectedAuditPath,
   sourceIdentity, makeRunContext, completeSelection, validateContext, assertSource, validateReceipts, readReceipts, writeReceipt };
 if (require.main === module) {
   try {

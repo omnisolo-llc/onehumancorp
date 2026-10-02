@@ -1,9 +1,14 @@
 import type { BrowserContext, Page } from '@playwright/test';
+import { expectedAuditPath } from '../../../scripts/ui-click-audit.cjs';
+
+export type AuditNavigationReceipt = { requestedUrl: string; finalUrl: string; redirected: boolean };
 
 // A test session is isolated from the suite's shared JWT because the crawler
 // also exercises Log out. All authentication still uses the real login endpoint.
 export function createAuditNavigation(baseURL: string, authenticate: (page: Page) => Promise<void>) {
-  const origin = new URL(baseURL).origin;
+  const base = new URL(baseURL);
+  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password) throw new Error('Invalid audit base destination');
+  const origin = base.origin;
   const sessions = new WeakMap<BrowserContext, { valid: boolean }>();
   const sameOriginPath = (value: string) => {
     try {
@@ -28,9 +33,12 @@ export function createAuditNavigation(baseURL: string, authenticate: (page: Page
     }
     return session;
   };
-  return async (page: Page, route: string) => {
-    const session = sessionFor(page.context());
+  return async (page: Page, route: string): Promise<AuditNavigationReceipt> => {
     const destination = new URL(route, baseURL);
+    if (!route.startsWith('/') || route.startsWith('//') || destination.origin !== origin || destination.username || destination.password) throw new Error('Audit destination must be an app route on the configured origin');
+    if (destination.pathname === '/share-card' && (destination.search || destination.hash)) throw new Error('Only the default share-card redirect is classified by this route audit');
+    const expectedPath = expectedAuditPath(destination.pathname);
+    const session = sessionFor(page.context());
     for (let attempt = 0; attempt < 2; attempt += 1) {
       if (!session.valid) {
         await authenticate(page);
@@ -41,6 +49,11 @@ export function createAuditNavigation(baseURL: string, authenticate: (page: Page
       const response = await page.goto(destination.href, { waitUntil: 'load' });
       await page.waitForLoadState('networkidle', { timeout: 100 }).catch(() => undefined);
       await page.waitForTimeout(100);
+      if (destination.pathname === '/share-card') {
+        // This page intentionally replaces its initial document. Do not discover
+        // transient layout controls, and never retry a target click after it moves.
+        await page.waitForURL(url => url.origin === origin && [expectedPath, '/login'].includes(url.pathname), { waitUntil: 'load', timeout: 5000 });
+      }
       const redirectedToLogin = destination.pathname !== '/login' && sameOriginPath(page.url()) === '/login';
       if (response?.status() === 401 || redirectedToLogin || !session.valid) {
         session.valid = false;
@@ -56,7 +69,10 @@ export function createAuditNavigation(baseURL: string, authenticate: (page: Page
           && style.display !== 'none' && bounds.width > 0 && bounds.height > 0;
       }), undefined, { timeout: 5000 });
       await ready.dispose();
-      return;
+      const final = new URL(page.url());
+      if (final.origin !== origin || final.username || final.password || final.pathname !== expectedPath) throw new Error('Audit navigation reached an unclassified destination route');
+      return { requestedUrl: destination.href, finalUrl: final.href, redirected: destination.href !== final.href };
     }
+    throw new Error('Audit navigation did not reach a verified destination');
   };
 }

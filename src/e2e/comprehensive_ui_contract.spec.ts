@@ -7,7 +7,7 @@ import { ATTACHMENT, INVENTORY_TITLE, PROTOCOL, discoverAppRoutes as discoverSou
 import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
-import { createAuditNavigation } from './support/ui_audit_navigation';
+import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui_audit_navigation';
 
 const appRoot = path.resolve(__dirname, '../ui/next/src/app');
 function discoverAppRoutes(): string[] { return discoverSourceRoutes(path.resolve(__dirname, '../..')); }
@@ -181,6 +181,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
 type RouteClickAudit = {
   protocol: number; kind: 'route'; route: string; discoveredKeys: string[];
   observations: { key: string; completed: boolean; effect: ClickEffects | null; error: string | null }[];
+  navigations: AuditNavigationReceipt[];
   exhausted: boolean; failures: string[]; assertionsPassed: boolean;
   timings?: { phase: string; target?: string; elapsedMs: number }[];
 };
@@ -198,7 +199,7 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit:
   // page/video for the route and destroying delayed callbacks from the old realm.
   let page = await sourcePage.context().newPage();
   try {
-    await timed('navigate', () => gotoReady(page, route));
+    await timed('navigate', async () => { audit.navigations.push(await gotoReady(page, route)); });
     while (true) {
       const candidates = await timed('discover', () => tagClickTargets(page));
       for (const target of candidates) if (!audit.discoveredKeys.includes(target.key)) audit.discoveredKeys.push(target.key);
@@ -221,7 +222,7 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit:
         failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
       }
       page = await timed('retire', () => replaceAuditDocument(page));
-      await timed('navigate', () => gotoReady(page, route));
+      await timed('navigate', async () => { audit.navigations.push(await gotoReady(page, route)); });
     }
     return { auditedTargets: audited.size, failures };
   } finally {
@@ -249,7 +250,7 @@ test.describe('comprehensive UI contract', () => {
 
     test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ page }) => {
       test.setTimeout(120000);
-      const audit: RouteClickAudit = { protocol: PROTOCOL, kind: 'route', route, discoveredKeys: [], observations: [], exhausted: false, failures: [], assertionsPassed: false };
+      const audit: RouteClickAudit = { protocol: PROTOCOL, kind: 'route', route, discoveredKeys: [], observations: [], navigations: [], exhausted: false, failures: [], assertionsPassed: false };
       try {
         const result = await auditClickEffectsForRoute(page, route, audit);
         console.info(`Audited ${result.auditedTargets} click targets on ${routeLabel(route)}.`);
