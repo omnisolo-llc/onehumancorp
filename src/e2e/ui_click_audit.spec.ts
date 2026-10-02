@@ -368,3 +368,39 @@ test('waits for a real busy shell replacement before discovering its control', a
     await expect(page.getByRole('button', { name: '1', exact: true })).toBeVisible();
   } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
 });
+
+
+test('recognizes focus moved to a visible input during the same trusted click', async ({ page }) => {
+  await page.setContent(`<button onclick="document.querySelector('input').focus()">Add attachments</button><input aria-label="Attachments">`);
+  const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Add attachments'}).elementHandle())!);
+  await expect(page.getByRole('textbox',{name:'Attachments'})).toBeFocused();
+  expect(effect.changed).toBe(false);
+  expect(effect.focusSeen).toBe(true);
+  expect(hasMeaningfulClickEffect(effect)).toBe(true);
+});
+
+test('preparation focus does not make an inert button meaningful', async ({ page }) => {
+  await page.setContent('<button>Dead control</button><input aria-label="Unrelated">');
+  await page.getByRole('textbox').focus();
+  const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Dead control'}).elementHandle())!);
+  expect(effect.focusSeen).toBe(false);
+  expect(hasMeaningfulClickEffect(effect)).toBe(false);
+});
+
+test('delayed preparation focus cannot certify a dead click', async ({ page }) => {
+  await page.setContent(`<button onfocus="setTimeout(()=>document.querySelector('input').focus(),100)">Dead control</button><input aria-label="Unrelated">`);
+  const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Dead control'}).elementHandle())!);
+  await expect(page.getByRole('textbox')).toBeFocused();
+  expect(effect.focusSeen).toBe(false);
+  expect(effect.changed).toBe(false);
+  expect(hasMeaningfulClickEffect(effect)).toBe(false);
+});
+
+test('focus moved into a hidden field or the document body is not a meaningful control effect', async ({ page }) => {
+  for (const selector of ['input','body']) {
+    await page.setContent(`<body tabindex="-1"><button onclick="document.querySelector('${selector}').focus()">Dead control</button><input hidden></body>`);
+    const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Dead control'}).elementHandle())!);
+    expect(effect.focusSeen).toBe(false);
+    expect(hasMeaningfulClickEffect(effect)).toBe(false);
+  }
+});

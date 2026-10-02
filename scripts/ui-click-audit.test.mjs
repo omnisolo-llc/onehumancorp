@@ -56,6 +56,7 @@ const corruptions = [
   ['route failure', f => f.shards[0].tests[0].attachments[0].failures = ['dead button']],
   ['alert-only fake effect', f => { const e = f.shards[0].tests[0].attachments[0].observations[0].effect; e.changed = false; e.dialogSeen = true; }],
   ['failed selection restoration', f => f.shards[0].tests[0].attachments[0].observations[0].effect.selectionRestored = false],
+  ['nonboolean focus effect', f => f.shards[0].tests[0].attachments[0].observations[0].effect.focusSeen = 'true'],
   ['nonboolean effect', f => f.shards[0].tests[0].attachments[0].observations[0].effect.changed = 'true'],
   ['false inventory declaration', f => f.shards[1].tests[1].attachments[0].routes = ['/']],
   ['missing distinct global assertion', f => { f.shards[1].tests.pop(); f.shards[1].selection.pop(); }],
@@ -186,4 +187,10 @@ test('drift diagnostics bound listed paths while the full source still fails clo
   let error;try{protocol.assertSource(root,context,before);}catch(caught){error=caught;}
   assert(error);assert.equal(error.sourceDiagnostics.changedFiles,105);assert.equal(error.sourceDiagnostics.changes.length,100);assert.equal(error.sourceDiagnostics.omittedChanges,5);
  } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('a recorded trusted-click focus effect is meaningful while plain preparation remains inert', () => {
+ const f=fixture(); const effect=f.shards[0].tests[0].attachments[0].observations[0].effect; effect.changed=false; effect.focusSeen=true;
+ assert.equal(validateReceipts(f.shards,f.context,2).targets,2);
+ effect.focusSeen=false; assert.throws(()=>validateReceipts(f.shards,f.context,2),/no meaningful/);
 });

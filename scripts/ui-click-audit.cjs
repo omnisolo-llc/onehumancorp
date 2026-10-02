@@ -134,8 +134,9 @@ function assertSource(root, context, before) {
 function meaningful(effect) {
   const keys = ['changed', 'requestSeen', 'downloadSeen', 'fileChooserSeen', 'popupSeen', 'validationSeen', 'dialogSeen', 'decisionSeen'];
   requireTrue(effect && keys.every(key => typeof effect[key] === 'boolean')
-    && (effect.selectionRestored === undefined || typeof effect.selectionRestored === 'boolean'), 'invalid observed effect');
-  return effect.selectionRestored !== false && keys.filter(key => key !== 'dialogSeen').some(key => effect[key]);
+    && (effect.selectionRestored === undefined || typeof effect.selectionRestored === 'boolean')
+    && (effect.focusSeen === undefined || typeof effect.focusSeen === 'boolean'), 'invalid observed effect');
+  return effect.selectionRestored !== false && (effect.focusSeen === true || keys.filter(key => key !== 'dialogSeen').some(key => effect[key]));
 }
 function validateReceipts(receipts, context, totalShards) {
   validateContext(context);
