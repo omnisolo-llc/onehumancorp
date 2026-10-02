@@ -1,3 +1,13 @@
+fn sqlite_store(pool: sqlx::SqlitePool) -> DefinitionStore {
+    DefinitionStore::Database(crate::persistence::AppDatabase::from_connection(
+        sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool),
+    ))
+}
+fn postgres_store(pool: sqlx::PgPool) -> DefinitionStore {
+    DefinitionStore::Database(crate::persistence::AppDatabase::from_connection(
+        sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(pool),
+    ))
+}
 use crate::{agent_definitions::DefinitionStore, definitions_api};
 use axum::{
     Router,
@@ -85,16 +95,11 @@ impl Fixture {
             .await
             .unwrap();
         sqlite_schema(&sqlite, &url).await;
-        Self::with_store(DefinitionStore::Sqlite(sqlite.clone()), sqlite).await
+        Self::with_store(sqlite_store(sqlite.clone()), sqlite).await
     }
     async fn with_store(store: DefinitionStore, sqlite: sqlx::SqlitePool) -> Self {
         let connection = match &store {
-            DefinitionStore::Sqlite(pool) => {
-                sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone())
-            }
-            DefinitionStore::Postgres(pool) => {
-                sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone())
-            }
+            DefinitionStore::Database(database) => database.connection().clone(),
             DefinitionStore::Unavailable => unreachable!(),
         };
         let auth = Arc::new(server_auth::Store::with_portable_repo(Arc::new(
@@ -595,10 +600,7 @@ async fn independent_store_recovery_returns_the_existing_receipt_after_lost_resp
     let f = Fixture::sqlite().await;
     let request = publish_request();
     let saved = f.publish(request.clone()).await;
-    let store = match &f.store {
-        DefinitionStore::Sqlite(pool) => DefinitionStore::Sqlite(pool.clone()),
-        _ => unreachable!(),
-    };
+    let store = sqlite_store(f.sqlite.clone());
     let app: Router = definitions_api::router(store, f.auth.clone());
     let path = format!(
         "/api/v1/agents/definitions/operations/{}",
@@ -812,7 +814,7 @@ impl PgFixture {
         Self {
             admin,
             pool: pool.clone(),
-            store: DefinitionStore::Postgres(pool),
+            store: postgres_store(pool),
             schema,
             role,
             created_migration_role: !role_exists,
@@ -1029,7 +1031,7 @@ async fn sqlite_file_reopen_preserves_receipts_and_inactive_installations() {
     sqlite_schema(&pool, &url).await;
     let a = owner("disk-tenant", "disk-user");
     let request = typed_publish();
-    let store = DefinitionStore::Sqlite(pool.clone());
+    let store = sqlite_store(pool.clone());
     let receipt = store.publish(&a, &request).await.unwrap();
     let definition = receipt.definition.unwrap();
     let installation = store
@@ -1050,7 +1052,7 @@ async fn sqlite_file_reopen_preserves_receipts_and_inactive_installations() {
     pool.close().await;
     drop(pool);
     let reopened = sqlx::SqlitePool::connect(&url).await.unwrap();
-    let second = DefinitionStore::Sqlite(reopened.clone());
+    let second = sqlite_store(reopened.clone());
     assert_eq!(
         second
             .operation(&a, request.request_id)
@@ -1231,7 +1233,7 @@ async fn operation_id_conflicts_across_publish_and_install_kinds() {
 async fn missing_schema_read_does_not_seed_or_claim_an_empty_catalogue() {
     let empty = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
     let mut f = Fixture::sqlite().await;
-    f.app = definitions_api::router(DefinitionStore::Sqlite(empty.clone()), f.auth.clone());
+    f.app = definitions_api::router(sqlite_store(empty.clone()), f.auth.clone());
     let (status, value) = f
         .request(
             "GET",
@@ -1346,8 +1348,8 @@ async fn independent_sqlite_connections_share_an_atomic_request_claim() {
     let one = sqlx::SqlitePool::connect(&url).await.unwrap();
     sqlite_schema(&one, &url).await;
     let two = sqlx::SqlitePool::connect(&url).await.unwrap();
-    let left = DefinitionStore::Sqlite(one.clone());
-    let right = DefinitionStore::Sqlite(two.clone());
+    let left = sqlite_store(one.clone());
+    let right = sqlite_store(two.clone());
     let a = owner("disk-tenant", "disk-user");
     let request = typed_publish();
     let (a, b) = tokio::join!(left.publish(&a, &request), right.publish(&a, &request));

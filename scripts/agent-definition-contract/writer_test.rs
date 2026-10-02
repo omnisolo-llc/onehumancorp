@@ -126,7 +126,7 @@ async fn actual_sqlite_setup_writer_creates_a_usable_canonical_publisher() {
         .fetch_one(&pool)
         .await
         .unwrap();
-    let receipt = DefinitionStore::Sqlite(pool)
+    let receipt = sqlite_store(pool)
         .publish(&owner("setup-tenant", &id), &typed_publish())
         .await
         .unwrap();
@@ -184,7 +184,7 @@ async fn actual_cli_bootstrap_writer_preserves_explicit_admin_assignment() {
             .await
             .unwrap();
     assert_eq!(
-        DefinitionStore::Sqlite(pool.clone())
+        sqlite_store(pool.clone())
             .publish(&owner("org-1", &id), &typed_publish())
             .await
             .unwrap()

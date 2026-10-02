@@ -6,8 +6,8 @@ test('definition routes use the actual configured store and existing strict bear
   const main=read('src/server/lib.rs');
   assert.match(main,/\.merge\(api::agents::definitions::router\(/);
   const start=main.indexOf('.merge(api::agents::definitions::router(');const mount=main.slice(start,main.indexOf('http_auth_store.clone()',start)+24);
-  assert.match(mount,/db::DbStore::Postgres.*DefinitionStore::Postgres\(db.pool.clone\(\)\)/s);
-  assert.match(mount,/db::DbStore::Sqlite\(pool\).*DefinitionStore::Sqlite\(pool.clone\(\)\)/s);
+  assert.match(mount,/db::DbStore::Postgres.*DefinitionStore::Database\(persistence::AppDatabase::from_connection\(sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool\(db.pool.clone\(\)\)\)\)/s);
+  assert.match(mount,/db::DbStore::Sqlite\(pool\).*DefinitionStore::Database\(persistence::AppDatabase::from_connection\(sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool\(pool.clone\(\)\)\)\)/s);
   assert.match(mount,/get_mysql_pool_if_exists[\s\S]*DefinitionStore::Unavailable/);
   assert.doesNotMatch(mount,/get_pool\(|get_sqlite_pool_if_exists|Mock/);
   const router=read('src/server/api/agents/definitions.rs');
@@ -32,5 +32,7 @@ test('inactive install has no runtime/provider dispatch and preserves real bluep
   assert.doesNotMatch(store,/register_agent\(|dispatch_workflow\(|hire_handler\(|reqwest::|Hub::/);
   const prepare=read('scripts/agent-definition-contract/prepare.py');
   for(const module of ['src/server/persistence/agent_definitions.rs','src/server/api/agents/definitions.rs','src/server/domain/blueprint.rs']) assert.ok(prepare.includes(module));
+  assert.match(prepare, /src\/server\/persistence\/backend_neutrality_test\.sh/);
+  assert.match(read('scripts/agent-definition-contract/run.sh'), /bash src\/server\/persistence\/backend_neutrality_test\.sh/);
   assert.match(prepare,/#\[path=/);assert.doesNotMatch(prepare,/disabled auth|mock auth|x-mock-auth/);
 });

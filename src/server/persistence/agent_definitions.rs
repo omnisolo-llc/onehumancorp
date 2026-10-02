@@ -1,15 +1,18 @@
 //! Durable public definitions and inactive, owner-scoped installation snapshots.
 //! This module has no agent runtime, provider, tool-grant or dispatch dependency.
+use super::{capabilities::DatabaseBackend, connection::AppDatabase};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use sea_orm::{
+    ConnectionTrait, DatabaseTransaction, DbErr, IsolationLevel, Statement, TransactionTrait,
+    TryGetableMany, Value,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, SqlitePool};
 use uuid::Uuid;
 
 #[derive(Clone)]
 pub enum DefinitionStore {
-    Postgres(PgPool),
-    Sqlite(SqlitePool),
+    Database(AppDatabase),
     Unavailable,
 }
 #[derive(Clone, Debug)]
@@ -24,11 +27,11 @@ pub enum Error {
     Conflict,
     NotFound,
     Unavailable,
-    Database(sqlx::Error),
+    Database(DbErr),
     Corrupt,
 }
-impl From<sqlx::Error> for Error {
-    fn from(error: sqlx::Error) -> Self {
+impl From<DbErr> for Error {
+    fn from(error: DbErr) -> Self {
         Self::Database(error)
     }
 }
@@ -223,71 +226,145 @@ fn encode_cursor(kind: &str, scope: &str, id: &str, version: i64) -> Result<Stri
         version,
     })?))
 }
-// Every operation rechecks the current canonical identity inside its own
-// transaction. Middleware verification is necessary but cannot fence revocation
-// between token validation and durable commit.
-macro_rules! verify_actor {
-    ($tx:ident,$owner:expr,$write:expr,$suffix:expr) => {{
-        let query=format!("SELECT COALESCE(active,FALSE),marketplace_eligible FROM users WHERE id=$1 AND tenant_id=$2{}",$suffix);
-        let identity:Option<(bool,bool)>=sqlx::query_as(&query).bind(&$owner.user).bind(&$owner.tenant).fetch_optional(&mut *$tx).await?;
-        let Some((true,eligible))=identity else {return Err(Error::Forbidden)};
-        if $write {
-            let roles:Vec<String>=sqlx::query_scalar("SELECT role_name FROM identity_user_roles WHERE user_id=$1 AND tenant_id=$2").bind(&$owner.user).bind(&$owner.tenant).fetch_all(&mut *$tx).await?;
-            if !eligible || !roles.iter().any(|role|role.eq_ignore_ascii_case("ADMIN")||role.eq_ignore_ascii_case("OWNER")){return Err(Error::Forbidden)}
-        }
-    }};
+// Bound statements use the configured portable connection and the same transaction.
+// Tuple decoding fails closed on malformed stored rows.
+fn statement(tx: &DatabaseTransaction, sql: &str, values: Vec<Value>) -> Statement {
+    Statement::from_sql_and_values(tx.get_database_backend(), sql, values)
 }
-// Both engines execute the identical bound SQL and business operation body.
-// Only transaction setup differs; SQLite write claims use BEGIN IMMEDIATE.
-macro_rules! transaction {
-    ($store:expr,$owner:expr,$write:expr,$lock:expr,$tx:ident,$body:block) => {{
-        if !valid_text(&$owner.tenant, 512, true)
-            || $owner.tenant.trim() != $owner.tenant
-            || $owner.tenant.eq_ignore_ascii_case("system")
-            || !valid_text(&$owner.user, 512, true)
+async fn execute(tx: &DatabaseTransaction, sql: &str, values: Vec<Value>) -> Result<(), Error> {
+    tx.execute(statement(tx, sql, values)).await?;
+    Ok(())
+}
+async fn fetch_optional<T: TryGetableMany>(
+    tx: &DatabaseTransaction,
+    sql: &str,
+    values: Vec<Value>,
+) -> Result<Option<T>, Error> {
+    tx.query_one(statement(tx, sql, values))
+        .await?
+        .map(|row| row.try_get_many_by_index().map_err(Error::from))
+        .transpose()
+}
+async fn fetch_one<T: TryGetableMany>(
+    tx: &DatabaseTransaction,
+    sql: &str,
+    values: Vec<Value>,
+) -> Result<T, Error> {
+    fetch_optional(tx, sql, values).await?.ok_or_else(|| {
+        Error::Database(DbErr::RecordNotFound(
+            "required definition row missing".into(),
+        ))
+    })
+}
+async fn fetch_all<T: TryGetableMany>(
+    tx: &DatabaseTransaction,
+    sql: &str,
+    values: Vec<Value>,
+) -> Result<Vec<T>, Error> {
+    tx.query_all(statement(tx, sql, values))
+        .await?
+        .into_iter()
+        .map(|row| row.try_get_many_by_index().map_err(Error::from))
+        .collect()
+}
+impl DefinitionStore {
+    // Middleware validation cannot fence revocation between verification and commit.
+    async fn transaction(
+        &self,
+        owner: &Owner,
+        write: bool,
+        lock: Option<&str>,
+    ) -> Result<DatabaseTransaction, Error> {
+        if !valid_text(&owner.tenant, 512, true)
+            || owner.tenant.trim() != owner.tenant
+            || owner.tenant.eq_ignore_ascii_case("system")
+            || !valid_text(&owner.user, 512, true)
         {
             return Err(Error::Invalid);
         }
-        match $store {
-            DefinitionStore::Postgres(pool) => {
-                let mut $tx = pool
-                    .begin_with("BEGIN ISOLATION LEVEL READ COMMITTED")
+        let Self::Database(database) = self else {
+            return Err(Error::Unavailable);
+        };
+        let tx = match database.backend() {
+            DatabaseBackend::Postgres => {
+                // A fresh statement snapshot after waiting for the authority gate is required.
+                let tx = database
+                    .connection()
+                    .begin_with_config(Some(IsolationLevel::ReadCommitted), None)
                     .await?;
-                server_common::auth_utils::set_org_context(&mut *$tx, &$owner.tenant).await?;
-                sqlx::query("SELECT set_config('app.current_actor',$1,true)")
-                    .bind(&$owner.user)
-                    .execute(&mut *$tx)
+                execute(&tx, "SELECT set_config('role', 'none', true), set_config('app.current_tenant', $1, true)", vec![(&owner.tenant).into()]).await?;
+                execute(
+                    &tx,
+                    "SELECT set_config('app.current_actor',$1,true)",
+                    vec![(&owner.user).into()],
+                )
+                .await?;
+                if write {
+                    execute(
+                        &tx,
+                        "SELECT pg_advisory_xact_lock_shared(57129048260865031)",
+                        vec![],
+                    )
                     .await?;
-                if $write {
-                    sqlx::query("SELECT pg_advisory_xact_lock_shared(57129048260865031)")
-                        .execute(&mut *$tx)
-                        .await?;
                 }
-                verify_actor!($tx, $owner, $write, " FOR SHARE");
-                if let Some(key) = $lock {
-                    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-                        .bind(key)
-                        .execute(&mut *$tx)
-                        .await?;
-                }
-                $body
+                tx
             }
-            DefinitionStore::Sqlite(pool) => {
-                let mut $tx = pool
-                    .begin_with(if $write { "BEGIN IMMEDIATE" } else { "BEGIN" })
+            DatabaseBackend::Sqlite => {
+                let tx = database.connection().begin().await?;
+                if write {
+                    // SeaORM begins a deferred transaction. Acquire SQLite write intent before
+                    // ANY read snapshot; this changes no rows and invokes no row trigger.
+                    execute(
+                        &tx,
+                        "UPDATE agent_definition_operations SET request_id=request_id WHERE 0",
+                        vec![],
+                    )
                     .await?;
-                let enabled: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
-                    .fetch_one(&mut *$tx)
-                    .await?;
+                }
+                let enabled: i64 = fetch_one(&tx, "PRAGMA foreign_keys", vec![]).await?;
                 if enabled != 1 {
                     return Err(Error::Unavailable);
                 }
-                verify_actor!($tx, $owner, $write, "");
-                $body
+                tx
             }
-            DefinitionStore::Unavailable => Err(Error::Unavailable),
+            DatabaseBackend::MySql => return Err(Error::Unavailable),
+        };
+        let suffix = if database.backend() == DatabaseBackend::Postgres {
+            " FOR SHARE"
+        } else {
+            ""
+        };
+        let identity: Option<(bool,bool)> = fetch_optional(&tx, &format!("SELECT COALESCE(active,FALSE),marketplace_eligible FROM users WHERE id=$1 AND tenant_id=$2{suffix}"), vec![(&owner.user).into(),(&owner.tenant).into()]).await?;
+        let Some((true, eligible)) = identity else {
+            return Err(Error::Forbidden);
+        };
+        if write {
+            let roles: Vec<String> = fetch_all(
+                &tx,
+                "SELECT role_name FROM identity_user_roles WHERE user_id=$1 AND tenant_id=$2",
+                vec![(&owner.user).into(), (&owner.tenant).into()],
+            )
+            .await?;
+            if !eligible
+                || !roles.iter().any(|role| {
+                    role.eq_ignore_ascii_case("ADMIN") || role.eq_ignore_ascii_case("OWNER")
+                })
+            {
+                return Err(Error::Forbidden);
+            }
         }
-    }};
+        if database.backend() == DatabaseBackend::Postgres
+            && let Some(key) = lock
+        {
+            execute(
+                &tx,
+                "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+                vec![key.into()],
+            )
+            .await?;
+        }
+        Ok(tx)
+    }
 }
 impl DefinitionStore {
     pub async fn publish(&self, owner: &Owner, request: &PublishRequest) -> Result<Receipt, Error> {
@@ -301,9 +378,9 @@ impl DefinitionStore {
             &request.visibility,
         ))?;
         let key = serde_json::to_string(&(&owner.tenant, &owner.user, request.request_id))?;
-        transaction!(self, owner, true, Some(&key), tx, {
-            if let Some((prior,receipt))=sqlx::query_as::<_,(String,String)>("SELECT fingerprint,receipt FROM agent_definition_operations WHERE tenant_id=$1 AND user_id=$2 AND request_id=$3")
-                .bind(&owner.tenant).bind(&owner.user).bind(request.request_id.to_string()).fetch_optional(&mut *tx).await? {
+        {
+            let tx = self.transaction(owner, true, Some(&key)).await?;
+            if let Some((prior,receipt))=fetch_optional::<(String,String)>(&tx, "SELECT fingerprint,receipt FROM agent_definition_operations WHERE tenant_id=$1 AND user_id=$2 AND request_id=$3", vec![(&owner.tenant).into(),(&owner.user).into(),(request.request_id.to_string()).into()]).await? {
                 if prior!=fingerprint {return Err(Error::Conflict)}
                 return checked_receipt(&receipt,owner,request.request_id);
             }
@@ -324,8 +401,8 @@ impl DefinitionStore {
                 definition.name, definition.description, definition.role
             )
             .to_lowercase();
-            sqlx::query("INSERT INTO agent_definitions(id,version,digest,document,search_text,source,authority_key) VALUES($1,$2,$3,$4,$5,'community',(SELECT marketplace_authority_key FROM users WHERE id=$6 AND tenant_id=$7))").bind(&definition.id).bind(definition.version).bind(&definition.digest).bind(serde_json::to_string(&definition)?).bind(search).bind(&owner.user).bind(&owner.tenant).execute(&mut *tx).await?;
-            sqlx::query("INSERT INTO agent_definition_publishers(definition_id,version,tenant_id,user_id) VALUES($1,$2,$3,$4)").bind(&definition.id).bind(definition.version).bind(&owner.tenant).bind(&owner.user).execute(&mut *tx).await?;
+            execute(&tx, "INSERT INTO agent_definitions(id,version,digest,document,search_text,source,authority_key) VALUES($1,$2,$3,$4,$5,'community',(SELECT marketplace_authority_key FROM users WHERE id=$6 AND tenant_id=$7))", vec![(&definition.id).into(),(definition.version).into(),(&definition.digest).into(),(serde_json::to_string(&definition)?).into(),(search).into(),(&owner.user).into(),(&owner.tenant).into()]).await?;
+            execute(&tx, "INSERT INTO agent_definition_publishers(definition_id,version,tenant_id,user_id) VALUES($1,$2,$3,$4)", vec![(&definition.id).into(),(definition.version).into(),(&owner.tenant).into(),(&owner.user).into()]).await?;
             let receipt = Receipt {
                 success: true,
                 status: "published".into(),
@@ -336,10 +413,10 @@ impl DefinitionStore {
                 installation: None,
                 replayed: false,
             };
-            sqlx::query("INSERT INTO agent_definition_operations(tenant_id,user_id,request_id,fingerprint,receipt) VALUES($1,$2,$3,$4,$5)").bind(&owner.tenant).bind(&owner.user).bind(request.request_id.to_string()).bind(&fingerprint).bind(serde_json::to_string(&receipt)?).execute(&mut *tx).await?;
+            execute(&tx, "INSERT INTO agent_definition_operations(tenant_id,user_id,request_id,fingerprint,receipt) VALUES($1,$2,$3,$4,$5)", vec![(&owner.tenant).into(),(&owner.user).into(),(request.request_id.to_string()).into(),(&fingerprint).into(),(serde_json::to_string(&receipt)?).into()]).await?;
             tx.commit().await?;
             Ok(receipt)
-        })
+        }
     }
 }
 impl DefinitionStore {
@@ -354,19 +431,13 @@ impl DefinitionStore {
         }
         let fingerprint = hash(&("install", id, request.version, &request.digest))?;
         let key = serde_json::to_string(&(&owner.tenant, &owner.user, request.request_id))?;
-        transaction!(self, owner, true, Some(&key), tx, {
-            if let Some((prior,receipt))=sqlx::query_as::<_,(String,String)>("SELECT fingerprint,receipt FROM agent_definition_operations WHERE tenant_id=$1 AND user_id=$2 AND request_id=$3")
-                .bind(&owner.tenant).bind(&owner.user).bind(request.request_id.to_string()).fetch_optional(&mut *tx).await? {
+        {
+            let tx = self.transaction(owner, true, Some(&key)).await?;
+            if let Some((prior,receipt))=fetch_optional::<(String,String)>(&tx, "SELECT fingerprint,receipt FROM agent_definition_operations WHERE tenant_id=$1 AND user_id=$2 AND request_id=$3", vec![(&owner.tenant).into(),(&owner.user).into(),(request.request_id.to_string()).into()]).await? {
                 if prior!=fingerprint {return Err(Error::Conflict)}
                 return checked_receipt(&receipt,owner,request.request_id);
             }
-            let document: Option<String> = sqlx::query_scalar(
-                "SELECT document FROM agent_definitions WHERE id=$1 AND version=$2 AND (source='first_party' OR EXISTS(SELECT 1 FROM agent_definition_authorities a WHERE a.authority_key=agent_definitions.authority_key AND a.eligible))",
-            )
-            .bind(id.to_string())
-            .bind(request.version)
-            .fetch_optional(&mut *tx)
-            .await?;
+            let document: Option<String> = fetch_optional(&tx, "SELECT document FROM agent_definitions WHERE id=$1 AND version=$2 AND (source='first_party' OR EXISTS(SELECT 1 FROM agent_definition_authorities a WHERE a.authority_key=agent_definitions.authority_key AND a.eligible))", vec![(id.to_string()).into(),(request.version).into()]).await?;
             let definition = decode_definition(&document.ok_or(Error::Conflict)?)?;
             if definition.id != id.to_string()
                 || definition.version != request.version
@@ -398,10 +469,8 @@ impl DefinitionStore {
                 system_prompt: definition.system_prompt.clone(),
                 status: "installed_inactive".into(),
             };
-            sqlx::query("INSERT INTO agent_definition_installations(id,tenant_id,user_id,definition_id,version,document) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant_id,user_id,definition_id,version) DO NOTHING")
-                .bind(&proposed.id).bind(&owner.tenant).bind(&owner.user).bind(&definition.id).bind(definition.version).bind(serde_json::to_string(&proposed)?).execute(&mut *tx).await?;
-            let document:String=sqlx::query_scalar("SELECT document FROM agent_definition_installations WHERE tenant_id=$1 AND user_id=$2 AND definition_id=$3 AND version=$4")
-                .bind(&owner.tenant).bind(&owner.user).bind(&definition.id).bind(definition.version).fetch_one(&mut *tx).await?;
+            execute(&tx, "INSERT INTO agent_definition_installations(id,tenant_id,user_id,definition_id,version,document) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant_id,user_id,definition_id,version) DO NOTHING", vec![(&proposed.id).into(),(&owner.tenant).into(),(&owner.user).into(),(&definition.id).into(),(definition.version).into(),(serde_json::to_string(&proposed)?).into()]).await?;
+            let document:String=fetch_one(&tx, "SELECT document FROM agent_definition_installations WHERE tenant_id=$1 AND user_id=$2 AND definition_id=$3 AND version=$4", vec![(&owner.tenant).into(),(&owner.user).into(),(&definition.id).into(),(definition.version).into()]).await?;
             let installation = decode_installation(&document)?;
             if installation.definition_id != definition.id
                 || installation.version != definition.version
@@ -422,18 +491,17 @@ impl DefinitionStore {
                 installation: Some(installation),
                 replayed: false,
             };
-            sqlx::query("INSERT INTO agent_definition_operations(tenant_id,user_id,request_id,fingerprint,receipt) VALUES($1,$2,$3,$4,$5)")
-                .bind(&owner.tenant).bind(&owner.user).bind(request.request_id.to_string()).bind(&fingerprint).bind(serde_json::to_string(&receipt)?).execute(&mut *tx).await?;
+            execute(&tx, "INSERT INTO agent_definition_operations(tenant_id,user_id,request_id,fingerprint,receipt) VALUES($1,$2,$3,$4,$5)", vec![(&owner.tenant).into(),(&owner.user).into(),(request.request_id.to_string()).into(),(&fingerprint).into(),(serde_json::to_string(&receipt)?).into()]).await?;
             tx.commit().await?;
             Ok(receipt)
-        })
+        }
     }
     pub async fn operation(&self, owner: &Owner, request_id: Uuid) -> Result<Receipt, Error> {
-        transaction!(self, owner, false, None::<&str>, tx, {
-            let receipt:Option<String>=sqlx::query_scalar("SELECT receipt FROM agent_definition_operations WHERE tenant_id=$1 AND user_id=$2 AND request_id=$3")
-                .bind(&owner.tenant).bind(&owner.user).bind(request_id.to_string()).fetch_optional(&mut *tx).await?;
+        {
+            let tx = self.transaction(owner, false, None).await?;
+            let receipt:Option<String>=fetch_optional(&tx, "SELECT receipt FROM agent_definition_operations WHERE tenant_id=$1 AND user_id=$2 AND request_id=$3", vec![(&owner.tenant).into(),(&owner.user).into(),(request_id.to_string()).into()]).await?;
             checked_receipt(&receipt.ok_or(Error::NotFound)?, owner, request_id)
-        })
+        }
     }
     pub async fn list(&self, owner: &Owner, query: &ListQuery) -> Result<Catalogue, Error> {
         let q = query.q.as_deref().unwrap_or_default();
@@ -457,9 +525,9 @@ impl DefinitionStore {
                 .replace('%', "\\%")
                 .replace('_', "\\_")
         );
-        transaction!(self, owner, false, None::<&str>, tx, {
-            let rows=sqlx::query_as::<_,(String,i64,String,String)>("SELECT id,version,digest,document FROM agent_definitions WHERE (source='first_party' OR EXISTS(SELECT 1 FROM agent_definition_authorities a WHERE a.authority_key=agent_definitions.authority_key AND a.eligible)) AND (id>$1 OR (id=$1 AND version>$2)) AND search_text LIKE $3 ESCAPE '\\' ORDER BY id,version LIMIT $4")
-                .bind(&after_id).bind(after_version).bind(&pattern).bind((limit+1) as i64).fetch_all(&mut *tx).await?;
+        {
+            let tx = self.transaction(owner, false, None).await?;
+            let rows=fetch_all::<(String,i64,String,String)>(&tx, "SELECT id,version,digest,document FROM agent_definitions WHERE (source='first_party' OR EXISTS(SELECT 1 FROM agent_definition_authorities a WHERE a.authority_key=agent_definitions.authority_key AND a.eligible)) AND (id>$1 OR (id=$1 AND version>$2)) AND search_text LIKE $3 ESCAPE '\\' ORDER BY id,version LIMIT $4", vec![(&after_id).into(),(after_version).into(),(&pattern).into(),((limit+1) as i64).into()]).await?;
             let mut definitions = vec![];
             let mut bytes = 0usize;
             let mut more = false;
@@ -489,8 +557,7 @@ impl DefinitionStore {
             } else {
                 None
             };
-            let rows=sqlx::query_as::<_,(String,String,i64,String)>("SELECT id,definition_id,version,document FROM agent_definition_installations WHERE tenant_id=$1 AND user_id=$2 AND id>$3 ORDER BY id LIMIT $4")
-                .bind(&owner.tenant).bind(&owner.user).bind(&after_installation).bind((limit+1) as i64).fetch_all(&mut *tx).await?;
+            let rows=fetch_all::<(String,String,i64,String)>(&tx, "SELECT id,definition_id,version,document FROM agent_definition_installations WHERE tenant_id=$1 AND user_id=$2 AND id>$3 ORDER BY id LIMIT $4", vec![(&owner.tenant).into(),(&owner.user).into(),(&after_installation).into(),((limit+1) as i64).into()]).await?;
             let mut installations = vec![];
             let mut bytes = 0usize;
             let mut more = false;
@@ -527,7 +594,7 @@ impl DefinitionStore {
                 next_cursor,
                 next_installation_cursor,
             })
-        })
+        }
     }
 }
 fn decode_installation(bytes: &str) -> Result<Installation, Error> {

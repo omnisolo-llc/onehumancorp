@@ -10010,8 +10010,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 persistence::agent_definitions::DefinitionStore::Unavailable
             } else {
                 match &db.store {
-                    db::DbStore::Postgres => persistence::agent_definitions::DefinitionStore::Postgres(db.pool.clone()),
-                    db::DbStore::Sqlite(pool) => persistence::agent_definitions::DefinitionStore::Sqlite(pool.clone()),
+                    db::DbStore::Postgres => persistence::agent_definitions::DefinitionStore::Database(persistence::AppDatabase::from_connection(sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(db.pool.clone()))),
+                    db::DbStore::Sqlite(pool) => persistence::agent_definitions::DefinitionStore::Database(persistence::AppDatabase::from_connection(sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone()))),
                 }
             },
             http_auth_store.clone(),

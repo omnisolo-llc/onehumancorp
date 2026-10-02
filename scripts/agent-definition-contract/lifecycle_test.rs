@@ -174,7 +174,7 @@ async fn real_sqlite_pool_with_foreign_keys_disabled_fails_before_mutation() {
             .unwrap(),
         0
     );
-    let store = DefinitionStore::Sqlite(pool.clone());
+    let store = sqlite_store(pool.clone());
     assert!(matches!(
         store
             .publish(&owner("definition-a", &claims.sub), &typed_publish())
@@ -292,7 +292,7 @@ async fn waiting_install_rechecks_revocation_with_inherited_repeatable_read_defa
         .execute(&mut *revoke)
         .await
         .unwrap();
-    let store = DefinitionStore::Postgres(pool.clone());
+    let store = postgres_store(pool.clone());
     let request = crate::agent_definitions::InstallRequest {
         request_id: Uuid::new_v4(),
         version: 1,

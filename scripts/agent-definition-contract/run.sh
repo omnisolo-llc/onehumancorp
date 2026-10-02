@@ -6,6 +6,7 @@ python3 scripts/agent-definition-contract/database_guard.py
 python3 scripts/agent-definition-contract/test_database_guard.py
 python3 scripts/agent-definition-authority/test_sqlite.py
 node --test scripts/agent-definition-wiring.test.mjs
+bash src/server/persistence/backend_neutrality_test.sh
 
 # This configuration belongs only to the fixture process; no application setting
 # or external credential is read or changed by these tests.

@@ -11,3 +11,12 @@ The 49-case inventory covers PostgreSQL and SQLite storage, actual restricted-lo
 Dependency versions/checksums match the repository Cargo.lock. Generated imports, the derived lock and source manifest are ignored. The runner fingerprints production modules, imported crates, schemas, protobuf inputs and gate wiring before and after execution. Missing source, dependency drift, zero/ignored discovery, reduced inventory and failures are fatal. The wrapper retains execution logs and a failed or passed result. Successful runs also retain the source manifest; source drift is a failure. Six additional SQLite-only authority checks, three preflight guards and three mount guards run before Cargo.
 
 The gate does not certify the full server executable, browser/BFF pairing, a MySQL backend, external registry publication or installed-agent execution. `installed_inactive` is a persisted definition snapshot only. Receipt recovery can prove an existing commit; a missing receipt cannot resolve an in-flight operation. Commit rollback, a lost response and concurrent replay are exercised; a proxy-induced transport failure during COMMIT is not simulated.
+
+The store uses the existing AppDatabase/SeaORM connection and transaction boundary.
+The outer route adapts the already configured pool; it never reconnects or creates
+an alternate in-memory store. PostgreSQL explicitly selects READ COMMITTED before
+context and authority gates. SQLite acquires write intent with a zero-row UPDATE
+before any read snapshot inside SeaORM's deferred transaction; the independent
+pool concurrency and rollback cases exercise this serialization. Foreign keys are
+still verified on the actual transaction connection. No transaction auto-retry is
+introduced. The unchanged backend-neutrality contract must also pass.
