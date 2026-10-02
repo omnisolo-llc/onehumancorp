@@ -107,4 +107,10 @@ describe('ViralPostGeneratorPage', () => {
     await waitFor(() => expect(screen.queryByText('Upgrade to Pro')).toBeNull());
     expect(window.localStorage.setItem).not.toHaveBeenCalled();
   });
+  it('shows required input guidance and disables empty or whitespace generation',()=>{
+    render(<ViralPostGeneratorPage/>);const button=screen.getByRole('button',{name:'Generate Post'});expect(button).toBeDisabled();expect(screen.getByRole('status',{name:'Post requirements'})).toHaveTextContent(/product name.*key benefit/i);
+    fireEvent.change(screen.getByPlaceholderText('e.g. Signature Coffee Blend'),{target:{value:'  '}});fireEvent.change(screen.getByPlaceholderText('e.g. a bold start to your morning'),{target:{value:'Actual benefit'}});expect(button).toBeDisabled();fireEvent.click(button);expect(screen.queryByRole('button',{name:'Copy to Clipboard'})).not.toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('e.g. Signature Coffee Blend'),{target:{value:'Actual product'}});expect(button).toBeEnabled();fireEvent.click(button);expect(screen.getByText(/Introducing the new Actual product/)).toBeInTheDocument();
+  });
+
 });

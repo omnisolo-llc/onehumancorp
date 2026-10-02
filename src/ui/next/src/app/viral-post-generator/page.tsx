@@ -14,6 +14,7 @@ export default function ViralPostGeneratorPage() {
   const [copied, setCopied] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
+  const canGenerate = Boolean(productName.trim() && keyBenefit.trim());
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -32,7 +33,7 @@ export default function ViralPostGeneratorPage() {
   };
 
   const handleGenerate = () => {
-    if (!productName || !keyBenefit) return;
+    if (!canGenerate) return;
     const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.\n\nShop now: https://${tenantId}.cloud.omnisolo.co\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`;
     setGeneratedPost(post);
   };
@@ -74,8 +75,9 @@ export default function ViralPostGeneratorPage() {
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Post Details</h2>
                 <div className="flex flex-col gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                        <label htmlFor="post-product" className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
                         <input
+                            id="post-product"
                             type="text"
                             placeholder="e.g. Signature Coffee Blend"
                             value={productName}
@@ -84,8 +86,9 @@ export default function ViralPostGeneratorPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Key Benefit</label>
+                        <label htmlFor="post-benefit" className="block text-sm font-medium text-gray-700 mb-1">Key Benefit</label>
                         <input
+                            id="post-benefit"
                             type="text"
                             placeholder="e.g. a bold start to your morning"
                             value={keyBenefit}
@@ -112,10 +115,15 @@ export default function ViralPostGeneratorPage() {
 
                     <button
                         onClick={handleGenerate}
-                        className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
+                        disabled={!canGenerate}
+                        aria-describedby="post-requirements"
+                        className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
                     >
                         Generate Post
                     </button>
+                    <p id="post-requirements" role="status" aria-label="Post requirements" className="text-sm text-gray-600">
+                        {canGenerate ? 'Ready to generate a post from these details.' : 'Enter a product name and key benefit to generate a post.'}
+                    </p>
                 </div>
             </div>
         </section>
