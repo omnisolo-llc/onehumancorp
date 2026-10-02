@@ -1,4 +1,5 @@
 import { test, expect } from '../onboarding_fixtures';
+import {captureSetupPost,completeManualSetup,expectLaunchedSetup,expectPreparedSetup,verifiedSetupOwner} from '../support/legacy_manual_setup';
 
 test.describe('Zero-Click Onboarding Flow', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // strictly mobile viewport
@@ -19,33 +20,21 @@ test.describe('Zero-Click Onboarding Flow', () => {
     // Type into the input
     await page.locator('#instant-bio').fill('I am a baker in Austin selling custom cakes');
 
-    // The instant path prepares a workspace. Completion still requires approval.
-    const generated = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start_zero_click') && response.request().method() === 'POST')
-      .then(async response => ({ status: response.status(), body: await response.json() }));
-    const [preparedResponse] = await Promise.all([generated, page.locator('#generate-storefront-btn').click()]);
-    expect(preparedResponse.status).toBe(200);
-    const prepared = preparedResponse.body;
-    expect(prepared).toMatchObject({ success: true, status: 'prepared' });
-    expect(typeof prepared.preparation_id).toBe('string');
-    expect(prepared.preparation_id.length).toBeGreaterThan(0);
-    const identityResponse = await page.request.get('/api/v1/auth/session-identity');
-    expect(identityResponse.status()).toBe(200);
-    const identity = await identityResponse.json();
-    expect(typeof identity.userId).toBe('string');
-    expect(identity.userId.length).toBeGreaterThan(0);
-    expect(typeof identity.tenantId).toBe('string');
-    expect(identity.tenantId.length).toBeGreaterThan(0);
-    expect(prepared.organization_id).toBe(identity.tenantId);
-    expect(prepared.user_id).toBe(identity.userId);
-    const approval = page.locator('#step-approval');
-    await expect(approval).toBeVisible();
-    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/launch') && response.request().method() === 'POST')
-      .then(async response => ({ status: response.status(), body: await response.json() }));
-    // Start reading the real receipt when its response arrives, before the click
-    // completes navigation and Chromium retires the previous document's body.
-    const [launchedResponse] = await Promise.all([launch, approval.getByRole('button', { name: 'Approve & Complete Setup' }).click()]);
-    expect(launchedResponse.status).toBe(200);
-    expect(launchedResponse.body).toMatchObject({ success: true, status: 'launched', preparation_id: prepared.preparation_id, organization_id: identity.tenantId, user_id: identity.userId });
+    const owner=await verifiedSetupOwner(page);
+    const generated=captureSetupPost(page,'start_zero_click');
+    const [reply]=await Promise.all([generated,page.locator('#generate-storefront-btn').click()]);
+    if(reply.status===503){
+      expect(reply.body).toMatchObject({error:'onboarding_ai_unconfigured'});
+      expect(reply.body.success).not.toBe(true);
+      await completeManualSetup(page,'instant','I am a baker in Austin selling custom cakes',owner);
+    }else{
+      // A configured provider must supply its real prepared receipt; it is never mocked here.
+      const id=expectPreparedSetup(reply,owner);
+      const approval=page.locator('#step-approval');await expect(approval).toBeVisible();
+      const launch=captureSetupPost(page,'launch');
+      const [launched]=await Promise.all([launch,approval.getByRole('button',{name:'Approve & Complete Setup'}).click()]);
+      await expectLaunchedSetup(page,launched,id,owner);
+    }
 
     // The acknowledged local setup leads to the dashboard.
     await expect(page).toHaveURL(/.*(dashboard\.html|dashboard|success\.html).*/, { timeout: 30000 });

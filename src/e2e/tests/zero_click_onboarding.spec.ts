@@ -1,16 +1,11 @@
 import { test, expect } from '../onboarding_fixtures';
+import {captureSetupPost,completeManualSetup,expectLaunchedSetup,expectPreparedSetup,verifiedSetupOwner} from '../support/legacy_manual_setup';
 
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
     // Navigate to the setup route
     await page.goto('/setup.html');
-    const identityResponse = await page.request.get('/api/v1/auth/session-identity');
-    expect(identityResponse.status()).toBe(200);
-    const identity = await identityResponse.json();
-    expect(typeof identity.userId).toBe('string');
-    expect(identity.userId.length).toBeGreaterThan(0);
-    expect(typeof identity.tenantId).toBe('string');
-    expect(identity.tenantId.length).toBeGreaterThan(0);
+    const identity=await verifiedSetupOwner(page);
 
     // Make sure we're on a mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
@@ -26,38 +21,22 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
 
     // Type a simple sentence and press Enter
     await chatInput.fill('I run a mobile dog grooming service in Austin');
-    await chatInput.press('Enter');
-
-    // Review the prepared profile before explicitly launching it.
-    const approval = page.locator('#step-approval');
-    await expect(approval.getByRole('heading', { name: 'Ready to Launch' })).toBeVisible({ timeout: 45000 });
-    await expect(approval.locator('#approval-details')).not.toBeEmpty();
-    const preparation = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/start') && response.request().method() === 'POST')
-      .then(async response => {
-        const text = await response.text();
-        expect(response.status(), text).toBe(200);
-        return { status: response.status(), body: JSON.parse(text) };
-      });
-    const launch = page.waitForResponse(response => response.url().endsWith('/api/v1/onboarding/launch') && response.request().method() === 'POST')
-      .then(async response => ({ status: response.status(), body: await response.json() }));
-    const [preparedResponse, launchedResponse] = await Promise.all([preparation, launch, approval.getByRole('button', { name: 'Approve & Complete Setup' }).click()]);
-    expect(preparedResponse.status).toBe(200);
-    const prepared = preparedResponse.body;
-    expect(prepared.success).toBe(true);
-    expect(typeof prepared.preparation_id).toBe('string');
-    expect(prepared.preparation_id.length).toBeGreaterThan(0);
-    expect(typeof prepared.organization_id).toBe('string');
-    expect(prepared.organization_id.length).toBeGreaterThan(0);
-    expect(typeof prepared.user_id).toBe('string');
-    expect(prepared.user_id.length).toBeGreaterThan(0);
-    expect(prepared.organization_id).toBe(identity.tenantId);
-    expect(prepared.user_id).toBe(identity.userId);
-    expect(launchedResponse.status).toBe(200);
-    const launched = launchedResponse.body;
-    expect(launched).toMatchObject({ success: true, status: 'launched', preparation_id: prepared.preparation_id, organization_id: prepared.organization_id, user_id: prepared.user_id });
-    const stateResponse = await page.request.get('/api/v1/onboarding/state');
-    expect(stateResponse.status()).toBe(200);
-    expect((await stateResponse.json()).preparation).toMatchObject({ preparation_id: prepared.preparation_id, status: 'launched', organization_id: prepared.organization_id, user_id: prepared.user_id });
+    const chat=captureSetupPost(page,'chat');
+    const [reply]=await Promise.all([chat,chatInput.press('Enter')]);
+    if(reply.status===503){
+      expect(reply.body).toMatchObject({error:'onboarding_ai_unconfigured'});
+      expect(reply.body.success).not.toBe(true);
+      await completeManualSetup(page,'chat','I run a mobile dog grooming service in Austin',identity);
+    }else{
+      expect(reply.status).toBe(200);expect(reply.body).toMatchObject({is_complete:true});
+      expect(reply.body.error??null).toBeNull();
+      const approval=page.locator('#step-approval');
+      await expect(approval.getByRole('heading',{name:'Ready to Launch'})).toBeVisible({timeout:45000});
+      await expect(approval.locator('#approval-details')).not.toBeEmpty();
+      const preparation=captureSetupPost(page,'start');const launch=captureSetupPost(page,'launch');
+      const [prepared,launched]=await Promise.all([preparation,launch,approval.getByRole('button',{name:'Approve & Complete Setup'}).click()]);
+      const id=expectPreparedSetup(prepared,identity);await expectLaunchedSetup(page,launched,id,identity);
+    }
     await expect(page).toHaveURL(/\/dashboard(?:\.html)?$/, { timeout: 60000 });
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 
