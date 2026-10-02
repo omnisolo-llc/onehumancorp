@@ -3947,6 +3947,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
 
+    // Publication work is durable PostgreSQL state, never an in-memory success.
+    // Dropping the sender on server exit stops the worker's next polling turn.
+    let (_publication_shutdown, publication_shutdown_rx) = tokio::sync::watch::channel(false);
+    if legacy_sqlx_background_enabled && matches!(&db.store, db::DbStore::Postgres) {
+        tokio::spawn(crate::builder::publication_worker::run_publication_worker(
+            db.pool.clone(),
+            publication_shutdown_rx,
+        ));
+    }
+
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     if legacy_sqlx_background_enabled {
@@ -9991,6 +10001,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
+        .merge(crate::builder::publication_http::router(
+            db.pool.clone(),
+            http_auth_store.clone(),
+        ))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .nest("/api/v1/agents", api::agents::hire::router(hub.clone()).layer(axum::Extension(workflow_execution.clone())))
         .merge(api::agents::definitions::router(

@@ -25,6 +25,18 @@ class FocusedGateTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         self.assertTrue((root/'scripts/order-milestones/run.sh').is_file())
         self.assertIn('python3 scripts/focused_ci_gate.py order-milestones', (root/'.github/workflows/ci.yml').read_text())
+    def test_site_publication_gate_requires_complete_pg_http_and_javascript_proof(self):
+        self.assertIn('site-publication', gate.GATES)
+        minimum, database = gate.GATES['site-publication']
+        self.assertGreaterEqual(minimum, 79)
+        self.assertEqual(database, 'OHC_PUBLICATION_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        runner = (root/'scripts/site-publication/run.sh').read_text()
+        self.assertIn('node scripts/site-publication/jcs-proof.cjs', runner)
+        self.assertIn('src/ui/next/node_modules', runner)
+        witness = (root/'scripts/site-publication/jcs-proof.cjs').read_text()
+        self.assertIn("'5.1.0'", witness)
+        self.assertIn('process.versions.node', witness)
 
     def test_agent_definition_gate_requires_real_database_and_complete_inventory(self):
         minimum,database=gate.GATES['agent-definition-contract']

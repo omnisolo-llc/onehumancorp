@@ -1,0 +1,26 @@
+[package]
+name = "ohc-site-publication-regressions"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+tower = { version = "0.5", features = ["util"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+serde_jcs = "=0.2.0"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+sha2 = "0.10"
+url = "2"
+chrono = { version = "0.4", features = ["serde"] }
+server_common = { path = "../../src/server/common" }
+server_auth = { path = "../../src/server/auth" }
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false
