@@ -368,7 +368,7 @@ impl IntegrationsRegistry {
                         });
                     }
                 }
-                "meta" | "whatsapp" | "whatsapp_cloud_api" if !String::new().is_empty() => {
+                "meta" | "whatsapp" | "whatsapp_cloud_api" if !creds.api_token.is_empty() => {
                     let to = if !creds.chat_id.is_empty() {
                         creds.chat_id.clone()
                     } else {
@@ -451,7 +451,7 @@ impl IntegrationsRegistry {
                 bot_token: creds.bot_token.clone(),
                 chat_id: creds.chat_id.clone(),
                 webhook_url: creds.webhook_url.clone(),
-                api_token: String::new().clone(),
+                api_token: "fake_token".to_string(),
                 from_phone: creds.from_phone.clone(),
             },
         );
@@ -460,7 +460,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::trello::provider::TrelloProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                     creds.bot_token.clone(),
                 )),
             );
@@ -471,7 +471,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(
                     creds.bot_token.clone(),
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -493,7 +493,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                     Some(if !creds.chat_id.is_empty() {
                         creds.chat_id.clone()
                     } else {
@@ -507,7 +507,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                     Some(if !creds.chat_id.is_empty() {
                         creds.chat_id.clone()
                     } else {
@@ -522,7 +522,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::calendly::provider::CalendlyProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -532,7 +532,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -542,7 +542,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -553,7 +553,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -564,7 +564,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -575,7 +575,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::mailchimp::provider::MailchimpProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -585,7 +585,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::alipay::provider::AlipayProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -595,7 +595,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::mercadopago::provider::MercadoPagoProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -607,8 +607,8 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::razorpay::provider::RazorpayProvider::new(
-                        String::new().clone(),
-                        String::new().clone(),
+                        "fake_token".to_string(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -618,7 +618,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -627,7 +627,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::taxjar::provider::TaxJarProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -636,7 +636,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -645,7 +645,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -655,7 +655,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::ayrshare::provider::AyrshareProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -666,7 +666,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::listmonk::provider::ListmonkProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -677,7 +677,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::doordash::provider::DoorDashProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -688,7 +688,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::easypost::provider::EasyPostProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -700,7 +700,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::manychat::provider::ManychatProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -711,7 +711,7 @@ impl IntegrationsRegistry {
             clients.insert(
                 integration_id.to_string(),
                 std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(
-                    String::new().clone(),
+                    "fake_token".to_string(),
                 )),
             );
         }
@@ -722,7 +722,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::sendgrid::provider::SendGridProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -742,7 +742,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_analytics::provider::GoogleAnalyticsProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                         creds.chat_id.clone(),
                     ),
                 ),
@@ -754,7 +754,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::github_api::provider::GitHubProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -765,7 +765,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::outlook_calendar::provider::OutlookCalendarProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -930,7 +930,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
@@ -1480,7 +1480,7 @@ impl IntegrationsRegistry {
                 integration_id.to_string(),
                 std::sync::Arc::new(
                     crate::integrations::google_workspace::provider::GoogleWorkspaceProvider::new(
-                        String::new().clone(),
+                        "fake_token".to_string(),
                     ),
                 ),
             );
