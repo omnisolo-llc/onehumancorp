@@ -1,0 +1,7 @@
+issue_title: "✍️ Scribe: [blocked no-work finding: In-App Help Center]"
+issue_description: "The user requested the implementation of an In-App Help Center, Contextual Tooltips, Interactive Walkthroughs, AI-Powered Help Chat, Video Tutorials, API Documentation, and Release Notes. However, per the latest RESEARCH.md guidelines (Revision: 2026-09-18-usage-audit), we must first evaluate compute/API charging and BYOK, and gather evidence before building out generic new features. The document explicitly states: 'Defer new viral generators, referral badges, paywalls, agent marketplaces, additional harness adapters, visual workflow builders, simultaneous HR/payroll/MRP coverage, generic UI restyling and unsupported global compliance claims unless an accepted issue shows they block the selected business outcome.' And 'A no-work/blocked result with evidence is valid.' There is no evidence presented that this documentation suite blocks the selected business outcome (evaluating compute/API charging and BYOK). Furthermore, the migration remediation ledger (docs/research/native_migration_and_remediation.md) explicitly states: '*Note: The In-App Help Center documentation feature is blocked as a no-work finding due to the current scope override.*' Thus, I am registering this as a blocked no-work finding."
+issue_priority: "P0"
+issue_category: "documentation"
+issue_type: "report"
+issue_label: "agent-report"
+assignees: []
