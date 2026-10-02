@@ -13,3 +13,12 @@ Use pinned Node22 and install the tiny witness tree with `npm ci --prefix script
 This focused gate does not certify the complete server build, authenticated publication UI, Next proxy or browser acceptance. Those remain separate acceptance gates. The implementation is application-hosted PostgreSQL publication; it does not deploy DNS, CDN, custom domains or external providers.
 
 The focused Cargo lock is checked in so an isolated CI lane can run `bash scripts/site-publication/fetch.sh` before the offline gate. That bounded setup fetches only this harness for the host target with `--locked`, and checks every registry source/version/checksum against the root lock both before and after fetching. Tests retain `--locked --offline`; missing dependency or integrity failures remain failures. Root dependency updates must refresh and reverify this focused lock explicitly.
+
+The main-composition regression derives the publication mount position from the
+application source and runs the actual global bearer/tenant middleware around the
+real publication router. It covers anonymous HTML, current owner authorization and
+anonymous 404 after exact-version revocation. This catches public routes captured
+by a later global authentication layer; isolated child-router tests cannot prove
+that boundary. The tier layer only applies action limits to protected/autodream
+paths and is not compiled into this focused boundary. Full hosted browser acceptance
+remains required.

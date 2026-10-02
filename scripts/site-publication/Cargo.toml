@@ -19,6 +19,8 @@ chrono = { version = "0.4", features = ["serde"] }
 server_common = { path = "../../src/server/common" }
 server_auth = { path = "../../src/server/auth" }
 sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
+server_config = { path = "../../src/server/config" }
+urlencoding = "2.1.3"
 [lib]
 path = "generated.rs"
 [profile.dev]

@@ -37,7 +37,7 @@ class FocusedGateTests(unittest.TestCase):
     def test_site_publication_gate_requires_complete_pg_http_and_javascript_proof(self):
         self.assertIn('site-publication', gate.GATES)
         minimum, database = gate.GATES['site-publication']
-        self.assertGreaterEqual(minimum, 80)
+        self.assertGreaterEqual(minimum, 81)
         self.assertEqual(database, 'OHC_PUBLICATION_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         runner = (root/'scripts/site-publication/run.sh').read_text()

@@ -28,7 +28,7 @@ GATES = {
     'agent-receipt-postgres-contract': (38, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
     'stripe-webhook-security': (22, None),
     'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
-    'site-publication': (80, 'OHC_PUBLICATION_TEST_DATABASE_URL'),
+    'site-publication': (81, 'OHC_PUBLICATION_TEST_DATABASE_URL'),
     'service-creation': (6, 'OHC_SERVICE_TEST_DATABASE_URL'),
 }
 RESULT = re.compile(r'test result: (ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out;')

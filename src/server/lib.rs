@@ -9077,10 +9077,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
-        .merge(crate::builder::publication_http::router(
-            db.pool.clone(),
-            http_auth_store.clone(),
-        ))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .nest("/api/v1/agents", api::agents::hire::router(hub.clone()).layer(axum::Extension(workflow_execution.clone())))
         .merge(api::agents::definitions::router(
@@ -9286,6 +9282,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             protected_bearer_auth_middleware,
         ))
         .with_state(mesh_transport)
+        // Publication carries its own strict owner authentication. Its public
+        // document routes must remain outside the global authenticated scope.
+        .merge(crate::builder::publication_http::router(
+            db.pool.clone(),
+            http_auth_store.clone(),
+        ))
         .nest(
             "/api/v1/local_seo",
             api::local_seo::router()

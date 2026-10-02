@@ -800,3 +800,73 @@ async fn publication_routes_preserve_an_independent_nonunit_application_state() 
     assert_eq!(f.data.counts().await, (1, 1, 1));
     f.data.finish().await;
 }
+
+#[tokio::test]
+async fn actual_application_auth_composition_serves_anonymous_documents_and_fences_owner_actions() {
+    let mut f = HttpFixture::new().await;
+    f.app = crate::application_publication_routes(f.data.pool.clone(), f.auth.clone());
+    let published = f.publish().await;
+    let public_path = format!("/api/v1/public/sites/{}", published.site_id);
+    let response = f.request("GET", &public_path, None, json!(null)).await;
+    assert_eq!(
+        response.0,
+        StatusCode::OK,
+        "actual main composition response headers={:?}, body={}",
+        response.1,
+        String::from_utf8_lossy(&response.2)
+    );
+    assert_eq!(response.1["content-type"], "text/html; charset=utf-8");
+    assert_eq!(response.1["cache-control"], "no-store");
+    assert_eq!(response.1["x-content-type-options"], "nosniff");
+    assert_eq!(response.1["referrer-policy"], "no-referrer");
+    assert!(
+        response.1["content-security-policy"]
+            .to_str()
+            .unwrap()
+            .contains("script-src 'none'")
+    );
+    assert!(String::from_utf8_lossy(&response.2).contains("Actual committed public document"));
+    let revoke_path = format!("/api/v1/builder/publications/{}", published.publication_id);
+    for path in [
+        "/api/v1/builder/publications".to_string(),
+        revoke_path.clone(),
+    ] {
+        let method = if path == revoke_path {
+            "DELETE"
+        } else {
+            "POST"
+        };
+        let result = f.request(method, &path, None, f.body(Uuid::new_v4())).await;
+        assert_eq!(result.0, StatusCode::UNAUTHORIZED);
+    }
+    assert_eq!(
+        f.request("DELETE", &revoke_path, Some(&f.foreign), json!(null))
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    sqlx::query("DELETE FROM identity_user_roles WHERE user_id=$1 AND tenant_id=$2")
+        .bind(&f.data.a.user_id)
+        .bind(&f.data.a.tenant_id)
+        .execute(&f.data.admin)
+        .await
+        .unwrap();
+    assert_eq!(
+        f.request("DELETE", &revoke_path, Some(&f.owner), json!(null))
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    sqlx::query("INSERT INTO identity_user_roles(user_id,role_name,tenant_id,position) VALUES($1,'ADMIN',$2,0)").bind(&f.data.a.user_id).bind(&f.data.a.tenant_id).execute(&f.data.admin).await.unwrap();
+    assert_eq!(
+        f.request("DELETE", &revoke_path, Some(&f.owner), json!(null))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        f.request("GET", &public_path, None, json!(null)).await.0,
+        StatusCode::NOT_FOUND
+    );
+    f.data.finish().await;
+}
