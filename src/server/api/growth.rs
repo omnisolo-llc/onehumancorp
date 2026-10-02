@@ -2735,11 +2735,15 @@ pub struct SpinToWinQuery {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MilestoneResponse {
-    pub title: String,
-    pub subtitle: String,
-    #[serde(rename = "shareText")]
-    pub share_text: String,
-    pub reward: String,
+    pub success: bool,
+    pub metric: String,
+    pub included_statuses: String,
+    pub tenant_id: String,
+    pub user_id: String,
+    pub recorded_orders: i64,
+    pub reached_thresholds: Vec<i64>,
+    pub highest_threshold: Option<i64>,
+    pub observed_at: String,
 }
 
 async fn handle_get_milestone(
@@ -2747,119 +2751,88 @@ async fn handle_get_milestone(
     claims: Option<Extension<::server_common::Claims>>,
     axum::extract::Query(query): axum::extract::Query<MilestoneQuery>,
 ) -> impl IntoResponse {
-    let fallback_tenant = "DEFAULT".to_string();
-    let tenant_id = query
-        .tenant_id
-        .clone()
-        .or_else(|| claims.and_then(|c| c.organization_id.clone()))
-        .unwrap_or(fallback_tenant);
-
-    // Check business milestones to find highest achievement
-    let mut best_milestone_id = "100_orders".to_string();
-
-    if tenant_id != "DEFAULT" {
-        let rows =
-            sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-                .bind(tenant_id)
-                .fetch_all(&state.pool)
-                .await
-                .unwrap_or_default();
-
-        use sqlx::Row;
-        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
-
-        if types.contains(&"revenue_100k".to_string()) {
-            best_milestone_id = "revenue_100k".to_string();
-        } else if types.contains(&"1000_orders".to_string()) {
-            best_milestone_id = "1000_orders".to_string();
-        } else if types.contains(&"revenue_10k".to_string()) {
-            best_milestone_id = "revenue_10k".to_string();
-        } else if types.contains(&"100_orders".to_string()) {
-            best_milestone_id = "100_orders".to_string();
-        } else if types.contains(&"50th_order".to_string()) {
-            best_milestone_id = "50th_order".to_string();
-        } else if types.contains(&"revenue_1k".to_string()) {
-            best_milestone_id = "revenue_1k".to_string();
-        } else if types.contains(&"10th_order".to_string()) {
-            best_milestone_id = "10th_order".to_string();
-        } else if types.contains(&"5_referrals".to_string()) {
-            best_milestone_id = "5_referrals".to_string();
-        } else if types.contains(&"100_visitors".to_string()) {
-            best_milestone_id = "100_visitors".to_string();
-        } else if types.contains(&"first_sale".to_string()) {
-            best_milestone_id = "first_sale".to_string();
-        }
-    }
-
-    let (title, subtitle, share_text, reward) = match best_milestone_id.as_str() {
-        "revenue_100k" => (
-            "Six-Figure Club! 🌟",
-            "You crossed $100k in revenue. Share to unlock $500 in credits.",
-            "I just hit $100k in revenue running my business on OmniSolo! 🚀",
-            "$500 Credit",
-        ),
-        "1000_orders" => (
-            "1,000th Order Delivered! 👑",
-            "An incredible milestone! Share your success to unlock $100 in credits.",
-            "I just hit my 1,000th order using OmniSolo to run my business! 🚀",
-            "$100 Credit",
-        ),
-        "revenue_10k" => (
-            "Five-Figure Club! 💎",
-            "You crossed $10k in revenue. Share to unlock $75 in credits.",
-            "I just hit $10k in revenue running my business on OmniSolo! 🚀",
-            "$75 Credit",
-        ),
-        "100_orders" => (
-            "100th Order Delivered! 🎉",
-            "You're growing fast. Share your success to unlock $50 in OmniSolo credits.",
-            "I just hit my 100th order using OmniSolo to run my business! 🚀 Check them out and get $50 off your first month:",
-            "$50 Credit",
-        ),
-        "50th_order" => (
-            "50th Order! 🔥",
-            "You're halfway to 100! Share your success to unlock $30 in OmniSolo credits.",
-            "I just hit my 50th order using OmniSolo! 🚀",
-            "$30 Credit",
-        ),
-        "revenue_1k" => (
-            "Four-Figure Club! 💰",
-            "You crossed $1k in revenue. Share to unlock $25 in credits.",
-            "I just hit my first $1k in revenue running my business on OmniSolo! 🚀",
-            "$25 Credit",
-        ),
-        "10th_order" => (
-            "10th Order! 📈",
-            "Business is booming. Share your success to unlock $10 in credits.",
-            "I just hit my 10th order using OmniSolo! 🚀 Get $50 off your first month:",
-            "$10 Credit",
-        ),
-        "5_referrals" => (
-            "High Connector! 🤝",
-            "You've referred 5 businesses. Share to unlock $100 in credits.",
-            "I just helped 5 other businesses start on OmniSolo! 🚀 Get $50 off your first month:",
-            "$100 Credit",
-        ),
-        "100_visitors" => (
-            "100 Visitors! 🚀",
-            "Traffic is soaring. Share to unlock $5 in credits.",
-            "I just had 100 visitors to my new OmniSolo storefront! 🚀 Check it out and get $50 off your first month:",
-            "$5 Credit",
-        ),
-        _ => (
-            "First Sale! 💸",
-            "You got your first sale! Share your success to unlock $5 in credits.",
-            "I just got my first sale using OmniSolo to run my business! 🚀 Start your business and get $50 off your first month:",
-            "$5 Credit",
-        ),
+    use axum::response::IntoResponse;
+    let failure = |status, code| {
+        (
+            status,
+            [(axum::http::header::CACHE_CONTROL, "private, no-store")],
+            Json(serde_json::json!({"success": false, "error": code})),
+        )
+            .into_response()
     };
-
-    Json(MilestoneResponse {
-        title: title.to_string(),
-        subtitle: subtitle.to_string(),
-        share_text: share_text.to_string(),
-        reward: reward.to_string(),
-    })
+    let Some(Extension(claims)) = claims else {
+        return failure(
+            axum::http::StatusCode::UNAUTHORIZED,
+            "authentication_required",
+        );
+    };
+    let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims) else {
+        return failure(axum::http::StatusCode::FORBIDDEN, "tenant_required");
+    };
+    if query
+        .tenant_id
+        .as_ref()
+        .is_some_and(|requested| requested != &tenant_id)
+    {
+        return failure(axum::http::StatusCode::FORBIDDEN, "tenant_mismatch");
+    }
+    let unavailable = || {
+        failure(
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "milestone_unavailable",
+        )
+    };
+    let Ok(mut tx) = state.pool.begin().await else {
+        return unavailable();
+    };
+    if sqlx::query("SET TRANSACTION READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .is_err()
+        || sqlx::query("SET LOCAL statement_timeout = '2s'")
+            .execute(&mut *tx)
+            .await
+            .is_err()
+        || ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .is_err()
+    {
+        return unavailable();
+    }
+    // Literal persisted records, across every status. This is not a count of
+    // paid/fulfilled sales and does not aggregate amounts or mixed currencies.
+    let result: Result<(i64, chrono::DateTime<chrono::Utc>), sqlx::Error> = sqlx::query_as(
+        "SELECT COUNT(*)::bigint, clock_timestamp() FROM orders WHERE tenant_id = $1",
+    )
+    .bind(&tenant_id)
+    .fetch_one(&mut *tx)
+    .await;
+    let Ok((recorded_orders, observed_at)) = result else {
+        return unavailable();
+    };
+    if tx.commit().await.is_err() {
+        return unavailable();
+    }
+    let reached_thresholds: Vec<i64> = [1, 10, 50, 100, 1000]
+        .into_iter()
+        .filter(|threshold| recorded_orders >= *threshold)
+        .collect();
+    let highest_threshold = reached_thresholds.last().copied();
+    (
+        [(axum::http::header::CACHE_CONTROL, "private, no-store")],
+        Json(MilestoneResponse {
+            success: true,
+            metric: "recorded_orders".into(),
+            included_statuses: "all_recorded_statuses".into(),
+            tenant_id,
+            user_id: claims.sub,
+            recorded_orders,
+            reached_thresholds,
+            highest_threshold,
+            observed_at: observed_at.to_rfc3339(),
+        }),
+    )
+        .into_response()
 }
 
 #[derive(Debug, Deserialize)]

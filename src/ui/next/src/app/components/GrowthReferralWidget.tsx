@@ -4,6 +4,7 @@ import React from 'react';
 import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { Card, CardContent } from "@/components/ui/card";
 import { useCloudInvitation } from '../referrals/useCloudInvitation';
+import { RecordedOrderMilestone } from './RecordedOrderMilestone';
 
 const noPrivateDraft = () => {};
 
@@ -133,14 +134,7 @@ export default function GrowthReferralWidget() {
         </CardContent>
       </Card>
 
-      <section className="mt-8 pt-6 border-t border-white/20 dark:border-white/10" aria-labelledby="team-order-milestones">
-        <h3 id="team-order-milestones" className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-          Order milestones unavailable
-        </h3>
-        <p className="text-gray-600 dark:text-gray-300 text-sm">
-          A verified order count for this business is required before a milestone can be displayed or shared.
-        </p>
-      </section>
+      <RecordedOrderMilestone invitation={invitation} />
     </div>
   );
 }

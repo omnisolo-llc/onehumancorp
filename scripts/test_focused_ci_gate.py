@@ -18,6 +18,13 @@ class FocusedGateTests(unittest.TestCase):
         self.assertEqual(database, 'OHC_WIDGET_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         self.assertTrue((root/'scripts/widget-chat-contract/run.sh').is_file())
+    def test_recorded_order_milestones_require_real_database_and_all_cases(self):
+        minimum, database = gate.GATES['order-milestones']
+        self.assertGreaterEqual(minimum, 13)
+        self.assertEqual(database, 'OHC_MILESTONE_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        self.assertTrue((root/'scripts/order-milestones/run.sh').is_file())
+        self.assertIn('python3 scripts/focused_ci_gate.py order-milestones', (root/'.github/workflows/ci.yml').read_text())
 
     def test_agent_definition_gate_requires_real_database_and_complete_inventory(self):
         minimum,database=gate.GATES['agent-definition-contract']

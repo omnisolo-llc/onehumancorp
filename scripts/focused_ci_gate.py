@@ -12,6 +12,7 @@ import sys
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
     'widget-chat-contract': (32, 'OHC_WIDGET_TEST_DATABASE_URL'),
+    'order-milestones': (13, 'OHC_MILESTONE_TEST_DATABASE_URL'),
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),
     'agent-definition-contract': (49, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
 
