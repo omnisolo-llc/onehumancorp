@@ -407,13 +407,21 @@ run_rest_smoke_tests() {
     exit 1
   }
 
-# --- seed demo data ---
-  seed_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/dev/seed" \
-    "${auth_headers[@]}" \
-    -H 'Content-Type: application/json' \
-    -d '{"scenario":"launch-readiness"}')"
-  printf '%s' "${seed_response}" | jq -e '.ok == true' >/dev/null
-  log "  /api/v1/dev/seed ✓"
+# --- no fixture endpoint in either production deployment mode ---
+  retired_seed_status="$(curl_bounded -sS -o /dev/null -w '%{http_code}' -X POST "${backend_url}/api/v1/dev/seed" \
+    "${auth_headers[@]}" -H 'Content-Type: application/json' -d '{"scenario":"launch-readiness"}')"
+  [[ "${retired_seed_status}" == "404" ]] || { echo "production seed endpoint must be absent: HTTP ${retired_seed_status}" >&2; exit 1; }
+
+  # Create and read an actual tenant record through the normal application API.
+  # No test routes, fake backend replies or direct access to the deployed DB.
+  recorded_vendor="$(curl_bounded -sf --retry 0 -X POST "${backend_url}/api/v1/ui/supply/vendors" \
+    "${auth_headers[@]}" -H 'Content-Type: application/json' \
+    -d '{"name":"Kind deployment fixture vendor","contact_info":"kind-vendor@example.test"}')"
+  recorded_vendor_id="$(printf '%s' "${recorded_vendor}" | jq -er '.id | select(type == "string" and length > 0)')"
+  recorded_supply="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/ui/supply")"
+  printf '%s' "${recorded_supply}" | jq -e --arg id "${recorded_vendor_id}" \
+    '.vendors | any(.[]; .id == $id and .name == "Kind deployment fixture vendor")' >/dev/null
+  log "  production fixture isolation and persisted supply record ✓"
 
 # --- dashboard ---
   dashboard="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/dashboard")"

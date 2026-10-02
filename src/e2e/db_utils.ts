@@ -1,12 +1,12 @@
 import { Pool } from "pg";
+import { verifiedFixtureDatabaseUrl } from "../../scripts/e2e-fixture-database.mjs";
 
 // Importing a browser spec must not connect to a database or prevent --list.
 // Require the isolated test database at the first actual query, not discovery.
 let pool: Pool | undefined;
 function testPool(): Pool {
   if (pool) return pool;
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is required for database-backed E2E tests.");
+  const databaseUrl = verifiedFixtureDatabaseUrl();
   pool = new Pool({ connectionString: databaseUrl, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000 });
   return pool;
 }

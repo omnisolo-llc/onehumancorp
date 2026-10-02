@@ -189,8 +189,8 @@ A: The platform supports any model referenced in the billing catalog. Current de
 **Q: Is my data stored persistently?**
 A: When deployed with the Helm chart (Redis + CloudNative PG), all data is persisted. In the Docker Compose dev stack the backend uses in-memory storage by default.
 
-**Q: How do I reset demo data?**
-A: Call `POST /api/v1/dev/seed` with `{"scenario":"launch-readiness"}` to reload the seeded demo scenario.
+**Q: Can I load demo records into my installation?**
+A: Production and normal development servers do not expose fixture seeding or simulation endpoints. Developers can run `make test-e2e` to exercise the actual app with a newly created, disposable fixture database. This does not modify an existing installation.
 
 **Q: Who can approve a critical-risk action?**
 A: Any user with the `approver` platform role. Reach out to your administrator to have this role assigned.

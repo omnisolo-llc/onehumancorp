@@ -504,12 +504,7 @@ where
             "/referrals/milestones/status",
             get(handle_get_referral_milestones),
         )
-        .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
-        .route(
-            "/reputation/simulate-referral-checkout",
-            post(handle_simulate_referral_checkout),
-        )
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
@@ -1045,35 +1040,11 @@ async fn handle_social_post(
     )
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SimulateEventRequest {
-    pub customer_id: String,
-    pub order_id: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SimulateEventResponse {
-    pub message: String,
-    pub review_id: String,
-    pub referral_code: String,
-}
-
 #[derive(Debug, Serialize)]
 pub struct ReputationStatsResponse {
     pub average_rating: f64,
     pub total_reviews: i64,
     pub total_referral_credits: f64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SimulateReferralCheckoutRequest {
-    pub referral_code: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SimulateReferralCheckoutResponse {
-    pub message: String,
-    pub credit_amount: f64,
 }
 
 async fn handle_generate_review(
@@ -5708,80 +5679,6 @@ pub async fn handle_embed_widget(
     axum::response::Html(html)
 }
 
-async fn handle_simulate_event(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-    Json(req): Json<SimulateEventRequest>,
-) -> Result<Json<SimulateEventResponse>, StatusCode> {
-    let tenant_id = auth_info.org_id;
-    let customer_id = req.customer_id;
-    let order_id = req.order_id.unwrap_or_default();
-
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-    let review_id = uuid::Uuid::new_v4().to_string();
-    let rating = 5;
-
-    sqlx::query(
-        "INSERT INTO reviews (id, tenant_id, customer_id, order_id, rating, comment) VALUES ($1, $2, $3, $4, $5, $6)"
-    )
-    .bind(&review_id)
-    .bind(&tenant_id)
-    .bind(&customer_id)
-    .bind(&order_id)
-    .bind(rating)
-    .bind("Excellent service!")
-    .execute(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let _ = sqlx::query(
-        "INSERT INTO reputation_profiles (id, tenant_id, average_rating, total_reviews)
-         VALUES ($1, $2, $3, 1)
-         ON CONFLICT (tenant_id)
-         DO UPDATE SET
-            total_reviews = reputation_profiles.total_reviews + 1,
-            average_rating = ((reputation_profiles.average_rating * reputation_profiles.total_reviews) + $3) / (reputation_profiles.total_reviews + 1),
-            updated_at = CURRENT_TIMESTAMP"
-    )
-    .bind(uuid::Uuid::new_v4().to_string())
-    .bind(&tenant_id)
-    .bind(rating as f64)
-    .execute(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let generated_referral_link =
-        crate::services::growth::referral_api::generate_referral_link(&customer_id)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let ref_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query("INSERT INTO referral_codes (id, tenant_id, customer_id, referral_code) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
-        .bind(&ref_id)
-        .bind(&tenant_id)
-        .bind(&customer_id)
-        .bind(&generated_referral_link)
-        .execute(&mut *tx)
-        .await;
-
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(SimulateEventResponse {
-        message: "Simulated review solicitation SMS. Customer replied with 5. Review inserted and referral code generated.".to_string(),
-        review_id,
-        referral_code: generated_referral_link,
-    }))
-}
-
 async fn handle_reputation_stats(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<
@@ -5838,88 +5735,6 @@ async fn handle_reputation_stats(
         average_rating,
         total_reviews: total_reviews as i64,
         total_referral_credits: total_credits,
-    }))
-}
-
-async fn handle_simulate_referral_checkout(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-    Json(req): Json<SimulateReferralCheckoutRequest>,
-) -> Result<Json<SimulateReferralCheckoutResponse>, StatusCode> {
-    let tenant_id = auth_info.org_id;
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-    // find customer_id by referral_code
-    let original_customer_id: String = sqlx::query_scalar(
-        "SELECT customer_id FROM referral_codes WHERE tenant_id = $1 AND referral_code = $2",
-    )
-    .bind(&tenant_id)
-    .bind(&req.referral_code)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .ok_or(StatusCode::NOT_FOUND)?;
-
-    // Insert into ledger_accounts if not exists
-    let account_id = format!("cust_{}", original_customer_id);
-    let _ = sqlx::query(
-        "INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, 'USD', 0.0) ON CONFLICT DO NOTHING"
-    )
-    .bind(&tenant_id)
-    .bind(&account_id)
-    .execute(&mut *tx)
-    .await;
-
-    // Create transaction
-    let tx_id = uuid::Uuid::new_v4().to_string();
-    let credit_amount = 10.0;
-
-    sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, 'USD')")
-        .bind(&tenant_id)
-        .bind(&tx_id)
-        .bind(credit_amount)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    // Create entry
-    let entry_id = uuid::Uuid::new_v4().to_string();
-    sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
-        .bind(&tenant_id)
-        .bind(&entry_id)
-        .bind(&tx_id)
-        .bind(&account_id)
-        .bind(credit_amount)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    // Update balance
-    sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
-        .bind(credit_amount)
-        .bind(&tenant_id)
-        .bind(&account_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(SimulateReferralCheckoutResponse {
-        message: format!(
-            "Friend used referral code. Credited {} to customer {}",
-            credit_amount, original_customer_id
-        ),
-        credit_amount,
     }))
 }
 

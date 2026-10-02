@@ -254,6 +254,10 @@ jobs:
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         run: bash scripts/production-readiness-contract/run.sh
 
+      - name: Reject retired fixture paths before real approval handling
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        run: bash scripts/fixture-boundary-contract/run.sh
+
       - name: Check out the already pinned OpenHarness SDK for isolated tests
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         uses: actions/checkout@v6

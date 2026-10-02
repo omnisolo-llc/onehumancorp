@@ -82,3 +82,5 @@ pub mod voice_provisioning;
 pub mod widget;
 
 pub mod production_readiness;
+
+pub(crate) mod fixture_boundary;
