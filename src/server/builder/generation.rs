@@ -285,6 +285,11 @@ impl GenerationContext {
         };
         match self.execution.run(admitted).await {
             AnalysisOutcome::Completed(text) => Ok((text, provenance)),
+            AnalysisOutcome::BudgetUnavailable => Err(failure(
+                StatusCode::CONFLICT,
+                "generation_budget_unavailable",
+                "The authorized usage budget cannot cover this draft. No provider request was sent",
+            )),
             AnalysisOutcome::Cancelled => Err(failure(
                 StatusCode::FORBIDDEN,
                 "generation_authority_changed",

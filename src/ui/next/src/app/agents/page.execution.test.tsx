@@ -173,7 +173,7 @@ test('reload accepts a stored reference only after the authenticated workflow re
   const view = await open(); await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
   expect(await screen.findByText(/Text analysis queued/)).toBeVisible();
-  workflowRows = [{ id: receipt.workflow_id, name: 'Actual analysis', task: 'Supplied task', workflow: 'expert_task', status: 'completed', output: 'Actual returned text' }];
+  workflowRows = [{ id: receipt.workflow_id, actor_id: firstOwner.userId, name: 'Actual analysis', task: 'Supplied task', workflow: 'expert_task', status: 'completed', output: 'Actual returned text' }];
   view.unmount(); await open();
   expect(await screen.findByText(/Previously accepted text analysis/)).toBeVisible();
   expect(screen.getAllByText('Actual returned text').length).toBeGreaterThan(0);
@@ -203,6 +203,55 @@ test('the durable duplicate-prevention marker does not retain private task text'
   expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
   const stored = readOwnedOnboardingItem('agent-analysis-request');
   expect(stored).not.toContain(privateTask);
-  expect(stored).toBe(JSON.stringify({ status: 'unknown' }));
+  expect(JSON.parse(stored!)).toEqual({ status: 'unknown', request_id: new Headers(mutations()[0][1]!.headers).get('idempotency-key') });
+  expect(mutations()).toHaveLength(1);
+});
+
+test('sends a durable request UUID and retains only that identity after an ambiguous response', async () => {
+  submit = async () => { throw new TypeError('connection ended'); };
+  await open(); await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
+  expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
+  const key = new Headers(mutations()[0][1]!.headers).get('idempotency-key');
+  expect(key, 'a dispatched request must have a durable identity').not.toBeNull();
+  expect(key).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+  expect(JSON.parse(readOwnedOnboardingItem('agent-analysis-request')!)).toEqual({ status: 'unknown', request_id: key });
+});
+
+test('recovers a request UUID only from its authenticated owner receipt after a lost acknowledgement', async () => {
+  submit = async () => { throw new TypeError('connection ended'); };
+  const view = await open(); await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
+  expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
+  const requestId = new Headers(mutations()[0][1]!.headers).get('idempotency-key');
+  workflowRows = [{ id: receipt.workflow_id, request_id: requestId, actor_id: firstOwner.userId, agent_id: receipt.agent_id, name: 'Actual accepted work', task: 'Submitted task', workflow: 'expert_task', status: 'completed', output: 'Actual returned text' }];
+  view.unmount(); await open();
+  expect(await screen.findByText(/Previously accepted text analysis/)).toBeVisible();
+  expect(mutations()).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare another task' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
+});
+
+test('a confirmed budget rejection permits a new explicit attempt without holding an unstarted request', async () => {
+  submit = async () => Response.json({ id: '', agent_id: '', workflow_id: '', status: 'budget_rejected', message: 'Budget cannot cover this request' }, { status: 409 });
+  await open(); await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
+  expect(await screen.findByText(/budget cannot cover this request/i)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled();
+  expect([null, '']).toContain(readOwnedOnboardingItem('agent-analysis-request'));
+  expect(mutations()).toHaveLength(1);
+});
+
+test('a different actor receipt cannot clear an unresolved request marker', async () => {
+  submit = async () => { throw new TypeError('connection ended'); };
+  const view = await open(); await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
+  expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
+  const requestId = new Headers(mutations()[0][1]!.headers).get('idempotency-key');
+  workflowRows = [{ id: receipt.workflow_id, request_id: requestId, actor_id: 'different-owner', agent_id: receipt.agent_id, name: 'Other actor work', task: 'Other task', workflow: 'expert_task', status: 'completed' }];
+  view.unmount(); await open();
+  expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Start task' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Prepare another task' })).not.toBeInTheDocument();
   expect(mutations()).toHaveLength(1);
 });

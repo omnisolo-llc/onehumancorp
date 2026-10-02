@@ -71,6 +71,8 @@ pub struct WorkflowRecord {
     pub id: String,
     pub tenant_id: String,
     pub actor_id: String,
+    pub request_id: String,
+    pub agent_id: Option<String>,
     pub name: String,
     pub workflow: String,
     pub task: String,
@@ -94,8 +96,6 @@ struct CreateWorkflowRequest {
     workflow: String,
 }
 
-static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> =
-    std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<
     std::sync::Arc<omnisolo_builtin_agent::service::AgentServiceImpl>,
 > = std::sync::OnceLock::new();
@@ -1247,8 +1247,39 @@ pub fn is_standalone_runtime() -> bool {
     crate::config::get().standalone
 }
 
-pub fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
-    WORKFLOW_REGISTRY.get_or_init(|| RwLock::new(Vec::new()))
+impl From<workflow_execution::receipts::Receipt> for WorkflowRecord {
+    fn from(r: workflow_execution::receipts::Receipt) -> Self {
+        use workflow_execution::receipts::StoredPhase;
+        let status = match r.phase {
+            StoredPhase::Queued => "queued",
+            StoredPhase::Dispatching => "running",
+            StoredPhase::Completed => "completed",
+            StoredPhase::Cancelled => "cancelled",
+            StoredPhase::OutcomeUnknown => "outcome_unknown",
+        };
+        Self {
+            id: r.id.clone(),
+            tenant_id: r.tenant_id,
+            actor_id: r.actor_id,
+            request_id: r.request_id,
+            agent_id: r
+                .agent_role
+                .as_ref()
+                .map(|_| format!("agent-{}", r.id.replace('-', ""))),
+            name: r.name,
+            workflow: r.workflow,
+            task: r.task,
+            model: r.model,
+            provider: r.provider,
+            status: status.into(),
+            command: "Configured tenant text analysis; no tools or workspace access".into(),
+            created_at: chrono::DateTime::from_timestamp(r.created_at, 0)
+                .expect("receipt timestamp was validated")
+                .to_rfc3339(),
+            output: r.output,
+            error: r.error,
+        }
+    }
 }
 
 pub fn workflow_agent_binary() -> String {
@@ -1292,47 +1323,83 @@ pub fn workflow_agent_task(workflow: &str, task: &str) -> String {
     )
 }
 
-fn set_workflow_result(
-    id: &str,
-    status: &str,
-    output: Option<String>,
-    error: Option<String>,
-) -> bool {
-    let registry = get_workflow_registry();
-    if let Ok(mut workflows) = registry.write()
-        && let Some(record) = workflows.iter_mut().find(|record| record.id == id)
-        && matches!(record.status.as_str(), "queued" | "running")
-    {
-        record.status = status.to_string();
-        record.output = output;
-        record.error = error;
-        return true;
-    }
-    false
-}
-
 pub mod workflow_execution;
 
 struct ConfiguredWorkflowInference(
     std::sync::Arc<omnisolo_builtin_agent::tenant_analysis::ConfiguredTextAnalysis>,
 );
 impl workflow_execution::TextInference for ConfiguredWorkflowInference {
+    fn prepare(
+        &self,
+        task: &str,
+        policy: &workflow_execution::AnalysisPolicy,
+    ) -> Result<
+        omnisolo_builtin_agent::tenant_analysis::PreparedTextAnalysis,
+        workflow_execution::AdmissionError,
+    > {
+        if policy.provider != self.0.provider()
+            || policy.model != self.0.model()
+            || policy.max_output_tokens != self.0.max_output_tokens()
+        {
+            return Err(workflow_execution::AdmissionError::Unavailable);
+        }
+        self.0
+            .prepare(task)
+            .map_err(|_| workflow_execution::AdmissionError::Unavailable)
+    }
     fn infer<'a>(
         &'a self,
         input: &'a workflow_execution::AdmittedAnalysis,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, ()>> + Send + 'a>> {
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = Result<workflow_execution::InferenceResult, ()>>
+                + Send
+                + 'a,
+        >,
+    > {
         Box::pin(async move {
             let service = self
                 .0
                 .bind(input.tenant_id(), input.actor_id())
                 .map_err(|_| ())?;
-            service.analyze(input.task()).await
+            let result = service
+                .analyze_prepared(input.prepared().ok_or(())?)
+                .await?;
+            let usage = result.usage;
+            let cached = i64::from(usage.cache_read_input_tokens);
+            let input_tokens = i64::from(usage.input_tokens);
+            let output_tokens = i64::from(usage.output_tokens);
+            let input_tokens = if input.policy().provider == "anthropic" {
+                input_tokens.checked_add(cached).ok_or(())?
+            } else {
+                input_tokens
+            };
+            // The text request supplies no cache-write directives. Unexpected
+            // cache-write charges require reconciliation with an approved rate.
+            let counts = (input_tokens > 0
+                && output_tokens > 0
+                && cached >= 0
+                && cached <= input_tokens
+                && usage.cache_creation_input_tokens == 0)
+                .then_some(server_harness::middleware::usage_ledger::TokenCounts {
+                    input: input_tokens,
+                    output: output_tokens,
+                    cached_input: cached,
+                });
+            Ok(workflow_execution::InferenceResult {
+                output: result.output,
+                provider_request_id: result.response_id.filter(|id| {
+                    !id.trim().is_empty() && id.len() <= 255 && !id.chars().any(char::is_control)
+                }),
+                counts,
+            })
         })
     }
 }
 
 fn configured_workflow_execution(
     store: std::sync::Arc<::server_auth::Store>,
+    database: crate::persistence::AppDatabase,
 ) -> std::sync::Arc<workflow_execution::WorkflowExecution> {
     use workflow_execution::{AnalysisPolicy, WorkflowExecution};
     let configured =
@@ -1345,16 +1412,27 @@ fn configured_workflow_execution(
                     client.max_output_tokens(),
                 )
                 .ok()?;
+                let funding = workflow_execution::funding::FundingContext::new(
+                    workflow_execution::funding::FundingPolicy::from_environment(&policy).ok()?,
+                    &database,
+                )
+                .ok()?;
                 Some((
                     policy,
+                    funding,
                     std::sync::Arc::new(ConfiguredWorkflowInference(std::sync::Arc::new(client)))
                         as std::sync::Arc<dyn workflow_execution::TextInference>,
                 ))
             });
-    std::sync::Arc::new(match configured {
-        Some((policy, client)) => WorkflowExecution::configured(store, policy, client),
-        None => WorkflowExecution::unavailable(store),
-    })
+    std::sync::Arc::new(
+        (match configured {
+            Some((policy, funding, client)) => {
+                WorkflowExecution::configured_funded(store, policy, client, funding)
+            }
+            None => WorkflowExecution::unavailable(store),
+        })
+        .with_receipts(database),
+    )
 }
 
 pub(crate) struct RegisteredWorkflowAgent {
@@ -1371,81 +1449,44 @@ impl workflow_execution::RegistrationLease for RegisteredWorkflowAgent {
                 .is_some_and(|agent| agent.organization_id == self.tenant_id)
         })
     }
-}
-
-pub(crate) fn dispatch_workflow(
-    record: WorkflowRecord,
-    admitted: workflow_execution::AdmittedAnalysis,
-    execution: std::sync::Arc<workflow_execution::WorkflowExecution>,
-    registration: Option<std::sync::Arc<RegisteredWorkflowAgent>>,
-) {
-    tokio::spawn(async move {
-        let id = record.id;
-        if !set_workflow_result(&id, "running", None, None) {
-            return;
-        }
-        let admitted = match &registration {
-            Some(registration) => admitted.with_registration(registration.clone()),
-            None => admitted,
-        };
-        let (status, output, error) = match execution.run(admitted).await {
-            workflow_execution::AnalysisOutcome::Completed(output) => {
-                ("completed", Some(output), None)
-            }
-            workflow_execution::AnalysisOutcome::Cancelled => (
-                "cancelled",
-                None,
-                Some("Authority changed before execution".into()),
-            ),
-            workflow_execution::AnalysisOutcome::OutcomeUnknown => (
-                "outcome_unknown",
-                None,
-                Some("The inference outcome is unconfirmed. No retry was sent.".into()),
-            ),
-        };
-        if set_workflow_result(&id, status, output, error)
-            && let Some(registration) = registration
-        {
-            registration
-                .hub
-                .update_agent_status(
-                    &registration.agent_id,
-                    &registration.tenant_id,
-                    &status.to_ascii_uppercase(),
-                )
+    fn finished<'a>(
+        &'a self,
+        status: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + 'a>> {
+        Box::pin(async move {
+            self.hub
+                .update_agent_status(&self.agent_id, &self.tenant_id, status)
                 .await;
-        }
-    });
+        })
+    }
 }
 
 async fn list_workflows_handler(
+    axum::extract::Extension(execution): axum::extract::Extension<
+        std::sync::Arc<workflow_execution::WorkflowExecution>,
+    >,
+    headers: axum::http::HeaderMap,
     claims: Option<axum::extract::Extension<::server_common::Claims>>,
 ) -> impl axum::response::IntoResponse {
     use axum::http::StatusCode;
-    let Some(tenant_id) = claims
-        .as_ref()
-        .and_then(|claims| ::server_common::auth_utils::signed_tenant_id(&claims.0))
-    else {
+    let Some(claims) = claims else {
         return (
             StatusCode::UNAUTHORIZED,
-            axum::Json(serde_json::json!({ "error": "Authentication required" })),
+            axum::Json(serde_json::json!({"error":"Authentication required"})),
         );
     };
-    let Ok(records) = get_workflow_registry().read() else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            axum::Json(serde_json::json!({ "error": "Workflow records unavailable" })),
-        );
-    };
-    let workflows: Vec<_> = records
-        .iter()
-        .filter(|record| record.tenant_id == tenant_id)
-        .cloned()
-        .collect();
-    (
-        StatusCode::OK,
-        axum::Json(serde_json::json!({ "workflows": workflows })),
-    )
+    match execution.list_receipts(&claims.0, &headers).await {
+        Ok(receipts) => (
+            StatusCode::OK,
+            axum::Json(
+                serde_json::json!({"workflows":receipts.into_iter().map(WorkflowRecord::from).collect::<Vec<_>>()}),
+            ),
+        ),
+        Err(error) => (
+            error.status(),
+            axum::Json(serde_json::json!({"error":error.message()})),
+        ),
+    }
 }
 
 async fn create_workflow_handler(
@@ -1457,89 +1498,103 @@ async fn create_workflow_handler(
     axum::Json(payload): axum::Json<CreateWorkflowRequest>,
 ) -> impl axum::response::IntoResponse {
     use axum::http::StatusCode;
-
     let Some(claims) = claims else {
         return (
             StatusCode::UNAUTHORIZED,
-            axum::Json(serde_json::json!({ "error": "Authentication required" })),
+            axum::Json(serde_json::json!({"error":"Authentication required"})),
         );
     };
-    let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims.0) else {
-        return (
-            StatusCode::UNAUTHORIZED,
-            axum::Json(serde_json::json!({ "error": "Authentication required" })),
-        );
-    };
-    if !claims
-        .roles
-        .iter()
-        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
-    {
-        return (
-            StatusCode::FORBIDDEN,
-            axum::Json(
-                serde_json::json!({ "error": "An owner or administrator must start workflows" }),
-            ),
-        );
-    }
-
-    let name = payload.name.trim();
-    let task = payload.task.trim();
-    if name.is_empty() || task.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({ "error": "Workflow name and task are required" })),
-        );
-    }
-
-    let workflow = if payload.workflow.trim().is_empty() {
-        "expert_task"
-    } else {
-        payload.workflow.trim()
-    };
-    let admitted = match execution
-        .admit(&claims.0, &headers, &payload.task, &payload.model, workflow)
-        .await
-    {
-        Ok(admitted) => admitted,
+    let request_id = match workflow_execution::dispatch::request_id(&headers) {
+        Ok(id) => id,
         Err(error) => {
             return (
                 error.status(),
-                axum::Json(serde_json::json!({"error": error.message()})),
+                axum::Json(serde_json::json!({"error":error.message()})),
             );
         }
     };
-    let record = WorkflowRecord {
-        id: uuid::Uuid::new_v4().to_string(),
-        tenant_id,
-        actor_id: claims.sub.clone(),
-        name: name.to_string(),
-        workflow: "expert_task".into(),
-        task: payload.task.clone(),
-        model: admitted.policy().model.clone(),
-        provider: admitted.policy().provider.clone(),
-        status: "queued".to_string(),
-        command: "Configured tenant text analysis; no tools or workspace access".into(),
-        created_at: Utc::now().to_rfc3339(),
-        output: None,
-        error: None,
+    let request = workflow_execution::receipts::RequestMetadata {
+        request_id,
+        name: payload.name.trim().into(),
+        workflow: if payload.workflow.trim().is_empty() {
+            "expert_task".into()
+        } else {
+            payload.workflow.trim().into()
+        },
+        requested_model: payload.model,
+        agent_role: None,
     };
-
-    {
-        let Ok(mut workflows) = get_workflow_registry().write() else {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                axum::Json(serde_json::json!({ "error": "Workflow records unavailable" })),
-            );
-        };
-        workflows.insert(0, record.clone());
+    let result = async {
+        let reservation = execution
+            .prepare(&claims.0, &headers, &payload.task, request)
+            .await?;
+        execution.dispatch(reservation, None).await
     }
-    dispatch_workflow(record.clone(), admitted, execution, None);
+    .await;
+    match result {
+        Ok(receipt) => (
+            StatusCode::ACCEPTED,
+            axum::Json(serde_json::json!({"workflow":WorkflowRecord::from(receipt)})),
+        ),
+        Err(error) => (
+            error.status(),
+            axum::Json(serde_json::json!({"error":error.message()})),
+        ),
+    }
+}
 
-    (
-        StatusCode::ACCEPTED,
-        axum::Json(serde_json::json!({ "workflow": record })),
-    )
+async fn workflow_receipt_handler(
+    axum::extract::Extension(execution): axum::extract::Extension<
+        std::sync::Arc<workflow_execution::WorkflowExecution>,
+    >,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    headers: axum::http::HeaderMap,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
+) -> impl axum::response::IntoResponse {
+    use axum::http::StatusCode;
+    let Some(claims) = claims else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({"error":"Authentication required"})),
+        );
+    };
+    match execution.get_receipt(&claims.0, &headers, &id).await {
+        Ok(receipt) => (
+            StatusCode::OK,
+            axum::Json(serde_json::json!({"workflow":WorkflowRecord::from(receipt)})),
+        ),
+        Err(error) => (
+            error.status(),
+            axum::Json(serde_json::json!({"error":error.message()})),
+        ),
+    }
+}
+
+async fn cancel_workflow_handler(
+    axum::extract::Extension(execution): axum::extract::Extension<
+        std::sync::Arc<workflow_execution::WorkflowExecution>,
+    >,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    headers: axum::http::HeaderMap,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
+) -> impl axum::response::IntoResponse {
+    use axum::http::StatusCode;
+    let Some(claims) = claims else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({"error":"Authentication required"})),
+        );
+    };
+    match execution.cancel_receipt(&claims.0, &headers, &id).await {
+        Ok(receipt) => (
+            StatusCode::OK,
+            axum::Json(serde_json::json!({"workflow":WorkflowRecord::from(receipt)})),
+        ),
+        Err(error) => (
+            error.status(),
+            axum::Json(serde_json::json!({"error":error.message()})),
+        ),
+    }
 }
 pub mod db;
 pub use ::server_auth as auth;
@@ -4733,7 +4788,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(std::io::Error::other)?;
     let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
-    let workflow_execution = configured_workflow_execution(http_auth_store.clone());
+    let workflow_execution =
+        configured_workflow_execution(http_auth_store.clone(), auth_database.as_ref().clone());
     let http_auth_router = crate::auth::http::router(http_auth_store.clone())
         .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))?;
     async fn generate_manychat_draft_handler() -> axum::response::Response {
@@ -9078,6 +9134,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
+        .route("/api/v1/agents/workflows/{id}",axum::routing::get(workflow_receipt_handler).layer(axum::Extension(workflow_execution.clone())))
+        .route("/api/v1/agents/workflows/{id}/cancel",axum::routing::post(cancel_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .nest("/api/v1/agents", api::agents::hire::router(hub.clone()).layer(axum::Extension(workflow_execution.clone())))
         .merge(api::agents::definitions::router(
             if db::get_mysql_pool_if_exists().is_some() {

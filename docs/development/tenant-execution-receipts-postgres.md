@@ -1,9 +1,9 @@
-# PostgreSQL receipt parity plan
+# PostgreSQL receipt parity and mounted dispatch
 
-Status: implemented and focused-test verified; full application/provider and
-hosted CI acceptance remain separate requirements. SQLite lifecycle commit
-`a6ed6bc` remains the reviewed foundation; HTTP/provider dispatch and hard monetary
-budgets are separate outstanding work.
+Status: receipt persistence and mounted funded text dispatch are implemented and
+focused-test verified. Full integrated workspace and hosted CI acceptance remain
+separate requirements. See [the current dispatch contract](durable-tenant-text-dispatch.md)
+for operator configuration, required request IDs and conservative accounting.
 
 ## Contract
 
@@ -36,9 +36,9 @@ existing migration code before runtime use.
 A token revocation row can be inserted concurrently without touching the user row.
 The implementation must not pretend the user lock serializes token revocation.
 Tests must cover revocation committed while an operation waits, and final commit
-checks must refuse private output if authority has been lost. A stronger atomic
-revocation ordering, if required, must reuse a shared auth-side lock protocol with
-all revocation writers rather than a receipt-only advisory lock.
+checks must refuse private output if authority has been lost. The canonical auth revocation INSERT/UPDATE trigger takes the same tenant/JTI
+transaction advisory identity used by the final receipt shared-lock fence. A fresh
+authority read and COMMIT occur inside that fence; no fence is held across provider I/O.
 
 ## Evidence before completion
 
@@ -57,14 +57,16 @@ additional acceptance requirements.
 
 ## Focused local result (2026-10-02)
 
-The source-bound harness ran 38/38 cases, zero ignored or filtered: ten actual
-restricted-role PostgreSQL cases and 28 existing SQLite/execution cases. Actual
-PostgreSQL tests include deferred terminal commit rejection, revocation during
-authority/receipt lock waits and expired persisted claim recovery without retry.
-Strict all-target Clippy passed. These are storage-contract results, not mounted
-HTTP/worker/provider acceptance or a claim of metered execution readiness.
+The current source-bound receipt harness passes 49 cases with zero ignored or
+filtered, including the 40-case revocation/storage foundation, retained SQLite
+lifecycle cases, exact prepared-request bounds, explicit funding policy and an
+actual forced-RLS PostgreSQL worker/provider/ledger transaction. The separate
+mounted workflow gate passes 94 and builder compatibility gate passes 50; all
+three pass strict all-target Clippy. SQLite schema enforcement passes nine cases.
+These owned database/loopback results do not certify a live paid vendor or the
+full integrated workspace. No production account or credit was changed.
 
 The checked-in focused Cargo lock must be an exact registry/version/source/checksum
 subset of the root lock. CI fetches this focused graph for the Rust host with
-`--locked`; tests remain `--locked --offline`. The mandatory gate has a 40-case floor
+`--locked`; tests remain `--locked --offline`. The mandatory gate has a 49-case floor
 and uses the existing PostgreSQL lane, without adding a runner.

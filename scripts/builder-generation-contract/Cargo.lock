@@ -2362,6 +2362,7 @@ dependencies = [
  "serde_json",
  "server_auth",
  "server_common",
+ "server_harness",
  "sha2",
  "sqlx",
  "tokio",

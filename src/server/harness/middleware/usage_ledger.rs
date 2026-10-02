@@ -326,6 +326,34 @@ impl UsageLedger {
         })
     }
 
+    /// Preserve every outstanding micro-unit when a durable execution claim
+    /// cannot be reconciled. This never converts a hold into a bill or releases
+    /// it, and never erases an already observed receipt.
+    pub async fn require_reconciliation(
+        &self,
+        tenant: &str,
+        event: &str,
+    ) -> Result<(), LedgerError> {
+        if !identifier(tenant) || !identifier(event) {
+            return Err(LedgerError::Invalid);
+        }
+        transaction!(self, tenant, tx, {
+            sqlx::query("UPDATE ohc_usage_records SET state='reconciliation_required' WHERE tenant_id=$1 AND event_id=$2 AND state IN ('reserved','in_flight')").bind(tenant).bind(event).execute(&mut *tx).await?;
+            let present: Option<(String,)> = sqlx::query_as(
+                "SELECT state FROM ohc_usage_records WHERE tenant_id=$1 AND event_id=$2",
+            )
+            .bind(tenant)
+            .bind(event)
+            .fetch_optional(&mut *tx)
+            .await?;
+            if present.is_none() {
+                return Err(LedgerError::State);
+            }
+            tx.commit().await?;
+            Ok(())
+        })
+    }
+
     pub async fn settle(
         &self,
         tenant: &str,
@@ -385,6 +413,12 @@ impl UsageLedger {
                 .bind(tenant).bind(&scope.provider).bind(&receipt.provider_request_id).bind(event)
                 .execute(&mut *tx).await?.rows_affected();
             if receipt_claimed != 1 {
+                // Keep the actual conflicting observation for reconciliation.
+                // Its identifier is already charged elsewhere, so this hold
+                // must neither be charged a second time nor silently released.
+                sqlx::query("UPDATE ohc_usage_records SET state='reconciliation_required',receipt_json=$3,receipt_digest=$4,provider_cost_micros=$5 WHERE tenant_id=$1 AND event_id=$2")
+                    .bind(tenant).bind(event).bind(&receipt_json).bind(&receipt_digest).bind(provider_cost).execute(&mut *tx).await?;
+                tx.commit().await?;
                 return Err(LedgerError::Conflict);
             }
             let charge = charge.ok_or(LedgerError::State)?;

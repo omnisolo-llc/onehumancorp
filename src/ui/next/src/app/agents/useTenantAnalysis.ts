@@ -74,7 +74,8 @@ export function useTenantAnalysis(retireView: () => void) {
           let stored: Record<string, unknown> | null = null;
           try { stored = record(JSON.parse(pending)); } catch { /* An unreadable marker stays held. */ }
           const acknowledged = stored?.status === 'acknowledged' ? receiptFrom(stored.receipt) : null;
-          if (acknowledged) {
+          const requestId = stored?.status === 'unknown' && typeof stored.request_id === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(stored.request_id) ? stored.request_id : null;
+          if (acknowledged || requestId) {
             // Browser storage supplies only a reference. Current authenticated
             // server data must confirm it before this view acknowledges it.
             try {
@@ -82,9 +83,13 @@ export function useTenantAnalysis(retireView: () => void) {
               const snapshot = record(await lookup.json());
               if (!current(expected, token, epoch)) return;
               const rows = snapshot?.workflows;
-              const matching = lookup.ok && Array.isArray(rows) ? rows.map(record).filter(row => row?.id === acknowledged.workflow_id) : [];
-              if (matching.length === 1 && typeof matching[0]?.status === 'string' && ['queued', 'running', 'completed', 'failed', 'cancelled', 'outcome_unknown'].includes(matching[0].status)) {
-                setReceipt(acknowledged); setNotice(`Previously accepted text analysis: ${acknowledged.workflow_id}. Current status: ${matching[0].status}.`);
+              const matching = lookup.ok && Array.isArray(rows) ? rows.map(record).filter(row => row?.actor_id === expected.userId && (acknowledged ? row?.id === acknowledged.workflow_id : row?.request_id === requestId)) : [];
+              if (matching.length === 1 && readOwnedOnboardingItem(REQUEST) === pending && typeof matching[0]?.status === 'string' && ['queued', 'running', 'completed', 'failed', 'cancelled', 'outcome_unknown'].includes(matching[0].status)) {
+                const confirmed = acknowledged ?? receiptFrom({ id: matching[0].agent_id, agent_id: matching[0].agent_id, workflow_id: matching[0].id, status: 'queued' });
+                if (confirmed) {
+                  if (!acknowledged) writeOwnedOnboardingItem(REQUEST, JSON.stringify({ status: 'acknowledged', receipt: confirmed }));
+                  setReceipt(confirmed); setNotice(`Previously accepted text analysis: ${confirmed.workflow_id}. Current status: ${matching[0].status}.`);
+                }
               }
             } catch { /* Failed readback never clears an unresolved request. */ }
           }
@@ -126,9 +131,10 @@ export function useTenantAnalysis(retireView: () => void) {
       return await navigator.locks.request('omnisolo-agent-analysis:' + JSON.stringify([expected.userId, expected.tenantId]), { mode: 'exclusive', signal: controller.signal }, () => untilAborted((async () => {
         if (controller.signal.aborted || !current(expected, token, epoch)) return null;
         if (readOwnedOnboardingItem(REQUEST)) { blocked.current = true; setHeld(true); setNotice(UNKNOWN); return null; }
-        const response = await fetchForOwnedBusinessAction('/api/v1/agents/hire', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal }, expected, () => {
+        const requestId = crypto.randomUUID();
+        const response = await fetchForOwnedBusinessAction('/api/v1/agents/hire', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': requestId }, body: JSON.stringify(payload), signal: controller.signal }, expected, () => {
           if (controller.signal.aborted || !current(expected, token, epoch)) throw new Error('Task view changed before dispatch');
-          writeOwnedOnboardingItem(REQUEST, JSON.stringify({ status: 'unknown' }));
+          writeOwnedOnboardingItem(REQUEST, JSON.stringify({ status: 'unknown', request_id: requestId }));
           dispatched = true; blocked.current = true;
         });
         const data: unknown = await response.json();
@@ -139,7 +145,9 @@ export function useTenantAnalysis(retireView: () => void) {
           setReceipt(accepted); setHeld(true); setNotice(`Text analysis queued: ${accepted.workflow_id}. This receipt does not mean it has completed.`);
           return accepted;
         }
-        if (response.status === 400 && rejected?.status === 'error' && rejected.id === '' && rejected.agent_id === '' && rejected.workflow_id === '') {
+        if (response.status === 409 && rejected?.status === 'budget_rejected' && rejected.id === '' && rejected.agent_id === '' && rejected.workflow_id === '') {
+          writeOwnedOnboardingItem(REQUEST, ''); blocked.current = false; setHeld(false); setNotice('Your usage budget cannot cover this request. No provider request was sent. Update the spending limit before trying again.');
+        } else if (response.status === 400 && rejected?.status === 'error' && rejected.id === '' && rejected.agent_id === '' && rejected.workflow_id === '') {
           writeOwnedOnboardingItem(REQUEST, ''); blocked.current = false; setHeld(false); setNotice('The task was rejected before acceptance. Check its text and supported options.');
         } else { setHeld(true); setNotice(UNKNOWN); }
         return null;

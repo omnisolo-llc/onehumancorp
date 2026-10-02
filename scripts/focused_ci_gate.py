@@ -11,7 +11,7 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
-    'builder-generation-contract': (47, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
+    'builder-generation-contract': (50, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
     'widget-chat-contract': (32, 'OHC_WIDGET_TEST_DATABASE_URL'),
     'order-milestones': (13, 'OHC_MILESTONE_TEST_DATABASE_URL'),
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),
@@ -24,8 +24,8 @@ GATES = {
     'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
     'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
-    'agent-workflow-contract': (57, None),
-    'agent-receipt-postgres-contract': (40, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
+    'agent-workflow-contract': (94, None),
+    'agent-receipt-postgres-contract': (49, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
     'stripe-webhook-security': (22, None),
     'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
     'site-publication': (81, 'OHC_PUBLICATION_TEST_DATABASE_URL'),

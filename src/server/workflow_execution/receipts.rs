@@ -1,5 +1,5 @@
 //! Durable receipt contract for admitted text-only work on the configured ORM.
-//! This module is not mounted while its storage contract is being implemented.
+//! Claims are committed before dispatch; expired or cancelled effects never retry.
 use super::{AdmittedAnalysis, Authority};
 use crate::persistence::AppDatabase;
 use sea_orm::{
@@ -15,6 +15,7 @@ pub(crate) struct RequestMetadata {
     pub name: String,
     pub workflow: String,
     pub requested_model: String,
+    pub agent_role: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -39,6 +40,10 @@ pub(crate) struct Receipt {
     pub provider: String,
     pub model: String,
     pub max_output_tokens: i32,
+    pub agent_role: Option<String>,
+    pub funding: Option<super::funding::FundingPolicy>,
+    pub input_token_bound: Option<i64>,
+    pub prepared_request_digest: Option<String>,
     pub phase: StoredPhase,
     pub created_at: i64,
     pub updated_at: i64,
@@ -49,12 +54,66 @@ pub(crate) struct Receipt {
 #[derive(Debug)]
 pub(crate) enum Error {
     Invalid,
+    RequestIdentity,
+    Budget,
     Forbidden,
     Conflict,
     NotFound,
     Unavailable,
     Corrupt,
     Database(sea_orm::DbErr),
+}
+impl Error {
+    pub(crate) fn status(&self) -> axum::http::StatusCode {
+        use axum::http::StatusCode;
+        match self {
+            Self::Invalid | Self::RequestIdentity => StatusCode::BAD_REQUEST,
+            Self::Budget => StatusCode::CONFLICT,
+            Self::Forbidden => StatusCode::FORBIDDEN,
+            Self::Conflict => StatusCode::CONFLICT,
+            Self::NotFound => StatusCode::NOT_FOUND,
+            _ => StatusCode::SERVICE_UNAVAILABLE,
+        }
+    }
+    pub(crate) fn message(&self) -> &'static str {
+        match self {
+            Self::Invalid => "Invalid workflow request identity or payload",
+            Self::RequestIdentity => {
+                "A single canonical non-nil Idempotency-Key UUID is required before a task can be submitted"
+            }
+            Self::Budget => {
+                "The authorized usage budget cannot cover this request; no provider call was sent"
+            }
+            Self::Forbidden => "Current owner or administrator authority is required",
+            Self::Conflict => {
+                "The request conflicts with an existing workflow; no new work was started"
+            }
+            Self::NotFound => "Workflow not found",
+            _ => "Durable workflow storage is unavailable; acceptance is unconfirmed",
+        }
+    }
+}
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.message())
+    }
+}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Database(cause) => Some(cause),
+            _ => None,
+        }
+    }
+}
+impl From<super::AdmissionError> for Error {
+    fn from(error: super::AdmissionError) -> Self {
+        match error {
+            super::AdmissionError::Invalid => Self::Invalid,
+            super::AdmissionError::Forbidden => Self::Forbidden,
+            super::AdmissionError::Unavailable => Self::Unavailable,
+        }
+    }
 }
 impl From<sea_orm::DbErr> for Error {
     fn from(value: sea_orm::DbErr) -> Self {
@@ -75,6 +134,12 @@ pub(crate) struct Reservation {
 impl Reservation {
     pub(crate) fn receipt(&self) -> &Receipt {
         &self.receipt
+    }
+    pub(crate) fn bind_usage(&mut self, usage: super::funding::UsageTicket) {
+        if let Some(input) = &mut self.admitted {
+            input.execution_id = self.receipt.id.clone();
+            input.usage = Some(usage);
+        }
     }
     pub(crate) fn replayed(&self) -> bool {
         self.admitted.is_none()
@@ -99,6 +164,11 @@ pub(crate) struct CompletionProof {
     pub(super) fingerprint: String,
 }
 impl DispatchLease {
+    pub(crate) fn into_admitted(self) -> AdmittedAnalysis {
+        let mut admitted = self.admitted;
+        admitted.execution_id = self.receipt.id;
+        admitted
+    }
     pub(crate) fn completion_proof(&self) -> CompletionProof {
         CompletionProof {
             receipt: self.receipt.clone(),
@@ -121,6 +191,14 @@ struct Payload {
     provider: String,
     model: String,
     max_output_tokens: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    agent_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    funding: Option<super::funding::FundingPolicy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    input_token_bound: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    prepared_request_digest: Option<String>,
 }
 impl Payload {
     fn validate(&self) -> Result<(), Error> {
@@ -128,6 +206,9 @@ impl Payload {
             || self.name.trim().is_empty()
             || self.name.chars().count() > 200
             || self.name.contains('\0')
+            || self.agent_role.as_ref().is_some_and(|role| {
+                role.trim().is_empty() || role.chars().count() > 120 || role.contains('\0')
+            })
             || self.task.trim().is_empty()
             || self.task.chars().count() > super::MAX_TASK_CHARACTERS
             || !matches!(self.workflow.as_str(), "" | "expert_task" | "analysis")
@@ -143,12 +224,37 @@ impl Payload {
         {
             return Err(Error::Invalid);
         }
+        if self.funding.is_some() != self.input_token_bound.is_some()
+            || self.funding.is_some() != self.prepared_request_digest.is_some()
+            || self.prepared_request_digest.as_ref().is_some_and(|digest| {
+                digest.len() != 64
+                    || !digest
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            })
+            || self
+                .input_token_bound
+                .is_some_and(|bound| !(4096..=1_000_000).contains(&bound))
+        {
+            return Err(Error::Invalid);
+        }
+        if let Some(funding) = &self.funding {
+            funding.validate(
+                &super::AnalysisPolicy::new(
+                    self.provider.clone(),
+                    self.model.clone(),
+                    self.max_output_tokens,
+                )
+                .map_err(|_| Error::Invalid)?,
+            )?;
+        }
         Ok(())
     }
     fn matches_request(&self, input: &AdmittedAnalysis, request: &RequestMetadata) -> bool {
         self.name == request.name
             && self.workflow == request.workflow
             && self.requested_model == request.requested_model
+            && self.agent_role == request.agent_role
             && self.task == input.task
     }
 }
@@ -217,6 +323,13 @@ fn decode(row: QueryResult) -> Result<Stored, Error> {
     }
     let tenant_id = field::<String>(&row, "tenant_id")?;
     let actor_id = field::<String>(&row, "actor_id")?;
+    if payload
+        .funding
+        .as_ref()
+        .is_some_and(|funding| funding.operator_tenant != tenant_id)
+    {
+        return Err(Error::Corrupt);
+    }
     let token_id = field::<String>(&row, "token_id")?;
     let token_expires_at = field::<i64>(&row, "token_expires_at")?;
     let session_id = field::<Option<String>>(&row, "session_id")?;
@@ -248,6 +361,9 @@ fn decode(row: QueryResult) -> Result<Stored, Error> {
     {
         return Err(Error::Corrupt);
     }
+    if chrono::DateTime::from_timestamp(field::<i64>(&row, "created_at")?, 0).is_none() {
+        return Err(Error::Corrupt);
+    }
     let receipt = Receipt {
         id,
         tenant_id,
@@ -259,6 +375,10 @@ fn decode(row: QueryResult) -> Result<Stored, Error> {
         provider: payload.provider.clone(),
         model: payload.model.clone(),
         max_output_tokens: payload.max_output_tokens,
+        agent_role: payload.agent_role.clone(),
+        funding: payload.funding.clone(),
+        input_token_bound: payload.input_token_bound,
+        prepared_request_digest: payload.prepared_request_digest.clone(),
         phase,
         created_at: field(&row, "created_at")?,
         updated_at: field(&row, "updated_at")?,
@@ -273,6 +393,9 @@ fn decode(row: QueryResult) -> Result<Stored, Error> {
 }
 
 impl ReceiptStore {
+    pub(crate) fn database(&self) -> &AppDatabase {
+        &self.database
+    }
     pub(crate) fn new(database: AppDatabase) -> Self {
         Self { database }
     }
@@ -443,6 +566,61 @@ impl ReceiptStore {
         Ok((tx, now))
     }
 
+    pub(crate) async fn find_request(
+        &self,
+        authority: &Authority,
+        task: &str,
+        request: &RequestMetadata,
+    ) -> Result<Option<Reservation>, Error> {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let (tx, _) = self.transaction(authority, true).await?;
+            let prior = row(&tx, "SELECT * FROM tenant_workflow_receipts WHERE tenant_id=$1 AND actor_id=$2 AND request_id=$3", vec![(&authority.tenant_id).into(), (&authority.actor_id).into(), request.request_id.to_string().into()]).await?;
+            let prior = prior.map(decode).transpose()?;
+            if let Some(prior) = &prior
+                && (prior.payload.task != task || prior.payload.name != request.name || prior.payload.workflow != request.workflow || prior.payload.requested_model != request.requested_model || prior.payload.agent_role != request.agent_role) { return Err(Error::Conflict); }
+            Self::recheck_before_commit(&tx, authority).await?;
+            tx.commit().await?;
+            match prior {
+                Some(prior)=>Ok(Some(Reservation {receipt:self.get(authority,&prior.receipt.id).await?,admitted:None,authority:authority.clone()})),
+                None=>Ok(None),
+            }
+        }).await.map_err(|_| Error::Unavailable)?
+    }
+
+    pub(crate) async fn list(&self, authority: &Authority) -> Result<Vec<Receipt>, Error> {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let (tx, now) = self.transaction(authority, true).await?;
+            // Queued work has no effect. A process lost before claim cannot
+            // resume the old capability. Claimed work remains uncertain.
+            execute(&tx, "UPDATE tenant_workflow_receipts SET phase='cancelled',generation=1,updated_at=$1,error='cancelled' WHERE tenant_id=$2 AND phase='queued' AND created_at<=$3", vec![now.into(), (&authority.tenant_id).into(), (now-120).into()]).await?;
+            execute(&tx, "UPDATE tenant_workflow_receipts SET phase='outcome_unknown',generation=2,updated_at=$1,error='lease_expired' WHERE tenant_id=$2 AND phase='dispatching' AND lease_expires_at<=$1", vec![now.into(), (&authority.tenant_id).into()]).await?;
+            let rows = tx.query_all(statement(&tx,"SELECT * FROM tenant_workflow_receipts WHERE tenant_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100",vec![(&authority.tenant_id).into()])).await?;
+            let result=rows.into_iter().map(|r| decode(r).map(|r|r.receipt)).collect::<Result<Vec<_>,_>>()?;
+            Self::recheck_before_commit(&tx,authority).await?;
+            tx.commit().await?;
+            Ok(result)
+        }).await.map_err(|_|Error::Unavailable)?
+    }
+
+    pub(crate) async fn cancel(&self, authority: &Authority, id: &str) -> Result<Receipt, Error> {
+        if Uuid::parse_str(id).is_err() {
+            return Err(Error::Invalid);
+        }
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let (tx, now)=self.transaction(authority,true).await?;
+            let saved=decode(row(&tx,"SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2",vec![id.into(),(&authority.tenant_id).into()]).await?.ok_or(Error::NotFound)?)?;
+            match saved.receipt.phase {
+                StoredPhase::Queued=>{ execute(&tx,"UPDATE tenant_workflow_receipts SET phase='cancelled',generation=1,updated_at=$1,error='cancelled' WHERE id=$2 AND tenant_id=$3 AND phase='queued'",vec![now.into(),id.into(),(&authority.tenant_id).into()]).await?; }
+                StoredPhase::Dispatching=>{ execute(&tx,"UPDATE tenant_workflow_receipts SET phase='outcome_unknown',generation=2,updated_at=$1,error='execution_uncertain' WHERE id=$2 AND tenant_id=$3 AND phase='dispatching'",vec![now.into(),id.into(),(&authority.tenant_id).into()]).await?; }
+                _=>{}
+            }
+            let saved=decode(row(&tx,"SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2",vec![id.into(),(&authority.tenant_id).into()]).await?.ok_or(Error::NotFound)?)?;
+            Self::recheck_before_commit(&tx,authority).await?;
+            tx.commit().await?;
+            Ok(saved.receipt)
+        }).await.map_err(|_|Error::Unavailable)?
+    }
+
     pub(crate) async fn reserve(
         &self,
         input: AdmittedAnalysis,
@@ -473,6 +651,13 @@ impl ReceiptStore {
             provider: input.policy.provider.clone(),
             model: input.policy.model.clone(),
             max_output_tokens: input.policy.max_output_tokens,
+            agent_role: request.agent_role.clone(),
+            funding: input.funding.clone(),
+            input_token_bound: input.input_token_bound,
+            prepared_request_digest: input
+                .prepared
+                .as_ref()
+                .map(|request| request.digest().to_owned()),
         };
         payload.validate()?;
         let authority = input.authority.clone();
@@ -534,7 +719,9 @@ impl ReceiptStore {
                 }
                 (StoredPhase::Completed, Some(output.clone()), None)
             }
-            super::AnalysisOutcome::Cancelled => (StoredPhase::Cancelled, None, Some("cancelled")),
+            super::AnalysisOutcome::Cancelled | super::AnalysisOutcome::BudgetUnavailable => {
+                (StoredPhase::Cancelled, None, Some("cancelled"))
+            }
             super::AnalysisOutcome::OutcomeUnknown => (
                 StoredPhase::OutcomeUnknown,
                 None,
@@ -675,7 +862,19 @@ impl ReceiptStore {
         let expires: Option<i64> = field(&saved, "lease_expires_at")?;
         let mut actual = decode(saved)?;
         Self::require_authority(&tx, authority, now).await?;
-        if actual.receipt.phase == StoredPhase::Dispatching && expires.ok_or(Error::Corrupt)? <= now
+        if actual.receipt.phase == StoredPhase::Queued && actual.receipt.created_at <= now - 120 {
+            execute(&tx,"UPDATE tenant_workflow_receipts SET phase='cancelled',generation=1,updated_at=$1,error='cancelled' WHERE id=$2 AND tenant_id=$3 AND phase='queued'",vec![now.into(),id.into(),(&authority.tenant_id).into()]).await?;
+            actual = decode(
+                row(
+                    &tx,
+                    "SELECT * FROM tenant_workflow_receipts WHERE id=$1 AND tenant_id=$2",
+                    vec![id.into(), (&authority.tenant_id).into()],
+                )
+                .await?
+                .ok_or(Error::Corrupt)?,
+            )?;
+        } else if actual.receipt.phase == StoredPhase::Dispatching
+            && expires.ok_or(Error::Corrupt)? <= now
         {
             if generation != 1 || nonce.is_none() {
                 return Err(Error::Corrupt);

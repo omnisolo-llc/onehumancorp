@@ -2364,6 +2364,7 @@ dependencies = [
  "server_auth",
  "server_common",
  "server_config",
+ "server_harness",
  "server_omnisolo",
  "server_pricing",
  "server_utils",

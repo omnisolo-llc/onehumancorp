@@ -26,7 +26,11 @@ impl TextInference for NeverInfer {
     fn infer<'a>(
         &'a self,
         _: &'a AdmittedAnalysis,
-    ) -> Pin<Box<dyn Future<Output = Result<String, ()>> + Send + 'a>> {
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<crate::workflow_execution::InferenceResult, ()>> + Send + 'a,
+        >,
+    > {
         Box::pin(async { panic!("Storage contracts must not call a provider") })
     }
 }
@@ -114,6 +118,7 @@ fn request() -> RequestMetadata {
         name: "Owned durable text task".into(),
         workflow: "analysis".into(),
         requested_model: "Auto".into(),
+        agent_role: None,
     }
 }
 
@@ -762,6 +767,7 @@ async fn reopening_an_expired_dispatch_records_unknown_without_reexecution_or_la
         name: expired.receipt.name.clone(),
         workflow: expired.receipt.workflow.clone(),
         requested_model: "Auto".into(),
+        agent_role: None,
     };
     let replay = reopened
         .reserve(fixture.admitted().await, metadata)
@@ -769,4 +775,68 @@ async fn reopening_an_expired_dispatch_records_unknown_without_reexecution_or_la
         .unwrap();
     assert_eq!(replay.receipt(), &recovered);
     assert!(reopened.claim(replay).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn an_unclaimed_restart_receipt_expires_on_both_direct_read_and_request_replay() {
+    use sha2::{Digest, Sha256};
+    let fixture = ReceiptFixture::open(&format!(
+        "sqlite:file:queued_restart_{}?mode=memory&cache=shared",
+        Uuid::new_v4()
+    ))
+    .await;
+    let store = fixture.store();
+    let authority = fixture.authority().await;
+    let original = store
+        .reserve(fixture.admitted().await, request())
+        .await
+        .unwrap();
+    let connection = fixture.database.connection();
+    let backend = sea_orm::DatabaseBackend::Sqlite;
+    let row=connection.query_one(sea_orm::Statement::from_sql_and_values(backend,"SELECT payload,CAST(strftime('%s','now') AS INTEGER) AS now FROM tenant_workflow_receipts WHERE id=$1",[original.receipt().id.clone().into()])).await.unwrap().unwrap();
+    let payload: String = row.try_get("", "payload").unwrap();
+    let now: i64 = row.try_get("", "now").unwrap();
+    for by_request in [false, true] {
+        let id = Uuid::new_v4().to_string();
+        let request_id = Uuid::new_v4();
+        let prefix = serde_json::to_string(&(
+            "ohc-tenant-text-admission-v1",
+            &authority.tenant_id,
+            &authority.actor_id,
+            request_id.to_string(),
+            &authority.token_id,
+            authority.expires_at,
+            authority.session_id.as_deref(),
+        ))
+        .unwrap();
+        let encoded = format!("{},{}]", prefix.strip_suffix(']').unwrap(), payload);
+        let fingerprint = format!("{:x}", Sha256::digest(encoded.as_bytes()));
+        // A backdated, never-claimed restart fixture follows the actual INSERT
+        // contract. No trigger or database clock is replaced.
+        connection.execute(sea_orm::Statement::from_sql_and_values(backend,"INSERT INTO tenant_workflow_receipts(id,tenant_id,actor_id,request_id,fingerprint,payload,token_id,token_expires_at,session_id,phase,generation,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'queued',0,$10,$10)",vec![id.clone().into(),authority.tenant_id.clone().into(),authority.actor_id.clone().into(),request_id.to_string().into(),fingerprint.into(),payload.clone().into(),authority.token_id.clone().into(),authority.expires_at.into(),authority.session_id.clone().into(),(now-300).into()])).await.unwrap();
+        let actual = if by_request {
+            let metadata = RequestMetadata {
+                request_id,
+                name: original.receipt().name.clone(),
+                workflow: original.receipt().workflow.clone(),
+                requested_model: "Auto".into(),
+                agent_role: None,
+            };
+            store
+                .find_request(&authority, &original.receipt().task, &metadata)
+                .await
+                .unwrap()
+                .unwrap()
+                .receipt()
+                .clone()
+        } else {
+            store.get(&authority, &id).await.unwrap()
+        };
+        assert_eq!(
+            actual.phase,
+            StoredPhase::Cancelled,
+            "unclaimed expired request is terminal on read/replay: {by_request}"
+        );
+        assert!(actual.output.is_none());
+    }
 }

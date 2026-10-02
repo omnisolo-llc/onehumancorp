@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 [workspace]
 [dependencies]
+server_harness = { path = "../../src/server/harness" }
 async-trait = "0.1"
 sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
 sha2 = "0.10"

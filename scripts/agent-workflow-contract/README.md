@@ -5,15 +5,16 @@ HTTP handler bodies, request/response types and workflow envelope logic. The
 production bearer middleware and auth Store create and authenticate two real
 local tenant users. It does not compile the full server or certify deployment.
 
-The actual admission, dispatch and lifecycle code runs with terminal text inference recorded instead of contacting a provider. Current signed membership and token revocation are checked through the production auth Store. The small Hub
+The actual admission, durable worker and accounting code runs on real SQLite.
+The funded cases execute the actual configured adapter against an owned loopback
+HTTP provider; remaining boundary tests record terminal text inference. Current signed membership and token revocation are checked through the production auth Store. The small Hub
 fixture compiles the actual lookup and tenant-bound status update methods while preserving registration/list behavior required by these HTTP contracts;
-it is not evidence of Redis, telemetry, or full Hub integration. No paid agent,
-provider, workflow command, marketplace request, or live customer effect runs.
+it is not evidence of Redis, telemetry, or full Hub integration. No paid vendor, marketplace request, or live customer effect runs.
 
 The tests must preserve genuine two-tenant HTTP effects and fail on leaked reads,
 dropped task input, or an unacknowledged registration. Input manifests bind the
 exact production source, local dependencies, and tests. Do not count this as
-full make lint/test or provider verification.
+full make lint/test or live vendor verification.
 
 Run from the repository root with the pinned Rust toolchain and cached locked
 dependencies:
@@ -23,7 +24,7 @@ python3 scripts/focused_ci_gate.py agent-workflow-contract
 ```
 
 The required PostgreSQL security CI job also runs this offline gate. The wrapper
-requires at least 57 executed tests, rejects failures/skips/filters, and retains
+requires at least 94 executed tests, rejects failures/skips/filters, and retains
 the log plus source manifest. `make test` checks the mandatory CI registration
 through the native-contract discovery guard; it does not claim that discovery is
 runtime acceptance.

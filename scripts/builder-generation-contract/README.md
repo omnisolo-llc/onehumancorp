@@ -13,4 +13,4 @@ against the repository Cargo.lock and fingerprints all covered sources.
 These are focused local contract tests, not live-provider or full-server
 certification. Full Cargo/Next/desktop and hosted CI gates remain required.
 
-The combined gate preserves the original 32 generation/admission cases and 15 imported durable receipt lifecycle cases. Its mandatory CI floor is 47. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
+The combined gate preserves the original 32 generation/admission cases, 15 imported durable receipt lifecycle cases and three funded admission cases. Its mandatory CI floor is 50. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
