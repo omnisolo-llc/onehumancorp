@@ -704,24 +704,15 @@
       <div class="omnisolo-growth-card app-card" id="ai-savings-widget">
         <div style="display: flex; flex-direction: column; gap: 16px;">
           <div>
-            <h2 id="ai-savings-title" style="margin-bottom: 8px;">You saved 0 hours this week</h2>
-            <p id="ai-savings-desc" style="margin-top: 0; margin-bottom: 0;">Loading your time savings data...</p>
+            <h2 id="ai-savings-title" style="margin-bottom: 8px;">Recorded time savings</h2>
+            <p role="status" id="ai-savings-desc" style="margin-top: 0; margin-bottom: 0;">Loading your time savings data...</p>
           </div>
           <div style="text-align: left;">
-            <button id="share-savings-btn" style="background-color: #1DA1F2; border: none; padding: 10px 16px;">Share to get 7 Days Pro</button>
-            <p id="savings-status" style="font-size: 12px; margin-top: 8px; color: #86868b; display: none;">Verifying Share...</p>
+            <a href="/trial-extension" class="btn-outline" style="display: inline-block; text-decoration: none;">Check current plan and trial availability</a>
           </div>
         </div>
       </div>
 
-      <div class="omnisolo-growth-card app-card" id="ai-savings-success-widget" style="display: none; background: rgba(0, 255, 0, 0.05); border-color: rgba(0, 255, 0, 0.2);">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <h2 style="margin-bottom: 8px;">Trial Extended!</h2>
-            <p style="margin-top: 0; margin-bottom: 0;">Your Pro trial has been successfully extended by 7 days. Enjoy the extra time!</p>
-          </div>
-        </div>
-      </div>
       <div id="dynamic-milestones-container"></div>
 
       <div class="omnisolo-growth-card app-card" id="cart-recovery-widget" style="display: none; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(0, 102, 255, 0.3); margin-bottom: 20px;">
@@ -1355,14 +1346,9 @@
           }
         } catch(e) { console.error('Failed to fetch milestones', e); }
 
-        const shareSavingsBtn = document.getElementById('share-savings-btn');
-        const savingsStatus = document.getElementById('savings-status');
-        const aiSavingsWidget = document.getElementById('ai-savings-widget');
-        const aiSavingsSuccessWidget = document.getElementById('ai-savings-success-widget');
         const aiSavingsTitle = document.getElementById('ai-savings-title');
         const aiSavingsDesc = document.getElementById('ai-savings-desc');
 
-        let currentHoursSaved = 0;
 
         // AI Feature Paywall Logic
         const aiReferBtn = document.getElementById("ai-paywall-refer-btn");
@@ -1567,58 +1553,30 @@
         }
 
 
-        // Fetch dynamic time savings data
+        // A failed optional metric must never hide the dashboard container.
+        const showSavingsUnavailable = () => {
+          aiSavingsTitle.textContent = 'Recorded time savings';
+          aiSavingsDesc.textContent = 'Recorded time-savings data is unavailable.';
+        };
         try {
           const token = localStorage.getItem('omnisolo_token') || localStorage.getItem('access_token');
-          const savingsResponse = await fetch('/api/v1/growth/time-savings', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
-          if (savingsResponse.ok) {
-            const data = await savingsResponse.json();
-            currentHoursSaved = data.hours_saved;
-            aiSavingsTitle.innerText = `You saved ${data.hours_saved} hours this week`;
-            aiSavingsDesc.innerText = `Your AI agents handled ${data.inquiries_handled} customer inquiries, scheduled ${data.appointments_scheduled} appointments, and recovered ${data.carts_recovered} abandoned carts.`;
-          } else {
-            document.getElementById("ai-savings-widget").parentElement.style.display = "none";
-
-          }
-        } catch (error) {
-          console.error("Error fetching time savings data:", error);
-          document.getElementById("ai-savings-widget").parentElement.style.display = "none";
-
-        }
-
-        if (shareSavingsBtn) {
-          shareSavingsBtn.addEventListener('click', async () => {
-            const message = `My AI agents on OmniSolo OneHumanCorp just saved me ${currentHoursSaved} hours this week! 🚀 #OmniSolo #SmallBiz #AI`;
-            const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-            window.open(shareUrl, '_blank');
-
-            shareSavingsBtn.style.display = 'none';
-            savingsStatus.style.display = 'block';
-
-            try {
-              let url = '/api/v1/growth/trial-extension/claim';
-              if (window.__TAURI__ && window.__TAURI__.core) {
-                  url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
-              }
-              const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'authorization': 'Bearer ' + localStorage.getItem('omnisolo_token')
-                }
-              });
-
-              if (response.ok) {
-                aiSavingsWidget.style.display = 'none';
-                aiSavingsSuccessWidget.style.display = 'block';
-              } else {
-                savingsStatus.innerText = 'Failed to claim extension';
-              }
-            } catch (error) {
-              savingsStatus.innerText = 'Error claiming extension';
-              console.error('Error:', error);
-            }
+          const savingsResponse = await fetch('/api/v1/growth/time-savings', {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' },
+            credentials: 'same-origin', cache: 'no-store'
           });
+          if (savingsResponse.status !== 200) throw new Error('Savings unavailable');
+          const data = await savingsResponse.json();
+          if (!data || typeof data !== 'object' || Array.isArray(data) || data.error != null
+              || ('success' in data && data.success !== true)
+              || typeof data.hours_saved !== 'number' || !Number.isFinite(data.hours_saved) || data.hours_saved < 0
+              || ['inquiries_handled', 'appointments_scheduled', 'carts_recovered'].some(key =>
+                data[key] !== undefined && (!Number.isSafeInteger(data[key]) || data[key] < 0))) {
+            throw new Error('Savings unavailable');
+          }
+          aiSavingsTitle.textContent = `Recorded estimate: ${data.hours_saved} hours saved.`;
+          aiSavingsDesc.textContent = `Reported counters: ${data.inquiries_handled ?? 'not reported'} customer inquiries; ${data.appointments_scheduled ?? 'not reported'} appointments; ${data.carts_recovered ?? 'not reported'} recovered carts.`;
+        } catch {
+          showSavingsUnavailable();
         }
       });
       const name = localStorage.getItem('businessName');
