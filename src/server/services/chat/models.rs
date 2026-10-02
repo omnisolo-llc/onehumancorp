@@ -35,11 +35,22 @@ pub struct ChatContact {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatContactInbox {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub contact_id: Uuid,
+    pub inbox_id: Uuid,
+    pub source_id: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct ChatConversation {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub inbox_id: Uuid,
-    pub contact_id: Uuid,
+    pub contact_inbox_id: Uuid,
     pub assignee_id: Option<Uuid>,
     pub status: String,
     pub created_at: DateTime<Utc>,
@@ -54,6 +65,9 @@ pub struct ChatMessage {
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub content: String,
+    pub content_type: String,
+    pub message_type: String,
+    pub private: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

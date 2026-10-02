@@ -1,4 +1,6 @@
-use super::models::{ChatChannel, ChatContact, ChatConversation, ChatInbox, ChatMessage};
+use super::models::{
+    ChatChannel, ChatContact, ChatContactInbox, ChatConversation, ChatInbox, ChatMessage,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -11,15 +13,50 @@ impl ChatService {
         Self { pool }
     }
 
+    pub async fn create_contact_inbox(
+        &self,
+        tenant_id: Uuid,
+        contact_id: Uuid,
+        inbox_id: Uuid,
+        source_id: Option<String>,
+    ) -> Result<ChatContactInbox, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
+        let res = sqlx::query_as(
+            r#"
+            INSERT INTO chat_contact_inboxes (id, tenant_id, contact_id, inbox_id, source_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, tenant_id, contact_id, inbox_id, source_id, created_at, updated_at
+            "#,
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(contact_id)
+        .bind(inbox_id)
+        .bind(source_id)
+        .fetch_one(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(res)
+    }
+
     pub async fn create_inbox(
         &self,
         tenant_id: Uuid,
         name: String,
     ) -> Result<ChatInbox, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query(&format!("SET LOCAL app.current_tenant_id = '{}'", tenant_id))
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
         let res = sqlx::query_as(
             r#"
             INSERT INTO chat_inboxes (id, tenant_id, name)
@@ -44,9 +81,12 @@ impl ChatService {
         config: serde_json::Value,
     ) -> Result<ChatChannel, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query(&format!("SET LOCAL app.current_tenant_id = '{}'", tenant_id))
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
         let res = sqlx::query_as(
             r#"
             INSERT INTO chat_channels (id, tenant_id, inbox_id, channel_type, config)
@@ -73,9 +113,12 @@ impl ChatService {
         phone: Option<String>,
     ) -> Result<ChatContact, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query(&format!("SET LOCAL app.current_tenant_id = '{}'", tenant_id))
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
         let res = sqlx::query_as(
             r#"
             INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
@@ -98,24 +141,27 @@ impl ChatService {
         &self,
         tenant_id: Uuid,
         inbox_id: Uuid,
-        contact_id: Uuid,
+        contact_inbox_id: Uuid,
         assignee_id: Option<Uuid>,
     ) -> Result<ChatConversation, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query(&format!("SET LOCAL app.current_tenant_id = '{}'", tenant_id))
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
         let res = sqlx::query_as(
             r#"
-            INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
+            INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_inbox_id, assignee_id, status)
             VALUES ($1, $2, $3, $4, $5, 'open')
-            RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+            RETURNING id, tenant_id, inbox_id, contact_inbox_id, assignee_id, status, created_at, updated_at
             "#
         )
         .bind(Uuid::new_v4())
         .bind(tenant_id)
         .bind(inbox_id)
-        .bind(contact_id)
+        .bind(contact_inbox_id)
         .bind(assignee_id)
         .fetch_one(&mut *tx)
         .await?;
@@ -123,6 +169,7 @@ impl ChatService {
         Ok(res)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn send_message(
         &self,
         tenant_id: Uuid,
@@ -130,16 +177,22 @@ impl ChatService {
         sender_type: String,
         sender_id: Option<Uuid>,
         content: String,
+        content_type: String,
+        message_type: String,
+        private: bool,
     ) -> Result<ChatMessage, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query(&format!("SET LOCAL app.current_tenant_id = '{}'", tenant_id))
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
         let res = sqlx::query_as(
             r#"
-            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, content_type, message_type, private)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, content_type, message_type, private, created_at, updated_at
             "#
         )
         .bind(Uuid::new_v4())
@@ -148,6 +201,9 @@ impl ChatService {
         .bind(sender_type)
         .bind(sender_id)
         .bind(content)
+        .bind(content_type)
+        .bind(message_type)
+        .bind(private)
         .fetch_one(&mut *tx)
         .await?;
         tx.commit().await?;
@@ -176,24 +232,60 @@ mod tests {
         let tenant_id = Uuid::new_v4();
 
         // 1. Create inbox
-        let inbox = service.create_inbox(tenant_id, "Support".to_string()).await.unwrap();
+        let inbox = service
+            .create_inbox(tenant_id, "Support".to_string())
+            .await
+            .unwrap();
         assert_eq!(inbox.name, "Support");
 
         // 2. Create channel
         let config = serde_json::json!({"webhook_url": "https://example.com"});
-        let channel = service.create_channel(tenant_id, inbox.id, "widget".to_string(), config).await.unwrap();
+        let channel = service
+            .create_channel(tenant_id, inbox.id, "widget".to_string(), config)
+            .await
+            .unwrap();
         assert_eq!(channel.channel_type, "widget");
 
         // 3. Create contact
-        let contact = service.create_contact(tenant_id, Some("Alice".to_string()), Some("alice@example.com".to_string()), None).await.unwrap();
+        let contact = service
+            .create_contact(
+                tenant_id,
+                Some("Alice".to_string()),
+                Some("alice@example.com".to_string()),
+                None,
+            )
+            .await
+            .unwrap();
         assert_eq!(contact.name.as_deref(), Some("Alice"));
 
-        // 4. Start conversation
-        let conversation = service.start_conversation(tenant_id, inbox.id, contact.id, None).await.unwrap();
+        // 4. Create contact inbox
+        let contact_inbox = service
+            .create_contact_inbox(tenant_id, contact.id, inbox.id, None)
+            .await
+            .unwrap();
+        assert_eq!(contact_inbox.contact_id, contact.id);
+
+        // 5. Start conversation
+        let conversation = service
+            .start_conversation(tenant_id, inbox.id, contact_inbox.id, None)
+            .await
+            .unwrap();
         assert_eq!(conversation.status, "open");
 
-        // 5. Send message
-        let msg = service.send_message(tenant_id, conversation.id, "contact".to_string(), Some(contact.id), "Hello!".to_string()).await.unwrap();
+        // 6. Send message
+        let msg = service
+            .send_message(
+                tenant_id,
+                conversation.id,
+                "contact".to_string(),
+                Some(contact.id),
+                "Hello!".to_string(),
+                "text".to_string(),
+                "incoming".to_string(),
+                false,
+            )
+            .await
+            .unwrap();
         assert_eq!(msg.content, "Hello!");
     }
 
@@ -218,7 +310,7 @@ mod tests {
             r#"
             INSERT INTO chat_inboxes (id, tenant_id, name)
             VALUES ($1, $2, 'Tenant 1 Inbox')
-            "#
+            "#,
         )
         .bind(inbox_id)
         .bind(tenant1)
