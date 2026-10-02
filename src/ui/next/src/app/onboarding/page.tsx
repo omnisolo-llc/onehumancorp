@@ -47,6 +47,7 @@ export default function OnboardingWizard() {
   const [heldDraft, setHeldDraft] = useState(false);
   const [draftPending, setDraftPending] = useState(false);
   const [draftWriteProblem, setDraftWriteProblem] = useState<string | null>(null);
+  const [manualInput, setManualInput] = useState<string | null>(null);
   useEffect(() => subscribeOnboardingPersistence(() => { setDraftPending(onboardingDraftPending()); setDraftWriteProblem(onboardingDraftWriteProblem(onboardingOwner())); }), []);
   const initialStateLoaded = useRef(false);
   const [chatMessages, setChatMessages] = useState<
@@ -84,11 +85,13 @@ export default function OnboardingWizard() {
         const response = await (isDraftWrite ? sendOnboardingDraft(url, options, viewOwner) : fetchForOnboardingOwner(url, options, viewOwner));
         if (!response.ok) {
           let errMsg = `HTTP error! status: ${response.status}`;
+          let code: string | undefined;
           try {
             const result = await response.clone().json();
             errMsg = result.error || result.message || errMsg;
+            code = typeof result.error === 'string' ? result.error : undefined;
           } catch  { /* Optional local state or response decoding failed; retain the existing fallback. */ }
-          throw new Error(errMsg);
+          throw Object.assign(new Error(errMsg), { status: response.status, code });
         }
         return response;
       } catch (err) {
@@ -315,7 +318,7 @@ export default function OnboardingWizard() {
     const unsubscribe = subscribeOnboardingInvalidation(restart => {
       loadVersion += 1; operationEpoch.current += 1; operationPending.current = false; draftSavePending.current = false;
       prepared.current = null; preparedDraft.current = null; needsRecovery.current = false;
-      setChatMessages([]); setChatInput(''); setChatImageUrl(''); setSaveMessage(''); setValidationError(''); setValidationErrors({}); setDraftPending(false); setDraftWriteProblem(null);
+      setChatMessages([]); setChatInput(''); setChatImageUrl(''); setManualInput(null); setSaveMessage(''); setValidationError(''); setValidationErrors({}); setDraftPending(false); setDraftWriteProblem(null);
       initialStateLoaded.current = false; setViewOwner(null); setIsLoaded(false);
       if (restart) void load(); else setIdentityError('Your session could not be verified. Sign in again to continue.');
     });
@@ -399,9 +402,23 @@ export default function OnboardingWizard() {
     skipped,
   ]);
 
+  const offerManualReview = (cause: unknown, input: string): boolean => {
+    if (!cause || typeof cause !== 'object' || !('status' in cause) || cause.status !== 503
+      || !('code' in cause) || cause.code !== 'onboarding_ai_unconfigured') return false;
+    setManualInput(input);
+    updateState({ error: 'AI-assisted setup is unavailable because no model provider is configured. Review and enter your business details manually.' });
+    return true;
+  };
+  const continueManually = () => {
+    if (manualInput === null || !viewOwner || operationPending.current || draftSavePending.current) return;
+    updateState({ step: 2, bio: manualInput, businessDescription: businessDescription || whatYouSell || manualInput, error: '', isLoading: false });
+    setManualInput(null);
+  };
+
   const handleIntake = async () => {
     if (operationPending.current || draftSavePending.current) return;
     operationPending.current = true;
+    setManualInput(null);
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
     updateState({ isLoading: true });
@@ -481,6 +498,7 @@ export default function OnboardingWizard() {
       }); // Go to review step
     } catch (err) {
       if (!active()) return;
+      if (offerManualReview(err, whatYouSell || bio)) return;
       console.error(err);
       updateState({
         error: errorMessage(err, '') || "Backend connection failed. Please try again.",
@@ -497,6 +515,7 @@ export default function OnboardingWizard() {
   const handleSendChatMessage = async () => {
     if ((!chatInput.trim() && !chatImageUrl.trim()) || operationPending.current || draftSavePending.current) return;
     operationPending.current = true;
+    setManualInput(null);
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
     const newHistory = [...chatMessages, { role: 'user', content: chatInput, image_url: chatImageUrl || undefined }];
@@ -516,7 +535,7 @@ export default function OnboardingWizard() {
         updateState({ step: 2, businessName: intake.business_name, businessType: intake.business_type || 'Online Store', businessDescription: newHistory.map(message => message.content).join(' '), categories: intake.categories || [], firstProductName: intake.initial_products[0].name || '', firstProductPrice: String(intake.initial_products[0].price ?? ''), location: intake.location || '', targetAudience: intake.target_audience || '' });
       }
     } catch (cause) {
-      if (active()) updateState({ error: errorMessage(cause, 'Failed to send chat message') });
+      if (active() && !offerManualReview(cause, newHistory.filter(message => message.role === 'user').map(message => message.content).join('\n'))) updateState({ error: errorMessage(cause, 'Failed to send chat message') });
     } finally {
       if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
@@ -526,6 +545,7 @@ export default function OnboardingWizard() {
     if (operationPending.current || draftSavePending.current) return;
     if (!bio.trim()) { updateState({ error: 'Please tell us about your business.' }); return; }
     operationPending.current = true;
+    setManualInput(null);
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
     updateState({ isLoading: true, error: '', step: 4 });
@@ -544,7 +564,10 @@ export default function OnboardingWizard() {
       if (!active()) return;
       adoptPreparation(result.preparation);
     } catch (cause) {
-      if (active()) { needsRecovery.current = true; updateState({ step: -1, error: errorMessage(cause, 'Setup could not be confirmed. Check its status before retrying.') }); }
+      if (active()) {
+        if (offerManualReview(cause, bio)) { needsRecovery.current = false; updateState({ step: -1 }); }
+        else { needsRecovery.current = true; updateState({ step: -1, error: errorMessage(cause, 'Setup could not be confirmed. Check its status before retrying.') }); }
+      }
     } finally {
       if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
@@ -753,7 +776,7 @@ export default function OnboardingWizard() {
           ></div>
         </div>
 
-        {error && (
+        {error && manualInput === null && (
           <div className="absolute top-4 left-4 right-4 z-[9999] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake glass-control">
             <svg
               className="w-5 h-5 flex-shrink-0"
@@ -771,6 +794,11 @@ export default function OnboardingWizard() {
             <p className="flex-1">{error}</p>
           </div>
         )}
+
+        {manualInput !== null && <section className="mx-6 mt-4 rounded-lg border p-4" aria-label="Manual setup available">
+          <p role="status">{error}</p>
+          <button type="button" className="app-button mt-3" disabled={isLoading} onClick={continueManually}>Review Details Manually</button>
+        </section>}
 
         <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar relative">
           {step === -2 && (
