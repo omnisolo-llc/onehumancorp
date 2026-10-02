@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "GitHub Issue #36657: Native Rust Omnichannel Chat System Implementation"
+issue_description: "The issue requests implementing an omnichannel chat system with webhook adapters for Meta API, Twilio, Instagram DMs, WhatsApp, and SMS, along with an AI agent drafting integration. However, according to the 'Active business-capability map' and 'Gated expansion' sections in RESEARCH.md, adding 'Additional channels' and 'connectors' requires explicit strategy approval, measurable value, and retained-customer need. Since there is no recorded explicit evidence-backed decision or expansion gate approval to build these new channels, this feature implementation is blocked due to unavailable authorization and evidence."
