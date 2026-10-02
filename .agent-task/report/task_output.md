@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "[Research] Architect OHC Native Omnichannel Chat & Web Widget (Chatwoot Replacement)"
+issue_description: "The issue requests building a native replacement for Chatwoot, an external service. However, RESEARCH.md explicitly directs to integrate existing tools instead of rebuilding them. Furthermore, requests to build native replacements for external services (like Chatwoot) require explicit authorization, evidence, and an expansion gate in RESEARCH.md, none of which currently exist for Chatwoot replacement. Therefore, this task is marked as no_work to avoid unauthorized feature expansion and rewriting."
