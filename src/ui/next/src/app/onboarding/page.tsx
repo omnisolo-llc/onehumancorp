@@ -1612,7 +1612,7 @@ export default function OnboardingWizard() {
               </h2>
               <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                  Here's what our AI figured out. Feel free to tweak these.
+                  Review your business details before preparing your workspace.
                 </p>
                 <button
                   type="button"
@@ -1632,10 +1632,11 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                  <label htmlFor="review-business-name" className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Business Name
                   </label>
                   <input
+                    id="review-business-name"
                     type="text"
                     autoFocus
                     autoCapitalize="words"
@@ -1656,10 +1657,11 @@ export default function OnboardingWizard() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                  <label htmlFor="review-business-type" className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Business Type
                   </label>
                   <input
+                    id="review-business-type"
                     type="text"
                     autoCapitalize="words"
                     value={businessType}
@@ -1772,7 +1774,7 @@ export default function OnboardingWizard() {
                     }
                     if (String(firstProductPrice || "").trim().length === 0) {
                       newErrors.firstProductPrice =
-                        "A price is needed to set up your Stripe catalog.";
+                        "A price is needed for your first product or service.";
                       hasError = true;
                     }
 

@@ -1,7 +1,8 @@
 import { test, expect } from '../../../../e2e/onboarding_fixtures';
+import { completeReactZeroClickReview } from '../../../../e2e/react_zero_click_review';
 
 test.describe('Onboarding flows', () => {
-  test('Zero-Click Onboarding flow interactive steps', async ({ page }) => {
+  test('Zero-Click Onboarding flow interactive steps', async ({ page, onboardingOwner }, testInfo) => {
     // 1. Start at the zero-click onboarding page
     await page.goto('/onboarding/zero-click');
     await expect(page).toHaveTitle(/OmniSolo/);
@@ -17,14 +18,10 @@ test.describe('Onboarding flows', () => {
     // 4. Submit the form
     const submitBtn = page.getByRole('button', { name: 'Send message', exact: true });
     await expect(submitBtn).toBeEnabled();
-    await submitBtn.click();
-
-    // Chat prepares a review. Saving and completion require separate owner actions.
-    await page.getByRole('button', { name: /Approve.*Prepare Workspace/ }).click();
-    await expect(page.getByText('Your workspace is prepared')).toBeVisible();
-    await expect(page.getByText('Setup complete')).toHaveCount(0);
-    await page.getByRole('button', { name: /Launch My Store/i }).click();
-    await expect(page.getByText('Setup complete')).toBeVisible({ timeout: 15000 });
+    const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/onboarding/chat' && response.request().method() === 'POST').then(async response => ({ status: response.status(), body: await response.json() }));
+    const [result] = await Promise.all([pending, submitBtn.click()]);
+    const mode = await completeReactZeroClickReview(page, onboardingOwner, result);
+    testInfo.annotations.push({ type: 'setup-mode', description: mode });
     await expect(page.getByRole('button', { name: /Go to dashboard/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Share on X/i })).toBeVisible();
   });

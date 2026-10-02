@@ -27,6 +27,9 @@ it('keeps owner inputs and requires an explicit manual review choice when AI int
   expect(useOnboardingStore.getState().step).toBe(1);
   expect(calls('start')).toHaveLength(0);
   await userEvent.click(manual);
+  expect(screen.queryByText(/what our AI figured out/)).toBeNull();
+  expect(screen.getByRole('textbox',{name:'Business Name'})).toBeVisible();
+  expect(screen.getByRole('textbox',{name:'Business Type'})).toBeVisible();
   expect(useOnboardingStore.getState()).toMatchObject({ step: 2, businessName: 'Owner workshop', businessDescription: 'I repair bicycles', firstProductName: '', firstProductPrice: '', aiAgents: [] });
   expect(screen.getByRole('textbox', { name: 'First Product' })).toHaveValue('');
   expect(screen.getByRole('textbox', { name: 'Price' })).toHaveValue('');
