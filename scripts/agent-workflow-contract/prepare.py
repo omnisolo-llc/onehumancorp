@@ -114,11 +114,17 @@ app_end=server.index('.fallback(api_not_found_handler);',raw_end)
 assert '.layer(' not in server[raw_end:app_end]
 assert '.route_layer(' not in server[raw_end:app_end]
 parts.append('fn mounted_rpc_boundary(http_auth_store: std::sync::Arc<server_auth::Store>) -> axum::Router {\n    let rate_limiter = std::sync::Arc::new(server_pricing::rate_limit::RedisRateLimiter::new(redis::Client::open("redis://127.0.0.1:1").unwrap()));\n    #[derive(Clone)]\n    struct MeshTransportFixture;\n    let mesh_transport = MeshTransportFixture;\n    axum::Router::new()\n'+api_chain+'\n'+raw_chain+'\n}')
+for name in ['capabilities','connection','entities','migration']:
+    parts.append(f'#[path={json.dumps(str(ROOT / "src/server/persistence" / (name+".rs")))}] pub mod {name};')
+parts.append('pub mod persistence { pub use crate::{capabilities,connection,entities,migration}; pub use connection::AppDatabase; }')
 parts += ['#[cfg(test)]#[path="test.rs"]mod tests;']
 (HERE/'generated.rs').write_text('\n\n'.join(parts)+'\n')
 inputs = [ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/api/agents/hire.rs',ROOT/'src/server/workflow_execution.rs',ROOT/'src/server/hub.rs']
-inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py','rpc_boundary.rs.in']]
+inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py','rpc_boundary.rs.in','test_receipt_schema.py']]
 inputs += [p for p in (ROOT/'src/proto').rglob('*.proto')]
+inputs += [p for p in (ROOT/'src/server/workflow_execution').rglob('*.rs')]
+inputs += [p for p in (ROOT/'src/server/persistence').rglob('*') if p.suffix in ['.rs','.sql']]
+inputs += [p for p in (ROOT/'src/server/migrations').glob('1020_*.sql')]
 for name in ['auth','common','config','oidc','omnisolo','telemetry','pricing','utils']:
     inputs += [p for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 inputs += [p for p in (ROOT/'src/agents/builtin').rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]

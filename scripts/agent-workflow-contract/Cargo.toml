@@ -5,6 +5,8 @@ edition = "2024"
 [workspace]
 [dependencies]
 async-trait = "0.1"
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
+sha2 = "0.10"
 futures-util = "0.3.32"
 server_config = { path = "../../src/server/config" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }

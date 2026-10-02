@@ -3,6 +3,12 @@
 use server_common::Claims;
 use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
 
+#[path = "workflow_execution/receipts.rs"]
+pub(crate) mod receipts;
+#[cfg(test)]
+#[path = "workflow_execution/receipts_contract_test.rs"]
+mod receipts_contract_test;
+
 const MAX_TASK_CHARACTERS: usize = 16_000;
 const MAX_OUTPUT_BYTES: usize = 64_000;
 
