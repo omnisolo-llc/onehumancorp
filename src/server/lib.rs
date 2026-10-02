@@ -9874,11 +9874,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/api/v1/dashboard",
             axum::routing::get(|| async {
-                axum::Json(serde_json::json!({
-                    "organization": { "id": "e2e-org", "name": "OmniSolo E2E" },
-                    "agents": [],
-                    "metrics": { "tasksCompleted": 0, "activeAgents": 0 }
-                }))
+                api::production_readiness::unavailable("organization_dashboard")
             }),
         )
         .route(
@@ -9891,37 +9887,37 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/api/v1/costs",
             axum::routing::get(|| async {
-                axum::Json(serde_json::json!({ "totalCostUSD": 0.0, "currency": "USD" }))
+                api::production_readiness::unavailable("cost_summary")
             }),
         )
         .route(
             "/api/v1/approvals/request",
             axum::routing::post(|| async {
-                axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "pending" }))
+                api::production_readiness::unavailable("approval_request")
             }),
         )
         .route(
             "/api/v1/approvals/decide",
             axum::routing::put(|| async {
-                axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "approved" }))
+                api::production_readiness::unavailable("approval_decision")
             }),
         )
         .route(
             "/api/v1/handoffs",
             axum::routing::post(|| async {
-                axum::Json(serde_json::json!({ "id": "handoff-e2e", "status": "created" }))
+                api::production_readiness::unavailable("handoff_creation")
             }),
         )
         .route(
             "/api/v1/skills/import",
             axum::routing::post(|| async {
-                axum::Json(serde_json::json!({ "id": "skill-e2e", "status": "imported" }))
+                api::production_readiness::unavailable("skill_import")
             }),
         )
         .route(
             "/api/v1/snapshots/create",
             axum::routing::post(|| async {
-                axum::Json(serde_json::json!({ "id": "snapshot-e2e", "status": "created" }))
+                api::production_readiness::unavailable("snapshot_creation")
             }),
         )
         .route(

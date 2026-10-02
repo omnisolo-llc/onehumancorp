@@ -1,0 +1,15 @@
+[package]
+name = "ohc-production-readiness-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = { version = "0.5", features = ["util"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

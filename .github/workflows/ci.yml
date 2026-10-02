@@ -250,6 +250,10 @@ jobs:
           OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_chat_service_test
         run: make test-backend
 
+      - name: Reject fabricated production capability receipts through real HTTP handlers
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        run: bash scripts/production-readiness-contract/run.sh
+
       - name: Check out the already pinned OpenHarness SDK for isolated tests
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         uses: actions/checkout@v6
