@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { invalidateQueueOwner, readQueueOwner } from './queueIdentity';
+import { invalidateQueueOwner, readQueueOwner, hasVerifiedOfflineQueueOwner } from './queueIdentity';
 beforeEach(() => { invalidateQueueOwner(); vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true); });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 it('uses only the verified session endpoint and permits a verified same-tab offline identity', async () => {
@@ -69,4 +69,27 @@ it('rejects a verification that finishes after a logout epoch event', async () =
   window.dispatchEvent(new Event('omnisolo_auth_changed'));
   resolve(Response.json({ userId: 'a', tenantId: 't', expiresAt: Date.now() + 100000 }));
   await expect(pending).rejects.toThrow('identity');
+});
+
+it('readiness can be bound to the expected owner without supplying identity or changing stored drafts', async () => {
+  const a = { userId: 'a', tenantId: 'tenant-a' }, b = { userId: 'b', tenantId: 'tenant-b' };
+  localStorage.setItem('held-owner-draft', 'private draft retained');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json({ ...a, expiresAt: Date.now() + 100000 })).mockResolvedValueOnce(Response.json({ ...b, expiresAt: Date.now() + 100000 })));
+  await readQueueOwner(); expect(hasVerifiedOfflineQueueOwner(a)).toBe(true);
+  await readQueueOwner();
+  expect(hasVerifiedOfflineQueueOwner()).toBe(true);
+  expect(hasVerifiedOfflineQueueOwner(a)).toBe(false);
+  expect(hasVerifiedOfflineQueueOwner(null)).toBe(false);
+  expect(hasVerifiedOfflineQueueOwner(b)).toBe(true);
+  expect(localStorage.getItem('held-owner-draft')).toBe('private draft retained');
+});
+it('pending same-owner verification is unavailable rather than proof of a different owner', async () => {
+  const owner = { userId: 'a', tenantId: 'tenant-a' };
+  let resolve!: (response: Response) => void;
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json({ ...owner, expiresAt: Date.now() + 100000 })).mockImplementationOnce(() => new Promise(done => { resolve = done; })));
+  await readQueueOwner();
+  const pending = readQueueOwner();
+  expect(hasVerifiedOfflineQueueOwner()).toBe(false); expect(hasVerifiedOfflineQueueOwner(owner)).toBe(false);
+  resolve(Response.json({ ...owner, expiresAt: Date.now() + 100000 })); await pending;
+  expect(hasVerifiedOfflineQueueOwner()).toBe(true); expect(hasVerifiedOfflineQueueOwner(owner)).toBe(true);
 });

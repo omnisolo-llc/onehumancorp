@@ -9,8 +9,8 @@ const readinessListeners = new Set<() => void>();
 const pendingVerifications = new Set<number>();
 let readinessExpiry: ReturnType<typeof setTimeout> | undefined;
 /** This reflects the existing cache policy; it never supplies identity or authorizes a write. */
-export function hasVerifiedOfflineQueueOwner(): boolean {
-  try { return !!verified && pendingVerifications.size === 0 && verified.expiresAt > Date.now() && verified.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY); }
+export function hasVerifiedOfflineQueueOwner(expected?: QueueOwner | null): boolean {
+  try { return !!verified && pendingVerifications.size === 0 && verified.expiresAt > Date.now() && verified.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && (expected === undefined || (!!expected && sameOwner(verified.owner, expected))); }
   catch { return false; }
 }
 function publishReadiness(): void {
