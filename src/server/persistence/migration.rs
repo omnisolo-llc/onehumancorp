@@ -173,6 +173,11 @@ where
     backfill_portable_user_roles(connection).await?;
     backfill_identity_email_claims(connection).await?;
     configure_postgres_role_rls(connection).await?;
+    if backend == sea_orm::DatabaseBackend::Postgres {
+        connection
+            .execute_unprepared(include_str!("token_revocation_fence_postgres.sql"))
+            .await?;
+    }
     configure_agent_definition_authority(connection).await?;
 
     insert_default_or_ignore(

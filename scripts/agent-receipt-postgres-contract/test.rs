@@ -675,3 +675,107 @@ async fn postgres_token_revocation_committed_while_receipt_is_locked_discards_re
     drop(lease);
     f.close().await;
 }
+
+#[tokio::test]
+async fn postgres_every_canonical_revocation_writer_waits_for_the_final_receipt_commit_fence() {
+    let f = Fixture::open().await;
+    let mut observed = Vec::new();
+    for direct in [false, true] {
+        let claims = f.identities[if direct { 2 } else { 0 }].0.clone();
+        let mut finishing = f.admin.begin().await.unwrap();
+        // This is the last-step shared fence held by a receipt commit. It must
+        // also cover direct canonical-table inserts, not just an HTTP endpoint.
+        sqlx::query("SELECT pg_advisory_xact_lock_shared(hashtextextended(jsonb_build_array('ohc-token-fence-v1',$1::text,$2::text)::text,0))")
+            .bind("receipt-pg-a").bind(&claims.jti).execute(&mut *finishing).await.unwrap();
+        let auth = f.auth.clone();
+        let pool = f.admin.clone();
+        let (sent, received) = tokio::sync::oneshot::channel();
+        let writer = tokio::spawn(async move {
+            let result = if direct {
+                sqlx::query("INSERT INTO auth_revoked_tokens(jti,tenant_id,expires_at) VALUES($1,'receipt-pg-a',$2)")
+                    .bind(claims.jti)
+                    .bind(chrono::DateTime::from_timestamp(claims.exp, 0).unwrap())
+                    .execute(&pool).await.map(|_| ()).map_err(|e| e.to_string())
+            } else {
+                auth.revoke_token(
+                    claims.jti,
+                    chrono::DateTime::from_timestamp(claims.exp, 0).unwrap(),
+                    "receipt-pg-a",
+                )
+                .await
+            };
+            let _ = sent.send(());
+            result
+        });
+        let completed_before_receipt_commit =
+            tokio::time::timeout(Duration::from_millis(150), received)
+                .await
+                .is_ok();
+        finishing.commit().await.unwrap();
+        writer.await.unwrap().unwrap();
+        observed.push(completed_before_receipt_commit);
+    }
+    f.close().await;
+    assert_eq!(
+        observed,
+        [false, false],
+        "canonical repository and direct revocation writers must serialize with receipt commit"
+    );
+}
+
+#[tokio::test]
+async fn postgres_receipt_final_commit_fence_closes_revocation_after_the_last_authority_read() {
+    let f = Fixture::open().await;
+    let reserved = f
+        .store
+        .reserve(f.admitted(0).await, request(Uuid::new_v4()))
+        .await
+        .unwrap();
+    let lease = f.store.claim(reserved).await.unwrap().unwrap();
+    let proof = lease.completion_proof();
+    sqlx::raw_sql("CREATE FUNCTION block_receipt_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(720031921); RETURN NEW; END $$; CREATE CONSTRAINT TRIGGER block_receipt_commit AFTER UPDATE ON tenant_workflow_receipts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION block_receipt_commit();").execute(&f.admin).await.unwrap();
+    let mut barrier = f.admin.begin().await.unwrap();
+    sqlx::query("SELECT pg_advisory_xact_lock(720031921)")
+        .execute(&mut *barrier)
+        .await
+        .unwrap();
+    let store = f.store.clone();
+    let finishing = tokio::spawn(async move {
+        store
+            .finish(
+                &proof,
+                &AnalysisOutcome::Completed(
+                    "Confirmed provider result awaiting durable commit".into(),
+                ),
+            )
+            .await
+    });
+    wait_for_owned_lock_wait(&f).await;
+    let auth = f.auth.clone();
+    let claims = f.identities[0].0.clone();
+    let (sent, received) = tokio::sync::oneshot::channel();
+    let revoking = tokio::spawn(async move {
+        let result = auth
+            .revoke_token(
+                claims.jti,
+                chrono::DateTime::from_timestamp(claims.exp, 0).unwrap(),
+                "receipt-pg-a",
+            )
+            .await;
+        let _ = sent.send(());
+        result
+    });
+    let revocation_overtook_commit = tokio::time::timeout(Duration::from_millis(150), received)
+        .await
+        .is_ok();
+    barrier.commit().await.unwrap();
+    let finished = finishing.await.unwrap();
+    revoking.await.unwrap().unwrap();
+    drop(lease);
+    f.close().await;
+    assert!(
+        !revocation_overtook_commit,
+        "revocation cannot commit between the last authority check and receipt COMMIT"
+    );
+    assert_eq!(finished.unwrap().phase, StoredPhase::Completed);
+}

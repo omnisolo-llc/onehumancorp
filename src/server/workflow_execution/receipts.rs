@@ -376,8 +376,10 @@ impl ReceiptStore {
         authority: &Authority,
     ) -> Result<(), Error> {
         if tx.get_database_backend() == sea_orm::DatabaseBackend::Postgres {
-            // Token revocation can be inserted without changing the user row.
-            // Use a new statement snapshot after any blocked receipt write.
+            // Acquire only after blocked receipt writes. Canonical revocation
+            // writers take the exclusive counterpart in the database trigger.
+            // The fresh authority snapshot and COMMIT now share one fence.
+            execute(tx, "SELECT pg_advisory_xact_lock_shared(hashtextextended(jsonb_build_array('ohc-token-fence-v1',$1::text,$2::text)::text,0))", vec![(&authority.tenant_id).into(), (&authority.token_id).into()]).await?;
             Self::require_authority(tx, authority, Self::clock(tx).await?).await?;
         }
         Ok(())
