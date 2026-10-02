@@ -13,7 +13,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('reads only supported owned business snapshots with exact verified owner headers and private transport', async () => {
   const expected = await openOnboardingSession();
-  for (const url of ['/api/v1/pos/orders', '/api/v1/pos/inventory', '/api/v1/agents/execution-policy', '/api/v1/agents/workflows', '/api/v1/agents/approvals', '/api/v1/agents/approvals/activity']) {
+  for (const url of ['/api/v1/pos/orders', '/api/v1/pos/inventory', '/api/v1/agents/execution-policy', '/api/v1/agents/workflows', '/api/v1/agents/approvals', '/api/v1/agents/approvals/activity', '/api/v1/walkthrough/store-setup']) {
     await fetchForOwnedBusinessRead(url, expected);
     const call = vi.mocked(fetch).mock.calls.find(([target]) => target === url);
     expect(call?.[1]).toMatchObject({ method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error' });

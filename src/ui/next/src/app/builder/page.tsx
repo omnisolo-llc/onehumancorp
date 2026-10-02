@@ -1,16 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
+import { useState, useEffect, useRef } from "react";
+import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock } from "./components";
 import { useWalkthrough } from "../../components/help";
 import { WalkthroughTarget, InteractiveWalkthrough } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { useBuilderStore } from "./store";
+import { useBuilderStore, initializeBuilderDraft, builderDraftError, subscribeBuilderPersistence, LEGACY_BUILDER_DRAFT_KEY, isBuilderBlocks, type BuilderState } from "./store";
+import { assertBuilderEditor, builderScopeActive, type BuilderScope } from './ownedDraft';
+import { fetchForOwnedBusinessAction, fetchForOwnedBusinessRead, subscribeOnboardingInvalidation } from '../onboarding/draftSession';
+import { canonicalRequest } from '../onboarding/contracts';
+import { sameOwner, type QueueOwner } from '@/lib/sync/queueIdentity';
+import { PublicationPanel } from './PublicationPanel';
+import { layoutPublicationSnapshot } from './layoutPublicationSnapshot';
+import { prepareSiteSnapshot } from './publicationContracts';
+import type { BuilderBlock } from '@/lib/builder-types';
 
 export default function BuilderPage() {
-  const { bio, setBio, businessName, setBusinessName, businessCategory, setBusinessCategory, vibe, setVibe, wizardStep, setWizardStep, blocks, setBlocks, drafts, setDrafts, status, setStatus, setBusinessGoal, liveUrl, setLiveUrl } = useBuilderStore();
-
-  const [, setIsLoaded] = useState(false);
+  const state = useBuilderStore();
+  const { bio, businessName, businessCategory, vibe, wizardStep, blocks, drafts, status, seoMetadata } = state;
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [sessionError, setSessionError] = useState('');
+  const [heldLegacy, setHeldLegacy] = useState(false);
+  const [viewScope, setViewScope] = useState<BuilderScope | null>(null);
+  const currentScope = useRef<BuilderScope | null>(null);
+  const releaseEditor = useRef<() => void>(() => {});
+  const epoch = useRef(0);
+  const busy = useRef(false);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
@@ -19,186 +34,140 @@ export default function BuilderPage() {
   const [saveMessage, setSaveMessage] = useState("");
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [walkthroughSteps, setWalkthroughSteps] = useState<React.ComponentProps<typeof InteractiveWalkthrough>["steps"]>([]);
-  useWalkthrough();
-
   const [wizardStep1Error, setWizardStep1Error] = useState("");
-
-  const handleStep1Next = () => {
-    if (businessName.trim().length < 3) {
-      setWizardStep1Error("Business name must be at least 3 characters.");
-      return;
-    }
-    if (businessCategory.trim().length < 5) {
-      setWizardStep1Error("Category must be at least 5 characters.");
-      return;
-    }
-    setWizardStep1Error("");
-    setWizardStep(2);
-  };
-
-  // GEO UI State
   const [geoScore, setGeoScore] = useState<number | null>(null);
   const [geoRecs, setGeoRecs] = useState<string[]>([]);
-  const [seoApplied, setSeoApplied] = useState(false);
+  useWalkthrough();
 
-  // Growth Loop: Soft Paywall State
-  const [isPremium, setIsPremium] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [tenantId, setTenantId] = useState("storefront");
+  const edit = (action: () => void) => {
+    if (!builderScopeActive(viewScope)) return;
+    try { assertBuilderEditor(viewScope, LEGACY_BUILDER_DRAFT_KEY); action(); }
+    catch (error) { setSaveMessage(error instanceof Error ? error.message : 'Your editor changed. Reopen this draft.'); }
+  };
+  const setBio = (value: string) => edit(() => state.setBio(value));
+  const setBusinessName = (value: string) => edit(() => state.setBusinessName(value));
+  const setBusinessCategory = (value: string) => edit(() => state.setBusinessCategory(value));
+  const setVibe = (value: string) => edit(() => state.setVibe(value));
+  const setWizardStep = (value: number) => edit(() => state.setWizardStep(value));
+  const setBlocks = (value: BuilderBlock[]) => edit(() => state.setBlocks(value));
+  const setStatus = (value: BuilderState['status']) => edit(() => state.setStatus(value));
+  const setBusinessGoal = (value: BuilderState['businessGoal']) => edit(() => state.setBusinessGoal(value));
 
+  useEffect(() => subscribeBuilderPersistence(() => { if (builderDraftError()) setSaveMessage(builderDraftError()); }), []);
   useEffect(() => {
-    fetch("/api/v1/walkthrough/store-setup")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setWalkthroughSteps(data);
-        }
-      })
-      .catch((err) => {
-        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
-        console.error("Walkthrough fetch failed:", err);
-      });
-
-    const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
-    setTenantId(savedTenantId);
-    setIsLoaded(true);
-  }, []);
-
-  const handleGeoAnalysis = async () => {
-    try {
-      const response = await fetch('/api/v1/builder/geo_score', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: bio })
-      });
-      const data = await response.json();
-      setGeoScore(data.generative_score);
-      setGeoRecs(data.recommendations);
-    } catch (error) {
-      console.error("Failed to analyze GEO score", error);
-    }
-  };
-
-  const handleAutoSeo = async () => {
-    try {
-      await fetch('/api/v1/builder/auto_seo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: bio })
-      });
-      setSeoApplied(true);
-    } catch (error) {
-      console.error("Failed to apply Auto SEO", error);
-    }
-  };
-
-  const handleGenerate = async () => {
-    setStatus("generating");
-
-    try {
-      const promptDescription = businessName
-        ? `${businessName}. ${businessCategory ? businessCategory + '. ' : ''}${bio}`
-        : bio;
-      const [response] = await Promise.all([
-        fetch('/api/v1/builder/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: promptDescription })
-        }),
-        new Promise((resolve) => setTimeout(resolve, 600)),
-      ]);
-
-      const data = await response.json();
-      const newBlocks = data.pages[0].blocks.map((b: import("@/lib/builder-types").GeneratedBlock) => ({
-        type: b.block_type === 'HeroBlock' ? 'Hero' :
-              b.block_type === 'ProductGridBlock' ? 'Catalog' :
-              b.block_type === 'ServiceBookingBlock' ? 'Booking' :
-              b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
-        props: b.content
-      }));
-
-      // Inject Viral Loop: Every new store gets a Referral block by default
-      newBlocks.push({
-        type: 'Referral',
-        props: {
-          offerTitle: "Refer a Friend & Earn",
-          offerDescription: "Get 20% off your next purchase when a friend buys from us!"
-        }
-      });
-
-      const draft2 = JSON.parse(JSON.stringify(newBlocks));
-      setDrafts([newBlocks, draft2]);
-      setBlocks(newBlocks);
-      setStatus("selection");
-    } catch (error) {
-      console.error("Failed to generate storefront", error);
-      setStatus("idle");
-    }
-  };
-
-  const handleLaunch = async () => {
-    try {
-      const draftBlocks = blocks.map((b, i) => ({
-        block_type: b.type === 'Hero' ? 'HeroBlock' :
-                    b.type === 'Catalog' ? 'ProductGridBlock' :
-                    b.type === 'Booking' ? 'ServiceBookingBlock' :
-                    b.type === 'Testimonials' ? 'TestimonialBlock' :
-                    b.type === 'Referral' ? 'ReferralBlock' : b.type,
-        content: b.props,
-        sort_order: i
-      }));
-
-      // In a more complete implementation, we'd store the StoreProfile returned from generate,
-      // but for now we construct a minimal valid draft payload preserving current blocks.
-      const cleanSub = (businessName || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mayacakes';
-      const domainUrl = `https://${cleanSub}.cloud.omnisolo.co`;
-      const payload = {
-          domain: `${cleanSub}.cloud.omnisolo.co`,
-          draft: {
-              domain: `${cleanSub}.cloud.omnisolo.co`,
-              brand_dna: { name: businessName },
-              pages: [{
-                  path: '/',
-                  title: businessName || 'Home',
-                  blocks: draftBlocks,
-                  seo_metadata: {
-                    "@context": "https://schema.org",
-                    "@type": "LocalBusiness",
-                    "name": businessName || bio
-                  }
-              }]
-          }
-      };
-
+    let disposed = false; let load = 0;
+    const open = async () => {
+      const attempt = ++load; setIsLoaded(false); setSessionError('');
       try {
-        const response = await fetch('/api/v1/builder/publish_draft', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (response.ok) {
-          setStatus("live");
-          setLiveUrl(domainUrl);
-        } else {
-          setStatus("live");
-          setLiveUrl(domainUrl);
-        }
-      } catch {
-        setStatus("live");
-        setLiveUrl(domainUrl);
-      }
-    } catch (error) {
-      console.error('Error publishing:', error);
-    }
+        const restored = await initializeBuilderDraft();
+        if (disposed || attempt !== load) { restored.release(); return; }
+        releaseEditor.current(); releaseEditor.current = restored.release;
+        currentScope.current = restored.scope; setViewScope(restored.scope);
+        setHeldLegacy(localStorage.getItem('builder-storage') !== null); setIsLoaded(true);
+        void fetchForOwnedBusinessRead('/api/v1/walkthrough/store-setup', restored.scope.owner).then(async response => {
+          const steps: unknown = await response.json();
+          if (!disposed && attempt === load && builderScopeActive(restored.scope) && response.status === 200 && Array.isArray(steps)) setWalkthroughSteps(steps);
+        }).catch(() => {});
+      } catch (error) { if (!disposed && attempt === load) setSessionError(error instanceof Error ? error.message : 'Verify your builder session.'); }
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(restart => {
+      ++load; ++epoch.current; busy.current = false; releaseEditor.current(); releaseEditor.current = () => {};
+      currentScope.current = null; setViewScope(null); setIsLoaded(false); setSaveMessage(''); setGeoScore(null); setGeoRecs([]); setWalkthroughSteps([]);
+      setSelectedBlockIndex(null); setSelectedDraftIndex(0); setIsActionSheetOpen(false); setDraggedIndex(null); setWizardStep1Error('');
+      if (restart) void open(); else setSessionError('Your session could not be verified. Your owned draft remains held.');
+    });
+    void open();
+    return () => { disposed = true; ++load; ++epoch.current; busy.current = false; releaseEditor.current(); releaseEditor.current = () => {}; currentScope.current = null; unsubscribe(); };
+  }, []);
+  const retireEditor = (owner: QueueOwner, reason: string) => {
+    if (!currentScope.current || !sameOwner(currentScope.current.owner, owner)) return;
+    ++epoch.current; busy.current = false; releaseEditor.current(); releaseEditor.current = () => {};
+    currentScope.current = null; setViewScope(null); setIsLoaded(false); setSessionError(reason);
+    setIsActionSheetOpen(false); setSelectedBlockIndex(null); setSaveMessage(''); setGeoScore(null); setGeoRecs([]);
   };
+  const handleStep1Next = () => {
+    if (businessName.trim().length < 3) { setWizardStep1Error("Business name must be at least 3 characters."); return; }
+    if (businessCategory.trim().length < 5) { setWizardStep1Error("Category must be at least 5 characters."); return; }
+    setWizardStep1Error(""); setWizardStep(2);
+  };
+  const publicationSnapshot = () => {
+    if (!viewScope) throw new Error('Verify your editor owner.');
+    assertBuilderEditor(viewScope, LEGACY_BUILDER_DRAFT_KEY);
+    const value = useBuilderStore.getState();
+    const snapshot = layoutPublicationSnapshot({ title: value.businessName || 'Home', bio: value.bio, blocks: value.blocks });
+    const seo_metadata = Object.keys(value.seoMetadata).length ? value.seoMetadata : snapshot.pages[0].seo_metadata;
+    return { ...snapshot, pages: [{ ...snapshot.pages[0], seo_metadata }] };
+  };
+  const runDraftAction = async (url: string, action: (data: unknown) => void) => {
+    const scope = viewScope;
+    if (!builderScopeActive(scope) || busy.current || builderDraftError()) return;
+    const attempt = ++epoch.current; busy.current = true;
+    const fingerprint = canonicalRequest({ bio: state.bio, blocks: state.blocks });
+    const active = () => attempt === epoch.current && builderScopeActive(scope);
+    try {
+      assertBuilderEditor(scope, LEGACY_BUILDER_DRAFT_KEY);
+      const response = await fetchForOwnedBusinessAction(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: state.bio }) }, scope.owner, () => assertBuilderEditor(scope, LEGACY_BUILDER_DRAFT_KEY));
+      const data: unknown = await response.json();
+      if (!active()) return;
+      const latest = useBuilderStore.getState();
+      if (canonicalRequest({ bio: latest.bio, blocks: latest.blocks }) !== fingerprint) throw new Error('Your draft changed; the earlier result was not applied.');
+      if (response.status !== 200 || !data || typeof data !== 'object' || Array.isArray(data) || 'error' in data || ('success' in data && data.success === false)) throw new Error('Draft content suggestions could not be confirmed.');
+      action(data);
+    } catch (error) { if (active()) setSaveMessage(error instanceof Error ? error.message : 'Draft content suggestions could not be confirmed.'); }
+    finally { if (active()) busy.current = false; }
+  };
+  const handleGeoAnalysis = () => void runDraftAction('/api/v1/builder/geo_score', data => {
+    const result = data as Record<string, unknown>;
+    if (!Number.isInteger(result.generative_score) || Number(result.generative_score) < 0 || Number(result.generative_score) > 100 || !Array.isArray(result.recommendations) || !result.recommendations.every(item => typeof item === 'string')) throw new Error('The content analysis response was incomplete.');
+    setGeoScore(Number(result.generative_score)); setGeoRecs(result.recommendations as string[]);
+    setSaveMessage('Draft analysis returned suggestions; this is not a measured search ranking.');
+  });
+  const handleAutoSeo = () => void runDraftAction('/api/v1/builder/auto_seo', data => {
+    state.setSeoMetadata(data as Record<string, unknown>);
+    setSaveMessage('SEO metadata updated in this private draft. Review it before publishing.');
+  });
+  const handleGenerate = async () => {
+    const scope = viewScope;
+    if (!builderScopeActive(scope) || busy.current || builderDraftError()) return;
+    const attempt = ++epoch.current; busy.current = true;
+    const input = () => { const value = useBuilderStore.getState(); return { businessName: value.businessName, businessCategory: value.businessCategory, vibe: value.vibe, bio: value.bio, blocks: value.blocks, seoMetadata: value.seoMetadata }; };
+    const submitted = input(); const fingerprint = canonicalRequest(submitted);
+    const active = () => attempt === epoch.current && builderScopeActive(scope);
+    setStatus('generating');
+    try {
+      const description = [submitted.businessName, submitted.businessCategory, submitted.bio, submitted.vibe ? `Requested style: ${submitted.vibe}` : ''].filter(Boolean).join('. ');
+      const response = await fetchForOwnedBusinessAction('/api/v1/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description }) }, scope.owner, () => { assertBuilderEditor(scope, LEGACY_BUILDER_DRAFT_KEY); if (canonicalRequest(input()) !== fingerprint) throw new Error('Your draft changed before generation.'); });
+      const data = await response.json();
+      if (!active()) return;
+      if (canonicalRequest(input()) !== fingerprint) throw new Error('Your draft changed; the earlier generated result was not applied.');
+      if (response.status !== 200 || !data || data.success === false || data.error != null || !Array.isArray(data.pages) || !Array.isArray(data.pages[0]?.blocks)) throw new Error('The generated draft could not be confirmed.');
+      const names: Record<string, string> = { HeroBlock: 'Hero', ProductGridBlock: 'Catalog', ServiceBookingBlock: 'Booking', TestimonialBlock: 'Testimonials', ReferralBlock: 'Referral' };
+      const generated: unknown = data.pages[0].blocks.map((block: Record<string, unknown>) => ({ type: typeof block.block_type === 'string' ? names[block.block_type] || block.block_type : '', props: block.content }));
+      if (!isBuilderBlocks(generated)) throw new Error('The generated draft has unsupported content.');
+      await prepareSiteSnapshot(layoutPublicationSnapshot({ title: submitted.businessName || 'Home', bio: submitted.bio, blocks: generated }));
+      if (!active()) return;
+      if (canonicalRequest(input()) !== fingerprint) throw new Error('Your draft changed; the earlier generated result was not applied.');
+      state.setDrafts([generated]); state.setBlocks(generated); state.setSeoMetadata({}); state.setStatus('selection'); setSaveMessage('');
+    } catch (error) {
+      if (active()) { state.setStatus(useBuilderStore.getState().blocks.length ? 'draft' : 'idle'); setSaveMessage(error instanceof Error ? error.message : 'Generation could not be confirmed.'); }
+    } finally { if (active()) busy.current = false; }
+  };
+
+  if (sessionError) return <div role="alert">{sessionError}</div>;
+  if (!isLoaded || !builderScopeActive(viewScope)) return <div role="status">Verifying your builder session…</div>;
+  const draftNotice = <div className="p-3 text-sm">
+    {heldLegacy && <p>Older unowned builder draft is held separately. It has not been opened or assigned to this account.</p>}
+    {saveMessage && <p role="status">{saveMessage}</p>}
+  </div>;
 
   if (status === "selection") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:glassmorphism shadow-2xl">
+          {draftNotice}
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
-              <p className="text-sm text-gray-500">The Architect returned this draft for review.</p>
+              <p className="text-sm text-gray-500">Review the returned proposal, including its content and prices.</p>
            </div>
 
            <div className="flex-1 overflow-y-auto px-6 space-y-6 pb-24">
@@ -244,6 +213,7 @@ export default function BuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:glassmorphism shadow-2xl">
+          {draftNotice}
           {/* Abstract Background Blur */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 blur-[80px] opacity-30 animate-pulse" />
@@ -285,6 +255,7 @@ export default function BuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:glassmorphism shadow-2xl">
+          {draftNotice}
 
           <div className="px-8 pt-12 pb-4 relative">
              <div className="flex justify-between mb-8">
@@ -295,7 +266,7 @@ export default function BuilderPage() {
              {(businessName || businessCategory || vibe || bio) && (
                <div className="absolute top-4 right-8 flex items-center gap-1 text-xs text-green-600 font-medium animate-fade-in bg-green-50 px-2 py-1 rounded-full border border-green-200 shadow-sm">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                 Progress saved
+                 {builderDraftError() ? 'Local save needs attention' : 'Draft saved on this device'}
                </div>
              )}
           </div>
@@ -497,9 +468,10 @@ export default function BuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:glassmorphism shadow-2xl">
+          {draftNotice}
            <div className="px-8 pt-20 pb-4 text-center">
-              <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
-              <p className="text-sm text-gray-500 animate-pulse">Designing your custom storefront...</p>
+              <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Draft builder</h1>
+              <p className="text-sm text-gray-500 animate-pulse">Preparing your storefront draft...</p>
            </div>
            <div className="flex-1 overflow-y-auto px-4">
               <SkeletonBlock />
@@ -513,143 +485,11 @@ export default function BuilderPage() {
     );
   }
 
-  if (status === "live") {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:glassmorphism shadow-2xl px-6 pt-12 pb-8">
-          {/* Success Animation Background */}
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
-
-          <div className="w-20 h-20 bg-[#34C759] text-white rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce mt-8">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-          </div>
-
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-2 tracking-tight">You're Live!</h1>
-          <p className="text-gray-500 mb-8 text-sm max-w-[240px]">Your business is now open to the world. Scan the code to see it.</p>
-
-          <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <QRCode value={liveUrl} />
-          </div>
-
-          {/* Growth Loop: Embeddable Storefront Widget */}
-          <div className="w-full glassmorphism backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
-            <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
-            <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OmniSolo storefront on your existing website, blog, or partner pages.</p>
-            <div className="app-card dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 rounded-[16px] p-3 relative">
-                <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
-{`<div id="omnisolo-embed-root"></div>
-<script src="/embed.js" data-store="${tenantId}"></script>
-<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OmniSolo</b></a>
-</div>`}
-                </pre>
-                <button
-                    onClick={() => {
-                        const code = `<div id="omnisolo-embed-root"></div>\n<script src="/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OmniSolo</b></a>\n</div>`;
-                        navigator.clipboard.writeText(code);
-                        setSaveMessage("Embed code copied.");
-                    }}
-                    className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-[30px] saturate-[210%]"
-                >
-                    Copy
-                </button>
-            </div>
-            {saveMessage && <p role="status" className="mt-2 text-xs font-semibold text-green-600">{saveMessage}</p>}
-          </div>
-
-          <div className="w-full bg-gray-50 p-3 rounded-[16px] border border-gray-100 mb-6 flex items-center justify-between">
-            <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(liveUrl);
-                setSaveMessage("Live URL copied.");
-              }}
-              className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0"
-            >
-              Copy
-            </button>
-          </div>
-
-          {/* Growth Loop 1: Acquisition (Get your first customer) */}
-          <div className="w-full glassmorphism backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
-            <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Get your first customer 🚀</h2>
-            <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Share your new store with friends and family to get early sales.</p>
-
-            <div className="flex gap-3">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Check out my new store: ${liveUrl}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-[#25D366] text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                WhatsApp
-              </a>
-              <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just launched my new business on OmniSolo OneHumanCorp! Check it out: ${liveUrl}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-black text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                Share
-              </a>
-            </div>
-          </div>
-
-
-          {/* Generative Visibility Score */}
-          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-[30px] saturate-[210%] border border-[#0066FF]/30 dark:border-[#0066FF]/20 shadow-sm p-5 mb-6 text-left rounded-[16px]">
-            <h2 className="text-lg font-bold font-outfit text-[#0066FF] dark:text-blue-300 mb-1">Generative Visibility Score (GEO)</h2>
-            <p className="text-xs text-blue-700 dark:text-blue-200 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
-
-            {geoScore === null ? (
-              <button
-                onClick={handleGeoAnalysis}
-                className="w-full bg-[#0071E3] text-white font-semibold py-2 rounded-[8px] text-sm shadow-sm hover:bg-blue-700 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-              >
-                Analyze Visibility
-              </button>
-            ) : (
-              <div className="animate-fade-in">
-                <div className="flex items-end gap-2 mb-3">
-                  <span className="text-3xl font-black text-blue-900">{geoScore}</span>
-                  <span className="text-sm font-medium text-[#0071E3] pb-1">/ 100</span>
-                </div>
-                {geoRecs.length > 0 && (
-                  <ul className="text-xs text-blue-800 space-y-1 mb-4 list-disc pl-4">
-                    {geoRecs.map((r, idx) => <li key={idx}>{r}</li>)}
-                  </ul>
-                )}
-                <button
-                  onClick={handleAutoSeo}
-                  disabled={seoApplied}
-                  className={`w-full font-semibold py-2 rounded-[8px] text-sm shadow-sm transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                    seoApplied
-                    ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200"
-                    : "bg-[#0071E3] text-white hover:bg-blue-700"
-                  }`}
-                >
-                  {seoApplied ? "Recommendations Applied ✓" : "Auto-Apply SEO Metadata"}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button
-            className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-white/60 dark:hover:bg-black/40 border border-white/50 dark:border-white/10 backdrop-blur-[30px] saturate-[210%]"
-            onClick={() => setStatus("idle")}
-          >
-            Go to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:glassmorphism shadow-2xl">
+          {draftNotice}
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-[30px] saturate-[210%] text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
@@ -706,7 +546,19 @@ export default function BuilderPage() {
               <SmartBlock {...b} />
             </DraggableBlock>
           ))}
-          {!isPremium && <SmartBlock type="PoweredBy" props={{ tenantId }} />}
+          <SmartBlock type="PoweredBy" props={{ tenantId: viewScope.owner.tenantId }} />
+          <section aria-label="Private draft metadata" className="p-4 space-y-2">
+            <h2>Draft content suggestions</h2>
+            <p>Content analysis and metadata changes apply only to this private draft.</p>
+            <button type="button" onClick={handleGeoAnalysis}>Analyze draft content</button>
+            {geoScore !== null && <p>Content review score: {geoScore}/100</p>}
+            {geoRecs.map((text, index) => <p key={index}>{text}</p>)}
+            <button type="button" onClick={handleAutoSeo}>Prepare draft SEO metadata</button>
+            {Object.keys(seoMetadata).length > 0 && <pre aria-label="Private SEO metadata">{JSON.stringify(seoMetadata, null, 2)}</pre>}
+          </section>
+          <PublicationPanel channel="builder" expectedOwner={viewScope.owner} getSnapshot={publicationSnapshot}
+            isEditorCurrent={() => { try { assertBuilderEditor(viewScope, LEGACY_BUILDER_DRAFT_KEY); return !builderDraftError(); } catch { return false; } }}
+            onRetired={retireEditor} />
         </div>
 
         {/* Action Sheet for Editing Blocks */}
@@ -730,11 +582,11 @@ export default function BuilderPage() {
                   }}
                 />
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button className="p-4 glassmorphism backdrop-blur-[30px] saturate-[210%] rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button disabled title="This editor cannot upload or generate images yet" className="p-4 glassmorphism backdrop-blur-[30px] saturate-[210%] rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
                     <span>🖼️</span>
                     <span>Upload Photo</span>
                   </button>
-                  <button className="p-4 glassmorphism backdrop-blur-[30px] saturate-[210%] rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button disabled title="This editor cannot upload or generate images yet" className="p-4 glassmorphism backdrop-blur-[30px] saturate-[210%] rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
                     <span>✨</span>
                     <span>AI Generate</span>
                   </button>
@@ -753,95 +605,11 @@ export default function BuilderPage() {
           </div>
         </ActionSheet>
 
-        {/* Bottom Action Bar */}
-        <div className="absolute bottom-0 w-full p-4 glassmorphism border-t border-white/40 dark:border-white/10 z-50">
-          <div className="flex gap-3 mb-2">
-            <WithTooltip id="change-vibe-tooltip" defaultText="Change the theme and colors of your website.">
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[8px] inline-flex items-center justify-center gap-2">
-              <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
-                <path d="M4 7h16" />
-                <path d="M7 12h10" />
-                <path d="M10 17h4" />
-              </svg>
-              <span>Change Vibe</span>
-            </button>
-          </WithTooltip>
-            {!isPremium && (
-              <WithTooltip id="remove-branding-tooltip" defaultText="Upgrade to Premium to remove OmniSolo branding.">
-              <button
-                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-[30px] saturate-[210%] border border-[#0066FF]/30 rounded-[8px] inline-flex items-center justify-center gap-2"
-                onClick={() => setShowUpgradeModal(true)}
-              >
-                <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
-                  <path d="M12 3v18" />
-                  <path d="M5 12h14" />
-                  <path d="M7 5l12 12" />
-                </svg>
-                <span>Remove Branding</span>
-              </button>
-            </WithTooltip>
-            )}
-          </div>
-          <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
-            <button
-              id="launch-btn"
-              className="w-full bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2"
-              onClick={handleLaunch}
-            >
-              <span>1-Tap Launch</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-            </button>
-          </WithTooltip>
+        <div className="border-t p-4 flex gap-4">
+          <button type="button" onClick={() => { setWizardStep(2); setStatus('idle'); }}>Review style and details</button>
+          <a href="/plan">Review plan options</a>
         </div>
 
-        {/* Upgrade Modal */}
-        {showUpgradeModal && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%] z-[60] flex flex-col justify-end">
-            <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-[30px] saturate-[210%] w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t border-white/40 dark:border-white/10">
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[8px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
-                  👑
-                </div>
-                <button
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-white/40 dark:hover:bg-black/40 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Upgrade to Premium</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] mb-6 font-inter text-sm leading-relaxed">
-                Unlock white-labeling, custom domains, and advanced analytics to grow your business faster.
-              </p>
-
-              <div className="space-y-3 mb-6 font-inter text-sm">
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-gray-700 dark:text-gray-300">Remove "Powered by OmniSolo" footer</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-gray-700 dark:text-gray-300">Connect a custom domain</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-gray-700 dark:text-gray-300">Priority AI scheduling</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  setIsPremium(true);
-                  setShowUpgradeModal(false);
-                }}
-                className="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white dark:text-black text-white font-bold p-4 rounded-[8px] shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-between items-center"
-              >
-                <span>Upgrade Now</span>
-                <span className="font-normal opacity-80">$15 / mo</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `

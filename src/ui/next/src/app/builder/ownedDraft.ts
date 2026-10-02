@@ -5,7 +5,7 @@ import { canonicalRequest } from '../onboarding/contracts';
 
 type EditorLease = { name: string; active: boolean; raw: string | null; release: () => void };
 export type BuilderScope = { owner: QueueOwner; epoch: number; editor?: EditorLease };
-const editorDrafts = new Set(['website-builder-draft', 'storefront-builder-draft', 'agent-publication-draft']);
+const editorDrafts = new Set(['website-builder-draft', 'storefront-builder-draft', 'agent-publication-draft', 'legacy-builder-draft']);
 export async function openBuilderEditor(name: string, active: () => boolean = () => true): Promise<BuilderScope> {
   const scope = await openBuilderScope();
   if (!active()) throw new Error('This editor was closed before its draft was opened.');
