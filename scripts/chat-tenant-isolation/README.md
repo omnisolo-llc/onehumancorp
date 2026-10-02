@@ -36,3 +36,10 @@ The content-type migration is additive. Real SQLx upgrade tests cover both an ol
 schema and a schema with the column already present, preserve prior message bytes
 and recorded migration checksums, verify the default on new writes, and replay the
 upgrade. This is not proof of caller authentication or live message delivery.
+
+The already-present-column case retains the original migration 233 checksum and
+adds the column separately. It does not certify a database that already executed
+the upstream rewrite of migration 233 and recorded that different checksum.
+SQLx must continue to reject that mismatched history. Such an installation needs
+its actual deployment history and backups reviewed before an authorized migration
+reconciliation; this gate never rewrites `_sqlx_migrations` checksums automatically.
