@@ -120,11 +120,11 @@ export default function StorefrontBuilderPage() {
   const addBlock = (type: string) => {
     if (!builderScopeActive(viewScope)) return;
     let defaultProps = {};
-    if (type === "Hero") defaultProps = { headline: "New Section", copy: "Add some text here." };
-    if (type === "Catalog") defaultProps = { items: [{ name: "New Product", price: "$0", description: "Description here" }] };
-    if (type === "Booking") defaultProps = { title: "Book a Time", availability: "Available all week" };
-    if (type === "Contact") defaultProps = { email: "contact@example.com", phone: "555-0199" };
-    if (type === "Referral") defaultProps = { offerTitle: "Refer & Earn", offerDescription: "Get 20% off" };
+    if (type === "Hero") defaultProps = { headline: "", copy: "" };
+    if (type === "Catalog") defaultProps = { items: [{ name: "", price: "", description: "" }] };
+    if (type === "Booking") defaultProps = { title: "", availability: "", booking_url: "" };
+    if (type === "Contact") defaultProps = { email: "", phone: "" };
+    if (type === "Referral") defaultProps = { offerTitle: "", offerDescription: "" };
 
     const newBlocks = [...blocks, { type, props: defaultProps }];
     setBlocks(newBlocks);
@@ -550,7 +550,7 @@ export default function StorefrontBuilderPage() {
                       <button
                         className="w-full py-2 bg-gray-100 dark:bg-gray-800 text-sm font-semibold rounded-lg text-gray-700 dark:text-gray-200"
                         onClick={() => {
-                          const newItems = [...editingBlockContent[key], { name: 'New Item', price: '$0', description: 'Description' }];
+                          const newItems = [...editingBlockContent[key], { name: '', price: '', description: '' }];
                           setEditingBlockContent({ ...editingBlockContent, [key]: newItems });
                         }}
                       >
