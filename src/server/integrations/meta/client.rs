@@ -1,10 +1,11 @@
 use async_trait::async_trait;
-use reqwest::Client;
 use lazy_static::lazy_static;
 use regex::Regex;
+use reqwest::Client;
 
 lazy_static! {
-    static ref BSUID_REGEX: Regex = Regex::new(r"^[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}$").unwrap();
+    static ref BSUID_REGEX: Regex =
+        Regex::new(r"^[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}$").unwrap();
 }
 
 pub(crate) fn build_meta_payload(platform: &str, to: &str, body: &str) -> serde_json::Value {
