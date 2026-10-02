@@ -32,7 +32,10 @@ pub struct PublishRequest {
 }
 
 /// The application and HTTP regression gate share this complete route assembly.
-pub fn router(pool: PgPool, auth: std::sync::Arc<server_auth::Store>) -> Router {
+pub fn router<S: Clone + Send + Sync + 'static>(
+    pool: PgPool,
+    auth: std::sync::Arc<server_auth::Store>,
+) -> Router<S> {
     Router::new()
         .nest(
             "/api/v1/builder",
@@ -43,6 +46,9 @@ pub fn router(pool: PgPool, auth: std::sync::Arc<server_auth::Store>) -> Router 
         )
         .nest("/api/v1/public/sites", public_router(pool))
         .layer(axum::middleware::from_fn(no_store))
+        // Publication's database/auth state is already resolved. Leave the
+        // containing application's missing state generic (e.g. MeshTransport).
+        .with_state(())
 }
 
 pub fn authenticated_router(pool: PgPool) -> Router {

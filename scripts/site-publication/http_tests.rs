@@ -738,3 +738,65 @@ async fn selected_product_document_uses_reviewed_snapshot_and_rechecks_public_au
     assert_eq!(foreign.0, StatusCode::NOT_FOUND);
     assert_eq!(revoked.0, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn publication_routes_preserve_an_independent_nonunit_application_state() {
+    #[derive(Clone)]
+    struct OuterState {
+        marker: String,
+    }
+    let mut f = HttpFixture::new().await;
+    let outer: Router<Arc<OuterState>> = Router::new().route(
+        "/independent-state",
+        axum::routing::get(
+            |axum::extract::State(state): axum::extract::State<Arc<OuterState>>| async move {
+                state.marker.clone()
+            },
+        ),
+    );
+    // This merge previously failed exactly like the production MeshTransport
+    // routes: publication must not force the outer router's state to ().
+    f.app = outer
+        .merge(publication_http::router(
+            f.data.pool.clone(),
+            f.auth.clone(),
+        ))
+        .with_state(Arc::new(OuterState {
+            marker: "actual outer state survived".into(),
+        }));
+    let outer = f
+        .request("GET", "/independent-state", None, json!(null))
+        .await;
+    assert_eq!(outer.0, StatusCode::OK);
+    assert_eq!(outer.2, b"actual outer state survived");
+    let id = Uuid::new_v4();
+    let unsigned = f
+        .request("POST", "/api/v1/builder/publications", None, f.body(id))
+        .await;
+    assert_eq!(unsigned.0, StatusCode::UNAUTHORIZED);
+    let submitted = f
+        .request(
+            "POST",
+            "/api/v1/builder/publications",
+            Some(&f.owner),
+            f.body(id),
+        )
+        .await;
+    assert_eq!(submitted.0, StatusCode::ACCEPTED);
+    let receipt: serde_json::Value = serde_json::from_slice(&submitted.2).unwrap();
+    assert_eq!(receipt["user_id"], f.data.a.user_id);
+    let public = f
+        .request(
+            "GET",
+            &format!(
+                "/api/v1/public/sites/{}",
+                receipt["site_id"].as_str().unwrap()
+            ),
+            None,
+            json!(null),
+        )
+        .await;
+    assert_eq!(public.0, StatusCode::NOT_FOUND);
+    assert_eq!(f.data.counts().await, (1, 1, 1));
+    f.data.finish().await;
+}

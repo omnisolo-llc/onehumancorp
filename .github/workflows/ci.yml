@@ -980,6 +980,10 @@ jobs:
         run: |
           python3 scripts/site-publication/verify_node_lock.py
           npm ci --prefix scripts/site-publication --ignore-scripts --omit=dev --no-audit --no-fund
+      - name: Fetch only locked publication Rust dependencies
+        if: ${{ !cancelled() }}
+        timeout-minutes: 5
+        run: bash scripts/site-publication/fetch.sh
       - name: Verify reviewed public HTTP documents and cross-language receipts
         if: ${{ !cancelled() }}
         env:

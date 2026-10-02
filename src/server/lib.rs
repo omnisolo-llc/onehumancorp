@@ -9854,6 +9854,61 @@ mod tests {
     use super::*;
     use crate::settings::Store;
 
+    #[tokio::test]
+    async fn publication_composes_with_the_existing_mesh_transport_handler() {
+        use axum::{
+            Router,
+            body::Body,
+            http::{Request, StatusCode},
+            routing::post,
+        };
+        use omnisolo_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+        use tower::ServiceExt;
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres@127.0.0.1:1/ohc_router_composition_test")
+            .unwrap();
+        let auth = std::sync::Arc::new(server_auth::Store::new());
+        let transport: std::sync::Arc<dyn MeshTransport> =
+            std::sync::Arc::new(InProcessTransport::new());
+        let app: Router<std::sync::Arc<dyn MeshTransport>> = Router::new()
+            .route(
+                "/existing-mesh",
+                post(crate::api::mesh_handler::broadcast_handler),
+            )
+            .merge(crate::builder::publication_http::router(pool, auth));
+        let app = app.with_state(transport);
+        let mesh_body = serde_json::json!({"topic":"composition-only","message":{
+            "agent_id":"local-test","action":"check","status":"test","payload":[],"msg_id":"composition"
+        }});
+        let mesh = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/existing-mesh")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&mesh_body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        // The actual handler keeps its existing authentication behavior. This
+        // unsigned request never publishes an event or contacts a provider.
+        assert_eq!(mesh.status(), StatusCode::UNAUTHORIZED);
+        let publication = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/builder/publications")
+                    .header("content-type", "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(publication.status(), StatusCode::UNAUTHORIZED);
+    }
+
     #[test]
     fn rust_server_does_not_register_legacy_browser_application_routes() {
         let source = include_str!("lib.rs");
