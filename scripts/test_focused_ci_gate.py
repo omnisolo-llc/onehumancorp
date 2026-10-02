@@ -48,7 +48,7 @@ class FocusedGateTests(unittest.TestCase):
         self.assertIn('process.versions.node', witness)
     def test_agent_receipt_postgres_gate_keeps_real_storage_and_sqlite_inventory(self):
         minimum, database = gate.GATES['agent-receipt-postgres-contract']
-        self.assertGreaterEqual(minimum, 38)
+        self.assertGreaterEqual(minimum, 40)
         self.assertEqual(database, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         runner = (root/'scripts/agent-receipt-postgres-contract/run.sh').read_text()

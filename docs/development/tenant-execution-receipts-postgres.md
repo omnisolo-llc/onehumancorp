@@ -66,5 +66,5 @@ HTTP/worker/provider acceptance or a claim of metered execution readiness.
 
 The checked-in focused Cargo lock must be an exact registry/version/source/checksum
 subset of the root lock. CI fetches this focused graph for the Rust host with
-`--locked`; tests remain `--locked --offline`. The mandatory gate has a 38-case floor
+`--locked`; tests remain `--locked --offline`. The mandatory gate has a 40-case floor
 and uses the existing PostgreSQL lane, without adding a runner.
