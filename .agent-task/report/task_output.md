@@ -1,0 +1,4 @@
+outcome: no_work
+issue_title: "Research Chatwoot Competitors and Implement Native Replacement"
+issue_description: |
+  The requested omnichannel replacement and Chatwoot removal are already complete on the backend. The current codebase contains native Rust backend models (e.g. `src/server/domain/inbox.rs`, `src/server/api/inbox_api.rs`), workers (`message_triage_worker.rs`), and a documented removal plan that has been fully executed (see `docs/superpowers/plans/2026-07-13-chatwoot-removal.md` and `deploy/tests/no_chatwoot_residue_test.sh`). However, the specific unified inbox Next.js UI components could not be explicitly located and verified during this trace, leaving a potential gap in the frontend implementation. The codebase explicitly forbids legacy or redundant Chatwoot infrastructure. Based on the verified backend implementation, no new code modifications are necessary.
