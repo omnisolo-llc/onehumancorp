@@ -1,6 +1,7 @@
 import { E2E_ADMIN_USER, expect, test } from "../../../../e2e/fixtures";
 import { discoverApplicationRoutes } from "./production_route_inventory";
 import { recordSmokeHttpResponse, isVerifiedVoicePolicyDiagnostic } from "../../../../e2e/support/hosted_voice_policy";
+import { createLinkBioActor } from "../../../../e2e/link_bio_owner";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "http://127.0.0.1:3000";
 const adminEmail = process.env.OMNISOLO_ADMIN_EMAIL ?? process.env.OHC_ADMIN_EMAIL ?? E2E_ADMIN_USER.email;
@@ -9,11 +10,11 @@ const organizationId = process.env.OMNISOLO_ADMIN_ORGANIZATION_ID
   ?? process.env.OHC_ADMIN_ORGANIZATION_ID
   ?? E2E_ADMIN_USER.organizationId;
 
-async function loginThroughRenderedForm(page: import("@playwright/test").Page) {
-  await page.goto(new URL("/login", baseUrl).toString(), { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Email or username").fill(adminEmail!);
-  await page.getByLabel("Password").fill(adminPassword!);
-  await page.getByLabel(/Organization/).fill(organizationId);
+async function loginThroughRenderedForm(page: import("@playwright/test").Page, actor = { email: adminEmail!, password: adminPassword!, organizationId }, appBaseUrl = baseUrl) {
+  await page.goto(new URL("/login", appBaseUrl).toString(), { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Email or username").fill(actor.email);
+  await page.getByLabel("Password").fill(actor.password);
+  await page.getByLabel(/Organization/).fill(actor.organizationId);
   await page.getByRole("button", { name: "Log in" }).click();
   await page.waitForURL(/\/dashboard(?:\?|$)/, { timeout: 30_000 });
 }
@@ -27,9 +28,31 @@ test("health check is public and returns a live response", async ({ anonymousPag
   await expect(page.locator("body")).toContainText("ok");
 });
 
-test("all application pages render through the real authenticated service", async ({ anonymousPage: page }) => {
+test("all application pages render through the real authenticated service", async ({ anonymousPage: page, baseURL, adminUser }) => {
   test.setTimeout(15 * 60_000);
-  await loginThroughRenderedForm(page);
+  const actor = await createLinkBioActor(page, baseURL, adminUser);
+  const baseUrl = new URL(baseURL!).origin;
+  await page.context().clearCookies();
+  await loginThroughRenderedForm(page, { email: actor.email, password: adminUser.password, organizationId: actor.tenantId }, baseUrl);
+  // The private preview route requires an actual owned configuration. Build it
+  // through the maintained editor, then verify the persisted response before crawling.
+  await page.goto(new URL('/link-in-bio-generator', baseUrl).href);
+  await page.getByRole('textbox', { name: 'Store / Creator Name' }).fill('Owned smoke profile');
+  await page.getByRole('textbox', { name: 'Bio / Description' }).fill('Private configuration for this isolated smoke actor.');
+  const saved = page.waitForResponse(response => new URL(response.url()).origin === new URL(baseUrl).origin
+    && new URL(response.url()).pathname === '/api/v1/growth/link-in-bio' && response.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Save private configuration', exact: true }).click();
+  const saveResponse = await saved;
+  expect(saveResponse.status()).toBe(200);
+  expect(await saveResponse.text()).toBe('');
+  expect(saveResponse.request().postDataJSON().tenant_id).toBe(actor.tenantId);
+  expect(saveResponse.request().headers()['x-ohc-expected-user']).toBe(actor.userId);
+  expect(saveResponse.request().headers()['x-ohc-expected-tenant']).toBe(actor.tenantId);
+  const savedProfile = await page.request.get(new URL(`/api/v1/growth/link-in-bio/${encodeURIComponent(actor.tenantId)}`, baseUrl).href, {
+    headers: { 'x-ohc-expected-user': actor.userId, 'x-ohc-expected-tenant': actor.tenantId },
+  });
+  expect(savedProfile.status()).toBe(200);
+  expect(await savedProfile.json()).toMatchObject({ store_name: 'Owned smoke profile', bio: 'Private configuration for this isolated smoke actor.', links: [] });
   const failures: string[] = [];
   const httpFailures: string[] = [];
   const requestFailures: string[] = [];
@@ -66,7 +89,7 @@ test("all application pages render through the real authenticated service", asyn
   const routeFailures: string[] = [];
   const contentFailures: string[] = [];
 
-  for (const route of discoverApplicationRoutes()) {
+  for (const route of discoverApplicationRoutes(undefined, { tenant: actor.tenantId })) {
     try {
       const response = await page.goto(new URL(route, baseUrl).toString(), {
         waitUntil: "domcontentloaded",
