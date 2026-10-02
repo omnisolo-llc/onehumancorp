@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Design: Native Rust Omnichannel Chat Foundation"
+issue_description: "The issue requests implementing a Native Rust Omnichannel Chat Foundation, which includes models, API, and UI. During the research, it was identified that the Native Rust Omnichannel Chat architecture is already implemented and exists in the codebase (e.g. `src/server/services/chat/models.rs`, `src/server/db/migrations/1009_native_omnichannel_chat.sql`). Furthermore, external channel connectors required by the prompt are blocked by missing external sandbox credentials, which makes it explicitly blocked. Finally, the Next.js frontend has replaced Flutter UI in the current codebase architecture. Therefore, a no-work finding outcome is generated."
