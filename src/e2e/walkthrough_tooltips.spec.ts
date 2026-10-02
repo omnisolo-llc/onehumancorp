@@ -8,7 +8,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     // Check Walkthrough button
     const walkBtn = page.locator('#dashboard-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
-    await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await walkBtn.click();
 
     // The walkthrough overlay should appear
     const overlay = page.locator('.omnisolo-walkthrough-overlay');
@@ -20,7 +20,7 @@ test.describe('Walkthrough and Tooltips features', () => {
 
     // Close the walkthrough
     const closeBtn = page.locator('.omnisolo-walkthrough-close');
-    await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await closeBtn.click();
     await expect(overlay).not.toBeVisible();
   });
 
@@ -29,7 +29,7 @@ test.describe('Walkthrough and Tooltips features', () => {
 
     const walkBtn = page.locator('#storefront-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
-    await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await walkBtn.click();
 
     const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
@@ -39,7 +39,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(bubble).toContainText('Storefront Builder');
 
     const closeBtn = page.locator('.omnisolo-walkthrough-close');
-    await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await closeBtn.click();
     await expect(overlay).not.toBeVisible();
 
     // Check Help Center button
@@ -53,7 +53,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     // Check Walkthrough button
     const walkBtn = page.locator('#pos-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
-    await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await walkBtn.click();
 
     // The walkthrough overlay should appear
     const overlay = page.locator('.omnisolo-walkthrough-overlay');
@@ -65,7 +65,7 @@ test.describe('Walkthrough and Tooltips features', () => {
 
     // Close the walkthrough
     const closeBtn = page.locator('.omnisolo-walkthrough-close');
-    await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await closeBtn.click();
     await expect(overlay).not.toBeVisible();
 
     // Check Help Center button
@@ -79,7 +79,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     // Check Walkthrough button
     const walkBtn = page.locator('#assistant-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
-    await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await walkBtn.click();
 
     // The walkthrough overlay should appear
     const overlay = page.locator('.omnisolo-walkthrough-overlay');
@@ -91,7 +91,7 @@ test.describe('Walkthrough and Tooltips features', () => {
 
     // Close the walkthrough
     const closeBtn = page.locator('.omnisolo-walkthrough-close');
-    await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
+    await closeBtn.click();
     await expect(overlay).not.toBeVisible();
 
     // Check Help Center button
