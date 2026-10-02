@@ -36,7 +36,7 @@ impl AnalysisPolicy {
 }
 
 #[derive(Clone)]
-struct Authority {
+pub(crate) struct Authority {
     tenant_id: String,
     actor_id: String,
     token_id: String,
@@ -185,14 +185,13 @@ impl WorkflowExecution {
         .map_err(|_| AdmissionError::Unavailable)?
     }
 
-    pub async fn admit(
+    // Receipt reconciliation requires current identity even when the provider is
+    // unavailable. This private snapshot grants no inference or workspace effect.
+    pub(crate) async fn authorize(
         &self,
         claims: &Claims,
         headers: &axum::http::HeaderMap,
-        task: &str,
-        requested_model: &str,
-        workflow: &str,
-    ) -> Result<AdmittedAnalysis, AdmissionError> {
+    ) -> Result<Authority, AdmissionError> {
         // Revalidate the exact bearer against the Store as well as requiring
         // the middleware's current claims. A fabricated internal Claims value
         // or caller-supplied tenant/actor is not a dispatch capability.
@@ -240,6 +239,18 @@ impl WorkflowExecution {
             session_id: claims.session_id.clone(),
         };
         self.current_authority(&authority).await?;
+        Ok(authority)
+    }
+
+    pub async fn admit(
+        &self,
+        claims: &Claims,
+        headers: &axum::http::HeaderMap,
+        task: &str,
+        requested_model: &str,
+        workflow: &str,
+    ) -> Result<AdmittedAnalysis, AdmissionError> {
+        let authority = self.authorize(claims, headers).await?;
         if task.trim().is_empty()
             || task.chars().count() > MAX_TASK_CHARACTERS
             || !matches!(workflow, "" | "expert_task" | "analysis")
@@ -540,6 +551,40 @@ mod tests {
                 .admit(claims, headers, "must not dispatch", "Auto", "expert_task")
                 .await,
             Err(AdmissionError::Unavailable)
+        ));
+        assert!(f.inference.seen.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn receipt_reconciliation_authentication_does_not_require_an_available_provider() {
+        let f = Fixture::new(false, false).await;
+        let execution = WorkflowExecution::unavailable(f.store.clone());
+        let (claims, headers) = &f.identities[0];
+        let authority = execution.authorize(claims, headers).await.unwrap();
+        assert_eq!(
+            authority.tenant_id,
+            claims.organization_id.as_deref().unwrap()
+        );
+        assert_eq!(authority.actor_id, claims.sub);
+        let mut forged = claims.clone();
+        forged.sub = f.identities[1].0.sub.clone();
+        assert!(matches!(
+            execution.authorize(&forged, headers).await,
+            Err(AdmissionError::Forbidden)
+        ));
+        f.store
+            .update_user(
+                &claims.sub,
+                None,
+                Some(vec!["staff".into()]),
+                None,
+                claims.organization_id.as_deref().unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(matches!(
+            execution.authorize(claims, headers).await,
+            Err(AdmissionError::Forbidden)
         ));
         assert!(f.inference.seen.lock().unwrap().is_empty());
     }
