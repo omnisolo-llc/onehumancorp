@@ -1,3 +1,0 @@
-issue_title: 🛠️ Forge: Implement Native Rust Omnichannel Inbox & Agentic Chat Replacements for Chatwoot
-issue_description: "The owner requested the implementation of a native Rust omnichannel inbox to replace Chatwoot, complete with webhooks for messaging platforms, real-time WebSockets, and UI components. The existing codebase already contains the native Rust omnichannel webhook endpoint at `/api/v1/omnichannel/webhook`, complete with SQLite persistence, `omni_inbox_messages` handling, identity resolution, job queue submission for `message_triage`, and a `tenant.omnichannel.message.received` event dispatcher. No new implementation is needed."
-outcome: no_work
