@@ -46,7 +46,7 @@ describe('ViralPostGeneratorPage', () => {
 
   it('renders correctly', () => {
     render(<ViralPostGeneratorPage />);
-    expect(screen.getByText('Promoter Agent Post Generator 🚀')).toBeDefined();
+    expect(screen.getByText('Social Post Template 🚀')).toBeDefined();
   });
 
   it('generates a post', () => {
@@ -66,7 +66,7 @@ describe('ViralPostGeneratorPage', () => {
     expect(screen.getAllByText(/Powered by OmniSolo/).length).toBeGreaterThan(0);
   });
 
-  it('copies to clipboard', () => {
+  it('copies to clipboard', async () => {
     render(<ViralPostGeneratorPage />);
 
     const productNameInput = screen.getByPlaceholderText('e.g. Signature Coffee Blend');
@@ -82,7 +82,7 @@ describe('ViralPostGeneratorPage', () => {
     fireEvent.click(copyBtn);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByText('Copied!')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Copied!')).toBeDefined());
   });
 
   it('shows paywall when toggling remove branding', () => {
