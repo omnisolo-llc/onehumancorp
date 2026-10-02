@@ -135,6 +135,33 @@ impl ChatService {
         Ok(res)
     }
 
+    pub async fn get_open_conversations(
+        &self,
+        tenant_id: Uuid,
+        inbox_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await?;
+        let res = sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+            FROM chat_conversations
+            WHERE inbox_id = $1 AND status = 'open'
+            ORDER BY updated_at DESC
+            "#,
+        )
+        .bind(inbox_id)
+        .fetch_all(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(res)
+    }
+
     pub async fn send_message(
         &self,
         tenant_id: Uuid,
@@ -236,6 +263,36 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(msg.content, "Hello!");
+
+        // 6. Query open conversations
+        let open_conversations = service
+            .get_open_conversations(tenant_id, inbox.id)
+            .await
+            .unwrap();
+        assert_eq!(open_conversations.len(), 1);
+        assert_eq!(open_conversations[0].id, conversation.id);
+
+        // 7. Test closed conversation exclusion (update to closed manually for test)
+        let mut tx = service.pool.begin().await.unwrap();
+        sqlx::query(&format!(
+            "SET LOCAL app.current_tenant_id = '{}'",
+            tenant_id
+        ))
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+        sqlx::query("UPDATE chat_conversations SET status = 'closed' WHERE id = $1")
+            .bind(conversation.id)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+
+        let open_conversations_after = service
+            .get_open_conversations(tenant_id, inbox.id)
+            .await
+            .unwrap();
+        assert_eq!(open_conversations_after.len(), 0);
     }
 
     #[tokio::test]
