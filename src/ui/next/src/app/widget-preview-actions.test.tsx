@@ -14,12 +14,14 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it('sample appointments cannot send a client message', async () => {
+it('unverified appointment access never falls back to sample data or client actions', async () => {
   await act(async () => { render(<TooltipProvider><Operations /></TooltipProvider>); });
-  const button = screen.getByRole('button', { name: 'Message Client' });
-  expect(button).toBeDisabled();
-  expect(button).toHaveAccessibleDescription(/unavailable for sample appointments/i);
-  expect(screen.getByText(/sample schedule preview/i)).toBeInTheDocument();
+  expect(screen.getByRole('alert', { name: 'Appointment status' })).toHaveTextContent(/appointments could not be loaded/i);
+  expect(screen.getByRole('button', { name: 'Retry loading appointments' })).toBeEnabled();
+  expect(screen.queryByRole('button', { name: 'Message Client' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('list', { name: 'Recorded appointments' })).not.toBeInTheDocument();
+  expect(screen.queryByText(/sample schedule preview|Alice Smith|Sarah Johnson|Mike Brown/)).not.toBeInTheDocument();
+  expect(screen.queryByText('No appointments recorded for this business.')).not.toBeInTheDocument();
 });
 
 it('sample staff shifts cannot request a live swap', async () => {
