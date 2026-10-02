@@ -61,6 +61,10 @@ impl ChatFixture {
             .iter()
             .find(|m| m.version == 1009)
             .expect("native chat migration1009 must be in the active source");
+        let sender_migration = migrations
+            .iter()
+            .find(|m| m.version == 1021)
+            .expect("chat sender migration1021 must be in the active source");
         let schema = format!("chat_case_{}", Uuid::new_v4().simple());
         let role = format!("chat_member_{}", Uuid::new_v4().simple());
         let password = Uuid::new_v4().simple().to_string();
@@ -86,6 +90,10 @@ impl ChatFixture {
             .execute(&admin)
             .await
             .expect("actual native chat migration must execute");
+        sqlx::raw_sql(sender_migration.sql.as_ref())
+            .execute(&admin)
+            .await
+            .expect("actual chat sender migration must execute after migration1009");
         sqlx::query(&format!("CREATE ROLE {role} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD '{password}'")).execute(&admin).await.unwrap();
         sqlx::raw_sql(&format!("GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA {schema} TO {role};")).execute(&admin).await.unwrap();
         let scoped = PgPoolOptions::new()
