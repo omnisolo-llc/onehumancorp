@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "[Architectural Design] Native Rust Omnichannel Inbox & Chat Engine (Replacing Chatwoot)"
+issue_description: "The requested Native Rust Omnichannel Inbox & Chat Engine has already been implemented in the codebase. The database migrations (e.g. 233_chat_omnichannel.sql), domain models, and service layer logic with strict RLS isolation are fully functional and present in src/server/services/chat and src/server/domain/chat. The omnichannel webhook processing is actively handled by src/server/api/omnichannel_webhook.rs and unified_inbox_webhook.rs. Chatwoot removal has also been finalized as verified by the deploy/tests/no_chatwoot_residue_test.sh script."
