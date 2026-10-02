@@ -206,6 +206,37 @@ fn block_html(block: &PublishedBlock, site_id: Uuid) -> Result<String, Publicati
             "<p>{}</p>",
             escape_html(text(value, "text", true)?)
         )),
+        "LinkListBlock" => {
+            let links =
+                value
+                    .get("links")
+                    .and_then(Value::as_array)
+                    .ok_or(PublicationError::Invalid(
+                        "Reviewed profile links are missing",
+                    ))?;
+            html.push_str("<nav aria-label=\"Profile links\"><ul>");
+            for link in links {
+                let label = text(link, "label", true)?;
+                let destination = text(link, "url", true)?;
+                // Keep the private bio editor's absolute, whitespace-free web
+                // destination contract before the shared URL/credential checks.
+                let scheme = destination.split_once("://").map(|(scheme, _)| scheme);
+                if !scheme.is_some_and(|scheme| {
+                    scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https")
+                }) || destination.chars().any(char::is_whitespace)
+                {
+                    return Err(PublicationError::Invalid(
+                        "Profile links require absolute HTTP or HTTPS destinations",
+                    ));
+                }
+                html.push_str(&format!(
+                    "<li><a class=\"action\" href=\"{}\" rel=\"noopener noreferrer\">{}</a></li>",
+                    escape_html(&web_url(destination)?),
+                    escape_html(label)
+                ));
+            }
+            html.push_str("</ul></nav>");
+        }
         _ => {
             return Err(PublicationError::Invalid(
                 "This reviewed block type is not supported for publication",

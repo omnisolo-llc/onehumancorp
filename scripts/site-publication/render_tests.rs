@@ -193,3 +193,125 @@ fn every_reviewed_page_is_rendered_and_the_digest_binds_actual_bytes() {
         )
     );
 }
+
+#[test]
+fn reviewed_bio_link_list_preserves_order_and_real_web_destinations() {
+    let rendered = render_snapshot(
+        &snapshot(vec![
+            block(
+                "HeroBlock",
+                json!({"headline":"Owner bakery","subtitle":"Reviewed bio"}),
+                0,
+            ),
+            block(
+                "LinkListBlock",
+                json!({"links":[
+                    {"label":"Our menu","url":"https://example.test/menu?item=tea&size=large"},
+                    {"label":"Local hours","url":"http://example.test/hours#today"}
+                ]}),
+                1,
+            ),
+        ]),
+        Uuid::nil(),
+    )
+    .unwrap();
+    let html = &rendered.pages["/"];
+    assert!(html.contains("<h1>Owner bakery</h1><p>Reviewed bio</p>"));
+    assert!(html.contains("href=\"https://example.test/menu?item=tea&amp;size=large\""));
+    assert!(html.contains("href=\"http://example.test/hours#today\""));
+    assert!(html.find("Our menu").unwrap() < html.find("Local hours").unwrap());
+    assert_eq!(html.matches("<a ").count(), 2);
+    assert!(!html.contains("Open booking"));
+}
+
+#[test]
+fn bio_link_labels_and_unicode_destinations_stay_in_their_html_contexts() {
+    let rendered = render_snapshot(
+        &snapshot(vec![block(
+            "LinkListBlock",
+            json!({"links":[{
+                "label":"雪 & \"Tea\" <img src=x onerror=alert(1)>",
+                "url":"https://example.test/雪?note=O'Reilly&x=%22%3C"
+            }]}),
+            0,
+        )]),
+        Uuid::nil(),
+    )
+    .unwrap();
+    let html = &rendered.pages["/"];
+    assert!(html.contains("雪 &amp; &quot;Tea&quot; &lt;img src=x onerror=alert(1)&gt;"));
+    assert!(html.contains("href=\"https://example.test/%E9%9B%AA?note=O%27Reilly&amp;x=%22%3C\""));
+    assert_eq!(html.matches("<a ").count(), 1);
+    assert_eq!(html.matches("<script").count(), 1);
+    assert!(!html.contains("<img src=x"));
+    assert!(!html.contains("onclick="));
+}
+
+#[test]
+fn unsafe_or_malformed_bio_links_reject_the_entire_publication() {
+    for content in [
+        json!({}),
+        json!({"links":null}),
+        json!({"links":{}}),
+        json!({"links":[null]}),
+        json!({"links":[{"label":"","url":"https://example.test"}]}),
+        json!({"links":[{"label":"   ","url":"https://example.test"}]}),
+        json!({"links":[{"label":false,"url":"https://example.test"}]}),
+        json!({"links":[{"label":"Title"}]}),
+        json!({"links":[{"label":"Title","url":42}]}),
+    ] {
+        assert!(
+            render_snapshot(
+                &snapshot(vec![block("LinkListBlock", content.clone(), 0)]),
+                Uuid::nil()
+            )
+            .is_err(),
+            "accepted {content}"
+        );
+    }
+    for url in [
+        "javascript:alert(1)",
+        "data:text/html,hello",
+        "blob:https://example.test/id",
+        "mailto:owner@example.test",
+        "//example.test/menu",
+        "/menu",
+        "https://",
+        " https://example.test/menu",
+        "https://example.test/menu ",
+        "https://example.test/\nmenu",
+        "https://example.test/\tmenu",
+        "https://example.test/our menu",
+        "https://example.test/\u{a0}menu",
+        "https:example.test/menu",
+        "https:/example.test/menu",
+        "https:\\example.test/menu",
+        "https://owner:secret@example.test/menu",
+    ] {
+        let input = snapshot(vec![block(
+            "LinkListBlock",
+            json!({"links":[
+                {"label":"Safe first","url":"https://example.test/menu"},
+                {"label":"Invalid second","url":url}
+            ]}),
+            0,
+        )]);
+        assert!(
+            render_snapshot(&input, Uuid::nil()).is_err(),
+            "accepted unsafe link {url:?}"
+        );
+    }
+}
+
+#[test]
+fn an_empty_reviewed_link_list_does_not_invent_a_destination() {
+    let rendered = render_snapshot(
+        &snapshot(vec![block("LinkListBlock", json!({"links":[]}), 0)]),
+        Uuid::nil(),
+    )
+    .unwrap();
+    let html = &rendered.pages["/"];
+    assert!(!html.contains("<a "));
+    assert!(!html.contains("<button"));
+    assert!(!html.contains("my-store"));
+}
