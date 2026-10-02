@@ -1,68 +1,52 @@
-import { createGrowthOwner } from './growth_owner';
 import { test, expect } from './fixtures';
+import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from './support/entitlement_fixture';
 
-test.describe('Viral Trial Extension Loop', () => {
-  test('should display the trial extension page and handle share', async ({ page, baseURL }) => {
-    await createGrowthOwner(page, baseURL);
+test.describe('Verified plan and trial availability', () => {
+  test('trial page reports the real plan and retains unavailable activation after repeat checks', async ({ page, baseURL }) => {
+    const fixture = await createEntitlementOwner(page, baseURL);
+    const claims = trackTrialClaims(page);
     await page.goto('/trial-extension');
-
-    await expect(page.getByRole('heading', { name: 'Interactive Pro Activation' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Activate Pro Access?' })).toBeVisible();
-
-    // The share button should be present
-    const shareButton = page.getByRole('button', { name: 'Share on X to Activate Pro' });
-    await expect(shareButton).toBeVisible();
-    await expect(shareButton).toBeEnabled();
-
-    const poweredByLink = page.locator('a', { hasText: /OmniSolo/i }).first();
-    await expect(poweredByLink).toBeVisible();
-    await expect(poweredByLink).toHaveAttribute('href', /.*\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=trial_extension/);
-
-    // We cannot use waitForEvent('popup') because we mock window.open
-    await page.evaluate(() => {
-      window.open = function() { return null; };
-    });
-
-    const claimResponse = page.waitForResponse(response =>
-      response.url().endsWith('/api/v1/growth/trial-extension/claim') && response.request().method() === 'POST');
-    await shareButton.click();
-    expect((await claimResponse).ok()).toBeTruthy();
-
-    await expect(page.getByRole('heading', { name: 'Pro Access Activated' })).toBeVisible();
-    await expect(page.getByText('Thank you for sharing. The backend confirmed Pro access for this account.')).toBeVisible();
-
-    const dashboardBtn = page.getByRole('link', { name: /Dashboard/i }).first();
-    await expect(dashboardBtn).toBeVisible();
-    await dashboardBtn.click();
-
-    await expect(page).toHaveURL(/.*\/dashboard/);
+    await expect(page.getByRole('heading', { name: 'Plan and Trial Availability' })).toBeVisible();
+    await expect(page.getByRole('status', { name: 'Current plan' })).toHaveText('Current verified plan: Free.');
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await page.getByRole('button', { name: 'Check trial availability' }).click();
+      await expect(page.getByText(/durable grant is not verified/)).toBeVisible();
+    }
+    await page.getByRole('button', { name: 'Refresh current plan' }).click();
+    await expect(page.getByRole('status', { name: 'Current plan' })).toHaveText('Current verified plan: Free.');
+    await page.reload();
+    await expect(page.getByRole('status', { name: 'Current plan' })).toHaveText('Current verified plan: Free.');
+    await page.getByRole('link', { name: 'Back to Dashboard' }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    expect(claims).toEqual([]);
+    await expectEntitlementUnchanged(page, fixture);
   });
-  test('should display the trial extension widget on the Pricing page and handle share', async ({ page, baseURL }) => {
-    // Navigate to pricing
-    await createGrowthOwner(page, baseURL);
+
+  test('pricing trial widget cannot grant a plan and retains plan navigation', async ({ page, baseURL }) => {
+    const fixture = await createEntitlementOwner(page, baseURL);
+    const claims = trackTrialClaims(page);
     await page.goto('/pricing');
-
-    // Wait for the Pricing screen to load
-    await expect(page.locator('h1:has-text("Pricing Plans")')).toBeVisible();
-
-    // Verify the widget text
-    await expect(page.getByText(/Want (Pro Access\?|7 Extra Days of Pro\?)/i)).toBeVisible();
-    await expect(page.getByText(/Share on X \(Twitter\) to (request access to|unlock a free week of) advanced features\./i)).toBeVisible();
-
-    // The share button should be present inside the widget
-    const shareButton = page.getByRole('button', { name: /Share (to Unlock|on X to Request Pro)/i });
-    await expect(shareButton).toBeVisible();
-    await expect(shareButton).toBeEnabled();
-
-    // Mock window.open to prevent popup
-    await page.evaluate(() => {
-      window.open = function() { return null; };
-    });
-
-    await shareButton.click();
-
-    // Verify it transitions to success state
-    await expect(page.getByText(/(Pro Access Activated|Trial Extended!)/i)).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/(The backend confirmed Pro access for this account\.|You've unlocked 7 days of Pro for free\.)/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pricing Plans', exact: true })).toBeVisible();
+    const widget = page.getByRole('region', { name: 'Plan and trial availability' });
+    await expect(widget.getByText('Current verified plan: Free.')).toBeVisible();
+    await expect(widget.getByText('Sharing does not confirm a trial grant or its duration.')).toBeVisible();
+    await widget.getByRole('button', { name: 'Check trial availability' }).click();
+    await expect(widget.getByText(/durable grant is not verified/)).toBeVisible();
+    await expect(widget.getByRole('link', { name: 'Review plans' })).toHaveAttribute('href', '/pricing');
+    await expect(page.getByText(/Pro Access Activated|Trial Extended!/)).not.toBeVisible();
+    expect(claims).toEqual([]);
+    await expectEntitlementUnchanged(page, fixture);
   });
+
+  for (const plan of ['Free', 'Pro', 'Business'] as const) {
+    test(`direct repeated trial requests cannot overwrite a persisted ${plan} plan`, async ({ page, baseURL }) => {
+      const fixture = await createEntitlementOwner(page, baseURL, plan);
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const response = await page.request.post('/api/v1/growth/trial-extension/claim', { data: { share_verified: true } });
+        expect(response.status()).toBe(501);
+        expect(await response.json()).toMatchObject({ success: false, code: 'capability_unavailable', capability: 'trial_entitlement' });
+        await expectEntitlementUnchanged(page, fixture);
+      }
+    });
+  }
 });

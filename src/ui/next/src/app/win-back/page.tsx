@@ -72,7 +72,7 @@ export default function WinBackCampaignPage() {
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-2xl p-6 shadow-sm">
            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Re-engage Inactive Customers</h2>
            <p className="text-gray-600 text-sm">
-             Generate highly-converting, personalized win-back emails using AI. It costs 5x less to retain a customer than to acquire a new one.
+             Prepare an editable campaign template using the offer you provide. Review the wording and customer permissions before sending.
            </p>
         </div>
 
@@ -113,7 +113,7 @@ export default function WinBackCampaignPage() {
                 disabled={!discountOffer || isGenerating || currentPlan === null}
                 className={`w-full py-3 mt-4 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${(!discountOffer || isGenerating || currentPlan === null) ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0'}`}
               >
-                {isGenerating ? 'Drafting with AI...' : 'Generate AI Campaign'}
+                {isGenerating ? 'Preparing template...' : 'Generate Campaign Template'}
               </button>
             </div>
           </section>
@@ -121,15 +121,20 @@ export default function WinBackCampaignPage() {
           {/* AI Draft Preview */}
           <section className="w-full md:w-1/2 p-6 shadow-md flex flex-col" style={{ background: '#ffffff', border: '1px solid rgba(0, 0, 0, 0.05)', borderRadius: '16px' }}>
             <h3 className="text-xl font-semibold font-outfit mb-4 flex items-center gap-2" style={{ color: '#1D1D1F' }}>
-              <span className="text-yellow-500">✨</span> AI Generated Draft
+              <span className="text-yellow-500">✨</span> Campaign Draft Template
             </h3>
 
             {generatedDraft ? (
               <div className="flex-1 flex flex-col">
                 <div className="flex-1 bg-gray-50 border border-gray-100 rounded-xl p-4 mb-4">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-700 font-inter font-medium" style={{ fontFamily: 'inherit' }}>
-                    {generatedDraft}
-                  </pre>
+                  <textarea
+                    aria-label="Campaign draft"
+                    value={generatedDraft}
+                    onChange={event => setGeneratedDraft(event.target.value)}
+                    rows={12}
+                    className="w-full whitespace-pre-wrap text-sm text-gray-700 font-inter font-medium"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">This template does not create a discount code or send a campaign.</p>
                 </div>
 
                 <button
@@ -143,7 +148,7 @@ export default function WinBackCampaignPage() {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
                 <svg className="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                <p className="text-sm font-medium">Configure your campaign to generate a high-converting win-back draft.</p>
+                <p className="text-sm font-medium">Enter your offer to prepare a campaign template.</p>
               </div>
             )}
           </section>
@@ -159,6 +164,7 @@ export default function WinBackCampaignPage() {
             <div className="flex justify-end mb-2">
               <button
                 onClick={() => setShowSoftPaywall(false)}
+                aria-label="Close paywall"
                 className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
               >
                 <span className="text-xl leading-none">&times;</span>

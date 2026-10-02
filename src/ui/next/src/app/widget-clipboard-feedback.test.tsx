@@ -67,7 +67,7 @@ describe('clipboard feedback follows the actual platform outcome', () => {
       const copy = screen.getByRole('button', { name: button });
       fireEvent.click(copy);
       expect(copy).toBeDisabled();
-      const copyFeedback = name === 'team embed' ? within(copy.parentElement!) : screen;
+      const copyFeedback = ['team embed', 'referral'].includes(name) ? within(copy.parentElement!) : screen;
       expect(copyFeedback.getByRole('status')).toHaveTextContent(/copying/i);
       expect(screen.queryByText(/^Copied!?$/)).not.toBeInTheDocument();
       await act(async () => { completion.resolve(); });

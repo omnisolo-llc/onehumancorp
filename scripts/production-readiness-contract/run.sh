@@ -16,8 +16,8 @@ from pathlib import Path
 import re, sys
 source = Path(sys.argv[1]).read_text()
 results = re.findall(r'test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out', source)
-if not results or sum(int(item[0]) for item in results) < 7 or any(any(int(value) for value in item[1:]) for item in results):
-    raise SystemExit('The mounted readiness gate requires all seven real HTTP tests, with no failures, ignored or filtered tests')
+if not results or sum(int(item[0]) for item in results) < 10 or any(any(int(value) for value in item[1:]) for item in results):
+    raise SystemExit('The mounted readiness gate requires all ten real HTTP tests, with no failures, ignored or filtered tests')
 PY
 python3 scripts/production-readiness-contract/prepare.py
 test "$before" = "$(sha256sum scripts/production-readiness-contract/source-manifest.json)"

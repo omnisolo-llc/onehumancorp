@@ -24,7 +24,7 @@ afterEach(() => { act(() => invalidateQueueOwner()); vi.unstubAllGlobals(); vi.r
 const cases = [
   { name: 'soft paywall', Page: SoftPaywallWidget, open: () => fireEvent.click(screen.getByRole('button', { name: /^(Enable|Review automation setup)$/ })) },
   { name: 'viral trial widget', Page: ViralTrialExtensionWidget, open: () => {} },
-  { name: 'win-back', Page: WinBack, open: () => { fireEvent.change(screen.getByLabelText('Product to Feature (Optional)'), { target: { value: 'Owner product' } }); fireEvent.change(screen.getByLabelText('Discount Offer (%)'), { target: { value: '15' } }); fireEvent.click(screen.getByRole('button', { name: 'Generate AI Campaign' })); } },
+  { name: 'win-back', Page: WinBack, open: () => { fireEvent.change(screen.getByLabelText('Product to Feature (Optional)'), { target: { value: 'Owner product' } }); fireEvent.change(screen.getByLabelText('Discount Offer (%)'), { target: { value: '15' } }); fireEvent.click(screen.getByRole('button', { name: 'Generate Campaign Template' })); } },
   { name: 'trial page', Page: Trial, open: () => {} },
   { name: 'interactive demo', Page: Demo, open: () => fireEvent.click(screen.getByRole('checkbox')) },
   { name: 'referral builder', Page: Referral, open: () => fireEvent.click(screen.getByRole('checkbox')) },
@@ -53,12 +53,27 @@ it('an unowned saved Pro flag cannot remove referral branding', async () => {
   expect(screen.getByRole('checkbox')).not.toBeChecked();
   expect(localStorage.getItem('has_pro')).toBe('true');
 });
+it('the referral paywall can be dismissed after a trial check without changing branding', async () => {
+  await act(async () => { render(<Referral />); });
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('button', { name: 'Check trial availability' }));
+  expect(screen.getByText(/durable grant is not verified/)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Close paywall' }));
+  expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).not.toBeInTheDocument();
+  expect(screen.getByRole('checkbox')).not.toBeChecked();
+  expect(screen.getByRole('link', { name: /Powered by OmniSolo/ })).toBeVisible();
+});
+it('the referral branding control waits for the current server plan', () => {
+  vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
+  render(<Referral />);
+  expect(screen.getByRole('checkbox')).toBeDisabled();
+});
 it('a currently verified Pro owner can still explicitly request the real win-back generator', async () => {
   currentPlan = 'Pro'; await act(async () => { render(<WinBack />); });
   fireEvent.change(screen.getByLabelText('Product to Feature (Optional)'), { target: { value: 'Owner product' } }); fireEvent.change(screen.getByLabelText('Discount Offer (%)'), { target: { value: '15' } });
-  const button = screen.getByRole('button', { name: 'Generate AI Campaign' }); await waitFor(() => expect(button).toBeEnabled());
+  const button = screen.getByRole('button', { name: 'Generate Campaign Template' }); await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
-  expect(await screen.findByText(/Actual supplied subject/)).toBeVisible();
+  expect(await screen.findByRole('textbox', { name: 'Campaign draft' })).toHaveValue('Subject: Actual supplied subject\n\nActual supplied campaign body');
   expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === '/api/v1/growth/campaign/generate-win-back')).toHaveLength(1);
   expect(vi.mocked(fetch).mock.calls.some(([url]) => url === '/api/v1/growth/trial-extension/claim')).toBe(false);
 });

@@ -6,7 +6,6 @@ pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = Once
 pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
 pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> =
     OnceLock::new();
-pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = OnceLock::new();
 use crate::hub::Hub;
 use axum::{
     Extension, Json, Router,
@@ -505,8 +504,20 @@ where
             get(handle_get_referral_milestones),
         )
         .route("/reputation/stats", get(handle_reputation_stats))
-        .route("/trial-extension/claim", post(handle_trial_extension_claim))
-        .route("/time-savings", get(handle_time_savings))
+        // A share click has no durable grant identity, expiry or verification.
+        // Never convert the account's current plan into an unbounded Pro grant.
+        .route(
+            "/trial-extension/claim",
+            post(|| async { crate::api::production_readiness::unavailable("trial_entitlement") }),
+        )
+        // Task-title counters and fixed minutes-per-action are not measured
+        // owner savings. Keep this gap explicit until provenance is persisted.
+        .route(
+            "/time-savings",
+            get(|| async {
+                crate::api::production_readiness::unavailable("measured_time_savings")
+            }),
+        )
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .route("/wrapped", get(handle_wrapped))
@@ -644,220 +655,6 @@ async fn handle_referral_tier(
         referrals_needed_for_next: needed,
         total_conversions: conversions,
     }))
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TimeSavingsResponse {
-    pub hours_saved: f64,
-    pub inquiries_handled: i64,
-    pub appointments_scheduled: i64,
-    pub carts_recovered: i64,
-    pub auto_replied: i64,
-}
-
-async fn fetch_time_savings_data(
-    pool: &sqlx::PgPool,
-    parsed_uuid: uuid::Uuid,
-    tenant_id_str: &str,
-) -> Result<TimeSavingsResponse, sqlx::Error> {
-    let f1 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
-
-    let f2 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
-
-    let f3 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
-
-    let f4 = async {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'",
-        )
-        .bind(tenant_id_str)
-        .fetch_one(pool)
-        .await
-    };
-
-    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
-
-    let inquiries_handled = res1?;
-    let appointments_scheduled = res2?;
-    let carts_recovered = res3?;
-    let auto_replied = res4?;
-
-    let base_hours = (inquiries_handled as f64 * 0.2)
-        + (appointments_scheduled as f64 * 0.3)
-        + (carts_recovered as f64 * 0.43)
-        + (auto_replied as f64 * 0.1);
-    let hours_saved = (base_hours * 10.0).round() / 10.0;
-
-    Ok(TimeSavingsResponse {
-        hours_saved,
-        inquiries_handled,
-        appointments_scheduled,
-        carts_recovered,
-        auto_replied,
-    })
-}
-
-async fn handle_time_savings(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-) -> Result<Json<TimeSavingsResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
-        Ok(u) => u,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
-    };
-
-    let tenant_id_str = auth_info.org_id;
-
-    let cache_key = format!("time_savings:{}", tenant_id_str);
-    let cache = TIME_SAVINGS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
-
-    if let Some((cached_res, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return Ok(Json(cached_res));
-        }
-
-        let pool_bg = state.pool.clone();
-        let cache_key_bg = cache_key.clone();
-        let tenant_id_str_bg = tenant_id_str.clone();
-
-        tokio::spawn(async move {
-            match fetch_time_savings_data(&pool_bg, parsed_uuid, &tenant_id_str_bg).await {
-                Ok(response) => {
-                    if let Some(c) = TIME_SAVINGS_CACHE.get() {
-                        c.set(&cache_key_bg, response, std::time::Duration::from_secs(60))
-                            .await;
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to fetch background time savings data: {}", e);
-                }
-            }
-        });
-
-        return Ok(Json(cached_res));
-    }
-
-    match fetch_time_savings_data(&state.pool, parsed_uuid, &tenant_id_str).await {
-        Ok(response) => {
-            cache
-                .set(
-                    &cache_key,
-                    response.clone(),
-                    std::time::Duration::from_secs(60),
-                )
-                .await;
-            Ok(Json(response))
-        }
-        Err(e) => {
-            tracing::error!("Failed to fetch time savings data: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TrialExtensionClaimResponse {
-    pub success: bool,
-    pub message: String,
-}
-
-async fn handle_trial_extension_claim(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
-    let org_id_str = &auth_info.org_id;
-
-    // First check if already claimed
-    let has_claimed: Option<bool> = sqlx::query_scalar(
-        "SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1",
-    )
-    .bind(org_id_str)
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to query tenant for trial extension check: {}", e); // pii-safe
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    if let Some(claimed) = has_claimed {
-        if claimed {
-            return Err(StatusCode::BAD_REQUEST);
-        }
-    } else {
-        let _ = sqlx::query(
-            "INSERT INTO tenants (id, name, tier, plan_tier, has_claimed_trial_extension)
-             VALUES ($1, $1, 'pro', 'pro', true)
-             ON CONFLICT (id) DO UPDATE SET tier = 'pro', plan_tier = 'pro', has_claimed_trial_extension = true",
-        )
-        .bind(org_id_str)
-        .execute(&state.pool)
-        .await;
-
-        return Ok(Json(TrialExtensionClaimResponse {
-            success: true,
-            message: "Trial successfully extended to pro".to_string(),
-        }));
-    }
-
-    let update_result = sqlx::query(
-        "UPDATE tenants SET tier = 'pro', plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1",
-    )
-    .bind(org_id_str)
-    .execute(&state.pool)
-    .await;
-
-    match update_result {
-        Ok(result) => {
-            if result.rows_affected() > 0 {
-                if let Some(client) = crate::get_redis_client()
-                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
-                {
-                    let invalidation_topic = "cache_invalidation_events";
-                    let invalidation_payload = serde_json::json!({
-                        "event": "tenant.updated",
-                        "tags": [
-                            format!("tenant-id:{}", org_id_str)
-                        ]
-                    })
-                    .to_string();
-                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                        .arg(invalidation_topic)
-                        .arg(invalidation_payload)
-                        .query_async(&mut conn)
-                        .await;
-                }
-                Ok(Json(TrialExtensionClaimResponse {
-                    success: true,
-                    message: "Trial successfully extended to pro".to_string(),
-                }))
-            } else {
-                Err(StatusCode::NOT_FOUND)
-            }
-        }
-        Err(e) => {
-            tracing::error!("Failed to extend trial: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1252,19 +1049,16 @@ pub struct GenerateSubscriptionOfferResponse {
     pub message: String,
 }
 
-async fn handle_generate_win_back(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateWinBackRequest>,
-) -> impl IntoResponse {
-    let offer = req.offer.unwrap_or_else(|| "a special offer".to_string());
+async fn handle_generate_win_back(Json(req): Json<GenerateWinBackRequest>) -> impl IntoResponse {
+    let offer = req.offer.unwrap_or_else(|| "[your offer]".to_string());
     let body_text = if let Some((discount, product)) = offer.split_once(" off ") {
         format!(
-            "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} off your next order on {} with code WINBACK.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
+            "Hi there,\n\nWe would love to welcome you back. Enjoy {} off your next order on {}.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
             discount, product
         )
     } else {
         format!(
-            "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
+            "Hi there,\n\nWe would love to welcome you back. Enjoy {} on your next order.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
             offer
         )
     };
@@ -4153,69 +3947,54 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_trial_extension_claim() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
-            return;
-        }
+    async fn unverified_trial_and_savings_routes_do_not_touch_database_or_emit_events() {
+        use axum::body::{Body, to_bytes};
+        use axum::http::{Method, Request};
+        use tower::ServiceExt;
 
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        // A deliberately unreachable local pool proves the unavailable routes
+        // never need database access or a provider to give an honest answer.
+        let pool = crate::db::secure_pg_pool_options()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://fixture:fixture@127.0.0.1:1/ohc_unavailable")
+            .unwrap();
+        let (event_tx, mut events) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
-
-        let tenant_id = "55555555-5555-5555-5555-555555555555";
-        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
-            .bind(tenant_id)
-            .execute(&pool).await.unwrap();
-
-        let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
-            org_id: tenant_id.to_string(),
-            agent_id: "test-agent".to_string(),
-        };
-
-        let res = super::handle_trial_extension_claim(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await
-        .unwrap();
-        assert!(res.0.success);
-
-        let plan_tier: String =
-            sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
-                .bind(tenant_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-
-        assert_eq!(plan_tier, "pro");
-
-        let has_claimed: bool = sqlx::query_scalar(
-            "SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1::uuid",
-        )
-        .bind(tenant_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-
-        assert!(has_claimed);
-
-        // Try claiming again, it should fail
-        let res_again = super::handle_trial_extension_claim(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await;
-        assert!(res_again.is_err());
-        assert_eq!(res_again.unwrap_err(), StatusCode::BAD_REQUEST);
+        let app: Router = router(
+            pool,
+            hub,
+            Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()),
+        );
+        for (method, path, capability) in [
+            (Method::POST, "/trial-extension/claim", "trial_entitlement"),
+            (Method::GET, "/time-savings", "measured_time_savings"),
+        ] {
+            for _ in 0..2 {
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method(method.clone())
+                            .uri(path)
+                            .header("x-tenant-id", "fixture-only")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+                assert_eq!(response.headers()["cache-control"], "no-store");
+                let bytes = to_bytes(response.into_body(), 16_384).await.unwrap();
+                let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                assert_eq!(value["success"], false);
+                assert_eq!(value["capability"], capability);
+                assert_eq!(value["code"], "capability_unavailable");
+                assert!(value.get("hours_saved").is_none());
+                assert!(value.get("current_plan").is_none());
+                assert!(value.get("expires_at").is_none());
+            }
+        }
+        assert!(events.try_recv().is_err());
     }
 
     #[tokio::test]

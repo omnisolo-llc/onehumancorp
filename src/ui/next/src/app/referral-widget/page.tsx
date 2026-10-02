@@ -7,7 +7,7 @@ import { useProPlan } from '../components/useProPlan';
 
 export default function ReferralWidgetBuilderPage() {
   const [tenant, setTenant] = useState('my-store');
-  const { hasPro, claimTrial, claimError } = useProPlan();
+  const { hasPro, currentPlan, planError, claimTrial, claimError } = useProPlan();
   const [amount, setAmount] = useState('10');
   const [type, setType] = useState('%');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -139,12 +139,14 @@ export default function ReferralWidgetBuilderPage() {
             </div>
 
             <div className="mb-6">
+              {currentPlan === null && <p role="status">{planError ?? 'Verifying your current plan…'}</p>}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   id="remove-branding-checkbox"
                   aria-label='Remove "OmniSolo" Branding'
                   checked={brandingRemoved}
+                  disabled={currentPlan === null}
                   onChange={(e) => handleCheckboxChange(e.target.checked)}
                   className="w-4 h-4 text-[#0066FF] border-gray-300 rounded focus:ring-[#0066FF]"
                 />
