@@ -1,9 +1,17 @@
-outcome: no_work
-issue_title: "Scout Tool Integration Research - Twilio SMS"
+issue_title: "Implement Core Chatwoot Domain Models in Rust (Native Omnichannel Chat)"
 issue_description: |
-  The issue requested a new implementation for Twilio SMS integration. However, inspecting the codebase reveals that Twilio SMS and WhatsApp integration are already implemented and mounted (see src/server/integrations/twilio and src/e2e/settings.spec.ts). Furthermore, RESEARCH.md explicitly instructs to defer additional harness adapters. No code changes are required as the feature is already present.
-issue_priority: "P2"
-issue_category: ""
-issue_type: ""
-issue_label: ""
+  The requested domain models for the native omnichannel chat engine replacement already exist in the codebase.
+
+  The tables for \`chat_contacts\`, \`chat_inboxes\`, \`chat_conversations\`, and \`chat_messages\` are fully implemented with the requested structure and multi-tenancy rules (RLS) in \`src/server/migrations/1009_native_omnichannel_chat.sql\`.
+
+  The corresponding Rust structures (\`ChatInbox\`, \`ChatChannel\`, \`ChatContact\`, \`ChatConversation\`, \`ChatMessage\`) are already fully defined in \`src/server/services/chat/models.rs\`.
+
+  The implementation logic is present in \`src/server/services/chat/service.rs\`.
+
+  Because the requested data structures and PostgreSQL DDL are already implemented and meet the requirements, no further action can or needs to be safely taken for this feature.
+issue_priority: P0
+issue_category: IMPLEMENTER
+issue_type: Feature
+issue_label: []
 assignees: []
+outcome: blocked
