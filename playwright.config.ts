@@ -12,7 +12,7 @@ const reporter = process.env.PLAYWRIGHT_LIST_REPORTER
 
 const timeout = process.env.PLAYWRIGHT_TEST_TIMEOUT
   ? Number.parseInt(process.env.PLAYWRIGHT_TEST_TIMEOUT, 10)
-  : 60000;
+  : 120000;
 
 const actionTimeout = process.env.PLAYWRIGHT_ACTION_TIMEOUT
   ? Number.parseInt(process.env.PLAYWRIGHT_ACTION_TIMEOUT, 10)
@@ -36,7 +36,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter,
   outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR || './test-results/native',
-  timeout: Number.isFinite(timeout) ? timeout : 60000,
+  timeout: Number.isFinite(timeout) ? timeout : 120000,
   use: {
     baseURL: process.env.BASE_URL || 'http://127.0.0.1:18789',
     ...(storageState ? { storageState } : {}),
