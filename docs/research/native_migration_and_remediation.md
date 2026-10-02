@@ -73,6 +73,8 @@ One isolated test setup was blocked by the host's enforced bwrap execution polic
 
 Date: 2026-09-18. Source baseline: `f8e9d8dd5c099f417df0c32f6131e9b465e5fb20` on `fix/bazel-modernization-and-cleanup`, plus existing research/documentation changes. This ledger implements the user's instruction to migrate from Bazel to native Rust/Cargo, Tauri and Node.js, then address every finding in [the detailed audit](business_capability_and_usage_economics_audit.md). Existing business logic, platform support, permission boundaries and useful tests must not be removed just to make migration green.
 
+- Sentinel Tenant/Client Isolation Audit: Verified no active unmitigated CRITICAL local data exposure vulnerabilities or multi-tenant leakage confirmed in immediate local code paths during this run. No active unaddressed isolation violations in standard endpoints.
+
 ## Evidence recorded before changes
 
 The audit records owner anecdotes, current product comparisons and provider-access distinctions separately from source findings. It does not establish willingness to pay, a winning segment, actual per-workflow cost, universal subscription access or production readiness. The previous fixed $99 offer and exclusive agency segment remain suspended hypotheses. This implementation is not permission to charge customers, contact prospects, publish or deploy.
