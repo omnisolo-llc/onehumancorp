@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Native Omnichannel Chat & Messaging Engine (Rust)"
+issue_description: "The native omnichannel chat system (replacing Chatwoot) has already been fully implemented in the codebase (e.g., chat_inboxes, chat_channels, chat_contacts, chat_conversations, chat_messages are created in src/server/db/migrations/1009_native_omnichannel_chat.sql and 233_chat_omnichannel.sql). Multi-tenant boundaries with PostgreSQL RLS are correctly enforced. The corresponding gRPC schemas exist in src/proto/inbox.proto and services in src/server/services/inbox/service.rs. No further work is needed as the requested feature already exists."
