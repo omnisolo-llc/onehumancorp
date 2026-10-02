@@ -1,3 +1,5 @@
 outcome: no_work
-issue_title: "Native Rust Omnichannel Chat System - Core Architecture"
-issue_description: "According to RESEARCH.md, the core strategic directive is to integrate existing tools instead of rebuilding them. Requests to build native replacements for external services (such as Chatwoot) without explicit authorization, evidence, and an expansion gate must be rejected."
+issue_title: "Market Insight & Feature Brief: AI-First Omnichannel Customer Support & Routing (OmniChat Replacement)"
+issue_description: |
+  The issue requests building a native Rust replacement for OmniChat to implement a new omnichannel customer support routing feature. However, the OneHumanCorp operating contract explicitly states: "Prioritize integrating existing tools over rebuilding them. Requests to build native replacements for external services (e.g., Chatwoot), or new verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines, and harness adapters require explicit authorization, evidence, and an expansion gate in RESEARCH.md; otherwise, return a no_work finding."
+  I searched `RESEARCH.md` and found no mention of "omnichat" or an expansion gate for this omnichannel replacement feature. Therefore, following the contract, this is a blocked / no_work finding. I loaded the superpowers:using-superpowers skill from revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d and superpowers:brainstorming from the same revision.
