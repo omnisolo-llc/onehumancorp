@@ -89,7 +89,39 @@ export async function fetchForOwnedBusinessAction(url: string, options: RequestI
     if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This action was not sent.');
   });
 }
-async function authenticatedOnboardingFetch(url: string, options: RequestInit, expected: DraftOwner, before: number, dispatched?: () => void): Promise<Response> {
+export async function fetchForOwnedDefinition(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  const parsed = new URL(url, 'https://owned.invalid');
+  const root = '/api/v1/agents/definitions';
+  const uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+  if (!url.startsWith('/') || url.startsWith('//') || parsed.origin !== 'https://owned.invalid' || parsed.hash
+    || Array.from(url).some(character => character.charCodeAt(0) <= 32 || character === '\\')) throw new Error('Invalid agent definition destination');
+  const catalogue = parsed.pathname === root && method === 'GET';
+  const publication = parsed.pathname === root && method === 'POST';
+  const installation = new RegExp('^' + root + '/' + uuid + '/install$').test(parsed.pathname) && method === 'POST';
+  const recovery = new RegExp('^' + root + '/operations/' + uuid + '$').test(parsed.pathname) && method === 'GET';
+  if ((!catalogue && !publication && !installation && !recovery) || (!catalogue && parsed.search)) throw new Error('Invalid agent definition operation');
+  if (catalogue) {
+    for (const [key, value] of parsed.searchParams) {
+      if (!['q', 'cursor', 'installation_cursor', 'limit'].includes(key) || parsed.searchParams.getAll(key).length !== 1
+        || (key === 'q' && (Array.from(value).length > 256 || value.includes('\0')))
+        || (key.includes('cursor') && (!value || value.length > 2048))
+        || (key === 'limit' && (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 100))) throw new Error('Invalid agent catalogue query');
+    }
+  }
+  const intended = expected ? { ...expected } : null;
+  if (!intended || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. Please reopen this view.');
+  const before = epoch;
+  return authenticatedOnboardingFetch(url, { ...options, method }, intended, before, () => {
+    const marker: unknown = onDispatch?.();
+    if (marker && typeof (marker as PromiseLike<unknown>).then === 'function') {
+      void Promise.resolve(marker).catch(() => undefined);
+      throw new Error('Dispatch markers must be saved synchronously');
+    }
+    if (before !== epoch || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. This action was not sent.');
+  }, true);
+}
+async function authenticatedOnboardingFetch(url: string, options: RequestInit, expected: DraftOwner, before: number, dispatched?: () => void, definitionPermission = false): Promise<Response> {
   let verified: DraftOwner;
   try { verified = await readQueueOwner(); }
   catch (cause) { if (before === epoch) invalidateOnboardingSession(false); throw cause; }
@@ -103,10 +135,12 @@ async function authenticatedOnboardingFetch(url: string, options: RequestInit, e
   dispatched?.();
   const response = await fetch(url, { ...options, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
   if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This reply was not applied.');
-  if (response.status === 409) {
+  if (response.status === 409 || (definitionPermission && response.status === 403)) {
     const problem = await response.clone().json().catch(() => null);
     if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. This reply was not applied.');
-    if (problem?.error === 'session_identity_changed' || problem?.error === 'queued owner does not match the current session') invalidateOnboardingSession(false);
+    const reason = problem?.error ?? (definitionPermission ? problem?.reason : undefined);
+    if (reason === 'session_identity_changed' || reason === 'queued owner does not match the current session') invalidateOnboardingSession(false);
+    if (response.status === 403 && problem?.success === false && problem?.reason === 'owner_or_admin_required') return response;
   }
   if (response.status === 401 || response.status === 403) invalidateOnboardingSession(false);
   return response;
