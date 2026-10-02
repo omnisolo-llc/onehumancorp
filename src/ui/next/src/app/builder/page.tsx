@@ -140,7 +140,7 @@ export default function BuilderPage() {
       const data = await response.json();
       if (!active()) return;
       if (canonicalRequest(input()) !== fingerprint) throw new Error('Your draft changed; the earlier generated result was not applied.');
-      if (response.status !== 200 || !data || data.success === false || data.error != null || !Array.isArray(data.pages) || !Array.isArray(data.pages[0]?.blocks)) throw new Error('The generated draft could not be confirmed.');
+      if (response.status !== 200 || !data || data.success !== undefined && data.success !== true || data.error != null || !Array.isArray(data.pages) || !Array.isArray(data.pages[0]?.blocks)) throw new Error('The generated draft could not be confirmed.');
       const names: Record<string, string> = { HeroBlock: 'Hero', ProductGridBlock: 'Catalog', ServiceBookingBlock: 'Booking', TestimonialBlock: 'Testimonials', ReferralBlock: 'Referral' };
       const generated: unknown = data.pages[0].blocks.map((block: Record<string, unknown>) => ({ type: typeof block.block_type === 'string' ? names[block.block_type] || block.block_type : '', props: block.content }));
       if (!isBuilderBlocks(generated)) throw new Error('The generated draft has unsupported content.');

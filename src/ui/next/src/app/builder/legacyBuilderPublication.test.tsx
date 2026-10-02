@@ -93,8 +93,8 @@ it('uses only the actual generated draft without invented discounts or duplicate
   expect(JSON.parse(String(call[1]?.body)).description).toContain('Minimalist');
 });
 
-it('rejects contradictory generation acknowledgements without manufacturing draft content', async () => {
-  generation = async () => Response.json({ success: false, pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Unconfirmed' } }] }] });
+it.each([false, 'false', 0])('rejects contradictory generation acknowledgement %s without manufacturing draft content', async success => {
+  generation = async () => Response.json({ success, pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Unconfirmed' } }] }] });
   await startGeneration(); await screen.findByText('The generated draft could not be confirmed.');
   expect(useBuilderStore.getState().blocks).toEqual([]); expect(screen.queryByText('Unconfirmed')).toBeNull();
 });

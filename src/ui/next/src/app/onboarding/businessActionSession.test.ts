@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'])(
+it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/brand_toolbox/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'])(
   'sends %s through the verified owner boundary and acknowledges dispatch', async url => {
     const expected = await openOnboardingSession();
     const dispatched = vi.fn();

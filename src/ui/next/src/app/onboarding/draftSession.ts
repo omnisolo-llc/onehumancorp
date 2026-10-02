@@ -77,7 +77,7 @@ export async function fetchForOwnedBusinessRead(url: string, expected: DraftOwne
 }
 /** Existing business mutations share session authority, not draft-write queuing. */
 export async function fetchForOwnedBusinessAction(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
-  if (!['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'].includes(url)) throw new Error('Invalid business action destination');
+  if (!['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/brand_toolbox/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'].includes(url)) throw new Error('Invalid business action destination');
   if ((options.method ?? 'GET').toUpperCase() !== 'POST') throw new Error('Owned business actions require POST');
   if (!expected || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. Please reopen setup.');
   const before = epoch;
