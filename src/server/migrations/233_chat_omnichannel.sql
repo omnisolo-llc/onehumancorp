@@ -85,3 +85,6 @@ CREATE POLICY tenant_isolation_policy ON chat_conversations
 CREATE POLICY tenant_isolation_policy ON chat_messages
     FOR ALL
     USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+-- Add missing content_type column
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS content_type VARCHAR(50) NOT NULL DEFAULT 'text';
