@@ -43,8 +43,8 @@ pub struct Message {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
     use serde_json::json;
+    use uuid::Uuid;
 
     #[test]
     fn test_inbox_creation() {
