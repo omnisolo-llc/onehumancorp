@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "🔗 Link: [blocked no-work finding: Flutter UI component explicitly deprecated]"
+issue_description: "The issue asks to build a Flutter UI (mobile-first 375px) that connects to the new native WebSocket. However, OneHumanCorp project instructions explicitly state that Flutter components are deprecated and the required UI architecture must use Next.js. While the native Rust implementation for the unified omnichannel inbox is mostly present (including InboxService, unified_threads, unified_messages, and existing database schema for inbox_messages with RLS policies), fulfilling the Flutter UI acceptance criteria directly violates the current architectural guidelines, blocking further work on this specific issue request."
