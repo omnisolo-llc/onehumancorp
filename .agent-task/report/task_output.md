@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Omnichannel Customer Support & Native Rust Chat System"
+issue_description: "The issue describes implementing a native omnichannel chat system. However, based on the repository memory, Chatwoot has been permanently superseded by a native omnichannel chat design, which already exists in the codebase. Furthermore, implementing new external channel connectors like Instagram and WhatsApp is strictly gated by end-to-end sandbox verification. Since the required external sandbox credentials for Meta/Instagram/WhatsApp are missing from the environment, implementation and testing are explicitly blocked. Therefore, a no-work finding is returned."
