@@ -9,8 +9,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_builder_sites_publication_tenant ON builde
 
 CREATE TABLE IF NOT EXISTS builder_publications (
     publication_id UUID PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
-    owner_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     operation_id UUID NOT NULL,
     site_id UUID NOT NULL,
     requested_site_id UUID,
@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS builder_publications (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (tenant_id, owner_id, operation_id),
+    UNIQUE (publication_id, tenant_id),
     UNIQUE (site_id, site_version),
     UNIQUE (site_id, publication_id),
     FOREIGN KEY (site_id,tenant_id) REFERENCES builder_sites(id,publication_tenant_id) ON DELETE CASCADE,
@@ -72,3 +73,17 @@ $$;
 DROP TRIGGER IF EXISTS protect_builder_publication_tenant ON builder_sites;
 CREATE TRIGGER protect_builder_publication_tenant BEFORE UPDATE ON builder_sites
 FOR EACH ROW EXECUTE FUNCTION protect_builder_publication_tenant();
+
+-- Internal routing metadata contains no snapshot or user data. Discovery never
+-- establishes authority; the worker rechecks the tenant-scoped receipt and user.
+CREATE TABLE IF NOT EXISTS builder_publication_work (
+    publication_id UUID PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    FOREIGN KEY (publication_id,tenant_id) REFERENCES builder_publications(publication_id,tenant_id) ON DELETE CASCADE
+);
+REVOKE ALL ON builder_publication_work FROM PUBLIC;
+ALTER TABLE builder_publication_work ENABLE ROW LEVEL SECURITY;
+ALTER TABLE builder_publication_work FORCE ROW LEVEL SECURITY;
+CREATE POLICY publication_work_discovery ON builder_publication_work FOR SELECT USING (true);
+CREATE POLICY publication_work_insert ON builder_publication_work FOR INSERT WITH CHECK (tenant_id=current_setting('app.current_tenant',true));
+CREATE POLICY publication_work_delete ON builder_publication_work FOR DELETE USING (tenant_id=current_setting('app.current_tenant',true));

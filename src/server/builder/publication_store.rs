@@ -196,14 +196,14 @@ pub(crate) async fn require_current_owner(
         return Err(PublicationError::Unauthorized);
     }
     server_common::auth_utils::set_org_context(&mut **tx, &actor.tenant_id).await?;
-    let user=sqlx::query_scalar::<_,String>("SELECT u.id FROM users u JOIN identity_user_roles r ON r.user_id=u.id AND r.tenant_id=u.tenant_id WHERE u.id=$1 AND u.tenant_id=$2 AND u.active=TRUE AND lower(r.role_name) IN ('admin','owner') FOR SHARE OF u,r")
+    let user=sqlx::query_scalar::<_,String>("SELECT u.id FROM users u JOIN identity_user_roles r ON r.user_id=u.id AND r.tenant_id=u.tenant_id WHERE u.id=$1 AND u.tenant_id=$2 AND u.active=TRUE AND translate(r.role_name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz') IN ('admin','owner') FOR SHARE OF u,r")
         .bind(&actor.user_id).bind(&actor.tenant_id).fetch_optional(&mut **tx).await?;
     if user.is_none() {
         return Err(PublicationError::Unauthorized);
     }
     Ok(())
 }
-fn receipt(row: &sqlx::postgres::PgRow) -> Result<PublicationReceipt, PublicationError> {
+pub(crate) fn receipt(row: &sqlx::postgres::PgRow) -> Result<PublicationReceipt, PublicationError> {
     let status = match row.try_get::<String, _>("status")?.as_str() {
         "pending" => PublicationStatus::Pending,
         "processing" => PublicationStatus::Processing,
@@ -232,9 +232,18 @@ pub async fn submit_publication(
     site_id: Option<Uuid>,
     snapshot: &SiteSnapshot,
 ) -> Result<PublicationReceipt, PublicationError> {
-    let (snapshot_value, digest, products) = prepare_snapshot(snapshot)?;
+    let (snapshot_value, _, _) = prepare_snapshot(snapshot)?;
     let mut tx = pool.begin().await?;
     require_current_owner(&mut tx, actor).await?;
+    // JSONB normalizes numeric spellings (including negative zero). Bind replay
+    // and worker verification to the exact database representation we persist.
+    let stored_value: Value = sqlx::query_scalar("SELECT $1::jsonb")
+        .bind(snapshot_value)
+        .fetch_one(&mut *tx)
+        .await?;
+    let stored_snapshot: SiteSnapshot =
+        serde_json::from_value(stored_value).map_err(|_| PublicationError::Corrupt)?;
+    let (snapshot_value, digest, products) = prepare_snapshot(&stored_snapshot)?;
     let operation_key = serde_json::to_string(&(&actor.tenant_id, &actor.user_id, operation_id))
         .map_err(|_| PublicationError::Invalid("Invalid operation identity"))?;
     sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
@@ -284,6 +293,11 @@ pub async fn submit_publication(
     let row=sqlx::query("INSERT INTO builder_publications(publication_id,tenant_id,owner_id,operation_id,site_id,requested_site_id,site_version,snapshot,snapshot_sha256,product_ids) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *")
         .bind(Uuid::new_v4()).bind(&actor.tenant_id).bind(&actor.user_id).bind(operation_id).bind(saved_site).bind(site_id).bind(version).bind(snapshot_value).bind(digest).bind(products).fetch_one(&mut *tx).await?;
     let receipt = receipt(&row)?;
+    sqlx::query("INSERT INTO builder_publication_work(publication_id,tenant_id) VALUES($1,$2)")
+        .bind(receipt.publication_id)
+        .bind(&actor.tenant_id)
+        .execute(&mut *tx)
+        .await?;
     tx.commit().await?;
     Ok(receipt)
 }

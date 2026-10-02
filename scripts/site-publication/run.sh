@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 : "${OHC_PUBLICATION_TEST_DATABASE_URL:?Supply an owned disposable PostgreSQL database}"
+python3 scripts/site-publication/database_guard.py
 export OMNISOLO_DATABASE_URL="$OHC_PUBLICATION_TEST_DATABASE_URL" OMNISOLO_STANDALONE_MODE=false
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
 cp Cargo.lock scripts/site-publication/Cargo.lock

@@ -14,6 +14,34 @@ struct Fixture {
     product_a: Uuid,
     product_b: Uuid,
 }
+fn fixture_database_options(value: &str) -> Result<sqlx::postgres::PgConnectOptions, String> {
+    let parsed = url::Url::parse(value).map_err(|_| "Invalid owned test URL".to_string())?;
+    let name = parsed
+        .path()
+        .strip_prefix("/ohc_")
+        .and_then(|name| name.strip_suffix("_test"));
+    let owned = matches!(parsed.scheme(), "postgres" | "postgresql")
+        && matches!(parsed.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))
+        && name.is_some_and(|name| {
+            !name.is_empty()
+                && name
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+        })
+        && parsed.query().is_none()
+        && parsed.fragment().is_none()
+        && parsed.port() != Some(0);
+    if !owned {
+        return Err(
+            "Publication tests require a dedicated loopback ohc_*_test database without overrides"
+                .to_string(),
+        );
+    }
+    value
+        .parse()
+        .map_err(|error: sqlx::Error| error.to_string())
+}
+
 impl Fixture {
     async fn new(legacy_tenant: bool) -> Self {
         let url =
@@ -24,7 +52,7 @@ impl Fixture {
         let admin = sqlx::postgres::PgPoolOptions::new()
             .max_connections(3)
             .connect_with(
-                url.parse::<sqlx::postgres::PgConnectOptions>()
+                fixture_database_options(&url)
                     .unwrap()
                     .options([("search_path", schema.as_str())]),
             )
@@ -98,7 +126,7 @@ impl Fixture {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(8)
             .connect_with(
-                url.parse::<sqlx::postgres::PgConnectOptions>()
+                fixture_database_options(&url)
                     .unwrap()
                     .username(&role)
                     .password(&password)
@@ -657,4 +685,27 @@ async fn a_legacy_site_without_raw_tenant_binding_is_not_silently_adopted() {
     );
     assert_eq!(title, "Legacy draft");
     assert_eq!(counts, (1, 1, 0));
+}
+
+#[path = "worker_tests.rs"]
+mod worker_tests;
+
+#[test]
+fn direct_fixture_preflight_rejects_unowned_destinations_without_connecting() {
+    for value in [
+        "postgres://localhost/production",
+        "postgres://db.example/ohc_publication_test",
+        "postgres://127.0.0.1/ohc_publication_test?options=-csearch_path%3Dpublic",
+        "postgres://127.0.0.1/ohc_publication_test#override",
+        "postgres://127.0.0.1/ohc_%70ublication_test",
+    ] {
+        assert!(
+            fixture_database_options(value).is_err(),
+            "must reject before any connection: {value}"
+        );
+    }
+    assert!(
+        fixture_database_options("postgres://postgres@127.0.0.1:55439/ohc_publication_test")
+            .is_ok()
+    );
 }
