@@ -66,7 +66,10 @@ export const PricingCard: React.FC<PricingCardProps> = ({
             </button>
           );
         }
-        if (currentPlan === tierName || (!currentPlan && tierName === 'Free')) {
+        if (currentPlan === null) {
+          return <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl" disabled>Plan unavailable</button>;
+        }
+        if (currentPlan === tierName) {
           return tierName === 'Free' ? (
             <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
               Current Plan
@@ -91,7 +94,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         );
       })()}
 
-      {tierName === 'Free' && (!loading && (currentPlan === 'Free' || !currentPlan)) && (
+      {tierName === 'Free' && !loading && currentPlan === 'Free' && (
         <ViralTrialExtensionWidget />
       )}
     </div>

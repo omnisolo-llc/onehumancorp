@@ -10,11 +10,28 @@ import '../components/ViralTrialExtensionWidget';
 import { PricingCard } from './PricingCard';
 
 
+type PlanSummary = Partial<import('@/lib/business-records').BillingPlan> & { current_plan: string };
+const metric = (value: unknown): number | undefined => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+const limit = (value: unknown): number | null | undefined => value === null ? null : metric(value);
+function readPlanSummary(value: unknown): PlanSummary | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const data = value as Record<string, unknown>;
+  if (data.error != null || ('success' in data && data.success !== true) || typeof data.current_plan !== 'string') return null;
+  const current_plan = ['Free', 'Starter', 'Pro', 'Business'].find(plan => plan.toLowerCase() === (data.current_plan as string).toLowerCase());
+  if (!current_plan) return null;
+  return {
+    current_plan,
+    ai_actions_used: metric(data.ai_actions_used), ai_actions_limit: limit(data.ai_actions_limit),
+    storage_used_bytes: metric(data.storage_used_bytes), storage_limit_bytes: limit(data.storage_limit_bytes),
+    next_bill_estimated: typeof data.next_bill_estimated === 'number' && Number.isSafeInteger(data.next_bill_estimated) ? data.next_bill_estimated : undefined,
+  };
+}
+
 export default function PricingPage() {
   useRouter();
 
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
-  const [planDetails, setPlanDetails] = useState<import('@/lib/business-records').BillingPlan | null>(null);
+  const [planDetails, setPlanDetails] = useState<PlanSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAnnual, setIsAnnual] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -24,11 +41,9 @@ export default function PricingPage() {
     const fetchPlanData = async () => {
       try {
         const response = await fetch('/api/v1/billing/my-plan');
-        if (response.ok) {
-          const json = await response.json();
-          setCurrentPlan(json.current_plan);
-          setPlanDetails(json);
-        }
+        const summary = response.status === 200 ? readPlanSummary(await response.json()) : null;
+        setCurrentPlan(summary?.current_plan ?? null);
+        setPlanDetails(summary);
       } catch (error) {
         if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
         console.error('Failed to fetch plan data:', error);
@@ -133,35 +148,36 @@ export default function PricingPage() {
         <div className="mb-8 p-6 app-card omnisolo-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-xl rounded-2xl w-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {currentPlan || 'Free'}</h2>
+                    <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {loading ? 'Verifying…' : currentPlan ?? 'Unavailable'}</h2>
                     <p className="text-sm text-gray-500 mt-1">Cost transparency and usage tracking</p>
                 </div>
-                <button onClick={handleManageBilling} className="min-h-[44px] px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center whitespace-nowrap">
+                <button onClick={handleManageBilling} disabled={loading || currentPlan === null} className="min-h-[44px] px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center whitespace-nowrap">
                     Manage Plan & Billing
                 </button>
             </div>
 
+            {!loading && currentPlan === null && <p role="status">Current billing data is unavailable. <a href="/pricing">Retry plan lookup</a></p>}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">AI Actions Used</p>
                     <p className="text-xl font-bold text-gray-900">
-                        {planDetails?.ai_actions_used || 0}
-                        <span className="text-sm font-normal text-gray-500 ml-1">/ {planDetails?.ai_actions_limit || '∞'}</span>
+                        {planDetails?.ai_actions_used ?? 'Unknown'}
+                        <span className="text-sm font-normal text-gray-500 ml-1">{' / '}{planDetails?.ai_actions_limit === null ? 'Unlimited' : planDetails?.ai_actions_limit ?? 'Unknown'}</span>
                     </p>
                 </div>
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Storage Used</p>
                     <p className="text-xl font-bold text-gray-900">
-                        {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
+                        {planDetails?.storage_used_bytes === undefined ? 'Unknown' : `${(planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1)} MB`}
                         <span className="text-sm font-normal text-gray-500 ml-1">
-                            / {planDetails?.storage_limit_bytes ? (planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0) + ' MB' : '∞'}
+                            {' / '}{planDetails?.storage_limit_bytes === null ? 'Unlimited' : planDetails?.storage_limit_bytes === undefined ? 'Unknown' : `${(planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB`}
                         </span>
                     </p>
                 </div>
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Estimated Next Bill</p>
                     <p className="text-xl font-bold text-gray-900">
-                        ${((planDetails?.next_bill_estimated || 0) / 100).toFixed(2)}
+                        {planDetails?.next_bill_estimated === undefined ? 'Unknown' : `$${(planDetails.next_bill_estimated / 100).toFixed(2)}`}
                     </p>
                 </div>
             </div>
@@ -224,7 +240,7 @@ export default function PricingPage() {
               <div>
                   <h3 className="font-semibold text-gray-800">How do I upgrade, downgrade, or cancel?</h3>
                   <p className="text-gray-600 text-sm mt-1 leading-relaxed">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page or by clicking "Manage Plan" above.</p>
-                  <button onClick={handleManageBilling} className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium underline">Manage Billing Portal</button>
+                  <button onClick={handleManageBilling} disabled={loading || currentPlan === null} className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium underline">Manage Billing Portal</button>
               </div>
               <div>
                   <h3 className="font-semibold text-gray-800">What is the storage limit?</h3>
