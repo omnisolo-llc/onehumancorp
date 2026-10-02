@@ -17,8 +17,8 @@ it('settles the real Inbox shell to one title after its streamed Suspense fallba
   const stream=renderToPipeableStream(createElement(TooltipProvider,{children:createElement(InboxPage)}),{onShellReady(){stream.pipe(output);setImmediate(ready.release);},onError:reject});
  });
  const document='<!doctype html><html><body>'+html+'</body></html>';
- const before=new JSDOM(document);expect(before.window.document.querySelectorAll('h1.app-title')).toHaveLength(2);expect(before.window.document.querySelector('[hidden] h1.app-title')).not.toBeNull();before.window.close();
+ const before=new JSDOM(document);expect(before.window.document.querySelectorAll('h1.app-title')).toHaveLength(2);expect(before.window.document.querySelectorAll('.app-main')).toHaveLength(2);expect(before.window.document.querySelector('[hidden] h1.app-title')).not.toBeNull();before.window.close();
  const settled=new JSDOM(document,{runScripts:'dangerously',url:'https://workspace.test/inbox'});
- try {expect(settled.window.document.querySelectorAll('h1.app-title')).toHaveLength(1);expect(settled.window.document.querySelector('h1.app-title')?.textContent).toBe('Unified Inbox');expect(settled.window.document.querySelector('[data-testid="inbox-settled"]')).not.toBeNull();}
+ try {expect(settled.window.document.querySelectorAll('h1.app-title')).toHaveLength(1);expect(settled.window.document.querySelectorAll('.app-main')).toHaveLength(1);expect(settled.window.document.querySelector('h1.app-title')?.textContent).toBe('Unified Inbox');expect(settled.window.document.querySelector('[data-testid="inbox-settled"]')).not.toBeNull();}
  finally{settled.window.close();}
 });
