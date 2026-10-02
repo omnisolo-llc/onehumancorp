@@ -10,12 +10,21 @@ pub struct Inbox {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ChannelAdapter {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub inbox_id: Uuid,
+    pub channel_type: String,
+    pub config: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Contact {
     pub id: Uuid,
     pub tenant_id: Uuid,
-    pub name: String,
+    pub name: Option<String>,
     pub email: Option<String>,
-    pub phone_number: Option<String>,
+    pub phone: Option<String>,
     pub identifier: Option<String>,
     pub custom_attributes: Option<serde_json::Value>,
 }
@@ -26,6 +35,7 @@ pub struct Conversation {
     pub tenant_id: Uuid,
     pub inbox_id: Uuid,
     pub contact_id: Uuid,
+    pub assignee_id: Option<Uuid>,
     pub status: String,
     pub custom_attributes: Option<serde_json::Value>,
 }
@@ -35,6 +45,8 @@ pub struct Message {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub conversation_id: Uuid,
+    pub sender_type: String,
+    pub sender_id: Option<Uuid>,
     pub content: String,
     pub message_type: i32,
     pub custom_attributes: Option<serde_json::Value>,
@@ -66,21 +78,40 @@ mod tests {
     }
 
     #[test]
+    fn test_channel_adapter_creation() {
+        let tenant_id = Uuid::new_v4();
+        let channel = ChannelAdapter {
+            id: Uuid::new_v4(),
+            tenant_id,
+            inbox_id: Uuid::new_v4(),
+            channel_type: "whatsapp".to_string(),
+            config: json!({ "api_key": "123" }),
+        };
+
+        assert_eq!(channel.tenant_id, tenant_id);
+        assert_eq!(channel.channel_type, "whatsapp");
+
+        let serialized = serde_json::to_string(&channel).unwrap();
+        let deserialized: ChannelAdapter = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(channel, deserialized);
+    }
+
+    #[test]
     fn test_contact_creation() {
         let tenant_id = Uuid::new_v4();
         let custom_attrs = json!({ "vip": true });
         let contact = Contact {
             id: Uuid::new_v4(),
             tenant_id,
-            name: "John Doe".to_string(),
+            name: Some("John Doe".to_string()),
             email: Some("john@example.com".to_string()),
-            phone_number: None,
+            phone: None,
             identifier: Some("ext-123".to_string()),
             custom_attributes: Some(custom_attrs.clone()),
         };
 
         assert_eq!(contact.tenant_id, tenant_id);
-        assert_eq!(contact.name, "John Doe");
+        assert_eq!(contact.name, Some("John Doe".to_string()));
         assert_eq!(contact.custom_attributes, Some(custom_attrs));
 
         let serialized = serde_json::to_string(&contact).unwrap();
@@ -96,6 +127,7 @@ mod tests {
             tenant_id,
             inbox_id: Uuid::new_v4(),
             contact_id: Uuid::new_v4(),
+            assignee_id: None,
             status: "open".to_string(),
             custom_attributes: None,
         };
@@ -115,6 +147,8 @@ mod tests {
             id: Uuid::new_v4(),
             tenant_id,
             conversation_id: Uuid::new_v4(),
+            sender_type: "agent".to_string(),
+            sender_id: Some(Uuid::new_v4()),
             content: "Hello!".to_string(),
             message_type: 0,
             custom_attributes: None,
