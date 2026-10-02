@@ -13,9 +13,9 @@ function deferred() {
   const promise = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
-beforeEach(() => { localStorage.clear(); localStorage.setItem('business_display_name', 'reviewed-store'); });
+beforeEach(() => { vi.stubGlobal('fetch', vi.fn(async url => Response.json(url === '/api/v1/auth/session-identity' ? { userId: 'referral-owner', tenantId: 'referral-tenant', expiresAt: Date.now() + 60000 } : { current_plan: 'Free' }))); localStorage.clear(); localStorage.setItem('business_display_name', 'reviewed-store'); });
 afterEach(() => {
-  cleanup();
+  cleanup(); vi.unstubAllGlobals();
   if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
   else Reflect.deleteProperty(navigator, 'clipboard');
 });

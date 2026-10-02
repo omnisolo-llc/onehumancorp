@@ -4,6 +4,7 @@ import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cloudUrl } from '../../lib/branding';
+import { useProPlan } from '../components/useProPlan';
 
 function escapeHtmlText(value: string): string {
   return value.replace(/[&<>]/g, (character) => ({
@@ -22,18 +23,14 @@ export default function InteractiveDemoPage() {
   const [demoTitle, setDemoTitle] = useState('My Interactive Demo');
   const [demoDescription, setDemoDescription] = useState('Try out our latest features right here in the browser.');
   const [removeBranding, setRemoveBranding] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro, claimTrial, claimError } = useProPlan();
+  const brandingRemoved = removeBranding && hasPro;
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [tenant, setTenant] = useState('DEFAULT');
-  const [trialError, setTrialError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
-      fetch('/api/v1/billing/my-plan')
-        .then((response) => response.ok ? response.json() : Promise.reject())
-        .then((data) => setHasPro(['pro', 'business'].includes(String(data.current_plan || '').toLowerCase())))
-        .catch(() => setHasPro(false));
     }
   }, []);
 
@@ -50,27 +47,7 @@ export default function InteractiveDemoPage() {
   };
 
   const claimTrialExtension = async () => {
-    const message = `I just launched an Interactive Demo on OmniSolo OneHumanCorp! It's an amazing way to show off my products. 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenant}`;
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-    window.open(shareUrl, '_blank');
-    setTrialError(null);
-
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) throw new Error('Pro activation is unavailable.');
-      setHasPro(true);
-      setShowSoftPaywall(false);
-      setRemoveBranding(true);
-    } catch {
-      setTrialError('Pro activation is unavailable.');
-    }
+    await claimTrial();
   };
 
   const embedCode = `<!-- Interactive Demo Widget -->
@@ -81,7 +58,7 @@ export default function InteractiveDemoPage() {
     <button disabled aria-describedby="demo-content-unavailable" style="background: #0071e3; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Start Interactive Demo</button>
     <p id="demo-content-unavailable">Preview only. No interactive demo steps have been configured.</p>
   </div>
-${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
+${brandingRemoved ? '' : `  <div style="text-align: center; margin-top: 16px;">
     <a href="${escapeHtmlAttribute(`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OmniSolo</a>
   </div>`}
 </div>`;
@@ -140,7 +117,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                         type="checkbox"
                         aria-label="Remove Powered by OmniSolo Badge"
                         className="sr-only peer"
-                        checked={removeBranding}
+                        checked={brandingRemoved}
                         onChange={handleToggleBranding}
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -191,7 +168,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                     <p id="demo-content-unavailable">Preview only. No interactive demo steps have been configured.</p>
                   </div>
 
-                  {!removeBranding && (
+                  {!brandingRemoved && (
                     <div className="mt-4 text-center">
                       <a href={cloudUrl(`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">⚡ Powered by OmniSolo</a>
                     </div>
@@ -244,9 +221,9 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-               Share on X to activate Pro
+               Check trial availability
              </button>
-             {trialError && <p className="mt-3 text-sm text-red-600" role="status">{trialError}</p>}
+             {claimError && <p className="mt-3 text-sm text-red-600" role="status">{claimError}</p>}
           </div>
         </div>
       )}

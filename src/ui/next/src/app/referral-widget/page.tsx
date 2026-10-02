@@ -3,17 +3,18 @@
 import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useProPlan } from '../components/useProPlan';
 
 export default function ReferralWidgetBuilderPage() {
   const [tenant, setTenant] = useState('my-store');
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro, claimTrial, claimError } = useProPlan();
   const [amount, setAmount] = useState('10');
   const [type, setType] = useState('%');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallStatus, setPaywallStatus] = useState('');
+  const brandingRemoved = removeBranding && hasPro;
 
   const [linkCopyStatus, setLinkCopyStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
   const copySequence = useRef(0);
@@ -47,9 +48,7 @@ export default function ReferralWidgetBuilderPage() {
   useEffect(() => {
     try {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
-      const storedPro = localStorage.getItem('has_pro') === 'true';
       setTenant(storedTenant);
-      setHasPro(storedPro);
     } catch {
       // ignore
     }
@@ -64,42 +63,10 @@ export default function ReferralWidgetBuilderPage() {
   };
 
   const handleShareToUnlock = async () => {
-    const message = `Check out my new Referral Program built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenant}`;
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-    try {
-      window.open(shareUrl, '_blank');
-    } catch {
-      // ignore
-    }
-
-    setPaywallStatus('Verifying Share...');
-
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.ok) {
-        setPaywallStatus('Unlocked!');
-        setHasPro(true);
-        localStorage.setItem('has_pro', 'true');
-        setTimeout(() => {
-          setShowPaywall(false);
-          setRemoveBranding(true);
-          setPaywallStatus('');
-        }, 1500);
-      } else {
-        setPaywallStatus('Failed to claim trial extension.');
-        setTimeout(() => setPaywallStatus(''), 3000);
-      }
-    } catch {
-      setPaywallStatus('Error claiming trial extension.');
-      setTimeout(() => setPaywallStatus(''), 3000);
-    }
+    await claimTrial();
   };
 
-  const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co'}/api/v1/growth/customer-referral/embed?tenant=${tenant}&theme=${theme}&give=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&get=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&hide_branding=${removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`;
+  const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co'}/api/v1/growth/customer-referral/embed?tenant=${tenant}&theme=${theme}&give=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&get=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&hide_branding=${brandingRemoved}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`;
 
   const clipboard = useClipboardFeedback(embedCode);
   const handleCopyCode = () => { void clipboard.copy(embedCode); };
@@ -177,7 +144,7 @@ export default function ReferralWidgetBuilderPage() {
                   type="checkbox"
                   id="remove-branding-checkbox"
                   aria-label='Remove "OmniSolo" Branding'
-                  checked={removeBranding}
+                  checked={brandingRemoved}
                   onChange={(e) => handleCheckboxChange(e.target.checked)}
                   className="w-4 h-4 text-[#0066FF] border-gray-300 rounded focus:ring-[#0066FF]"
                 />
@@ -224,7 +191,7 @@ export default function ReferralWidgetBuilderPage() {
                 {linkCopyStatus === 'copied' && <p role="status">Link copied</p>}
                 {linkCopyStatus === 'error' && <p role="alert">Could not copy the link. Select the link and copy it manually.</p>}
 
-                {!removeBranding && (
+                {!brandingRemoved && (
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-center">
                     <a
                       href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
@@ -301,15 +268,15 @@ export default function ReferralWidgetBuilderPage() {
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
               Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
-            {paywallStatus ? (
-              <p className="text-indigo-600 font-semibold mb-4 text-sm">{paywallStatus}</p>
+            {claimError ? (
+              <p className="text-indigo-600 font-semibold mb-4 text-sm">{claimError}</p>
             ) : (
               <button
                 type="button"
                 onClick={handleShareToUnlock}
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-md"
               >
-                Share on X to Unlock 7 Days
+                Check trial availability
               </button>
             )}
           </div>
