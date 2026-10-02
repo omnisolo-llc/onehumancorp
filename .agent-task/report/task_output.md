@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "GitHub Issue #36797: OneHumanCorp (OHC) Market Leadership & Native Omnichannel Agentic Architecture"
+issue_description: "The requested implementation of the Native Rust Omnichannel Customer Support Engine (WhatsApp/Instagram channels), The Ambassador Agentic Negotiator, and Vigilant Manager Inventory & POS Auto-Sync are explicitly blocked. According to RESEARCH.md, 'New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines and harness adapters require evidence and the expansion gate in RESEARCH.md.' These requested epics lack the required evidence and explicit evidence-backed decision for expansion. Therefore, this task is blocked and no implementation can proceed."
