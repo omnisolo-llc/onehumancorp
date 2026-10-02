@@ -8,7 +8,7 @@ import { sendOnboardingDraft } from './draftWrites';
 import { onboardingDraftWriteProblem } from './draftWriteGate';
 import { useOnboardingStore, initializeOnboardingDraft, onboardingStorageFailed, onboardingDraftPending, markOnboardingDraftFromServer, subscribeOnboardingPersistence } from "./store";
 import { fetchForOnboardingOwner, hasHeldOnboardingDraft, readOwnedOnboardingItem, writeOwnedOnboardingItem, subscribeOnboardingInvalidation, onboardingOwner, captureOnboardingRestoreSnapshot, assertOnboardingRestoreSnapshot, type DraftOwner } from "./draftSession";
-import { canonicalRequest, observedWebsite, readDraftAcknowledgement, readLaunchResult, readPreparation, readPreparedResult, resultForPreparation, type Preparation } from "./contracts";
+import { canonicalRequest, normalizeReviewedProducts, observedWebsite, readDraftAcknowledgement, readLaunchResult, readPreparation, readPreparedResult, resultForPreparation, type Preparation } from "./contracts";
 import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
 
@@ -47,6 +47,7 @@ export default function OnboardingWizard() {
   const [heldDraft, setHeldDraft] = useState(false);
   const [draftPending, setDraftPending] = useState(false);
   const [draftWriteProblem, setDraftWriteProblem] = useState<string | null>(null);
+  const [manualInput, setManualInput] = useState<string | null>(null);
   useEffect(() => subscribeOnboardingPersistence(() => { setDraftPending(onboardingDraftPending()); setDraftWriteProblem(onboardingDraftWriteProblem(onboardingOwner())); }), []);
   const initialStateLoaded = useRef(false);
   const [chatMessages, setChatMessages] = useState<
@@ -84,11 +85,13 @@ export default function OnboardingWizard() {
         const response = await (isDraftWrite ? sendOnboardingDraft(url, options, viewOwner) : fetchForOnboardingOwner(url, options, viewOwner));
         if (!response.ok) {
           let errMsg = `HTTP error! status: ${response.status}`;
+          let code: string | undefined;
           try {
             const result = await response.clone().json();
             errMsg = result.error || result.message || errMsg;
+            code = typeof result.error === 'string' ? result.error : undefined;
           } catch  { /* Optional local state or response decoding failed; retain the existing fallback. */ }
-          throw new Error(errMsg);
+          throw Object.assign(new Error(errMsg), { status: response.status, code });
         }
         return response;
       } catch (err) {
@@ -315,7 +318,7 @@ export default function OnboardingWizard() {
     const unsubscribe = subscribeOnboardingInvalidation(restart => {
       loadVersion += 1; operationEpoch.current += 1; operationPending.current = false; draftSavePending.current = false;
       prepared.current = null; preparedDraft.current = null; needsRecovery.current = false;
-      setChatMessages([]); setChatInput(''); setChatImageUrl(''); setSaveMessage(''); setValidationError(''); setValidationErrors({}); setDraftPending(false); setDraftWriteProblem(null);
+      setChatMessages([]); setChatInput(''); setChatImageUrl(''); setManualInput(null); setSaveMessage(''); setValidationError(''); setValidationErrors({}); setDraftPending(false); setDraftWriteProblem(null);
       initialStateLoaded.current = false; setViewOwner(null); setIsLoaded(false);
       if (restart) void load(); else setIdentityError('Your session could not be verified. Sign in again to continue.');
     });
@@ -399,9 +402,23 @@ export default function OnboardingWizard() {
     skipped,
   ]);
 
+  const offerManualReview = (cause: unknown, input: string): boolean => {
+    if (!cause || typeof cause !== 'object' || !('status' in cause) || cause.status !== 503
+      || !('code' in cause) || cause.code !== 'onboarding_ai_unconfigured') return false;
+    setManualInput(input);
+    updateState({ error: 'AI-assisted setup is unavailable because no model provider is configured. Review and enter your business details manually.' });
+    return true;
+  };
+  const continueManually = () => {
+    if (manualInput === null || !viewOwner || operationPending.current || draftSavePending.current) return;
+    updateState({ step: 2, bio: manualInput, businessDescription: businessDescription || whatYouSell || manualInput, error: '', isLoading: false });
+    setManualInput(null);
+  };
+
   const handleIntake = async () => {
     if (operationPending.current || draftSavePending.current) return;
     operationPending.current = true;
+    setManualInput(null);
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
     updateState({ isLoading: true });
@@ -481,6 +498,7 @@ export default function OnboardingWizard() {
       }); // Go to review step
     } catch (err) {
       if (!active()) return;
+      if (offerManualReview(err, whatYouSell || bio)) return;
       console.error(err);
       updateState({
         error: errorMessage(err, '') || "Backend connection failed. Please try again.",
@@ -497,6 +515,7 @@ export default function OnboardingWizard() {
   const handleSendChatMessage = async () => {
     if ((!chatInput.trim() && !chatImageUrl.trim()) || operationPending.current || draftSavePending.current) return;
     operationPending.current = true;
+    setManualInput(null);
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
     const newHistory = [...chatMessages, { role: 'user', content: chatInput, image_url: chatImageUrl || undefined }];
@@ -516,7 +535,7 @@ export default function OnboardingWizard() {
         updateState({ step: 2, businessName: intake.business_name, businessType: intake.business_type || 'Online Store', businessDescription: newHistory.map(message => message.content).join(' '), categories: intake.categories || [], firstProductName: intake.initial_products[0].name || '', firstProductPrice: String(intake.initial_products[0].price ?? ''), location: intake.location || '', targetAudience: intake.target_audience || '' });
       }
     } catch (cause) {
-      if (active()) updateState({ error: errorMessage(cause, 'Failed to send chat message') });
+      if (active() && !offerManualReview(cause, newHistory.filter(message => message.role === 'user').map(message => message.content).join('\n'))) updateState({ error: errorMessage(cause, 'Failed to send chat message') });
     } finally {
       if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
@@ -526,6 +545,7 @@ export default function OnboardingWizard() {
     if (operationPending.current || draftSavePending.current) return;
     if (!bio.trim()) { updateState({ error: 'Please tell us about your business.' }); return; }
     operationPending.current = true;
+    setManualInput(null);
     const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current;
     updateState({ isLoading: true, error: '', step: 4 });
@@ -544,7 +564,10 @@ export default function OnboardingWizard() {
       if (!active()) return;
       adoptPreparation(result.preparation);
     } catch (cause) {
-      if (active()) { needsRecovery.current = true; updateState({ step: -1, error: errorMessage(cause, 'Setup could not be confirmed. Check its status before retrying.') }); }
+      if (active()) {
+        if (offerManualReview(cause, bio)) { needsRecovery.current = false; updateState({ step: -1 }); }
+        else { needsRecovery.current = true; updateState({ step: -1, error: errorMessage(cause, 'Setup could not be confirmed. Check its status before retrying.') }); }
+      }
     } finally {
       if (active()) { operationPending.current = false; updateState({ isLoading: false }); }
     }
@@ -553,13 +576,9 @@ export default function OnboardingWizard() {
   const draftRequest = () => {
     const { businessType, businessName, businessDescription, whatYouSell, categories, websiteTemplate, firstProductName, firstProductPrice, domainChoice, location, targetAudience, aiAgents, aiAutoRespond } = useOnboardingStore.getState();
     const initial: unknown = JSON.parse(readOwnedOnboardingItem('products') || '[]');
-    if (!Array.isArray(initial)) throw new Error('The reviewed product draft is invalid');
-    const initialProducts = initial.map((item, index) => {
-      if (!item || typeof item !== 'object') throw new Error('The reviewed product draft is invalid');
-      const product = item as Record<string, unknown>;
-      const normalized = { ...product, ...(typeof product.price === 'number' ? { price: String(product.price) } : {}) };
-      return (prepared.current ? product.product_id === prepared.current.primary_product_id : index === 0) && firstProductName ? { ...normalized, name: firstProductName, price: firstProductPrice } : normalized;
-    });
+    const initialProducts = normalizeReviewedProducts(initial).map((product, index) =>
+      (prepared.current ? product.product_id === prepared.current.primary_product_id : index === 0) && firstProductName
+        ? { ...product, name: firstProductName, price: firstProductPrice } : product);
     return {
       business_type: businessType, company_name: businessName, company_description: businessDescription || whatYouSell,
       selling_categories: categories, payment_pref: 'online', website_template: websiteTemplate,
@@ -757,7 +776,7 @@ export default function OnboardingWizard() {
           ></div>
         </div>
 
-        {error && (
+        {error && manualInput === null && (
           <div className="absolute top-4 left-4 right-4 z-[9999] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake glass-control">
             <svg
               className="w-5 h-5 flex-shrink-0"
@@ -775,6 +794,11 @@ export default function OnboardingWizard() {
             <p className="flex-1">{error}</p>
           </div>
         )}
+
+        {manualInput !== null && <section className="mx-6 mt-4 rounded-lg border p-4" aria-label="Manual setup available">
+          <p role="status">{error}</p>
+          <button type="button" className="app-button mt-3" disabled={isLoading} onClick={continueManually}>Review Details Manually</button>
+        </section>}
 
         <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar relative">
           {step === -2 && (
@@ -992,7 +1016,7 @@ export default function OnboardingWizard() {
                     <button
                       id="chat-send-btn"
                       onClick={handleSendChatMessage}
-                      disabled={isLoading}
+                      disabled={isLoading || (!chatInput.trim() && !chatImageUrl.trim())}
                       className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
                     >
                       Send
@@ -1588,7 +1612,7 @@ export default function OnboardingWizard() {
               </h2>
               <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                  Here's what our AI figured out. Feel free to tweak these.
+                  Review your business details before preparing your workspace.
                 </p>
                 <button
                   type="button"
@@ -1608,10 +1632,11 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                  <label htmlFor="review-business-name" className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Business Name
                   </label>
                   <input
+                    id="review-business-name"
                     type="text"
                     autoFocus
                     autoCapitalize="words"
@@ -1632,10 +1657,11 @@ export default function OnboardingWizard() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                  <label htmlFor="review-business-type" className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Business Type
                   </label>
                   <input
+                    id="review-business-type"
                     type="text"
                     autoCapitalize="words"
                     value={businessType}
@@ -1748,7 +1774,7 @@ export default function OnboardingWizard() {
                     }
                     if (String(firstProductPrice || "").trim().length === 0) {
                       newErrors.firstProductPrice =
-                        "A price is needed to set up your Stripe catalog.";
+                        "A price is needed for your first product or service.";
                       hasError = true;
                     }
 

@@ -10,6 +10,33 @@ use tokio::task::JoinHandle;
 
 const UPSTREAM_SECRET: &str = "upstream-secret-canary";
 
+fn isolated_case_passed(output: &std::process::Output, case: &str) -> bool {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    output.status.success()
+        && stdout
+            .lines()
+            .any(|line| line == format!("test {case} ... ok"))
+        && stdout
+            .lines()
+            .any(|line| line.starts_with("test result: ok. 1 passed; 0 failed; 0 ignored;"))
+}
+
+#[test]
+fn isolated_vault_case_receipt_rejects_zero_discovery() {
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "__missing_provider_facade_case__"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "The zero-discovery control must exit successfully"
+    );
+    assert!(!isolated_case_passed(
+        &output,
+        "facade_rejects_byok_api_if_tenant_key_absent_or_revoked"
+    ));
+}
+
 fn selection(model_id: &str) -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
@@ -556,6 +583,36 @@ async fn timeout_returns_a_structured_provider_error() {
 
 #[tokio::test]
 async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
+    // Environment belongs to this disposable child, not concurrent test tasks.
+    // Production still reads its configured vault and must deny an absent key.
+    const CHILD: &str = "OHC_PROVIDER_FACADE_ABSENT_KEY_CHILD";
+    if std::env::var(CHILD).as_deref() != Ok("1") {
+        let result = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "facade_rejects_byok_api_if_tenant_key_absent_or_revoked",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .env(
+                "OMNISOLO_CONNECTION_KEYS",
+                r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#,
+            )
+            .env("OMNISOLO_CONNECTION_ACTIVE_KEY", "v1")
+            .env_remove("OMNISOLO_CONNECTION_DATABASE_URL")
+            .output()
+            .unwrap();
+        assert!(
+            isolated_case_passed(
+                &result,
+                "facade_rejects_byok_api_if_tenant_key_absent_or_revoked"
+            ),
+            "isolated vault test failed: {}{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+        return;
+    }
     use server_harness::middleware::provider_facade::ProviderFacadeConfig;
     use server_harness::middleware::usage_ledger::{PayerMode, UsageLedger, UsageScope};
     use server_harness::middleware::usage_meter::UsageMeterSettings;
@@ -596,15 +653,6 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
         max_request_micros: 1000000,
     });
 
-    unsafe {
-        std::env::set_var(
-            "OMNISOLO_CONNECTION_KEYS",
-            r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#,
-        );
-        std::env::set_var("OMNISOLO_CONNECTION_ACTIVE_KEY", "v1");
-        std::env::set_var("OMNISOLO_CONNECTION_DATABASE_URL", db_path.clone());
-    }
-
     let facade = ProviderFacade::start_with_config(config).await.unwrap();
 
     let response = reqwest::Client::new()
@@ -630,11 +678,6 @@ async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
             .contains("Tenant API connection is absent or revoked")
     );
 
-    unsafe {
-        std::env::remove_var("OMNISOLO_CONNECTION_KEYS");
-        std::env::remove_var("OMNISOLO_CONNECTION_ACTIVE_KEY");
-        std::env::remove_var("OMNISOLO_CONNECTION_DATABASE_URL");
-    }
     facade.shutdown().await.unwrap();
     upstream.shutdown().await;
 }
@@ -679,14 +722,6 @@ async fn facade_rejects_byok_api_if_origin_is_unsupported() {
         max_request_micros: 1000000,
     });
 
-    unsafe {
-        std::env::set_var(
-            "OMNISOLO_CONNECTION_KEYS",
-            r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#,
-        );
-        std::env::set_var("OMNISOLO_CONNECTION_ACTIVE_KEY", "v1");
-    }
-
     let facade = ProviderFacade::start_with_config(config).await.unwrap();
 
     let response = reqwest::Client::new()
@@ -706,10 +741,6 @@ async fn facade_rejects_byok_api_if_origin_is_unsupported() {
             .contains("The BYOK credential is bound to its verified provider origin")
     );
 
-    unsafe {
-        std::env::remove_var("OMNISOLO_CONNECTION_KEYS");
-        std::env::remove_var("OMNISOLO_CONNECTION_ACTIVE_KEY");
-    }
     facade.shutdown().await.unwrap();
     upstream.shutdown().await;
 }

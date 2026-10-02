@@ -182,29 +182,35 @@ type RouteClickAudit = {
   protocol: number; kind: 'route'; route: string; discoveredKeys: string[];
   observations: { key: string; completed: boolean; effect: ClickEffects | null; error: string | null }[];
   exhausted: boolean; failures: string[]; assertionsPassed: boolean;
+  timings?: { phase: string; target?: string; elapsedMs: number }[];
 };
 
 async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit: RouteClickAudit) {
   const failures = audit.failures;
   const audited = new Set<string>();
   const startedAt = Date.now();
+  const timed = async <T>(phase: string, operation: () => Promise<T>, target?: string): Promise<T> => {
+    const started = Date.now();
+    try { return await operation(); }
+    finally { (audit.timings ??= []).push({ phase, target, elapsedMs: Date.now() - started }); }
+  };
   // Restore with a committed blank document between clicks, retaining one
   // page/video for the route and destroying delayed callbacks from the old realm.
   let page = await sourcePage.context().newPage();
   try {
-    await gotoReady(page, route);
+    await timed('navigate', () => gotoReady(page, route));
     while (true) {
-      const candidates = await tagClickTargets(page);
+      const candidates = await timed('discover', () => tagClickTargets(page));
       for (const target of candidates) if (!audit.discoveredKeys.includes(target.key)) audit.discoveredKeys.push(target.key);
       const candidate = candidates.find((target) => !audited.has(target.key));
       if (!candidate) { audit.exhausted = true; break; }
       if (Date.now() - startedAt > 90_000) {
         throw new Error(`${route}: click target enumeration did not converge after ${audited.size} targets; next=${candidate.label}. No remaining coverage was silently skipped.`);
       }
-      const target = await resolveAuditTarget(page, candidate.key, () => tagClickTargets(page));
+      const target = await timed('resolve', () => resolveAuditTarget(page, candidate.key, () => tagClickTargets(page)), candidate.label);
       audited.add(candidate.key);
       try {
-        const observed = await observeClickEffects(page, target);
+        const observed = await timed('observe', () => observeClickEffects(page, target), candidate.label);
         audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
         if (!hasMeaningfulClickEffect(observed)) {
           if (observed.dialogSeen) failures.push(`${route}: "${candidate.label}" only opened a browser dialog`);
@@ -214,8 +220,8 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit:
         audit.observations.push({ key: candidate.key, completed: false, effect: null, error: String(error).split('\n')[0] });
         failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
       }
-      page = await replaceAuditDocument(page);
-      await gotoReady(page, route);
+      page = await timed('retire', () => replaceAuditDocument(page));
+      await timed('navigate', () => gotoReady(page, route));
     }
     return { auditedTargets: audited.size, failures };
   } finally {
@@ -430,6 +436,17 @@ test.describe('comprehensive UI contract', () => {
             Array.from((element as HTMLInputElement).labels || []).map((labelElement) => labelElement.textContent || '').join(' ').trim() ||
             (element.textContent || '').trim();
 
+          let hiddenAncestor: string | null = null;
+          if (rect.width < 1 || rect.height < 1) {
+            for (let ancestor: Element | null = element; ancestor; ancestor = ancestor.parentElement) {
+              const ancestorStyle = window.getComputedStyle(ancestor);
+              if (ancestor.hasAttribute('hidden') || ancestorStyle.display === 'none' || ancestorStyle.visibility === 'hidden') {
+                hiddenAncestor = `${ancestor.tagName.toLowerCase()}#${ancestor.id} ${ancestor.getAttribute('class') || ''}`.slice(0, 240);
+                break;
+              }
+            }
+          }
+
           return {
             index,
             tag,
@@ -439,6 +456,11 @@ test.describe('comprehensive UI contract', () => {
             height: rect.height,
             pointerEvents: style.pointerEvents,
             disabled: element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true',
+            id: element.id.slice(0, 120),
+            classes: (element.getAttribute('class') || '').slice(0, 240),
+            display: style.display,
+            visibility: style.visibility,
+            hiddenAncestor,
           };
         }),
       );
@@ -446,7 +468,9 @@ test.describe('comprehensive UI contract', () => {
 
       for (const result of results) {
         const target = `${route}: ${result.tag}${result.type ? `[type=${result.type}]` : ''} #${result.index + 1}`;
-        if (result.width < 1 || result.height < 1) failures.push(`${target} has no rendered hit area`);
+        if (result.width < 1 || result.height < 1) {
+          failures.push(`${target} has no rendered hit area: ${JSON.stringify({ label: result.label.slice(0, 200), id: result.id, classes: result.classes, width: result.width, height: result.height, display: result.display, visibility: result.visibility, hiddenAncestor: result.hiddenAncestor })}`);
+        }
         if (!result.disabled && result.pointerEvents === 'none') failures.push(`${target} has pointer-events disabled`);
         if (!result.disabled && !result.label) failures.push(`${target} has no accessible label/text/placeholder/title`);
       }

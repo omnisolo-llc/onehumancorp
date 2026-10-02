@@ -1,45 +1,73 @@
 "use client";
 
-import { useState,useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { isSupportedBioUrl } from '@/lib/bioLinks';
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
+type BioOwner = {userId: string; tenantId: string; expiresAt: number};
+async function verifiedIdentity(): Promise<BioOwner> {
+  const response = await fetch('/api/v1/auth/session-identity', {credentials:'same-origin',cache:'no-store',redirect:'error'});
+  const data = await response.json();
+  if (response.status !== 200 || data?.error != null || data?.success === false || typeof data?.userId !== 'string' || !data.userId || typeof data?.tenantId !== 'string' || !data.tenantId || !Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now()) throw new Error('Verified profile identity unavailable');
+  return data;
+}
+function ownerHeaders(owner: BioOwner): Headers {
+  const headers = new Headers({'Content-Type':'application/json','x-ohc-expected-user':owner.userId,'x-ohc-expected-tenant':owner.tenantId});
+  if (headers.get('x-ohc-expected-user') !== owner.userId || headers.get('x-ohc-expected-tenant') !== owner.tenantId) throw new Error('Profile identity cannot be represented');
+  return headers;
+}
+
 export default function LinkInBioGeneratorPage() {
   const router = useRouter();
-  const [storeName, setStoreName] = useState('My Store');
-  const [bio, setBio] = useState('Welcome to my storefront!');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://cloud.omnisolo.co' }]);
-  const [tenant, setTenant] = useState('my-store');
+  const [storeName, setStoreName] = useState('');
+  const [bio, setBio] = useState('');
+  const [theme, setTheme] = useState('light');
+  const [links, setLinks] = useState<{title:string;url:string}[]>([]);
+  const [owner, setOwner] = useState<BioOwner | null>(null);
   const [removeBranding, setRemoveBranding] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [phase, setPhase] = useState<'loading'|'ready'|'saving'|'held'>('loading');
+  const [status, setStatus] = useState('Verifying private profile access…');
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    const tid = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'my-store') : 'my-store';
-    setTenant(tid);
-
-    // Load existing config if available
-    const loadConfig = async () => {
-      try {
-        const res = await fetch(`/api/v1/growth/link-in-bio/${tid}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.store_name) {
-             setStoreName((curr) => curr === 'My Store' ? data.store_name : curr);
-             setBio((curr) => curr === 'Welcome to my storefront!' ? (data.bio || '') : curr);
-             setTheme((curr) => curr === 'light' ? (data.theme || 'light') : curr);
-             setLinks((curr) => (curr.length === 1 && curr[0].title === 'Shop Now' && data.links && data.links.length > 0) ? data.links : curr);
-             setRemoveBranding((curr) => curr ? curr : (data.remove_branding || false));
-          }
-        }
-      } catch  {
-        // ignore
-      }
-    };
-    loadConfig();
+  const [hasSaved, setHasSaved] = useState(false);
+  const epoch = useRef(0);
+  const active = useRef(false);
+  const saving = useRef(false);
+  const isSaving = phase === 'saving';
+  const linkUrl = owner && typeof window !== 'undefined' ? `${window.location.origin}/bio/${encodeURIComponent(owner.tenantId)}` : '';
+  const clipboard = useClipboardFeedback(linkUrl + JSON.stringify([storeName,bio,theme,links,removeBranding]));
+  const retire = useCallback(() => {
+    ++epoch.current; saving.current=false; setOwner(null); setStoreName(''); setBio(''); setLinks([]); setTheme('light'); setRemoveBranding(false); setSaveSuccess(false); setHasSaved(false); setPhase('held');
+    setStatus('Your session changed. Reload to verify private profile access.');
   }, []);
+  useEffect(() => {
+    active.current = true; const current = ++epoch.current; let timer: ReturnType<typeof setTimeout> | undefined;
+    const storage = (event: StorageEvent) => { if (event.key === null || event.key === 'omnisolo_queue_identity_epoch_v2') retire(); };
+    window.addEventListener('omnisolo_auth_changed',retire); window.addEventListener('storage',storage); window.addEventListener('pagehide',retire);
+    void (async () => {
+      try {
+        const identity = await verifiedIdentity();
+        if (!active.current || current !== epoch.current) return;
+        const headers = ownerHeaders(identity); setOwner(identity);
+        timer = setTimeout(retire, Math.min(identity.expiresAt-Date.now(),2_147_483_647));
+        const response = await fetch(`/api/v1/growth/link-in-bio/${encodeURIComponent(identity.tenantId)}`, {headers,credentials:'same-origin',cache:'no-store',redirect:'error'});
+        if (response.status === 404) {
+          await response.text();
+          if (!active.current || current !== epoch.current) return;
+          setPhase('ready'); setStatus('No saved private profile. Enter your details to save one.'); return;
+        }
+        if (response.status !== 200) throw new Error('Private profile unavailable');
+        const data = await response.json();
+        if (!active.current || current !== epoch.current) return;
+        if (data?.error != null || data?.success === false || typeof data?.store_name !== 'string' || typeof data.bio !== 'string' || typeof data.theme !== 'string' || !Array.isArray(data.links) || data.links.some((link: {title?:unknown;url?:unknown}|null) => !link || typeof link.title !== 'string' || typeof link.url !== 'string') || (data.remove_branding !== undefined && typeof data.remove_branding !== 'boolean')) throw new Error('Private profile is incomplete');
+        setStoreName(data.store_name); setBio(data.bio); setTheme(data.theme); setLinks(data.links); setRemoveBranding(data.remove_branding ?? false); setHasSaved(true); setPhase('ready'); setStatus('Saved private profile loaded. Public publication is not available.');
+      } catch {
+        if (active.current && current === epoch.current) {setPhase('held'); setStatus('Private profile could not be loaded. Reload before editing existing configuration.');}
+      }
+    })();
+    return () => {active.current=false; ++epoch.current; clearTimeout(timer); window.removeEventListener('omnisolo_auth_changed',retire); window.removeEventListener('storage',storage); window.removeEventListener('pagehide',retire);};
+  }, [retire]);
 
   const handleAddLink = () => {
     setLinks([...links, { title: 'New Link', url: 'https://' }]);
@@ -57,39 +85,36 @@ export default function LinkInBioGeneratorPage() {
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    setSaveSuccess(false);
+    if (phase !== 'ready' || !owner || saving.current) return;
+    if (links.some(link => !isSupportedBioUrl(link.url))) {setStatus('Each link needs an absolute HTTP or HTTPS URL without whitespace or control characters.'); return;}
+    saving.current=true;
+    const current = epoch.current; const intended = {...owner};
+    const payload = {tenant_id:intended.tenantId,store_name:storeName,bio,theme,links:links.map((link,index)=>({id:String(index+1),title:link.title,url:link.url})),remove_branding:removeBranding};
+    setPhase('saving'); setSaveSuccess(false); setStatus('Saving private configuration…');
     try {
-      const res = await fetch('/api/v1/growth/link-in-bio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenant_id: tenant,
-          store_name: storeName,
-          bio,
-          theme,
-          links: links.map((l, i) => ({ id: String(i + 1), title: l.title, url: l.url })),
-          remove_branding: removeBranding
-        })
-      });
-      if (res.ok) {
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+      let identity: BioOwner;
+      try {identity = await verifiedIdentity();}
+      catch {if (active.current && current === epoch.current) retire(); return;}
+      if (!active.current || current !== epoch.current) return;
+      if (identity.userId !== intended.userId || identity.tenantId !== intended.tenantId) {retire(); return;}
+      const response = await fetch('/api/v1/growth/link-in-bio',{method:'POST',headers:ownerHeaders(intended),body:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',redirect:'error'});
+      if (!active.current || current !== epoch.current) return;
+      if (response.status === 401 || response.status === 403) {retire(); return;}
+      const body = await response.text();
+      if (!active.current || current !== epoch.current) return;
+      if (response.status === 409) {
+        let error: unknown;
+        try {error = JSON.parse(body)?.error;} catch { /* An unreadable conflict is an unknown save outcome. */ }
+        if (error === 'queued owner does not match the current session' || error === 'session_identity_changed') {retire(); return;}
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSaving(false);
-    }
+      if (response.status !== 200 || body !== '') throw new Error('Unconfirmed profile save');
+      setSaveSuccess(true); setHasSaved(true); setPhase('ready'); setStatus('Saved private configuration. Public publication is not available.');
+    } catch {
+      if (active.current && current === epoch.current) {setPhase('held');setStatus('The private save could not be confirmed. Reload and review stored data before trying again.');}
+    } finally {if (current === epoch.current) saving.current=false;}
   };
 
-  const linkUrl = `https://cloud.omnisolo.co/bio/${tenant}`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(linkUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const handleCopy = () => {if (phase === 'ready' && hasSaved && linkUrl) void clipboard.copy(linkUrl);};
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] p-4 md:p-8 font-inter">
@@ -105,13 +130,13 @@ export default function LinkInBioGeneratorPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white tracking-tight">Link in Bio Generator</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">One link to rule them all. Drive social traffic to your store.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Edit your private business profile. Public publication is not available.</p>
           </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Builder Controls */}
-          <div className="flex-1 space-y-6">
+          <fieldset disabled={phase !== 'ready'} className="flex-1 space-y-6 border-0 p-0 m-0 min-w-0">
             <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
               <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Profile Info</h2>
 
@@ -216,20 +241,22 @@ export default function LinkInBioGeneratorPage() {
                 disabled={isSaving}
                 className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg shadow-lg transition-all flex justify-center items-center gap-2"
             >
-                {isSaving ? 'Saving...' : saveSuccess ? 'Saved! ✅' : 'Save & Publish'}
+                {isSaving ? 'Saving...' : saveSuccess ? 'Saved private configuration' : 'Save private configuration'}
             </button>
-          </div>
+            <p role="status" aria-label="Private profile status">{status}</p>
+          </fieldset>
 
           {/* Live Preview */}
           <div className="w-full lg:w-[400px] flex-shrink-0">
              <div className="sticky top-8">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white">Live Preview</h2>
-                    <button onClick={handleCopy} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors">
-                        {copied ? 'Copied URL!' : 'Copy Link'}
+                    <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white">Private Preview</h2>
+                    <button onClick={handleCopy} disabled={phase !== 'ready' || !hasSaved || clipboard.state === 'pending'} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors">
+                        {clipboard.state === 'copied' ? 'Copied private preview link' : 'Copy saved private preview link'}
                     </button>
                 </div>
 
+                {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'} aria-label="Private profile clipboard">{clipboard.message}</p>}
                 {/* Mobile Device Mockup */}
                 <div className="relative w-[340px] h-[680px] mx-auto border-[12px] border-black rounded-[40px] shadow-2xl overflow-hidden bg-white">
                     <div className="absolute top-0 inset-x-0 h-6 bg-black z-20 rounded-b-3xl"></div> {/* Notch */}
@@ -243,20 +270,20 @@ export default function LinkInBioGeneratorPage() {
 
                         <div className="w-full space-y-4">
                             {links.map((link, i) => (
-                                <a
+                                isSupportedBioUrl(link.url) ? <a
                                     key={i}
-                                    href={link.url || `/link/${i + 1}`}
+                                    href={link.url}
                                     onClick={(e) => e.preventDefault()}
                                     className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-black shadow-md hover:shadow-lg'}`}
                                 >
                                     {link.title || 'Link Title'}
-                                </a>
+                                </a> : <span key={i} aria-disabled="true" className="block py-4 px-6 text-center">{link.title || 'Link Title'} (unavailable)</span>
                             ))}
                         </div>
 
-                        {!removeBranding && (
+                        {owner && !removeBranding && (
                           <div className="mt-auto pt-8 pb-4">
-                              <PoweredByOmniSolo tenantId={tenant} />
+                              <PoweredByOmniSolo tenantId={owner.tenantId} />
                           </div>
                         )}
                     </div>

@@ -1,7 +1,8 @@
 import { test, expect } from './onboarding_fixtures';
+import { completeReactZeroClickReview } from './react_zero_click_review';
 
 test.describe('Zero Click Builder Viral Growth Loop', () => {
-  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page }) => {
+  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page, onboardingOwner }, testInfo) => {
     // Navigate to the new growth feature
     // The fixture authenticates a fresh test-owned tenant.
 
@@ -29,17 +30,11 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // The button should now be enabled
     await expect(generateBtn).toBeEnabled();
 
-    // Submit the form
-    await generateBtn.click();
-
-    await page.getByRole('button', { name: /Approve.*Prepare Workspace/ }).click();
-    // Wait for the committed preparation
-    await expect(page.locator('h2', { hasText: 'Your workspace is prepared' })).toBeVisible({ timeout: 15000 });
-
-    // Explicit approval completes local setup
-    await page.getByText('🚀 Launch My Store').click();
-
-    await expect(page.getByText('Setup complete')).toBeVisible();
+    const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/onboarding/chat' && response.request().method() === 'POST').then(async response => ({ status: response.status(), body: await response.json() }));
+    const [result] = await Promise.all([pending, generateBtn.click()]);
+    const mode = await completeReactZeroClickReview(page, onboardingOwner, result);
+    testInfo.annotations.push({ type: 'setup-mode', description: mode });
+    await expect(page.getByRole('button', { name: /Share on X/i })).toBeVisible();
     await page.getByRole('button', { name: /Go to dashboard/i }).click();
     // Check navigation to dashboard
     await expect(page).toHaveURL(/.*dashboard/, { timeout: 15000 });

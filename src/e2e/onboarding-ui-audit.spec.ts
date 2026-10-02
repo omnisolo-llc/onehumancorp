@@ -30,6 +30,7 @@ test.describe('Onboarding UI Audit', () => {
     await page.locator('#step-admin .next-step-btn').click();
 
     await page.locator('#first-offer').fill("Logo Design");
+    await page.locator('#first-product-price').fill('25.00');
     await page.locator('#step-offer .next-step-btn').click();
 
     await page.locator('#location-input').fill('Portland, OR');

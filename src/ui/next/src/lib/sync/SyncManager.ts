@@ -17,6 +17,7 @@ type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
 export class SyncManager {
   private static instance: SyncManager;
   private syncInProgress = false;
+  private enqueueDuringSync = false;
 
   private constructor() {
     this.connectWebSocket();
@@ -59,7 +60,8 @@ export class SyncManager {
     this.notifyListeners();
 
     if (navigator.onLine) {
-      void this.sync();
+      if (this.syncInProgress) this.enqueueDuringSync = true;
+      else void this.sync();
     }
   }
 
@@ -133,6 +135,7 @@ export class SyncManager {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
     // Acquire before the first await, including queue reads.
     this.syncInProgress = true;
+    let completedPass = false;
     try {
       const queue = await this.getQueue();
       for (const action of queue) {
@@ -167,10 +170,18 @@ export class SyncManager {
           this.notifyListeners();
         }
       }
+      completedPass = true;
     } catch (error) {
       console.error('Offline queue requires attention:', error);
     } finally {
       this.syncInProgress = false;
+      // A committed enqueue can arrive after this pass captured its snapshot.
+      // Re-read once for that new work; existing claims still hold unknown,
+      // blocked, and acknowledged actions without replaying their effects.
+      if (this.enqueueDuringSync) {
+        this.enqueueDuringSync = false;
+        if (completedPass) void this.sync();
+      }
     }
   }
 }

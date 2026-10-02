@@ -42,11 +42,9 @@ test.describe('Growth Referral Widget', () => {
     const copyEmbedBtn = page.getByRole('button', { name: 'Copy Embed Code' });
     await expect(copyEmbedBtn).toBeVisible();
 
-    // Verify 10th order milestone section
-    const milestoneHeading = page.getByRole('heading', { name: '🎉 10th Order! Share your success' });
-    await expect(milestoneHeading).toBeVisible();
-
-    const milestoneShareBtn = page.getByRole('link', { name: /Share to WhatsApp/i });
-    await expect(milestoneShareBtn).toBeVisible();
+    // No verified order-count receipt exists in this page yet.
+    await expect(page.getByRole('heading', { name: 'Order milestones unavailable' })).toBeVisible();
+    await expect(page.getByRole('img', { name: '10th Order Milestone' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /Share to WhatsApp/i })).toHaveCount(0);
   });
 });

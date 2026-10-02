@@ -25,7 +25,7 @@ test('cart recovery workflow', async ({ page, loginAs, adminUser }) => {
     await page.evaluate(() => {
         localStorage.setItem('has_pro', 'true');
         // Because cart-recovery.html reads it globally on load:
-        window.hasPro = true;
+        Object.assign(window, { hasPro: true });
     });
 
     // 5. Fill out the form

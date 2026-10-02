@@ -5,13 +5,15 @@ import { canonicalRequest } from '../onboarding/contracts';
 
 type EditorLease = { name: string; active: boolean; raw: string | null; release: () => void };
 export type BuilderScope = { owner: QueueOwner; epoch: number; editor?: EditorLease };
-const editorDrafts = new Set(['website-builder-draft', 'storefront-builder-draft']);
-export async function openBuilderEditor(name: string): Promise<BuilderScope> {
+const editorDrafts = new Set(['website-builder-draft', 'storefront-builder-draft', 'agent-publication-draft']);
+export async function openBuilderEditor(name: string, active: () => boolean = () => true): Promise<BuilderScope> {
   const scope = await openBuilderScope();
+  if (!active()) throw new Error('This editor was closed before its draft was opened.');
   if (!navigator.locks?.request) throw new Error('Builder editing is unavailable because this browser cannot coordinate safe local drafts. Your saved draft remains held.');
   const key = builderDraftKey(name, scope);
   return new Promise<BuilderScope>((resolve, reject) => {
     void navigator.locks.request(key + ':editor', { mode: 'exclusive', ifAvailable: true }, async lock => {
+      if (!active()) throw new Error('This editor was closed before its draft was opened.');
       if (!lock) throw new Error('This builder draft is open in another view. Close that editor, then reopen this page to load its latest saved edits.');
       assertBuilderScope(scope);
       let finish!: () => void;

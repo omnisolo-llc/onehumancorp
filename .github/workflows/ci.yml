@@ -214,7 +214,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install native system libraries
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev postgresql-client
       - uses: ./.github/actions/setup-native
         id: rust-setup
         with:
@@ -239,8 +239,15 @@ jobs:
           path: target/ci-logs/lint-backend.log
           if-no-files-found: error
           retention-days: 7
+      - name: Create the isolated database required by native chat tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+        run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_chat_service_test
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_chat_service_test
         run: make test-backend
 
       - name: Check out the already pinned OpenHarness SDK for isolated tests
@@ -296,10 +303,11 @@ jobs:
       - name: Lint JavaScript and TypeScript
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: npm run lint:node
-      - name: Typecheck web and CLI
+      - name: Typecheck web, browser tests and CLI
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
         run: |
           npm run typecheck:web
+          npm run typecheck:e2e
           npm --prefix src/cli run typecheck
       - name: Run all Node, frontend, CLI and desktop UI tests
         if: ${{ !cancelled() && steps.native-setup.outcome == 'success' }}
@@ -374,14 +382,15 @@ jobs:
     name: Native real-stack Playwright ${{ matrix.shard }}/12
     strategy:
       fail-fast: false
-      # Keep all twelve shards, reserving four runners for Rust, desktop,
-      # Kind and Compose. Together the complete job graph uses at most eight.
+      # Keep all twelve shards; the desktop fence leaves at most four other
+      # runners for Rust, PostgreSQL, Kind and Compose (DAG-tested total: eight).
       max-parallel: 4
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    needs: [check-changes, native-build, native-web, dependency-audit, native-node, postgres-security]
-    # These independent quality lanes release their runner slots first, but a
-    # failure there must not conceal browser results for successfully built code.
+    needs: [check-changes, native-build, native-web, dependency-audit, native-node, native-desktop]
+    # Browser setup owns its database; PostgreSQL correctness remains mandatory
+    # in CI Required and can run concurrently. Desktop releases its runner first.
+    # A quality failure must not conceal browser results for successfully built code.
     if: ${{ !cancelled() && needs.check-changes.outputs.markdown-only == 'false' && needs.native-build.result == 'success' && needs.native-web.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -866,6 +875,48 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_onboarding_draft_test
           python3 scripts/focused_ci_gate.py onboarding-draft-merge
+      - name: Verify tenant-scoped search and database failure handling
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SEARCH_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_search_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_search_test
+          python3 scripts/focused_ci_gate.py tenant-search
+      - name: Verify bootstrap administrator roles through portable authentication
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SETUP_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_setup_role_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_setup_role_test
+          python3 scripts/focused_ci_gate.py bootstrap-portable-roles
+
+      - name: Verify native chat migration and tenant relationships
+        if: ${{ !cancelled() }}
+        env:
+          OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_chat_tenant_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_chat_tenant_test
+          python3 scripts/focused_ci_gate.py chat-tenant-isolation
+
+      - name: Verify private link-bio tenant isolation
+        if: ${{ !cancelled() }}
+        env:
+          OHC_BIO_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_bio_isolation_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_bio_isolation_test
+          python3 scripts/focused_ci_gate.py link-bio-isolation
+      - name: Verify durable public definitions and inactive tenant installations
+        if: ${{ !cancelled() }}
+        env:
+          OHC_AGENT_DEFINITION_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_agent_definition_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_agent_definition_test
+          python3 scripts/focused_ci_gate.py agent-definition-contract
       - name: Verify agent workflow tenant isolation and requested tasks offline
         if: ${{ !cancelled() }}
         env:
@@ -884,6 +935,14 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_builder_publication_test
           python3 scripts/focused_ci_gate.py builder-publication
+      - name: Verify canonical service creation and committed receipts
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SERVICE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_service_creation_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_service_creation_test
+          python3 scripts/focused_ci_gate.py service-creation
       - name: Retain focused gate execution and source evidence
         uses: actions/upload-artifact@v6
         if: always()

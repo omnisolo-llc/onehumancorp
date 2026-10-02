@@ -1,35 +1,23 @@
-import '@testing-library/jest-dom';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
+import { fields, marketplaceBackend } from './marketplace.test-support';
 import MarketplacePage from './page';
 import PublishPage from './publish/page';
-const navigation = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
-const agent = { id: 'registry-agent', name: 'Actual registry descriptor', description: 'A definition link', author: 'Registry author', version: '1.0.0', endpoint: 'https://registry.example.test/definition' };
-beforeEach(() => {
-  navigation.push.mockReset();
-  vi.stubGlobal('fetch', vi.fn(async (_url, options) => Response.json(options?.method === 'POST' ? { id: 'fabricated-success' } : [agent])));
+const navigation=vi.hoisted(()=>({push:vi.fn()}));vi.mock('next/navigation',()=>({useRouter:()=>navigation}));
+let backend:ReturnType<typeof marketplaceBackend>;
+beforeEach(()=>{backend=marketplaceBackend();navigation.push.mockReset();backend.fetch.mockImplementation(async(url,options)=>options?.method==='POST'?Response.json({id:'fabricated-success'}):backend.route(url,options));});
+afterEach(()=>{cleanup();notifyQueueIdentityChange();vi.unstubAllGlobals();});
+it('never presents a local toggle or incomplete receipt as a recorded installation',async()=>{
+ render(<MarketplacePage/>);await screen.findByText('Senior Rust Developer');fireEvent.click(within(screen.getByRole('article',{name:'Senior Rust Developer'})).getByRole('button',{name:'Install Agent'}));
+ expect(screen.queryByRole('button',{name:'Installed'})).toBeNull();expect(backend.posts()).toHaveLength(0);
+ await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Confirm Inactive Installation'})));
+ await screen.findByRole('button',{name:'Check Saved Status'});expect(screen.queryByRole('button',{name:'Installed'})).toBeNull();expect(screen.queryByText(/Agent installed successfully/)).toBeNull();
 });
-afterEach(() => vi.unstubAllGlobals());
-it('never presents a local button toggle as a recorded agent installation', async () => {
-  render(<MarketplacePage />);
-  const install = await screen.findByRole('button', { name: 'Install Agent' });
-  expect(install).toBeDisabled();
-  fireEvent.click(install);
-  expect(screen.queryByRole('button', { name: 'Installed' })).toBeNull();
-  expect(screen.queryByText(/Successfully installed/)).toBeNull();
-  expect(screen.getByText(/Installation is unavailable/)).toBeVisible();
-  expect(vi.mocked(fetch).mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
-});
-it('keeps full-agent form values without sending fields the registry cannot persist', async () => {
-  render(<PublishPage />);
-  const values = { 'Agent Name': 'Private draft', Description: 'Reviewed purpose', Role: 'Writer', 'System Prompt': 'Private instructions' };
-  for (const [name, value] of Object.entries(values)) fireEvent.change(screen.getByLabelText(name), { target: { value } });
-  const button = screen.getByRole('button', { name: 'Publish to Marketplace' });
-  await act(async () => fireEvent.submit(button.closest('form')!));
-  expect(fetch).not.toHaveBeenCalled();
-  expect(navigation.push).not.toHaveBeenCalled();
-  for (const [name, value] of Object.entries(values)) expect(screen.getByLabelText(name)).toHaveValue(value);
-  expect(button).toBeDisabled();
-  expect(screen.getByRole('status')).toHaveTextContent(/Full-agent publication is unavailable/);
+it('retains full publication fields without a false success when the actual receipt is incomplete',async()=>{
+ render(<PublishPage/>);await screen.findByText('Verified marketplace access. Review all fields before submitting.');
+ for(const[label,value]of Object.entries({'Agent Name':fields.name,Description:fields.description,Role:fields.role,'System Prompt':fields.system_prompt}))fireEvent.change(screen.getByLabelText(label),{target:{value}});
+ fireEvent.click(screen.getByRole('button',{name:'Review Publication'}));expect(backend.posts()).toHaveLength(0);
+ await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Publish Publicly'})));await screen.findByRole('button',{name:'Check Saved Status'});
+ expect(navigation.push).not.toHaveBeenCalled();expect(screen.getByLabelText('System Prompt')).toHaveValue(fields.system_prompt);expect(backend.posts()).toHaveLength(1);
 });

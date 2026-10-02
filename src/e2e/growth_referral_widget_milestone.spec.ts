@@ -7,7 +7,7 @@ test('growth_referral_widget_milestone', async ({ page, request, loginAs, adminU
 });
 
 test.describe('Growth Referral Widget Milestone UI', () => {
-  test('should display 10th order milestone alert and card on Team Page', async ({ page, loginAs, unlimitedAdminUser }) => {
+  test('keeps order milestones unavailable without a verified business count', async ({ page, loginAs, unlimitedAdminUser }) => {
     // Login
     await loginAs(page, unlimitedAdminUser);
 
@@ -15,15 +15,10 @@ test.describe('Growth Referral Widget Milestone UI', () => {
     await page.goto('/team');
     await page.waitForLoadState('networkidle');
 
-    // Verify milestone banner exists
-    await expect(page.getByRole('heading', { name: /10th Order! Share your success/i })).toBeVisible();
-
-    // Verify WhatsApp share button exists
-    await expect(page.getByRole('link', { name: /Share to WhatsApp/i })).toBeVisible();
-
-    // Verify the milestone card image is loaded
-    const milestoneImage = page.locator('img[alt="10th Order Milestone"]');
-    await expect(milestoneImage).toBeVisible();
-    await expect(milestoneImage).toHaveAttribute('src', /milestone_id=10th_order/);
+    await expect(page.getByRole('heading', { name: 'Order milestones unavailable' })).toBeVisible();
+    await expect(page.getByText('A verified order count for this business is required before a milestone can be displayed or shared.')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Share to WhatsApp/i })).toHaveCount(0);
+    await expect(page.getByRole('img', { name: '10th Order Milestone' })).toHaveCount(0);
+    await expect(page.locator('[src*="milestone_id=10th_order"]')).toHaveCount(0);
   });
 });

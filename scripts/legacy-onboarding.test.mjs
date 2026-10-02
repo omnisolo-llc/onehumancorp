@@ -18,7 +18,7 @@ async function setup(path, fetch, options = {}) {
   const dom = new JSDOM(html, { url: options.url || 'https://workspace.example/setup.html', runScripts: 'outside-only', pretendToBeVisual: true });
   Object.defineProperty(dom.window.navigator,'locks',{configurable:true,value:options.locks===false?undefined:options.locks||createOriginLockManager()});
   dom.window.fetch = (url, request) => url.endsWith('/session-identity') ? Promise.resolve(Response.json({...testOwner,expiresAt:Date.now()+60_000})) : fetch(url,request);
-  const initial = options.stored ?? { work_context: 'Agency', business_name: 'Nora Studio', first_offer: 'Logo Design', location: 'Portland, OR', target_audience: 'Local founders', categories: 'Design', assistant_name: 'Nora' };
+  const initial = options.stored ?? { work_context: 'Agency', business_name: 'Nora Studio', first_offer: 'Logo Design', firstProductPrice: '25.00', location: 'Portland, OR', target_audience: 'Local founders', categories: 'Design', assistant_name: 'Nora' };
   dom.window.localStorage.setItem(draftKey, JSON.stringify({format:1,state:initial,revision:'fixture-acknowledged',acknowledgedRevision:'fixture-acknowledged'}));
   options.prepare?.(dom.window);
   dom.window.HTMLElement.prototype.scrollTo = () => {};
@@ -118,6 +118,34 @@ for (const path of paths) {
       assert.equal(dom.window.document.getElementById('approval-error').textContent, 'Launch rejected');
       assert.equal(dom.window.document.getElementById('approve-publish-btn').disabled, false);
       assert.equal(dom.window.document.getElementById('approve-publish-btn').textContent, 'Approve & Complete Setup');
+    } finally { dom.window.close(); }
+  });
+}
+
+for (const path of paths) {
+  test(`${path} projects nullable intake fields into the actual strict preparation request`, async () => {
+    let submitted;
+    const dom = await setup(path, async (url, options) => {
+      if (url.endsWith('/start')) { submitted = JSON.parse(options.body); return new Promise(() => {}); }
+      if (url.endsWith('/chat')) return Response.json({ is_complete: true, reply: 'Ready to review', intake_data: {
+        business_name: 'Owner studio', business_type: 'Service', initial_products: [
+          { name: 'First service', price: '25.00', description: null, variants: null },
+          { name: 'Second service', price: 15, description: 'Reviewed details', variants: [{ name: 'Extended', price_modifier: 5, model_note: 'not an API field' }], model_note: 'not an API field' },
+        ],
+      } });
+      return Response.json({});
+    });
+    try {
+      dom.window.goToStep('step-chat');
+      dom.window.document.getElementById('chat-input').value = 'I provide owner services';
+      dom.window.document.getElementById('chat-send-btn').click();
+      await waitUntil(() => dom.window.pendingOnboardingReq);
+      dom.window.document.getElementById('approve-publish-btn').click();
+      await waitUntil(() => submitted);
+      assert.deepEqual(submitted.initial_products, [
+        { name: 'First service', price: '25.00', description: '', variants: [] },
+        { name: 'Second service', price: '15', description: 'Reviewed details', variants: [{ name: 'Extended', price_modifier: '5' }] },
+      ]);
     } finally { dom.window.close(); }
   });
 }

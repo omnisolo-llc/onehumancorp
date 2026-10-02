@@ -56,6 +56,7 @@ const corruptions = [
   ['route failure', f => f.shards[0].tests[0].attachments[0].failures = ['dead button']],
   ['alert-only fake effect', f => { const e = f.shards[0].tests[0].attachments[0].observations[0].effect; e.changed = false; e.dialogSeen = true; }],
   ['failed selection restoration', f => f.shards[0].tests[0].attachments[0].observations[0].effect.selectionRestored = false],
+  ['nonboolean focus effect', f => f.shards[0].tests[0].attachments[0].observations[0].effect.focusSeen = 'true'],
   ['nonboolean effect', f => f.shards[0].tests[0].attachments[0].observations[0].effect.changed = 'true'],
   ['false inventory declaration', f => f.shards[1].tests[1].attachments[0].routes = ['/']],
   ['missing distinct global assertion', f => { f.shards[1].tests.pop(); f.shards[1].selection.pop(); }],
@@ -105,22 +106,24 @@ test('real Playwright reporter retains actual successful assertions and refuses 
     for (const file of ['page.tsx', 'second/page.tsx']) fs.writeFileSync(path.join(root, 'src/ui/next/src/app', file), 'fixture');
     const { shards } = fixture(); const cases = shards.flatMap(shard => shard.tests);
     const testFile = `const {test,expect}=require(${JSON.stringify(require.resolve('@playwright/test'))});\n`
-      + cases.map(item => `test(${JSON.stringify(item.title)},async()=>{expect(process.env.PROBE_FAIL==='1'&&${JSON.stringify(item.id)}==='b').toBe(false);${item.attachments.length ? `await test.info().attach(${JSON.stringify(ATTACHMENT)},{body:Buffer.from(${JSON.stringify(JSON.stringify(item.attachments[0]))}),contentType:'application/json'});` : ''}});`).join('\n');
+      + cases.map(item => `test(${JSON.stringify(item.title)},async()=>{if(process.env.PROBE_DRIFT==='1'&&${JSON.stringify(item.id)}==='a')require('node:fs').writeFileSync('tracked-output.txt','after');expect(process.env.PROBE_FAIL==='1'&&${JSON.stringify(item.id)}==='b').toBe(false);${item.attachments.length ? `await test.info().attach(${JSON.stringify(ATTACHMENT)},{body:Buffer.from(${JSON.stringify(JSON.stringify(item.attachments[0]))}),contentType:'application/json'});` : ''}});`).join('\n');
     fs.writeFileSync(path.join(specDir, 'comprehensive_ui_contract.spec.ts'), testFile);
     fs.writeFileSync(path.join(root, 'playwright.config.cjs'), `module.exports={testDir:'./src/e2e',workers:1,retries:0,reporter:[[${JSON.stringify(require.resolve('./ui-click-audit-reporter.cjs'))}]],outputDir:'./untracked-results'};`);
+    fs.writeFileSync(path.join(root,'tracked-output.txt'),'before');
     git(['init', '-q']); git(['add', '.']); git(['-c', 'user.name=fixture', '-c', 'user.email=fixture@localhost', 'commit', '-qm', 'fixture']);
     const context = makeRunContext(root, { GITHUB_RUN_ID: 'reporter-probe', GITHUB_RUN_ATTEMPT: '1' });
-    for (const fail of [false, true]) {
-      const directory = path.join(root, fail ? 'failed-receipts' : 'passed-receipts');
+    for (const mode of ['pass','assertion-failure','source-drift']) {
+      const fail=mode!=='pass'; const directory=path.join(root,mode+'-receipts');
       let rejected = false;
       try {
         execFileSync(process.execPath, [require.resolve('@playwright/test/cli'), 'test', '--config', 'playwright.config.cjs'], {
           cwd: root, encoding: 'utf8', timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'],
-          env: { ...process.env, PROBE_FAIL: fail ? '1' : '0', OHC_CLICK_AUDIT_ROOT: root, OHC_CLICK_AUDIT_DIRECTORY: directory, OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(context) },
+          env: { ...process.env, PROBE_FAIL: mode==='assertion-failure' ? '1' : '0', PROBE_DRIFT: mode==='source-drift' ? '1' : '0', OHC_CLICK_AUDIT_ROOT: root, OHC_CLICK_AUDIT_DIRECTORY: directory, OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(context) },
         });
       } catch (error) { rejected = true; if (!fail) throw error; }
       assert.equal(rejected, fail);
       const receipts = readReceipts(directory);
+      if (mode==='source-drift') {assert.equal(receipts[0].complete,false);assert.equal(receipts[0].runStatus,'failed');assert.match(receipts[0].reporterError,/source or route inventory changed/);assert.equal(receipts[0].sourceDiagnostics.changes[0].path,'tracked-output.txt');assert(receipts[0].tests.every(t=>t.status==='passed'));}
       if (fail) assert.throws(() => validateReceipts(receipts, context, 1));
       else assert.deepEqual(validateReceipts(receipts, context, 1), { shards: 1, routes: 2, targets: 2, tests: 11 });
     }
@@ -146,4 +149,48 @@ test('required workflow aggregates all twelve independently retained shard recei
   assert(aggregate.steps.some(step => /ui-click-audit\.cjs target\/click-receipts 12/.test(step.run || '')));
   assert(required.needs.includes('native-click-coverage'));
   assert(required.steps.some(step => /require_success "native-click-coverage"/.test(step.run || '')));
+});
+
+test('source drift reports exact tracked output hashes without excluding runtime-looking paths', () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'click-drift-'));
+  const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'});
+  try {
+    fs.mkdirSync(path.join(root,'src/ui/next/src/app'),{recursive:true});
+    fs.mkdirSync(path.join(root,'.agent-task/report'),{recursive:true});
+    fs.writeFileSync(path.join(root,'src/ui/next/src/app/page.tsx'),'page');
+    fs.writeFileSync(path.join(root,'.agent-task/report/task_output.md'),'before');
+    fs.writeFileSync(path.join(root,'removed.txt'),'remove me');
+    git(['init','-q']);git(['add','-f','.']);git(['-c','user.name=fixture','-c','user.email=fixture@localhost','commit','-qm','fixture']);
+    const context=makeRunContext(root,{GITHUB_RUN_ID:'drift',GITHUB_RUN_ATTEMPT:'1'});
+    const before=protocol.assertSource(root,context);
+    fs.writeFileSync(path.join(root,'.agent-task/report/task_output.md'),'after');fs.unlinkSync(path.join(root,'removed.txt'));
+    fs.mkdirSync(path.join(root,'src/ui/next/src/app/new-route'));fs.writeFileSync(path.join(root,'src/ui/next/src/app/new-route/page.tsx'),'untracked route');
+    let error;try{protocol.assertSource(root,context,before);}catch(caught){error=caught;}
+    assert(error);assert.match(error.message,/changed|ENOENT/);
+    const detail=error.sourceDiagnostics;
+    assert.equal(detail.changedFiles,2);assert.equal(detail.omittedChanges,0);
+    const output=detail.changes.find(item=>item.path==='.agent-task/report/task_output.md');
+    assert.equal(output.before.bytes,6);assert.equal(output.after.bytes,5);assert.notEqual(output.before.sha256,output.after.sha256);
+    assert.equal(detail.changes.find(item=>item.path==='removed.txt').after,null);
+    assert.deepEqual(detail.routesAdded,['/new-route']);assert.deepEqual(detail.routesRemoved,[]);
+  } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('drift diagnostics bound listed paths while the full source still fails closed', () => {
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'click-drift-bound-'));const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'});
+ try {
+  fs.mkdirSync(path.join(root,'src/ui/next/src/app'),{recursive:true});fs.writeFileSync(path.join(root,'src/ui/next/src/app/page.tsx'),'page');
+  for(let n=0;n<105;n++)fs.writeFileSync(path.join(root,`source-${n}.txt`),'before');
+  git(['init','-q']);git(['add','.']);git(['-c','user.name=fixture','-c','user.email=fixture@localhost','commit','-qm','fixture']);
+  const context=makeRunContext(root,{GITHUB_RUN_ID:'bounded',GITHUB_RUN_ATTEMPT:'1'});const before=protocol.assertSource(root,context);
+  for(let n=0;n<105;n++)fs.writeFileSync(path.join(root,`source-${n}.txt`),'after');
+  let error;try{protocol.assertSource(root,context,before);}catch(caught){error=caught;}
+  assert(error);assert.equal(error.sourceDiagnostics.changedFiles,105);assert.equal(error.sourceDiagnostics.changes.length,100);assert.equal(error.sourceDiagnostics.omittedChanges,5);
+ } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('a recorded trusted-click focus effect is meaningful while plain preparation remains inert', () => {
+ const f=fixture(); const effect=f.shards[0].tests[0].attachments[0].observations[0].effect; effect.changed=false; effect.focusSeen=true;
+ assert.equal(validateReceipts(f.shards,f.context,2).targets,2);
+ effect.focusSeen=false; assert.throws(()=>validateReceipts(f.shards,f.context,2),/no meaningful/);
 });

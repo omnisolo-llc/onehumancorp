@@ -19,3 +19,12 @@ The protocol tests include the installed Playwright runner executing real Node-o
 The reset-per-target crawler still has a known discovery limitation: a control revealed only by an earlier interaction may never be seen after document retirement. Receipts enforce completion for targets the crawler actually discovered; they do not certify unseen controls. The current performance and remount failures must be resolved with real browser evidence, without reducing discovery or increasing budgets.
 
 This source was reconstructed after the earlier local workspace was lost. It is not claimed byte-identical to the historical ad571566 implementation. New validation and independent review bind to this reconstruction's own source manifest.
+
+
+## Preparation and result boundaries
+
+The generic sweep observes the page's actual input state. It does not synthesize field edits before discovery or clicking: debounced searches can remove discovered controls, and delayed input/autosave effects could otherwise be mistaken for an inert button's effect. A native invalid-form message is real click feedback, but is not proof that a form was submitted successfully. Filled-submission journeys remain separate real-stack tests.
+
+A visible `aria-busy="true"` initialization surface must settle before initial discovery. This bounded read-only wait cannot repeat a user action and is not applied after clicks or to arbitrary background polling. Exclusive choice controls must expose their actual selected state, and the audit still proves deselection followed by the original target's real off-to-on transition.
+
+Route receipts retain phase timings for navigation, discovery, target resolution, observation and document retirement. These are diagnostic measurements, never substitutes for completed target assertions. The root route's historical 90-second enumeration failure remains unverified until a fresh browser run completes the unchanged coverage budget.

@@ -2,6 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { test, expect } from '../fixtures';
 import { e2eDbQuery } from '../db_utils';
 import { createOwnerQuote } from './quote_fixture';
+import { requireLoopbackUrl } from '../support/recorded_invitation';
+
+test.beforeEach(async ({ baseURL }) => {
+  expect(baseURL).toBeTruthy();
+  requireLoopbackUrl(baseURL!);
+});
 
 test.describe('Owner service and quote review', () => {
   test('creates a service, reviews its persisted quote and saves pricing edits', async ({ page, loginAs, adminUser }) => {
@@ -10,27 +16,33 @@ test.describe('Owner service and quote review', () => {
     await page.getByRole('button', { name: 'Quick Actions', exact: true }).click();
     await page.getByRole('link', { name: 'New Service' }).click();
     await expect(page.getByRole('heading', { name: 'Add Service', exact: true })).toBeVisible();
+    requireLoopbackUrl(page.url());
+    const serviceOrigin = new URL(page.url()).origin;
 
     const title = `Sink Repair ${randomUUID()}`;
     await page.getByLabel('Service Title', { exact: true }).fill(title);
     await page.getByLabel('Price', { exact: true }).fill('50');
     await page.getByLabel('Description', { exact: true }).fill('Fix leaky sinks and replace pipes.');
     const serviceResponsePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === '/api/v1/booking/services'
+      new URL(response.url()).origin === serviceOrigin
+      && new URL(response.url()).pathname === '/api/v1/booking/services'
       && response.request().method() === 'POST');
+    requireLoopbackUrl(page.url());
+    expect(new URL(page.url()).origin).toBe(serviceOrigin);
     await page.getByRole('button', { name: 'Save Service', exact: true }).click();
     const serviceResponse = await serviceResponsePromise;
     expect(serviceResponse.ok(), await serviceResponse.text()).toBe(true);
     const service = await serviceResponse.json();
     expect(service.success).toBe(true);
     expect(service.service_id).toMatch(/^[0-9a-f-]{36}$/);
-    await expect(page.getByRole('heading', { name: 'Service Saved!', exact: true })).toBeVisible();
+    // Successful receipt storage navigates automatically; the transient saved
+    // screen is retained only for a failed navigation or unpersisted receipt.
     const [persistedService] = await e2eDbQuery(
-      'SELECT tenant_id, title, price_cents FROM services WHERE id = $1', [service.service_id],
+      'SELECT tenant_id, name AS title, (price * 100)::BIGINT AS price_cents FROM services WHERE id = $1', [service.service_id],
     );
     expect(persistedService).toMatchObject({ tenant_id: adminUser.organizationId, title });
     expect(Number(persistedService.price_cents)).toBe(5000);
-    await page.getByRole('link', { name: 'Back to dashboard', exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard(?:[?#].*)?$/);
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 
     // Service creation does not invoke an AI draft or schedule customer visits.

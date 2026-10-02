@@ -11,12 +11,19 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
-    'onboarding-durability': (64, 'OHC_SYNC_TEST_DATABASE_URL'),
+    'agent-definition-contract': (49, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
+
+    'chat-tenant-isolation': (8, 'OHC_CHAT_TEST_DATABASE_URL'),
+    'bootstrap-portable-roles': (9, 'OHC_SETUP_TEST_DATABASE_URL'),
+    'link-bio-isolation': (14, 'OHC_BIO_TEST_DATABASE_URL'),
+    'tenant-search': (13, 'OHC_SEARCH_TEST_DATABASE_URL'),
+    'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
     'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
     'agent-workflow-contract': (9, None),
     'stripe-webhook-security': (22, None),
     'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
+    'service-creation': (6, 'OHC_SERVICE_TEST_DATABASE_URL'),
 }
 RESULT = re.compile(r'test result: (ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out;')
 

@@ -275,27 +275,7 @@ impl OnboardingAgent {
 
         let minimax = match self.minimax.as_ref() {
             Some(m) => m,
-            None => {
-                // E2E Test / Local adapter mock fallback when no LLM is configured
-                let combined_input = user_messages
-                    .iter()
-                    .map(|m| {
-                        let mut text = m.content.clone();
-                        if let Some(url) = &m.image_url {
-                            text.push_str(&format!("\nImage provided: {}", url));
-                        }
-                        text
-                    })
-                    .collect::<Vec<String>>()
-                    .join("\n");
-                let intake_data = self.process_intake(&combined_input).await?;
-
-                return Ok(ChatResponse {
-                    is_complete: true,
-                    reply: "Give me a minute... I'm building your business.".to_string(),
-                    intake_data: Some(intake_data),
-                });
-            }
+            None => return Err("onboarding_ai_unconfigured".into()),
         };
 
         let mut conversation_history = String::new();
@@ -389,41 +369,7 @@ Your response:",
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
         let minimax = match self.minimax.as_ref() {
             Some(m) => m,
-            None => {
-                // E2E Test / Local adapter mock fallback when no LLM is configured
-                return Ok(IntakeData {
-                    business_name: "Mock Business".to_string(),
-                    business_type: "Mock Type".to_string(),
-                    categories: vec!["physical".to_string()],
-                    initial_products: vec![
-                        IntakeProduct {
-                            name: "Mock Product 1".to_string(),
-                            price: "10.00".to_string(),
-                            description: Some("Description for Product 1".to_string()),
-                            variants: None,
-                        },
-                        IntakeProduct {
-                            name: "Mock Product 2".to_string(),
-                            price: "20.00".to_string(),
-                            description: Some("Description for Product 2".to_string()),
-                            variants: None,
-                        },
-                        IntakeProduct {
-                            name: "Mock Product 3".to_string(),
-                            price: "30.00".to_string(),
-                            description: Some("Description for Product 3".to_string()),
-                            variants: None,
-                        },
-                    ],
-                    location: Some("Mock Location".to_string()),
-                    target_audience: Some("Mock Audience".to_string()),
-                    initial_tasks: Some(vec!["Follow up with new leads".to_string()]),
-                    sample_customer_name: Some("Sample Customer".to_string()),
-                    sample_customer_email: Some("sample@example.com".to_string()),
-                    deposit_percentage: Some(50),
-                    lead_time_days: Some(3),
-                });
-            }
+            None => return Err("onboarding_ai_unconfigured".into()),
         };
 
         let prompt = format!(

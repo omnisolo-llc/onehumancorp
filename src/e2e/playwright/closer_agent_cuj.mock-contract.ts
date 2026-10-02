@@ -14,10 +14,10 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
     // 1. Create a draft quote via the API
     const quoteRes = await request.post('/api/v1/quotes/draft_agent', {
       headers: {
-        'x-tenant-id': adminUser.tenantId
+        'x-tenant-id': adminUser.organizationId
       },
       data: {
-        tenant_id: adminUser.tenantId,
+        tenant_id: adminUser.organizationId,
         customer_id: '00000000-0000-0000-0000-000000000000',
         inquiry: 'Fix leaky sink inquiry'
       }
@@ -31,7 +31,7 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
 
     // 2. Mock the agent feed? No, post to the real agent feed API
     const feedItemPayload = {
-      tenant_id: adminUser.tenantId,
+      tenant_id: adminUser.organizationId,
       event_source: 'instagram_dm',
       context_payload: {
         customer_name: 'Carlos Handyman',
@@ -47,7 +47,7 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
 
     const feedRes = await request.post('/api/v1/agent-feed', {
       headers: {
-        'x-tenant-id': adminUser.tenantId
+        'x-tenant-id': adminUser.organizationId
       },
       data: feedItemPayload
     });
@@ -64,7 +64,7 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
     // It should have a Review Estimate or similar button depending on feed item.
     // If unified-feed doesn't have custom button for Draft Quote, we can click the action card to see details or manually navigate if we know how the app works.
     // For now, let's navigate directly to the quote UI to review and approve, simulating tapping the card.
-    await page.goto(`/api/v1/ui/quote.html?tenant=${adminUser.tenantId}&id=${quoteId}`);
+    await page.goto(`/api/v1/ui/quote.html?tenant=${adminUser.organizationId}&id=${quoteId}`);
 
     // Wait for the quote to load and check real values
     await expect(page.locator('text=DRAFT').or(page.locator('text=Draft Quote')).or(page.locator('text=Draft'))).toBeVisible({ timeout: 15000 });

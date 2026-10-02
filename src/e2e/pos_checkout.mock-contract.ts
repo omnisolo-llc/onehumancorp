@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { pool } from './global-setup';
+import { db as pool } from './db_utils';
 
 test.describe('Tap to Pay / POS Checkout API Flow', () => {
   test('POS payment intent creation and webhook deducts inventory', async ({ browser }) => {
@@ -57,6 +57,6 @@ test.describe('Tap to Pay / POS Checkout API Flow', () => {
 
     // Verify inventory deduction
     const res = await pool.query('SELECT inventory_count FROM products WHERE id = $1', [productId]);
-    expect(res.rows[0].inventory_count).toBe(9);
+    expect(res[0].inventory_count).toBe(9);
   });
 });

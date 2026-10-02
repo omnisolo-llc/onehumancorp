@@ -16,6 +16,23 @@ describe("UnifiedAgentFeed activity surfaces", () => {
     vi.useRealTimers();
   });
 
+  it("exposes the real selected choice and restores Proposals after Activity", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ items: [] })));
+    render(<UnifiedAgentFeed initialData={{ items: [], activity: [] }} />);
+    const proposals = screen.getByRole("button", { name: "Proposals" });
+    const activity = screen.getByRole("button", { name: "Activity Feed" });
+    expect(proposals).toHaveAttribute("aria-pressed", "true");
+    expect(activity).toHaveAttribute("aria-pressed", "false");
+    await userEvent.setup().click(activity);
+    expect(activity).toHaveAttribute("aria-pressed", "true");
+    expect(proposals).toHaveAttribute("aria-pressed", "false");
+    await userEvent.setup().click(proposals);
+    expect(proposals).toHaveAttribute("aria-pressed", "true");
+    expect(activity).toHaveAttribute("aria-pressed", "false");
+    await userEvent.setup().click(proposals);
+    expect(proposals).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("renders activity entries as glass surfaces", async () => {
     render(
       <UnifiedAgentFeed

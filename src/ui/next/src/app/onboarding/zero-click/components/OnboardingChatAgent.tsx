@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { openOnboardingSession, fetchForOnboardingOwner, subscribeOnboardingInvalidation, type DraftOwner } from '../../draftSession';
-import { readPreparation, readPreparedResult, resultForPreparation } from '../../contracts';
+import { useRouter } from 'next/navigation';
+import { sameOwner } from '@/lib/sync/queueIdentity';
+import { initializeOnboardingDraft, onboardingStorageFailed, useOnboardingStore } from '../../store';
+import { openOnboardingSession, onboardingOwner, fetchForOnboardingOwner, subscribeOnboardingInvalidation, type DraftOwner } from '../../draftSession';
+import { normalizeReviewedProducts, readPreparation, readPreparedResult, resultForPreparation } from '../../contracts';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -13,7 +16,7 @@ interface IntakeData {
   categories: string[];
   location?: string;
   target_audience?: string;
-  initial_products: { name: string; price: string; description?: string; variants?: string[] }[];
+  initial_products: { name: string; price: string | number; description?: string | null; variants?: { name: string; price_modifier: string | number }[] | null }[];
 }
 
 interface OnboardingChatAgentProps {
@@ -21,6 +24,8 @@ interface OnboardingChatAgentProps {
 }
 
 export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
+  const router = useRouter();
+  const [manualPrompt, setManualPrompt] = useState<string | null>(null);
   const [viewOwner, setViewOwner] = useState<DraftOwner | null>(null);
   const [identityError, setIdentityError] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
@@ -79,7 +84,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     const unsubscribe = subscribeOnboardingInvalidation(restart => {
       loadVersion += 1;
       epoch.current += 1; busy.current = false; unknownPreparation.current = false;
-      setInput(''); setReview(null); setMessages([{role:'assistant',content:'Sign in to continue your setup.'}]); setIsLoading(false); setIsProvisioning(false); setViewOwner(null);
+      setInput(''); setReview(null); setManualPrompt(null); setMessages([{role:'assistant',content:'Sign in to continue your setup.'}]); setIsLoading(false); setIsProvisioning(false); setViewOwner(null);
       if (restart) void load(); else { setIsLoaded(false); setIdentityError('Your session could not be verified. Sign in again to continue.'); }
     });
     void load();
@@ -111,13 +116,18 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     const version = ++epoch.current;
     const active = () => version === epoch.current;
     const newMessages: ChatMessage[] = [...messages, { role: 'user', content: input.trim() }];
-    setMessages(newMessages); setInput(''); setIsLoading(true); setReview(null); setError(null);
+    setMessages(newMessages); setInput(''); setIsLoading(true); setReview(null); setManualPrompt(null); setError(null);
     void saveStateToBackend(newMessages);
     try {
       const response = await fetchForOnboardingOwner('/api/v1/onboarding/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: newMessages }) }, viewOwner);
-      if (!response.ok) throw new Error('Failed to communicate with setup agent');
       const data = await response.json();
       if (!active()) return;
+      if (response.status === 503 && data?.error === 'onboarding_ai_unconfigured') {
+        setManualPrompt(newMessages.filter(message => message.role === 'user').map(message => message.content).join(' '));
+        setError('AI-assisted setup is unavailable because no model provider is configured. You can review and enter your details manually.');
+        return;
+      }
+      if (!response.ok) throw new Error('Failed to communicate with setup agent');
       if (typeof data.reply !== 'string') throw new Error('The setup reply is incomplete');
       const updated: ChatMessage[] = [...newMessages, { role: 'assistant', content: data.reply }];
       setMessages(updated); void saveStateToBackend(updated);
@@ -131,6 +141,25 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     } finally {
       if (active()) { busy.current = false; setIsLoading(false); }
     }
+  };
+
+  const handleManualReview = async () => {
+    if (manualPrompt === null || !viewOwner || busy.current) return;
+    busy.current = true; setIsLoading(true);
+    const version = ++epoch.current; const intended = { ...viewOwner };
+    const active = () => version === epoch.current;
+    try {
+      if ([...manualPrompt].length > 4000) throw new Error('Your setup description exceeds 4000 characters. Keep a shorter description before continuing manually.');
+      const owner = await initializeOnboardingDraft();
+      if (!active()) return;
+      const currentOwner = onboardingOwner();
+      if (!currentOwner || !sameOwner(owner, intended) || !sameOwner(currentOwner, intended)) throw new Error('Your session changed. Reopen setup before continuing.');
+      const previous = useOnboardingStore.getState();
+      previous.updateState({ step: 2, bio: manualPrompt, businessDescription: previous.businessDescription || previous.whatYouSell || manualPrompt, isLoading: false, error: '' });
+      if (onboardingStorageFailed()) throw new Error('Your manual setup details could not be saved on this device. Keep this conversation open and preserve your input before retrying.');
+      if (active()) router.push('/onboarding');
+    } catch (cause) { if (active()) setError(cause instanceof Error ? cause.message : 'Manual setup could not be opened.'); }
+    finally { if (active()) { busy.current = false; setIsLoading(false); } }
   };
 
   const handleProvisioning = async () => {
@@ -155,7 +184,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         company_description: review.prompt, selling_categories: intake.categories || [], payment_pref: 'online',
         website_template: 'Modern', first_product_name: first.name, first_product_price: String(first.price),
         domain_choice: 'subdomain', price_type: 'fixed', location: intake.location || '', target_audience: intake.target_audience || '',
-        initial_products: intake.initial_products.map(product => ({ ...product, price: String(product.price), description: product.description || '', variants: product.variants || [] })), ai_agents: [], ai_auto_respond: false,
+        initial_products: normalizeReviewedProducts(intake.initial_products), ai_agents: [], ai_auto_respond: false,
       };
       const response = await fetchForOnboardingOwner('/api/v1/onboarding/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, viewOwner);
       if (!response.ok) throw new Error('Setup preparation could not be confirmed. Check its status before retrying.');
@@ -241,6 +270,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
         <p>You can send another message to revise these details before preparing your workspace.</p>
         <button type="button" disabled={isProvisioning} onClick={handleProvisioning}>Approve &amp; Prepare Workspace</button>
       </section>}
+      {manualPrompt !== null && <section aria-label="Manual setup available" className="p-4"><p>Your conversation is preserved above. Review this description, then enter your own business, product and price details.</p><label htmlFor="manual-description">Description for manual setup</label><textarea id="manual-description" value={manualPrompt} disabled={isLoading || isProvisioning} onChange={event => setManualPrompt(event.target.value)} /><button type="button" disabled={isLoading || isProvisioning} onClick={() => void handleManualReview()}>Review Details Manually</button></section>}
       {/* Input Area */}
       <div className="p-4 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-transparent">
         {error && (

@@ -85,9 +85,12 @@ class NativeCacheTests(unittest.TestCase):
         self.assertIn('!cancelled()', job['if'])
         self.assertIn("needs.native-build.result == 'success'", job['if'])
         self.assertIn("needs.native-web.result == 'success'", job['if'])
-        for name in ('dependency-audit', 'native-node', 'postgres-security'):
+        for name in ('dependency-audit', 'native-node', 'native-desktop'):
             self.assertIn(name, job['needs'])
             self.assertNotIn(f'needs.{name}.result', job['if'])
+        self.assertNotIn('postgres-security', job['needs'])
+        self.assertNotIn('needs.postgres-security.result', job['if'])
+        self.assertIn('postgres-security', self.ci['jobs']['ci-required']['needs'])
 
     def test_action_pins_and_cargo_dependency_boundary(self):
         rust = next(step for step in self.steps if step.get('uses', '').startswith('dtolnay/rust-toolchain@'))

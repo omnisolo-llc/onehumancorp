@@ -84,6 +84,61 @@ describe('durable sync outcomes', () => {
     await expect(SyncManager.getInstance().enqueue({ type: 'cash_sale', timestamp: 'invalid' })).rejects.toThrow('timestamp');
     expect(enqueueAction).toHaveBeenCalledOnce();
   });
+  it('drains a newly enqueued action after the active sync captured an older queue snapshot', async () => {
+    let finish!: (response: Response) => void;
+    const fetchMock = vi.fn().mockImplementation((route: string) => route.includes('terminal')
+      ? new Promise<Response>(resolve => { finish = resolve; })
+      : Promise.resolve(response('triage-new', route)));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getActions).mockImplementation(async () => [...actions]);
+    vi.mocked(enqueueAction).mockImplementation(async action => { actions = [...actions, action]; });
+    const manager = SyncManager.getInstance();
+    const active = manager.sync();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await manager.enqueue({ ...triage, id: 'triage-new' }, owner);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    finish(response('sale', '/api/v1/payments/terminal/sync_offline'));
+    await active;
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect([...states.values()]).toEqual(['acknowledged', 'acknowledged']));
+  });
+  it('does not replay an unknown old outcome when a new enqueue requests another drain', async () => {
+    let fail!: (error: Error) => void;
+    const fetchMock = vi.fn().mockImplementation((route: string) => route.includes('terminal')
+      ? new Promise<Response>((_resolve, reject) => { fail = reject; })
+      : Promise.resolve(response('triage-new', route)));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getActions).mockImplementation(async () => [...actions]);
+    vi.mocked(enqueueAction).mockImplementation(async action => { actions = [...actions, action]; });
+    const manager = SyncManager.getInstance();
+    const active = manager.sync();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await manager.enqueue({ ...triage, id: 'triage-new' }, owner);
+    fail(new Error('Lost response'));
+    await active;
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect([...states.values()]).toEqual(['reconciliation', 'acknowledged']));
+    await manager.sync();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  it('holds follow-on work when the active acknowledgement cannot be persisted', async () => {
+    let finish!: (response: Response) => void;
+    const fetchMock = vi.fn().mockImplementation(() => new Promise<Response>(resolve => { finish = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(getActions).mockImplementation(async () => [...actions]);
+    vi.mocked(enqueueAction).mockImplementation(async action => { actions = [...actions, action]; });
+    vi.mocked(completeAction).mockRejectedValue(new Error('Storage unavailable'));
+    const manager = SyncManager.getInstance();
+    const active = manager.sync();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await manager.enqueue({ ...triage, id: 'triage-new' }, owner);
+    finish(response('sale', '/api/v1/payments/terminal/sync_offline'));
+    await active;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(getActions).toHaveBeenCalledOnce();
+    expect([...states.values()]).toEqual(['inflight']);
+  });
 });
 
 it('forwards the expected view owner through the enqueueMutation alias', async () => {

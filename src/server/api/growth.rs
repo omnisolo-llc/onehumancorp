@@ -6022,95 +6022,105 @@ pub struct SetLinkInBioConfigReq {
     pub remove_branding: Option<bool>,
 }
 
+fn is_supported_bio_url(value: &str) -> bool {
+    if value
+        .chars()
+        .any(|c| c.is_whitespace() || c.is_control() || c == '\\')
+    {
+        return false;
+    }
+    let lower = value.to_ascii_lowercase();
+    if !(lower.starts_with("https://") || lower.starts_with("http://")) {
+        return false;
+    }
+    match url::Url::parse(value) {
+        Ok(parsed) => {
+            matches!(parsed.scheme(), "http" | "https")
+                && parsed.host_str().is_some_and(|host| !host.is_empty())
+        }
+        Err(_) => false,
+    }
+}
+
 pub async fn handle_get_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::extract::Path(tenant): axum::extract::Path<String>,
-) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
+) -> Result<axum::response::Response, axum::http::StatusCode> {
+    use axum::response::IntoResponse;
+    let claims = claims.ok_or(axum::http::StatusCode::UNAUTHORIZED)?.0;
+    let signed_tenant = ::server_common::auth_utils::signed_tenant_id(&claims)
+        .ok_or(axum::http::StatusCode::FORBIDDEN)?;
+    if tenant != signed_tenant {
+        return Err(axum::http::StatusCode::FORBIDDEN);
+    }
     let mut tx = state
         .pool
         .begin()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant).await;
-
-    let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
-        .bind(&tenant)
-        .fetch_optional(&mut *tx)
+    sqlx::query("SET TRANSACTION READ ONLY")
+        .execute(&mut *tx)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let value = match value {
-        Some(v) => Some(v),
-        None => {
-            sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE kv_key = 'link_in_bio_config' ORDER BY updated_at DESC LIMIT 1")
-                .fetch_optional(&mut *tx)
-                .await
-                .unwrap_or(None)
-        }
-    };
-
-    let config = if let Some(val) = value {
-        serde_json::from_str(&val).unwrap_or_else(|_| LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem {
-                    id: "1".to_string(),
-                    title: "Visit My Store".to_string(),
-                    url: "/website-builder".to_string(),
-                },
-                LinkItem {
-                    id: "2".to_string(),
-                    title: "Book an Appointment".to_string(),
-                    url: "/booking".to_string(),
-                },
-            ],
-            remove_branding: false,
-        })
-    } else {
-        LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem {
-                    id: "1".to_string(),
-                    title: "Visit My Store".to_string(),
-                    url: "/website-builder".to_string(),
-                },
-                LinkItem {
-                    id: "2".to_string(),
-                    title: "Book an Appointment".to_string(),
-                    url: "/booking".to_string(),
-                },
-            ],
-            remove_branding: false,
-        }
-    };
-
-    Ok(axum::Json(config))
+    ::server_common::auth_utils::set_org_context(&mut *tx, &signed_tenant)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
+        .bind(&signed_tenant).fetch_optional(&mut *tx).await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let value = value.ok_or(axum::http::StatusCode::NOT_FOUND)?;
+    let config: LinkInBioConfig =
+        serde_json::from_str(&value).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    if config
+        .links
+        .iter()
+        .any(|link| !is_supported_bio_url(&link.url))
+    {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    tx.commit()
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        [(axum::http::header::CACHE_CONTROL, "private, no-store")],
+        axum::Json(config),
+    )
+        .into_response())
 }
 
 pub async fn handle_post_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let target_tenant = req
+    let claims = claims.ok_or(axum::http::StatusCode::UNAUTHORIZED)?.0;
+    let target_tenant = ::server_common::auth_utils::signed_tenant_id(&claims)
+        .ok_or(axum::http::StatusCode::FORBIDDEN)?;
+    if req
         .tenant_id
-        .clone()
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| auth_info.org_id.clone());
+        .as_ref()
+        .is_some_and(|tenant| tenant != &target_tenant)
+    {
+        return Err(axum::http::StatusCode::FORBIDDEN);
+    }
+
+    if req
+        .links
+        .iter()
+        .any(|link| !is_supported_bio_url(&link.url))
+    {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
 
     let mut tx = state
         .pool
         .begin()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &target_tenant).await;
+    ::server_common::auth_utils::set_org_context(&mut *tx, &target_tenant)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut links = req.links;
     for (i, link) in links.iter_mut().enumerate() {
@@ -6139,19 +6149,6 @@ pub async fn handle_post_link_in_bio(
     tx.commit()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if target_tenant != "my-store" {
-        if let Ok(mut tx2) = state.pool.begin().await {
-            let _ = ::server_common::auth_utils::set_org_context(&mut *tx2, "my-store").await;
-            let _ = sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ('my-store', 'link_in_bio_config', $1) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $1, updated_at = CURRENT_TIMESTAMP")
-                .bind(&val)
-                .execute(&mut *tx2)
-                .await;
-            let _ = tx2.commit().await;
-        } else {
-            tracing::warn!("Failed to begin transaction for my-store mirror config");
-        }
-    }
 
     Ok(axum::http::StatusCode::OK)
 }

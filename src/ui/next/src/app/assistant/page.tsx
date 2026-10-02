@@ -647,12 +647,12 @@ function TaskListPage({
       </div>
       <div className={styles.filterMeta}>
         <span>{shownCountLabel}</span>
-        <button type="button" onClick={onReset} className={styles.inlineButton}>Reset task filters</button>
+        <button type="button" onClick={onReset} disabled={taskSearch === '' && taskStatusFilter === 'all' && taskDateFilter === 'all'} className={styles.inlineButton}>Reset task filters</button>
       </div>
       <div className={styles.taskList}>
         {visibleTasks.length === 0 && <p className={styles.emptyText}>No matching tasks.</p>}
         {visibleTasks.map((task) => (
-          <button key={task.id} type="button" onClick={() => onSelect(task.id)} className={cx(styles.taskCard, activeTaskId === task.id && styles.taskCardActive)}>
+          <button key={task.id} type="button" onClick={() => onSelect(task.id)} aria-pressed={activeTaskId === task.id} disabled={activeTaskId === task.id} className={cx(styles.taskCard, activeTaskId === task.id && styles.taskCardActive)}>
             <div className={styles.metaRow}>
               <span className={styles.overline}>{task.workspace}</span>
               <span className={cx(styles.statusBadge, statusClass(task.status))}>{task.status}</span>

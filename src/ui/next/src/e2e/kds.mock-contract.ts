@@ -9,11 +9,11 @@ test.describe('KDS Offline & Multilingual', () => {
     await page.goto('/pos/kds');
     await page.evaluate(() => localStorage.clear());
     await page.evaluate(async () => {
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         const req = indexedDB.deleteDatabase('OMNISOLO_Offline_Queue');
-        req.onsuccess = resolve;
-        req.onerror = resolve;
-        req.onblocked = resolve;
+        req.onsuccess = () => resolve();
+        req.onerror = () => resolve();
+        req.onblocked = () => resolve();
       });
     });
 
@@ -68,10 +68,10 @@ test.describe('KDS Offline & Multilingual', () => {
 
     // Verify localStorage queued events
     const events = await page.evaluate(async () => {
-      return new Promise((resolve) => {
+      return new Promise<unknown[]>((resolve) => {
         const request = indexedDB.open('OMNISOLO_Offline_Queue', 1);
-        request.onsuccess = (e) => {
-          const db = e.target.result;
+        request.onsuccess = () => {
+          const db = request.result;
           if (!db.objectStoreNames.contains('actions')) {
             resolve([]);
             return;
@@ -85,8 +85,8 @@ test.describe('KDS Offline & Multilingual', () => {
       });
     });
     expect(events.length).toBe(2);
-    expect(events[0].type).toBe('UPDATE_ORDER_STATUS');
-    expect(events[1].type).toBe('TOGGLE_SOLD_OUT');
+    expect(events[0]).toHaveProperty('type', 'UPDATE_ORDER_STATUS');
+    expect(events[1]).toHaveProperty('type', 'TOGGLE_SOLD_OUT');
 
     // Restore network
     await context.setOffline(false);
@@ -98,10 +98,10 @@ test.describe('KDS Offline & Multilingual', () => {
     // Wait for background sync to trigger (interval is 5s) and clear events
     await expect(async () => {
       const remainingEvents = await page.evaluate(async () => {
-        return new Promise((resolve) => {
+        return new Promise<unknown[]>((resolve) => {
           const request = indexedDB.open('OMNISOLO_Offline_Queue', 1);
-          request.onsuccess = (e) => {
-            const db = e.target.result;
+          request.onsuccess = () => {
+            const db = request.result;
             if (!db.objectStoreNames.contains('actions')) {
               resolve([]);
               return;

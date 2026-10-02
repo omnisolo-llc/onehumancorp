@@ -426,11 +426,22 @@ run_rest_smoke_tests() {
   log "  /api/v1/agents ✓"
 
 # --- hire agent ---
-  hire_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/agents/hire" \
+  # Hiring can dispatch work. Do not retry an ambiguous mutation outcome.
+  hire_response="$(curl_bounded -sS --retry 0 -X POST "${backend_url}/api/v1/agents/hire" \
     "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
+    -w $'\n%{http_code}' \
     -d '{"name":"E2E Test Agent","role":"SOFTWARE_ENGINEER","model":"gpt-4o-mini"}')"
-  echo "${hire_response}" | grep -q '"id"' || { echo "hire agent failed: ${hire_response}" >&2; exit 1; }
+  hire_status="${hire_response##*$'\n'}"
+  hire_response="${hire_response%$'\n'*}"
+  [[ "${hire_status}" == "201" ]] || {
+    printf 'hire agent failed: HTTP %s; response: %.1024s\n' "${hire_status}" "${hire_response}" >&2
+    exit 1
+  }
+  printf '%s' "${hire_response}" | jq -e '.id | type == "string" and length > 0' >/dev/null || {
+    echo 'hire agent did not return a nonempty recorded ID' >&2
+    exit 1
+  }
   log "  /api/v1/agents/hire ✓"
 
 # --- meetings ---

@@ -327,15 +327,31 @@ fn validate_start_request(request: &AuthenticatedStartOnboardingRequest) -> bool
         })
 }
 
+fn onboarding_ai_failure(error: &str) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if error == "onboarding_ai_unconfigured" {
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "onboarding_ai_unconfigured",
+                "message": "AI-assisted setup is unavailable because no model provider is configured. Review and enter your business details manually."
+            })),
+        ).into_response();
+    }
+    axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+}
+
 async fn process_intake_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<IntakeRequest>,
-) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode>
+) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::response::Response>
 {
     if !valid_required_text(&payload.description, MAX_ONBOARDING_INPUT_CHARS)
         || !valid_optional_url(payload.image_url.as_deref())
     {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
+        return Err(axum::response::IntoResponse::into_response(
+            axum::http::StatusCode::BAD_REQUEST,
+        ));
     }
     let mut combined_input = payload.description.clone();
     if let Some(image_url) = &payload.image_url {
@@ -345,7 +361,7 @@ async fn process_intake_handler(
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding intake agent error: {}", error);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+            Err(onboarding_ai_failure(&error))
         }
     }
 }
@@ -353,16 +369,20 @@ async fn process_intake_handler(
 async fn process_chat_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<ChatRequest>,
-) -> Result<Json<crate::services::onboarding::onboarding_agent::ChatResponse>, axum::http::StatusCode>
-{
+) -> Result<
+    Json<crate::services::onboarding::onboarding_agent::ChatResponse>,
+    axum::response::Response,
+> {
     if !validate_chat_request(&payload) {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
+        return Err(axum::response::IntoResponse::into_response(
+            axum::http::StatusCode::BAD_REQUEST,
+        ));
     }
     match agent.process_chat(payload.messages).await {
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding chat agent error: {}", error);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+            Err(onboarding_ai_failure(&error))
         }
     }
 }
@@ -501,7 +521,7 @@ async fn start_zero_click(
 
     let intake_data = agent.process_intake(&combined_prompt).await.map_err(|e| {
         tracing::error!("Intake error: {}", e);
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        onboarding_ai_failure(&e)
     })?;
 
     let first_product = intake_data.initial_products.first();

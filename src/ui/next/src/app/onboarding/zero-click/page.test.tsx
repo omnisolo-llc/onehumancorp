@@ -79,7 +79,7 @@ describe('ZeroClickBuilderPage', () => {
               business_name: 'Custom Sneakers Store',
               business_type: 'Retail',
               categories: ['physical'],
-              initial_products: [{ name: 'Sneakers', price: '100' }]
+              initial_products: [{ name: 'Sneakers', price: '100', description: null, variants: [{ name: 'Large', price_modifier: 5, model_note: 'not a request field' }] }]
             }
           }),
         });
@@ -114,6 +114,7 @@ describe('ZeroClickBuilderPage', () => {
     expect(launch).toBeInTheDocument();
     const startCall = vi.mocked(global.fetch).mock.calls.find(([url]) => url === '/api/v1/onboarding/start');
     const startBody = JSON.parse(String(startCall?.[1]?.body));
+    expect(startBody.initial_products).toEqual([{ name: 'Sneakers', price: '100', description: '', variants: [{ name: 'Large', price_modifier: '5' }] }]);
     expect(startBody.admin_name).toBeUndefined();
     expect(startBody.admin_email).toBeUndefined();
     expect(startBody.admin_password).toBeUndefined();

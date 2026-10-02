@@ -9,6 +9,21 @@ interface Task {
   status: string;
 }
 
+async function readTaskReceipt(response: Response): Promise<Record<string, unknown>> {
+  if (response.status !== 200) throw new Error("Task request was not completed");
+  const receipt: unknown = await response.json();
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)
+    || ("success" in receipt && receipt.success !== true) || "error" in receipt) {
+    throw new Error("Invalid task acknowledgement");
+  }
+  return receipt as Record<string, unknown>;
+}
+
+async function readTaskMutationReceipt(response: Response): Promise<void> {
+  const receipt = await readTaskReceipt(response);
+  if (receipt.success !== true) throw new Error("Task mutation was not acknowledged");
+}
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,10 +80,10 @@ export default function TasksPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, staff_id: "", description: "", priority: "normal" }),
       });
-      if (!response.ok) throw new Error("Task save failed");
-      const data = await response.json();
-      if (typeof data.id !== "string" || !data.id) throw new Error("Invalid task ID");
-      setTasks((prev) => [{ id: data.id, title, status: "pending" }, ...prev]);
+      const data = await readTaskReceipt(response);
+      if (typeof data.id !== "string" || !data.id.trim()) throw new Error("Invalid task ID");
+      const id = data.id;
+      setTasks((prev) => [{ id, title, status: "pending" }, ...prev]);
       setIsNewModalOpen(false);
       setNewTitle("");
     } catch {
@@ -100,7 +115,7 @@ export default function TasksPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
       });
-      if (!response.ok) throw new Error("Task edit failed");
+      await readTaskMutationReceipt(response);
       setTasks((prev) => prev.map((task) => task.id === id ? { ...task, title } : task));
       setSelectedTask((prev) => prev?.id === id ? { ...prev, title } : prev);
       setIsEditModalOpen(false);
@@ -117,7 +132,7 @@ export default function TasksPage() {
     setError("");
     try {
       const response = await fetch(`/api/v1/staff/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Task delete failed");
+      await readTaskMutationReceipt(response);
       setTasks((prev) => prev.filter((task) => task.id !== id));
       setSelectedTask(null);
     } catch {

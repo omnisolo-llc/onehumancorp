@@ -2299,6 +2299,9 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         <div id="offer-error" class="error-msg" aria-live="polite">
           Please tell us what you sell.
         </div>
+        <label for="first-product-price">First product or service price</label>
+        <input id="first-product-price" data-testid="first-product-price" type="text" inputmode="decimal" class="glass-control glassmorphism" placeholder="Enter a price, including 0 for a free offer" aria-describedby="first-product-price-error" />
+        <div id="first-product-price-error" class="error-msg" aria-live="polite">Please enter the price for your first offer.</div>
         <div class="btn-group">
           <button
             class="next-step-btn"
@@ -2631,6 +2634,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         assistant_name: document.getElementById("assistant-name"),
         assistant_tone: document.getElementById("assistant-tone"),
         first_offer: document.getElementById("first-offer"),
+        first_product_price: document.getElementById("first-product-price"),
         location: document.getElementById("location-input"),
         target_audience: document.getElementById("target-audience"),
         template_selection: document.getElementById("template-selection"),
@@ -2646,6 +2650,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         assistant_name: document.getElementById("assistant-name-error"),
         assistant_tone: document.getElementById("tone-error"),
         first_offer: document.getElementById("offer-error"),
+        first_product_price: document.getElementById("first-product-price-error"),
         location: document.getElementById("location-error"),
         target_audience: document.getElementById("target-audience-error"),
         template_selection: document.getElementById("template-error"),
@@ -2661,6 +2666,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         categories: "",
         tagline: "",
         first_offer: "",
+        firstProductPrice: "",
         template_selection: "",
         domain: "",
       };
@@ -2737,8 +2743,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         if (current!==legacyAuthEpoch || typeof data.userId!=='string' || !data.userId || typeof data.tenantId!=='string' || !data.tenantId || typeof data.expiresAt!=='number' || data.expiresAt<=Date.now()) throw new Error('Verified setup identity is unavailable.');
         return {userId:data.userId,tenantId:data.tenantId};
       }
-      function holdLegacySession(message, restart = false) {
-        if(legacyOwner && legacyReady)saveCurrentState(true);
+      function holdLegacySession(message, restart = false, preservePersistedDraft = false) {
+        if(legacyOwner && legacyReady && !preservePersistedDraft)saveCurrentState(true);
         legacyOwner=null; legacyReady=false; legacyAuthEpoch+=1; setupEpoch=(setupEpoch||0)+1;
         clearTimeout(autoSaveTimer); clearTimeout(saveStateTimer);
         state=JSON.parse(JSON.stringify(emptyLegacyState));
@@ -2752,6 +2758,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         if(inputs.domain_name)inputs.domain_name.placeholder='e.g. my-business';
         if(chatInputEl)chatInputEl.value='';
         const chatImage=document.getElementById('chat-image-url');if(chatImage)chatImage.value='';
+        document.querySelectorAll('.manual-intake-fallback').forEach(button=>button.remove());
+        const manualContext=document.getElementById('manual-intake-context');if(manualContext){manualContext.textContent='';manualContext.hidden=true;}
         for(const id of ['submit-error','approval-error','instant-error']){const error=document.getElementById(id);if(error)error.textContent='';}
         populateForm(); if(container)container.style.visibility='hidden';
         legacyStatus(message || 'Your session changed. Saved drafts remain held on this device.');
@@ -2993,6 +3001,9 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         }
       });
 
+      inputs.first_product_price.addEventListener('input',()=>{
+        if(/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(inputs.first_product_price.value.trim())){errors.first_product_price.style.display='none';inputs.first_product_price.classList.remove('invalid-input');}
+      });
       inputs.first_offer.addEventListener("input", () => {
         if (inputs.first_offer.value.trim().length > 0) {
           errors.first_offer.style.display = "none";
@@ -3028,6 +3039,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         if (state.assistant_tone)
           inputs.assistant_tone.value = state.assistant_tone;
         if (state.first_offer) inputs.first_offer.value = state.first_offer;
+        if (typeof state.firstProductPrice === "string") inputs.first_product_price.value = state.firstProductPrice;
         if (state.location) inputs.location.value = state.location;
         if (state.target_audience) inputs.target_audience.value = state.target_audience;
         if (state.template_selection)
@@ -3111,6 +3123,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         state.assistant_name = inputs.assistant_name.value;
         state.assistant_tone = inputs.assistant_tone.value;
         state.first_offer = inputs.first_offer.value;
+        state.firstProductPrice = inputs.first_product_price.value;
         state.location = inputs.location.value;
         state.target_audience = inputs.target_audience.value;
         state.template_selection = inputs.template_selection.value;
@@ -3254,6 +3267,17 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             errors.first_offer.style.display = "none";
             inputs.first_offer.classList.remove("invalid-input");
             state.first_offer = inputs.first_offer.value.trim();
+          }
+          const price = inputs.first_product_price.value.trim();
+          if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(price)) {
+            errors.first_product_price.textContent = 'Please enter a non-negative price for your first offer, including 0 if it is free.';
+            errors.first_product_price.style.display = 'block';
+            inputs.first_product_price.classList.add('invalid-input');
+            isValid = false;
+          } else {
+            errors.first_product_price.style.display = 'none';
+            inputs.first_product_price.classList.remove('invalid-input');
+            state.firstProductPrice = price;
           }
         } else if (stepId === "step-location") {
           if (inputs.location.value.trim() === "") {
@@ -3544,6 +3568,50 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       const chatMessagesEl = document.getElementById("chat-messages");
       let chatHistory = [];
 
+      function reviewedProducts(products) {
+        const priceText = value => {
+          if (typeof value === 'string') return value;
+          if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+          throw new Error('The reviewed product price is invalid');
+        };
+        if (!Array.isArray(products)) throw new Error('The reviewed product draft is invalid');
+        return products.map(product => {
+          if (!product || typeof product.name !== 'string' || !product.name.trim() || (product.description != null && typeof product.description !== 'string') || (product.variants != null && !Array.isArray(product.variants))) throw new Error('The reviewed product draft is invalid');
+          return { name: product.name, price: priceText(product.price), description: product.description ?? '', variants: (product.variants ?? []).map(variant => {
+            if (!variant || typeof variant.name !== 'string' || !variant.name.trim()) throw new Error('The reviewed product variant is invalid');
+            return { name: variant.name, price_modifier: priceText(variant.price_modifier) };
+          }) };
+        });
+      }
+      function unchangedIntakeDraft(snapshot) {
+        if(legacyStorageFailure){refreshLegacyPendingStatus();return false;}
+        try {
+          const currentDraft=readLegacyEntry();
+          if(currentDraft && canonicalSetup(currentDraft.state)===snapshot)return true;
+          holdLegacySession('Your draft changed in another view. Reopen setup to review the latest saved fields.',false,true);
+        }catch{
+          holdLegacySession('The saved draft could not be verified. Reopen setup before continuing.',false,true);
+        }
+        return false;
+      }
+      function isUnconfiguredIntake(status, data) {
+        return status===503 && data?.error==='onboarding_ai_unconfigured' && (data.success===undefined || data.success===false);
+      }
+      function offerManualIntake(source, prompt) {
+        const id=source+'-manual-review';document.getElementById(id)?.remove();document.getElementById(source+'-manual-unavailable')?.remove();
+        const parent=source==='chat'?chatMessagesEl:instantErrorEl.parentElement;
+        const note=document.createElement('p');note.id=source+'-manual-unavailable';note.className='manual-intake-fallback';note.setAttribute('role','status');note.textContent='AI-assisted setup is unavailable. Review and enter your business details manually.';parent.appendChild(note);
+        const button=document.createElement('button');button.type='button';button.id=id;button.className='btn-secondary manual-intake-fallback';button.textContent='Review Details Manually';parent.appendChild(button);
+        const ownerEpoch=legacyAuthEpoch;const expected=legacyOwner;
+        button.addEventListener('click',()=>{
+          if(!legacyReady || ownerEpoch!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))return;
+          let context=document.getElementById('manual-intake-context');
+          if(!context){context=document.createElement('aside');context.id='manual-intake-context';context.setAttribute('role','note');container.prepend(context);}
+          context.textContent='Your original setup notes: '+prompt;context.hidden=false;
+          document.querySelectorAll('.manual-intake-fallback').forEach(control=>control.remove());
+          goToStep('step-context');
+        });
+      }
       async function sendChatMessage() {
         if (!legacyReady) return;
         const text = chatInputEl.value.trim();
@@ -3583,6 +3651,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         if (imageUrl) msgObj.image_url = imageUrl;
 
         chatHistory.push(msgObj);
+        saveCurrentState(true);
+        const chatDraftSnapshot=canonicalSetup(state);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
         chatSendBtn.disabled = true;
@@ -3599,9 +3669,16 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               body: JSON.stringify({ messages: chatHistory }),
             });
 
-            if (!res.ok) throw new Error("Chat request failed");
             data = await res.json();
-          if (chatEpoch !== setupEpoch) return;
+          if (chatEpoch !== setupEpoch || chatOwnerEpoch !== legacyAuthEpoch) return;
+          if(!unchangedIntakeDraft(chatDraftSnapshot))return;
+          if (!res.ok) {
+            if(isUnconfiguredIntake(res.status,data)){
+              offerManualIntake('chat',chatHistory.filter(message=>message.role==='user').map(message=>message.content).join('\n'));
+              return;
+            }
+            throw new Error("Chat request failed");
+          }
 
           const asstMsgDiv = document.createElement("div");
           asstMsgDiv.className = "chat-message assistant";
@@ -3615,6 +3692,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           asstMsgDiv.appendChild(asstBubbleDiv);
           chatMessagesEl.appendChild(asstMsgDiv);
           chatHistory.push({ role: "assistant", content: data.reply });
+          saveCurrentState(true);
           chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
           if (data.is_complete && data.intake_data) {
@@ -3648,7 +3726,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               price_type: "fixed",
               location: intakeData.location || "Local",
               target_audience: intakeData.target_audience || "General",
-              initial_products: intakeData.initial_products.map(product => ({ ...product, price: String(product.price) })),
+              initial_products: reviewedProducts(intakeData.initial_products),
               ai_agents: selectedAgents,
               ai_auto_respond: autoRespondChecked,
             };
@@ -3703,7 +3781,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         const response = await legacyOwnedFetch(backendOrigin() + '/api/v1/onboarding/' + path, body === undefined ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
         const data = await response.json();
         if(current!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))throw new Error('A previous session reply was ignored');
-        if (!response.ok) throw new Error(data.error || data.message || 'Setup request failed');
+        if (!response.ok) {const error=new Error(data.error || data.message || 'Setup request failed');error.unconfiguredIntake=isUnconfiguredIntake(response.status,data);throw error;}
         return data;
       }
       function showPreparedReview(receipt) {
@@ -3775,6 +3853,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         if (!prompt) { instantErrorEl.textContent = 'Please tell us about your business.'; instantErrorEl.style.display = 'block'; return; }
         setupBusy = true; generateStorefrontBtn.disabled = true; generateStorefrontBtn.dataset.submitting = 'true';
         instantErrorEl.style.display = 'none'; goToStep('step-loading'); const epoch = setupEpoch; const ownerEpoch=legacyAuthEpoch;
+        const intakeDraftSnapshot=canonicalSetup(state);
         try {
           if (unknownSetup) {
             const stateData = await setupRequest('state');
@@ -3787,7 +3866,16 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           if (epoch !== setupEpoch) return;
           showPreparedReview(preparedResult(data));
         } catch (cause) {
-          if (epoch === setupEpoch) { unknownSetup = true; goToStep('step-instant'); instantErrorEl.textContent = cause.message || 'Setup could not be confirmed'; instantErrorEl.style.display = 'block'; }
+          if (epoch === setupEpoch) {
+            if(cause.unconfiguredIntake===true && !unchangedIntakeDraft(intakeDraftSnapshot)){
+              if(epoch===setupEpoch)goToStep('step-instant',false);
+              return;
+            }
+            unknownSetup = cause.unconfiguredIntake !== true;
+            goToStep('step-instant');
+            instantErrorEl.textContent = cause.unconfiguredIntake === true ? 'AI-assisted setup is unavailable.' : cause.message || 'Setup could not be confirmed';instantErrorEl.style.display='block';
+            if(cause.unconfiguredIntake===true)offerManualIntake('instant',prompt);
+          }
         } finally { if(ownerEpoch===legacyAuthEpoch){setupBusy = false; generateStorefrontBtn.disabled = false; delete generateStorefrontBtn.dataset.submitting; generateStorefrontBtn.textContent = 'Generate My Workspace';} }
       });
       document.querySelectorAll('.save-draft-btn').forEach(button=>{
@@ -3815,6 +3903,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       if (finishBtn) {
         finishBtn.addEventListener("click", () => {
           if (!legacyReady) return;
+          if (!validateStep("step-offer")) {goToStep('step-offer');return;}
           if (validateStep("step-template")) {
             const agentBadges = document.querySelectorAll(
               "#ai-agents-container .agent-badge",
@@ -3836,8 +3925,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               selling_categories: state.categories ? [state.categories] : [],
               payment_pref: "online",
               website_template: state.template_selection || "Modern",
-              first_product_name: state.first_offer || "First Offer",
-              first_product_price: "0.00",
+              first_product_name: state.first_offer,
+              first_product_price: state.firstProductPrice,
               domain_choice:
                 state.domain || generateSubdomain(state.business_name),
               price_type: "fixed",

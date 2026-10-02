@@ -59,8 +59,11 @@ cargo test --locked -p server_integrations_stripe
 cargo test --locked --workspace --exclude app
 npm run test:contracts
 npm run typecheck:web
+npm run typecheck:e2e
 npm run test:web
 ```
+
+`typecheck:e2e` checks every source included by `playwright.tsconfig.json`, including archived contract files. It is required by `make lint` and the Node CI job. Static checking does not change native browser discovery or certify archived mock contracts as runtime acceptance.
 
 Focused checks accelerate iteration; they do not replace the complete regression suite. Test output must include nonzero executed tests where tests are expected. No `--pass-with-no-tests`, hidden failures, disabled assertions or changed business expectations merely to obtain green output.
 
@@ -117,7 +120,7 @@ The engineering target is **X = 30 minutes for the complete Linux CI required ga
 The CI graph now separates work that can run independently:
 
 - Rust executable build publishes this run's backend, agent, worker and mTLS probe. The headless test/lint job and desktop test/lint job partition the complete Rust workspace without making the desktop lane rebuild every backend crate.
-- The production Next build publishes promptly. Root/web/CLI/legacy-desktop Node tests, typechecks and lint run in an independent **required** job; a passing build cannot bypass them.
+- The production Next build publishes promptly. Root/web/CLI/legacy-desktop Node tests, the complete Playwright TypeScript project, application typechecks and lint run in an independent **required** job; a passing build cannot bypass them.
 - Twelve browser shards consume the same source-validated web/binary artifacts, with four shards running concurrently and two workers per shard. Browser execution waits for the independent dependency audit, Node quality and PostgreSQL isolation lanes to release their runner slots; failures in those lanes do not conceal browser results when both build artifacts are valid. At most four Rust, desktop, Kind and Compose jobs can overlap this matrix, keeping the complete workflow at eight concurrent runners or fewer. CI reports each browser failure once. The shards retain the complete browser discovery, not a smoke allowlist.
 - One production Docker build produces the server/agent image layers. Kind and Compose both load that same run's archive and still execute their full deployment checks. `scripts/native-images.py` checks the source fingerprint, tar checksum, image tags and loaded image IDs; caches and arbitrary local images are not accepted as current build evidence. Both deployment suites reuse the compiled mTLS probe rather than installing another Rust toolchain and recompiling it.
 - PostgreSQL tenant-isolation tests remain independently required under the non-superuser application role. `CI Required` fails on failed/cancelled or unexpectedly skipped builds, tests, lint, dependency audit and security lanes.

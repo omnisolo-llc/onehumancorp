@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { fillEmptyAuditControls, hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
+import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
 
 import { createServer } from 'node:http';
 import { createAuditNavigation } from './support/ui_audit_navigation';
@@ -92,21 +92,13 @@ test('fails explicitly when preparation replaces the target rather than counting
   await expect(observeClickEffects(page,(await page.locator('#first').elementHandle())!)).rejects.toThrow('detached during alternate-choice preparation');
 });
 
-test('fills native browser controls without invoking an instance value tracker', async ({ page }) => {
-  await page.setContent('<input type="email" required><textarea></textarea><input type="number" min="5"><input type="checkbox"><input type="file"><output></output>');
-  await page.evaluate(() => {
-    const control=document.querySelector('input')!;
-    const descriptor=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!;
-    Object.defineProperty(control,'value',{configurable:true,get(){return descriptor.get!.call(this);},set(value){this.dataset.instanceAssigned='true';descriptor.set!.call(this,value);}});
-    control.addEventListener('input',()=>{document.querySelector('output')!.textContent=control.value;});
-  });
-  await page.evaluate(fillEmptyAuditControls);
-  expect(await page.locator('input[type=email]').inputValue()).toBe('ui-audit@example.test');
-  expect(await page.locator('input[type=email]').getAttribute('data-instance-assigned')).toBeNull();
-  expect(await page.locator('input[type=email]').evaluate((input: HTMLInputElement)=>input.validity.valid)).toBe(true);
-  expect(await page.locator('output').textContent()).toBe('ui-audit@example.test');
-  expect(await page.locator('textarea').inputValue()).toBe('Audit value');
-  expect(await page.locator('input[type=number]').inputValue()).toBe('5');
+test('does not edit unrelated fields while checking a real click', async ({ page }) => {
+  await page.setContent('<input type="email" required><textarea></textarea><input type="number" min="5"><input type="checkbox"><input type="file"><button onclick="this.textContent=\'Clicked\'">Click once</button>');
+  const effect = await observeClickEffects(page, (await page.getByRole('button', { name: 'Click once' }).elementHandle())!);
+  expect(hasMeaningfulClickEffect(effect)).toBe(true);
+  expect(await page.locator('input[type=email]').inputValue()).toBe('');
+  expect(await page.locator('textarea').inputValue()).toBe('');
+  expect(await page.locator('input[type=number]').inputValue()).toBe('');
   expect(await page.locator('input[type=checkbox]').isChecked()).toBe(false);
   expect(await page.locator('input[type=file]').inputValue()).toBe('');
 });
@@ -316,12 +308,99 @@ test('reuses a verified audit session and renews only read navigation after real
 
 test('accepts a real in-document destination while rejecting placeholder and missing fragments', async ({ page }) => {
   const markup = '<a href="#cost-breakdown-section">View Detailed Costs</a><div style="height:1200px"></div><section id="cost-breakdown-section"><h2>Cost Breakdown</h2></section>';
-  await page.goto(`data:text/html,${encodeURIComponent(markup)}`);
-  expect(await page.evaluate(hasFragmentTarget, '#cost-breakdown-section')).toBe(true);
-  for (const fragment of ['#', '#missing', '#%E0%A4']) {
-    expect(await page.evaluate(hasFragmentTarget, fragment)).toBe(false);
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html' });
+    response.end(markup);
+  });
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing fixture address');
+    await page.goto(`http://127.0.0.1:${address.port}/fragment`);
+    expect(await page.evaluate(hasFragmentTarget, '#cost-breakdown-section')).toBe(true);
+    for (const fragment of ['#', '#missing', '#%E0%A4']) {
+      expect(await page.evaluate(hasFragmentTarget, fragment)).toBe(false);
+    }
+    await page.getByRole('link', { name: 'View Detailed Costs' }).click();
+    await expect(page).toHaveURL(/#cost-breakdown-section$/);
+    expect(await page.evaluate(() => location.hash)).toBe('#cost-breakdown-section');
+    await expect(page.getByRole('heading', { name: 'Cost Breakdown' })).toBeInViewport();
+  } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
+
+});
+
+
+test('does not trigger delayed autosave DOM or network effects before an inert submit', async ({ page }) => {
+  let autosaves = 0;
+  const server = createServer((request, response) => {
+    if (request.url === '/autosave') { autosaves += 1; response.writeHead(204); response.end(); return; }
+    response.writeHead(200, { 'content-type': 'text/html' });
+    response.end(`<form onsubmit="event.preventDefault()"><input type="email" oninput="setTimeout(()=>{document.querySelector('output').textContent='Autosaved';fetch('/autosave',{method:'POST'})},100)"><button>Dead submit</button><output></output></form>`);
+  });
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing fixture address');
+    await page.goto(`http://127.0.0.1:${address.port}/`);
+    const effect = await observeClickEffects(page, (await page.getByRole('button', { name: 'Dead submit' }).elementHandle())!);
+    expect(hasMeaningfulClickEffect(effect)).toBe(false);
+    expect(effect.requestSeen).toBe(false);
+    expect(await page.locator('input').inputValue()).toBe('');
+    await expect(page.locator('output')).toBeEmpty();
+    expect(autosaves).toBe(0);
+  } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
+});
+
+test('waits for a real busy shell replacement before discovering its control', async ({ page }) => {
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html' });
+    response.end(`<div aria-busy="true"><button>Loading control</button></div><script>setTimeout(()=>{document.querySelector('div').outerHTML='<button onclick="this.textContent=String(Number(this.textContent)+1)">0</button>'},400)</script>`);
+  });
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing fixture address');
+    const navigate = createAuditNavigation(`http://127.0.0.1:${address.port}`, async () => undefined);
+    await navigate(page, '/');
+    await expect(page.getByRole('button', { name: 'Loading control' })).toHaveCount(0);
+    const effect = await observeClickEffects(page, (await page.getByRole('button', { name: '0', exact: true }).elementHandle())!);
+    expect(hasMeaningfulClickEffect(effect)).toBe(true);
+    await expect(page.getByRole('button', { name: '1', exact: true })).toBeVisible();
+  } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
+});
+
+
+test('recognizes focus moved to a visible input during the same trusted click', async ({ page }) => {
+  await page.setContent(`<button onclick="document.querySelector('input').focus()">Add attachments</button><input aria-label="Attachments">`);
+  const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Add attachments'}).elementHandle())!);
+  await expect(page.getByRole('textbox',{name:'Attachments'})).toBeFocused();
+  expect(effect.changed).toBe(false);
+  expect(effect.focusSeen).toBe(true);
+  expect(hasMeaningfulClickEffect(effect)).toBe(true);
+});
+
+test('preparation focus does not make an inert button meaningful', async ({ page }) => {
+  await page.setContent('<button>Dead control</button><input aria-label="Unrelated">');
+  await page.getByRole('textbox').focus();
+  const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Dead control'}).elementHandle())!);
+  expect(effect.focusSeen).toBe(false);
+  expect(hasMeaningfulClickEffect(effect)).toBe(false);
+});
+
+test('delayed preparation focus cannot certify a dead click', async ({ page }) => {
+  await page.setContent(`<button onfocus="setTimeout(()=>document.querySelector('input').focus(),100)">Dead control</button><input aria-label="Unrelated">`);
+  const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Dead control'}).elementHandle())!);
+  await expect(page.getByRole('textbox')).toBeFocused();
+  expect(effect.focusSeen).toBe(false);
+  expect(effect.changed).toBe(false);
+  expect(hasMeaningfulClickEffect(effect)).toBe(false);
+});
+
+test('focus moved into a hidden field or the document body is not a meaningful control effect', async ({ page }) => {
+  for (const selector of ['input','body']) {
+    await page.setContent(`<body tabindex="-1"><button onclick="document.querySelector('${selector}').focus()">Dead control</button><input hidden></body>`);
+    const effect=await observeClickEffects(page,(await page.getByRole('button',{name:'Dead control'}).elementHandle())!);
+    expect(effect.focusSeen).toBe(false);
+    expect(hasMeaningfulClickEffect(effect)).toBe(false);
   }
-  await page.getByRole('link', { name: 'View Detailed Costs' }).click();
-  expect(await page.evaluate(() => location.hash)).toBe('#cost-breakdown-section');
-  await expect(page.getByRole('heading', { name: 'Cost Breakdown' })).toBeInViewport();
 });

@@ -8,37 +8,12 @@ export type ClickEffects = {
   dialogSeen: boolean;
   decisionSeen: boolean;
   selectionRestored?: boolean;
+  focusSeen?: boolean;
 };
 
 export function hasMeaningfulClickEffect(effect: ClickEffects): boolean {
   return effect.selectionRestored !== false && (effect.changed || effect.requestSeen || effect.downloadSeen
-    || effect.fileChooserSeen || effect.popupSeen || effect.validationSeen || effect.decisionSeen);
-}
-
-// Runs in the browser realm. Use the native setter, not React's instance value
-// tracker: dispatching after assigning control.value otherwise leaves React
-// state empty even though the DOM appears filled.
-export function fillEmptyAuditControls() {
-  for (const control of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')) {
-    const style = window.getComputedStyle(control);
-    const rect = control.getBoundingClientRect();
-    if (style.visibility === 'hidden' || style.display === 'none' || !rect.width || !rect.height
-        || control.disabled || control.readOnly || control.value) continue;
-    let value = 'Audit value';
-    if (control instanceof HTMLInputElement) {
-      if (['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(control.type)) continue;
-      const values: Record<string, string> = {
-        url: 'https://example.test', email: 'ui-audit@example.test', tel: '+15550101000',
-        number: String(Math.max(Number(control.min) || 0, 1)), date: '2026-10-01',
-        'datetime-local': '2026-10-01T12:00', time: '12:00', month: '2026-10', week: '2026-W40',
-      };
-      value = values[control.type] ?? value;
-    }
-    const prototype = control instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
-    Object.getOwnPropertyDescriptor(prototype, 'value')!.set!.call(control, value);
-    control.dispatchEvent(new Event('input', { bubbles: true }));
-    control.dispatchEvent(new Event('change', { bubbles: true }));
-  }
+    || effect.fileChooserSeen || effect.popupSeen || effect.validationSeen || effect.decisionSeen || effect.focusSeen === true);
 }
 
 import type { Dialog, Download, ElementHandle, FileChooser, JSHandle, Page, Request } from '@playwright/test';
@@ -105,6 +80,45 @@ async function prepareExclusiveChoice(target: ElementHandle<HTMLElement | SVGEle
   } finally { await handle.dispose(); }
 }
 
+// Observe only a focus transition produced during this same trusted click.
+// Hover/button preparation and later timers are outside the event interval.
+export function installClickFocusProbe(element: HTMLElement | SVGElement) {
+  let clicked: MouseEvent | undefined;
+  let before: Element | null = null;
+  let focusSeen = false;
+  const capture = (event: MouseEvent) => {
+    if (!event.isTrusted || !event.composedPath().includes(element)) return;
+    clicked = event;
+    before = document.activeElement;
+  };
+  const bubble = (event: MouseEvent) => {
+    if (event !== clicked || !event.isTrusted) return;
+    const focused = document.activeElement;
+    if (focused === before || focused === element || focused === document.body
+        || !(focused instanceof HTMLElement)) return;
+    if (!(focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement
+        || focused instanceof HTMLSelectElement || focused.isContentEditable)
+        || focused.matches(':disabled') || focused.closest('[hidden], [inert], [aria-hidden="true"]')) return;
+    const bounds = focused.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    for (let current: Element | null = focused; current; current = current.parentElement) {
+      const style = getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse'
+          || Number(style.opacity) === 0) return;
+    }
+    focusSeen = true;
+  };
+  window.addEventListener('click', capture, true);
+  window.addEventListener('click', bubble);
+  return {
+    get focusSeen() { return focusSeen; },
+    dispose() {
+      window.removeEventListener('click', capture, true);
+      window.removeEventListener('click', bubble);
+    },
+  };
+}
+
 export async function observeClickEffects(page: Page, target: ElementHandle<HTMLElement | SVGElement>): Promise<ClickEffects> {
   const selectionAttribute = await prepareExclusiveChoice(target);
   await target.hover({ timeout: 5000 });
@@ -112,7 +126,7 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
   const beforeUrl = page.url();
   const beforeSignature = await pageSignature(page);
   const observed: ClickEffects = { changed: false, requestSeen: false, downloadSeen: false,
-    fileChooserSeen: false, popupSeen: false, validationSeen: false, dialogSeen: false, decisionSeen: false };
+    fileChooserSeen: false, popupSeen: false, validationSeen: false, dialogSeen: false, decisionSeen: false, focusSeen: false };
   const popups: Page[] = [];
   const pending: Promise<unknown>[] = [];
   const onDialog = async (dialog: Dialog) => {
@@ -151,11 +165,14 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
   page.on('download', onDownload);
   page.on('filechooser', onFileChooser);
   page.on('popup', onPopup);
+  let focusProbe: JSHandle<ReturnType<typeof installClickFocusProbe>> | undefined;
   try {
+    focusProbe = await target.evaluateHandle(installClickFocusProbe);
     // A real user gesture is required by clipboard, popup and file APIs.
     await target.click({ timeout: 5000 });
     const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
     observed.changed = effect.changed;
+    observed.focusSeen = await focusProbe.evaluate(probe => probe.focusSeen).catch(() => false);
     observed.validationSeen = await page.evaluate(() => Boolean((window as Window & { __uiAuditInvalid?: boolean }).__uiAuditInvalid)).catch(() => false);
     await Promise.all(pending);
     if (selectionAttribute) {
@@ -163,6 +180,10 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
     }
     return observed;
   } finally {
+    if (focusProbe) {
+      await focusProbe.evaluate(probe => probe.dispose()).catch(() => undefined);
+      await focusProbe.dispose();
+    }
     page.off('dialog', onDialog);
     page.off('request', onRequest);
     page.off('download', onDownload);

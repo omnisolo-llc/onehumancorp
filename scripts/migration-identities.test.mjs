@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,5 +42,20 @@ test('invalid and out-of-range versions are rejected before SQL execution', asyn
       assert.equal(result.status, 1);
       assert.match(result.stderr, /Invalid SQLx migration identity/);
     } finally { await rm(dir, { recursive: true, force: true }); }
+  }
+});
+
+
+test('native chat migration stays in the source actually embedded and watched by the server', async () => {
+  const db = await readFile(path.join(root, 'src/server/db.rs'), 'utf8');
+  const build = await readFile(path.join(root, 'src/server/build.rs'), 'utf8');
+  const embedded = db.match(/static POSTGRES_MIGRATOR[^;]+sqlx::migrate!\("([^"]+)"\)/);
+  assert.ok(embedded, 'the actual embedded migration source must be discoverable');
+  const directory = path.resolve(root, embedded[1]);
+  assert.match(build, /cargo:rerun-if-changed=src\/server\/migrations/);
+  const sql = await readFile(path.join(directory, '1009_native_omnichannel_chat.sql'), 'utf8');
+  for (const table of ['inboxes','channels','contacts','conversations','messages']) {
+    assert.ok(sql.includes(`CREATE TABLE IF NOT EXISTS chat_${table}`), table);
+    assert.ok(sql.includes(`ALTER TABLE chat_${table} ENABLE ROW LEVEL SECURITY`), table);
   }
 });

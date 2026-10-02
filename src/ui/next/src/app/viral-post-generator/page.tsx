@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProPlan } from '../components/useProPlan';
+import { useClipboardFeedback } from '../../hooks/useClipboardFeedback';
+import { isSupportedBioUrl } from '../../lib/bioLinks';
 
 export default function ViralPostGeneratorPage() {
   const router = useRouter();
@@ -11,9 +13,13 @@ export default function ViralPostGeneratorPage() {
   const [generatedPost, setGeneratedPost] = useState('');
   const { hasPro, claimTrial, claimError } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [destination, setDestination] = useState('');
+  const clipboard = useClipboardFeedback(generatedPost);
+  const copied = clipboard.state === 'copied';
   const [removeBranding, setRemoveBranding] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
+  const destinationValid = destination === '' || isSupportedBioUrl(destination);
+  const canGenerate = Boolean(productName.trim() && keyBenefit.trim() && destinationValid);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -32,8 +38,9 @@ export default function ViralPostGeneratorPage() {
   };
 
   const handleGenerate = () => {
-    if (!productName || !keyBenefit) return;
-    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.\n\nShop now: https://${tenantId}.cloud.omnisolo.co\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`;
+    if (!canGenerate) return;
+    const link = destination ? `\n\nLearn more: ${destination}` : '';
+    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.${link}\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`;
     setGeneratedPost(post);
   };
 
@@ -49,7 +56,7 @@ export default function ViralPostGeneratorPage() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Promoter Agent Post Generator 🚀</h1>
+         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Social Post Template 🚀</h1>
          <div className="flex items-center gap-3">
             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
                Back to Dashboard
@@ -64,9 +71,9 @@ export default function ViralPostGeneratorPage() {
         {/* Editor Settings */}
         <section className="w-full md:w-1/2 flex flex-col gap-6">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Automate Your Marketing</h2>
+                <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Draft a Social Post</h2>
                 <p className="text-gray-600 text-sm">
-                    Generate highly converting social media posts instantly. Let our AI promoter agent do the heavy lifting.
+                    Create a local text template from your details. Review it before sharing; generating a template does not publish a post or a storefront.
                 </p>
             </div>
 
@@ -74,8 +81,9 @@ export default function ViralPostGeneratorPage() {
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Post Details</h2>
                 <div className="flex flex-col gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                        <label htmlFor="post-product" className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
                         <input
+                            id="post-product"
                             type="text"
                             placeholder="e.g. Signature Coffee Blend"
                             value={productName}
@@ -84,14 +92,29 @@ export default function ViralPostGeneratorPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Key Benefit</label>
+                        <label htmlFor="post-benefit" className="block text-sm font-medium text-gray-700 mb-1">Key Benefit</label>
                         <input
+                            id="post-benefit"
                             type="text"
                             placeholder="e.g. a bold start to your morning"
                             value={keyBenefit}
                             onChange={(e) => setKeyBenefit(e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
+                    </div>
+
+                    <div>
+                        <label htmlFor="post-destination" className="block text-sm font-medium text-gray-700 mb-1">Destination link (optional)</label>
+                        <input
+                            id="post-destination"
+                            type="url"
+                            placeholder="https://example.com/your-page"
+                            value={destination}
+                            onChange={(e) => setDestination(e.target.value)}
+                            aria-describedby="post-link-note"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <p id="post-link-note" className="text-sm text-gray-600">Use an existing HTTP or HTTPS page. This link is supplied by you; its availability is not verified here.</p>
                     </div>
 
                     <div className="pt-4 border-t border-gray-100">
@@ -112,10 +135,15 @@ export default function ViralPostGeneratorPage() {
 
                     <button
                         onClick={handleGenerate}
-                        className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
+                        disabled={!canGenerate}
+                        aria-describedby="post-requirements"
+                        className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
                     >
                         Generate Post
                     </button>
+                    <p id="post-requirements" role="status" aria-label="Post requirements" className="text-sm text-gray-600">
+                        {!destinationValid ? 'Enter an absolute HTTP or HTTPS destination without spaces, or leave the link empty.' : canGenerate ? 'Ready to generate a local template from these details.' : 'Enter a product name and key benefit to generate a post.'}
+                    </p>
                 </div>
             </div>
         </section>
@@ -141,16 +169,14 @@ export default function ViralPostGeneratorPage() {
                  {generatedPost && (
                     <button
                         id="copy-post-btn"
-                        onClick={() => {
-                            navigator.clipboard.writeText(generatedPost);
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 2000);
-                        }}
+                        onClick={() => { void clipboard.copy(generatedPost); }}
+                        disabled={clipboard.state === 'pending'}
                         className={`mt-4 w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
                     >
-                        {copied ? 'Copied!' : 'Copy to Clipboard'}
+                        {copied ? 'Copied!' : clipboard.state === 'pending' ? 'Copying…' : 'Copy to Clipboard'}
                     </button>
                  )}
+                 {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'} aria-label="Post clipboard" className="mt-2 text-sm text-gray-600">{clipboard.message}</p>}
              </div>
         </section>
       </main>

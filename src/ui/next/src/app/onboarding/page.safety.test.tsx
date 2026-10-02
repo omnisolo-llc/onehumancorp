@@ -2,6 +2,7 @@ import {beforeEach as beforeLocks} from 'vitest';
 beforeLocks(() => installOnboardingLocks());
 import {installOnboardingLocks} from './testLocks';
 import { initializeOnboardingDraft, markOnboardingDraftFromServer } from './store';
+import { writeOwnedOnboardingItem } from './draftSession';
 import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -37,6 +38,19 @@ async function approve() {
   render(<OnboardingWizard />);
   await userEvent.click(await screen.findByRole('button', { name: /Approve.*(?:Publish|setup|launch)/i }));
 }
+it('projects nullable intake products into the strict preparation contract', async () => {
+  writeOwnedOnboardingItem('products', JSON.stringify([
+    { name: 'Consultation', price: '25.00', description: null, variants: null },
+    { name: 'Second service', price: 15, description: 'Reviewed details', variants: [{ name: 'Extended', price_modifier: 5, model_note: 'omit' }], model_note: 'omit' },
+  ]));
+  await approve();
+  await waitFor(() => expect(calls('start')).toHaveLength(1));
+  const payload = JSON.parse(String(calls('start')[0][1]?.body));
+  expect(payload.initial_products).toEqual([
+    { name: 'Consultation', price: '25.00', description: '', variants: [] },
+    { name: 'Second service', price: '15', description: 'Reviewed details', variants: [{ name: 'Extended', price_modifier: '5' }] },
+  ]);
+});
 it('does not automatically repeat preparation after an unknown network outcome', async () => {
   start = async () => { throw new Error('Connection lost'); };
   await approve();
