@@ -568,6 +568,12 @@ pub fn get_articles() -> Vec<HelpArticle> {
             link: "/help/getting-started-1".to_string(),
         },
         HelpArticle {
+            category: "General".to_string(),
+            title: "How to Send Proposals and Collect Payments Securely".to_string(),
+            desc: "Learn how to generate accurate quotes, send secure invoices, and manage payment approvals.".to_string(),
+            link: "/help/managing-quotes-invoices".to_string(),
+        },
+        HelpArticle {
             category: "My Store".to_string(),
             title: "Adding Products".to_string(),
             desc: "Add products, track what's in stock, and change how your store looks."
