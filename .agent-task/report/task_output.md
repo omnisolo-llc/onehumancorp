@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: Implement Autonomous Customer Lifecycle & Loyalty Engine
+issue_description: The issue requests building an Autonomous Customer Lifecycle & Loyalty Engine, which involves POS engine integration (POS client, pos.payment_success). However, RESEARCH.md explicitly states that new epics and POS engines require an expansion gate and explicit authorization. I searched RESEARCH.md and found no such expansion gate or authorization for this work. Therefore, this task is blocked. Superpowers workflow loaded skill: .agent-scratch/superpowers/skills/using-superpowers/SKILL.md from revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d.
