@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_description: "The issue requests building a native Rust omnichannel chat system to replace the external service Chatwoot. However, the One Human Corp operating contract mandates prioritizing integrating existing tools over rebuilding them. Requests to build native replacements for external services require explicit authorization and an expansion gate in RESEARCH.md. Since no such expansion gate exists for this replacement, this task is rejected."
