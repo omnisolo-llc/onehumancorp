@@ -29,6 +29,7 @@ allowed_reference_paths=(
   docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md
   docs/reports/production_agent_optimization_report.md
   .agent-task/report/task_output.md
+  src/server/api/omni_inbox_webhook.rs
 )
 
 is_allowed_reference() {
