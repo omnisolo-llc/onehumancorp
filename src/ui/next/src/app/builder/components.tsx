@@ -133,10 +133,14 @@ export function SmartBlock({ type, props }: { type: string; props: import('@/lib
         </div>
         <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 glassmorphism shadow-lg">
           <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>
-          <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.copy}</p>
+          <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.subtitle ?? props.copy}</p>
         </div>
       </div>
     );
+  }
+
+  if (type === "TextBlock" || type === "Text") {
+    return <div className="p-6 font-inter text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-pre-wrap">{props.text}</div>;
   }
 
   if (type === "Catalog") {

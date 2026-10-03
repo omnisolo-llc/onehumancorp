@@ -1,37 +1,41 @@
 import { test, expect } from './fixtures';
+import { expectGeneratedDraft, expectGenerationUnavailable, generationAcceptance, generationGateReason, generationPrerequisite, generationResponse, publicationWrites } from './generation-acceptance';
 
 test.describe('Agentic Storefront Editor', () => {
-  test('Maya can use the Marketing Agent to edit her storefront', async ({ page, adminUser, loginAs }) => {
+  test('unconfigured generation explains the prerequisite and preserves the owner brief', async ({ page, adminUser, loginAs }) => {
+    test.skip(generationAcceptance, 'This contract requires an unconfigured generation service.');
     await loginAs(page, adminUser);
-
-    // Navigate to the storefront builder page
     await page.goto('/storefront-builder');
+    const writes = publicationWrites(page);
+    await page.getByPlaceholder(/mobile dog grooming service/i).fill('Maya the home baker, I bake custom vegan cakes.');
+    const response = generationResponse(page);
+    await page.getByRole('button', { name: 'Build My Storefront' }).click();
+    await expectGenerationUnavailable(await response);
+    await expect(page.getByRole('alert')).toHaveText(generationPrerequisite);
+    await expect(page.getByText('Preview Mode')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByPlaceholder(/mobile dog grooming service/i)).toHaveValue('Maya the home baker, I bake custom vegan cakes.');
+    await expect(page.getByText('Preview Mode')).toHaveCount(0);
+    expect(writes).toEqual([]);
+  });
 
-    // Wait for the page to load
-    await expect(page.locator('text=Welcome to OmniSolo Smart Builder')).toBeVisible();
-
-    // Enter bio
-    await page.fill('textarea[placeholder="e.g. I run a mobile dog grooming service in Portland"]', 'Maya the home baker, I bake custom vegan cakes.');
-
-    // Click Generate
-    await page.click('button:has-text("Build My Storefront")');
-
-    // Wait for generation to finish and preview mode to appear
-    await expect(page.locator('text=Preview Mode')).toBeVisible({ timeout: 15000 });
-
-    // Click on "Ask Agent to Edit"
-    await page.click('button:has-text("Ask Agent to Edit")');
-
-    // Verify Marketing Agent chat opens
-    await expect(page.locator('text=Marketing Agent').first()).toBeVisible();
-
-    // Type a request to the agent
-    await page.fill('textarea[placeholder="e.g. Add a new product..."]', 'Add a new vegan chocolate cake for $45');
-
-    // Click send (the SVG icon button)
-    await page.locator('button:has-text("Marketing Agent") ~ div:last-child button').click();
-
-    // Wait for generation to finish and return to preview mode
-    await expect(page.locator('text=Preview Mode')).toBeVisible({ timeout: 15000 });
+  test('Maya generates and edits actual storefront copy @provider-acceptance', async ({ page, adminUser, loginAs }) => {
+    test.skip(!generationAcceptance, generationGateReason);
+    test.setTimeout(180_000);
+    await loginAs(page, adminUser);
+    await page.goto('/storefront-builder');
+    await page.getByPlaceholder(/mobile dog grooming service/i).fill('Maya the home baker, I bake custom vegan cakes.');
+    const response = generationResponse(page);
+    await page.getByRole('button', { name: 'Build My Storefront' }).click();
+    const draft = await expectGeneratedDraft(await response, adminUser.organizationId);
+    await expect(page.getByText('Preview Mode')).toBeVisible();
+    await expect(page.locator('body')).toContainText(draft.pages[0].blocks[0].content.headline);
+    await page.getByRole('button', { name: /Ask Agent to Edit/ }).click();
+    await page.getByPlaceholder(/Add a new product/i).fill('Update the headline to emphasize vegan celebration cakes.');
+    const edited = generationResponse(page);
+    await page.getByRole('button', { name: 'Send storefront edit' }).click();
+    const result = await expectGeneratedDraft(await edited, adminUser.organizationId);
+    await expect(page.getByText('Preview Mode')).toBeVisible();
+    await expect(page.locator('body')).toContainText(result.pages[0].blocks[0].content.headline);
   });
 });

@@ -123,3 +123,18 @@ it('does not claim SEO was applied after a failed response', async () => {
   await screen.findByText('Draft content suggestions could not be confirmed.');
   expect(useBuilderStore.getState().seoMetadata).toEqual({}); expect(screen.queryByLabelText('Private SEO metadata')).toBeNull();
 });
+
+it('explains a missing authorized provider while retaining the owner wizard inputs', async () => {
+  generation = async () => Response.json({ code: 'generation_unavailable' }, { status: 503 });
+  await startGeneration();
+  expect(await screen.findByText(/Configure the builder operator tenant and an authorized text-generation provider/)).toBeVisible();
+  expect(useBuilderStore.getState().bio).toBe('Owner requested service description');
+  expect(useBuilderStore.getState().blocks).toEqual([]);
+});
+
+it.each(['headline', 'subtitle', 'text'])('rejects array-valued generated %s before applying a draft', async field => {
+  generation = async () => Response.json({ pages: [{ blocks: [{ block_type: field === 'text' ? 'TextBlock' : 'HeroBlock', content: { [field]: [{ name: 'Unconfirmed array content' }] } }] }] });
+  await startGeneration();
+  expect(await screen.findByText(/generated draft has unsupported content/)).toBeVisible();
+  expect(useBuilderStore.getState().blocks).toEqual([]);
+});
