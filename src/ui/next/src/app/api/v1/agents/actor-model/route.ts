@@ -1,3 +1,4 @@
+import { runtimeTextResponse } from "@/lib/auth/runtimeResponse";
 import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 import { jsonRpcRequestTransform } from "@/lib/auth/jsonRpc";
 
@@ -11,14 +12,5 @@ export async function POST(request: Request) {
       return { message: input.message };
     }),
   });
-  if (!response.ok) return response;
-  try {
-    const payload = await response.json();
-    if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
-    return Response.json({
-      result: payload?.result?.output ?? "Executed successfully with empty output.",
-    });
-  } catch {
-    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
-  }
+  return runtimeTextResponse(response);
 }

@@ -1,32 +1,31 @@
 import { test, expect } from './fixtures';
+import { runtimeAcceptance, runtimeGateReason } from './generation-acceptance';
 
 test.describe('Aider RepoMap UI', () => {
-  test('user can interact with the RepoMap API to generate a map of the repository', async ({ page, unlimitedAdminUser, loginAs }) => {
-    // 1. MUST start from the home page after user login via the UI
+  test('unconfigured runtime explains that no repository work was dispatched', async ({ page, unlimitedAdminUser, loginAs }) => {
+    test.skip(runtimeAcceptance, 'This contract requires an unconfigured repository runtime.');
     await loginAs(page, unlimitedAdminUser);
-
-    // In our E2E tests, loginAs brings us to /dashboard.html, so we navigate exactly as a user would
-    await expect(page.locator('body')).toBeVisible();
-
-    // The advanced help links might be hidden initially.
-    // We will navigate directly using page.goto because the link might be inside a toggle,
-    // but to be fully correct, let's just click the link. If it's hidden, let's force it visible or go to it directly.
     await page.goto('/aider.html');
-
-    // 3. Verify we reached the page
-    await expect(page.getByRole('heading', { name: 'Aider RepoMap' })).toBeVisible();
-
-    // 4. Fill in the form
-    await page.locator('input[placeholder="e.g. ."]').fill('src/agents/builtin');
-
-    // 5. Submit
+    await page.getByPlaceholder('e.g. .').fill('src/agents/builtin');
+    const response = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/rpc' && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Generate RepoMap' }).click();
+    const result = await response;
+    expect(result.status()).toBe(503);
+    expect(await result.json()).toEqual({ error: 'Agent runtime is not configured; no work was dispatched' });
+    await expect(page.getByRole('alert')).toHaveText('Error: Agent runtime is not configured; no work was dispatched');
+    await expect(page.getByText('RepoMap Result')).toBeHidden();
+    await expect(page.locator('#result-content')).toBeEmpty();
+    await expect(page.getByRole('button', { name: 'Generate RepoMap' })).toBeEnabled();
+  });
 
-    // 6. Verify result
-    await expect(page.getByText('RepoMap Result')).toBeVisible({ timeout: 10000 });
-
-    // Check that some files from the src/agents/builtin directory are displayed in the map
-    await expect(page.locator('pre')).toContainText('agent.rs');
-    await expect(page.locator('pre')).toContainText('aider_repomap.rs');
+  test('the authorized runtime returns the actual repository map @runtime-acceptance', async ({ page, unlimitedAdminUser, loginAs }) => {
+    test.skip(!runtimeAcceptance, runtimeGateReason);
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/aider.html');
+    await page.getByPlaceholder('e.g. .').fill('src/agents/builtin');
+    await page.getByRole('button', { name: 'Generate RepoMap' }).click();
+    await expect(page.getByText('RepoMap Result')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#result-content')).toContainText('agent.rs');
+    await expect(page.locator('#result-content')).toContainText('aider_repomap.rs');
   });
 });

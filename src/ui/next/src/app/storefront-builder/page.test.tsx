@@ -54,7 +54,7 @@ describe('StorefrontBuilderPage', () => {
     expect(button.className).not.toContain('cursor-not-allowed');
 
     vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
+      ok: true, status: 200,
       json: async () => ({
         pages: [{
           blocks: [
@@ -82,7 +82,7 @@ describe('StorefrontBuilderPage', () => {
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
 
     vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
+      ok: true, status: 200,
       json: async () => ({
         pages: [{
           blocks: [
@@ -115,7 +115,7 @@ describe('StorefrontBuilderPage', () => {
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
 
     vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
+      ok: true, status: 200,
       json: async () => ({
         pages: [{
           blocks: [
@@ -156,4 +156,65 @@ describe('StorefrontBuilderPage', () => {
     }finally{fail.mockRestore();}
   });
 
+});
+
+async function startStorefront() {
+  render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
+  fireEvent.change(await screen.findByPlaceholderText(/mobile dog grooming service/i), { target: { value: 'Owner supplied cake business' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Build My Storefront' }));
+}
+
+it('shows the provider prerequisite after an unavailable generation without losing the owner description', async () => {
+  localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks();
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'generation_unavailable', error: 'Configure the builder operator tenant and an authorized text-generation provider before generating a draft' }, { status: 503 })));
+  await startStorefront();
+  expect(await screen.findByRole('alert')).toHaveTextContent(/authorized text-generation provider/i);
+  expect(screen.getByPlaceholderText(/mobile dog grooming service/i)).toHaveValue('Owner supplied cake business');
+  expect(screen.queryByText('Preview Mode')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Build My Storefront' })).toBeEnabled();
+});
+
+it.each([
+  { success: false, pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Unconfirmed' } }] }] },
+  { error: 'rejected', pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Unconfirmed' } }] }] },
+  { pages: [{ blocks: [] }] },
+  { pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: { nested: 'Unconfirmed' } } }] }] },
+  { pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: [{ name: 'Unconfirmed' }] } }] }] },
+  { pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Title', subtitle: [{ name: 'Unconfirmed' }] } }] }] },
+  { pages: [{ blocks: [{ block_type: 'TextBlock', content: { text: [{ name: 'Unconfirmed' }] } }] }] },
+  { pages: [{ blocks: [{ block_type: 'ProductGridBlock', content: {} }] }] },
+])('rejects an unconfirmed generated layout before replacing the local draft %#', async payload => {
+  localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks();
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(payload)));
+  await startStorefront();
+  expect(await screen.findByRole('alert')).toHaveTextContent(/draft.*could not be confirmed|unsupported content/i);
+  expect(screen.queryByText('Preview Mode')).toBeNull();
+  expect(Object.values(localStorage).join(' ')).not.toContain('Unconfirmed');
+});
+
+it('renders the generated Hero subtitle and TextBlock instead of dropping actual provider content', async () => {
+  localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks();
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ pages: [{ blocks: [
+    { block_type: 'HeroBlock', content: { headline: 'Owner cake business', subtitle: 'Custom bakes from the supplied brief' } },
+    { block_type: 'TextBlock', content: { text: 'Orders must be discussed with the owner' } },
+  ] }] })));
+  await startStorefront();
+  expect(await screen.findByText('Preview Mode')).toBeVisible();
+  expect(screen.getByText('Custom bakes from the supplied brief')).toBeVisible();
+  expect(screen.getByText('Orders must be discussed with the owner')).toBeVisible();
+});
+
+it('keeps the existing draft and edit request when the generation provider is unavailable', async () => {
+  localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks();
+  const request = vi.fn(async () => Response.json({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Existing reviewed headline' } }] }] }));
+  vi.stubGlobal('fetch', request);
+  await startStorefront();
+  fireEvent.click(await screen.findByText('Agent'));
+  fireEvent.change(screen.getByPlaceholderText(/Add a new product/i), { target: { value: 'Change the headline to vegan cakes' } });
+  request.mockImplementation(async () => Response.json({ code: 'generation_outcome_unknown' }, { status: 502 }));
+  fireEvent.keyDown(screen.getByPlaceholderText(/Add a new product/i), { key: 'Enter' });
+  expect(await screen.findByRole('alert')).toHaveTextContent(/No automatic retry/i);
+  expect(screen.getByPlaceholderText(/Add a new product/i)).toHaveValue('Change the headline to vegan cakes');
+  fireEvent.click(screen.getByRole('button', { name: 'Close Marketing Agent' }));
+  expect(await screen.findByText('Existing reviewed headline')).toBeVisible();
 });

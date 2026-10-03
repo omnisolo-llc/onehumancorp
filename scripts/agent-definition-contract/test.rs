@@ -1381,3 +1381,6 @@ mod lifecycle;
 
 #[path = "writer_test.rs"]
 mod writers;
+
+#[path = "growth_preview_test.rs"]
+mod growth_previews;

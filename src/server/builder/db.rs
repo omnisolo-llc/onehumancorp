@@ -102,7 +102,7 @@ pub async fn get_site_structure_rows(
 }
 
 pub async fn create_brand_toolbox(
-    tx: &mut Transaction<'_, Postgres>,
+    connection: &mut sqlx::PgConnection,
     tenant_id: Uuid,
     name: String,
     source_description: String,
@@ -119,7 +119,7 @@ pub async fn create_brand_toolbox(
     .bind(name)
     .bind(source_description)
     .bind(toolbox)
-    .fetch_one(&mut **tx)
+    .fetch_one(connection)
     .await
 }
 

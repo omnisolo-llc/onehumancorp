@@ -9,7 +9,7 @@ test.describe('Autonomous Service Portfolio Generator', () => {
     await page.evaluate(async () => {
       await fetch('/api/v1/agents/workflows', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
         body: JSON.stringify({
           action: 'trigger_event',
           event_type: 'tenant.job.completed',

@@ -20,3 +20,13 @@ before any read snapshot inside SeaORM's deferred transaction; the independent
 pool concurrency and rollback cases exercise this serialization. Foreign keys are
 still verified on the actual transaction connection. No transaction auto-retry is
 introduced. The unchanged backend-neutrality contract must also pass.
+
+The growth preview cases mount the actual `api/growth_previews.rs` router with
+strict bearer authentication and restricted, forced-RLS PostgreSQL fixtures.
+They cover current membership, Free/Starter/Pro/Business plans, unknown plans and
+storage errors, raw versus encoded tenant identity, explicit branding requests,
+unchanged persisted plans, private cache policy, and literal HTML fields. The
+post-purchase/customer-referral coverage formerly in `growth-embed-regressions`
+lives here because those handlers now require actual authenticated owners. Their
+outputs are labeled private drafts; public publication and reward/discount
+fulfillment remain unavailable capabilities, not successful test outcomes.

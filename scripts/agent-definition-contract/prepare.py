@@ -3,9 +3,13 @@ from pathlib import Path
 import json, hashlib, re
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
+growth_source=(ROOT/'src/server/api/growth.rs').read_text()
+assert '.merge(super::growth_previews::router(pool.clone()))' in growth_source, 'actual preview routes must remain mounted in growth router'
+assert '.nest("/api/v1/growth", api::growth::router(' in (ROOT/'src/server/lib.rs').read_text(), 'actual growth router must remain mounted'
 paths = {
     'agent_definitions': ROOT / 'src/server/persistence/agent_definitions.rs',
     'definitions_api': ROOT / 'src/server/api/agents/definitions.rs',
+    'growth_previews': ROOT / 'src/server/api/growth_previews.rs',
     'blueprint': ROOT / 'src/server/domain/blueprint.rs',
     **{name: ROOT / f'src/server/persistence/{name}.rs' for name in ['capabilities','connection','entities','migration']},
 }
@@ -36,10 +40,11 @@ test=re.search(r'^#\[tokio::test\]\nasync fn migration_backfills_portable_roles_
 lines.append('#[cfg(test)] mod original_role_migration { use crate::persistence::{AppDatabase,entities,migration}; use chrono::Utc; use sea_orm::{ActiveModelTrait,ConnectionTrait,Set,Statement};'+helper+test+'}')
 lines.append('#[cfg(test)] #[path="test.rs"] mod tests;')
 (HERE / 'generated.rs').write_text('\n'.join(lines) + '\n')
-inputs = list(paths.values()) + [ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'.github/workflows/ci.yml', ROOT/'scripts/focused_ci_gate.py', ROOT/'scripts/test_focused_ci_gate.py', ROOT/'src/server/persistence_commands_test.rs', ROOT/'src/server/persistence/commands.rs', ROOT/'src/server/api/setup.rs', ROOT/'src/e2e/growth_owner.ts', ROOT/'src/server/migrations/110_trial_extension_claim.sql', ROOT/'src/server/db.rs', ROOT/'src/server/lib.rs', ROOT/'src/server/migrations/001_initial.sql', ROOT/'src/server/persistence/mod.rs', ROOT/'src/server/persistence/backend_neutrality_test.sh', ROOT/'src/server/api/agents/mod.rs', ROOT/'scripts/agent-definition-wiring.test.mjs', ROOT/'scripts/agent-definition-authority/test_sqlite.py', ROOT/'src/server/migrations/1018_agent_definition_marketplace.sql', ROOT/'src/server/persistence/agent_definitions_sqlite.sql', ROOT/'src/server/persistence/agent_definition_authority_pg.sql', ROOT/'src/server/persistence/agent_definition_authority_sqlite.sql']
-inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','run.sh','verify_lock.py','test.rs','authority_test.rs','lifecycle_test.rs','writer_test.rs','database_guard.py','test_database_guard.py','README.md']]
+inputs = list(paths.values()) + [ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'.github/workflows/ci.yml', ROOT/'scripts/focused_ci_gate.py', ROOT/'scripts/test_focused_ci_gate.py', ROOT/'src/server/persistence_commands_test.rs', ROOT/'src/server/persistence/commands.rs', ROOT/'src/server/api/setup.rs', ROOT/'src/e2e/growth_owner.ts', ROOT/'src/server/migrations/110_trial_extension_claim.sql', ROOT/'src/server/db.rs', ROOT/'src/server/lib.rs', ROOT/'src/server/api/growth.rs', ROOT/'src/server/api/mod.rs', ROOT/'src/server/migrations/001_initial.sql', ROOT/'src/server/persistence/mod.rs', ROOT/'src/server/persistence/backend_neutrality_test.sh', ROOT/'src/server/api/agents/mod.rs', ROOT/'scripts/agent-definition-wiring.test.mjs', ROOT/'scripts/agent-definition-authority/test_sqlite.py', ROOT/'src/server/migrations/1018_agent_definition_marketplace.sql', ROOT/'src/server/persistence/agent_definitions_sqlite.sql', ROOT/'src/server/persistence/agent_definition_authority_pg.sql', ROOT/'src/server/persistence/agent_definition_authority_sqlite.sql']
+inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','run.sh','verify_lock.py','test.rs','authority_test.rs','lifecycle_test.rs','writer_test.rs','growth_preview_test.rs','check_preview_html.py','database_guard.py','test_database_guard.py','README.md']]
 for name in ['auth', 'common', 'config', 'oidc', 'omnisolo', 'telemetry']:
     inputs += [p for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix == '.rs' or p.name == 'Cargo.toml')]
+inputs += list((ROOT/'src/server/persistence').glob('*.sql'))
 inputs += list((ROOT/'src/proto').rglob('*.proto'))
 inputs += [p for p in [ROOT/'.cargo/config.toml', ROOT/'src/ui/next/src/lib/auth/authLimits.json'] if p.is_file()]
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(inputs))},indent=2)+'\n')

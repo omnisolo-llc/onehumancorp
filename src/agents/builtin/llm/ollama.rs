@@ -27,6 +27,7 @@ impl OllamaClient {
             client: Client::builder()
                 .connect_timeout(std::time::Duration::from_secs(2))
                 .timeout(std::time::Duration::from_secs(300))
+                .redirect(reqwest::redirect::Policy::none())
                 .build()
                 .unwrap(),
             circuit_breaker: CircuitBreaker::new(3, Duration::from_secs(60)),
@@ -77,12 +78,17 @@ impl LlmClient for OllamaClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        self.chat_prepared(super::minify_chat_request(req)).await
+    }
+    async fn chat_prepared(
+        &self,
+        req: ChatRequest,
+    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
         let cb = &self.circuit_breaker;
         if !cb.allow() {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
 
-        let req = super::minify_chat_request(req);
         let mut messages = Vec::new();
 
         if !req.system.is_empty() {
@@ -130,15 +136,14 @@ impl LlmClient for OllamaClient {
         if !resp.status().is_success() {
             cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(format!("ollama api error (status {}): {}", status, body).into());
+            return Err(format!("ollama api error (status {status})").into());
         }
 
-        let result: OllamaResponse = match resp.json().await {
+        let result: OllamaResponse = match super::read_provider_json(resp).await {
             Ok(result) => result,
             Err(error) => {
                 cb.record_non_failure();
-                return Err(error.into());
+                return Err(error);
             }
         };
         cb.record_success();

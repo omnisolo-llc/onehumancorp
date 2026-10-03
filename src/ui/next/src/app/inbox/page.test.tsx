@@ -20,13 +20,18 @@ vi.mock('../../lib/powersync/PowerSyncProvider', () => ({
 }));
 
 vi.mock('../components/AppShell', () => ({
-  AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AppShell: ({ children, actions }: { children: React.ReactNode; actions?: Array<{ label: string; href: string }> }) => <div><nav>{actions?.map(action => <a key={action.href} href={action.href}>{action.label}</a>)}</nav>{children}</div>,
 }));
 
 beforeEach(() => {
   queryState.data = [];
   queryState.unsupported = false;
   queryState.search = "";
+});
+
+test('the audit action opens the existing audit dashboard document', () => {
+  render(<InboxPage />);
+  expect(screen.getByRole('link', { name: 'Audit' })).toHaveAttribute('href', '/agent-audit-dashboard.html');
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
@@ -76,6 +81,19 @@ test('marks the actual pending API surface busy until the workspace is committed
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
     expect(container.querySelector('[data-testid="inbox-settled"]')).not.toBeNull();
   } finally { global.fetch = oldFetch; }
+});
+
+test('loads the real omni inbox records without an unused request to a different inbox table', async () => {
+  queryState.unsupported = true;
+  const original = global.fetch;
+  const fetcher = vi.fn(async (url: string) => Response.json(url === '/api/v1/ui/omni_inbox' ? [{ id: 'owned-message', content: 'Actual owned inbox content', status: 'pending' }] : []));
+  global.fetch = fetcher;
+  try {
+    render(<InboxPage />);
+    await screen.findAllByText('Actual owned inbox content');
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/v1/ui/inbox/messages')).toHaveLength(0);
+    expect(fetcher.mock.calls.some(([url]) => url === '/api/v1/ui/omni_inbox')).toBe(true);
+  } finally { global.fetch = original; }
 });
 
 const detail = () => screen.getByText('Conversation Detail').closest('section')!;

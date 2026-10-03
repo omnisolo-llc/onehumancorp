@@ -30,6 +30,19 @@ pub async fn edge_caching_middleware(
     req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, axum::http::StatusCode> {
+    // Authenticated/private documents cannot use the shared public URI cache.
+    // This check precedes lookup, so old cache entries cannot bypass authority.
+    if req.headers().contains_key(header::AUTHORIZATION)
+        || req.headers().contains_key(header::COOKIE)
+        || req.extensions().get::<server_common::Claims>().is_some()
+    {
+        let mut response = next.run(req).await;
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("private, no-store"),
+        );
+        return Ok(response.into_response());
+    }
     let method = req.method().clone();
     let uri = req.uri().to_string();
     let is_get = method == axum::http::Method::GET;
@@ -98,15 +111,45 @@ pub async fn edge_caching_middleware(
         }
     }
 
-    if !parts.headers.contains_key(header::CACHE_CONTROL)
-        && let Ok(val) = "public, s-maxage=60, stale-while-revalidate=86400".parse()
-    {
-        parts.headers.insert(header::CACHE_CONTROL, val);
+    let private_response = parts.headers.contains_key(header::SET_COOKIE)
+        || parts
+            .headers
+            .get_all(header::CACHE_CONTROL)
+            .iter()
+            .any(|value| {
+                let Ok(value) = value.to_str() else {
+                    return true;
+                };
+                value.split(',').any(|directive| {
+                    matches!(
+                        directive
+                            .split('=')
+                            .next()
+                            .unwrap_or_default()
+                            .trim()
+                            .to_ascii_lowercase()
+                            .as_str(),
+                        "private" | "no-store" | "no-cache"
+                    )
+                })
+            });
+    if private_response {
+        parts.headers.insert(
+            header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("private, no-store"),
+        );
+    } else if !parts.headers.contains_key(header::CACHE_CONTROL) {
+        parts.headers.insert(
+            header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static(
+                "public, s-maxage=60, stale-while-revalidate=86400",
+            ),
+        );
     }
 
     parts.headers.insert("X-Cache", "MISS".parse().unwrap());
 
-    if is_get && parts.status.is_success() {
+    if is_get && parts.status.is_success() && !private_response {
         let mut tags_vec = Vec::new();
         if let Some(surrogate) = parts.headers.get("Surrogate-Key")
             && let Ok(s) = surrogate.to_str()
@@ -229,5 +272,93 @@ mod tests {
 
         assert_eq!(res.headers().get("Surrogate-Key").unwrap(), "tag1 tag2");
         assert_eq!(res.headers().get("X-Cache").unwrap(), "MISS");
+    }
+    #[tokio::test]
+    async fn authenticated_requests_never_reuse_a_public_uri_cache_entry() {
+        let path = format!("/private-{}", uuid::Uuid::new_v4());
+        get_cdn_cache()
+            .set(
+                &format!("cdn:{path}"),
+                CachedResponse {
+                    status: 200,
+                    headers: vec![],
+                    body: b"Old public response".to_vec(),
+                },
+                std::time::Duration::from_secs(60),
+            )
+            .await;
+        let app = Router::new()
+            .route(&path, get(|| async { "Current private response" }))
+            .layer(from_fn(edge_caching_middleware));
+        for name in [header::AUTHORIZATION, header::COOKIE] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(&path)
+                        .header(name, "explicit-fixture-value")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.headers()[header::CACHE_CONTROL],
+                "private, no-store"
+            );
+            assert_eq!(
+                to_bytes(response.into_body(), 1024).await.unwrap(),
+                "Current private response"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn private_and_cookie_responses_never_enter_the_shared_cache() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+        for (name, value) in [
+            (header::CACHE_CONTROL, "private=\"user\", max-age=60"),
+            (header::SET_COOKIE, "local-fixture=value; HttpOnly"),
+        ] {
+            let path = format!("/private-response-{}", uuid::Uuid::new_v4());
+            let hits = Arc::new(AtomicUsize::new(0));
+            let observed = hits.clone();
+            let app = Router::new()
+                .route(
+                    &path,
+                    get(move || {
+                        let hits = hits.clone();
+                        let name = name.clone();
+                        async move {
+                            let mut response = Response::new(Body::from(format!(
+                                "Private {}",
+                                hits.fetch_add(1, Ordering::SeqCst)
+                            )));
+                            response.headers_mut().insert(name, value.parse().unwrap());
+                            response
+                        }
+                    }),
+                )
+                .layer(from_fn(edge_caching_middleware));
+            for expected in ["Private 0", "Private 1"] {
+                let response = app
+                    .clone()
+                    .oneshot(Request::builder().uri(&path).body(Body::empty()).unwrap())
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    response.headers()[header::CACHE_CONTROL],
+                    "private, no-store"
+                );
+                assert_eq!(
+                    to_bytes(response.into_body(), 1024).await.unwrap(),
+                    expected
+                );
+            }
+            assert_eq!(observed.load(Ordering::SeqCst), 2);
+        }
     }
 }

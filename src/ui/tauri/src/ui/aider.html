@@ -38,7 +38,7 @@
 
         <button id="generate-btn">Generate RepoMap</button>
 
-        <div id="error-msg" class="error"></div>
+        <div id="error-msg" class="error" role="alert"></div>
 
         <div id="result-container">
             <h3>RepoMap Result</h3>
@@ -58,6 +58,7 @@
             btn.textContent = 'Generating...';
             errorMsg.style.display = 'none';
             resultContainer.style.display = 'none';
+            resultContent.textContent = '';
 
             try {
                 const response = await fetch('/api/v1/rpc', {
@@ -73,8 +74,12 @@
 
                 const data = await response.json();
 
-                if (data.error) {
-                    throw new Error(data.error.message || 'Unknown error');
+                if (response.status !== 200 || data?.error != null) {
+                    const message = typeof data?.error === 'string' ? data.error : data?.error?.message;
+                    throw new Error(typeof message === 'string' && message.trim() && message.length <= 1000 ? message : 'The repository map could not be confirmed.');
+                }
+                if (data?.jsonrpc !== '2.0' || data.id !== 'aider-1' || typeof data.result !== 'string' || !data.result.trim() || data.result.length > 2_097_152) {
+                    throw new Error('The repository map response could not be confirmed.');
                 }
 
                 resultContent.textContent = data.result;

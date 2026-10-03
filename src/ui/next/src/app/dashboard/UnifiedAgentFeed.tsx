@@ -1,6 +1,8 @@
 "use client";
 
 
+import { currentVerifiedQueueOwner, currentVerifiedQueueLease, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, QUEUE_IDENTITY_EPOCH_KEY, type QueueOwner } from '@/lib/sync/queueIdentity';
+import { subscribeOnboardingInvalidation } from '../onboarding/draftSession';
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo, useRef } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
@@ -34,35 +36,67 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   );
   const [activities, setActivities] = useState<ActivityItem[]>(initialData?.activity || []);
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
+  const [chatNotice, setChatNotice] = useState('');
+  const [chatReady, setChatReady] = useState(() => currentVerifiedQueueOwner() !== null);
+  const chatScope = useRef<{ owner: QueueOwner | null; storageEpoch: string | null; expiresAt: number } | null>(null);
+  const chatExpiry = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const handleSendChatMessage = (e: React.FormEvent) => {
-    e.preventDefault();
+  const retireChat = () => {
+    clearTimeout(chatExpiry.current); chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(currentVerifiedQueueOwner() !== null);
+  };
+  useEffect(() => {
+    const retire = () => {
+      clearTimeout(chatExpiry.current); chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(currentVerifiedQueueOwner() !== null);
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(retire);
+    const unsubscribeReadiness = subscribeQueueIdentityReadiness(() => {
+      const binding = chatScope.current;
+      if (!binding) { setChatReady(currentVerifiedQueueOwner() !== null); return; }
+      if (binding.expiresAt <= Date.now()) { retire(); setChatNotice('Your unsent draft expired. Enter a new draft after verifying your session.'); return; }
+      try { if (binding.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)) { retire(); return; } }
+      catch { retire(); return; }
+      const current = currentVerifiedQueueOwner();
+      if (!current) { setChatReady(false); return; }
+      // Text entered before identity was established is never assigned to the
+      // first verified login. Only a previously bound same owner can recover it.
+      if (!binding.owner || !sameOwner(binding.owner, current)) retire();
+      else setChatReady(true);
+    });
+    // This editor must establish its own lease before accepting private text;
+    // it cannot depend on another dashboard widget finishing verification first.
+    if (!currentVerifiedQueueOwner()) void readQueueOwner().catch(() => {});
+    return () => { clearTimeout(chatExpiry.current); unsubscribe(); unsubscribeReadiness(); };
+  }, []);
+
+  const editChat = (value: string) => {
+    const lease = currentVerifiedQueueLease();
+    const current = lease?.owner;
+    if (!current) { setChatReady(false); return; }
+    const previous = chatScope.current;
+    if (previous?.owner && (!current || !sameOwner(previous.owner, current))) { retireChat(); return; }
+    try {
+      const storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
+      if (previous && (previous.expiresAt <= Date.now() || previous.storageEpoch !== storageEpoch)) { retireChat(); return; }
+      const binding = previous ?? { owner: current, storageEpoch, expiresAt: lease!.expiresAt };
+      chatScope.current = binding;
+      clearTimeout(chatExpiry.current);
+      chatExpiry.current = setTimeout(() => {
+        if (chatScope.current === binding) { retireChat(); setChatNotice('Your unsent draft expired. Enter a new draft after verifying your session.'); }
+      }, Math.min(binding.expiresAt - Date.now(), 2_147_483_647));
+      setChatInput(value); setChatNotice(''); setChatReady(true);
+    } catch { retireChat(); }
+  };
+  const handleSendChatMessage = (event: React.FormEvent) => {
+    event.preventDefault();
     if (!chatInput.trim()) return;
-    const text = chatInput.trim();
-    setChatInput("");
-    setChatMessages((prev) => [...prev, { role: "user" as const, text }]);
-
-    let responseText = "Understood.";
-    const lower = text.toLowerCase();
-    if (lower.includes("favorite")) {
-      if (lower.includes("chocolate")) {
-        try { localStorage.setItem("user_favorite_cake", "chocolate"); } catch (err) { void err; }
-        responseText = "I'll remember that your favorite cake is chocolate.";
-      } else {
-        let saved = "chocolate";
-        try { saved = localStorage.getItem("user_favorite_cake") || "chocolate"; } catch (err) { void err; }
-        responseText = `Based on consolidated memory, your favorite cake is ${saved}.`;
+    const binding = chatScope.current;
+    try {
+      if (!binding?.owner || !chatReady || binding.expiresAt <= Date.now() || binding.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)
+        || !hasVerifiedOfflineQueueOwner(binding.owner)) {
+        retireChat(); return;
       }
-    } else if (lower.includes("chocolate")) {
-      try { localStorage.setItem("user_favorite_cake", "chocolate"); } catch (err) { void err; }
-      responseText = "Noted! Your preference for chocolate has been remembered.";
-    }
-
-    setChatMessages((prev) => [
-      ...prev,
-      { role: "agent" as const, text: responseText },
-    ]);
+    } catch { retireChat(); return; }
+    setChatNotice('Memory chat is unavailable. Your draft has not been sent or saved.');
   };
 
   const groupedProposals = useMemo(() => {
@@ -191,13 +225,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 ...refreshedData,
                 items: refreshedData.items || initialData.items || [],
                 priority_tasks:
-                  refreshedData.priority_tasks && refreshedData.priority_tasks.length > 0
-                    ? refreshedData.priority_tasks
-                    : initialData.priority_tasks,
+                  refreshedData.priority_tasks === undefined
+                    ? initialData.priority_tasks
+                    : refreshedData.priority_tasks,
                 triage:
-                  refreshedData.triage && refreshedData.triage.length > 0
-                    ? refreshedData.triage
-                    : initialData.triage,
+                  refreshedData.triage === undefined
+                    ? initialData.triage
+                    : refreshedData.triage,
               }
             : refreshedData;
         }
@@ -235,9 +269,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
             // Integrate Triage Items (Messages)
             if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
+              // The aggregate triage endpoint also projects agent_feed_items.
+              // Keep the canonical row and its lifecycle state when both reads
+              // include the same tenant/record; a stale projection must not
+              // create a second action or reopen an approved decision.
+              const canonicalRecords = new Set(unifiedData.items.map(
+                (item) => JSON.stringify([item.tenant_id, item.id]),
+              ));
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.triage.slice(0, 3).map((ti) => {
+                ...unifiedData.triage.filter(
+                  (item) => !canonicalRecords.has(JSON.stringify([item.tenant_id, item.id])),
+                ).slice(0, 3).map((ti) => {
                   let featureType = "triage";
 
                   if (ti.source?.toLowerCase() === "instagram dm" || ti.source?.toLowerCase() === "instagram") {
@@ -578,39 +621,21 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
       {/* Agent Chat & Memory Box */}
       <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-800">
-        {chatMessages.length > 0 && (
-          <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
-            {chatMessages.map((msg, i) => (
-              <div
-                key={i}
-                className={
-                  msg.role === "user"
-                    ? "text-right"
-                    : "text-left agent-message text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 p-2.5 rounded-lg"
-                }
-              >
-                {msg.role === "user" ? (
-                  <span className="inline-block bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg">
-                    {msg.text}
-                  </span>
-                ) : (
-                  <span>{msg.text}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">Memory chat is not configured.</p>
+        {chatNotice && <p role="alert" className="mb-2 text-sm text-gray-600 dark:text-gray-300">{chatNotice}</p>}
+        {!chatReady && <div><p>Verify your current session to view this unsent draft.</p><button type="button" onClick={() => { void readQueueOwner().catch(() => { setChatReady(false); }); }}>Reverify draft access</button></div>}
         <form onSubmit={handleSendChatMessage} className="flex gap-2">
           <input
             type="text"
             placeholder="Message..."
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
+            value={chatReady ? chatInput : ''}
+            disabled={!chatReady}
+            onChange={(e) => editChat(e.target.value)}
             className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
-            disabled={!chatInput.trim()}
+            disabled={!chatReady || !chatInput.trim()}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
           >
             Send
@@ -667,14 +692,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 Loading Agent Proposals...
               </div>
             )}
-            {!loading && items.length === 0 && (
+            {!loading && !error && items.length === 0 && (
               <div
                 className="w-full flex flex-col items-center gap-6 p-6 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm  shadow-sm opacity-90 text-center"
                 data-testid="triage-feed-empty"
               >
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  All caught up! Your business is running smoothly.
+                  No pending proposals are recorded.
                 </h3>
                 <div className="w-full max-w-md text-left">
                   <GrowthReferralWidget />
@@ -747,7 +772,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
             })}
             {items.length > 0 && (
               <div data-testid="triage-feed-empty" className="text-center py-2 text-xs text-gray-500">
-                All caught up on automated triage proposals!
+                {items.length} recorded proposal{items.length === 1 ? "" : "s"} in this feed.
               </div>
             )}
           </>

@@ -58,24 +58,28 @@ test.describe('Dashboard Cleanup Audit', () => {
     expect(tooltipLoaded).toBe(false);
   });
 
-  test('Verify gracefully hiding AI savings widget without network mocking', async ({ page, loginAs, unlimitedAdminUser }) => {
-    // Tests must not mock the network. We simply load the page.
-    // If the widget is missing data, the frontend should naturally hide it as patched.
-    await loginAs(page, unlimitedAdminUser);
-
-    await page.goto('/dashboard');
-    await page.waitForTimeout(3000);
-
-    const widget = page.locator('#ai-savings-widget');
-    if (await widget.count() > 0) {
-        const isVisible = await widget.isVisible();
-        if (isVisible) {
-          // If it is visible, it should have the fallback handled properly
-          const text = await page.locator('#ai-savings-title').innerText();
-          expect(text).toMatch(/You saved [0-9]+ hours this week/);
-        } else {
-            await expect(widget).toBeHidden();
-        }
-    }
-  });
+  for (const route of ['/dashboard.html', '/ui/dashboard.html']) {
+    test(`${route} keeps navigation and Cloud Bridge visible when recorded savings is unavailable`, async ({ page, loginAs, unlimitedAdminUser }) => {
+      await loginAs(page, unlimitedAdminUser);
+      const savingsRead = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/growth/time-savings');
+      await page.goto(route);
+      const response = await savingsRead;
+      expect(response.status()).toBe(501);
+      // The widget rejects a non-200 response before reading its body. Verify
+      // the terminal API receipt independently of that browser body lifetime.
+      const receipt = await page.request.get('/api/v1/growth/time-savings');
+      expect(receipt.status()).toBe(501);
+      expect(await receipt.json()).toMatchObject({ success: false, capability: 'measured_time_savings' });
+      const widget = page.locator('#ai-savings-widget');
+      await expect(widget).toBeVisible();
+      await expect(widget.locator('..')).toBeVisible();
+      await expect(page.locator('#ai-savings-title')).toHaveText('Recorded time savings');
+      await expect(page.locator('#ai-savings-desc')).toHaveText('Recorded time-savings data is unavailable.');
+      await expect(page.locator('#generate-cloud-bridge-btn')).toBeVisible();
+      await expect(page.locator('#cloud-bridge-email')).toBeVisible();
+      await expect(page.locator('a[href="booking-dashboard.html"]').first()).toBeVisible();
+      await expect(widget.getByRole('link', { name: 'Check current plan and trial availability' })).toHaveAttribute('href', '/trial-extension');
+      await expect(widget.getByText(/You saved 0|7 Days Pro|Trial Extended/)).not.toBeVisible();
+    });
+  }
 });

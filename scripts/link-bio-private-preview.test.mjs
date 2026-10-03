@@ -1,4 +1,4 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {JSDOM,VirtualConsole} from 'jsdom';
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {JSDOM,VirtualConsole} from './test-support/offline-dom.mjs';
 const roots=['src/ui/next/public','src/ui/next/public/ui','src/ui/tauri/src/ui'];
 const owner={userId:'member-a',tenantId:'owned / & tenant',expiresAt:Date.now()+600000};const profile={store_name:'Actual private business',bio:'Private details',theme:'dark',links:[],remove_branding:false};
 const turn=()=>new Promise(r=>setImmediate(r));

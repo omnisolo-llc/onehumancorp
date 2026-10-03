@@ -55,6 +55,21 @@ struct LimitRequest {
 struct Page {
     #[serde(default)]
     after: String,
+    #[serde(default)]
+    tenant_id: Option<String>,
+    #[serde(default)]
+    user_id: Option<String>,
+}
+impl Page {
+    fn matches_claims(&self, claims: &Claims) -> bool {
+        self.tenant_id
+            .as_deref()
+            .is_none_or(|tenant| Some(tenant) == claims.organization_id.as_deref())
+            && self
+                .user_id
+                .as_deref()
+                .is_none_or(|user| user == claims.sub)
+    }
 }
 
 async fn set_limit(
@@ -68,7 +83,6 @@ async fn set_limit(
         return Err(StatusCode::BAD_REQUEST);
     }
     let ledger = ledger(&hub)?;
-    ledger.initialize().await.map_err(status)?;
     ledger
         .set_limit(tenant, request.limit_micros)
         .await
@@ -96,6 +110,11 @@ async fn records(
     Query(page): Query<Page>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let tenant = owner_tenant(&claims)?;
+    // Proxy identity query parameters are compatibility preconditions only.
+    // Claims remain the sole account/tenant authorization source.
+    if !page.matches_claims(&claims) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     let entries = ledger(&hub)?
         .records(tenant, &page.after)
         .await
@@ -128,7 +147,7 @@ mod tests {
             .is_err()
         );
         assert!(
-            serde_json::from_value::<Page>(serde_json::json!({"after":"","tenant_id":"other"}))
+            serde_json::from_value::<Page>(serde_json::json!({"after":"","tenant":"other"}))
                 .is_err()
         );
     }

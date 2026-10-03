@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/brand_toolbox/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'])(
+it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/brand_toolbox/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire', '/api/v1/agents/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/cancel'])(
   'sends %s through the verified owner boundary and acknowledges dispatch', async url => {
     const expected = await openOnboardingSession();
     const dispatched = vi.fn();
@@ -26,7 +26,7 @@ it.each(['/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builde
     expect(dispatched).toHaveBeenCalledOnce();
   },
 );
-it.each(['https://other.example/api/v1/booking/services', '/api/v1/booking/services?tenant=other', '/api/v1/onboarding/state', '/api/v1/agents/hire?tenant=other'])(
+it.each(['https://other.example/api/v1/booking/services', '/api/v1/booking/services?tenant=other', '/api/v1/onboarding/state', '/api/v1/agents/hire?tenant=other', '/api/v1/agents/workflows/00000000-0000-0000-0000-000000000000/cancel', '/api/v1/agents/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/cancel?tenant=other', '/api/v1/agents/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/execute'])(
   'never sends owner data to unapproved destination %s', async url => {
     const expected = await openOnboardingSession();
     const count = vi.mocked(fetch).mock.calls.length;

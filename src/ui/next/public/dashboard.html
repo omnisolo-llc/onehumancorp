@@ -704,24 +704,15 @@
       <div class="omnisolo-growth-card app-card" id="ai-savings-widget">
         <div style="display: flex; flex-direction: column; gap: 16px;">
           <div>
-            <h2 id="ai-savings-title" style="margin-bottom: 8px;">You saved 0 hours this week</h2>
-            <p id="ai-savings-desc" style="margin-top: 0; margin-bottom: 0;">Loading your time savings data...</p>
+            <h2 id="ai-savings-title" style="margin-bottom: 8px;">Recorded time savings</h2>
+            <p role="status" id="ai-savings-desc" style="margin-top: 0; margin-bottom: 0;">Loading your time savings data...</p>
           </div>
           <div style="text-align: left;">
-            <button id="share-savings-btn" style="background-color: #1DA1F2; border: none; padding: 10px 16px;">Share to get 7 Days Pro</button>
-            <p id="savings-status" style="font-size: 12px; margin-top: 8px; color: #86868b; display: none;">Verifying Share...</p>
+            <a href="/trial-extension" class="btn-outline" style="display: inline-block; text-decoration: none;">Check current plan and trial availability</a>
           </div>
         </div>
       </div>
 
-      <div class="omnisolo-growth-card app-card" id="ai-savings-success-widget" style="display: none; background: rgba(0, 255, 0, 0.05); border-color: rgba(0, 255, 0, 0.2);">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <h2 style="margin-bottom: 8px;">Trial Extended!</h2>
-            <p style="margin-top: 0; margin-bottom: 0;">Your Pro trial has been successfully extended by 7 days. Enjoy the extra time!</p>
-          </div>
-        </div>
-      </div>
       <div id="dynamic-milestones-container"></div>
 
       <div class="omnisolo-growth-card app-card" id="cart-recovery-widget" style="display: none; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(0, 102, 255, 0.3); margin-bottom: 20px;">
@@ -1326,7 +1317,6 @@
           const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
           if (res.ok) {
             const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             const milestoneContainer = document.getElementById('dynamic-milestones-container');
             const tenthOrderMilestone = data.milestones.find(m => m.id === '10th_order' && m.reached);
 
@@ -1355,14 +1345,9 @@
           }
         } catch(e) { console.error('Failed to fetch milestones', e); }
 
-        const shareSavingsBtn = document.getElementById('share-savings-btn');
-        const savingsStatus = document.getElementById('savings-status');
-        const aiSavingsWidget = document.getElementById('ai-savings-widget');
-        const aiSavingsSuccessWidget = document.getElementById('ai-savings-success-widget');
         const aiSavingsTitle = document.getElementById('ai-savings-title');
         const aiSavingsDesc = document.getElementById('ai-savings-desc');
 
-        let currentHoursSaved = 0;
 
         // AI Feature Paywall Logic
         const aiReferBtn = document.getElementById("ai-paywall-refer-btn");
@@ -1567,58 +1552,30 @@
         }
 
 
-        // Fetch dynamic time savings data
+        // A failed optional metric must never hide the dashboard container.
+        const showSavingsUnavailable = () => {
+          aiSavingsTitle.textContent = 'Recorded time savings';
+          aiSavingsDesc.textContent = 'Recorded time-savings data is unavailable.';
+        };
         try {
           const token = localStorage.getItem('omnisolo_token') || localStorage.getItem('access_token');
-          const savingsResponse = await fetch('/api/v1/growth/time-savings', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
-          if (savingsResponse.ok) {
-            const data = await savingsResponse.json();
-            currentHoursSaved = data.hours_saved;
-            aiSavingsTitle.innerText = `You saved ${data.hours_saved} hours this week`;
-            aiSavingsDesc.innerText = `Your AI agents handled ${data.inquiries_handled} customer inquiries, scheduled ${data.appointments_scheduled} appointments, and recovered ${data.carts_recovered} abandoned carts.`;
-          } else {
-            document.getElementById("ai-savings-widget").parentElement.style.display = "none";
-
-          }
-        } catch (error) {
-          console.error("Error fetching time savings data:", error);
-          document.getElementById("ai-savings-widget").parentElement.style.display = "none";
-
-        }
-
-        if (shareSavingsBtn) {
-          shareSavingsBtn.addEventListener('click', async () => {
-            const message = `My AI agents on OmniSolo OneHumanCorp just saved me ${currentHoursSaved} hours this week! 🚀 #OmniSolo #SmallBiz #AI`;
-            const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-            window.open(shareUrl, '_blank');
-
-            shareSavingsBtn.style.display = 'none';
-            savingsStatus.style.display = 'block';
-
-            try {
-              let url = '/api/v1/growth/trial-extension/claim';
-              if (window.__TAURI__ && window.__TAURI__.core) {
-                  url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
-              }
-              const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'authorization': 'Bearer ' + localStorage.getItem('omnisolo_token')
-                }
-              });
-
-              if (response.ok) {
-                aiSavingsWidget.style.display = 'none';
-                aiSavingsSuccessWidget.style.display = 'block';
-              } else {
-                savingsStatus.innerText = 'Failed to claim extension';
-              }
-            } catch (error) {
-              savingsStatus.innerText = 'Error claiming extension';
-              console.error('Error:', error);
-            }
+          const savingsResponse = await fetch('/api/v1/growth/time-savings', {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' },
+            credentials: 'same-origin', cache: 'no-store'
           });
+          if (savingsResponse.status !== 200) throw new Error('Savings unavailable');
+          const data = await savingsResponse.json();
+          if (!data || typeof data !== 'object' || Array.isArray(data) || data.error != null
+              || ('success' in data && data.success !== true)
+              || typeof data.hours_saved !== 'number' || !Number.isFinite(data.hours_saved) || data.hours_saved < 0
+              || ['inquiries_handled', 'appointments_scheduled', 'carts_recovered'].some(key =>
+                data[key] !== undefined && (!Number.isSafeInteger(data[key]) || data[key] < 0))) {
+            throw new Error('Savings unavailable');
+          }
+          aiSavingsTitle.textContent = `Recorded estimate: ${data.hours_saved} hours saved.`;
+          aiSavingsDesc.textContent = `Reported counters: ${data.inquiries_handled ?? 'not reported'} customer inquiries; ${data.appointments_scheduled ?? 'not reported'} appointments; ${data.carts_recovered ?? 'not reported'} recovered carts.`;
+        } catch {
+          showSavingsUnavailable();
         }
       });
       const name = localStorage.getItem('businessName');
@@ -1637,7 +1594,6 @@
           });
           if (res.ok) {
             const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             document.getElementById('referral-tier-section').style.display = 'block';
             document.getElementById('referral-tier-text').innerHTML = `You are on the <strong>${data.current_tier} Tier</strong>!`;
 
@@ -1665,7 +1621,6 @@
           const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             document.getElementById('viral-loop-invites-sent').innerText = data.total_invites || '0';
             document.getElementById('viral-loop-active-referrals').innerText = data.metrics?.active_referrals || '0';
             document.getElementById('viral-loop-revenue').innerText = '$' + (data.metrics?.revenue || 0).toFixed(2);
@@ -1695,7 +1650,6 @@
           const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             const reachedMilestone = data.milestones && data.milestones.find(m => m.reached);
             if (reachedMilestone) {
               document.getElementById('milestone-title').innerText = reachedMilestone.title;
@@ -1776,7 +1730,6 @@
               if (!res.ok) return;
 
               const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
               document.getElementById('referral-tier-widget').style.display = 'block';
 
               let statusText = `You are on the <strong>${data.current_tier}</strong> Tier.`;
@@ -1836,7 +1789,6 @@
           const res = await fetch('/api/v1/growth/wrapped', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             if (data.total_sales > 0 || data.total_orders > 0) {
               document.getElementById('wrapped-widget').style.display = 'block';
               document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
@@ -2066,6 +2018,13 @@
             }
           }
           triageQueue.innerHTML = groupedCardsHTML.join('') + standaloneProposals.map(item => {
+            const priority = typeof item.priority === 'string' ? item.priority.toLowerCase() : '';
+            const priorityClass = ['urgent', 'high'].includes(priority) ? 'urgent' : priority === 'medium' ? 'medium' : '';
+            let parsedPayload = item.proposed_action ?? item.context_payload ?? item.action_payload ?? item.payload ?? {};
+            if (typeof parsedPayload === 'string') {
+              try { parsedPayload = JSON.parse(parsedPayload); } catch { parsedPayload = {}; }
+            }
+            if (!parsedPayload || typeof parsedPayload !== 'object' || Array.isArray(parsedPayload)) parsedPayload = {};
             const actionType = item.action_type || item.proposed_action?.action_type;
             const description = item.context || item.proposed_action?.message || item.context_payload?.description || item.payload?.description || actionType || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true || item.context_payload?.weekly_health_report === true;
@@ -2480,7 +2439,7 @@
               : '$0.00';
 
             return `
-              <div class="triage-card" id="triage-${item.id}" data-testid="invoice-draft-card" data-group="${groupKey || ''}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+              <div class="triage-card" id="triage-${item.id}" data-testid="invoice-draft-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div class="agent-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                   <div class="agent-title-row" style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: #1D1D1F;">
                     <span class="agent-icon">💰</span>
@@ -2967,7 +2926,6 @@ window.handleTriageAction = async function(id, state) {
             let url = `/api/v1/search?q=${encodeURIComponent(query)}`;
             const res = await fetch(url);
             const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
 
             if (data.success && data.results && data.results.length > 0) {
               omniboxResults.innerHTML = data.results.map(item => `
@@ -3167,7 +3125,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "current-user", invitee_id: email })
                   });
                   const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
 
                   cloudBridgeStatus.style.display = 'block';
                   if (res.ok && data.invite_link) {
@@ -3222,7 +3179,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       }
                   });
                   const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                   linkInput.value = data.referral_link || "";
               } catch(e) {
                   console.error(e);
@@ -3754,7 +3710,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ message: text })
             });
             const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
 
             if (data.reply) {
                 appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
@@ -4195,7 +4150,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     allOk = false;
                 } else {
                     const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                     if (data.pending_reconciliation && data.pending_reconciliation.length > 0) {
                         showConflictModal(data.pending_reconciliation[0]);
                     }
@@ -4216,7 +4170,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     allOk = false;
                 } else {
                     const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                     if (data.pending_reconciliation && data.pending_reconciliation.length > 0) {
                         showConflictModal(data.pending_reconciliation[0]);
                     }
@@ -4335,7 +4288,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}`);
                     if (res.ok) {
                         const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                         const results = data.results || [];
 
                         if (results.length > 0) {

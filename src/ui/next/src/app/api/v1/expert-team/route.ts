@@ -1,3 +1,4 @@
+import { runtimeTextResponse } from "@/lib/auth/runtimeResponse";
 import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 import { jsonRpcRequestTransform } from "@/lib/auth/jsonRpc";
 import { FaultInjector } from "@/lib/chaos";
@@ -16,12 +17,7 @@ export async function POST(request: Request) {
       }),
     });
     await FaultInjector.applyFault("expert_team_api_fetch_after");
-    if (!response.ok) return response;
-    const payload = await response.json();
-    if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
-    return Response.json({
-      result: payload?.result?.output ?? "Executed successfully via Expert Team.",
-    });
+    return runtimeTextResponse(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "invalid request";
     if (message.includes("expert_team_api_start")) {

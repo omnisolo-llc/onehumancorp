@@ -25,12 +25,28 @@ test('the POS collision repair preserves historical SQLx checksums', async () =>
     '233_chat_omnichannel.sql': '97321c6b3f5ab689eeffea31a3fa5c3d396563337774a3825d32faaa048cfbfdd3b4c3e5714977ad7f8caec34f0bf789',
     '236_pos_offline_request_identity.sql': 'fb36c12db63a07f133ac6be6037beb896292d62d16f612177d831e7d1b241503e2b58bfd27719e8dc69b1255f4a6b20a',
     '1009_native_omnichannel_chat.sql': 'aaa15a53375f57bb82011b2aae513f05335fb7e543e3f1136cd5cb5decbc7a4a3d9b8fdc46f248de33de664da33c8b00',
+    '1025_usage_accounting.sql': '239d56c1459bf57717aeb184d01e6087889b728c99cbd62ee2329f7083a4a1591c6e764978871c613d8880362568b3b8',
   };
   for (const [name, checksum] of Object.entries(checksums)) {
     assert.ok(names.includes(name), `preserve the migration identity ${name}`);
     const sql = await readFile(path.join(directory, name));
     assert.equal(createHash('sha384').update(sql).digest('hex'), checksum, name);
   }
+});
+
+test('original chat DDL is not replayed under a second migration identity', async () => {
+  const directory = path.join(root, 'src/server/migrations');
+  const original = await readFile(path.join(directory, '233_chat_omnichannel.sql'));
+  const originalChecksum = createHash('sha384').update(original).digest('hex');
+  const copies = [];
+  for (const name of (await readdir(directory)).filter((name) => name.endsWith('.sql'))) {
+    const sql = await readFile(path.join(directory, name));
+    if (createHash('sha384').update(sql).digest('hex') === originalChecksum) copies.push(name);
+  }
+  // Replaying this SQL fails at its unconditional CREATE POLICY statements.
+  // Moving a duplicate to a free version would hide the identity collision
+  // while still breaking startup; the original migration remains authoritative.
+  assert.deepEqual(copies, ['233_chat_omnichannel.sql']);
 });
 
 test('POS and chat additions retain SQLx numeric dependency order after integration', async () => {

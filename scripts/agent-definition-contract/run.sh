@@ -22,7 +22,7 @@ python3 scripts/agent-definition-contract/verify_lock.py
 python3 scripts/agent-definition-contract/prepare.py
 before=$(sha256sum scripts/agent-definition-contract/source-manifest.json)
 status=0
-cargo test --locked --offline --manifest-path scripts/agent-definition-contract/Cargo.toml -- --test-threads=1 || status=$?
+cargo test --locked --offline --manifest-path scripts/agent-definition-contract/Cargo.toml "$@" -- --test-threads=1 || status=$?
 python3 scripts/agent-definition-contract/prepare.py
 test "$before" = "$(sha256sum scripts/agent-definition-contract/source-manifest.json)"
 exit "$status"

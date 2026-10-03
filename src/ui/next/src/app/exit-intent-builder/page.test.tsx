@@ -1,11 +1,15 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ExitIntentBuilder from "./page";
 import { vi } from "vitest";
+import { invalidateQueueOwner } from '@/lib/sync/queueIdentity';
 
 describe("ExitIntentBuilder", () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
+    localStorage.clear(); act(() => invalidateQueueOwner());
+    global.fetch = vi.fn(async url => url === '/api/v1/auth/session-identity'
+      ? Response.json({ userId: 'exit-owner', tenantId: 'exit-tenant', expiresAt: Date.now() + 60_000 })
+      : Response.json({ current_plan: 'Free' }));
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn(),
@@ -43,14 +47,15 @@ describe("ExitIntentBuilder", () => {
     render(<ExitIntentBuilder />);
 
     const toggleButton = screen.getByRole("switch");
+    await waitFor(() => expect(toggleButton).toBeEnabled());
     await userEvent.click(toggleButton);
 
     expect(screen.getAllByText("Remove OmniSolo Branding").length).toBeGreaterThan(0);
-    expect(screen.getByText("Upgrade to Pro")).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review plans' })).toHaveAttribute('href', '/pricing');
 
-    await userEvent.click(screen.getByText("Upgrade to Pro"));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(screen.queryByText("Upgrade to Pro")).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Review plans' })).not.toBeInTheDocument();
     expect(toggleButton).toHaveAttribute("aria-checked", "false");
     expect(localStorage.getItem('has_pro')).toBeNull();
   });

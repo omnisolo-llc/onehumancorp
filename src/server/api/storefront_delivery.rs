@@ -5,7 +5,7 @@ use crate::utils::cache::HybridCache;
 use axum::http::StatusCode;
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{DefaultBodyLimit, Extension, Path, State},
     response::{Html, IntoResponse},
     routing::{get, post},
 };
@@ -18,9 +18,17 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct DeliveryState {
     pub pool: PgPool,
+    auth: Arc<server_auth::Store>,
 }
 
-pub fn router() -> Router<DeliveryState> {
+pub fn router<S: Clone + Send + Sync + 'static>(
+    pool: PgPool,
+    auth: Arc<server_auth::Store>,
+) -> Router<S> {
+    let state = DeliveryState {
+        pool,
+        auth: auth.clone(),
+    };
     Router::new()
         .route(
             "/{tenant_id}/{product_id}",
@@ -35,10 +43,121 @@ pub fn router() -> Router<DeliveryState> {
                 crate::utils::edge_caching_middleware::edge_caching_middleware,
             )),
         )
+        .route_layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            private_owner,
+        ))
+        .route_layer(axum::middleware::from_fn_with_state(
+            auth,
+            server_auth::strict_bearer_auth_middleware,
+        ))
+        .layer(axum::middleware::from_fn(private_headers))
+        .layer(DefaultBodyLimit::max(16 * 1024))
+        .with_state(state)
+}
+
+async fn private_headers(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let mut response = next.run(request).await;
+    response.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("private, no-store"),
+    );
+    response
+}
+
+async fn scoped_read(
+    pool: &PgPool,
+    tenant: &str,
+) -> Result<sqlx::Transaction<'static, sqlx::Postgres>, StatusCode> {
+    let mut tx = tokio::time::timeout(std::time::Duration::from_secs(3), pool.begin())
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    server_common::auth_utils::set_org_context(&mut *tx, tenant)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    sqlx::query("SET LOCAL statement_timeout='3000ms'")
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    sqlx::query("SET LOCAL lock_timeout='1000ms'")
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(tx)
+}
+
+async fn private_owner(
+    State(state): State<DeliveryState>,
+    mut request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let Some(claims) = request.extensions().get::<server_common::Claims>().cloned() else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let owner =
+        match server_auth::commit_authority::verify_owner(&state.auth, &claims, request.headers())
+            .await
+        {
+            Ok(owner) => owner,
+            Err(server_auth::commit_authority::AuthorityError::Forbidden) => {
+                return StatusCode::FORBIDDEN.into_response();
+            }
+            Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        };
+    let path = request
+        .uri()
+        .path()
+        .strip_prefix("/api/v1/storefront")
+        .unwrap_or(request.uri().path());
+    let segments: Vec<_> = path.trim_start_matches('/').split('/').collect();
+    if let [tenant, product] = segments.as_slice()
+        && (*tenant != "webhook" || *product != "invalidate")
+    {
+        if *tenant != owner.tenant_id() {
+            return StatusCode::NOT_FOUND.into_response();
+        }
+        let Ok(product) = Uuid::parse_str(product) else {
+            return StatusCode::BAD_REQUEST.into_response();
+        };
+        let mut tx = match scoped_read(&state.pool, owner.tenant_id()).await {
+            Ok(tx) => tx,
+            Err(status) => return status.into_response(),
+        };
+        let exists: Result<bool, _> = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM products WHERE id=$1 AND tenant_id=$2)",
+        )
+        .bind(product.to_string())
+        .bind(owner.tenant_id())
+        .fetch_one(&mut *tx)
+        .await;
+        match exists {
+            Ok(false) => return StatusCode::NOT_FOUND.into_response(),
+            Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+            Ok(true) => {}
+        }
+        if tx.commit().await.is_err() {
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
+    }
+    let headers = request.headers().clone();
+    request.extensions_mut().insert(owner);
+    let response = next.run(request).await;
+    match server_auth::commit_authority::verify_owner(&state.auth, &claims, &headers).await {
+        Ok(_) => response,
+        Err(server_auth::commit_authority::AuthorityError::Forbidden) => {
+            StatusCode::FORBIDDEN.into_response()
+        }
+        Err(_) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
 }
 
 async fn resolve_domain(
     axum::extract::State(state): axum::extract::State<DeliveryState>,
+    Extension(owner): Extension<server_auth::commit_authority::VerifiedOwner>,
     req: axum::extract::Request,
 ) -> Result<impl IntoResponse, StatusCode> {
     let host = req
@@ -51,16 +170,22 @@ async fn resolve_domain(
     // Remove port if present
     let domain = host.split(':').next().unwrap_or(host).to_string();
 
-    let (site_id, tenant_id) = match sqlx::query_as::<_, (Uuid, Uuid)>(
-        "SELECT id, tenant_id FROM builder_sites WHERE domain = $1",
-    )
-    .bind(&domain)
-    .fetch_optional(&state.pool)
-    .await
-    {
-        Ok(Some(res)) => res,
-        _ => return Err(StatusCode::NOT_FOUND),
-    };
+    // Domain is a selector, never authority. Do not resolve mutable drafts
+    // across tenants, even when another tenant owns the requested hostname.
+    let tenant_id =
+        Uuid::parse_str(owner.tenant_id()).map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    let mut tx = scoped_read(&state.pool, owner.tenant_id()).await?;
+    let site_id: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM builder_sites WHERE domain=$1 AND tenant_id=$2")
+            .bind(&domain)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    let site_id = site_id.ok_or(StatusCode::NOT_FOUND)?;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
 
     let cache = get_edge_cache();
     let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, "en-US");
@@ -118,14 +243,69 @@ impl CacheInvalidationService {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct InvalidateRequest {
     pub tags: Vec<String>,
 }
 
+async fn owned_invalidation_tags(
+    pool: &PgPool,
+    tenant: &str,
+    tags: &[String],
+) -> Result<(), StatusCode> {
+    if tags.is_empty()
+        || tags.len() > 32
+        || tags
+            .iter()
+            .any(|tag| tag.len() > 1024 || tag.chars().any(char::is_control))
+    {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let mut tx = scoped_read(pool, tenant).await?;
+    for tag in tags {
+        if tag == &format!("tenant-id:{tenant}") {
+            continue;
+        }
+        let Some(raw_id) = tag.strip_prefix("entity:product:") else {
+            return Err(StatusCode::FORBIDDEN);
+        };
+        let id = Uuid::parse_str(raw_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+        if raw_id != id.to_string() {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM products WHERE id=$1 AND tenant_id=$2)",
+        )
+        .bind(raw_id)
+        .bind(tenant)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+        if !exists {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    }
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(())
+}
+
 async fn invalidate_cache_webhook(
-    State(_state): State<DeliveryState>,
+    State(state): State<DeliveryState>,
+    Extension(owner): Extension<server_auth::commit_authority::VerifiedOwner>,
     Json(payload): Json<InvalidateRequest>,
-) -> impl IntoResponse {
+) -> axum::response::Response {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        owned_invalidation_tags(&state.pool, owner.tenant_id(), &payload.tags),
+    )
+    .await
+    {
+        Ok(Ok(())) => {}
+        Ok(Err(status)) => return status.into_response(),
+        Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
     let cache = get_edge_cache();
     let service = CacheInvalidationService::new(cache);
     service.invalidate(payload.tags.clone()).await;
@@ -141,26 +321,30 @@ async fn invalidate_cache_webhook(
                 cdn_clone.invalidate_by_tag(&tag).await;
 
                 // Send purge request to NGINX Edge Cache
-                if let Err(e) = client_clone
-                    .post("http://edge-cache/purge")
-                    .body(tag.clone())
-                    .send()
-                    .await
+                match tokio::time::timeout(
+                    std::time::Duration::from_secs(3),
+                    client_clone
+                        .post("http://edge-cache/purge")
+                        .body(tag)
+                        .send(),
+                )
+                .await
                 {
-                    tracing::warn!(
-                        "Failed to send purge request to NGINX for tag {}: {}",
-                        tag,
-                        e
-                    );
-                } else {
-                    tracing::info!("Successfully sent purge request to NGINX for tag {}", tag);
+                    Ok(Ok(response)) if response.status().is_success() => {
+                        tracing::info!("Edge cache acknowledged a tenant-scoped purge")
+                    }
+                    _ => tracing::warn!("Edge cache purge remains unconfirmed"),
                 }
             }
         });
         futures::future::join_all(futures).await;
     });
 
-    StatusCode::OK
+    (
+        StatusCode::ACCEPTED,
+        Json(serde_json::json!({"local_cache_invalidated":true,"edge_purge":"unconfirmed"})),
+    )
+        .into_response()
 }
 
 async fn get_storefront_product(
@@ -242,22 +426,17 @@ async fn get_storefront_product(
         ongoing.lock().await.remove(&cache_key);
     }
 
-    if let Ok((html, tags)) = result {
-        let final_html =
-            inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
-        let mut response = Html(final_html.clone()).into_response();
-        set_storefront_headers(&mut response, &final_html, tenant_id, Some(tags));
-        return Ok(response);
-    }
-
-    // Fallback simple HTML
-    let html = format!(
-        "<!DOCTYPE html><html><body>Product {} not found</body></html>",
-        product_id
-    );
-    let mut response = Html(html.clone()).into_response();
-    set_storefront_headers(&mut response, &html, tenant_id, None);
-    Ok(response)
+    let failure = match result {
+        Ok((html, tags)) => {
+            let final_html =
+                inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
+            let mut response = Html(final_html.clone()).into_response();
+            set_storefront_headers(&mut response, &final_html, tenant_id, Some(tags));
+            return Ok(response);
+        }
+        Err(status) => status,
+    };
+    Err(failure)
 }
 
 fn set_storefront_headers(
@@ -293,9 +472,7 @@ fn set_storefront_headers(
 
     response.headers_mut().insert(
         axum::http::header::CACHE_CONTROL,
-        "public, s-maxage=60, stale-while-revalidate=86400"
-            .parse()
-            .unwrap(),
+        "private, no-store".parse().unwrap(),
     );
 }
 
@@ -323,10 +500,7 @@ mod tests {
             response.headers()["Surrogate-Key"],
             format!("tenant-id:{tenant} catalog:published")
         );
-        assert_eq!(
-            response.headers()[CACHE_CONTROL],
-            "public, s-maxage=60, stale-while-revalidate=86400"
-        );
+        assert_eq!(response.headers()[CACHE_CONTROL], "private, no-store");
         let expected = format!("\"{:x}\"", Sha256::digest(b"<h1>Store</h1>"));
         assert_eq!(response.headers()["ETag"], expected);
         let previous = response.headers()["ETag"].clone();

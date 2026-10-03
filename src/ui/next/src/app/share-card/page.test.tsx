@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import ShareCardPage, { generateMetadata } from './page';
+
+const originalLocation = window.location;
+afterEach(() => { Object.defineProperty(window, 'location', { configurable: true, writable: true, value: originalLocation }); });
+beforeEach(() => Object.defineProperty(window, 'location', { configurable: true, writable: true, value: { ...originalLocation, replace: vi.fn() } }));
 
 const target = async (url: string) => (await generateMetadata({ searchParams: Promise.resolve({ url }) })).openGraph;
 describe('share-card destinations', () => {
@@ -25,23 +30,43 @@ describe('share-card destinations', () => {
     'http://localhost:3000//untrusted.invalid/path',
     'http://localhost:3000///untrusted.invalid/path',
     'https://cloud.omnisolo.co.untrusted.invalid/path',
+    '/%5cshare-card?url=%2Fonboarding', '/help%00page', '/help%0apage',
   ])('rejects unsupported or looping target %s', async input => {
     expect(await target(input)).toMatchObject({ url: '/onboarding' });
   });
 });
 
-it('the actual page keeps its metadata refresh, script and visible link on the normalized target', async () => {
+it('preserves real query separators in the visible fallback destination', async () => {
+  render(await ShareCardPage({ searchParams: Promise.resolve({ url: '/onboarding?ref=owner&mode=manual' }) }));
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/onboarding?ref=owner&mode=manual');
+});
+
+it('does not schedule a native refresh before the redirect component is hydrated', async () => {
+  const html = renderToStaticMarkup(await ShareCardPage({ searchParams: Promise.resolve({}) }));
+  expect(html).not.toMatch(/http-equiv=["']refresh["']/i);
+  expect(html).toContain('href="/onboarding"');
+});
+
+it('the actual page keeps its visible link on the normalized target without a native refresh', async () => {
   const output = await ShareCardPage({ searchParams: Promise.resolve({ url: 'https://fixture-user:fixture-password@cloud.omnisolo.co/path' }) });
   const { container } = render(output);
   expect(screen.getByRole('link')).toHaveAttribute('href', '/onboarding');
-  expect(document.querySelector('meta[http-equiv="refresh"]')).toHaveAttribute('content', '0;url=/onboarding');
-  expect(container.querySelector('script')?.textContent).toBe('window.location.replace("/onboarding");');
+  expect(document.querySelector('meta[http-equiv="refresh"]')).toBeNull();
+  expect(container.querySelector('script')).toBeNull();
 });
 
 it('a local URL cannot become an external network-path URL in rendered redirect surfaces', async () => {
   const output = await ShareCardPage({ searchParams: Promise.resolve({ url: 'http://localhost:3000//untrusted.invalid/path' }) });
   const { container } = render(output);
   expect(screen.getByRole('link')).toHaveAttribute('href', '/onboarding');
-  expect(document.querySelector('meta[http-equiv="refresh"]')).toHaveAttribute('content', '0;url=/onboarding');
-  expect(container.querySelector('script')?.textContent).toBe('window.location.replace("/onboarding");');
+  expect(document.querySelector('meta[http-equiv="refresh"]')).toBeNull();
+  expect(container.querySelector('script')).toBeNull();
+});
+
+it('schedules only one automatic document navigation so the destination cannot be replaced twice', async () => {
+  const { container } = render(await ShareCardPage({ searchParams: Promise.resolve({}) }));
+  const refreshes = document.querySelectorAll('meta[http-equiv="refresh"]');
+  const scriptNavigations = Array.from(container.querySelectorAll('script')).filter(script => /location\.(?:replace|assign)|location\s*=/.test(script.textContent || ''));
+  expect(refreshes.length + scriptNavigations.length).toBe(0);
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/onboarding');
 });

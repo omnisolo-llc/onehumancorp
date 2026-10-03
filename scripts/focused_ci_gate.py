@@ -11,11 +11,14 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
-    'builder-generation-contract': (47, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
-    'widget-chat-contract': (32, 'OHC_WIDGET_TEST_DATABASE_URL'),
+    'checkpoint-restore-contract': (37, 'OHC_CHECKPOINT_TEST_DATABASE_URL'),
+    'staff-read-contract': (8, 'OHC_STAFF_TEST_DATABASE_URL'),
+    'proactive-worker-contract': (11, 'OHC_OPS_PROBE_DB'),
+    'builder-generation-contract': (90, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
+    'widget-chat-contract': (51, 'OHC_WIDGET_TEST_DATABASE_URL'),
     'order-milestones': (13, 'OHC_MILESTONE_TEST_DATABASE_URL'),
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),
-    'agent-definition-contract': (49, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
+    'agent-definition-contract': (63, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
 
     'chat-tenant-isolation': (13, 'OHC_CHAT_TEST_DATABASE_URL'),
     'bootstrap-portable-roles': (9, 'OHC_SETUP_TEST_DATABASE_URL'),
@@ -24,11 +27,11 @@ GATES = {
     'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
     'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
-    'agent-workflow-contract': (57, None),
-    'agent-receipt-postgres-contract': (40, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
+    'agent-workflow-contract': (108, None),
+    'agent-receipt-postgres-contract': (56, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
     'stripe-webhook-security': (22, None),
     'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
-    'site-publication': (81, 'OHC_PUBLICATION_TEST_DATABASE_URL'),
+    'site-publication': (93, 'OHC_PUBLICATION_TEST_DATABASE_URL'),
     'service-creation': (6, 'OHC_SERVICE_TEST_DATABASE_URL'),
 }
 RESULT = re.compile(r'test result: (ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out;')

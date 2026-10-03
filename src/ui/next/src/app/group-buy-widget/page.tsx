@@ -177,16 +177,17 @@ export default function GroupBuyWidgetPage() {
             </div>
 
             <div className="pt-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Embed Code</label>
-              <div className="relative">
+              <label htmlFor="group-buy-embed-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Embed Code</label>
+              <div className="flex flex-col items-start gap-3">
                 <textarea
+                  id="group-buy-embed-code"
                   readOnly
                   value={embedCode}
                   className="w-full h-32 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-xs focus:ring-2 focus:ring-pink-500 outline-none resize-none break-all"
                 />
                 <button
                   onClick={handleCopy}
-                  className="absolute top-3 right-3 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                  className="min-h-[44px] px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
                 >
                   {copied ? 'Copied!' : 'Copy Code'}
                 </button>

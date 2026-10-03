@@ -49,29 +49,20 @@ async fn execution_policy_handler(
     axum::extract::Extension(execution): axum::extract::Extension<
         Arc<crate::workflow_execution::WorkflowExecution>,
     >,
+    headers: axum::http::HeaderMap,
     claims: Option<axum::extract::Extension<::server_common::Claims>>,
 ) -> impl IntoResponse {
-    let Some(claims) =
-        claims.filter(|claims| ::server_common::auth_utils::signed_tenant_id(&claims.0).is_some())
-    else {
+    let Some(claims) = claims else {
         return (
             StatusCode::UNAUTHORIZED,
             Json(serde_json::json!({"error":"Authentication required"})),
         )
             .into_response();
     };
-    if !claims
-        .roles
-        .iter()
-        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
-    {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error":"Owner or administrator access required"})),
-        )
-            .into_response();
+    match execution.available_policy(&claims.0,&headers).await {
+        Ok(policy)=>Json(serde_json::json!({"available":policy.is_some(),"policy":policy,"mode":"text_analysis","workspace_access":false,"tools":[]})).into_response(),
+        Err(error)=>(error.status(),Json(serde_json::json!({"error":error.message()}))).into_response(),
     }
-    Json(serde_json::json!({"available": execution.policy().is_some(), "policy": execution.policy(), "mode": "text_analysis", "workspace_access": false, "tools": []})).into_response()
 }
 
 async fn hire_handler(
@@ -121,7 +112,6 @@ async fn hire_handler(
         )
             .into_response();
     }
-    let actor_id = claims.sub.clone();
     let execution = req
         .extensions()
         .get::<Arc<crate::workflow_execution::WorkflowExecution>>()
@@ -215,11 +205,8 @@ async fn hire_handler(
         )
             .into_response();
     };
-    let admitted = match execution
-        .admit(&claims, &headers, task, &payload.model, "expert_task")
-        .await
-    {
-        Ok(admitted) => admitted,
+    let request_id = match crate::workflow_execution::dispatch::request_id(&headers) {
+        Ok(id) => id,
         Err(error) => {
             return (
                 error.status(),
@@ -234,46 +221,68 @@ async fn hire_handler(
                 .into_response();
         }
     };
-    let workflow_id = uuid::Uuid::new_v4().to_string();
-    let record = crate::WorkflowRecord {
-        id: workflow_id.clone(),
-        tenant_id: tenant_id.clone(),
-        actor_id,
-        name: format!("{} text analysis", payload.name),
-        workflow: "expert_task".into(),
-        task: task.to_owned(),
-        model: admitted.policy().model.clone(),
-        provider: admitted.policy().provider.clone(),
-        status: "queued".into(),
-        command: "Configured tenant text analysis; no tools or workspace access".into(),
-        created_at: chrono::Utc::now().to_rfc3339(),
-        output: None,
-        error: None,
-    };
+    let reservation = match execution
+        .prepare(
+            &claims,
+            &headers,
+            task,
+            crate::workflow_execution::receipts::RequestMetadata {
+                request_id,
+                name: payload.name.clone(),
+                workflow: "expert_task".into(),
+                requested_model: payload.model.clone(),
+                agent_role: Some(payload.role.clone()),
+            },
+        )
+        .await
     {
-        let Ok(mut workflows) = crate::get_workflow_registry().write() else {
+        Ok(reservation) => reservation,
+        Err(error) => {
             return (
-                StatusCode::SERVICE_UNAVAILABLE,
+                error.status(),
+                Json(HireAgentResponse {
+                    id: String::new(),
+                    status: if matches!(&error, crate::workflow_execution::receipts::Error::Budget)
+                    {
+                        "budget_rejected".into()
+                    } else {
+                        "error".into()
+                    },
+                    agent_id: String::new(),
+                    workflow_id: String::new(),
+                    message: error.message().into(),
+                }),
+            )
+                .into_response();
+        }
+    };
+    let workflow_id = reservation.receipt().id.clone();
+    let agent_id = format!("agent-{}", workflow_id.replace('-', ""));
+    // A replay must never re-register a fired agent or submit another task.
+    if !reservation.replayed() {
+        agent.id = agent_id.clone();
+        agent.status = "QUEUED".into();
+        hub.register_agent(agent).await;
+        let registration = Arc::new(crate::RegisteredWorkflowAgent {
+            hub: hub.clone(),
+            agent_id: agent_id.clone(),
+            tenant_id,
+        });
+        if let Err(error) = execution.dispatch(reservation, Some(registration)).await {
+            hub.fire_agent(&agent_id).await;
+            return (
+                error.status(),
                 Json(HireAgentResponse {
                     id: String::new(),
                     status: "error".into(),
                     agent_id: String::new(),
                     workflow_id: String::new(),
-                    message: "Workflow records unavailable".into(),
+                    message: error.message().into(),
                 }),
             )
                 .into_response();
-        };
-        workflows.insert(0, record.clone());
+        }
     }
-    agent.status = "QUEUED".into();
-    hub.register_agent(agent).await;
-    let registration = Arc::new(crate::RegisteredWorkflowAgent {
-        hub: hub.clone(),
-        agent_id: agent_id.clone(),
-        tenant_id,
-    });
-    crate::dispatch_workflow(record, admitted, execution, Some(registration));
     (
         StatusCode::CREATED,
         Json(HireAgentResponse {

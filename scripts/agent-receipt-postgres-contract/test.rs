@@ -16,7 +16,11 @@ impl TextInference for NeverInfer {
     fn infer<'a>(
         &'a self,
         _: &'a AdmittedAnalysis,
-    ) -> Pin<Box<dyn Future<Output = Result<String, ()>> + Send + 'a>> {
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<crate::workflow_execution::InferenceResult, ()>> + Send + 'a,
+        >,
+    > {
         Box::pin(async { panic!("Receipt storage tests must never invoke a provider") })
     }
 }
@@ -242,6 +246,7 @@ fn request(id: Uuid) -> RequestMetadata {
         name: "Owner submitted analysis".into(),
         workflow: "analysis".into(),
         requested_model: "Auto".into(),
+        agent_role: None,
     }
 }
 
@@ -778,4 +783,334 @@ async fn postgres_receipt_final_commit_fence_closes_revocation_after_the_last_au
         "revocation cannot commit between the last authority check and receipt COMMIT"
     );
     assert_eq!(finished.unwrap().phase, StoredPhase::Completed);
+}
+
+#[tokio::test]
+async fn forced_rls_postgres_worker_uses_the_configured_pool_and_settles_actual_provider_usage() {
+    use axum::{Json, Router, routing::post};
+    use server_harness::middleware::usage_ledger::UsageLedger;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let f = Fixture::open().await;
+    let ledger = UsageLedger::Postgres(f.pool.clone());
+    ledger.set_limit("receipt-pg-a", 5000).await.unwrap();
+    let calls = Arc::new(AtomicUsize::new(0));
+    let observed = calls.clone();
+    let provider_ledger = ledger.clone();
+    let app=Router::new().route("/v1/chat/completions",post(move |Json(body):Json<serde_json::Value>| {let observed=observed.clone();let ledger=provider_ledger.clone();async move {
+        assert_eq!(body["model"],"owned-receipt-model");assert_eq!(body["max_tokens"],256);
+        let records=ledger.records("receipt-pg-a","").await.unwrap();assert!(records.iter().any(|record|record.state=="in_flight" && record.reserved_micros>160));
+        observed.fetch_add(1,Ordering::SeqCst);
+        Json(serde_json::json!({"id":"owned-pg-provider-receipt","choices":[{"message":{"role":"assistant","content":"Observed PostgreSQL provider result"},"finish_reason":"stop"}],"usage":{"prompt_tokens":100,"completion_tokens":30}}))
+    }}));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    let values=[("OMNISOLO_LLM_PROVIDER","openai-compatible".to_owned()),("OMNISOLO_LLM_MODEL","owned-receipt-model".into()),("OMNISOLO_LLM_ENDPOINT",endpoint),("OMNISOLO_LLM_API_KEY","public-local-pg-fixture".into()),("OMNISOLO_MAX_TOKENS","256".into()),("OMNISOLO_LLM_TENANT_ID","receipt-pg-a".into()),("OMNISOLO_USAGE_PAYER","managed_api".into()),("OMNISOLO_USAGE_MAX_REQUEST_MICROS","20000".into()),("OMNISOLO_USAGE_RATE_CARDS",r#"{"openai-compatible/owned-receipt-model":{"revision":"owned-pg-tariff","input_micros_per_million":1000000,"output_micros_per_million":2000000,"cached_input_micros_per_million":1000000}}"#.into())];
+    let old = values
+        .iter()
+        .map(|(key, _)| (*key, std::env::var(key).ok()))
+        .collect::<Vec<_>>();
+    for (key, value) in &values {
+        unsafe {
+            std::env::set_var(key, value);
+        }
+    }
+    let database = AppDatabase::from_connection(
+        sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(f.pool.clone()),
+    );
+    let execution = crate::configured_workflow_execution(f.auth.clone(), database);
+    for (key, value) in old {
+        unsafe {
+            if let Some(value) = value {
+                std::env::set_var(key, value);
+            } else {
+                std::env::remove_var(key);
+            }
+        }
+    }
+    let (claims, headers) = &f.identities[0];
+    let metadata = request(Uuid::new_v4());
+    let task = "The actual owner supplied this bounded text";
+    let reserved = execution
+        .prepare(claims, headers, task, metadata.clone())
+        .await
+        .unwrap();
+    let saved = reserved.receipt().clone();
+    assert_eq!(saved.tenant_id, "receipt-pg-a");
+    assert_eq!(saved.actor_id, claims.sub);
+    assert_eq!(
+        saved.funding.as_ref().unwrap().operator_tenant,
+        "receipt-pg-a"
+    );
+    assert!(matches!(
+        execution
+            .prepare(
+                &f.identities[1].0,
+                &f.identities[1].1,
+                task,
+                request(Uuid::new_v4())
+            )
+            .await,
+        Err(Error::Forbidden)
+    ));
+    assert!(matches!(
+        execution
+            .prepare(claims, headers, task, request(Uuid::new_v4()))
+            .await,
+        Err(Error::Budget)
+    ));
+    execution.dispatch(reserved, None).await.unwrap();
+    execution.wait_for_workers().await;
+    let replay = execution
+        .prepare(claims, headers, task, metadata)
+        .await
+        .unwrap();
+    assert!(replay.replayed());
+    execution.dispatch(replay, None).await.unwrap();
+    execution.wait_for_workers().await;
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    let account = ledger.summary("receipt-pg-a").await.unwrap();
+    assert_eq!(account.spent_micros, 160);
+    assert_eq!(account.reserved_micros, 0);
+    let receipt = execution
+        .get_receipt(claims, headers, &saved.id)
+        .await
+        .unwrap();
+    assert_eq!(receipt.phase, StoredPhase::Completed);
+    assert_eq!(
+        receipt.output.as_deref(),
+        Some("Observed PostgreSQL provider result")
+    );
+    let rows = ledger.records("receipt-pg-a", "").await.unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        rows[0].receipt.as_ref().unwrap().provider_request_id,
+        "owned-pg-provider-receipt"
+    );
+    let naked: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_usage_records")
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        naked, 0,
+        "forced RLS forbids usage reads without current tenant context"
+    );
+    // Reapplying deployment DDL cannot reset an observed, settled charge.
+    let before_summary = ledger.summary("receipt-pg-a").await.unwrap();
+    let before_rows = ledger.records("receipt-pg-a", "").await.unwrap();
+    let migration_db = AppDatabase::from_connection(
+        sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(f.admin.clone()),
+    );
+    migration::migrate(&migration_db).await.unwrap();
+    assert_eq!(
+        ledger.summary("receipt-pg-a").await.unwrap(),
+        before_summary
+    );
+    assert_eq!(
+        ledger.records("receipt-pg-a", "").await.unwrap(),
+        before_rows
+    );
+    server.abort();
+    let _ = server.await;
+    drop(execution);
+    drop(ledger);
+    f.close().await;
+}
+
+#[tokio::test]
+async fn postgres_readback_pagination_and_exact_actor_request_lookup_preserve_forced_rls() {
+    use crate::workflow_execution::receipts::ReceiptQuery;
+    let f = Fixture::open().await;
+    let authority = f.authority(0).await;
+    let mut saved = Vec::new();
+    for _ in 0..25 {
+        let reserved = f
+            .store
+            .reserve(f.admitted(0).await, request(Uuid::new_v4()))
+            .await
+            .unwrap();
+        saved.push(reserved.receipt().clone());
+    }
+    let target = &saved[0];
+    assert_eq!(
+        f.store
+            .by_request_id(&authority, &target.request_id)
+            .await
+            .unwrap()
+            .id,
+        target.id
+    );
+    for identity in [1, 2] {
+        assert!(matches!(
+            f.store
+                .by_request_id(&f.authority(identity).await, &target.request_id)
+                .await,
+            Err(Error::NotFound)
+        ));
+    }
+    let mut query = ReceiptQuery {
+        limit: Some(7),
+        before: None,
+    };
+    let mut ids = std::collections::HashSet::new();
+    loop {
+        let rows = f.store.list(&authority, &query).await.unwrap();
+        assert!(rows.len() <= 8);
+        for row in rows.iter().take(7) {
+            assert!(ids.insert(row.id.clone()));
+        }
+        if rows.len() <= 7 {
+            break;
+        }
+        query.before = Some(format!("{}:{}", rows[6].created_at, rows[6].id));
+    }
+    assert_eq!(ids.len(), 25);
+    assert!(
+        f.store
+            .list(&f.authority(1).await, &ReceiptQuery::default())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    query.before = Some("0:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa".into());
+    assert!(f.store.list(&authority, &query).await.unwrap().is_empty());
+    f.close().await;
+}
+
+async fn usage_api_fixture(f: &Fixture) -> (tokio::task::JoinHandle<()>, String) {
+    use axum::Router;
+    let hub = Arc::new(crate::hub::Hub {
+        task_manager: crate::hub::TaskManager {
+            db: std::sync::RwLock::new(Some(Arc::new(crate::db::DB {
+                store: crate::db::DbStore::Postgres,
+                pool: f.pool.clone(),
+            }))),
+        },
+    });
+    let app = Router::new()
+        .nest(
+            "/api/v1/billing",
+            crate::usage_api::router().with_state(hub),
+        )
+        .route_layer(axum::middleware::from_fn_with_state(
+            f.auth.clone(),
+            server_auth::strict_bearer_auth_middleware,
+        ));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    (
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        }),
+        url,
+    )
+}
+async fn usage_proxy(f: &Fixture, base_url: &str, operation: &str) -> std::process::Output {
+    use tokio::io::AsyncWriteExt;
+    let (claims, headers) = &f.identities[0];
+    let token = headers["authorization"]
+        .to_str()
+        .unwrap()
+        .strip_prefix("Bearer ")
+        .unwrap();
+    let mut child = tokio::process::Command::new("node")
+        .kill_on_drop(true)
+        .arg("scripts/agent-workflow-contract/usage-api-proxy-proof.cjs")
+        .current_dir(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."))
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(serde_json::json!({"base_url":base_url,"operation":operation,"tenant":claims.organization_id,"actor":claims.sub,"token":token}).to_string().as_bytes()).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(15), child.wait_with_output())
+        .await
+        .unwrap()
+        .unwrap()
+}
+#[tokio::test]
+async fn usage_owner_set_limit_works_without_schema_privileges_through_real_proxy() {
+    use server_harness::middleware::usage_ledger::UsageLedger;
+    let f = Fixture::open().await;
+    let ledger = UsageLedger::Postgres(f.pool.clone());
+    ledger.set_limit("receipt-pg-a", 1000).await.unwrap();
+    ledger.set_limit("receipt-pg-b", 777).await.unwrap();
+    let (server, url) = usage_api_fixture(&f).await;
+    let output = usage_proxy(&f, &url, "set_limit").await;
+    server.abort();
+    let _ = server.await;
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        ledger.summary("receipt-pg-a").await.unwrap().limit_micros,
+        3000
+    );
+    assert_eq!(
+        ledger.summary("receipt-pg-b").await.unwrap().limit_micros,
+        777
+    );
+    assert_eq!(
+        ledger.summary("receipt-pg-a").await.unwrap().spent_micros,
+        0
+    );
+    f.close().await;
+}
+#[tokio::test]
+async fn usage_owner_records_accept_verified_proxy_identity_without_cross_tenant_override() {
+    use server_harness::middleware::usage_ledger::UsageLedger;
+    let f = Fixture::open().await;
+    let ledger = UsageLedger::Postgres(f.pool.clone());
+    for (tenant, event) in [
+        ("receipt-pg-a", "owned-record-a"),
+        ("receipt-pg-b", "private-record-b"),
+    ] {
+        ledger.set_limit(tenant, 1000).await.unwrap();
+        ledger
+            .reserve(
+                &server_harness::middleware::usage_ledger::UsageScope {
+                    tenant_id: tenant.into(),
+                    task_id: event.into(),
+                    attempt_id: "1".into(),
+                    provider: "ollama".into(),
+                    model: "owned-ledger-storage-fixture".into(),
+                    payer: server_harness::middleware::usage_ledger::PayerMode::Local,
+                    rate_card: None,
+                },
+                event,
+                &"a".repeat(64),
+                0,
+            )
+            .await
+            .unwrap();
+    }
+    let (server, url) = usage_api_fixture(&f).await;
+    let output = usage_proxy(&f, &url, "records").await;
+    let client = reqwest::Client::new();
+    for query in [
+        "tenant_id=receipt-pg-b",
+        "user_id=peer-a",
+        "extra=unsafe",
+        "after=x&after=y",
+    ] {
+        let response = client
+            .get(format!("{url}/api/v1/billing/usage/records?{query}"))
+            .header("authorization", f.identities[0].1["authorization"].clone())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
+    }
+    server.abort();
+    let _ = server.await;
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    f.close().await;
 }

@@ -7040,6 +7040,7 @@ dependencies = [
  "tower 0.4.13",
  "tracing",
  "urlencoding",
+ "uuid",
 ]
 
 [[package]]

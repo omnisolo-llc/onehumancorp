@@ -61,7 +61,10 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
     }
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
+pub fn router<S: Clone + Send + Sync + 'static>(pool: Option<PgPool>) -> axum::Router<S> {
+    let Some(pool) = pool else {
+        return storage_independent_router();
+    };
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
@@ -83,7 +86,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/blocks/{block_id}", put(update_block))
         .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
         .route("/sites/{site_id}/publish", post(publish_site))
-        .merge(super::generation::router(pool.clone()))
+        .merge(super::generation::router(Some(pool.clone())))
         .route("/brand_toolbox", get(list_brand_toolboxes))
         .route("/brand_toolbox/{toolbox_id}", get(get_brand_toolbox))
         .route(
@@ -95,6 +98,23 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route_layer(middleware::from_fn(ensure_builder_claims))
         .layer(axum::Extension(edge_state))
         .with_state(pool)
+}
+
+pub fn storage_independent_router<S: Clone + Send + Sync + 'static>() -> Router<S> {
+    super::generation::router(None)
+        .route("/auto_seo", post(auto_seo))
+        .fallback(unavailable_builder_storage)
+        .route_layer(middleware::from_fn(ensure_builder_claims))
+}
+
+async fn unavailable_builder_storage() -> (axum::http::StatusCode, Json<Value>) {
+    (
+        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        Json(serde_json::json!({
+            "error":"Saved sites and brand assets are unavailable with this storage configuration",
+            "code":"builder_storage_unavailable"
+        })),
+    )
 }
 
 #[derive(Deserialize)]
@@ -207,7 +227,6 @@ async fn get_site(
 }
 
 async fn auto_seo(
-    State(_pool): State<PgPool>,
     Extension(_claims): Extension<Claims>,
     Json(payload): Json<AutoSeoRequest>,
 ) -> Result<Json<Value>, axum::http::StatusCode> {

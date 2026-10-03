@@ -10,6 +10,8 @@ export interface CatalogBlockItem {
 export interface BlockProperties {
   [key: string]: string | number | boolean | CatalogBlockItem[] | undefined;
   headline?: string;
+  subtitle?: string;
+  text?: string;
   copy?: string;
   image?: string;
   title?: string;

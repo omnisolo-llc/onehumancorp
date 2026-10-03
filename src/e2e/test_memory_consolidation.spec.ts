@@ -1,33 +1,31 @@
-import { test, expect } from '@playwright/test';
-import './fixtures';
+import { test, expect } from './fixtures';
 
-test.describe('Memory Consolidation E2E', () => {
-  test('Agent remembers custom preference over time', async ({ page }) => {
-    // 1. Log in
-    await page.goto('/');
-
-    // 2. Chat with agent about preference
-    // Wait for the unified agent feed
-    await page.waitForSelector('text=Unified Agent Feed', { state: 'visible' });
-
-    // Send a message to set a memory context
-    await page.fill('input[placeholder="Message..."]', 'My favorite cake is chocolate');
-    await page.click('button:has-text("Send")');
-
-    // Wait for agent to process and respond
-    // Since this uses the builtin agent, we'll verify it appears
-    await expect(page.locator('text=chocolate').first()).toBeVisible();
-
-    // We expect the system to run consolidation in the background.
-    // In a real e2e, we would reload and ask again
-    await page.reload();
-
-    await page.waitForSelector('text=Unified Agent Feed', { state: 'visible' });
-    await page.fill('input[placeholder="Message..."]', 'What is my favorite cake?');
-    await page.click('button:has-text("Send")');
-
-    // Eventually the agent answers based on consolidated memory
-    // Wait for some response showing "chocolate"
-    await expect(page.locator('.agent-message:has-text("chocolate")').first()).toBeVisible({ timeout: 15000 });
+test('unconfigured dashboard memory retains an unsent draft without fabricated recall', async ({ page }) => {
+  const writes:string[]=[];
+  page.on('request',request=>{
+    if(request.method()!=='GET' && /\/(?:assistant\/)?memory(?:\/|$)/.test(new URL(request.url()).pathname)) writes.push(request.url());
   });
+  await page.goto('/');
+  await expect(page.getByText('Unified Agent Feed',{exact:true})).toBeVisible();
+  // Legacy browser content has no verified owner and cannot become memory.
+  await page.evaluate(()=>localStorage.setItem('user_favorite_cake','Unowned legacy preference'));
+  const input=page.getByPlaceholder('Message...', {exact:true});
+  await expect(input).toBeEnabled();
+  await input.fill('My favorite cake is chocolate');
+  await page.getByRole('button',{name:'Send',exact:true}).click();
+  await expect(page.getByRole('alert').filter({hasText:'Your draft has not been sent or saved'})).toBeVisible();
+  await expect(input).toHaveValue('My favorite cake is chocolate');
+  await expect(page.locator('.agent-message')).toHaveCount(0);
+
+  await page.reload();
+  await expect(input).toBeEnabled();
+  await input.fill('What is my favorite cake?');
+  await page.getByRole('button',{name:'Send',exact:true}).click();
+  await expect(page.getByRole('alert').filter({hasText:'Your draft has not been sent or saved'})).toBeVisible();
+  await expect(page.locator('.agent-message')).toHaveCount(0);
+  await expect(page.getByText('Unowned legacy preference',{exact:true})).toHaveCount(0);
+  expect(await page.evaluate(()=>localStorage.getItem('user_favorite_cake'))).toBe('Unowned legacy preference');
+  expect(writes).toEqual([]);
+  // This is negative safety coverage. Durable actor-bound memory and any model
+  // consolidation/recall remain required open implementation/acceptance work.
 });

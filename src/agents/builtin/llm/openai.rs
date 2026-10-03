@@ -127,7 +127,11 @@ impl OpenAIClient {
             embedding_format: config.embedding_format,
             organization: config.organization,
             project: config.project,
-            client: Client::builder().timeout(config.timeout).build().unwrap(),
+            client: Client::builder()
+                .timeout(config.timeout)
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .unwrap(),
             circuit_breaker: CircuitBreaker::new(3, Duration::from_secs(60)),
         }
     }
@@ -319,12 +323,17 @@ impl LlmClient for OpenAIClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        self.chat_prepared(super::minify_chat_request(req)).await
+    }
+    async fn chat_prepared(
+        &self,
+        req: ChatRequest,
+    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
         let cb = &self.circuit_breaker;
         if !cb.allow() {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
 
-        let req = super::minify_chat_request(req);
         let mut messages = Vec::new();
 
         if !req.system.is_empty() {
@@ -441,11 +450,10 @@ impl LlmClient for OpenAIClient {
         if !resp.status().is_success() {
             cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(format!("openai api error (status {}): {}", status, body).into());
+            return Err(format!("openai api error (status {status})").into());
         }
 
-        let result = resp.json::<OpenAIResponse>().await;
+        let result = super::read_provider_json::<OpenAIResponse>(resp).await;
         if let Err(e) = result {
             cb.record_non_failure();
             return Err(format!("api error: failed to parse response: {:?}", e).into());
@@ -552,19 +560,14 @@ impl LlmClient for OpenAIClient {
         if !resp.status().is_success() {
             cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(format!(
-                "openai-compatible embeddings error (status {}): {}",
-                status, body
-            )
-            .into());
+            return Err(format!("openai-compatible embeddings error (status {status})").into());
         }
 
-        let result: OpenAIEmbeddingResponse = match resp.json().await {
+        let result: OpenAIEmbeddingResponse = match super::read_provider_json(resp).await {
             Ok(result) => result,
             Err(error) => {
                 cb.record_non_failure();
-                return Err(error.into());
+                return Err(error);
             }
         };
 

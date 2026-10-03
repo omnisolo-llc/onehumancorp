@@ -1,40 +1,27 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../e2e/fixtures';
+import { expectGeneratedDraft, expectGenerationUnavailable, fillBuilderBrief, generationAcceptance, generationGateReason, generationPrerequisite, generationResponse, publishAndReadAnonymous } from '../../../e2e/generation-acceptance';
 
-test('builder flow completes successfully', async ({ page }) => {
+test('builder does not claim completion without a configured provider', async ({ page, loginAs, adminUser }) => {
+  test.skip(generationAcceptance, 'This contract requires an unconfigured generation service.');
+  await loginAs(page, adminUser);
+  await fillBuilderBrief(page, 'My Awesome Store', 'I run a friendly retail store selling amazing products');
+  const response = generationResponse(page);
+  await page.getByRole('button', { name: 'Build Store' }).click();
+  await expectGenerationUnavailable(await response);
+  await expect(page.getByText(generationPrerequisite, { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Customize Selected Draft' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Open published website' })).toHaveCount(0);
+});
 
-  await page.goto('/builder');
-
-  await expect(page.getByText(/What are you building today/i)).toBeVisible();
-  await page.getByText('Selling Products').click();
-  await expect(page.getByText(/Let's build your store/i)).toBeVisible();
-
-  const nameInput = page.getByPlaceholder(/e.g. Acme Corp/i);
-  await nameInput.fill('My Awesome Store');
-
-  const categoryInput = page.getByPlaceholder(/e.g. Retail, Consulting, Tech/i);
-  await categoryInput.fill('Retail');
-
-  await page.getByRole('button', { name: /Next: Choose Vibe/i }).click();
-
-  await expect(page.getByText(/Select Your Vibe/i)).toBeVisible();
-  await page.getByRole('button', { name: 'Friendly' }).click();
-  await page.getByRole('button', { name: /Next: Details/i }).click();
-
-  await expect(page.getByText(/Final Details/i)).toBeVisible();
-  const textarea = page.getByPlaceholder(/e.g. I run a mobile dog grooming service/i);
-  await expect(textarea).toBeVisible();
-
-  await textarea.fill('I run a friendly retail store selling amazing products');
-
-  const buildButton = page.getByRole('button', { name: /Build Store/i });
-  await buildButton.click();
-
-  await expect(page.getByText(/Pick your draft/i)).toBeVisible({ timeout: 5000 });
-  await page.getByRole('button', { name: /Customize Selected Draft/i }).click();
-
-  await expect(page.getByText(/1-Tap Launch/i)).toBeVisible({ timeout: 5000 });
-
-  await page.getByRole('button', { name: /1-Tap Launch/i }).click();
-
-  await expect(page.getByText(/You're Live/i)).toBeVisible({ timeout: 5000 });
+test('builder generates and publishes the owner-reviewed website @provider-acceptance', async ({ page, anonymousPage, loginAs, adminUser }) => {
+  test.skip(!generationAcceptance, generationGateReason);
+  test.setTimeout(180_000);
+  await loginAs(page, adminUser);
+  await fillBuilderBrief(page, 'My Awesome Store', 'I run a friendly retail store selling amazing products');
+  const response = generationResponse(page);
+  await page.getByRole('button', { name: 'Build Store' }).click();
+  const draft = await expectGeneratedDraft(await response, adminUser.organizationId);
+  await page.getByRole('button', { name: 'Customize Selected Draft' }).click();
+  await expect(page.getByText('Mobile Editor')).toBeVisible();
+  await publishAndReadAnonymous(page, anonymousPage, draft.pages[0].blocks[0].content.headline);
 });

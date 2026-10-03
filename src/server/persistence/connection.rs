@@ -23,6 +23,11 @@ impl AppDatabase {
         url: &str,
         sqlcipher_key: Option<&str>,
     ) -> Result<Self, sea_orm::DbErr> {
+        if sqlcipher_key.is_some_and(|key| key.trim().is_empty() || !url.starts_with("sqlite:")) {
+            return Err(sea_orm::DbErr::Custom(
+                "SQLCipher requires a SQLite database and a nonempty configured key".into(),
+            ));
+        }
         let mut options = ConnectOptions::new(url.to_owned());
         options
             .max_connections(20)
@@ -40,6 +45,12 @@ impl AppDatabase {
                 });
         }
         let connection = Database::connect(options).await?;
+        if sqlcipher_key.is_some()
+            && let Err(error) = require_sqlite_encryption(&connection).await
+        {
+            let _ = connection.close().await;
+            return Err(error);
+        }
         Ok(Self::from_connection(connection))
     }
 
@@ -67,6 +78,45 @@ impl AppDatabase {
     pub const fn capabilities(&self) -> DatabaseCapabilities {
         DatabaseCapabilities::for_backend(self.backend)
     }
+}
+
+/// Unknown SQLite pragmas are silently ignored. A configured key therefore is
+/// not proof that encryption exists or that an existing database key is valid.
+pub(crate) async fn require_sqlite_encryption(
+    connection: &DatabaseConnection,
+) -> Result<(), sea_orm::DbErr> {
+    if connection.get_database_backend() != sea_orm::DatabaseBackend::Sqlite {
+        return Err(sea_orm::DbErr::Custom(
+            "SQLCipher verification requires the configured SQLite connection".into(),
+        ));
+    }
+    let version = connection
+        .query_one(sea_orm::Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "PRAGMA cipher_version".to_owned(),
+        ))
+        .await?
+        .map(|row| row.try_get_by_index::<String>(0))
+        .transpose()?;
+    if version
+        .as_deref()
+        .is_none_or(|value| value.trim().is_empty())
+    {
+        return Err(sea_orm::DbErr::Custom(
+            "Requested SQLite encryption requires a SQLCipher-enabled database engine".into(),
+        ));
+    }
+    // Reading the actual schema forces key verification for an existing file;
+    // reporting the cipher library version alone does not establish decryption.
+    let schema = connection
+        .query_one(sea_orm::Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "SELECT count(*) FROM sqlite_schema".to_owned(),
+        ))
+        .await?
+        .ok_or_else(|| sea_orm::DbErr::Custom("SQLite schema read was not confirmed".into()))?;
+    let _table_count: i64 = schema.try_get_by_index(0)?;
+    Ok(())
 }
 
 #[derive(Clone)]

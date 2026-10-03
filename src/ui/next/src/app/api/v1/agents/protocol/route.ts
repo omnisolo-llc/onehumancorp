@@ -14,17 +14,34 @@ const ALLOWED_METHODS = new Set([
   "ap_list_tasks",
   "ap_restore_checkpoint",
 ]);
+const READ_METHODS = new Set(["ap_list_tasks", "ap_list_steps", "ap_list_checkpoints"]);
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const encoder = new TextEncoder();
 
 async function unwrapResult(response: Response): Promise<Response> {
   if (!response.ok) return response;
+  const json = (body: unknown, status = 200) => Response.json(body, {
+    status, headers: { "Cache-Control": "private, no-store" },
+  });
+  const invalid = () => json({ error: "Backend returned an invalid Agent Protocol response" }, 502);
+  if (response.status !== 200) return invalid();
   try {
     const payload = await response.json();
-    if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
-    return Response.json(payload?.result ?? null);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return invalid();
+    const result = payload.result;
+    // The runtime reports transport-level RPC errors and operation-level errors
+    // (for example, an unconfigured checkpointer) in different envelopes.
+    const error = payload.error ?? result?.error;
+    if (error != null) {
+      const message = typeof error === "string" ? error : error.message;
+      return json({ error: typeof message === "string" && message.trim() ? message : "Agent Protocol operation failed" }, 502);
+    }
+    if (!result || typeof result !== "object" || Array.isArray(result)
+      || payload.success !== undefined && payload.success !== true
+      || result.success !== undefined && result.success !== true) return invalid();
+    return json(result);
   } catch {
-    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
+    return invalid();
   }
 }
 
@@ -33,6 +50,9 @@ export async function GET(request: Request) {
   const method = url.searchParams.get("method") ?? "";
   if (!ALLOWED_METHODS.has(method)) {
     return Response.json({ error: "unsupported method" }, { status: 400 });
+  }
+  if (!READ_METHODS.has(method)) {
+    return Response.json({ error: "This operation requires POST" }, { status: 405, headers: { Allow: "POST" } });
   }
   const taskId = url.searchParams.get("task_id");
   return unwrapResult(await proxyBackendRequest(request, "/api/v1/rpc", {

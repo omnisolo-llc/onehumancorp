@@ -1,60 +1,32 @@
 "use client";
 
 import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useProPlan } from '../components/useProPlan';
+import { hasVerifiedOfflineQueueOwner } from '@/lib/sync/queueIdentity';
 
 export default function ReferralWidgetBuilderPage() {
-  const [tenant, setTenant] = useState('my-store');
-  const { hasPro, currentPlan, planError, claimTrial, claimError } = useProPlan();
+  const { hasPro, currentPlan, verifiedOwner, planError, claimTrial, claimError, refreshPlan } = useProPlan();
   const [amount, setAmount] = useState('10');
   const [type, setType] = useState('%');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const brandingRemoved = removeBranding && hasPro;
-
-  const [linkCopyStatus, setLinkCopyStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
-  const copySequence = useRef(0);
-  const copyPending = useRef(false);
-  const referralLink = `https://cloud.omnisolo.co/setup.html?ref=${tenant}&promo=ref123`;
-
+  const previewReady = currentPlan !== null && verifiedOwner !== null && hasVerifiedOfflineQueueOwner(verifiedOwner);
+  const brandingRemoved = removeBranding && hasPro && previewReady;
   useEffect(() => {
-    copySequence.current += 1;
-    copyPending.current = false;
-    setLinkCopyStatus('idle');
-    return () => { copySequence.current += 1; copyPending.current = false; };
-  }, [referralLink]);
-
-  const handleCopyLink = async () => {
-    if (copyPending.current) return;
-    const sequence = ++copySequence.current;
-    copyPending.current = true;
-    setLinkCopyStatus('copying');
-    try {
-      if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard unavailable');
-      await navigator.clipboard.writeText(referralLink);
-      if (sequence === copySequence.current) setLinkCopyStatus('copied');
-    } catch {
-      if (sequence === copySequence.current) setLinkCopyStatus('error');
-    } finally {
-      if (sequence === copySequence.current) copyPending.current = false;
-    }
+    if (!previewReady) { setShowModal(false); setShowPaywall(false); setRemoveBranding(false); }
+  }, [previewReady]);
+  const guardPreview = () => {
+    if (currentPlan !== null && verifiedOwner && hasVerifiedOfflineQueueOwner(verifiedOwner)) return true;
+    setShowModal(false); setShowPaywall(false); setRemoveBranding(false);
+    void refreshPlan(); return false;
   };
 
-
-  useEffect(() => {
-    try {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
-      setTenant(storedTenant);
-    } catch {
-      // ignore
-    }
-  }, []);
-
   const handleCheckboxChange = (checked: boolean) => {
+    if (!guardPreview()) return;
     if (checked && !hasPro) {
       setShowPaywall(true);
       return;
@@ -66,10 +38,17 @@ export default function ReferralWidgetBuilderPage() {
     await claimTrial();
   };
 
-  const embedCode = `<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co'}/api/v1/growth/customer-referral/embed?tenant=${tenant}&theme=${theme}&give=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&get=${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}&hide_branding=${brandingRemoved}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`;
-
+  const parameters = new URLSearchParams({
+    tenant: verifiedOwner?.tenantId ?? '', theme,
+    give: `${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}`,
+    get: `${type === '$' ? '$' : ''}${amount}${type === '%' ? '%' : ''}`,
+    hide_branding: String(brandingRemoved),
+  });
+  const embedCode = previewReady && typeof window !== 'undefined'
+    ? `<iframe src="${window.location.origin}/api/v1/growth/customer-referral/embed?${parameters.toString().replaceAll('&', '&amp;')}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`
+    : '';
   const clipboard = useClipboardFeedback(embedCode);
-  const handleCopyCode = () => { void clipboard.copy(embedCode); };
+  const handleCopyCode = () => { if (guardPreview()) void clipboard.copy(embedCode); };
 
   return (
     <div className="min-h-screen bg-gray-50 font-inter text-gray-900 pb-20">
@@ -146,7 +125,7 @@ export default function ReferralWidgetBuilderPage() {
                   id="remove-branding-checkbox"
                   aria-label='Remove "OmniSolo" Branding'
                   checked={brandingRemoved}
-                  disabled={currentPlan === null}
+                  disabled={!previewReady}
                   onChange={(e) => handleCheckboxChange(e.target.checked)}
                   className="w-4 h-4 text-[#0066FF] border-gray-300 rounded focus:ring-[#0066FF]"
                 />
@@ -155,7 +134,8 @@ export default function ReferralWidgetBuilderPage() {
             </div>
 
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => { if (guardPreview()) setShowModal(true); }}
+              disabled={!previewReady}
               className="w-full py-3 bg-[#0066FF] text-white font-medium rounded-xl hover:bg-[#0052CC] transition-colors shadow-sm"
             >
               Get Embed Code
@@ -172,10 +152,10 @@ export default function ReferralWidgetBuilderPage() {
                   🎁
                 </div>
                 <h3 className="text-xl font-bold font-outfit mb-2">
-                  Give {type === '$' ? '$' : ''}{amount}{type === '%' ? '%' : ''}, Get {type === '$' ? '$' : ''}{amount}{type === '%' ? '%' : ''}
+                  Draft offer: Give {type === '$' ? '$' : ''}{amount}{type === '%' ? '%' : ''}, Get {type === '$' ? '$' : ''}{amount}{type === '%' ? '%' : ''}
                 </h3>
                 <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Share your link with friends. They get {type === '$' ? '$' : ''}{amount}{type === '%' ? '%' : ''} off their first order, and you get {type === '$' ? '$' : ''}{amount}{type === '%' ? '%' : ''} off your next!
+                  Preview only: proposed {type === '$' ? '$' : ''}{amount}{type === '%' ? '%' : ''} discount. No coupon, referral link, or reward has been created.
                 </p>
 
                 <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-4">
@@ -183,20 +163,17 @@ export default function ReferralWidgetBuilderPage() {
                     type="text"
                     readOnly
                     aria-label="Referral link preview"
-                    value={referralLink}
+                    value=""
+                    placeholder="Referral program link is not configured"
                     className="flex-1 bg-transparent border-none text-xs text-gray-600 dark:text-gray-300 px-2 focus:outline-none"
                   />
-                  <button onClick={handleCopyLink} disabled={linkCopyStatus === 'copying'} className="bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold py-2 px-4 rounded-md shadow-sm">
-                    {linkCopyStatus === 'copying' ? 'Copying…' : 'Copy Link'}
-                  </button>
+                  <button disabled className="bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold py-2 px-4 rounded-md shadow-sm">Link unavailable</button>
                 </div>
-                {linkCopyStatus === 'copied' && <p role="status">Link copied</p>}
-                {linkCopyStatus === 'error' && <p role="alert">Could not copy the link. Select the link and copy it manually.</p>}
 
                 {!brandingRemoved && (
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-center">
                     <a
-                      href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
+                      href="https://omnisolo.co"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-bold text-gray-500 hover:underline"
@@ -225,7 +202,7 @@ export default function ReferralWidgetBuilderPage() {
               </svg>
             </button>
             <h2 className="text-2xl font-bold font-outfit mb-2 text-gray-900 dark:text-white">Embed Referral Widget</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">Copy and paste this HTML snippet into your website or post-checkout page.</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">Authenticated preview code. Public embedding and reward fulfillment are not configured.</p>
             <textarea
               readOnly
               aria-label="Embed Code"
@@ -235,7 +212,7 @@ export default function ReferralWidgetBuilderPage() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={handleCopyCode}
-                disabled={clipboard.state === 'pending'}
+                disabled={!previewReady || clipboard.state === 'pending'}
                 className="flex-1 py-3 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium rounded-xl transition-colors"
               >
                 {clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
@@ -268,8 +245,9 @@ export default function ReferralWidgetBuilderPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Upgrade to Pro</h2>
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
-              Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
+              Make the Referral Widget 100% yours. A verified Pro or Business plan can remove the "Powered by OmniSolo" watermark.
             </p>
+            <Link href="/pricing" className="block mb-4 text-indigo-600">Review plans</Link>
             {claimError ? (
               <p className="text-indigo-600 font-semibold mb-4 text-sm">{claimError}</p>
             ) : (

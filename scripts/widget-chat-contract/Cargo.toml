@@ -19,9 +19,12 @@ jsonwebtoken = { version = "10.3", default-features = false, features = ["rust_c
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
+futures-util = "0.3"
 uuid = { version = "1", features = ["v4", "serde"] }
 server_auth = { path = "../../src/server/auth" }
 server_common = { path = "../../src/server/common" }
+server_config = { path = "../../src/server/config" }
+redis = { version = "0.27.6", features = ["tokio-comp", "connection-manager"] }
 tower = { version = "0.5", features = ["util"] }
 [lib]
 path = "generated.rs"

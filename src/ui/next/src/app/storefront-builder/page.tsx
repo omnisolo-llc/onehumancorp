@@ -2,10 +2,13 @@
 import { PublicationPanel } from '../builder/PublicationPanel';
 import { layoutPublicationSnapshot } from '../builder/layoutPublicationSnapshot';
 import { invalidateOnboardingSession } from '../onboarding/draftSession';
-import type { BuilderBlock, BlockProperties, GeneratedBlock } from '@/lib/builder-types';
+import type { BuilderBlock, BlockProperties } from '@/lib/builder-types';
 
 import { useState, useEffect, useRef } from "react";
 import { openBuilderEditor, releaseBuilderEditor, builderScopeActive, assertBuilderEditor, readBuilderDraft, writeBuilderDraft, hasHeldBuilderLegacy, publishOwnedLayout, type BuilderScope } from '../builder/ownedDraft';
+import { readGeneratedBlocks } from '../builder/generatedBlocks';
+import { prepareSiteSnapshot } from '../builder/publicationContracts';
+import { generationFailureMessage } from '../builder/generationFailure';
 import { canonicalRequest } from '../onboarding/contracts';
 import { subscribeOnboardingInvalidation, fetchForOwnedBusinessAction } from '../onboarding/draftSession';
 import { SmartBlock, DraggableBlock, ActionSheet } from "../builder/components";
@@ -34,6 +37,7 @@ export default function StorefrontBuilderPage() {
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [editingBlockContent, setEditingBlockContent] = useState<BlockProperties | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
+  const [generationError, setGenerationError] = useState("");
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   const walkthroughSteps: import("../../components/Walkthrough").Step[] = [
@@ -72,7 +76,7 @@ export default function StorefrontBuilderPage() {
     const clear = (restart: boolean) => {
       loadVersion += 1; operationEpoch.current += 1; busy.current = false; releaseBuilderEditor(editor); scope.current = null; setViewScope(null);
       localDraft.current = { bio: '', blocks: [], status: 'idle' };
-      setBio(''); setBlocks([]); setStatus('idle'); setLiveUrl(''); setTenantId(''); setSelectedBlockIndex(null); setEditingBlockContent(null); setChatMessage(''); setSaveMessage(''); setLoaded(false);
+      setBio(''); setBlocks([]); setStatus('idle'); setLiveUrl(''); setTenantId(''); setSelectedBlockIndex(null); setEditingBlockContent(null); setChatMessage(''); setSaveMessage(''); setGenerationError(''); setLoaded(false);
       if (restart) void load(); else setSessionError('Your session could not be verified. Your saved layout remains held.');
     };
     const unsubscribe = subscribeOnboardingInvalidation(clear);
@@ -133,42 +137,34 @@ export default function StorefrontBuilderPage() {
     setSelectedBlockIndex(newBlocks.length - 1);
   };
 
+  const generateLayout = async (description: string, current: BuilderScope, active: () => boolean) => {
+    const response = await fetchForOwnedBusinessAction('/api/v1/builder/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description }),
+    }, current.owner, () => { assertBuilderEditor(current, 'storefront-builder-draft'); if (!active()) throw new Error('Your editor changed before generation.'); });
+    const data = await response.json();
+    if (!active()) return null;
+    if (response.status !== 200) throw new Error(generationFailureMessage(response.status, data));
+    const generated = readGeneratedBlocks(data);
+    await prepareSiteSnapshot(layoutPublicationSnapshot({ title: 'Home', bio, blocks: generated }));
+    if (!active()) return null;
+    assertBuilderEditor(current, 'storefront-builder-draft');
+    return generated;
+  };
+
   const handleGenerate = async () => {
     const current = viewScope;
-    if (!builderScopeActive(current) || busy.current) return;
+    if (!builderScopeActive(current) || busy.current || bio.trim().length <= 5) return;
     busy.current = true; const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current && builderScopeActive(current);
-    setStatus("generating");
-
+    setGenerationError(''); setStatus('generating');
     try {
-      const response = await fetchForOwnedBusinessAction('/api/v1/builder/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: bio })
-      }, current.owner);
-
-      if (!active()) return;
-      if (!response.ok) {
-        updateStatus("idle");
-        return;
-      }
-
-      const data = await response.json();
-      if (!active()) return;
-      const blocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
-        type: b.block_type === 'HeroBlock' ? 'Hero' :
-              b.block_type === 'ProductGridBlock' ? 'Catalog' :
-              b.block_type === 'ServiceBookingBlock' ? 'Booking' :
-              b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
-        props: b.content
-      }));
-      setBlocks(blocks);
-      persistLayout({ blocks });
-      updateStatus("draft");
+      const generated = await generateLayout(bio, current, active);
+      if (!generated || !active()) return;
+      setBlocks(generated); persistLayout({ blocks: generated }); updateStatus('draft');
     } catch (error) {
       if (!active()) return;
-      console.error("Failed to generate storefront", error);
-      updateStatus("idle"); setSaveMessage("The layout could not be generated. Your local draft remains held.");
+      updateStatus(localDraft.current.blocks.length ? 'draft' : 'idle');
+      setGenerationError(error instanceof Error ? error.message : 'The layout could not be generated. Your existing draft was kept.');
     } finally { if (active()) busy.current = false; }
   };
 
@@ -193,39 +189,18 @@ export default function StorefrontBuilderPage() {
 
   const handleAgentChat = async () => {
     const current = viewScope;
-    if (!builderScopeActive(current) || busy.current) return;
+    if (!builderScopeActive(current) || busy.current || !chatMessage.trim()) return;
     busy.current = true; const epoch = ++operationEpoch.current;
     const active = () => epoch === operationEpoch.current && builderScopeActive(current);
-    if (!chatMessage.trim()) { busy.current = false; return; }
-    setStatus("generating");
+    setGenerationError(''); setStatus('generating');
     try {
-      const response = await fetchForOwnedBusinessAction("/api/v1/builder/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: `${bio}. Update request: ${chatMessage}. Note: Maintain a 375px optimized card-based mobile UI.` })
-      }, current.owner);
-      if (!active()) return;
-      if (!response.ok) {
-        updateStatus("idle");
-        return;
-      }
-      const data = await response.json();
-      if (!active()) return;
-      const newBlocks = data.pages[0].blocks.map((b: GeneratedBlock) => ({
-        type: b.block_type === "HeroBlock" ? "Hero" :
-              b.block_type === "ProductGridBlock" ? "Catalog" :
-              b.block_type === "ServiceBookingBlock" ? "Booking" :
-              b.block_type === "TestimonialBlock" ? "Testimonials" : b.block_type,
-        props: b.content
-      }));
-      setBlocks(newBlocks);
-      persistLayout({ blocks: newBlocks });
-      setChatMessage("");
-      updateStatus("draft");
+      const generated = await generateLayout(`${bio}. Update request: ${chatMessage}. Note: Maintain a 375px optimized card-based mobile UI.`, current, active);
+      if (!generated || !active()) return;
+      setBlocks(generated); persistLayout({ blocks: generated }); setChatMessage(''); updateStatus('draft');
     } catch (error) {
       if (!active()) return;
-      console.error("Failed to update storefront via agent", error);
-      updateStatus("draft"); setSaveMessage("The layout update could not be confirmed. Your local draft remains held.");
+      updateStatus('chat');
+      setGenerationError(error instanceof Error ? error.message : 'The layout update could not be confirmed. Your existing draft was kept.');
     } finally { if (active()) busy.current = false; }
   };
 
@@ -271,6 +246,8 @@ export default function StorefrontBuilderPage() {
   if (sessionError) return <div role="alert">{sessionError}</div>;
   if (!loaded) return <div role="status">Verifying your builder session…</div>;
 
+  const generationNotice = generationError && <p role="alert" className="m-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{generationError}</p>;
+
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
@@ -279,6 +256,7 @@ export default function StorefrontBuilderPage() {
             {saveMessage && <span className="text-[#34C759] text-sm font-semibold animate-fade-in">{saveMessage}</span>}
           </div>
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
+            {generationNotice}
             <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
             <div className="flex justify-end mb-4"><button id="storefront-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors">Start Tour</button></div>
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
@@ -381,12 +359,14 @@ export default function StorefrontBuilderPage() {
               <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7]">Marketing Agent</h2>
                   <button
+                      aria-label="Close Marketing Agent"
                       onClick={() => navigateStatus("draft")}
                       className="text-gray-500 hover:text-gray-700"
                   >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
               </div>
+              {generationNotice}
               <div className="flex-1 bg-white/50 dark:bg-black/50 rounded-xl p-4 mb-4 min-h-[200px] overflow-y-auto">
                   <div className="flex gap-3 mb-4">
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0071E3] font-bold shrink-0">AI</div>
@@ -416,6 +396,7 @@ export default function StorefrontBuilderPage() {
                       }}
                   />
                   <button
+                      aria-label="Send storefront edit"
                       onClick={handleAgentChat}
                       disabled={!chatMessage.trim()}
                       className={`absolute bottom-4 right-4 p-2 rounded-full ${chatMessage.trim() ? 'bg-[#0071E3] text-white' : 'bg-gray-200 text-gray-400'}`}
@@ -437,6 +418,7 @@ export default function StorefrontBuilderPage() {
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
+        {generationNotice}
         <div className="absolute top-10 right-4 flex items-center gap-4 z-50">
             {saveMessage && <span className="text-[#34C759] text-sm font-semibold animate-fade-in bg-white/80 dark:bg-black/80 px-2 py-1 rounded">{saveMessage}</span>}
         </div>

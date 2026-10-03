@@ -1,93 +1,54 @@
-import { test, expect } from '@playwright/test';
-import './fixtures';
-import { Client } from 'pg';
+import { randomUUID } from 'node:crypto';
+import { test, expect } from './fixtures';
+import { createGrowthOwner } from './growth_owner';
+import { e2eDbQuery } from './db_utils';
 
-test.describe('CustomerSuccessAgent Auto-Reply Flow', () => {
-  let db: Client;
-  let triageItemId: string;
-
-  test.beforeAll(async () => {
-    db = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc' });
-    await db.connect();
+test('SMB owner can approve their persisted CustomerSuccessAgent draft on mobile', async ({ browser, baseURL }) => {
+  if (!baseURL) throw new Error('The actual isolated application origin is required');
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 375, height: 812 },
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
   });
-
-  test.afterAll(async () => {
-    if (db) {
-      if (triageItemId) {
-        await db.query(`DELETE FROM agent_feed WHERE id = $1`, [triageItemId]);
-      }
-      await db.end();
-    }
-  });
-
-  test('SMB Owner can approve a CustomerSuccessAgent draft on mobile', async ({ browser }) => {
-    // 1. Simulate mobile viewport
-    const context = await browser.newContext({
-      viewport: { width: 375, height: 812 },
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
-    });
-
+  try {
     const page = await context.newPage();
+    const owner = await createGrowthOwner(page, baseURL);
+    const triageItemId = randomUUID();
+    const draft = 'Hi Maya! A custom 8-inch cake starts at $65. Let me know what flavor you want.';
+    // This is an explicitly test-owned persisted input, not provider-generation
+    // evidence. Seed before this new tenant's first feed read so direct SQL does
+    // not rely on an event invalidating a different test's cached feed.
+    const rows = await e2eDbQuery(
+      `INSERT INTO agent_feed (tenant_id,id,source,priority,description,payload,state,title)
+       VALUES ($1,$2,'CustomerSuccessAgent','High',$3,$4::jsonb,'PENDING_APPROVAL','Instagram Inquiry')
+       RETURNING id,tenant_id,state`,
+      [owner.tenantId,triageItemId,'Customer inquired about custom cake pricing on Instagram.',JSON.stringify({draft})],
+    );
+    expect(rows).toEqual([{id:triageItemId,tenant_id:owner.tenantId,state:'PENDING_APPROVAL'}]);
+    const identity = await page.request.get('/api/v1/auth/session-identity');
+    expect(identity.status()).toBe(200);
+    expect(await identity.json()).toMatchObject({userId:owner.userId,tenantId:owner.tenantId});
+    const recorded = await page.request.get('/api/v1/agent-feed');
+    expect(recorded.status()).toBe(200);
+    expect((await recorded.json()).items).toEqual(expect.arrayContaining([expect.objectContaining({id:triageItemId,tenant_id:owner.tenantId})]));
 
-    // Authenticate (reusing fixture logic conceptually, but manually here for mobile context)
-    await page.goto('/login');
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
-
-    // 2. Inject a pending agent draft into the backend
-    const res = await db.query(`
-      INSERT INTO agent_feed (tenant_id, id, source, priority, description, payload, state, title)
-      VALUES (
-        'e2e-tenant',
-        gen_random_uuid(),
-        'CustomerSuccessAgent',
-        'High',
-        'Customer inquired about custom cake pricing on Instagram.',
-        '{"draft": "Hi Maya! A custom 8-inch cake starts at $65. Let me know what flavor you want."}',
-        'PENDING_APPROVAL',
-        'Instagram Inquiry'
-      )
-      RETURNING id;
-    `);
-    triageItemId = res.rows[0].id;
-
-    // 3. Navigate to Dashboard (Command Center) and verify the card
     await page.goto('/dashboard');
-    await page.reload(); // Ensure fresh data
-
-    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    const card = page.getByTestId(`triage-card-${triageItemId}`);
     await expect(card).toBeVisible();
-    await expect(card.locator('text=Needs Attention: Pending Draft')).toBeVisible();
-    await expect(card.locator('text=Customer inquired about custom cake pricing on Instagram.')).toBeVisible();
-
-    // Verify the draft text is visible
-    const draftContainer = card.locator(`[data-testid="triage-draft-${triageItemId}"]`);
-    await expect(draftContainer).toBeVisible();
-    await expect(draftContainer).toContainText('Hi Maya! A custom 8-inch cake starts at $65. Let me know what flavor you want.');
-
-    // 4. Tap "Approve & Send" and verify loading state
-    const approveBtn = card.locator(`[data-testid="triage-approve-${triageItemId}"]`);
-    await expect(approveBtn).toBeVisible();
-
-    // Verify touch target size (at least 44x44px)
-    const btnBox = await approveBtn.boundingBox();
-    expect(btnBox?.width).toBeGreaterThanOrEqual(44);
-    expect(btnBox?.height).toBeGreaterThanOrEqual(44);
-
-    // Verify initial text
-    await expect(approveBtn.locator('.btn-text')).toHaveText('Approve & Send');
-
-    await approveBtn.click();
-
-    // 5. Verify the card disappears (handled by handleTriageAction removing the element)
-    await expect(card).not.toBeVisible({ timeout: 10000 });
-
-    // 6. Verify backend state updated to APPROVED
-    await expect(async () => {
-      const finalState = await db.query(`SELECT state FROM agent_feed WHERE id = $1`, [triageItemId]);
-      expect(finalState.rows[0]?.state).toBe('APPROVED');
-    }).toPass({ timeout: 10000 });
-  });
+    await expect(card.getByText('Needs Attention: Pending Draft')).toBeVisible();
+    await expect(card.getByText('Customer inquired about custom cake pricing on Instagram.')).toBeVisible();
+    await expect(card.getByTestId(`triage-draft-${triageItemId}`)).toContainText(draft);
+    const approve = card.getByTestId(`triage-approve-${triageItemId}`);
+    await expect(approve).toBeVisible();
+    const box = await approve.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    await expect(approve.locator('.btn-text')).toHaveText('Approve & Send');
+    const decision = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/agent-feed/${triageItemId}` && response.request().method() === 'PUT');
+    await approve.click();
+    expect((await decision).status()).toBe(200);
+    await expect(card).not.toBeVisible({timeout:10000});
+    // A committed approval is not proof that a provider delivered the message.
+    await expect.poll(async () => e2eDbQuery('SELECT state FROM agent_feed WHERE id=$1 AND tenant_id=$2',[triageItemId,owner.tenantId])).toEqual([{state:'APPROVED'}]);
+  } finally { await context.close(); }
 });

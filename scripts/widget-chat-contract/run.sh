@@ -2,8 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 : "${OHC_WIDGET_TEST_DATABASE_URL:?explicit disposable PostgreSQL prerequisite required}"
+: "${OHC_WIDGET_TEST_REDIS_URL:?explicit disposable loopback Redis prerequisite required}"
 python3 scripts/widget-chat-contract/database_guard.py
 unset JWT_SECRET_FILE OMNISOLO_DATABASE_URL_FILE DATABASE_URL_FILE DATABASE_URL REDIS_URL REDIS_URL_FILE
+# The actual Redis pool standalone-mode test resolves the real config helper.
+# Keep its private SQLite files in an owned disposable home, not the operator home.
+fixture_home=$(mktemp -d)
+trap 'rm -rf "$fixture_home"' EXIT
+export USERPROFILE="$fixture_home"
 export JWT_SECRET=public-local-widget-regression-signing-key-only
 export OMNISOLO_STANDALONE_MODE=false OMNISOLO_DATABASE_URL=sqlite::memory:
 export CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
