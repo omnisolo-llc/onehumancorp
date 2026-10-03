@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Architecture: Native Rust Omnichannel Chat Engine"
+issue_description: "The issue requests building a native omnichannel chat architecture to replace an external third-party service. However, requests to build native replacements for external services require explicit authorization, evidence, and an expansion gate in RESEARCH.md, which are not present. Therefore, this issue is blocked."
