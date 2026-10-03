@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "[Architecture] Universal Multi-Tenant Offline-First Mobile Tap-to-Pay and POS"
+issue_description: "The request to build a Flutter PWA/Native mobile POS client violates the repository constraints. As per the established guidelines and memory, creating additional frontends (e.g., Flutter) is explicitly forbidden; the maintained UI must remain Next.js/Tauri. Furthermore, expanding into POS engines requires explicit authorization, evidence, and an expansion gate in RESEARCH.md, which is currently absent. Superpowers workflow was utilized. Loaded skills: .agent-scratch/superpowers/skills/using-superpowers/SKILL.md. Upstream commit revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d."
