@@ -15,6 +15,8 @@ it('retains entered text in the existing local view without claiming a backend r
   render(<UnifiedAgentFeed initialData={{ items: [], activity: [] }} />); const input = screen.getByPlaceholderText('Message...');
   fireEvent.change(input, { target: { value: '  Review this local note  ' } });
   const send = screen.getByRole('button', { name: 'Send' }); expect(send).toBeEnabled(); fireEvent.click(send);
-  expect(screen.getByText('Review this local note')).toBeVisible(); expect(input).toHaveValue(''); expect(send).toBeDisabled();
+  expect(input).toHaveValue('  Review this local note  ');
+  expect(screen.getByRole('alert')).toHaveTextContent('Your draft has not been sent or saved');
+  expect(screen.queryByText('Understood.')).not.toBeInTheDocument();
   expect(fetcher.mock.calls.filter((call: unknown[]) => (call[1] as RequestInit | undefined)?.method === 'POST')).toHaveLength(0);
 });
