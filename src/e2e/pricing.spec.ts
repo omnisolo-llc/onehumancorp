@@ -56,7 +56,7 @@ test.describe('Pricing Page', () => {
         const response = await responsePromise;
         expect(response.status()).toBe(503);
         expect(response.request().postDataJSON()).toEqual({ tier, is_subscription: true, subscription_interval: 'month' });
-        await expect(page.getByRole('alert')).toHaveText('Checkout is unavailable. Your plan has not changed. Please try again.');
+        await expect(page.getByRole('alert').filter({ hasText: 'Checkout is unavailable.' })).toHaveText('Checkout is unavailable. Your plan has not changed. Please try again.');
         await expect(page).toHaveURL(/\/pricing$/);
         await expect(upgrade).toBeEnabled();
         await expectEntitlementUnchanged(page, fixture);

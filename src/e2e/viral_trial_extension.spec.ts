@@ -41,8 +41,12 @@ test.describe('Verified plan and trial availability', () => {
   for (const plan of ['Free', 'Pro', 'Business'] as const) {
     test(`direct repeated trial requests cannot overwrite a persisted ${plan} plan`, async ({ page, baseURL }) => {
       const fixture = await createEntitlementOwner(page, baseURL, plan);
+      if (!baseURL) throw new Error('A canonical browser origin is required for trial mutation requests.');
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const response = await page.request.post('/api/v1/growth/trial-extension/claim', { data: { share_verified: true } });
+        const response = await page.request.post('/api/v1/growth/trial-extension/claim', {
+          headers: { origin: new URL(baseURL).origin, 'sec-fetch-site': 'same-origin' },
+          data: { share_verified: true },
+        });
         expect(response.status()).toBe(501);
         expect(await response.json()).toMatchObject({ success: false, code: 'capability_unavailable', capability: 'trial_entitlement' });
         await expectEntitlementUnchanged(page, fixture);
