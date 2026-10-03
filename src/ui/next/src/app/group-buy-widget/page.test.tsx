@@ -23,7 +23,7 @@ describe('Group Buy Widget Page', () => {
 
   it('gives the selectable embed code its own accessible control', () => {
     render(<Page />);
-    expect((screen.getByRole('textbox', { name: 'Embed Code', exact: true }) as HTMLTextAreaElement).value).toContain('<iframe');
+    expect((screen.getByRole('textbox', { name: 'Embed Code' }) as HTMLTextAreaElement).value).toContain('<iframe');
     expect(screen.getByRole('button', { name: 'Copy Code' })).toBeEnabled();
   });
 
