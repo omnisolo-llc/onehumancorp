@@ -13,8 +13,6 @@ pub mod powersync;
 #[path = "api/setup.rs"]
 mod setup;
 
-use std::sync::RwLock;
-
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ChatRequest {

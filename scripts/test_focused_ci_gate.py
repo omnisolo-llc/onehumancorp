@@ -12,6 +12,25 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_operations_worker_gate_compiles_actual_spawn_and_cache_boundary(self):
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        minimum, database = gate.GATES['proactive-worker-contract']
+        self.assertGreaterEqual(minimum, 11)
+        self.assertEqual(database, 'OHC_OPS_PROBE_DB')
+        folder = root/'scripts/proactive-worker-contract'
+        runpy.run_path(str(folder/'prepare.py'))
+        generated = (folder/'generated.rs').read_text()
+        self.assertIn(str(root/'src/server/workers/proactive_operations_worker.rs'), generated)
+        self.assertIn('pub struct DB {', generated)
+        self.assertIn('pub struct HybridCacheInner<T>', generated)
+        self.assertIn('pub fn get_agent_feed_cache()', generated)
+        self.assertNotIn('struct Mock', generated)
+        self.assertIn('worker.start();', (folder/'test.rs').read_text())
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertIn('python3 scripts/focused_ci_gate.py proactive-worker-contract', workflow)
+        self.assertIn('bash scripts/proactive-worker-contract/fetch.sh', workflow)
+
     def test_builder_generation_requires_real_http_and_owned_storage(self):
         minimum, database = gate.GATES['builder-generation-contract']
         self.assertGreaterEqual(minimum, 50)

@@ -856,6 +856,18 @@ jobs:
       - name: Run PostgreSQL tenant-isolation suite
         run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"
 
+      - name: Fetch locked actual operations worker dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/proactive-worker-contract/fetch.sh
+
+      - name: Verify actual spawned operations worker and cache invalidation
+        if: ${{ !cancelled() }}
+        env:
+          OHC_OPS_PROBE_DB: postgres://postgres:postgres@localhost:5432/ohc_proactive_probe
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_proactive_probe
+          python3 scripts/focused_ci_gate.py proactive-worker-contract
+
       - name: Verify focused gate discovery and failure guards
         if: ${{ !cancelled() }}
         run: |

@@ -23,8 +23,11 @@ impl fmt::Display for TenantScanError {
 pub(crate) async fn bound_postgres_transaction(
     connection: &mut sqlx::PgConnection,
 ) -> Result<(), sqlx::Error> {
-    sqlx::raw_sql("SET LOCAL lock_timeout='1s'; SET LOCAL statement_timeout='4s'")
-        .execute(connection)
+    sqlx::query("SET LOCAL lock_timeout='1s'")
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("SET LOCAL statement_timeout='4s'")
+        .execute(&mut *connection)
         .await?;
     Ok(())
 }
