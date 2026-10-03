@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: Autonomous Staff Coordination & Escalation Engine
+issue_description: "Missing required evidence and authorization. According to RESEARCH.md revision 2026-09-18-usage-audit, new epics need an explicit evidence-backed decision, and expanding into HR, payroll, MRP, POS engines, or additional channels is explicitly deferred pending explicit expansion gates. The requested feature expands into these unauthorized domains without the required evidence. Loaded skills: .agent-scratch/superpowers/skills/using-superpowers/SKILL.md, .agent-scratch/superpowers/skills/brainstorming/SKILL.md from upstream commit 8ca22dba9a94f28898bbce59f2537ff4d87c747d."
