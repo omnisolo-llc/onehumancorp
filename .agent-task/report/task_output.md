@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Architect Native Rust Omnichannel Chat to Replace Chatwoot"
+issue_description: "The core domain and database schema for the Native Omnichannel Chat system in Rust are already implemented in `src/server/domain/chat` and `src/server/migrations/233_chat_omnichannel.sql`. I have verified the migrations correctly apply PostgreSQL Row Level Security (RLS) on all entities (`chat_inboxes`, `chat_channels`, `chat_contacts`, `chat_conversations`, `chat_messages`) for Zero Trust isolation using `tenant_id`. Additionally, `src/server/domain/chat/mod.rs` contains unit tests that successfully assert these data models."
