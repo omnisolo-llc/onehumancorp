@@ -6,7 +6,7 @@ test('Agent Protocol UI works end to end via UI', async ({ page, unlimitedAdminU
 
   await page.goto('/agent-protocol');
 
-  await expect(page.locator('h1')).toContainText('Agent Protocol UI');
+  await expect(page.getByRole('heading', { name: 'Agent Protocol UI', exact: true })).toBeVisible();
 
   await page.fill('input[placeholder="New Task Input..."]', 'Test Agent Protocol Task');
 
