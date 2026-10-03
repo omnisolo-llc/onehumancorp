@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T02:15:00Z",
+  "updated_at": "2026-10-03T02:23:00Z",
   "scope": "Every issue found remains tracked until repaired and verified. Containment is interim. Merge is not production-readiness certification.",
   "items": [
     {
@@ -12,9 +12,9 @@
     {
       "id": "legacy-agent-rpc",
       "owner": "durable-workflow",
-      "status": "contained",
+      "status": "partially_repaired",
       "required_outcome": "Implement supported Aider/Actor/Protocol/Goose/SONA/LangGraph operations with tenant authority and durable receipts",
-      "evidence_and_limit": "Missing runtime503 and upstream-auth502 are truthful; six browser401 causes addressed, positive operations remain open."
+      "evidence_and_limit": "Missing runtime503 and upstream-auth502 are truthful. Actor/expert now reject incomplete or contradictory completion envelopes; mutating protocol methods requirePOST before dispatch and synthesized private replies use no-store. Component fullNext3151 plus final server523 tests pass; canonical focused43/types pass. Genuine supported runtime operations remain open."
     },
     {
       "id": "durable-workflow",
@@ -166,9 +166,9 @@
     {
       "id": "local-test-hang",
       "owner": "integration",
-      "status": "repaired_pending_aggregate",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Diagnose concurrent root Node invite-test stall without weakening assertions",
-      "evidence_and_limit": "Full-dashboard JSDOM fixtures exposed real WebSocket transports despite stubbed fetch. The new offline helper denies network dispatch, subresources and default browser transports before scripts run; five boundary regressions and savings/trial/invitation61 cases pass with zero socket connects. All prior denied run outcomes remain unverified and inaccessible; no result was recovered through another route. Fresh aggregate on safeguarded source remains pending."
+      "evidence_and_limit": "Full-dashboard JSDOM fixtures exposed real WebSocket transports despite stubbed fetch. The offline helper denies network dispatch, subresources and default browser transports before scripts run; six boundary/dependency regressions and all 17 affected fixtures pass. Fresh safeguarded root suite833/833 passed, zero skipped/cancelled,78.51s. Normal npm-ci dry-run passes; actual hosted locked install still required because four installed pg packages predate their existing lock versions. Prior denied run outcomes remain unverified and inaccessible; no result was recovered through another route."
     },
     {
       "id": "operations-worker-spawn",
