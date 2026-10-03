@@ -192,7 +192,9 @@ pub async fn handle_autonomous_quote_action(
             stripe_payment_link = link;
         } else if let Err(e) = link_res {
             tracing::error!("Failed to generate Stripe payment link for deposit: {}", e); // pii-safe
-            stripe_payment_link = "unavailable".to_string();
+
+            /* Fallback explicitly left out to not overwrite if absent/failed */
+            stripe_payment_link = "".to_string();
         }
         drafted_message = format!(
             "{}

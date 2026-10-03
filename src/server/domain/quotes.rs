@@ -130,7 +130,9 @@ pub async fn handle_quote_action(
                 }
                 Err(err) => {
                     tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
-                    stripe_payment_link = "unavailable".to_string();
+
+                    /* Fallback explicitly left out */
+                    stripe_payment_link = "".to_string();
                 }
             }
         }

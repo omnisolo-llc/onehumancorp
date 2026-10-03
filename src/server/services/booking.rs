@@ -1754,11 +1754,7 @@ impl BookingEngineService for NativeBookingService {
             customer_id: req.customer_id,
             amount_cents: req.amount_cents,
             inventory_lock_id,
-            checkout_url: if checkout_url.is_empty() {
-                "unavailable".to_string()
-            } else {
-                checkout_url
-            },
+            checkout_url,
             status: "pending".to_string(),
             expires_at_unix: expires_at.timestamp(),
         }))
@@ -2193,9 +2189,9 @@ mod native_booking_tests {
         assert_eq!(session.customer_id, "c1");
         assert_eq!(session.amount_cents, 1000);
         if std::env::var("STRIPE_SECRET_KEY").is_ok() {
-            assert!(!session.checkout_url.is_empty() && session.checkout_url != "unavailable");
+            assert!(!session.checkout_url.is_empty());
         } else {
-            assert_eq!(session.checkout_url, "unavailable");
+            assert!(session.checkout_url.is_empty());
         }
         assert_eq!(session.status, "pending");
     }
