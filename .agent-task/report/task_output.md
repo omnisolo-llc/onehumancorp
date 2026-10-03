@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Implement Native Rust Omnichannel Inbox & Unified Chat Architecture"
+issue_description: "The issue requests building a native replacement for an external service (Chatwoot) for omnichannel messaging. However, RESEARCH.md explicitly states to integrate existing tools instead of rebuilding them. Furthermore, requests to build native replacements for external services, new verticals, channels, or agent marketplaces require explicit authorization, evidence, and an expansion gate in RESEARCH.md. Since there is no expansion gate or explicit authorization in RESEARCH.md for this omnichannel chat and inbox replacement, this is a blocked no_work finding."
