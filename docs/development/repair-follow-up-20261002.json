@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T02:23:00Z",
+  "updated_at": "2026-10-03T03:17:00Z",
   "scope": "Every issue found remains tracked until repaired and verified. Containment is interim. Merge is not production-readiness certification.",
   "items": [
     {
@@ -7,7 +7,7 @@
       "owner": "integration",
       "status": "failed_pending_repair_verification",
       "required_outcome": "Full locked make lint/test and actual browser acceptance on merged checkpoint",
-      "evidence_and_limit": "Exact c8fea4c CI37084808098: 1726 browser passed,36failed,6 configured acceptance skipped;25.95min total. Backend/images/Node/Next/Tauri/PG/Docker/Kind green. Actual Rust cases pass; full lib-test Clippy fails harness-only lifecycle helper usage. Next candidate includes real root lifecycle tests and scoped browser fixture corrections; full acceptance remains open."
+      "evidence_and_limit": "Exact2d835ca CI37089725232 ended naturally:1740 browser passed,28 failed,6 configured acceptance skipped. Rust/Node/Next/backend/Tauri/images/Docker/Kind/audit passed. PostgreSQL failed compiling one registration ActiveModel fixture; reviewed87366c9 fixes both nullable owner fields and actual52 cases/Clippy passed. Other executed component gates passed at combined104workflow/59PG/56builder, staff8 andpublication81. Next candidate remains unverified by full hosted acceptance."
     },
     {
       "id": "legacy-agent-rpc",
@@ -208,9 +208,9 @@
     {
       "id": "postgres-registration-namespace",
       "owner": "entitlement",
-      "status": "in_progress",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Actual PostgreSQL ticket/OIDC registration atomically creates its fresh Free tenant namespace, account, roles and source binding while preserving paid invitations and collision rollback",
-      "evidence_and_limit": "be5d0dc source-owner binding is integrated with18actualSQLiteauth/3migration/Clippy proof. Separate actual canonical PG RED confirms users_tenant_id_fkey rejects the server-generated tenant because no tenant row exists; fix and full PG proof remain open."
+      "evidence_and_limit": "Reviewedf5d8a84 fixes actual canonical FK failure by creating the fresh Free namespace atomically for ticket/OIDC registration; complete backend schemas preserve bootstrap order and paid invitations. Auth18, realPG/portable/schema13 and actualdefinition55 plusstrictClippy passed on component source; full combined hosted pending. MySQL has definition parity only, not live runtime acceptance."
     },
     {
       "id": "worst-case-cached-tariff",
@@ -222,9 +222,30 @@
     {
       "id": "legacy-dashboard-feed-clobber",
       "owner": "entitlement",
-      "status": "open",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Only the actual feed endpoint may replace recorded agent feed state; unrelated referral/metric reads cannot erase it",
-      "evidence_and_limit": "Mounted legacy dashboard checkReferralTier and fetchViralLoopMetrics assign agentFeedItems from unrelated missing pending_approvals/agent_feed fields; functions are called at startup. Owner investigating all mirrors; no repair verification yet."
+      "evidence_and_limit": "Reviewed7ab3aff removes13 unrelated feed assignments per mirror, repairs renderer locals and preserves the real feed refresh. Fifteen actualDOM regressions, safeguarded860root tests and103focused pass on component source; final combined browser pending."
+    },
+    {
+      "id": "builder-paid-request-recovery",
+      "owner": "durable-workflow",
+      "status": "open",
+      "required_outcome": "Durable idempotent builder admission and request readback before a paid generation retry",
+      "evidence_and_limit": "Funding is enforced, but GenerationContext::draft directly admits/runs without a recoverable client request receipt. Lost generation/save ACK can lead a manual retry to another paid request. No automatic retry was added; canonical write fencing is a separate prerequisite."
+    },
+    {
+      "id": "field-routing-authority",
+      "owner": "field-routing",
+      "status": "in_progress",
+      "required_outcome": "Signed current authority, real recorded appointment/route writes and truthful bounded planning across Next and legacy clients",
+      "evidence_and_limit": "Mounted handlers trust body/header tenant or fall back to e2e/default tenants, invent staff/travel outcomes and ignore writes; online client status is local-only. Dedicated owner is repairing all four server/Next surfaces plus legacy IndexedDB callers; no default tenant may be created to satisfy FKs."
+    },
+    {
+      "id": "agent-feed-invalidation-race",
+      "owner": "integration",
+      "status": "investigation_open",
+      "required_outcome": "Determine why a freshly stored owned Ambassador item was absent in one hosted feed snapshot and verify stable read-after-mutation behavior",
+      "evidence_and_limit": "c8 screenshot omitted the newly seeded Ambassador item while showing the same-test earlier operations item;2d passed unchanged. Shared cache permits a fetch to finish after invalidation, but exact causality is not yet reproduced. Do not call an unchanged subsequent pass a verified repair."
     }
   ],
   "required_configured_acceptance": [
@@ -299,6 +320,18 @@
       "kind": "runtime",
       "prerequisites": "Implemented and approved tenant-bound repository runtime with bounded workspace authority and isolated exact-source test stack",
       "evidence": "No positive configured acceptance has been run; passing unconfigured503 or unit fixtures cannot close this gate."
+    },
+    {
+      "id": "recorded-text-analysis-provider",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/e2e/recorded_text_analysis.spec.ts",
+      "test_title": "explicit text analysis returns actual durable provider output after reload @text-analysis-acceptance",
+      "kind": "provider",
+      "prerequisites": "Authorized real configured text provider and genuine funded tenant usage policy with explicit spending approval in the isolated exact-source stack; no live paid-call approval currently granted",
+      "evidence": "The new panel reuses durable admission/readback, but this positive configured browser/provider journey remains unexecuted. Unit and protocol tests do not close it."
     }
   ],
   "completion_rule": "Ordinary CI success is not all-tests or release-readiness success while any required configured acceptance is skipped/unexecuted or any recorded capability issue remains open."
