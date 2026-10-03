@@ -1,3 +1,3 @@
-outcome: no_work
-issue_title: Implement Custom Rust Omnichannel Chat System to Replace Chatwoot
-issue_description: The functionality requested in issue #35648 is already fully implemented. The basic models (UnifiedThread, UnifiedMessage, UnifiedTriageAction) and their schemas exist in src/server/services/inbox/service.rs with tenant_id RLS applied via unified_threads and unified_messages migrations. Basic CRUD operations are covered, and a WebSocket handler stub is already in src/server/api/unified_ws.rs that accepts connections and broadcasts mock messages.
+outcome: blocked
+issue_title: Implement Native Rust Omnichannel Chat (Chatwoot Replacement)
+issue_description: The issue is blocked because "Native Rust Omnichannel Chat System" is a new feature (expanding the scope to replace an external tool with a native build) and requires an explicit authorization, evidence, and expansion gate in RESEARCH.md. According to RESEARCH.md, "Requests to build native replacements for external services require explicit authorization, evidence, and an expansion gate in RESEARCH.md; otherwise, return a no_work finding." There is no such authorization in RESEARCH.md.
