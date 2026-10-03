@@ -1,6 +1,7 @@
 "use client";
 
 
+import { currentVerifiedQueueOwner, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, QUEUE_IDENTITY_EPOCH_KEY, type QueueOwner } from '@/lib/sync/queueIdentity';
 import { subscribeOnboardingInvalidation } from '../onboarding/draftSession';
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -36,14 +37,53 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   const [activities, setActivities] = useState<ActivityItem[]>(initialData?.activity || []);
   const [chatInput, setChatInput] = useState("");
   const [chatNotice, setChatNotice] = useState('');
+  const [chatReady, setChatReady] = useState(true);
+  const chatScope = useRef<{ owner: QueueOwner | null; storageEpoch: string | null } | null>(null);
 
-  useEffect(() => subscribeOnboardingInvalidation(() => {
-    setChatInput(''); setChatNotice('');
-  }), []);
+  const retireChat = () => {
+    chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(true);
+  };
+  useEffect(() => {
+    const retire = () => {
+      chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(true);
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(retire);
+    const unsubscribeReadiness = subscribeQueueIdentityReadiness(() => {
+      const binding = chatScope.current;
+      if (!binding) return;
+      try { if (binding.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)) { retire(); return; } }
+      catch { retire(); return; }
+      const current = currentVerifiedQueueOwner();
+      if (!current) { setChatReady(false); return; }
+      // Text entered before identity was established is never assigned to the
+      // first verified login. Only a previously bound same owner can recover it.
+      if (!binding.owner || !sameOwner(binding.owner, current)) retire();
+      else setChatReady(true);
+    });
+    return () => { unsubscribe(); unsubscribeReadiness(); };
+  }, []);
 
+  const editChat = (value: string) => {
+    const current = currentVerifiedQueueOwner();
+    const previous = chatScope.current;
+    if (previous?.owner && (!current || !sameOwner(previous.owner, current))) { retireChat(); return; }
+    try {
+      const storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
+      if (previous && previous.storageEpoch !== storageEpoch) { retireChat(); return; }
+      chatScope.current = { owner: current, storageEpoch };
+      setChatInput(value); setChatNotice(''); setChatReady(true);
+    } catch { retireChat(); }
+  };
   const handleSendChatMessage = (event: React.FormEvent) => {
     event.preventDefault();
     if (!chatInput.trim()) return;
+    const binding = chatScope.current;
+    try {
+      if (!binding || !chatReady || binding.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)
+        || (binding.owner ? !hasVerifiedOfflineQueueOwner(binding.owner) : currentVerifiedQueueOwner() !== null)) {
+        retireChat(); return;
+      }
+    } catch { retireChat(); return; }
     setChatNotice('Memory chat is unavailable. Your draft has not been sent or saved.');
   };
 
@@ -562,17 +602,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-800">
         <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">Memory chat is not configured.</p>
         {chatNotice && <p role="alert" className="mb-2 text-sm text-gray-600 dark:text-gray-300">{chatNotice}</p>}
+        {!chatReady && <div><p>Verify your current session to view this unsent draft.</p><button type="button" onClick={() => { void readQueueOwner().catch(() => { setChatReady(false); }); }}>Reverify draft access</button></div>}
         <form onSubmit={handleSendChatMessage} className="flex gap-2">
           <input
             type="text"
             placeholder="Message..."
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
+            value={chatReady ? chatInput : ''}
+            disabled={!chatReady}
+            onChange={(e) => editChat(e.target.value)}
             className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
-            disabled={!chatInput.trim()}
+            disabled={!chatReady || !chatInput.trim()}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
           >
             Send
