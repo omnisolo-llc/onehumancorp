@@ -12,6 +12,84 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_approval_runner_isolates_config_and_cleans_only_its_home_on_failure(self):
+        import os
+        import shutil
+        import subprocess
+        import sys
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            sandbox = Path(directory)
+            probe = sandbox/'scripts/approvals-read-contract'
+            probe.mkdir(parents=True)
+            shutil.copyfile(root/'scripts/approvals-read-contract/run.sh', probe/'run.sh')
+            (sandbox/'Cargo.lock').write_text('fixture lock')
+            (probe/'verify_lock.py').write_text('')
+            (probe/'prepare.py').write_text("from pathlib import Path\nPath(__file__).with_name('source-manifest.json').write_text('{}')\n")
+            binaries = sandbox/'bin'
+            binaries.mkdir()
+            capture = sandbox/'environment.json'
+            cargo = binaries/'cargo'
+            cargo.write_text(f'#!{sys.executable}\n' + '''import json, os, pathlib, sys
+if sys.argv[1] == 'test':
+    names = ['USERPROFILE', 'JWT_SECRET', 'JWT_SECRET_FILE', 'OMNISOLO_JWT_SECRET_FILE',
+             'OMNISOLO_STANDALONE_MODE', 'OMNISOLO_DATABASE_URL', 'OMNISOLO_DATABASE_URL_FILE',
+             'DATABASE_URL_FILE', 'DATABASE_URL', 'REDIS_URL', 'REDIS_URL_FILE',
+             'OMNISOLO_REDIS_URL', 'OMNISOLO_REDIS_URL_FILE']
+    pathlib.Path(os.environ['APPROVAL_ENV_CAPTURE']).write_text(json.dumps({name: os.environ[name] for name in names if name in os.environ}))
+    sys.exit(42)
+''')
+            cargo.chmod(0o755)
+            operator_home = sandbox/'operator-home'
+            operator_home.mkdir()
+            sentinel = operator_home/'keep'
+            sentinel.write_text('operator state')
+            scrubbed = ['JWT_SECRET_FILE', 'OMNISOLO_DATABASE_URL_FILE', 'DATABASE_URL_FILE',
+                        'DATABASE_URL', 'REDIS_URL', 'REDIS_URL_FILE', 'OMNISOLO_REDIS_URL',
+                        'OMNISOLO_REDIS_URL_FILE', 'OMNISOLO_JWT_SECRET_FILE']
+            env = dict(os.environ, PATH=str(binaries)+os.pathsep+os.environ['PATH'],
+                       USERPROFILE=str(operator_home), APPROVAL_ENV_CAPTURE=str(capture),
+                       OHC_APPROVAL_TEST_DATABASE_URL='postgres://fixture@127.0.0.1/ohc_approval_test',
+                       JWT_SECRET='ambient-canary', OMNISOLO_STANDALONE_MODE='true',
+                       OMNISOLO_DATABASE_URL='postgres://ambient.invalid/operator')
+            env.update({name: 'ambient-canary' for name in scrubbed})
+            result = subprocess.run(['bash', str(probe/'run.sh')], env=env,
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 42, result.stderr)
+            observed = json.loads(capture.read_text())
+            self.assertEqual(observed['OMNISOLO_DATABASE_URL'], 'sqlite::memory:')
+            self.assertEqual(observed['OMNISOLO_STANDALONE_MODE'], 'false')
+            self.assertEqual(observed['JWT_SECRET'], 'public-local-approval-regression-signing-key-only')
+            self.assertTrue(all(name not in observed for name in scrubbed))
+            self.assertNotEqual(observed['USERPROFILE'], str(operator_home))
+            self.assertFalse(Path(observed['USERPROFILE']).exists())
+            self.assertEqual(sentinel.read_text(), 'operator state')
+
+    def test_full_approval_decisions_are_required_in_native_tests(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['native-test']['steps']
+        native = next(step for step in steps if step.get('run') == 'make test-backend')
+        self.assertIn('/ohc_approval_test', native['env']['OHC_APPROVAL_TEST_DATABASE_URL'])
+        provision = next(step for step in steps if 'createdb' in step.get('run', '') and 'ohc_approval_test' in step.get('run', ''))
+        self.assertLess(steps.index(provision), steps.index(native))
+        self.assertIn('!cancelled()', provision['if'])
+        tests = (root/'src/server/api/agents/approvals_readback_test.rs').read_text()
+        self.assertNotIn('ignore =', tests)
+        wrapper = (root/'scripts/approvals-read-contract/with-owned-postgres.sh').read_text()
+        self.assertIn('api::agents::approvals::readback_tests', wrapper)
+        self.assertNotIn('--ignored', wrapper)
+
+    def test_approval_reads_require_real_pg_and_complete_read_inventory(self):
+        minimum, database = gate.GATES['approvals-read-contract']
+        self.assertGreaterEqual(minimum, 12)
+        self.assertEqual(database, 'OHC_APPROVAL_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        runner = (root/'scripts/approvals-read-contract/run.sh').read_text()
+        self.assertIn('--locked --offline', runner)
+        self.assertNotIn(' read_contract --', runner)
+        self.assertIn('python3 scripts/focused_ci_gate.py approvals-read-contract', (root/'.github/workflows/ci.yml').read_text())
+
     def test_field_boundaries_require_complete_actual_handler_and_owned_database_gate(self):
         root = Path(__file__).resolve().parents[1]
         self.assertIn('field-boundary-contract', gate.GATES)

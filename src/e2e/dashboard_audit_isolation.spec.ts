@@ -66,8 +66,25 @@ for (const route of ['/unified-feed', '/dashboard/unified-feed', '/feed', '/acti
       const response = await mutation;
       expect(response.status()).toBe(200);
       await response.finished();
+      const approvalId = route === '/action-center'
+        ? decodeURIComponent(new URL(response.url()).pathname.split('/').at(-1)!) : undefined;
+      if (approvalId) {
+        expect(await response.json()).toEqual({ success: true });
+        expect(await e2eDbQuery('SELECT lifecycle_state FROM agent_feed_items WHERE id=$1 AND tenant_id=$2', [approvalId, first.actor.tenantId]))
+          .toEqual([{ lifecycle_state: 'REJECTED' }]);
+      }
+      const reloadedApprovals = approvalId ? first.page.waitForResponse(result =>
+        new URL(result.url()).origin === new URL(baseURL).origin
+        && new URL(result.url()).pathname === '/api/v1/agents/approvals'
+        && result.request().method() === 'GET') : undefined;
       // Verify the mutation survived a real reload before comparing inventories.
       await first.navigate(route);
+      if (reloadedApprovals) {
+        const reloaded = await reloadedApprovals;
+        expect(reloaded.status()).toBe(200);
+        const body = await reloaded.json();
+        expect(body.pending_approvals.map((approval: { id: string }) => approval.id)).not.toContain(approvalId);
+      }
       await expect.poll(async () => (await discover()).length).toBeLessThan(baseline.length);
       const changed = (await discover()).map(target => target.key);
       expect(() => assertSameClickInventory(baseline, changed)).toThrow('missing=');

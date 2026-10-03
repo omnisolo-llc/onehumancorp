@@ -249,11 +249,17 @@ jobs:
         env:
           PGPASSWORD: ignored_fixture
         run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_checkpoint_test
+      - name: Create the isolated database required by approval decision tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+        run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_approval_test
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         env:
           OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_chat_service_test
           OHC_CHECKPOINT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_checkpoint_test
+          OHC_APPROVAL_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_approval_test
         run: make test-backend
 
       - name: Verify task-scoped checkpoint restore safety
@@ -905,6 +911,14 @@ jobs:
           python3 -m unittest scripts/test_focused_ci_gate.py
       # These source-bound gates use only disposable databases and loopback
       # provider fixtures. Each runs even if an independent earlier check fails.
+      - name: Verify approval read-after-write consistency
+        if: ${{ !cancelled() }}
+        env:
+          OHC_APPROVAL_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_approval_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_approval_test
+          python3 scripts/focused_ci_gate.py approvals-read-contract
       - name: Verify durable onboarding and session recovery
         if: ${{ !cancelled() }}
         env:
