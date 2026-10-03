@@ -25,140 +25,85 @@ impl AgentActionWorker {
     pub async fn process_job(
         &self,
         job: crate::orchestration::queue::omnisolo_job_queue::OmniSoloJob,
-        queue: &OmniSoloJobQueue,
-        redis_lock: &RedisLock,
+        _queue: &OmniSoloJobQueue,
+        _redis_lock: &RedisLock,
     ) {
-        let parsed: Result<Value, _> = serde_json::from_str(&job.payload);
-        if let Ok(payload) = parsed {
-            let tenant_id = &job.tenant_id;
-            let action_id = payload
-                .get("action_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or(&job.id);
+        self.process_durable_job(job).await;
+    }
 
-            // Acquire lock
-            match redis_lock
-                .acquire_lock(tenant_id, "agent_feed", action_id, 300)
-                .await
-            {
-                Ok(Some(lock_val)) => {
-                    // Process action with timeout
-                    let is_incident = payload
-                        .get("is_incident")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
-                    let dispatch_payload = payload.get("payload");
-                    let feature_type = payload.get("feature_type").and_then(|v| v.as_str());
-
-                    let success;
-                    let mut malformed = false;
-
-                    let process_future = async {
-                        let mut task_success = true;
-                        if is_incident {
-                            if let Some(payload_val) = dispatch_payload
-                                && let Err(e) =
-                                    crate::domain::incidents::handle_incident_resolution(
-                                        tenant_id,
-                                        &sqlx::types::Json(payload_val.clone()),
-                                        &self.pool,
-                                    )
-                                    .await
-                            {
-                                tracing::error!("Incident resolution failed: {}", e);
-                                task_success = false;
-                            }
-                        } else if let Some(ft) = feature_type {
-                            if let Some(payload_val) = dispatch_payload
-                                && let Err(e) = crate::domain::action_router::dispatch_action(
-                                    ft,
-                                    tenant_id,
-                                    &sqlx::types::Json(payload_val.clone()),
-                                    &self.pool,
-                                )
-                                .await
-                            {
-                                tracing::error!("Action dispatch failed: {}", e);
-                                task_success = false;
-                            }
-                        } else {
-                            // Invalid malformed payload: missing feature_type or is_incident flag
-                            task_success = false;
-                        }
-                        task_success
-                    };
-
-                    match tokio::time::timeout(Duration::from_secs(60), process_future).await {
-                        Ok(task_success) => {
-                            if !task_success && !is_incident && feature_type.is_none() {
-                                success = false;
-                                malformed = true;
-                            } else {
-                                success = task_success;
-                            }
-                        }
-                        Err(_) => {
-                            tracing::error!(
-                                "Agent execution exceeded 60-second ML-Resilience timeout rule for job {}",
-                                job.id
-                            );
-                            success = false;
-                        }
-                    }
-
-                    if success {
-                        let _ = queue.complete(&job.id).await;
-                    } else if malformed {
-                        let _ = queue.fail(&job.id, 3, "Invalid malformed payload: missing feature_type or is_incident flag").await;
-                    } else {
-                        let reason = if success {
-                            ""
-                        } else {
-                            "Agent execution exceeded 60-second ML-Resilience timeout rule."
-                        };
-                        let fail_reason = if reason.is_empty() {
-                            "Action execution failed"
-                        } else {
-                            reason
-                        };
-                        let _ = queue.fail(&job.id, 3, fail_reason).await;
-                    }
-
-                    let _ = redis_lock
-                        .release_lock(tenant_id, "agent_feed", action_id, &lock_val)
-                        .await;
+    async fn process_durable_job(
+        &self,
+        job: crate::orchestration::queue::omnisolo_job_queue::OmniSoloJob,
+    ) {
+        use super::agent_feed_dispatch as dispatch;
+        let attempt = match dispatch::claim(&self.pool, &job).await {
+            Ok(Some(attempt)) => attempt,
+            Ok(None) => return,
+            Err(error) => {
+                tracing::warn!(%error, job_id=%job.id, "Feed dispatch admission unconfirmed");
+                if let Err(error) = dispatch::defer_or_hold(&self.pool, &job).await {
+                    tracing::error!(%error, "Feed pre-attempt retry persistence unavailable");
                 }
-                Ok(None) => {
-                    // Lock not acquired (already running?)
-                    tracing::warn!("Could not acquire lock for action {}", action_id);
-                    let _ = queue.fail(&job.id, 3, "Lock contention").await;
-                }
-                Err(e) => {
-                    tracing::error!("Redis lock error: {}", e);
-                    let _ = queue.fail(&job.id, 3, &e).await;
-                }
+                return;
             }
-        } else {
-            tracing::error!("Invalid payload in agent_feed_action job");
-            let _ = queue.complete(&job.id).await; // complete to discard invalid
+        };
+        let process = async {
+            let payload = attempt
+                .payload
+                .get("payload")
+                .ok_or_else(|| "Missing dispatch payload".to_string())?;
+            if attempt.payload.get("is_incident").and_then(Value::as_bool) == Some(true) {
+                crate::domain::incidents::handle_incident_resolution(
+                    &attempt.tenant_id,
+                    payload,
+                    &self.pool,
+                )
+                .await
+                .map_err(|error| error.to_string())
+            } else {
+                let feature = attempt
+                    .payload
+                    .get("feature_type")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| "Missing dispatch feature".to_string())?;
+                crate::domain::action_router::dispatch_action(
+                    feature,
+                    &attempt.tenant_id,
+                    payload,
+                    &self.pool,
+                )
+                .await
+            }
+        };
+        let returned = match tokio::time::timeout(Duration::from_secs(60), process).await {
+            Ok(Ok(())) => true,
+            Ok(Err(error)) => {
+                tracing::warn!(%error,job_id=%job.id,"Attempted feed dispatch requires reconciliation");
+                false
+            }
+            Err(_) => {
+                tracing::warn!(job_id=%job.id,"Timed-out feed dispatch requires reconciliation");
+                false
+            }
+        };
+        if let Err(error) = dispatch::finish(&self.pool, &attempt, returned).await {
+            tracing::error!(%error,job_id=%job.id,"Feed dispatch return acknowledgement unconfirmed");
+            if let Err(error) = dispatch::defer_or_hold(&self.pool, &job).await {
+                tracing::error!(%error,"Feed reconciliation persistence unavailable; durable attempt remains held");
+            }
         }
     }
 
     async fn run(&self) {
         let pool_arc = Arc::new(self.pool.clone());
         let queue = OmniSoloJobQueue::new(pool_arc.clone());
-        let redis_lock = match RedisLock::new(&self.redis_url) {
-            Ok(l) => l,
-            Err(e) => {
-                tracing::error!("Failed to connect to Redis for agent action worker: {}", e);
-                return;
-            }
-        };
-
         loop {
+            if let Err(error) = super::agent_feed_dispatch::recover_abandoned(&self.pool).await {
+                tracing::warn!(%error,"Feed dispatch restart reconciliation unavailable");
+            }
             match queue.dequeue(vec!["agent_feed_action"]).await {
                 Ok(Some(job)) => {
-                    self.process_job(job, &queue, &redis_lock).await;
+                    self.process_durable_job(job).await;
                 }
                 Ok(None) => {
                     sleep(Duration::from_secs(2)).await;

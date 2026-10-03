@@ -20,6 +20,7 @@ pub mod subscription_replenishment_worker;
 pub mod subscription_retention_job;
 
 pub mod agent_action_worker;
+pub mod agent_feed_dispatch;
 pub mod booking_reengagement_job;
 #[cfg(test)]
 mod invoice_followup_worker_test;

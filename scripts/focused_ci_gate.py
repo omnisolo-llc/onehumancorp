@@ -11,6 +11,7 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
+    'agent-feed-decision-contract': (41, 'OHC_FEED_TEST_DATABASE_URL'),
     'memory-jsonb-contract': (27, 'OHC_MEMORY_TEST_DATABASE_URL'),
     'approvals-read-contract': (12, 'OHC_APPROVAL_TEST_DATABASE_URL'),
     'shipping-integrity-contract': (83, 'OHC_SHIPPING_TEST_DATABASE_URL'),
