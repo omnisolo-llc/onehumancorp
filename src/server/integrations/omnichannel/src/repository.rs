@@ -22,6 +22,10 @@ pub trait ChatRepository: Send + Sync {
         &self,
         conversation: conversation::Model,
     ) -> Result<conversation::Model, String>;
+    async fn update_conversation(
+        &self,
+        conversation: conversation::Model,
+    ) -> Result<conversation::Model, String>;
 
     async fn create_message(&self, message: message::Model) -> Result<message::Model, String>;
 }
@@ -77,6 +81,17 @@ impl ChatRepository for InMemoryChatRepository {
     ) -> Result<conversation::Model, String> {
         let mut conversations = self.conversations.lock().await;
         conversations.push(conversation.clone());
+        Ok(conversation)
+    }
+
+    async fn update_conversation(
+        &self,
+        conversation: conversation::Model,
+    ) -> Result<conversation::Model, String> {
+        let mut conversations = self.conversations.lock().await;
+        if let Some(existing) = conversations.iter_mut().find(|c| c.id == conversation.id) {
+            *existing = conversation.clone();
+        }
         Ok(conversation)
     }
 
