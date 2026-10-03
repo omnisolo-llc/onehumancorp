@@ -330,7 +330,10 @@ test.describe('comprehensive UI contract', () => {
     });
 
     for (const route of appRoutes) {
-      const response = await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
+      const navigation = await gotoReady(page, route);
+      // Check the verified final document with the same authenticated context.
+      // The share-card's initial shell is not the document being audited.
+      const response = await page.request.get(navigation.finalUrl, { failOnStatusCode: false });
       const status = response?.status() ?? 0;
       if (status >= 400) {
         failures.push(`${routeLabel(route)}: HTTP ${status}`);
@@ -352,7 +355,7 @@ test.describe('comprehensive UI contract', () => {
     expect(failures).toEqual([]);
   });
 
-  test('visible internal links resolve to real pages', async ({ page, request }) => {
+  test('visible internal links resolve to real pages', async ({ page }) => {
     test.setTimeout(180000);
     const failures: string[] = [];
     const checked = new Set<string>();
@@ -361,7 +364,7 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
+      await gotoReady(page, route);
       const hrefs = await page.locator('a[href]').evaluateAll((anchors) =>
         anchors
           .filter((anchor) => {
@@ -383,7 +386,7 @@ test.describe('comprehensive UI contract', () => {
         if (checked.has(href)) continue;
         checked.add(href);
 
-        const response = await request.get(href, { failOnStatusCode: false });
+        const response = await page.request.get(href, { failOnStatusCode: false });
         if (response.status() >= 400) {
           failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
         }
@@ -401,7 +404,7 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
+      await gotoReady(page, route);
       const hrefs = await page.locator('a[href]').evaluateAll((anchors) =>
         anchors
           .filter((anchor) => {
@@ -480,7 +483,7 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
+      await gotoReady(page, route);
       const results = await page.locator(interactiveSelector).evaluateAll((elements) =>
         elements.filter((element) => {
           const style = window.getComputedStyle(element);
@@ -554,7 +557,7 @@ test.describe('comprehensive UI contract', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       for (const route of appRoutes) {
-        await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
+        await gotoReady(page, route);
         auditedLayouts += 1;
         const layout = await page.evaluate((selector) => {
           const documentElement = document.documentElement;

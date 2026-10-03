@@ -352,7 +352,8 @@ test('does not trigger delayed autosave DOM or network effects before an inert s
 });
 
 test('waits for a real busy shell replacement before discovering its control', async ({ page }) => {
-  const server = createServer((_request, response) => {
+  const server = createServer((request, response) => {
+    if (request.url !== '/fixture-busy') { response.writeHead(404).end(); return; }
     response.writeHead(200, { 'content-type': 'text/html' });
     response.end(`<div aria-busy="true"><button>Loading control</button></div><script>setTimeout(()=>{document.querySelector('div').outerHTML='<button onclick="this.textContent=String(Number(this.textContent)+1)">0</button>'},400)</script>`);
   });
@@ -361,7 +362,7 @@ test('waits for a real busy shell replacement before discovering its control', a
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('Missing fixture address');
     const navigate = createAuditNavigation(`http://127.0.0.1:${address.port}`, async () => undefined);
-    await navigate(page, '/');
+    await navigate(page, '/fixture-busy');
     await expect(page.getByRole('button', { name: 'Loading control' })).toHaveCount(0);
     const effect = await observeClickEffects(page, (await page.getByRole('button', { name: '0', exact: true }).elementHandle())!);
     expect(hasMeaningfulClickEffect(effect)).toBe(true);
