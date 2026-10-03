@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { invalidateQueueOwner } from '@/lib/sync/queueIdentity';
+import { invalidateQueueOwner, readQueueOwner } from '@/lib/sync/queueIdentity';
 import { SuccessMilestoneWidget } from './SuccessMilestoneWidget';
 
 const owner = { userId: 'dashboard-owner', tenantId: 'dashboard-tenant' };
@@ -44,4 +44,39 @@ it('keeps both actual social intent links bound to reviewed aggregate text and t
   expect(twitter.origin + twitter.pathname).toBe('https://twitter.com/intent/tweet'); expect(whatsapp.origin).toBe('https://wa.me');
   expect(twitter.searchParams.get('text')).toBe(`We've recorded 101 orders in OmniSolo. ${link}`);
   expect(whatsapp.searchParams.get('text')).toBe(twitter.searchParams.get('text'));
+});
+
+it('keeps the public invitation control stable while same-owner identity is reverified', async () => {
+  await ready();
+  const button = screen.getByRole('button', { name: 'Create milestone invitation' });
+  await waitFor(() => expect(button).toBeEnabled());
+  let resolveIdentity!: (response: Response) => void;
+  vi.mocked(fetch).mockImplementationOnce(() => new Promise<Response>(resolve => { resolveIdentity = resolve; }));
+  let verification!: ReturnType<typeof readQueueOwner>;
+  act(() => { verification = readQueueOwner(); });
+  expect(button).toBeInTheDocument();
+  expect(button).not.toBeVisible();
+  expect(button).toBeDisabled();
+  expect(screen.queryByText('101 recorded orders')).not.toBeInTheDocument();
+  await act(async () => {
+    resolveIdentity(Response.json({ ...owner, expiresAt: Date.now() + 60000 }));
+    await verification;
+  });
+  expect(screen.getByRole('button', { name: 'Create milestone invitation' })).toBe(button);
+  expect(button).toBeVisible();
+  expect(button).toBeEnabled();
+});
+it('keeps previous-owner data and the stable invitation action unavailable after a different owner verifies', async () => {
+  await ready();
+  const button = screen.getByRole('button', { name: 'Create milestone invitation' });
+  await waitFor(() => expect(button).toBeEnabled());
+  vi.mocked(fetch).mockImplementationOnce(async () => Response.json({ userId: 'other-owner', tenantId: 'other-tenant', expiresAt: Date.now() + 60000 }));
+  await act(async () => { await readQueueOwner(); });
+  expect(button).toBeInTheDocument();
+  expect(button).not.toBeVisible();
+  expect(button).toBeDisabled();
+  expect(screen.queryByText('101 recorded orders')).not.toBeInTheDocument();
+  const writesBefore = vi.mocked(fetch).mock.calls.filter(([url]) => url === '/api/v1/growth/cloud-bridge/invite').length;
+  fireEvent.click(button);
+  expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === '/api/v1/growth/cloud-bridge/invite')).toHaveLength(writesBefore);
 });

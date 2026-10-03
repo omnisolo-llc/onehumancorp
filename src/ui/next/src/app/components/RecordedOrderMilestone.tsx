@@ -61,6 +61,7 @@ export function RecordedOrderMilestone({ invitation, showInvitationAction = fals
     return () => { active = false; request.abort(); unsubscribe(); };
   }, [userId, tenantId, refresh]);
   const visible = data && data.user_id === userId && data.tenant_id === tenantId && identityReady ? data : null;
+  const invitationVisible = !!visible && visible.highest_threshold !== null && invitation.phase !== 'created';
   const confirmedLink = visible && invitation.phase === 'created' ? invitation.link : '';
   const shareText = visible?.highest_threshold && confirmedLink ? `We've recorded ${visible.recorded_orders} orders in OmniSolo. ${confirmedLink}` : '';
   const copy = useClipboardFeedback(shareText);
@@ -83,9 +84,9 @@ export function RecordedOrderMilestone({ invitation, showInvitationAction = fals
         {copy.message && <p role={copy.state === 'error' ? 'alert' : 'status'} aria-label="Milestone clipboard">{copy.message}</p>}
       </> : <>
         <p>A confirmed invitation for this account is required before a milestone share link is available.</p>
-        {showInvitationAction && <button type="button" className="app-button" disabled={invitation.phase !== 'ready'} onClick={() => void invitation.create('pending-invite')}>Create milestone invitation</button>}
         {showInvitationAction && <p role="status">{invitation.message}</p>}
       </>)}
     </>}
+    {showInvitationAction && <button type="button" className="app-button" hidden={!invitationVisible} disabled={!invitationVisible || invitation.phase !== 'ready'} onClick={() => void invitation.create('pending-invite')}>Create milestone invitation</button>}
   </section>;
 }

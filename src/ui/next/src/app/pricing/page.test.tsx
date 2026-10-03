@@ -65,6 +65,43 @@ describe('PricingPage', () => {
     expect(screen.getByText('Business')).toBeDefined();
   });
 
+  it('does not invent usage, unlimited limits or a bill when those fields are absent', async () => {
+    await act(async () => { render(<PricingPage />); });
+    expect(screen.getByText('AI Actions Used').parentElement).toHaveTextContent('Unknown / Unknown');
+    expect(screen.getByText('Storage Used').parentElement).toHaveTextContent('Unknown / Unknown');
+    expect(screen.getByText('Estimated Next Bill').parentElement).toHaveTextContent('Unknown');
+    expect(screen.getByText('Estimated Next Bill').parentElement).not.toHaveTextContent('$0.00');
+  });
+
+  it('preserves explicit zero usage and limits rather than converting zero into unlimited', async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ current_plan: 'Free', ai_actions_used: 0, ai_actions_limit: 0,
+      storage_used_bytes: 0, storage_limit_bytes: 0, next_bill_estimated: 0 }));
+    await act(async () => { render(<PricingPage />); });
+    expect(screen.getByText('AI Actions Used').parentElement).toHaveTextContent('0 / 0');
+    expect(screen.getByText('Storage Used').parentElement).toHaveTextContent('0.0 MB / 0 MB');
+    expect(screen.getByText('Estimated Next Bill').parentElement).toHaveTextContent('$0.00');
+  });
+
+  it('shows unlimited only for explicit null limits from a verified plan response', async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ current_plan: 'Pro', ai_actions_used: 2, ai_actions_limit: null,
+      storage_used_bytes: 1048576, storage_limit_bytes: null, next_bill_estimated: 7900 }));
+    await act(async () => { render(<PricingPage />); });
+    expect(screen.getByText('AI Actions Used').parentElement).toHaveTextContent('2 / Unlimited');
+    expect(screen.getByText('Storage Used').parentElement).toHaveTextContent('1.0 MB / Unlimited');
+    expect(screen.getByText('Estimated Next Bill').parentElement).toHaveTextContent('$79.00');
+  });
+
+  it.each([{}, { current_plan: 'Unknown' }, { current_plan: 'Pro', success: false }, { current_plan: 'Pro', error: 'unavailable' }])(
+    'does not assume a Free or paid plan from an invalid response: %j', async body => {
+      vi.mocked(fetch).mockResolvedValue(Response.json(body));
+      await act(async () => { render(<PricingPage />); });
+      expect(screen.getByRole('heading', { name: 'My Plan: Unavailable' })).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Manage Plan & Billing' })).toBeDisabled();
+      expect(screen.getAllByRole('button', { name: 'Plan unavailable' })).toHaveLength(4);
+      expect(screen.getByRole('link', { name: 'Retry plan lookup' })).toHaveAttribute('href', '/pricing');
+    },
+  );
+
   it('initiates checkout session when upgrading to Starter', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
     vi.mocked(global.fetch, { partial: true }).mockImplementation(async (url: string, options?: RequestInit) => {
