@@ -1,5 +1,6 @@
 use crate::models::{contact, conversation, message};
 use crate::repository::ChatRepository;
+use crate::state_machine::{ConversationEvent, ConversationState, ConversationStateMachine};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -42,7 +43,7 @@ impl<R: ChatRepository> MessageRouter<R> {
         };
 
         // 2. Resolve conversation
-        let conversation = match self
+        let mut conversation = match self
             .repository
             .find_active_conversation(tenant_id, contact.id)
             .await?
@@ -63,7 +64,24 @@ impl<R: ChatRepository> MessageRouter<R> {
             }
         };
 
-        // 3. Create message
+        // 3. Process state transition
+        if let Ok(current_state) = conversation.status.parse::<ConversationState>() {
+            if let Ok(new_state) = ConversationStateMachine::transition(
+                &current_state,
+                &ConversationEvent::IncomingMessage,
+            ) {
+                if new_state != current_state {
+                    conversation.status = new_state.to_string();
+                    conversation.updated_at = Utc::now().into();
+                    let _ = self
+                        .repository
+                        .update_conversation(conversation.clone())
+                        .await;
+                }
+            }
+        }
+
+        // 4. Create message
         let new_msg = message::Model {
             id: Uuid::new_v4(),
             tenant_id,
