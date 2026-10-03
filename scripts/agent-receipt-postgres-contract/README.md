@@ -7,7 +7,7 @@ reach inference. The funded worker case calls an owned loopback HTTP fixture and
 checks persisted reservation before the response and observed settlement after it.
 No live vendor account or paid call is used.
 
-All 53 tests are mandatory. The additive migration 1022 and canonical revocation
+All 54 tests are mandatory. The additive migration 1022 and canonical revocation
 trigger are exercised with a restricted PostgreSQL role and forced row-level
 security. Cases cover reopen, exact replay/concurrent admission, one claim,
 terminal proof/replay, tenant/actor isolation, current roles and token revocation

@@ -85,7 +85,10 @@ one atomic cross-module commit:
 Managed admission prepares the exact normalized request once, fingerprints it,
 and reserves every UTF-8 byte of its complete system and user text plus 4096
 tokens for fixed protocol framing, together with every allowed
-output token at the approved tariff. The request is denied if that bound exceeds
+output token at the approved tariff. Input reservation uses the higher of
+the all-cached and all-uncached cost permitted by the rate card; cached input is
+a subset of total input, and no discount is assumed. Both costs use the ledger’s
+checked integer pricing. The request is denied if that bound exceeds
 the configured request ceiling or the account's remaining authorization. The
 immutable prepared request is carried through admission and sent without another
 normalization. Its fingerprint and input bound are stored with the receipt and

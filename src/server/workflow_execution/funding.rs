@@ -137,23 +137,23 @@ impl FundingContext {
         }
         // The adapter derives this bound from its exact normalized request,
         // including all system/user text plus fixed protocol framing. Reserve
-        // uncached input and every allowed output token; hidden request sources
-        // are rejected by that construction before a receipt is admitted.
+        // every allowed output token and the higher permitted input tariff.
+        // Cached input is a subset, but the rate card need not discount it.
+        // Hidden request sources are rejected before a receipt is admitted.
         let maximum = if self.policy.payer == PayerMode::ManagedApi {
             if !(4096..=1_000_000).contains(&input) {
                 return Err(Error::Invalid);
             }
-            let amount = self
-                .policy
-                .rate_card
-                .as_ref()
-                .ok_or(Error::Unavailable)?
-                .cost(&TokenCounts {
+            let rate = self.policy.rate_card.as_ref().ok_or(Error::Unavailable)?;
+            let cost = |cached_input| {
+                rate.cost(&TokenCounts {
                     input,
                     output: i64::from(policy.max_output_tokens),
-                    cached_input: 0,
+                    cached_input,
                 })
-                .map_err(|_| Error::Invalid)?;
+                .map_err(|_| Error::Invalid)
+            };
+            let amount = cost(0)?.max(cost(input)?);
             if amount > self.policy.request_ceiling_micros {
                 return Err(Error::Budget);
             }
@@ -334,6 +334,76 @@ fn ledger_error(error: LedgerError) -> Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn admission_reserves_the_worst_permitted_cached_or_uncached_input_tariff() {
+        use sea_orm::SqlxSqliteConnector;
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let database =
+            AppDatabase::from_connection(SqlxSqliteConnector::from_sqlx_sqlite_pool(pool));
+        let policy =
+            AnalysisPolicy::new("openai-compatible".into(), "explicit-model".into(), 256).unwrap();
+        for (ordinary, cached) in [(1_000_000, 2_000_000), (2_000_000, 1_000_000)] {
+            let mut funding = FundingContext::new(
+                FundingPolicy {
+                    operator_tenant: "operator".into(),
+                    payer: PayerMode::ManagedApi,
+                    rate_card: Some(RateCard {
+                        revision: "explicit-test-tariff".into(),
+                        input_micros_per_million: ordinary,
+                        output_micros_per_million: 3_000_000,
+                        cached_input_micros_per_million: cached,
+                    }),
+                    request_ceiling_micros: 20_000,
+                },
+                &database,
+            )
+            .unwrap();
+            let ticket = funding
+                .ticket(
+                    ("operator", "owner"),
+                    "Submitted text",
+                    &policy,
+                    "event".into(),
+                    "request",
+                    (4096, &"a".repeat(64)),
+                )
+                .unwrap();
+            assert_eq!(
+                ticket.maximum,
+                4096 * 2 + 256 * 3,
+                "cache is a subset of input, but no discounted tariff may be assumed"
+            );
+            funding.policy.request_ceiling_micros = 8000;
+            assert!(matches!(
+                funding.ticket(
+                    ("operator", "owner"),
+                    "Submitted text",
+                    &policy,
+                    "event".into(),
+                    "request",
+                    (4096, &"a".repeat(64))
+                ),
+                Err(Error::Budget)
+            ));
+            funding.policy.request_ceiling_micros = 20_000;
+            funding
+                .policy
+                .rate_card
+                .as_mut()
+                .unwrap()
+                .cached_input_micros_per_million = i64::MAX;
+            assert!(funding
+                .ticket(
+                    ("operator", "owner"),
+                    "Submitted text",
+                    &policy,
+                    "event".into(),
+                    "request",
+                    (4096, &"a".repeat(64))
+                )
+                .is_err());
+        }
+    }
     #[test]
     fn operator_configuration_cannot_infer_a_tenant_payer_tariff_or_subscription_permission() {
         let remote =
@@ -349,76 +419,62 @@ mod tests {
         };
         assert!(from(&remote, &[]).is_err());
         assert!(from(&remote, &[("OMNISOLO_LLM_TENANT_ID", "operator")]).is_err());
-        assert!(
-            from(
-                &remote,
-                &[
-                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                    ("OMNISOLO_USAGE_PAYER", "managed_api"),
-                    ("OMNISOLO_USAGE_MAX_REQUEST_MICROS", "1000")
-                ]
-            )
-            .is_err()
-        );
-        assert!(
-            from(
-                &remote,
-                &[
-                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                    ("OMNISOLO_USAGE_PAYER", "native_subscription")
-                ]
-            )
-            .is_err()
-        );
-        assert!(
-            from(
-                &remote,
-                &[
-                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                    ("OMNISOLO_USAGE_PAYER", "local")
-                ]
-            )
-            .is_err()
-        );
-        assert!(
-            from(
-                &local,
-                &[
-                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                    ("OMNISOLO_USAGE_PAYER", "byok_api")
-                ]
-            )
-            .is_err()
-        );
-        assert!(
-            from(
-                &local,
-                &[
-                    ("OMNISOLO_LLM_TENANT_ID", "system"),
-                    ("OMNISOLO_USAGE_PAYER", "local")
-                ]
-            )
-            .is_err()
-        );
-        assert!(
-            from(
-                &local,
-                &[
-                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                    ("OMNISOLO_USAGE_PAYER", "local")
-                ]
-            )
-            .is_ok()
-        );
-        assert!(
-            from(
-                &remote,
-                &[
-                    ("OMNISOLO_BUILDER_TENANT_ID", "operator"),
-                    ("OMNISOLO_USAGE_PAYER", "byok_api")
-                ]
-            )
-            .is_ok()
-        );
+        assert!(from(
+            &remote,
+            &[
+                ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                ("OMNISOLO_USAGE_PAYER", "managed_api"),
+                ("OMNISOLO_USAGE_MAX_REQUEST_MICROS", "1000")
+            ]
+        )
+        .is_err());
+        assert!(from(
+            &remote,
+            &[
+                ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                ("OMNISOLO_USAGE_PAYER", "native_subscription")
+            ]
+        )
+        .is_err());
+        assert!(from(
+            &remote,
+            &[
+                ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                ("OMNISOLO_USAGE_PAYER", "local")
+            ]
+        )
+        .is_err());
+        assert!(from(
+            &local,
+            &[
+                ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                ("OMNISOLO_USAGE_PAYER", "byok_api")
+            ]
+        )
+        .is_err());
+        assert!(from(
+            &local,
+            &[
+                ("OMNISOLO_LLM_TENANT_ID", "system"),
+                ("OMNISOLO_USAGE_PAYER", "local")
+            ]
+        )
+        .is_err());
+        assert!(from(
+            &local,
+            &[
+                ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                ("OMNISOLO_USAGE_PAYER", "local")
+            ]
+        )
+        .is_ok());
+        assert!(from(
+            &remote,
+            &[
+                ("OMNISOLO_BUILDER_TENANT_ID", "operator"),
+                ("OMNISOLO_USAGE_PAYER", "byok_api")
+            ]
+        )
+        .is_ok());
     }
 }

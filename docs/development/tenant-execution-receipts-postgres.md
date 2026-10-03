@@ -55,18 +55,23 @@ must include strict Clippy, nonzero discovered case counts, source fingerprints 
 root-lock dependency identity. Full application/HTTP/provider and hosted CI remain
 additional acceptance requirements.
 
-## Focused local result (2026-10-02)
+## Usage schema checkpoint (2026-10-03)
 
-The current source-bound receipt harness passes 53 cases with zero ignored or
+At the usage schema checkpoint, the source-bound receipt harness passed 53 cases with zero ignored or
 filtered, including the 40-case revocation/storage foundation, retained SQLite
 lifecycle cases, exact prepared-request bounds, explicit funding policy and an
 actual forced-RLS PostgreSQL worker/provider/ledger transaction. The separate
-mounted workflow gate passes 98 and builder compatibility gate passes 50; all
-three pass strict all-target Clippy. SQLite schema enforcement passes nine cases.
+mounted workflow gate passed 98 and builder compatibility gate passed 50; all
+three passed strict all-target Clippy. SQLite schema enforcement passes nine cases.
 These owned database/loopback results do not certify a live paid vendor or the
 full integrated workspace. No production account or credit was changed.
 
 The checked-in focused Cargo lock must be an exact registry/version/source/checksum
 subset of the root lock. CI fetches this focused graph for the Rust host with
-`--locked`; tests remain `--locked --offline`. The mandatory gate has a 53-case floor
+`--locked`; tests remain `--locked --offline`. The mandatory gate has a 54-case floor
 and uses the existing PostgreSQL lane, without adding a runner.
+
+The subsequent cached-input tariff fix passed all 99 workflow cases and strict
+all-target Clippy after a genuine underreservation RED. Its shared pricing case
+raises the required receipt and builder inventories to 54 and 51; their full
+PostgreSQL reruns remain part of integrated validation.
