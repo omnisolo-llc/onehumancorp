@@ -7,7 +7,7 @@ pub struct WhatsAppAdapter;
 
 #[async_trait]
 impl ChannelAdapter for WhatsAppAdapter {
-    async fn send_message(&self, recipient_id: &str, content: &str) -> Result<(), String> {
+    async fn send_message(&self, _recipient_id: &str, _content: &str) -> Result<(), String> {
         // Placeholder for sending message using Twilio or Meta provider
         // e.g., let provider = TwilioProvider::new(...);
         // provider.send_whatsapp(recipient_id, from, content).await
