@@ -15,7 +15,7 @@ certification. Full Cargo/Next/desktop and hosted CI gates remain required.
 
 The combined gate preserves the original generation/admission cases, imported durable receipt lifecycle cases, and funded admission cases. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
 
-The mandatory inventory is 89 cases. Canonical brand writes require the actual
+The mandatory inventory is 90 cases. Canonical brand writes require the actual
 same PostgreSQL pool as the credential store. Startup can reuse that pool for
 private builder storage only after proving that the configured business pool
 shares its real advisory-lock namespace, search path and canonical/business
@@ -57,6 +57,12 @@ cargo test --locked --offline --manifest-path scripts/builder-generation-contrac
 With that feature the encryption case requires an actual cipher engine, writes
 an owned encrypted file, rejects a wrong key and reopens the original data with
 the correct fixture key. A plain-engine rejection is not encryption proof.
+
+The legacy startup cipher-check block is also compiled verbatim against the
+actual persistence parent's private connection declaration and explicit
+re-exports. A real max-one-connection fixture confirms that a successful check
+retains its database, while plain-engine rejection closes the failed startup
+pool. The harness does not publish synthetic connection-module aliases.
 
 Owned database teardown distinguishes real clients from PostgreSQL autovacuum
 maintenance. The lifecycle tests observe a real slow autovacuum, exercise normal

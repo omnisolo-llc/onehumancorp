@@ -7,4 +7,5 @@ pub mod entities;
 pub mod migration;
 
 pub use capabilities::{DatabaseBackend, DatabaseCapabilities};
+pub(crate) use connection::require_sqlite_encryption;
 pub use connection::{AppDatabase, DatabaseUrl};

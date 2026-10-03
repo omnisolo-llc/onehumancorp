@@ -722,3 +722,45 @@ async fn sqlite_startup_requested_encryption_requires_an_actual_cipher_engine() 
         "actual cipher verified: nonempty encrypted file, original data reopened, wrong key rejected"
     );
 }
+
+#[tokio::test]
+async fn sqlite_startup_legacy_cipher_check_preserves_the_actual_parent_module_boundary() {
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+    sqlx::query("CREATE TABLE retained_startup(value INTEGER)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO retained_startup VALUES(9)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let version: Option<String> = sqlx::query_scalar("PRAGMA cipher_version")
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+    let result = crate::legacy_startup_cipher_check(pool.clone()).await;
+    if version.as_deref().is_none_or(str::is_empty) {
+        assert!(result.unwrap_err().to_string().contains("SQLCipher"));
+        assert!(
+            pool.is_closed(),
+            "failed legacy startup must close its own pool"
+        );
+    } else {
+        result.unwrap();
+        assert!(!pool.is_closed());
+        assert_eq!(pool.size(), 1);
+        let value: i64 = sqlx::query_scalar("SELECT value FROM retained_startup")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            value, 9,
+            "the exact configured pool and its database must survive the check"
+        );
+        pool.close().await;
+    }
+}

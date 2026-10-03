@@ -44,7 +44,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_builder_generation_requires_real_http_and_owned_storage(self):
         minimum, database = gate.GATES['builder-generation-contract']
-        self.assertGreaterEqual(minimum, 89)
+        self.assertGreaterEqual(minimum, 90)
         self.assertEqual(database, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         workflow = (root/'.github/workflows/ci.yml').read_text()
@@ -53,14 +53,23 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_builder_generation_preserves_receipt_storage_compile_inputs(self):
         import runpy
+        import re
         root = Path(__file__).resolve().parents[1]
         folder = root/'scripts/builder-generation-contract'
         runpy.run_path(str(folder/'prepare.py'))
         generated = (folder/'generated.rs').read_text()
         manifest = json.loads((folder/'source-manifest.json').read_text())
         self.assertIn('pub mod persistence {', generated)
+        parent = (root/'src/server/persistence/mod.rs').read_text()
         for name in ['capabilities', 'connection', 'entities', 'migration']:
-            self.assertIn(f'pub mod {name};', generated)
+            declaration = re.search(r'(?m)^(?:pub(?:\([^)]*\))? )?mod '+name+r';$', parent)
+            self.assertIsNotNone(declaration)
+            self.assertIn(declaration.group(), generated[generated.index('pub mod persistence {'):])
+        self.assertRegex(parent, r'(?m)^mod connection;$')
+        self.assertNotIn('pub mod connection;', generated)
+        self.assertNotIn('pub use crate::{capabilities,connection', generated)
+        self.assertIn('pub(crate) use connection::require_sqlite_encryption;', generated)
+        self.assertIn('crate::persistence::require_sqlite_encryption(&canonical_connection)', generated)
         required = list((root/'src/server/workflow_execution').rglob('*.rs'))
         required += [p for p in (root/'src/server/persistence').rglob('*') if p.is_file() and p.suffix in {'.rs', '.sql'}]
         for source in required:

@@ -71,10 +71,13 @@ startup_db+='}\n'
 startup_pool_proof='\n#[cfg(test)] async fn application_builder_pool(pool:sqlx::PgPool, auth_database:&crate::persistence::AppDatabase)->Option<sqlx::PgPool> {\n application_builder_pool_from_store(startup_db::DB {pool,store:startup_db::DbStore::Postgres},auth_database).await\n}\n#[cfg(test)] async fn application_builder_pool_from_store(db:startup_db::DB, auth_database:&crate::persistence::AppDatabase)->Option<sqlx::PgPool> {\n let _=(&db,auth_database);\n fn optional<T:Into<Option<sqlx::PgPool>>>(pool:T)->Option<sqlx::PgPool> {pool.into()}\n'+ 'optional('+builder_pool_expression+')\n}\n'
 commands=(ROOT/'src/server/persistence/commands.rs').read_text()
 environment_functions=commands[commands.index('pub fn database_url_from_environment()'):commands.index('#[derive(Clone, Copy, Debug')]
-startup_commands='pub mod startup_commands {use crate::persistence::connection::{AppDatabase,DatabaseUrl};type CommandResult<T=()> = Result<T,Box<dyn std::error::Error>>;\n'+environment_functions+'}\n'
+startup_commands='pub mod startup_commands {use crate::persistence::{AppDatabase,DatabaseUrl};type CommandResult<T=()> = Result<T,Box<dyn std::error::Error>>;\n'+environment_functions+'}\n'
 startup_selection=re.search(r'(?ms)^    let portable_database = .*?;(?=\n    let catalog_repository)',server)
 assert startup_selection, 'actual portable startup selection'
 startup_pool_proof+='\n#[cfg(test)] async fn application_startup_database(db:startup_db::DB, standalone:bool)->Result<Option<std::sync::Arc<crate::persistence::AppDatabase>>,Box<dyn std::error::Error>> {\nlet _=&db;\n'+startup_selection.group().replace('db::DbStore::','startup_db::DbStore::')+'\nOk(portable_database)\n}\n'
+cipher_start=legacy_db.index('            let canonical_connection =')
+cipher_end=legacy_db.index('\n\n            Ok(DB {',cipher_start)
+startup_pool_proof+='\nasync fn legacy_startup_cipher_check(sqlite_pool:sqlx::SqlitePool)->Result<(),Box<dyn std::error::Error>> {\n'+legacy_db[cipher_start:cipher_end]+'\nOk(())\n}\n'
 
 parts=['''#![allow(dead_code)]
 extern crate self as omnisolo_builtin_agent;
@@ -99,9 +102,18 @@ pub mod builder {pub use crate::generation_source as generation;pub use crate::{
  }).unwrap()
 }
 '''+tenant_source+'\n}\n',adapter,readers,non_pg_router,startup_db,startup_commands,startup_pool_proof,'#[cfg(test)]#[path="test.rs"]mod tests;']
+# Preserve actual parent visibility/re-exports. Publishing a synthetic connection
+# alias here previously hid an E0603 in the real legacy startup caller.
+persistence_parent=(ROOT/'src/server/persistence/mod.rs').read_text()
+parts.append('pub mod persistence {')
 for name in ['capabilities','connection','entities','migration']:
- parts.append(f'#[path={json.dumps(str(ROOT / "src/server/persistence" / (name+".rs")))}] pub mod {name};')
-parts.append('pub mod persistence { pub use crate::{capabilities,connection,entities,migration}; pub use crate::startup_commands as commands; pub use connection::AppDatabase; }')
+ declaration=re.search(r'(?m)^(?:pub(?:\([^)]*\))? )?mod '+name+r';$',persistence_parent)
+ assert declaration, 'actual persistence module declaration: '+name
+ parts.append(f'#[path={json.dumps(str(ROOT / "src/server/persistence" / (name+".rs")))}] '+declaration.group())
+for line in persistence_parent.splitlines():
+ if re.match(r'^pub(?:\([^)]*\))? use (?:connection|capabilities)::',line):
+  parts.append(line)
+parts.append('pub use crate::startup_commands as commands; }')
 (HERE/'generated.rs').write_text('\n'.join(parts))
 inputs=[ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'.github/workflows/ci.yml',ROOT/'scripts/focused_ci_gate.py',ROOT/'scripts/test_focused_ci_gate.py',ROOT/'src/server/migrations/001_initial.sql',ROOT/'src/server/migrations/009_builder.sql',ROOT/'src/server/migrations/1019_site_publication_receipts.sql',ROOT/'src/server/db.rs',ROOT/'src/server/migrations/1018_agent_definition_marketplace.sql',ROOT/'src/server/lib.rs',ROOT/'src/server/workflow_execution.rs',ROOT/'src/server/builder/generation.rs',ROOT/'src/server/builder/api.rs',ROOT/'src/server/builder/builder_test.rs',ROOT/'src/server/builder/db.rs',ROOT/'src/server/builder/publication_json.rs',ROOT/'src/server/builder/publication_store.rs',ROOT/'src/server/migrations/059_brand_toolboxes.sql']
 for package in ['auth','common','config','harness','omnisolo','pricing','utils']:
