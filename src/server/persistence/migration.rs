@@ -77,6 +77,7 @@ where
     let mut tickets = schema.create_table_from_entity(auth_entities::registration_ticket::Entity);
     tickets.if_not_exists();
     connection.execute(backend.build(&tickets)).await?;
+    ensure_registration_source_columns(connection).await?;
 
     let mut invitations = schema.create_table_from_entity(auth_entities::invitation::Entity);
     invitations.if_not_exists();
@@ -426,6 +427,49 @@ async fn ensure_legacy_role_column<C: ConnectionTrait>(
     Ok(())
 }
 
+/// Existing consumed tickets deliberately remain unbound: mutable email addresses
+/// are not evidence of the user/tenant that originally completed registration.
+async fn ensure_registration_source_columns<C: ConnectionTrait>(
+    connection: &C,
+) -> Result<(), sea_orm::DbErr> {
+    let backend = connection.get_database_backend();
+    for column in ["consumed_by_user_id", "consumed_by_tenant_id"] {
+        let exists = match backend {
+            sea_orm::DatabaseBackend::Postgres => false,
+            sea_orm::DatabaseBackend::MySql => {
+                mysql_column_exists(connection, "registration_tickets", column).await?
+            }
+            sea_orm::DatabaseBackend::Sqlite => connection
+                .query_all(Statement::from_string(
+                    backend,
+                    "PRAGMA table_info(registration_tickets)".to_string(),
+                ))
+                .await?
+                .iter()
+                .any(|row| {
+                    row.try_get::<String>("", "name")
+                        .is_ok_and(|name| name == column)
+                }),
+        };
+        if !exists {
+            let guard = if backend == sea_orm::DatabaseBackend::Postgres {
+                "IF NOT EXISTS "
+            } else {
+                ""
+            };
+            connection
+                .execute(Statement::from_string(
+                    backend,
+                    format!(
+                        "ALTER TABLE registration_tickets ADD COLUMN {guard}{column} TEXT NULL"
+                    ),
+                ))
+                .await?;
+        }
+    }
+    Ok(())
+}
+
 async fn configure_postgres_role_rls<C: ConnectionTrait>(
     connection: &C,
 ) -> Result<(), sea_orm::DbErr> {
@@ -650,4 +694,134 @@ async fn mysql_column_exists<C: ConnectionTrait>(
         ))
         .await
         .map(|row| row.is_some())
+}
+
+#[cfg(test)]
+mod registration_source_tests {
+    use super::AppDatabase;
+    use chrono::Utc;
+    use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
+    use server_auth::seaorm_store::SeaOrmAuthRepository;
+
+    async fn execute(db: &AppDatabase, sql: &str) {
+        db.connection().execute_unprepared(sql).await.unwrap();
+    }
+    fn user() -> server_auth::User {
+        let now = Utc::now();
+        server_auth::User {
+            id: "new-source-owner".into(),
+            username: "new-source-owner".into(),
+            email: "new-source-owner@example.test".into(),
+            password_hash: "test-owned-unused".into(),
+            active: true,
+            roles: vec![server_auth::ROLE_ADMIN.into()],
+            organization_id: Some("new-source-tenant".into()),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: None,
+        }
+    }
+    async fn fresh() -> AppDatabase {
+        let db = AppDatabase::connect("sqlite::memory:").await.unwrap();
+        super::migrate(&db).await.unwrap();
+        execute(
+            &db,
+            "UPDATE application_settings SET value='open' WHERE key='registration_mode'",
+        )
+        .await;
+        execute(&db, "INSERT INTO registration_tickets(id,email,token_hash,issued_at,expires_at,consumed_at,invitation_id) VALUES('new-ticket','new-source-owner@example.test','ticket-hash',CURRENT_TIMESTAMP,datetime('now','+1 day'),NULL,NULL)").await;
+        db
+    }
+    async fn receipt(db: &AppDatabase, id: &str) -> (Option<String>, Option<String>) {
+        let row = db.connection().query_one(Statement::from_sql_and_values(DatabaseBackend::Sqlite,
+            "SELECT consumed_by_user_id, consumed_by_tenant_id FROM registration_tickets WHERE id=?", [id.into()]))
+            .await.expect("actual migration must install immutable source identity columns").unwrap();
+        (
+            row.try_get("", "consumed_by_user_id").unwrap(),
+            row.try_get("", "consumed_by_tenant_id").unwrap(),
+        )
+    }
+    #[tokio::test]
+    async fn upgrading_old_tickets_preserves_history_without_inventing_source_owners() {
+        let db = AppDatabase::connect("sqlite::memory:").await.unwrap();
+        execute(&db, "CREATE TABLE registration_tickets(id TEXT PRIMARY KEY,email TEXT NOT NULL,token_hash TEXT NOT NULL,issued_at TEXT NOT NULL,expires_at TEXT NOT NULL,consumed_at TEXT,invitation_id TEXT)").await;
+        execute(&db, "INSERT INTO registration_tickets VALUES('old-consumed','old@example.test','old-hash','2026-01-01','2026-01-02','2026-01-01',NULL)").await;
+        super::migrate(&db).await.unwrap();
+        assert_eq!(receipt(&db, "old-consumed").await, (None, None));
+        super::migrate(&db).await.unwrap();
+        assert_eq!(receipt(&db, "old-consumed").await, (None, None));
+        let row = db
+            .connection()
+            .query_one(Statement::from_string(
+                DatabaseBackend::Sqlite,
+                "SELECT email, consumed_at FROM registration_tickets WHERE id='old-consumed'"
+                    .to_string(),
+            ))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            row.try_get::<String>("", "email").unwrap(),
+            "old@example.test"
+        );
+        assert_eq!(
+            row.try_get::<String>("", "consumed_at").unwrap(),
+            "2026-01-01"
+        );
+    }
+    #[tokio::test]
+    async fn migrated_registration_binds_the_source_to_the_actual_created_user_and_tenant() {
+        let db = fresh().await;
+        let repository = SeaOrmAuthRepository::new(db.connection().clone());
+        let created = repository
+            .consume_ticket_and_create_user("ticket-hash", Utc::now(), user())
+            .await
+            .unwrap();
+        assert_eq!(
+            receipt(&db, "new-ticket").await,
+            (Some(created.id), created.organization_id)
+        );
+    }
+    #[tokio::test]
+    async fn source_receipt_failure_rolls_back_user_roles_email_claim_and_ticket_consumption() {
+        let db = fresh().await;
+        execute(&db, "CREATE TRIGGER deny_source_receipt BEFORE UPDATE OF consumed_by_user_id ON registration_tickets BEGIN SELECT RAISE(ABORT,'owned fixture denies source receipt'); END").await;
+        let repository = SeaOrmAuthRepository::new(db.connection().clone());
+        assert!(
+            repository
+                .consume_ticket_and_create_user("ticket-hash", Utc::now(), user())
+                .await
+                .is_err(),
+            "source identity must be part of the actual registration transaction"
+        );
+        for table in ["users", "identity_user_roles", "identity_email_claims"] {
+            let row = db
+                .connection()
+                .query_one(Statement::from_string(
+                    DatabaseBackend::Sqlite,
+                    format!("SELECT COUNT(*) AS count FROM {table}"),
+                ))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                row.try_get::<i64>("", "count").unwrap(),
+                0,
+                "{table} must roll back"
+            );
+        }
+        let row = db
+            .connection()
+            .query_one(Statement::from_string(
+                DatabaseBackend::Sqlite,
+                "SELECT consumed_at FROM registration_tickets WHERE id='new-ticket'".to_string(),
+            ))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            row.try_get::<Option<String>>("", "consumed_at").unwrap(),
+            None
+        );
+    }
 }

@@ -2830,6 +2830,8 @@ mod tests {
             expires_at: Set(now + chrono::Duration::hours(1)),
             consumed_at: Set(None),
             invitation_id: Set(invitation_id),
+            consumed_by_user_id: Set(None),
+            consumed_by_tenant_id: Set(None),
         }
         .insert(repository.connection())
         .await
@@ -2912,7 +2914,7 @@ mod tests {
 
     #[tokio::test]
     async fn open_registration_ignores_client_tenant_and_creates_a_fresh_tenant() {
-        let (app, _, ticket) =
+        let (app, repository, ticket) =
             registration_test_app(crate::seaorm_store::RegistrationMode::Open, None).await;
         let response = app
             .oneshot(json_request(
@@ -2933,6 +2935,27 @@ mod tests {
         let organization_id = body["user"]["organization_id"].as_str().unwrap();
         assert_ne!(organization_id, "victim-tenant");
         assert!(uuid::Uuid::parse_str(organization_id).is_ok());
+        // Later rewards must use an immutable registration source identity,
+        // never infer historical ownership from a mutable email address.
+        let proof = repository
+            .connection()
+            .query_one(sea_orm::Statement::from_string(
+                sea_orm::DatabaseBackend::Sqlite,
+                "SELECT consumed_by_user_id, consumed_by_tenant_id FROM registration_tickets WHERE id = 'ticket-7'".to_string(),
+            ))
+            .await
+            .expect("verified registration must persist its source owner")
+            .unwrap();
+        assert_eq!(
+            proof.try_get::<String>("", "consumed_by_user_id").unwrap(),
+            body["user"]["id"].as_str().unwrap()
+        );
+        assert_eq!(
+            proof
+                .try_get::<String>("", "consumed_by_tenant_id")
+                .unwrap(),
+            organization_id
+        );
     }
 
     #[tokio::test]
@@ -2962,6 +2985,69 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(persisted.organization_id.as_deref(), Some("trusted-tenant"));
+        let proof = entities::registration_ticket::Entity::find_by_id("ticket-7")
+            .one(repository.connection())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            proof.consumed_by_user_id.as_deref(),
+            Some(persisted.id.as_str())
+        );
+        assert_eq!(
+            proof.consumed_by_tenant_id.as_deref(),
+            Some("trusted-tenant")
+        );
+    }
+
+    #[tokio::test]
+    async fn registration_source_failure_rolls_back_the_real_http_registration() {
+        let (app, repository, ticket) =
+            registration_test_app(crate::seaorm_store::RegistrationMode::Open, None).await;
+        repository.connection().execute_unprepared(
+            "CREATE TRIGGER deny_source_receipt BEFORE UPDATE OF consumed_by_user_id ON registration_tickets BEGIN SELECT RAISE(ABORT,'owned fixture denies source receipt'); END",
+        ).await.unwrap();
+        let response = app
+            .oneshot(json_request(
+                "/api/v1/auth/register",
+                serde_json::json!({
+                    "registration_ticket": ticket, "username": "new-user",
+                    "password": "violet river cabin orbit"
+                })
+                .to_string(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            entities::user::Entity::find()
+                .count(repository.connection())
+                .await
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            entities::identity_user_role::Entity::find()
+                .count(repository.connection())
+                .await
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            entities::identity_email_claim::Entity::find()
+                .count(repository.connection())
+                .await
+                .unwrap(),
+            0
+        );
+        let proof = entities::registration_ticket::Entity::find_by_id("ticket-7")
+            .one(repository.connection())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(proof.consumed_at.is_none());
+        assert!(proof.consumed_by_user_id.is_none());
+        assert!(proof.consumed_by_tenant_id.is_none());
     }
 
     #[tokio::test]

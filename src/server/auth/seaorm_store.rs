@@ -124,6 +124,11 @@ pub mod entities {
             pub expires_at: DateTimeUtc,
             pub consumed_at: Option<DateTimeUtc>,
             pub invitation_id: Option<String>,
+            /// Written atomically with the created account; never inferred from email.
+            #[sea_orm(column_type = "Text", nullable)]
+            pub consumed_by_user_id: Option<String>,
+            #[sea_orm(column_type = "Text", nullable)]
+            pub consumed_by_tenant_id: Option<String>,
         }
 
         #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -728,6 +733,8 @@ impl SeaOrmAuthRepository {
             expires_at: Set(ticket.expires_at),
             consumed_at: Set(None),
             invitation_id: Set(ticket.invitation_id),
+            consumed_by_user_id: Set(None),
+            consumed_by_tenant_id: Set(None),
         }
         .insert(&transaction)
         .await
@@ -834,6 +841,27 @@ impl SeaOrmAuthRepository {
         .await
         .map_err(db_error)?;
         replace_user_roles(&transaction, &user.id, &tenant_id, &user.roles).await?;
+        // This source receipt belongs to the same transaction as the account,
+        // email claim, roles and ticket consumption. A missing/failed receipt
+        // must roll back registration rather than leave an unprovable reward source.
+        let bound = registration_ticket::Entity::update_many()
+            .col_expr(
+                registration_ticket::Column::ConsumedByUserId,
+                sea_orm::sea_query::Expr::value(Some(user.id.clone())),
+            )
+            .col_expr(
+                registration_ticket::Column::ConsumedByTenantId,
+                sea_orm::sea_query::Expr::value(Some(tenant_id.clone())),
+            )
+            .filter(registration_ticket::Column::Id.eq(&ticket.id))
+            .filter(registration_ticket::Column::ConsumedByUserId.is_null())
+            .filter(registration_ticket::Column::ConsumedByTenantId.is_null())
+            .exec(&transaction)
+            .await
+            .map_err(db_error)?;
+        if bound.rows_affected != 1 {
+            return Err("registration source unavailable".to_string());
+        }
 
         transaction.commit().await.map_err(db_error)?;
         Ok(user)
@@ -1829,6 +1857,8 @@ mod atomic_registration_tests {
             expires_at: Set(now + chrono::Duration::minutes(20)),
             consumed_at: Set(None),
             invitation_id: Set(None),
+            consumed_by_user_id: Set(None),
+            consumed_by_tenant_id: Set(None),
         }
         .insert(first.connection())
         .await
@@ -1858,6 +1888,19 @@ mod atomic_registration_tests {
             vec![crate::ROLE_ADMIN.to_string()]
         );
         assert!(!users[0].tenant_id.is_empty());
+        let receipt = entities::registration_ticket::Entity::find_by_id("ticket")
+            .one(first.connection())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            receipt.consumed_by_user_id.as_deref(),
+            Some(users[0].id.as_str())
+        );
+        assert_eq!(
+            receipt.consumed_by_tenant_id.as_deref(),
+            Some(users[0].tenant_id.as_str())
+        );
     }
 
     #[tokio::test]
@@ -1877,6 +1920,8 @@ mod atomic_registration_tests {
                 expires_at: Set(now + chrono::Duration::minutes(20)),
                 consumed_at: Set(None),
                 invitation_id: Set(None),
+                consumed_by_user_id: Set(None),
+                consumed_by_tenant_id: Set(None),
             }
             .insert(first.connection())
             .await
@@ -1910,6 +1955,32 @@ mod atomic_registration_tests {
                 .unwrap(),
             1
         );
+        let receipts = entities::registration_ticket::Entity::find()
+            .all(first.connection())
+            .await
+            .unwrap();
+        assert_eq!(
+            receipts
+                .iter()
+                .filter(|receipt| receipt.consumed_at.is_some())
+                .count(),
+            1
+        );
+        assert_eq!(
+            receipts
+                .iter()
+                .filter(|receipt| receipt.consumed_by_user_id.is_some()
+                    && receipt.consumed_by_tenant_id.is_some())
+                .count(),
+            1
+        );
+        for receipt in receipts
+            .iter()
+            .filter(|receipt| receipt.consumed_at.is_none())
+        {
+            assert!(receipt.consumed_by_user_id.is_none());
+            assert!(receipt.consumed_by_tenant_id.is_none());
+        }
     }
 
     #[tokio::test]
