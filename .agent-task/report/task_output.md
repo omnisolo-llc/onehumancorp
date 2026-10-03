@@ -1,3 +1,5 @@
-outcome: no_work
-issue_title: Implement Custom Rust Omnichannel Chat System to Replace Chatwoot
-issue_description: The functionality requested in issue #35648 is already fully implemented. The basic models (UnifiedThread, UnifiedMessage, UnifiedTriageAction) and their schemas exist in src/server/services/inbox/service.rs with tenant_id RLS applied via unified_threads and unified_messages migrations. Basic CRUD operations are covered, and a WebSocket handler stub is already in src/server/api/unified_ws.rs that accepts connections and broadcasts mock messages.
+outcome: blocked
+issue_title: "Market Research: AI Agentic Workflows & Native Omnichannel Solutions"
+issue_description: |
+  Blocked - no-work finding: Native Rust Omnichannel Chat Engine is explicitly blocked by the expansion gate in RESEARCH.md. The issue requests implementing a 'Native Rust Omnichannel Dispatcher' to replace Chat woot and a 'Zero-Click Onboarding Agent', but the OHC operating contract explicitly states 'Defer new viral generators, referral badges, paywalls, agent marketplaces, additional harness adapters, visual workflow builders, simultaneous HR/payroll/MRP coverage, generic UI restyling and unsupported global compliance claims unless an accepted issue shows they block the selected business outcome.' and 'New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines and harness adapters require evidence and the expansion gate in RESEARCH.md. Without it, implementation is blocked.' No such expansion gate evidence exists for the proposed new omnichannel channels or onboarding agents.
+assignees: []
