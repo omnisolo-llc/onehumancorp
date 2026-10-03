@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "[Architecture] AI-Driven Staff Task Delegation & Shift Coordination Engine"
+issue_description: "The requested feature involves building an AI-Driven Staff Task Delegation & Shift Coordination Engine (HR/MRP expansion). According to the prompt and RESEARCH.md, new verticals, HR/payroll, and MRP engines require explicit evidence and authorization via the expansion gate, and are explicitly deferred ('Later; do not make HR/MRP prerequisites for solo owners'). The historical UI capability catalog lists payroll/tax/MRP/POS expansion as deferred. Therefore, this task is blocked due to missing authorization for this scope expansion. Loaded skills: skills/using-superpowers/SKILL.md (commit 8ca22dba9a94f28898bbce59f2537ff4d87c747d)"
