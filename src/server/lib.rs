@@ -8817,8 +8817,22 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
+    let shipping_access = std::sync::Arc::new(
+        crate::api::shipping::authority::ShippingAccess::configured(&db, http_auth_store.clone())
+            .await,
+    );
+    let field_ops_pool =
+        crate::api::field_ops::canonical_pool(&http_auth_store, db.postgres_pool()).await;
+    let sync_events_state = api::offline_sync::SyncEventsState::new(
+        db.pool.clone(),
+        field_ops_pool.clone(),
+        http_auth_store.clone(),
+    )
+    .await;
+    let sync_write_state =
+        api::offline_sync::SyncWriteState::new(http_auth_store.clone(), db.postgres_pool()).await;
     let app = axum::Router::new()
-        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone(), http_auth_store.clone()))
+        .nest("/api/v1/field-ops", crate::api::field_ops::configured_router(db.pool.clone(), field_ops_pool.clone(), mesh_transport.clone(), http_auth_store.clone()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
@@ -9193,9 +9207,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }),
         )
-        .route("/api/v1/sync/events", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::SyncEventsRequest>| async move { api::offline_sync::sync_events_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
-        .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
-        .route("/api/v1/sync/operation-intents", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OperationIntentRequest>| async move { api::offline_sync::operation_intents_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
+        .route("/api/v1/sync/events", axum::routing::post({ let state = sync_events_state.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::SyncEventsRequest>| async move { api::offline_sync::sync_events_handler(axum::extract::State(state), headers, payload).await } }))
+        .route("/api/v1/sync/offline", axum::routing::post({ let state = sync_write_state.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((state, mesh.clone())), headers, payload).await } }))
+        .route("/api/v1/sync/operation-intents", axum::routing::post({ let state = sync_write_state.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OperationIntentRequest>| async move { api::offline_sync::operation_intents_handler(axum::extract::State(state), headers, payload).await } }))
         .route("/api/v1/sync/mcp-deltas", axum::routing::post(api::sync_gateway::sync_mcp_deltas_handler).with_state(db.pool.clone()))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
@@ -9235,7 +9249,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .nest("/api/v1/assistant", api::assistant::router(db.clone()))
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
-        .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
+        .nest(
+            "/api/v1/fulfillment",
+            api::fulfillment::router(shipping_access.clone())
+                .merge(api::shipping::router(shipping_access.clone()))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                )),
+        )
         .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(canonical_builder_pool(auth_database, db.postgres_pool()).await).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
@@ -9274,7 +9296,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .nest(
             "/api/v1/shipping",
-            api::shipping::router(db.clone()).route_layer(
+            api::shipping::router(shipping_access.clone()).route_layer(
                 axum::middleware::from_fn_with_state(
                     http_auth_store.clone(),
                     ::server_auth::strict_bearer_auth_middleware,
@@ -9366,7 +9388,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/inquiries", api::inquiries::router().with_state(db.pool.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
-        .nest("/api/v1/field-service-routing", api::field_service_routing::router(db.clone(), hub.clone()))
+        .nest("/api/v1/field-service-routing", api::field_service_routing::router(db.clone(), hub.clone(), http_auth_store.clone(), field_ops_pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()).layer(axum::extract::Extension(hub.get_cost_auditor())))
         .nest(
             "/api/v1/proposals",
@@ -9446,6 +9468,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             protected_bearer_auth_middleware,
         ))
         .with_state(mesh_transport)
+        // Provider callbacks authenticate the account independently of owner sessions.
+        .nest(
+            "/api/v1/fulfillment",
+            api::fulfillment::webhook_router(db.pool.clone()),
+        )
         // Publication carries its own strict owner authentication. Its public
         // document routes must remain outside the global authenticated scope.
         .merge(crate::builder::publication_http::router(

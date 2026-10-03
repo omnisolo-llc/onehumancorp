@@ -52,8 +52,11 @@ pub struct PurchaseLabelResponse {
     #[serde(rename = "labelUrl")]
     pub label_url: String,
     #[serde(rename = "trackingNumber")]
-    pub tracking_number: String,
-    pub carrier: String,
+    pub tracking_number: Option<String>,
+    pub carrier: Option<String>,
+    #[serde(rename = "transactionId")]
+    pub transaction_id: String,
+    pub test: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -229,27 +232,63 @@ impl ShippoClient {
             return Err(format!("Shippo label API error {status}: {body}"));
         }
 
+        Self::parse_label_response(&body)
+    }
+
+    pub fn parse_label_response(body: &serde_json::Value) -> Result<PurchaseLabelResponse, String> {
+        if body.get("status").and_then(|v| v.as_str()) != Some("SUCCESS") {
+            return Err("Shippo did not confirm label creation; reconcile before retrying".into());
+        }
+        // Some supported API versions omit object_state. A contradictory state
+        // is never accepted as a successful receipt.
+        if body
+            .get("object_state")
+            .is_some_and(|v| v.as_str() != Some("VALID"))
+        {
+            return Err("Shippo returned an invalid transaction state".into());
+        }
+        let transaction_id = body
+            .get("object_id")
+            .and_then(|v| v.as_str())
+            .filter(|v| {
+                !v.is_empty()
+                    && v.len() <= 128
+                    && v.bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+            })
+            .ok_or("Shippo label response missing transaction identity")?
+            .to_owned();
+        let test = body
+            .get("test")
+            .and_then(|v| v.as_bool())
+            .ok_or("Shippo label response missing mode")?;
         let label_url = body
             .get("label_url")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| "Shippo label response missing label_url".to_string())?;
-        let label_url = trusted_label_url(label_url)
-            .ok_or_else(|| "Shippo label response returned an untrusted label URL".to_string())?;
-        let tracking_number = body
-            .get("tracking_number")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-        let carrier = body
-            .get("tracking_carrier")
-            .or_else(|| body.get("carrier"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("Shippo");
-
+            .and_then(trusted_label_url)
+            .ok_or("Shippo label response returned an untrusted label URL")?;
+        let optional_text = |key: &str| -> Result<Option<String>, String> {
+            match body.get(key) {
+                None | Some(serde_json::Value::Null) => Ok(None),
+                Some(serde_json::Value::String(value)) if value.is_empty() => Ok(None),
+                Some(serde_json::Value::String(value))
+                    if value.len() <= 256 && !value.chars().any(char::is_control) =>
+                {
+                    Ok(Some(value.clone()))
+                }
+                _ => Err(format!("Shippo returned invalid {key}")),
+            }
+        };
+        let tracking_number = optional_text("tracking_number")?;
+        // Never infer a carrier token from the display name or substitute Shippo.
+        let carrier = optional_text("tracking_carrier")?;
         Ok(PurchaseLabelResponse {
             success: true,
             label_url,
-            tracking_number: tracking_number.to_string(),
-            carrier: carrier.to_string(),
+            tracking_number,
+            carrier,
+            transaction_id,
+            test,
         })
     }
 

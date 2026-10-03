@@ -1,6 +1,7 @@
 //! A lost COMMIT reply is not proof of rollback.
 #[derive(Debug)]
 pub(super) enum SyncError {
+    Rejected(&'static str),
     Database(sqlx::Error),
     Commit(sqlx::Error),
 }
@@ -12,6 +13,7 @@ impl From<sqlx::Error> for SyncError {
 impl std::fmt::Display for SyncError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Rejected(reason) => write!(f, "transaction rejected: {reason}"),
             Self::Database(e) => write!(f, "transaction: {e}"),
             Self::Commit(e) => write!(f, "commit: {e}"),
         }
@@ -26,10 +28,13 @@ impl SyncError {
                 "blocked"
             }
             Self::Commit(_) => "reconciliation",
-            Self::Database(_) => "blocked",
+            Self::Database(_) | Self::Rejected(_) => "blocked",
         }
     }
     pub(super) fn reason(&self) -> &'static str {
+        if let Self::Rejected(reason) = self {
+            return reason;
+        }
         if self.status() == "reconciliation" {
             "commit_outcome_unknown"
         } else {
@@ -73,4 +78,14 @@ mod commit_code_tests {
         assert!(definite_rollback("40001"));
         assert!(definite_rollback("P0001"));
     }
+}
+
+use server_auth::commit_authority::{AuthorityError, OwnerPgTransaction};
+pub(super) async fn commit_owner(tx: OwnerPgTransaction) -> Result<(), SyncError> {
+    tx.commit().await.map_err(|error| match error {
+        AuthorityError::Forbidden => SyncError::Rejected("current_owner_authority_required"),
+        AuthorityError::Database(error) => SyncError::Commit(error),
+        // Authority timeouts can occur while awaiting COMMIT. Never infer rollback.
+        AuthorityError::Unavailable => SyncError::Commit(sqlx::Error::PoolTimedOut),
+    })
 }

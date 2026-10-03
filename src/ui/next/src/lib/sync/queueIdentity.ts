@@ -47,8 +47,19 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', invalidateQueueOwner);
 }
 
+/** Cancellation retires only this verification; a late transport reply cannot repopulate its lease. */
+function withIdentitySignal<T>(pending: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return pending;
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason ?? new DOMException('Identity verification interrupted', 'AbortError'));
+    if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
+    pending.then(value => { signal.removeEventListener('abort', abort); resolve(value); }, error => { signal.removeEventListener('abort', abort); reject(error); });
+  });
+}
+
 /** Browser storage is never identity authority. Offline reuse is same-tab and time-bounded. */
-export async function readQueueOwner(): Promise<QueueOwner> {
+export async function readQueueOwner(signal?: AbortSignal): Promise<QueueOwner> {
+  signal?.throwIfAborted();
   if (typeof window === 'undefined') throw new Error('Verified queue identity requires a browser');
   const storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
   if (!navigator.onLine) {
@@ -60,9 +71,10 @@ export async function readQueueOwner(): Promise<QueueOwner> {
   pendingVerifications.add(requestNumber);
   verified = undefined; publishReadiness();
   try {
-    const response = await fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+    const response = await withIdentitySignal(fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error', ...(signal ? { signal } : {}) }), signal);
     if (response.status !== 200) throw new Error('Verified queue identity unavailable');
-    const data = await response.json() as { userId?: unknown; tenantId?: unknown; expiresAt?: unknown; error?: unknown; success?: unknown };
+    const data = await withIdentitySignal(response.json(), signal) as { userId?: unknown; tenantId?: unknown; expiresAt?: unknown; error?: unknown; success?: unknown };
+    signal?.throwIfAborted();
     if (!data || typeof data !== 'object' || Array.isArray(data) || data.error != null || ('success' in data && data.success !== true)) throw new Error('Verified queue identity unavailable');
     if (epoch !== generation || storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) || typeof data.userId !== 'string' || !data.userId || typeof data.tenantId !== 'string' || !data.tenantId || typeof data.expiresAt !== 'number' || !Number.isSafeInteger(data.expiresAt) || data.expiresAt <= Date.now()) throw new Error('Verified queue identity unavailable');
     const owner = { userId: data.userId, tenantId: data.tenantId };

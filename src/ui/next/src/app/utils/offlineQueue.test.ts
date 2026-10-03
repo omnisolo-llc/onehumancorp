@@ -169,3 +169,70 @@ it('freezes the intended view owner before awaiting identity verification', asyn
   expect(rows.size).toBe(0);
   expect(getPowerSyncDB).toHaveBeenCalledTimes(storageReads);
 });
+
+const completion: OfflineAction = {
+  id: 'completion-1', type: 'sync_event', timestamp: 123,
+  payload: { entity_type: 'appointment', entity_id: 'job-1', action_type: 'UpdateStatus', base_version: 0,
+    payload: { status: 'Completed', expected_status: 'In-Progress', expected_updated_at: '2026-10-03T10:00:00Z', notes: 'Requested estimate' } },
+  field_completion: { job_id: 'job-1', customer_id: 'customer-1', notes: 'Requested estimate' },
+};
+it('atomically appends captured field follow-ups only with a durable completion acknowledgement', async () => {
+  await enqueueAction(completion, owner);
+  const claim = (await claimAction(completion.id, '/api/v1/sync/events'))!;
+  expect((await getActions()).map(action => action.type)).toEqual(['sync_event']);
+  await completeAction(claim, 'acknowledged');
+  const pending = await getActions();
+  expect(pending).toEqual([
+    { id: 'field-completion-completion-1-invoice', type: 'generate_invoice', timestamp: 123, payload: { job_id: 'job-1', customer_id: 'customer-1' }, field_completion_parent_id: 'completion-1' },
+    { id: 'field-completion-completion-1-quote', type: 'draft_quote', timestamp: 123, notes: 'Follow up quote requested by field op for job job-1. Notes: Requested estimate', payload: { notes: 'Follow up quote requested by field op for job job-1. Notes: Requested estimate' }, field_completion_parent_id: 'completion-1' },
+  ]);
+  expect(rows.size).toBe(3);
+  await enqueueAction(completion, owner);
+  expect(await claimAction(completion.id, '/api/v1/sync/events')).toBeNull();
+  expect(await getActions()).toEqual(pending);
+});
+it.each(['blocked', 'reconciliation'] as const)('never generates follow-ups from a %s completion receipt', async status => {
+  await enqueueAction(completion, owner);
+  const claim = (await claimAction(completion.id, '/api/v1/sync/events'))!;
+  await completeAction(claim, status);
+  expect(rows.size).toBe(1); expect((await getActions()).map(action => action.type)).toEqual(['sync_event']);
+});
+it('keeps the parent inflight and creates no children if their shared receipt transaction aborts', async () => {
+  await enqueueAction(completion, owner);
+  const claim = (await claimAction(completion.id, '/api/v1/sync/events'))!;
+  failCommit = true;
+  await expect(completeAction(claim, 'acknowledged')).rejects.toThrow('Commit aborted');
+  failCommit = false;
+  expect(rows.size).toBe(1); expect((await getQueueSummary()).reconciliation).toBe(1);
+  expect(await claimAction(completion.id, '/api/v1/sync/events')).toBeNull();
+});
+it('keeps acknowledged completion children under the original owner after a session switch', async () => {
+  await enqueueAction(completion, owner);
+  const claim = (await claimAction(completion.id, '/api/v1/sync/events'))!;
+  vi.mocked(readQueueOwner).mockResolvedValue({ userId: 'b', tenantId: 'other' });
+  await completeAction(claim, 'acknowledged');
+  expect(await getActions()).toEqual([]);
+  for (const row of rows.values()) expect(JSON.parse(String(row.payload)).owner).toEqual(owner);
+  vi.mocked(readQueueOwner).mockResolvedValue(owner);
+  expect((await getActions()).map(action => action.type)).toEqual(['generate_invoice', 'draft_quote']);
+});
+it('cannot turn unrelated or inconsistent mutations into a field completion handoff', async () => {
+  for (const bad of [{ ...completion, type: 'update_quote' }, { ...completion, field_completion: { ...completion.field_completion!, job_id: 'other' } }, { ...completion, field_completion: { ...completion.field_completion!, notes: 'not the saved notes' } }, { ...completion, payload: { ...completion.payload, payload: { status: 'Scheduled', notes: 'Requested estimate' } } }]) {
+    await expect(enqueueAction(bad, owner)).rejects.toThrow(/completion/i);
+  }
+  expect(rows.size).toBe(0);
+});
+it('does not emit a quote follow-up when the captured completion has no notes', async () => {
+  const noNotes = { ...completion, payload: { ...completion.payload, payload: { status: 'Completed', expected_updated_at: '2026-10-03T10:00:00Z', notes: '' } }, field_completion: { ...completion.field_completion!, notes: '' } };
+  await enqueueAction(noNotes, owner);
+  const claim = (await claimAction(completion.id, '/api/v1/sync/events'))!;
+  await completeAction(claim, 'acknowledged');
+  expect((await getActions()).map(action => action.type)).toEqual(['generate_invoice']);
+});
+it('holds a conflicting child ID instead of acknowledging the parent or replacing an existing action', async () => {
+  await enqueueAction({ id: 'field-completion-completion-1-invoice', type: 'generate_invoice', timestamp: 123, payload: { job_id: 'other', customer_id: 'other' } }, owner);
+  await enqueueAction(completion, owner);
+  const claim = (await claimAction(completion.id, '/api/v1/sync/events'))!;
+  await expect(completeAction(claim, 'acknowledged')).rejects.toThrow(/collision/i);
+  expect(rows.size).toBe(2); expect((await getQueueSummary()).reconciliation).toBe(1);
+});

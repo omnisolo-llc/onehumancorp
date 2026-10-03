@@ -1,8 +1,10 @@
 import { fireEvent,render,screen } from '@testing-library/react';
-import { beforeEach,describe,expect,it,vi } from 'vitest';
+import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
 import OrderDetailsPage from './page';
 
-vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'order-1' }) }));
+const route=vi.hoisted(()=>({id:'order-1'}));
+vi.mock('next/navigation', () => ({ useParams: () => ({ id: route.id }) }));
+afterEach(()=>{route.id='order-1';});
 vi.mock('../../components/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <main className="app-main">{children}</main>,
 }));
@@ -102,4 +104,20 @@ describe('OrderDetailsPage', () => {
     expect(await screen.findByText('This order was not found.')).toBeInTheDocument();
     expect(container.querySelector('.app-main')).not.toBeNull();
   });
+});
+
+describe('Shipping purchase evidence',()=>{
+  it('never fabricates a customer or shipping capability for a fixture-shaped order ID',async()=>{route.id='e2e-shippo-order';global.fetch=vi.fn().mockRejectedValue(new Error('offline'));render(<OrderDetailsPage/>);expect(await screen.findByRole('alert')).toHaveTextContent('Order data is unavailable');expect(screen.queryByText('Alice Johnson')).toBeNull();});
+  const ready = async (receipt: Record<string,unknown>) => {
+    global.fetch=vi.fn().mockImplementation(async(url:string)=>{
+      if(url.startsWith('/api/v1/ui/orders'))return new Response(JSON.stringify([{id:'order-1',customer_name:'A Customer',status:'paid'}]));
+      if(url==='/api/v1/shipping/rates')return new Response(JSON.stringify({rates:[{id:'rate-1',carrier:'UPS',service:'Ground',amount:'12.50'}]}));
+      return new Response(JSON.stringify(receipt),{status:receipt.success===true?200:202});
+    });
+    render(<OrderDetailsPage/>);await screen.findByText('A Customer');
+    fireEvent.change(screen.getByLabelText('Package weight in ounces'),{target:{value:'16'}});fireEvent.change(screen.getByLabelText('Package dimensions'),{target:{value:'10x8x6'}});fireEvent.click(screen.getByRole('button',{name:'Get Shipping Rates'}));await screen.findByText('UPS Ground');fireEvent.click(screen.getByRole('button',{name:'Buy Label'}));
+  };
+  it('does not turn a purchased label into a shipped order',async()=>{await ready({success:true,labelUrl:'https://app.goshippo.com/label.pdf',trackingNumber:'actual-tracking',carrier:'ups',transactionId:'txn_a',test:true});await screen.findByRole('link',{name:'Open Shipping Label'});expect(screen.queryByText('Shipped')).toBeNull();expect(screen.getByText('paid')).toBeVisible();});
+  it('preserves a real label whose optional tracking and carrier are not yet available',async()=>{await ready({success:true,labelUrl:'https://app.goshippo.com/label.pdf',trackingNumber:null,carrier:null,transactionId:'txn_a',test:true});expect(await screen.findByRole('link',{name:'Open Shipping Label'})).toHaveAttribute('href','https://app.goshippo.com/label.pdf');expect(screen.getByText('Not available yet')).toBeVisible();});
+  it('blocks a second purchase after a provider outcome requiring reconciliation',async()=>{await ready({success:false,status:'outcome_unknown',reconciliationRequired:true,error:'Reconcile before retrying',transactionId:'txn_a'});expect(await screen.findByRole('alert')).toHaveTextContent('Reconcile before retrying');expect(screen.getByRole('button',{name:'Buy Label'})).toBeDisabled();});
 });

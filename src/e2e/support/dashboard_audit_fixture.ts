@@ -8,17 +8,49 @@ import { authenticateRequest } from '../authenticate';
 import { createAuditNavigation, type AuditNavigationReceipt } from './ui_audit_navigation';
 
 export const isolatedClickAuditRoutes = new Set([
-  '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder',
+  '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder', '/onboarding', '/share-card',
 ]);
 
 export function clickAuditStates(route: string): string[] {
+  if (route === '/onboarding' || route === '/share-card') return ['entry', 'intro', 'instant-draft', 'manual-draft'];
   return route === '/builder' || route === '/website-builder' ? ['entry', 'started-draft'] : ['entry'];
 }
 
-// Both preparations are local wizard choices, never a dispatched business
-// action. Recreate them only in a newly seeded owner/context, before observation.
+// Preparations select wizard views and persist draft choices only, never
+// dispatch provider work. Recreate them in a new owner before observation.
 export async function prepareClickAuditState(page: Page, route: string, state: string) {
   if (state === 'entry') return;
+  if (route === '/onboarding' || route === '/share-card') {
+    if (!['intro', 'instant-draft', 'manual-draft'].includes(state)) throw new Error(`Unknown click audit state: ${state}`);
+    const select = async (name: string, step: number) => {
+      const origin = new URL(page.url()).origin;
+      const committed = page.waitForResponse(response => {
+        const url = new URL(response.url());
+        return url.origin === origin && url.pathname === '/api/v1/onboarding/state'
+          && response.request().method() === 'POST' && response.request().postDataJSON()?.step === step;
+      });
+      await page.getByRole('button', { name, exact: true }).click();
+      const response = await committed;
+      if (response.status() !== 204) throw new Error(`Onboarding draft state preparation failed: HTTP ${response.status()}`);
+      const completionError = await response.finished();
+      if (completionError) throw completionError;
+    };
+    // A new owner has the backend's actual step-0 conversational entry state.
+    await select('Back', -2);
+    await page.getByRole('button', { name: 'Conversational Setup', exact: true }).waitFor({ state: 'visible' });
+    if (state === 'instant-draft') {
+      await select('Instant Build', -1);
+      await page.locator('#instant-bio').waitFor({ state: 'visible' });
+    } else if (state === 'manual-draft') {
+      await select('Start My Business', 1);
+      await page.getByRole('heading', { name: "What's the name of your business?", exact: true }).waitFor({ state: 'visible' });
+    }
+    // Let the acknowledged write retire its React persistence effects before
+    // a target's observation window begins. No action is retried here.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.locator('#setup-screen[aria-busy="false"]').waitFor({ state: 'visible' });
+    return;
+  }
   if (state !== 'started-draft') throw new Error(`Unknown click audit state: ${state}`);
   if (route === '/website-builder') {
     await page.getByRole('button', { name: 'Start My Business', exact: true }).click();
@@ -38,6 +70,8 @@ const initialRouteReads: Record<string, string[]> = {
   '/action-center': ['/api/v1/agents/approvals'],
   '/builder': ['/api/v1/auth/session-identity'],
   '/website-builder': ['/api/v1/onboarding/draft', '/api/v1/onboarding/state'],
+  '/onboarding': ['/api/v1/onboarding/draft', '/api/v1/onboarding/state'],
+  '/share-card': ['/api/v1/onboarding/draft', '/api/v1/onboarding/state'],
 };
 
 const canonicalSeed = () => readFileSync(path.resolve(__dirname, '../e2e-seed.sql'), 'utf8');
@@ -62,8 +96,9 @@ export async function seedDashboardAuditOwner(baseURL: string) {
       (SELECT count(*)::int FROM agent_approvals WHERE tenant_id=$2) AS approvals,
       (SELECT count(*)::int FROM omni_inbox_messages WHERE tenant_id=$2) AS inbox,
       (SELECT count(*)::int FROM products WHERE tenant_id=$2) AS products,
-      (SELECT count(*)::int FROM opportunities WHERE tenant_id=$2) AS opportunities`, [`${seed.namespace}-%`, seed.tenantId]);
-    if (JSON.stringify(graph[0]) !== JSON.stringify({ tenants: 5, feed: 8, approvals: 2, inbox: 1, products: 2, opportunities: 2 })) {
+      (SELECT count(*)::int FROM opportunities WHERE tenant_id=$2) AS opportunities,
+      (SELECT count(*)::int FROM onboarding_state WHERE tenant_id=$2) AS onboarding`, [`${seed.namespace}-%`, seed.tenantId]);
+    if (JSON.stringify(graph[0]) !== JSON.stringify({ tenants: 5, feed: 8, approvals: 2, inbox: 1, products: 2, opportunities: 2, onboarding: 0 })) {
       throw new Error(`Canonical case-owned dashboard graph was not persisted: ${JSON.stringify(graph[0])}`);
     }
   });
@@ -100,7 +135,7 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
     return { actor, page, close: () => context.close(), navigate: async (route = '/dashboard'): Promise<AuditNavigationReceipt> => {
       if (!isolatedClickAuditRoutes.has(route)) throw new Error(`No isolated click fixture exists for ${route}`);
       const initialReads = initialRouteReads[route].map(path => page.waitForResponse(response =>
-        new URL(response.url()).pathname === path && response.request().method() === 'GET'));
+        new URL(response.url()).origin === new URL(baseURL).origin && new URL(response.url()).pathname === path && response.request().method() === 'GET'));
       // Complete the real initial reads before discovery; no API substitution.
       const [receipt, responses] = await Promise.all([navigate(page, route), Promise.all(initialReads)]);
       for (const response of responses) {
@@ -112,6 +147,9 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
         await page.getByText('Loading Agent Proposals...', { exact: true }).waitFor({ state: 'hidden' });
       } else if (route === '/unified-feed' || route === '/dashboard/unified-feed') {
         await page.getByText('Loading feed...', { exact: true }).waitFor({ state: 'hidden' });
+      } else if (route === '/onboarding' || route === '/share-card') {
+        await page.getByText('Preparing your setup…', { exact: true }).waitFor({ state: 'hidden' });
+        await page.getByRole('button', { name: 'Upload Image', exact: true }).waitFor({ state: 'visible' });
       } else if (route === '/feed') {
         await page.getByText('Checking your feed...', { exact: true }).waitFor({ state: 'hidden' });
       }

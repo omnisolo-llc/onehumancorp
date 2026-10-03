@@ -1,39 +1,54 @@
 import { test, expect } from './fixtures';
+import { seedRoutingJobs } from './support/field_routing_fixture';
+import { e2eDbQuery } from './db_utils';
 
 test.describe('Offline Field Service Sync', () => {
-  test('should optimistically update job status and sync when back online', async ({ page, context }) => {
-    // Navigate to the field service route page
+  test('preserves offline pending status and confirms the exact CAS request after reconnecting', async ({ page, context, seedData }) => {
+    const [jobId] = await seedRoutingJobs(seedData.tenant.id, seedData.customer.id);
+    const routes = page.waitForResponse(response => response.url().includes('/field-service-routing/routes/today'));
     await page.goto('/field-service-route.html');
-
-    // Wait for jobs to load
-    await expect(page.getByTestId('job-card-e2e-job-1')).toBeVisible({ timeout: 10000 });
-
-    // Disconnect network
+    const snapshot = await (await routes).json() as { routes: { jobs: { id: string; updated_at: string }[] }[] };
+    const observed = snapshot.routes.flatMap(route => route.jobs).find(job => job.id === jobId)!.updated_at;
+    const card = page.getByTestId(`job-card-${jobId}`);
+    await expect(card).toBeVisible();
     await context.setOffline(true);
-
-    // Verify offline indicator appears (give it a moment for offline event)
-    await expect(page.locator('#network-status-indicator')).toBeVisible();
-    await expect(page.locator('#network-status-text')).toHaveText(/Offline/);
-
-    // Click "Start Travel" which updates status to 'en_route'
-    const startTravelBtn = page.getByTestId('job-card-e2e-job-1').getByRole('button', { name: /Start Travel/i });
-    await startTravelBtn.click();
-
-    // Optimistic UI update: should now show 'en route' or the Arrived On-Site button
-    await expect(page.getByTestId('job-card-e2e-job-1').getByRole('button', { name: /Arrived On-Site/i })).toBeVisible();
-
-    // Reconnect network
-    const [response] = await Promise.all([
-      page.waitForResponse(res => res.url().includes('/api/v1/field-service-routing/jobs/e2e-job-1/status') && res.request().method() === 'POST'),
-      context.setOffline(false)
-    ]);
-
+    await expect(page.locator('#network-status-text')).toHaveText(/Working Offline/);
+    await card.getByRole('button', { name: 'Start Travel', exact: true }).click();
+    await expect(card.getByRole('button', { name: 'Arrived On-Site', exact: true })).toBeVisible();
+    await expect(card.getByTestId(`job-receipt-${jobId}`)).toHaveText('Saved locally; confirmation pending.');
+    expect((await e2eDbQuery('SELECT status FROM job_locations WHERE id = $1 AND tenant_id = $2', [jobId, seedData.tenant.id]))[0].status).toBe('pending');
+    const responsePromise = page.waitForResponse(response => response.url().includes(`/jobs/${jobId}/status`) && response.request().method() === 'POST');
+    await context.setOffline(false);
+    const response = await responsePromise;
     expect(response.status()).toBe(200);
-
-    // Verify it synced successfully
+    expect(response.request().postDataJSON()).toEqual({ status: 'en_route', expected_updated_at: observed });
+    expect(response.request().headers()['idempotency-key']).toBeTruthy();
+    expect(response.request().headers()['x-ohc-expected-tenant']).toBe(seedData.tenant.id);
+    expect(await response.json()).toMatchObject({ success: true, error: null, id: jobId, status: 'en_route' });
+    await expect(card.getByTestId(`job-receipt-${jobId}`)).toHaveText('Confirmed by server.');
     await expect(page.locator('#network-status-indicator')).toBeHidden();
+    await page.reload();
+    await expect(card.getByRole('button', { name: 'Arrived On-Site', exact: true })).toBeVisible();
+    expect((await e2eDbQuery('SELECT status FROM job_locations WHERE id = $1 AND tenant_id = $2', [jobId, seedData.tenant.id]))[0].status).toBe('en_route');
+  });
 
-    // The data should remain 'en_route' after the real fetch overrides optimistic update
-    await expect(page.getByTestId('job-card-e2e-job-1').getByRole('button', { name: /Arrived On-Site/i })).toBeVisible();
+  test('a real concurrent version change blocks the old offline intent until the owner discards and reviews it', async ({ page, context, seedData }) => {
+    const [jobId] = await seedRoutingJobs(seedData.tenant.id, seedData.customer.id);
+    await page.goto('/field-service-route.html');
+    const card = page.getByTestId(`job-card-${jobId}`);
+    await expect(card.getByRole('button', { name: 'Start Travel', exact: true })).toBeVisible();
+    await context.setOffline(true);
+    await card.getByRole('button', { name: 'Start Travel', exact: true }).click();
+    await expect(card.getByTestId(`job-receipt-${jobId}`)).toHaveText('Saved locally; confirmation pending.');
+    await e2eDbQuery("UPDATE job_locations SET updated_at = updated_at + INTERVAL '1 second' WHERE id = $1 AND tenant_id = $2", [jobId, seedData.tenant.id]);
+    const response = page.waitForResponse(result => result.url().includes(`/jobs/${jobId}/status`) && result.request().method() === 'POST');
+    await context.setOffline(false);
+    expect((await response).status()).toBe(409);
+    await expect(card.getByTestId(`job-receipt-${jobId}`)).toContainText('Change not saved (blocked)');
+    expect((await e2eDbQuery('SELECT status FROM job_locations WHERE id = $1 AND tenant_id = $2', [jobId, seedData.tenant.id]))[0].status).toBe('pending');
+    await card.getByRole('button', { name: 'Discard blocked changes and reload', exact: true }).click();
+    await expect(card.getByRole('button', { name: 'Start Travel', exact: true })).toBeEnabled();
+    await card.getByRole('button', { name: 'Start Travel', exact: true }).click();
+    await expect(card.getByTestId(`job-receipt-${jobId}`)).toHaveText('Confirmed by server.');
   });
 });

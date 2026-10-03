@@ -965,6 +965,15 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_widget_chat_test
           python3 scripts/focused_ci_gate.py widget-chat-contract
 
+      - name: Verify authenticated shipping and persisted fulfillment
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SHIPPING_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_shipping_integrity_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_shipping_integrity_test
+          python3 scripts/focused_ci_gate.py shipping-integrity-contract
+
       - name: Verify recorded staff reads and native staff migrations
         if: ${{ !cancelled() }}
         env:
@@ -982,6 +991,15 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_appointments_test
           python3 scripts/focused_ci_gate.py operations-appointments
+
+      - name: Verify canonical field mutations and committed route receipts
+        if: ${{ !cancelled() }}
+        env:
+          OHC_FIELD_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_field_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_field_test
+          python3 scripts/focused_ci_gate.py field-boundary-contract
 
       - name: Verify recorded-order milestone isolation
         if: ${{ !cancelled() }}

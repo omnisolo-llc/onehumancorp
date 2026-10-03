@@ -12,6 +12,34 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_field_boundaries_require_complete_actual_handler_and_owned_database_gate(self):
+        root = Path(__file__).resolve().parents[1]
+        self.assertIn('field-boundary-contract', gate.GATES)
+        minimum, database = gate.GATES['field-boundary-contract']
+        self.assertGreaterEqual(minimum, 89)
+        self.assertEqual(database, 'OHC_FIELD_TEST_DATABASE_URL')
+        self.assertIn('python3 scripts/focused_ci_gate.py field-boundary-contract', (root/'.github/workflows/ci.yml').read_text())
+        self.assertTrue((root/'scripts/field-boundary-contract/run.sh').is_file())
+        self.assertIn('--locked --offline', (root/'scripts/field-boundary-contract/run.sh').read_text())
+        import re, runpy
+        runpy.run_path(str(root/'scripts/field-boundary-contract/prepare.py'))
+        setup = re.search(r'let field_ops_pool\s*=\s*.*?;', (root/'src/server/lib.rs').read_text(), re.S).group()
+        self.assertIn(setup, (root/'scripts/field-boundary-contract/generated.rs').read_text())
+        generated = (root/'scripts/field-boundary-contract/generated.rs').read_text()
+        sync_setup = re.search(r'let sync_events_state\s*=\s*.*?;', (root/'src/server/lib.rs').read_text(), re.S).group()
+        self.assertIn(sync_setup, generated)
+        write_setup = re.search(r'let sync_write_state\s*=\s*.*?;', (root/'src/server/lib.rs').read_text(), re.S).group()
+        self.assertIn(write_setup, generated)
+        self.assertIn('/api/v1/sync/offline', generated)
+        self.assertIn('/api/v1/sync/operation-intents', generated)
+        self.assertIn('/api/v1/sync/events', generated)
+        runner = (root/'scripts/field-boundary-contract/run.sh').read_text()
+        self.assertIn('OHC_SYNC_TEST_DATABASE_URL="$OHC_FIELD_TEST_DATABASE_URL"', runner)
+        self.assertIn('--include-ignored', runner)
+        manifest = json.loads((root/'scripts/field-boundary-contract/source-manifest.json').read_text())
+        self.assertIn('src/server/api/durable_appointment_sync.rs', manifest)
+
+
     def test_operations_worker_gate_compiles_actual_spawn_and_cache_boundary(self):
         import runpy
         root = Path(__file__).resolve().parents[1]
@@ -127,7 +155,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_chat_gate_requires_real_database_and_complete_inventory(self):
         minimum, database = gate.GATES['chat-tenant-isolation']
-        self.assertGreaterEqual(minimum, 13)
+        self.assertGreaterEqual(minimum, 22)
         self.assertEqual(database, 'OHC_CHAT_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         self.assertTrue((root/'scripts/chat-tenant-isolation/run.sh').is_file())
@@ -137,6 +165,62 @@ class FocusedGateTests(unittest.TestCase):
         self.assertIn('OHC_CHAT_TEST_DATABASE_URL:', native)
         self.assertIn('ohc_chat_service_test', native)
         self.assertIn('make test-backend', native)
+
+    def test_chat_preparation_keeps_actual_outbox_dependency_modules_and_types(self):
+        import re
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        folder = root/'scripts/chat-tenant-isolation'
+        runpy.run_path(str(folder/'prepare.py'))
+        generated = (folder/'generated.rs').read_text()
+        for module, source in {
+            'chat': 'src/server/services/chat/mod.rs',
+            'omnichannel_repo': 'src/server/domain/repository/omnichannel_repo.rs',
+            'redis_pool': 'src/server/redis_pool.rs',
+        }.items():
+            self.assertRegex(generated, r'#\[path=' + re.escape(json.dumps(str(root/source))) + r'\]\s*pub mod ' + module + ';')
+        self.assertIn('pub mod services { pub use crate::chat; }', generated)
+        self.assertIn('pub mod domain { pub mod repository { pub use crate::omnichannel_repo; } }', generated)
+        db = (root/'src/server/db.rs').read_text()
+        for item in ['enum DbStore', 'struct DB']:
+            declaration = re.search(r'#\[derive\(Clone\)\]\npub ' + item + r' \{.*?\n\}', db, re.S)
+            self.assertIsNotNone(declaration)
+            self.assertIn(declaration.group(), generated)
+        standalone = re.search(r'pub fn is_standalone_runtime\(\) -> bool \{.*?\n\}', (root/'src/server/lib.rs').read_text(), re.S)
+        self.assertIn(standalone.group(), generated)
+        self.assertIn('pub use server_config as config;', generated)
+        self.assertNotIn('#[cfg(any())]', generated)
+        self.assertNotIn('struct Mock', generated)
+
+    def test_chat_preparation_declares_outbox_dependency_closure(self):
+        import tomllib
+        root = Path(__file__).resolve().parents[1]
+        dependencies = tomllib.loads((root/'scripts/chat-tenant-isolation/Cargo.toml').read_text())['dependencies']
+        for name in ['base64', 'tracing', 'redis', 'server_common', 'server_config']:
+            self.assertIn(name, dependencies)
+        self.assertEqual(dependencies['server_common']['path'], '../../src/server/common')
+        self.assertEqual(dependencies['server_config']['path'], '../../src/server/config')
+        self.assertTrue({'tokio-comp', 'connection-manager'}.issubset(dependencies['redis']['features']))
+        self.assertIn('sqlite', dependencies['sqlx']['features'])
+
+    def test_chat_preparation_fingerprints_imported_dependency_sources(self):
+        import hashlib
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        folder = root/'scripts/chat-tenant-isolation'
+        runpy.run_path(str(folder/'prepare.py'))
+        manifest = json.loads((folder/'source-manifest.json').read_text())
+        paths = [root/p for p in ['Cargo.toml', 'Cargo.lock', 'src/server/lib.rs', 'src/server/db.rs', 'src/server/build.rs',
+                                  'src/server/domain/repository/omnichannel_repo.rs', 'src/server/redis_pool.rs']]
+        paths += list((root/'src/server/services/chat').rglob('*.rs'))
+        paths += list((root/'src/server/migrations').glob('*.sql'))
+        paths += [p for name in ['common', 'config'] for p in (root/'src/server'/name).rglob('*')
+                  if p.is_file() and (p.suffix == '.rs' or p.name == 'Cargo.toml')]
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertEqual(manifest['inputs'].get(str(path.relative_to(root))), hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertEqual(manifest['generated_sha256'], hashlib.sha256((folder/'generated.rs').read_bytes()).hexdigest())
+        self.assertEqual(manifest['active_migration_source'], 'src/server/migrations')
 
     def test_bootstrap_portable_role_gate_is_mandatory_and_complete(self):
         self.assertIn('bootstrap-portable-roles', gate.GATES)

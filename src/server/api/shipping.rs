@@ -1,16 +1,21 @@
 use axum::{
     Json, Router,
-    extract::{Extension, State},
-    http::StatusCode,
+    extract::{Extension, Path, State},
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
 };
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::sync::Arc;
 
-use crate::db::{DB, DbStore};
+use super::fulfillment::authentication::ProviderScope;
+#[path = "shipping/authority.rs"]
+pub mod authority;
+use authority::{AuthorizedOwner, ShippingAccess};
+#[path = "shipping/labels.rs"]
+pub(crate) mod labels;
 
 const MAX_PARCEL_VALUE: f64 = 100_000.0;
 type HmacSha256 = Hmac<Sha256>;
@@ -101,129 +106,64 @@ pub struct RatesResponse {
     pub rates: Vec<crate::integrations::shippo::client::ShippoRate>,
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
+pub fn router<S: Clone + Send + Sync + 'static>(access: Arc<ShippingAccess>) -> Router<S> {
     Router::new()
         .route("/rates", post(fetch_rates))
         .route("/label", post(purchase_label))
-        .with_state(db)
+        .route("/label/{transaction_id}", get(read_label))
+        .with_state(access)
 }
 
 fn authenticated_tenant(claims: &::server_common::Claims) -> Option<String> {
     ::server_common::auth_utils::signed_tenant_id(claims)
 }
 
-async fn tenant_owns_order(db: &DB, tenant_id: &str, order_id: &str) -> Result<bool, String> {
-    match &db.store {
-        DbStore::Postgres => {
-            let mut tx = db.pool.begin().await.map_err(|error| error.to_string())?;
-            crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
-                .await
-                .map_err(|error| error.to_string())?;
-            let exists = sqlx::query_scalar::<_, bool>(
-                "SELECT EXISTS(SELECT 1 FROM orders WHERE tenant_id = $1 AND id = $2)",
-            )
-            .bind(tenant_id)
-            .bind(order_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|error| error.to_string())?;
-            tx.commit().await.map_err(|error| error.to_string())?;
+async fn tenant_owns_order(
+    owner: AuthorizedOwner,
+    order_id: &str,
+) -> Result<bool, authority::Error> {
+    let tenant_id = owner.tenant_id().to_owned();
+    match owner {
+        AuthorizedOwner::Postgres(owner) => {
+            let mut tx = owner.begin().await?;
+            let exists=sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM orders WHERE tenant_id=$1 AND id=$2 AND lower(COALESCE(status,'')) NOT IN ('canceled','cancelled','fulfilled','returned'))")
+                .bind(&tenant_id).bind(order_id).fetch_one(tx.connection()).await?;
+            tx.commit().await?;
             Ok(exists)
         }
-        DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>(
-            "SELECT EXISTS(SELECT 1 FROM orders WHERE tenant_id = ? AND id = ?)",
-        )
-        .bind(tenant_id)
-        .bind(order_id)
-        .fetch_one(pool)
-        .await
-        .map(|exists| exists != 0)
-        .map_err(|error| error.to_string()),
-    }
-}
-
-async fn record_purchased_label(
-    db: &DB,
-    tenant_id: &str,
-    order_id: &str,
-    tracking_number: &str,
-) -> Result<(), String> {
-    match &db.store {
-        DbStore::Postgres => {
-            let mut tx = db.pool.begin().await.map_err(|error| error.to_string())?;
-            crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
-                .await
-                .map_err(|error| error.to_string())?;
-            let updated = sqlx::query(
-                "UPDATE delivery_tasks SET provider = 'shippo', provider_delivery_id = $3, status = 'SHIPPED', updated_at = CURRENT_TIMESTAMP WHERE organization_id = $1 AND order_id = $2",
-            )
-            .bind(tenant_id)
-            .bind(order_id)
-            .bind(tracking_number)
-            .execute(&mut *tx)
-            .await
-            .map_err(|error| error.to_string())?;
-            if updated.rows_affected() == 0 {
-                sqlx::query(
-                    "INSERT INTO delivery_tasks (id, organization_id, order_id, provider, provider_delivery_id, status) VALUES ($1, $2, $3, 'shippo', $4, 'SHIPPED')",
-                )
-                .bind(uuid::Uuid::new_v4())
-                .bind(tenant_id)
-                .bind(order_id)
-                .bind(tracking_number)
-                .execute(&mut *tx)
-                .await
-                .map_err(|error| error.to_string())?;
-            }
-            sqlx::query("UPDATE orders SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
-                .bind(tenant_id)
-                .bind(order_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|error| error.to_string())?;
-            tx.commit().await.map_err(|error| error.to_string())
-        }
-        DbStore::Sqlite(pool) => {
-            let mut tx = pool.begin().await.map_err(|error| error.to_string())?;
-            let updated = sqlx::query(
-                "UPDATE delivery_tasks SET provider = 'shippo', provider_delivery_id = ?, status = 'SHIPPED', updated_at = CURRENT_TIMESTAMP WHERE organization_id = ? AND order_id = ?",
-            )
-            .bind(tracking_number)
-            .bind(tenant_id)
-            .bind(order_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|error| error.to_string())?;
-            if updated.rows_affected() == 0 {
-                sqlx::query(
-                    "INSERT INTO delivery_tasks (id, organization_id, order_id, provider, provider_delivery_id, status) VALUES (?, ?, ?, 'shippo', ?, 'SHIPPED')",
-                )
-                .bind(uuid::Uuid::new_v4().to_string())
-                .bind(tenant_id)
-                .bind(order_id)
-                .bind(tracking_number)
-                .execute(&mut *tx)
-                .await
-                .map_err(|error| error.to_string())?;
-            }
-            sqlx::query("UPDATE orders SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
-                .bind(tenant_id)
-                .bind(order_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|error| error.to_string())?;
-            tx.commit().await.map_err(|error| error.to_string())
+        AuthorizedOwner::Sqlite(owner) => {
+            let mut tx = owner.begin().await?;
+            let exists=sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM orders WHERE tenant_id=? AND id=? AND lower(COALESCE(status,'')) NOT IN ('canceled','cancelled','fulfilled','returned'))")
+                .bind(&tenant_id).bind(order_id).fetch_one(tx.connection()).await?;
+            tx.commit().await?;
+            Ok(exists)
         }
     }
 }
 
 async fn fetch_rates(
-    State(db): State<Arc<DB>>,
+    State(access): State<Arc<ShippingAccess>>,
     Extension(claims): Extension<::server_common::Claims>,
+    headers: HeaderMap,
     Json(payload): Json<FetchRatesRequest>,
 ) -> impl IntoResponse {
     let Some(tenant_id) = authenticated_tenant(&claims) else {
         return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let owner = match access.authorize(&claims, &headers).await {
+        Ok(owner) => owner,
+        Err(error) => return authority::response(error),
+    };
+    let _scope = match ProviderScope::from_environment("SHIPPO") {
+        Ok(scope) if scope.tenant_id == tenant_id => scope,
+        Ok(_) => return StatusCode::FORBIDDEN.into_response(),
+        Err(message) => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({"error":message})),
+            )
+                .into_response();
+        }
     };
     if !safe_id(payload.orderId.trim()) {
         return (
@@ -246,12 +186,11 @@ async fn fetch_rates(
         )
             .into_response();
     };
-    match tenant_owns_order(&db, &tenant_id, payload.orderId.trim()).await {
+    match tenant_owns_order(owner, payload.orderId.trim()).await {
         Ok(true) => {}
         Ok(false) => return StatusCode::NOT_FOUND.into_response(),
         Err(error) => {
-            tracing::error!("failed to verify shipping order: {error}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            return authority::response(error);
         }
     }
     let token = match std::env::var("SHIPPO_API_TOKEN") {
@@ -268,6 +207,13 @@ async fn fetch_rates(
     let dimensions = format!("{length}x{width}x{height}");
     match client.fetch_rates(weight, &dimensions).await {
         Ok(mut rates) => {
+            let current = match access.authorize(&claims, &headers).await {
+                Ok(owner) => owner,
+                Err(error) => return authority::response(error),
+            };
+            if let Err(error) = current.confirm().await {
+                return authority::response(error);
+            }
             for rate in &mut rates {
                 let Some(signed_id) =
                     signed_rate_id(&token, &tenant_id, payload.orderId.trim(), &rate.id)
@@ -287,12 +233,28 @@ async fn fetch_rates(
 }
 
 async fn purchase_label(
-    State(db): State<Arc<DB>>,
+    State(access): State<Arc<ShippingAccess>>,
     Extension(claims): Extension<::server_common::Claims>,
+    headers: HeaderMap,
     Json(payload): Json<PurchaseLabelRequest>,
 ) -> impl IntoResponse {
     let Some(tenant_id) = authenticated_tenant(&claims) else {
         return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let owner = match access.authorize(&claims, &headers).await {
+        Ok(owner) => owner,
+        Err(error) => return authority::response(error),
+    };
+    let scope = match ProviderScope::from_environment("SHIPPO") {
+        Ok(scope) if scope.tenant_id == tenant_id => scope,
+        Ok(_) => return StatusCode::FORBIDDEN.into_response(),
+        Err(message) => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({"error":message})),
+            )
+                .into_response();
+        }
     };
     let order_id = payload.orderId.trim();
     if !safe_id(order_id) || payload.rateId.len() > 256 {
@@ -320,31 +282,71 @@ async fn purchase_label(
         )
             .into_response();
     };
-    match tenant_owns_order(&db, &tenant_id, order_id).await {
+    match tenant_owns_order(owner, order_id).await {
         Ok(true) => {}
         Ok(false) => return StatusCode::NOT_FOUND.into_response(),
         Err(error) => {
-            tracing::error!("failed to verify shipping order: {error}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            return authority::response(error);
         }
     }
     let client = crate::integrations::shippo::provider::ShippoProvider::new(token);
     match client.purchase_label(rate_id).await {
         Ok(response) => {
-            match record_purchased_label(&db, &tenant_id, order_id, &response.tracking_number).await
-            {
+            let recorded=match access.authorize(&claims,&headers).await {
+                Ok(owner)=>labels::record(owner,&scope,order_id,&response).await,
+                Err(error)=>Err(error),
+            };
+            match recorded {
                 Ok(()) => (StatusCode::OK, Json(response)).into_response(),
                 Err(error) => {
                     tracing::error!("failed to persist purchased shipping label: {error}");
-                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                    (StatusCode::ACCEPTED, Json(serde_json::json!({
+                        "success":false,"status":"outcome_unknown","reconciliationRequired":true,
+                        "transactionId":response.transaction_id,
+                        "error":"Provider returned a label but local recording failed; reconcile before retrying"
+                    }))).into_response()
                 }
             }
         }
         Err(error) => (
-            StatusCode::BAD_GATEWAY,
-            Json(serde_json::json!({ "error": error })),
+            StatusCode::ACCEPTED,
+            Json(serde_json::json!({ "success":false,"status":"outcome_unknown","reconciliationRequired":true,"error": error })),
         )
             .into_response(),
+    }
+}
+
+async fn read_label(
+    State(access): State<Arc<ShippingAccess>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(transaction): Path<String>,
+    headers: HeaderMap,
+) -> axum::response::Response {
+    let Some(tenant_id) = authenticated_tenant(&claims) else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let owner = match access.authorize(&claims, &headers).await {
+        Ok(owner) => owner,
+        Err(error) => return authority::response(error),
+    };
+    let scope = match ProviderScope::from_environment("SHIPPO") {
+        Ok(scope) if scope.tenant_id == tenant_id => scope,
+        Ok(_) => return StatusCode::FORBIDDEN.into_response(),
+        Err(message) => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({"error":message})),
+            )
+                .into_response();
+        }
+    };
+    if !safe_id(&transaction) {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+    match labels::read(owner,&scope,&transaction).await {
+        Ok(Some(receipt)) => (StatusCode::OK,Json(receipt)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND,Json(serde_json::json!({"error":"No local receipt; this does not establish whether a provider purchase occurred"}))).into_response(),
+        Err(error) => authority::response(error)
     }
 }
 

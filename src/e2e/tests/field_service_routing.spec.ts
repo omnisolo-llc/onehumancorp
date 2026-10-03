@@ -1,7 +1,10 @@
 import { test, expect } from '../fixtures';
+import { seedRoutingJobs } from '../support/field_routing_fixture';
+import { e2eDbQuery } from '../db_utils';
 
 test.describe('Field Service Routing Mobile App', () => {
-  test('Carlos views today route and updates job status', async ({ page }) => {
+  test('Carlos views today route and updates job status', async ({ page, seedData }) => {
+    const [job1, job2] = await seedRoutingJobs(seedData.tenant.id, seedData.customer.id);
     // 1. Emulate a mobile device layout by changing viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -18,8 +21,8 @@ test.describe('Field Service Routing Mobile App', () => {
     await expect(page.locator('#loading-state')).toBeHidden({ timeout: 10000 });
 
     // Ensure we are displaying the seeded jobs from e2e-seed.sql
-    const job1Card = page.locator('[data-testid="job-card-e2e-job-1"]');
-    const job2Card = page.locator('[data-testid="job-card-e2e-job-2"]');
+    const job1Card = page.locator(`[data-testid="job-card-${job1}"]`);
+    const job2Card = page.locator(`[data-testid="job-card-${job2}"]`);
 
     await expect(job1Card).toBeVisible();
     await expect(job1Card.locator('.job-title')).toHaveText('Fix leaking sink');
@@ -28,24 +31,28 @@ test.describe('Field Service Routing Mobile App', () => {
     await expect(job2Card).toBeVisible();
 
     // 5. CUJ Action: "Start Travel" (change status from pending -> en_route)
-    const startTravelBtn = job1Card.locator('[data-testid="btn-start-travel-e2e-job-1"]');
+    const startTravelBtn = job1Card.locator(`[data-testid="btn-start-travel-${job1}"]`);
     await expect(startTravelBtn).toBeVisible();
     await startTravelBtn.click();
+    await expect(job1Card.getByTestId(`job-receipt-${job1}`)).toHaveText('Confirmed by server.');
 
     // 6. Verify status updated to 'en_route' and button changed to 'Arrived On-Site'
     await expect(job1Card.locator('.job-status')).toHaveText('en route', { timeout: 10000 });
-    const arriveBtn = job1Card.locator('[data-testid="btn-arrived-e2e-job-1"]');
+    const arriveBtn = job1Card.locator(`[data-testid="btn-arrived-${job1}"]`);
     await expect(arriveBtn).toBeVisible();
 
     // 7. CUJ Action: "Arrived On-Site" (change status from en_route -> on_site)
     await arriveBtn.click();
+    await expect(job1Card.getByTestId(`job-receipt-${job1}`)).toHaveText('Confirmed by server.');
 
     // 8. Verify status updated to 'on_site'
     await expect(job1Card.locator('.job-status')).toHaveText('on site', { timeout: 10000 });
 
     // 9. CUJ Action: "Job Done" (change status from on_site -> done)
-    const doneBtn = job1Card.locator('[data-testid="btn-job-done-e2e-job-1"]');
+    const doneBtn = job1Card.locator(`[data-testid="btn-job-done-${job1}"]`);
     await doneBtn.click();
+    await expect(job1Card.getByTestId(`job-receipt-${job1}`)).toHaveText('Confirmed by server.');
+    expect((await e2eDbQuery('SELECT status FROM job_locations WHERE id = $1 AND tenant_id = $2', [job1, seedData.tenant.id]))[0].status).toBe('done');
 
     // 10. Verify status updated to 'done' and 'Tap to Pay' button is shown
     await expect(job1Card.locator('.job-status')).toHaveText('done', { timeout: 10000 });
@@ -54,10 +61,10 @@ test.describe('Field Service Routing Mobile App', () => {
 
     // Go offline
     await page.context().setOffline(true);
-    await page.waitForTimeout(500);
+    await expect(page.locator('#network-status-text')).toHaveText(/Working Offline/);
 
     // CUJ Action: "Start Travel" (change status from pending -> en_route) on job2 while offline
-    const startTravelBtn2 = job2Card.locator('[data-testid="btn-start-travel-e2e-job-2"]');
+    const startTravelBtn2 = job2Card.locator(`[data-testid="btn-start-travel-${job2}"]`);
     await expect(startTravelBtn2).toBeVisible();
     await startTravelBtn2.click();
 
@@ -67,13 +74,18 @@ test.describe('Field Service Routing Mobile App', () => {
     // Check that network status indicator shows offline sync state
     const offlineIndicator = page.locator('#network-status-indicator');
     await expect(offlineIndicator).toBeVisible();
-    await expect(offlineIndicator.locator('#network-status-text')).toHaveText('Working Offline - Changes Saved');
+    await expect(offlineIndicator.locator('#network-status-text')).toHaveText('Working Offline - Changes Saved Locally; confirmation pending');
+
+    await expect(job2Card.getByTestId(`job-receipt-${job2}`)).toHaveText('Saved locally; confirmation pending.');
 
     // Go back online
     await page.context().setOffline(false);
 
     // Wait for the queue to sync and UI to refresh
     await expect(offlineIndicator).toBeHidden({ timeout: 10000 });
+
+    await expect(job2Card.getByTestId(`job-receipt-${job2}`)).toHaveText('Confirmed by server.');
+    expect((await e2eDbQuery('SELECT status FROM job_locations WHERE id = $1 AND tenant_id = $2', [job2, seedData.tenant.id]))[0].status).toBe('en_route');
 
     // Verify status persisted and refreshed from server
     await expect(job2Card.locator('.job-status')).toHaveText('en route', { timeout: 10000 });

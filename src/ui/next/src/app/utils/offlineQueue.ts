@@ -30,12 +30,40 @@ export interface OfflineAction {
   quantity?: number;
   device_signature?: string;
   timestamp: number;
+  /** Frozen local handoff context. Never inferred from a later appointment snapshot. */
+  field_completion?: { job_id: string; customer_id: string; notes: string };
+  field_completion_parent_id?: string;
 }
 
 export type RouteState = { plan: RoutePlan; status: 'pending' | 'inflight' | OutcomeStatus; attempts: number; attemptToken?: string; reason?: string };
 type Envelope = { version: 2; adapter: QueueAdapter; owner: QueueOwner; action: OfflineAction; context: RouteContext; routes: RouteState[] };
 export type ActionClaim = { action: OfflineAction; owner: QueueOwner; adapter: QueueAdapter; route: RoutePlan; attemptToken: string };
 export type QueueSummary = { pending: number; needsAttention: number; reconciliation: number; legacyHeld: number; storageUnavailable: boolean };
+
+/** Only the acknowledged appointment event can release its captured follow-ups. */
+function fieldCompletionFollowups(action: OfflineAction): OfflineAction[] {
+  const context = action.field_completion;
+  if (context === undefined) return [];
+  const event = action.payload;
+  const payload = event?.payload;
+  if (!context || typeof context !== 'object' || Array.isArray(context) || action.type !== 'sync_event'
+    || event?.entity_type !== 'appointment' || event?.action_type !== 'UpdateStatus'
+    || typeof context.job_id !== 'string' || !context.job_id || context.job_id !== event.entity_id
+    || typeof context.customer_id !== 'string' || !context.customer_id || typeof context.notes !== 'string'
+    || !payload || typeof payload !== 'object' || Array.isArray(payload)
+    || (payload as Record<string, unknown>).status !== 'Completed'
+    || typeof (payload as Record<string, unknown>).expected_updated_at !== 'string'
+    || !(payload as Record<string, unknown>).expected_updated_at
+    || ((payload as Record<string, unknown>).notes ?? '') !== context.notes) {
+    throw new Error('Invalid captured field completion handoff');
+  }
+  const common = { timestamp: action.timestamp, field_completion_parent_id: action.id };
+  const quoteNotes = `Follow up quote requested by field op for job ${context.job_id}. Notes: ${context.notes}`;
+  return [
+    { ...common, id: `field-completion-${action.id}-invoice`, type: 'generate_invoice', payload: { job_id: context.job_id, customer_id: context.customer_id } },
+    ...(context.notes ? [{ ...common, id: `field-completion-${action.id}-quote`, type: 'draft_quote', notes: quoteNotes, payload: { notes: quoteNotes } }] : []),
+  ];
+}
 
 function envelope(row: StoredQueueRow): Envelope | null {
   try {
@@ -46,6 +74,7 @@ function envelope(row: StoredQueueRow): Envelope | null {
         data.routes.some((route: RouteState) => !route || !validRoutePlan(route.plan) || !['pending', 'inflight', 'acknowledged', 'blocked', 'reconciliation'].includes(route.status) || !Number.isInteger(route.attempts) || route.attempts < 0 || route.attempts > route.plan.maxAttempts)) return null;
     if (!data.context || typeof data.context !== 'object' || Array.isArray(data.context) ||
         canonical(data.routes.map((route: RouteState) => route.plan)) !== canonical(planRoutes(data.action, data.context))) return null;
+    fieldCompletionFollowups(data.action);
     return data as Envelope;
   } catch { return null; }
 }
@@ -68,7 +97,7 @@ export async function enqueueActions(actions: OfflineAction[], expectedOwner?: Q
   if (!actions.length) return;
   const intendedOwner = expectedOwner ? { ...expectedOwner } : undefined;
   // Clone before the first await: the caller cannot change a queued financial action.
-  const immutable = clone(actions).map(action => { const context = captureRouteContext(action); return { action, context, plans: planRoutes(action, context) }; });
+  const immutable = clone(actions).map(action => { fieldCompletionFollowups(action); const context = captureRouteContext(action); return { action, context, plans: planRoutes(action, context) }; });
   const owner = await readQueueOwner();
   if (intendedOwner && !sameOwner(owner, intendedOwner)) throw new Error('Queued action owner does not match the current view.');
   const adapter = await selectedQueueAdapter();
@@ -138,7 +167,22 @@ export async function completeAction(claim: ActionClaim, status: OutcomeStatus, 
     const route = value?.routes.find(route => route.plan.id === claim.route.id);
     if (!value || value.adapter !== claim.adapter || !sameOwner(value.owner, claim.owner) || !route || route.status !== 'inflight' || route.attemptToken !== claim.attemptToken) throw new Error('Offline claim no longer matches');
     route.status = status; route.reason = reason;
-    return { writes: [stored(value)], result: undefined };
+    const writes = [stored(value)];
+    if (acknowledged(value)) {
+      // Parent receipt and children share one commit. A crash cannot leave an
+      // acknowledged completion without its follow-ups, or release them early.
+      for (const action of fieldCompletionFollowups(value.action)) {
+        const previous = rows.find(row => row.id === action.id);
+        const existing = previous && envelope(previous);
+        if (previous && (!existing || !sameOwner(existing.owner, value.owner) || canonical(existing.action) !== canonical(action))) throw new Error('Field completion follow-up ID collision requires reconciliation');
+        if (!previous) {
+          const context = captureRouteContext(action);
+          writes.push(stored({ version: 2, adapter: value.adapter, owner: value.owner, action, context,
+            routes: planRoutes(action, context).map(plan => ({ plan, status: 'pending', attempts: 0 })) }));
+        }
+      }
+    }
+    return { writes, result: undefined };
   });
 }
 

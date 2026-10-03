@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Appointment {
     pub id: String,
     pub customer_id: String,
@@ -19,6 +19,8 @@ pub struct Appointment {
     pub job_template_id: String,
     pub job_name: String,
     pub status: String,
+    #[serde(default)]
+    pub updated_at: Option<DateTime<Utc>>,
     pub scheduled_start_time: Option<DateTime<Utc>>,
     pub scheduled_end_time: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -44,6 +46,12 @@ pub fn router<S: Clone + Send + Sync + 'static>(
     pool: PgPool,
     store: Arc<server_auth::Store>,
 ) -> Router<S> {
+    optional_router(Some(pool), store)
+}
+pub fn optional_router<S: Clone + Send + Sync + 'static>(
+    pool: Option<PgPool>,
+    store: Arc<server_auth::Store>,
+) -> Router<S> {
     Router::new()
         .route("/appointments", get(get_appointments))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -61,7 +69,7 @@ fn failure(status: StatusCode, message: &'static str) -> Response {
         .into_response()
 }
 pub async fn get_appointments(
-    State(pool): State<PgPool>,
+    State(pool): State<Option<PgPool>>,
     Extension(claims): Extension<server_common::Claims>,
     Query(query): Query<GetAppointmentsQuery>,
 ) -> Response {
@@ -81,6 +89,12 @@ pub async fn get_appointments(
             "Appointment tenant does not match the current session",
         );
     }
+    let Some(pool) = pool else {
+        return failure(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Canonical appointment storage is unavailable",
+        );
+    };
     match read_appointments(&pool, &tenant, query.mobile_optimized.unwrap_or(false)).await {
         Ok(appointments) => (
             [(header::CACHE_CONTROL, "private, no-store")],
@@ -111,9 +125,14 @@ async fn read_appointments(
         .await?;
     let rows = sqlx::query_as::<_, Appointment>(
         r#"
+        WITH latest_route AS (
+            SELECT id FROM service_routes
+            WHERE tenant_id=$1 AND route_date=$3 AND status IN ('prepared','active')
+            ORDER BY created_at DESC NULLS LAST,id DESC LIMIT 1
+        )
         SELECT a.id, COALESCE(c.id,'') AS customer_id, COALESCE(c.name,'') AS customer_name,
                COALESCE(jt.id,'') AS job_template_id, COALESCE(jt.name,'') AS job_name,
-               a.status,a.scheduled_start_time,a.scheduled_end_time,
+               a.status,a.updated_at,a.scheduled_start_time,a.scheduled_end_time,
                CASE WHEN $2 THEN NULL::text ELSE a.location_address END AS location_address,
                CASE WHEN $2 THEN NULL::double precision ELSE a.location_lat END AS location_lat,
                CASE WHEN $2 THEN NULL::double precision ELSE a.location_lng END AS location_lng,
@@ -123,6 +142,7 @@ async fn read_appointments(
         LEFT JOIN job_templates jt ON jt.id=a.job_template_id AND jt.tenant_id=a.tenant_id
         LEFT JOIN LATERAL (
             SELECT MIN(jl.sequence_order) AS sequence_order FROM job_locations jl
+            JOIN latest_route lr ON lr.id=jl.service_route_id
             WHERE jl.appointment_id=a.id AND jl.tenant_id=a.tenant_id
         ) route ON true
         WHERE a.tenant_id=$1
@@ -131,6 +151,7 @@ async fn read_appointments(
     )
     .bind(tenant)
     .bind(mobile)
+    .bind(Utc::now().date_naive())
     .fetch_all(&mut *tx)
     .await?;
     tx.commit().await?;

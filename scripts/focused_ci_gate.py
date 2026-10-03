@@ -11,6 +11,8 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
+    'shipping-integrity-contract': (48, 'OHC_SHIPPING_TEST_DATABASE_URL'),
+    'field-boundary-contract': (89, 'OHC_FIELD_TEST_DATABASE_URL'),
     'checkpoint-restore-contract': (37, 'OHC_CHECKPOINT_TEST_DATABASE_URL'),
     'staff-read-contract': (8, 'OHC_STAFF_TEST_DATABASE_URL'),
     'proactive-worker-contract': (11, 'OHC_OPS_PROBE_DB'),
@@ -20,7 +22,7 @@ GATES = {
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),
     'agent-definition-contract': (63, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
 
-    'chat-tenant-isolation': (13, 'OHC_CHAT_TEST_DATABASE_URL'),
+    'chat-tenant-isolation': (22, 'OHC_CHAT_TEST_DATABASE_URL'),
     'bootstrap-portable-roles': (9, 'OHC_SETUP_TEST_DATABASE_URL'),
     'link-bio-isolation': (14, 'OHC_BIO_TEST_DATABASE_URL'),
     'tenant-search': (13, 'OHC_SEARCH_TEST_DATABASE_URL'),

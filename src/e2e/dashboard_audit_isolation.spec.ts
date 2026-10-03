@@ -107,3 +107,36 @@ for (const route of ['/builder', '/website-builder']) {
     } finally { await first.close(); }
   });
 }
+
+for (const route of ['/onboarding', '/share-card']) {
+  test(`persisted setup Back and Skip on ${route} cannot erase another owner's Upload Image coverage`, async ({ browser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated app base URL is required');
+    const first = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+    try {
+      await first.navigate(route);
+      await expect(first.page.getByRole('button', { name: 'Upload Image', exact: true })).toBeVisible();
+      const baseline = (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key);
+      await prepareClickAuditState(first.page, route, 'intro');
+      expect(await e2eDbQuery('SELECT state_json->>\'step\' AS selected_step FROM onboarding_state WHERE tenant_id=$1 AND user_id=$2', [first.actor.tenantId, first.actor.userId])).toEqual([{ selected_step: '-2' }]);
+      const changed = (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key);
+      expect(() => assertSameClickInventory(baseline, changed)).toThrow('missing=');
+      await expect(first.page.getByRole('button', { name: 'Upload Image', exact: true })).toHaveCount(0);
+      const skipped = first.page.waitForResponse(response => new URL(response.url()).origin === new URL(baseURL).origin
+        && new URL(response.url()).pathname === '/api/v1/onboarding/state' && response.request().method() === 'POST'
+        && response.request().postDataJSON()?.skipped === true);
+      await first.page.getByRole('button', { name: 'Skip setup', exact: true }).click();
+      expect((await skipped).status()).toBe(204);
+      await expect(first.page).toHaveURL(new URL('/dashboard', baseURL).href);
+      expect(await e2eDbQuery('SELECT state_json->>\'skipped\' AS skipped FROM onboarding_state WHERE tenant_id=$1 AND user_id=$2', [first.actor.tenantId, first.actor.userId])).toEqual([{ skipped: 'true' }]);
+      const second = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+      try {
+        await second.navigate(route);
+        expect(second.actor.tenantId).not.toBe(first.actor.tenantId);
+        await expect(second.page).toHaveURL(new URL('/onboarding', baseURL).href);
+        await expect(second.page.getByRole('button', { name: 'Upload Image', exact: true })).toBeVisible();
+        assertSameClickInventory(baseline, (await tagClickTargets(second.page, second.actor.namespace, second.actor.canonicalIds)).map(target => target.key));
+        expect(await e2eDbQuery('SELECT state_json->>\'skipped\' AS skipped FROM onboarding_state WHERE tenant_id=$1 AND user_id=$2', [first.actor.tenantId, first.actor.userId])).toEqual([{ skipped: 'true' }]);
+      } finally { await second.close(); }
+    } finally { await first.close(); }
+  });
+}
