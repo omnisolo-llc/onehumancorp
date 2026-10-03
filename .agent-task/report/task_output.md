@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Implement Autonomous Triage Agent & Unified Inbox Mobile UI"
+issue_description: "The request to implement an Autonomous Triage Agent and Unified Inbox Mobile UI is blocked. Under the 2026-09-18-usage-audit revision, requests to expand into new verticals, channels, or add new agents require explicit authorization, evidence, and an expansion gate in RESEARCH.md. There is no evidence-backed decision for this epic, so it is deferred. Superpowers skills loaded: .agent-scratch/superpowers/skills/using-superpowers/SKILL.md at upstream commit 8ca22dba9a94f28898bbce59f2537ff4d87c747d."
