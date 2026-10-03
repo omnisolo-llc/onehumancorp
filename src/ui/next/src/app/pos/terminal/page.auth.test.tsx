@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import POSTerminal from './page';
+import { invalidateQueueOwner } from '@/lib/sync/queueIdentity';
 
 vi.mock('./StripeTerminalClient', () => ({ default: ({ onQueued, onSuccess }: { onQueued?: (amount: number) => void; onSuccess?: (amount: number) => void }) => <div>Payment reader<button onClick={() => onQueued?.(5000)}>Queue test sale</button><button onClick={() => onSuccess?.(5000)}>Confirm test payment</button></div> }));
 vi.mock('../../../components/LocalizationToggle', () => ({ LocalizationToggle: () => null }));
@@ -15,6 +16,7 @@ const staff = { id: 'staff-a', name: 'Verified Staff', role: 'STAFF', tenant_id:
 let authentication: () => Promise<Response>;
 const transport = vi.fn<typeof fetch>(async (input) => {
   const url = String(input);
+  if (url === '/api/v1/auth/session-identity') return Response.json({ userId: 'user-a', tenantId: staff.tenant_id, expiresAt: Date.now() + 60_000 });
   if (url === '/api/v1/pos/auth') return authentication();
   if (url === '/api/v1/payments/terminal/session/start') return Response.json({ success: true, session_id: 'session-a' });
   if (url === '/api/v1/pos/inventory') return Response.json({ inventory: [] });
@@ -32,9 +34,10 @@ describe('POS terminal identity', () => {
     vi.stubGlobal('fetch', transport);
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
     localStorage.clear();
+    invalidateQueueOwner();
     authentication = async () => Response.json({ success: true, staff });
   });
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); invalidateQueueOwner(); });
 
   it('does not invent an offline manager or authorize payment while disconnected', async () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);

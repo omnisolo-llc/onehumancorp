@@ -13,6 +13,8 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
 
     // Clock in
     await page.getByRole('button', { name: 'Clock In' }).click();
+    await expect(page.getByRole('heading', { name: 'Clocked In', exact: true })).toBeVisible();
+    await expect(page.getByText('Offline queue ready for this session.', { exact: true })).toBeVisible();
   });
 
   test('does not invent a reader or charge when Terminal credentials are unavailable', async ({ page }) => {
@@ -39,6 +41,9 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     const terminal = page.locator('#pos-keypad');
     await terminal.getByRole('button', { name: 'Back', exact: true }).click();
     await terminal.getByRole('button', { name: 'Cash', exact: true }).click();
+    // Wait for the real same-owner identity and local queue reads to settle.
+    // An online sync revalidation must not be interrupted by this fixture.
+    await expect(page.getByText('Offline queue ready for this session.', { exact: true })).toBeVisible();
 
     // Go offline
     await context.setOffline(true);
