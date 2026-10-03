@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T01:01:00Z",
+  "updated_at": "2026-10-03T01:55:00Z",
   "scope": "Every issue found remains tracked until repaired and verified. Containment is interim. Merge is not production-readiness certification.",
   "items": [
     {
@@ -7,7 +7,7 @@
       "owner": "integration",
       "status": "failed_pending_repair_verification",
       "required_outcome": "Full locked make lint/test and actual browser acceptance on merged checkpoint",
-      "evidence_and_limit": "Exact d6a6eec CI37079912811: Node801/Next3101/Tauri/PG green; backend/images/Rust failed actual operations-worker Send/Executor and stale import. Browser/Compose/Kind did not execute. Reviewed minimal worker fix has actual11-case RED/GREEN and strictClippy; next exact-head hosted run required."
+      "evidence_and_limit": "Exact c8fea4c CI37084808098: 1726 browser passed,36failed,6 configured acceptance skipped;25.95min total. Backend/images/Node/Next/Tauri/PG/Docker/Kind green. Actual Rust cases pass; full lib-test Clippy fails harness-only lifecycle helper usage. Next candidate includes real root lifecycle tests and scoped browser fixture corrections; full acceptance remains open."
     },
     {
       "id": "legacy-agent-rpc",
@@ -75,16 +75,16 @@
     {
       "id": "operational-signals",
       "owner": "browser-operations",
-      "status": "repaired_pending_hosted",
+      "status": "verified_hosted",
       "required_outcome": "Remove invented recurring business claims and generate only recorded source-backed low-stock signals",
-      "evidence_and_limit": "Invented three scenarios and unconfigured daily checklist removed; actual inventory thresholds, source revision/dedupe, preserved decisions and bounded fair polling implemented. Actual original10 SQLite/PG cases plus spawned-worker/cache case pass11; same-setting query reborrows fix compiler error; full server build pending."
+      "evidence_and_limit": "c8 actual backend/images/PG/worker gate pass. Worker retains real inventory thresholds, source revision/dedupe, preserved decisions and bounded fair polling; actual11-case spawn/storage/cache/fairness regression passed. Broader alert categories require their own configured source signals."
     },
     {
       "id": "location-escalation",
       "owner": "integration",
-      "status": "in_progress",
+      "status": "partially_repaired",
       "required_outcome": "Truthful real staff/task/summary reads and genuine draft/send escalation workflow",
-      "evidence_and_limit": "Separate d63d240 removes fabricated staff/task/summary data, draft200 fallbacks and unused simulation routes; additive1027 plus8realSQLite/PG read tests andClippy pass. Held outside published checkpoint for owner-switch UI privacy repair. Genuine draft/send capability remains unfinished."
+      "evidence_and_limit": "Paired d63d240/4b11f02 integrated: real staff/task/summary reads and additive1027, no fabricated draft results, actual8SQLite/PG cases andClippy; owner-bound UI3068fullNext/29focused pass on component source. Genuine draft/delivery, invitation and timecard-write outcomes remain separate open issues."
     },
     {
       "id": "audio-command",
@@ -173,9 +173,9 @@
     {
       "id": "operations-worker-spawn",
       "owner": "integration",
-      "status": "repaired_pending_hosted",
+      "status": "verified_hosted",
       "required_outcome": "Build and run the exact production spawned worker with factual persistence, auth and cache behavior intact",
-      "evidence_and_limit": "Hosted d6a6eec RED reproduced in actual-source wrapper harness; final11 tests and strictClippy pass on153a371. Two transaction-local settings retain1s/4s values; original worker/storage byte-identical. New required CI gate11; full packaged backend pending."
+      "evidence_and_limit": "Minimal153a371 fix passed actual11/Clippy; c8 full backend and production images plus required worker gate passed. No unsafe, lint suppression or worker/cache/auth replacement."
     },
     {
       "id": "shipping-real-contracts",
@@ -204,6 +204,27 @@
       "status": "partially_repaired",
       "required_outcome": "Preserve actual generated text and owner edits; implement genuine supported URL/media/GEO/runtime paths or explicitly retire unadvertised unused paths",
       "evidence_and_limit": "0f81521 preserves subtitle/TextBlock, rejects malformed provider envelopes and presents real HTTP/RPC errors. URL/media/GEO and tenant-bound repository runtime remain unimplemented; exact503 availability is not positive capability acceptance."
+    },
+    {
+      "id": "postgres-registration-namespace",
+      "owner": "entitlement",
+      "status": "in_progress",
+      "required_outcome": "Actual PostgreSQL ticket/OIDC registration atomically creates its fresh Free tenant namespace, account, roles and source binding while preserving paid invitations and collision rollback",
+      "evidence_and_limit": "be5d0dc source-owner binding is integrated with18actualSQLiteauth/3migration/Clippy proof. Separate actual canonical PG RED confirms users_tenant_id_fkey rejects the server-generated tenant because no tenant row exists; fix and full PG proof remain open."
+    },
+    {
+      "id": "worst-case-cached-tariff",
+      "owner": "durable-workflow",
+      "status": "repaired_pending_hosted",
+      "required_outcome": "Reserve a checked monetary ceiling covering either all-cached or all-uncached input before dispatch",
+      "evidence_and_limit": "ec97410 uses max of existing RateCard.cost extremes, with real4864vs8960RED then workflow99. Two root lifecycle cases raise finalworkflow101/PG56/builder53. Workflow101/PG56 and strictClippy passed on component source; builder53/current fullhosted pending."
+    },
+    {
+      "id": "legacy-dashboard-feed-clobber",
+      "owner": "entitlement",
+      "status": "open",
+      "required_outcome": "Only the actual feed endpoint may replace recorded agent feed state; unrelated referral/metric reads cannot erase it",
+      "evidence_and_limit": "Mounted legacy dashboard checkReferralTier and fetchViralLoopMetrics assign agentFeedItems from unrelated missing pending_approvals/agent_feed fields; functions are called at startup. Owner investigating all mirrors; no repair verification yet."
     }
   ],
   "required_configured_acceptance": [
