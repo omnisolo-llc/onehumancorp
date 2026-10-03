@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: Implement Unified AI Triage Feed Architecture
+issue_description: "Missing required evidence/authorization in RESEARCH.md for expansion. The issue asks to build a new capability ('Unified AI Triage Command Center' feed, 'ohc_triage_feed', mobile/Flutter/Tauri UI) without explicit expansion gate/authorization in RESEARCH.md. The current research direction supersedes older role catalogs and strictly requires evidence before committing to new epics. Therefore, this issue is returning a blocked finding. Loaded skill path: .agent-scratch/superpowers/skills/using-superpowers/SKILL.md, upstream revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d"
