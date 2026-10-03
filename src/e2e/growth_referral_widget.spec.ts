@@ -1,9 +1,13 @@
 import { test, expect } from './fixtures';
+import { createRecordedOrderOwner, captureRecordedOrders } from './support/recorded_order_fixture';
+import { createRecordedInvitation } from './support/recorded_invitation';
 
 test.describe('Growth Referral Widget', () => {
-  test('generates widget code and handles paywall correctly', async ({ page }) => {
-
+  test('creates an actual invitation and preserves the empty recorded-order state', async ({ page, baseURL }) => {
+    const owner = await createRecordedOrderOwner(page, baseURL, 0);
+    const reading = captureRecordedOrders(page, owner);
     await page.goto('/team');
+    await reading;
 
     // Wait for the Widget Builder button to appear under Invite & Earn section and click it
     const widgetBuilderBtn = page.getByRole('button', { name: /Invite to Cloud Team|Unlock Cloud Collaboration/ });
@@ -12,16 +16,8 @@ test.describe('Growth Referral Widget', () => {
     await widgetBuilderBtn.waitFor({ state: 'visible', timeout: 15000 });
 
     await expect(widgetBuilderBtn).toBeVisible();
-    await widgetBuilderBtn.click();
-
-    // Check that the invite link generated has the expected format
     const copyInput = page.locator('input#cloud-bridge-invite-link');
-    await copyInput.waitFor({ state: 'visible', timeout: 15000 });
-    await expect(copyInput).toBeVisible();
-
-    // Check invite link value
-    await expect(copyInput).toHaveValue(/invite/, { timeout: 15000 });
-    const inviteLink = await copyInput.inputValue();
+    const inviteLink = await createRecordedInvitation(page, { button: widgetBuilderBtn, input: copyInput, invitee: 'pending-invite' });
     expect(inviteLink).toContain('/invite/');
 
     // Verify Copy button is present using exact text to avoid matching "Copy Embed Code"
@@ -42,11 +38,9 @@ test.describe('Growth Referral Widget', () => {
     const copyEmbedBtn = page.getByRole('button', { name: 'Copy Embed Code' });
     await expect(copyEmbedBtn).toBeVisible();
 
-    // Verify 10th order milestone section
-    const milestoneHeading = page.getByRole('heading', { name: '🎉 10th Order! Share your success' });
-    await expect(milestoneHeading).toBeVisible();
-
-    const milestoneShareBtn = page.getByRole('link', { name: /Share to WhatsApp/i });
-    await expect(milestoneShareBtn).toBeVisible();
+    // The actual owned aggregate is empty even though the fixture has foreign orders.
+    await expect(page.getByText('No recorded orders yet.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('img', { name: '10th Order Milestone' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /Share to WhatsApp/i })).toHaveCount(0);
   });
 });

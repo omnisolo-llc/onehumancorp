@@ -1736,8 +1736,9 @@
         ></div>
 
         <div class="btn-group">
+          <p id="approval-error" role="alert" style="color: #FF3B30"></p>
           <button id="approve-publish-btn" data-testid="approve-publish-btn">
-            Approve & Publish
+            Approve & Complete Setup
           </button>
         </div>
       </div>
@@ -2099,118 +2100,10 @@
         </div>
       </div>
 
-      <!-- Step 5: Admin Setup -->
+      <!-- Step 5: Team Review (existing signed-in account) -->
       <div class="step" id="step-admin">
-        <h1>Admin Credentials</h1>
-        <p>Set up your login details.</p>
-
-        <input
-          type="text"
-          id="admin-name"
-          data-testid="admin-name"
-          class="glassmorphism"
-          placeholder="Your Name (e.g. Maya)"
-          inputmode="text"
-          autocomplete="name"
-          enterkeyhint="next"
-        />
-        <div id="admin-name-error" class="error-msg" aria-live="polite">
-          Please enter your name.
-        </div>
-
-        <input
-          type="email"
-          id="admin-email"
-          data-testid="admin-email"
-          class="glassmorphism"
-          placeholder="admin@mybusiness.com"
-          inputmode="email"
-          autocomplete="email"
-          enterkeyhint="next"
-        />
-        <div id="email-error" class="error-msg" aria-live="polite">
-          Please enter a valid email address.
-        </div>
-
-        <div
-          style="
-            position: relative;
-            width: 100%;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-          "
-        >
-          <input
-            type="password"
-            id="admin-password"
-            data-testid="admin-password"
-            class="glassmorphism"
-            placeholder="Password (min 8 chars)"
-            autocomplete="new-password"
-            enterkeyhint="next"
-            style="padding-right: 44px !important; margin-bottom: 0; flex: 1"
-          />
-          <button
-            type="button"
-            id="toggle-password-visibility"
-            aria-label="Toggle password visibility"
-            title="Toggle password visibility"
-            style="
-              position: absolute;
-              right: 0;
-              height: 100%;
-              width: 44px;
-              background: none;
-              border: none;
-              cursor: pointer;
-              padding: 0;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: #555;
-              box-shadow: none;
-              min-width: auto !important;
-              min-height: auto !important;
-              z-index: 10;
-            "
-          >
-            <svg
-              id="eye-icon-show"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-            <svg
-              id="eye-icon-hide"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="display: none"
-            >
-              <path
-                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
-              ></path>
-              <line x1="1" y1="1" x2="23" y2="23"></line>
-            </svg>
-          </button>
-        </div>
-        <div id="password-error" class="error-msg" aria-live="polite">
-          Password must be at least 8 characters and contain a number.
-        </div>
+        <h1>Review your team</h1>
+        <p>Your business workspace uses your signed-in account.</p>
 
         <div
           style="
@@ -2402,6 +2295,9 @@
         <div id="offer-error" class="error-msg" aria-live="polite">
           Please tell us what you sell.
         </div>
+        <label for="first-product-price">First product or service price</label>
+        <input id="first-product-price" data-testid="first-product-price" type="text" inputmode="decimal" class="glass-control glassmorphism" placeholder="Enter a price, including 0 for a free offer" aria-describedby="first-product-price-error" />
+        <div id="first-product-price-error" class="error-msg" aria-live="polite">Please enter the price for your first offer.</div>
         <div class="btn-group">
           <button
             class="next-step-btn"
@@ -2653,6 +2549,16 @@
       </div>
     </div>
     <script>
+      // Successful OIDC returns invalidate older views before restoring this draft.
+      // This one-use marker is an invalidation signal, never session authority.
+      const authCompletion = new URL(window.location.href);
+      if (authCompletion.searchParams.get('ohc_auth_complete') === '1') {
+        authCompletion.searchParams.delete('ohc_auth_complete');
+        window.history.replaceState(window.history.state, '', authCompletion.pathname + authCompletion.search + authCompletion.hash);
+        try { localStorage.setItem('omnisolo_queue_identity_epoch_v2', crypto.randomUUID()); } catch { /* This document still revalidates its session. */ }
+        window.dispatchEvent(new Event('omnisolo_auth_changed'));
+      }
+
       const container = document.getElementById("form-container") || document.getElementById("setup-screen");
 
       function applyPersona(persona, event) {
@@ -2720,10 +2626,8 @@
         tagline: document.getElementById("business-tagline"),
         assistant_name: document.getElementById("assistant-name"),
         assistant_tone: document.getElementById("assistant-tone"),
-        admin_name: document.getElementById("admin-name"),
-        admin_email: document.getElementById("admin-email"),
-        admin_password: document.getElementById("admin-password"),
         first_offer: document.getElementById("first-offer"),
+        first_product_price: document.getElementById("first-product-price"),
         location: document.getElementById("location-input"),
         target_audience: document.getElementById("target-audience"),
         template_selection: document.getElementById("template-selection"),
@@ -2738,10 +2642,8 @@
         name: document.getElementById("name-error"),
         assistant_name: document.getElementById("assistant-name-error"),
         assistant_tone: document.getElementById("tone-error"),
-        admin_name: document.getElementById("admin-name-error"),
-        admin_email: document.getElementById("email-error"),
-        admin_password: document.getElementById("password-error"),
         first_offer: document.getElementById("offer-error"),
+        first_product_price: document.getElementById("first-product-price-error"),
         location: document.getElementById("location-error"),
         target_audience: document.getElementById("target-audience-error"),
         template_selection: document.getElementById("template-error"),
@@ -2757,62 +2659,171 @@
         categories: "",
         tagline: "",
         first_offer: "",
+        firstProductPrice: "",
         template_selection: "",
         domain: "",
       };
 
+      const emptyLegacyState = JSON.parse(JSON.stringify(state));
+      let legacyOwner = null;
+      let legacyAuthEpoch = 0;
+      let legacyReady = false;
+      const sameLegacyOwner = (a,b) => !!a && !!b && a.userId === b.userId && a.tenantId === b.tenantId;
+      const legacyKey = name => legacyOwner ? 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([legacyOwner.userId,legacyOwner.tenantId])) + ':' + name : null;
+      function legacyStatus(message, error = true) {
+        let status = document.getElementById('setup-session-status');
+        if (!status) { status=document.createElement('p'); status.id='setup-session-status'; if(container)container.before(status);else document.body.prepend(status); }
+        status.textContent=message; status.setAttribute('role',error?'alert':'status');
+      }
+      let legacyStorageFailure=false;
+      const liveLegacyFences=new Set();
+      const unknownDraftWrite='A previous draft save could not be confirmed. Local edits remain held for reconciliation.';
+      const unavailableDraftWrite='Draft saving is unavailable because this browser cannot coordinate safe saves. Your local edits remain held.';
+      function legacyWriteVersion(){const key=legacyKey('write-version');return key?localStorage.getItem(key):null;}
+      function legacyWriteFence(){const key=legacyKey('write-fence');return key&&localStorage.getItem(key)!==null;}
+      const legacyIdleControls=new Map(Array.from(document.querySelectorAll('.save-draft-btn,#finish-btn,#approve-publish-btn,#generate-storefront-btn,#chat-send-btn')).map(button=>[button,button.innerHTML]));
+      function readLegacyEntry() {
+        const key=legacyKey('legacy-draft'); const raw=key&&localStorage.getItem(key); if(!raw)return null;
+        const parsed=JSON.parse(raw);
+        if(!parsed || typeof parsed!=='object' || Array.isArray(parsed) || parsed.format===1 && (!parsed.state || typeof parsed.state!=='object' || Array.isArray(parsed.state) || typeof parsed.revision!=='string' || !parsed.revision || parsed.acknowledgedRevision!==null && typeof parsed.acknowledgedRevision!=='string'))throw new Error('The saved draft could not be read. Its original bytes remain held.');
+        return parsed.format===1 ? parsed : {format:1,state:parsed,revision:null,acknowledgedRevision:null};
+      }
+      function readLegacyDraft() { const entry=readLegacyEntry(); return entry ? JSON.stringify(entry.state) : null; }
+      function legacyDraftPending() { const entry=readLegacyEntry(); return legacyStorageFailure || legacyWriteFence() || !!entry&&(!entry.revision || entry.revision!==entry.acknowledgedRevision || (entry.acknowledgedWriteVersion??null)!==legacyWriteVersion()); }
+      function refreshLegacyPendingStatus() {
+        if(!legacyOwner)return;
+        if(legacyStorageFailure)legacyStatus('This device could not save your latest draft. Its previous saved copy remains held.');
+        else if(!navigator.locks?.request)legacyStatus(unavailableDraftWrite);
+        else if(legacyWriteFence()&&!liveLegacyFences.has(legacyKey('write-fence')))legacyStatus(unknownDraftWrite);
+        else if(legacyDraftPending()){
+          legacyStatus('Local edits are pending save. Other sessions’ drafts remain held.',false);
+          for(const button of document.querySelectorAll('.save-draft-btn'))if(!button.disabled && button.textContent==='Saved!')button.innerHTML=legacyIdleControls.get(button)||'Save Draft';
+        }
+        else if(localStorage.getItem('onboardingState') || localStorage.getItem('onboarding-storage-v4'))legacyStatus('An older draft is held on this device and was not loaded into this account.',false);
+        else legacyStatus('',false);
+      }
+      function writeLegacyDraft(value, acknowledged=false) {
+        const key=legacyKey('legacy-draft'); if(!key)return;
+        try {
+          const data=JSON.parse(value); const previous=readLegacyEntry();
+          const unchanged=previous && canonicalSetup(previous.state)===canonicalSetup(data);
+          const revision=unchanged&&previous.revision || Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-');
+          localStorage.setItem(key,JSON.stringify({format:1,state:data,revision,acknowledgedRevision:acknowledged?revision:previous?.acknowledgedRevision||null,acknowledgedWriteVersion:acknowledged?legacyWriteVersion():previous?.acknowledgedWriteVersion??null}));
+        } catch {legacyStorageFailure=true;}
+        refreshLegacyPendingStatus();
+      }
+      function captureLegacyDraftWrite(body) {
+        try {
+          const entry=readLegacyEntry();
+          if(!legacyOwner || !entry?.revision || legacyStorageFailure || typeof body!=='string' || canonicalSetup(JSON.parse(body))!==canonicalSetup(entry.state))return null;
+          return {owner:{...legacyOwner},epoch:legacyAuthEpoch,revision:entry.revision,snapshot:canonicalSetup(entry.state)};
+        } catch {return null;}
+      }
+      function acknowledgeLegacyDraft(stamp) {
+        if(!stamp || stamp.epoch!==legacyAuthEpoch || !sameLegacyOwner(stamp.owner,legacyOwner) || legacyWriteFence())return false;
+        try {
+          const key=legacyKey('legacy-draft');const current=readLegacyEntry();if(!key || !current)return false;
+          const matches=current.revision===stamp.revision && canonicalSetup(current.state)===stamp.snapshot;
+          localStorage.setItem(key,JSON.stringify({...current,acknowledgedRevision:matches?current.revision:null,acknowledgedWriteVersion:matches?legacyWriteVersion():null}));
+          refreshLegacyPendingStatus();return matches;
+        }catch{legacyStorageFailure=true;refreshLegacyPendingStatus();return false;}
+      }
+      async function readLegacyIdentity() {
+        const current=legacyAuthEpoch;
+        const response=await fetch(backendOrigin()+'/api/v1/auth/session-identity',{credentials:'same-origin',cache:'no-store',redirect:'error'});
+        if (!response.ok) throw new Error('Verify your signed-in session before using setup.');
+        const data=await response.json();
+        if (current!==legacyAuthEpoch || typeof data.userId!=='string' || !data.userId || typeof data.tenantId!=='string' || !data.tenantId || typeof data.expiresAt!=='number' || data.expiresAt<=Date.now()) throw new Error('Verified setup identity is unavailable.');
+        return {userId:data.userId,tenantId:data.tenantId};
+      }
+      function holdLegacySession(message, restart = false, preservePersistedDraft = false) {
+        if(legacyOwner && legacyReady && !preservePersistedDraft)saveCurrentState(true);
+        legacyOwner=null; legacyReady=false; legacyAuthEpoch+=1; setupEpoch=(setupEpoch||0)+1;
+        clearTimeout(autoSaveTimer); clearTimeout(saveStateTimer);
+        state=JSON.parse(JSON.stringify(emptyLegacyState));
+        for(const [button,html] of legacyIdleControls){button.innerHTML=html;button.disabled=false;button.style.backgroundColor='';button.style.color='';button.style.borderColor='';delete button.dataset.submitting;}
+        const savedMessage=document.getElementById('draft-saved-msg');if(savedMessage)savedMessage.style.display='none';
+        window.pendingOnboardingReq=undefined; committedPreparation=null; committedRequest=null; unknownSetup=false; setupBusy=false;
+        chatHistory=[]; if(chatMessagesEl)chatMessagesEl.replaceChildren();
+        const details=document.getElementById('approval-details'); if(details)details.replaceChildren();
+        for(const input of Object.values(inputs))if(input && 'value' in input)input.value='';
+        for(const input of inputs.context)input.checked=false;
+        if(inputs.domain_name)inputs.domain_name.placeholder='e.g. my-business';
+        if(chatInputEl)chatInputEl.value='';
+        const chatImage=document.getElementById('chat-image-url');if(chatImage)chatImage.value='';
+        document.querySelectorAll('.manual-intake-fallback').forEach(button=>button.remove());
+        const manualContext=document.getElementById('manual-intake-context');if(manualContext){manualContext.textContent='';manualContext.hidden=true;}
+        for(const id of ['submit-error','approval-error','instant-error']){const error=document.getElementById(id);if(error)error.textContent='';}
+        populateForm(); if(container)container.style.visibility='hidden';
+        legacyStatus(message || 'Your session changed. Saved drafts remain held on this device.');
+        const loadEpoch=legacyAuthEpoch;
+        if(restart)loadState().then(ready=>loadEpoch===legacyAuthEpoch&&ready&&restoreProtectedPreparation()).catch(error=>{if(loadEpoch===legacyAuthEpoch)holdLegacySession(error.message);});
+      }
+      async function legacyOwnedFetch(url, options = {}, dispatched = () => {}) {
+        const expected=legacyOwner; const current=legacyAuthEpoch;
+        if(!expected)throw new Error('Verify your signed-in session before using setup.');
+        const target=new URL(url,window.location.href);
+        if(target.origin!==window.location.origin || !['state','draft','chat','intake','start','start_zero_click','launch'].some(path=>target.pathname==='/api/v1/onboarding/'+path) || target.search || target.hash) throw new Error('Invalid setup destination');
+        let actual;
+        try {actual=await readLegacyIdentity();} catch(error) {if(current===legacyAuthEpoch)holdLegacySession(error.message);throw error;}
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(actual,expected) || !sameLegacyOwner(legacyOwner,expected)) {
+          if(current===legacyAuthEpoch)holdLegacySession('Your session changed. Saved drafts remain held.',true);
+          throw new Error('Setup session changed');
+        }
+        dispatched();
+        const response=await fetch(target.pathname,{...options,credentials:'same-origin',headers:{...options.headers,'x-ohc-expected-user':expected.userId,'x-ohc-expected-tenant':expected.tenantId}});
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(legacyOwner,expected))throw new Error('A previous session reply was ignored');
+        if(response.status===409){
+          const problem=await response.clone().json().catch(()=>null);
+          if(current!==legacyAuthEpoch || !sameLegacyOwner(legacyOwner,expected))throw new Error('A previous session reply was ignored');
+          if(problem && ['session_identity_changed','queued owner does not match the current session'].includes(problem.error))holdLegacySession('Your session changed. Sign in again to continue.');
+        }
+        if(response.status===401 || response.status===403)holdLegacySession('Your session could not be verified. Sign in again to continue.');
+        return response;
+      }
+      if(container)container.style.visibility='hidden';
+      window.addEventListener('omnisolo_auth_changed',()=>holdLegacySession('Your session changed. Saved drafts remain held.',true));
+      window.addEventListener('storage',event=>{if(event.key===null || event.key==='omnisolo_queue_identity_epoch_v2')holdLegacySession('Your session changed. Saved drafts remain held.',true);else if(event.key===legacyKey('write-version') || event.key===legacyKey('write-fence'))refreshLegacyPendingStatus();});
+      window.addEventListener('pagehide',()=>holdLegacySession('Saved drafts remain held on this device.'));
+
+      async function fetchDraft(url, options = {}) {
+        if(options.method!=='POST'){
+          const response=await legacyOwnedFetch(url,options);
+          if(!response.ok)throw new Error('Draft request failed');
+          return response;
+        }
+        if(!navigator.locks?.request)throw new Error(unavailableDraftWrite);
+        const expected=legacyOwner;const current=legacyAuthEpoch;const key=legacyKey('write-fence');
+        if(!expected || !key)throw new Error('Verify your signed-in session before saving a draft.');
+        const stamp=captureLegacyDraftWrite(options.body);
+        return navigator.locks.request(key,{mode:'exclusive'},async()=>{
+          if(current!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))throw new Error('Your session changed. This draft was not sent.');
+          if(localStorage.getItem(key)!==null)throw new Error(unknownDraftWrite);
+          const marker=JSON.stringify({operation:Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-'),status:'inflight'});
+          try{localStorage.setItem(key,marker);}catch{throw new Error('This device could not record a safe draft save. Your local edits remain held.');}
+          const release=()=>{if(localStorage.getItem(key)!==marker)throw new Error(unknownDraftWrite);localStorage.removeItem(key);};
+          let dispatched=false;liveLegacyFences.add(key);
+          try{
+            const response=await legacyOwnedFetch(url,options,()=>{dispatched=true;});
+            if(response.status>=400 && response.status<500){release();throw new Error('Draft request failed');}
+            if(!response.ok || response.status!==undefined && response.status!==200 && response.status!==204)throw new Error('Draft save was not acknowledged');
+            const copy=typeof response.clone==='function'?response.clone():response;
+            const body=typeof copy.text==='function'?await copy.text():null;
+            const data=body===null?await copy.json():body.trim()?JSON.parse(body):null;
+            if(data && (data.success===false || data.error!=null))throw new Error(data.error || 'Draft save was rejected');
+            localStorage.setItem(key.replace(/write-fence$/,'write-version'),marker);
+            release();acknowledgeLegacyDraft(stamp);return response;
+          }catch(error){if(!dispatched)release();throw error;}
+          finally{liveLegacyFences.delete(key);refreshLegacyPendingStatus();}
+        });
+      }
+      function saveRemoteDraft(draft) { return fetchDraft(backendOrigin() + '/api/v1/onboarding/draft', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)}); }
+      async function loadRemoteDraft() { return (await fetchDraft(backendOrigin() + '/api/v1/onboarding/draft')).json(); }
       // Auto save draft logic
       var autoSaveTimer = null;
       function debouncedAutoSave() {
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(() => {
-          saveCurrentState();
-
-          const backendUrl =
-            window.location.protocol === "file:" ||
-            ["1420", "3000", "8081"].includes(window.location.port)
-              ? "http://127.0.0.1:18789"
-              : "";
-          const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-          const userId = localStorage.getItem("user_id") || "e2e-admin-user";
-
-          if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
-              .then(() => {
-                const msg = document.getElementById("draft-saved-msg");
-                if (msg) {
-                  msg.style.display = "block";
-                  setTimeout(() => {
-                    msg.style.display = "none";
-                  }, 2000);
-                }
-              })
-              .catch(console.error);
-          } else {
-            fetch(`${backendUrl}/api/onboarding/draft`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Tenant-ID": tenantId,
-                "X-User-ID": userId,
-              },
-              body: JSON.stringify(state),
-            })
-              .then((res) => {
-                if (res.ok) {
-                  const msg = document.getElementById("draft-saved-msg");
-                  if (msg) {
-                    msg.style.display = "block";
-                    setTimeout(() => {
-                      msg.style.display = "none";
-                    }, 2000);
-                  }
-                }
-              })
-              .catch(console.error);
-          }
-        }, 500);
+        if(!legacyReady)return;
+        saveCurrentState();
       }
 
       document.querySelectorAll("input, select, textarea").forEach((el) => {
@@ -2833,31 +2844,56 @@
         });
       });
 
+      // Authenticated business setup must never restore or persist login details.
+      function businessDraft(value) {
+        const draft = value && typeof value === "object" && !Array.isArray(value)
+          ? { ...value }
+          : {};
+        delete draft.admin_name;
+        delete draft.admin_email;
+        delete draft.admin_password;
+        return draft;
+      }
+
       // Load existing state
       async function loadState() {
-        const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-        const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+        const current=legacyAuthEpoch;
+        const verified=await readLegacyIdentity();
+        if(current!==legacyAuthEpoch)return false;
+        legacyOwner=verified; legacyReady=false; legacyStorageFailure=false;
+        state=JSON.parse(JSON.stringify(emptyLegacyState));
+        const stored = readLegacyDraft();
+        const loadedWriteVersion=legacyWriteVersion();
+        const pendingLocal=legacyDraftPending();
+        if (stored) {
+          try {
+            const parsed = businessDraft(JSON.parse(stored));
+            state = { ...state, ...parsed };
+            if (parsed.businessName && !parsed.business_name) {
+              state.business_name = parsed.businessName;
+            }
+            writeLegacyDraft(JSON.stringify(state));
+          } catch {
+            throw new Error('The saved draft could not be read. Its original bytes remain held.');
+          }
+        }
 
+
+
+        const loadedDraftSnapshot=localStorage.getItem(legacyKey('legacy-draft'));
         let loadedState = null;
         if (window.__TAURI__ && window.__TAURI__.core) {
           try {
-            loadedState = await window.__TAURI__.core.invoke(
-              "get_onboarding_state",
-              { tenantId, userId },
-            );
+            loadedState = await loadRemoteDraft();
           } catch (err) {
             console.error("Tauri get_onboarding_state failed:", err);
           }
         } else {
-          const backendUrl =
-            window.location.protocol === "file:" ||
-            ["1420", "3000", "8081"].includes(window.location.port)
-              ? "http://127.0.0.1:18789"
-              : "";
+          const backendUrl = backendOrigin();
           try {
-            const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+            const res = await fetchDraft(`${backendUrl}/api/v1/onboarding/draft`, {
               method: "GET",
-              headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
+              headers: {},
             });
             if (res.ok) {
               loadedState = await res.json();
@@ -2867,26 +2903,21 @@
           }
         }
 
-        // Merge from localStorage as fallback
-        const stored = localStorage.getItem("onboardingState");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          state = { ...state, ...parsed };
-          if (parsed.businessName && !parsed.business_name) {
-            state.business_name = parsed.businessName;
-          }
-        }
-
-        // Merge backend state, taking priority
-        if (loadedState && Object.keys(loadedState).length > 0) {
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(legacyOwner,verified))return false;
+        if(loadedWriteVersion!==legacyWriteVersion() || loadedDraftSnapshot!==localStorage.getItem(legacyKey('legacy-draft')))throw new Error('Your draft changed in another view. Reopen setup to restore the latest local draft.');
+        // Merge backend business state, taking priority, without legacy login fields.
+        loadedState = businessDraft(loadedState);
+        if (!pendingLocal && loadedState && Object.keys(loadedState).length > 0) {
           state = { ...state, ...loadedState };
           if (loadedState.businessName && !loadedState.business_name) {
              state.business_name = loadedState.businessName;
           }
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+          writeLegacyDraft(JSON.stringify(state));
         }
 
-        populateForm();
+        legacyReady=true; populateForm(); if(container)container.style.visibility='';
+        if(!pendingLocal)writeLegacyDraft(JSON.stringify(state),true);
+        refreshLegacyPendingStatus();
 
         if (state.step === undefined || state.step === 0) {
           goToStep("step-initial", false);
@@ -2910,8 +2941,10 @@
             goToStep(steps[state.step], false);
           }
         }
+        return true;
       }
-      loadState();
+      const initialLoadEpoch=legacyAuthEpoch;
+      const draftRestored = loadState().catch(error=>{if(initialLoadEpoch===legacyAuthEpoch)holdLegacySession(error.message);return false;});
 
       // Clear name error on typing if valid
       inputs.name.addEventListener("input", () => {
@@ -2942,23 +2975,6 @@
         });
       }
 
-      inputs.admin_email.addEventListener("input", () => {
-        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())) {
-          errors.admin_email.style.display = "none";
-          inputs.admin_email.classList.remove("invalid-input");
-        }
-      });
-
-      inputs.admin_password.addEventListener("input", () => {
-        if (
-          inputs.admin_password.value.trim().length >= 8 &&
-          /\d/.test(inputs.admin_password.value)
-        ) {
-          errors.admin_password.style.display = "none";
-          inputs.admin_password.classList.remove("invalid-input");
-        }
-      });
-
       inputs.assistant_name.addEventListener("input", () => {
         if (inputs.assistant_name.value.trim().length > 0) {
           errors.assistant_name.style.display = "none";
@@ -2966,6 +2982,9 @@
         }
       });
 
+      inputs.first_product_price.addEventListener('input',()=>{
+        if(/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(inputs.first_product_price.value.trim())){errors.first_product_price.style.display='none';inputs.first_product_price.classList.remove('invalid-input');}
+      });
       inputs.first_offer.addEventListener("input", () => {
         if (inputs.first_offer.value.trim().length > 0) {
           errors.first_offer.style.display = "none";
@@ -3000,10 +3019,8 @@
           inputs.assistant_name.value = state.assistant_name;
         if (state.assistant_tone)
           inputs.assistant_tone.value = state.assistant_tone;
-        if (state.admin_email) inputs.admin_email.value = state.admin_email;
-        if (state.admin_password)
-          inputs.admin_password.value = state.admin_password;
         if (state.first_offer) inputs.first_offer.value = state.first_offer;
+        if (typeof state.firstProductPrice === "string") inputs.first_product_price.value = state.firstProductPrice;
         if (state.location) inputs.location.value = state.location;
         if (state.target_audience) inputs.target_audience.value = state.target_audience;
         if (state.template_selection)
@@ -3078,15 +3095,16 @@
       }
 
       var saveStateTimer = null;
-      function saveCurrentState() {
+      function saveCurrentState(localOnly=false) {
+        if (!legacyReady) return;
         state.categories = inputs.categories.value;
         state.business_name = inputs.name.value;
         state.businessName = inputs.name.value; // Sync for E2E
         state.tagline = inputs.tagline.value;
         state.assistant_name = inputs.assistant_name.value;
         state.assistant_tone = inputs.assistant_tone.value;
-        state.admin_name = inputs.admin_name.value;
         state.first_offer = inputs.first_offer.value;
+        state.firstProductPrice = inputs.first_product_price.value;
         state.location = inputs.location.value;
         state.target_audience = inputs.target_audience.value;
         state.template_selection = inputs.template_selection.value;
@@ -3139,42 +3157,22 @@
         }
 
         // Always set localStorage directly
-        localStorage.setItem("onboardingState", JSON.stringify(state));
+        writeLegacyDraft(JSON.stringify(state));
 
-        const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-        const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
+
+        if(localOnly)return;
         clearTimeout(saveStateTimer);
-        saveStateTimer = setTimeout(async () => {
-          if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
-              .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
-          } else {
-            localStorage.setItem("onboardingState", JSON.stringify(state));
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            try {
-              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Tenant-ID": tenantId,
-                  "X-User-ID": userId,
-                },
-                body: JSON.stringify(state),
-              });
-              if (!res.ok) {
-                console.warn("Failed to sync onboarding state with backend", res.status);
-              }
-            } catch (err) {
-              console.warn("Network error syncing onboarding state, offline fallback active", err);
-            }
-          }
-        }, 1000);
+        const ownerEpoch=legacyAuthEpoch; const expected=legacyOwner; const snapshot=JSON.stringify(state);
+        saveStateTimer=setTimeout(async()=>{
+          if(ownerEpoch!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))return;
+          try {
+            await fetchDraft(backendOrigin()+'/api/v1/onboarding/draft',{method:'POST',headers:{'Content-Type':'application/json'},body:snapshot});
+            if(ownerEpoch!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))return;
+            const message=document.getElementById('draft-saved-msg');
+            if(message && !legacyDraftPending()){message.style.display='block';setTimeout(()=>{if(ownerEpoch===legacyAuthEpoch)message.style.display='none';},2000);}
+          }catch(error){if(ownerEpoch===legacyAuthEpoch)legacyStatus(error.message || 'Draft save could not be confirmed. Local edits remain pending.');}
+        },1000);
       }
 
       function validateStep(stepId) {
@@ -3240,53 +3238,6 @@
             inputs.assistant_tone.classList.remove("invalid-input");
             state.assistant_tone = inputs.assistant_tone.value;
           }
-        } else if (stepId === "step-admin") {
-          const nameVal = inputs.admin_name.value.trim();
-          const emailVal = inputs.admin_email.value.trim();
-          const passVal = inputs.admin_password.value.trim();
-          let stepValid = true;
-
-          if (nameVal === "") {
-            errors.admin_name.style.display = "block";
-            inputs.admin_name.classList.add("invalid-input");
-            stepValid = false;
-          } else {
-            errors.admin_name.style.display = "none";
-            inputs.admin_name.classList.remove("invalid-input");
-          }
-
-          if (emailVal === "" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-            errors.admin_email.style.display = "block";
-            errors.admin_email.innerText =
-              emailVal === ""
-                ? "Admin Email is required."
-                : "Please enter a valid email address.";
-            inputs.admin_email.classList.add("invalid-input");
-            stepValid = false;
-          } else {
-            errors.admin_email.style.display = "none";
-            inputs.admin_email.classList.remove("invalid-input");
-          }
-
-          if (passVal === "" || passVal.length < 8 || !/\d/.test(passVal)) {
-            errors.admin_password.style.display = "block";
-            errors.admin_password.innerText =
-              passVal === ""
-                ? "Password is required."
-                : "Password must be at least 8 characters and contain a number.";
-            inputs.admin_password.classList.add("invalid-input");
-            stepValid = false;
-          } else {
-            errors.admin_password.style.display = "none";
-            inputs.admin_password.classList.remove("invalid-input");
-          }
-
-          if (stepValid) {
-            state.admin_email = emailVal;
-            state.admin_password = passVal;
-          } else {
-            isValid = false;
-          }
         } else if (stepId === "step-offer") {
           if (inputs.first_offer.value.trim() === "") {
             errors.first_offer.innerText = "Please tell us what you sell.";
@@ -3297,6 +3248,17 @@
             errors.first_offer.style.display = "none";
             inputs.first_offer.classList.remove("invalid-input");
             state.first_offer = inputs.first_offer.value.trim();
+          }
+          const price = inputs.first_product_price.value.trim();
+          if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(price)) {
+            errors.first_product_price.textContent = 'Please enter a non-negative price for your first offer, including 0 if it is free.';
+            errors.first_product_price.style.display = 'block';
+            inputs.first_product_price.classList.add('invalid-input');
+            isValid = false;
+          } else {
+            errors.first_product_price.style.display = 'none';
+            inputs.first_product_price.classList.remove('invalid-input');
+            state.firstProductPrice = price;
           }
         } else if (stepId === "step-location") {
           if (inputs.location.value.trim() === "") {
@@ -3350,23 +3312,6 @@
         }
 
         return isValid;
-      }
-
-      const togglePasswordBtn = document.getElementById(
-        "toggle-password-visibility",
-      );
-      if (togglePasswordBtn) {
-        togglePasswordBtn.addEventListener("click", () => {
-          const type =
-            inputs.admin_password.getAttribute("type") === "password"
-              ? "text"
-              : "password";
-          inputs.admin_password.setAttribute("type", type);
-          document.getElementById("eye-icon-show").style.display =
-            type === "password" ? "block" : "none";
-          document.getElementById("eye-icon-hide").style.display =
-            type === "password" ? "none" : "block";
-        });
       }
 
       function updateAssistantTeam() {
@@ -3488,7 +3433,9 @@
         }
       }
 
+      var setupEpoch = 0;
       function goToStep(stepId, shouldSave = true) {
+        setupEpoch += 1;
         if (stepId === "step-instant") {
           const instantBioInputEl = document.getElementById("instant-bio");
           const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
@@ -3515,7 +3462,7 @@
 
         if (shouldSave) {
           saveCurrentState();
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+          writeLegacyDraft(JSON.stringify(state));
         }
       }
 
@@ -3558,37 +3505,6 @@
         });
       });
 
-      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          const originalText = btn.innerText;
-          btn.innerText = "Saving...";
-          btn.disabled = true;
-
-          // Add a small delay to allow browser to render "Saving..."
-          await new Promise((r) => setTimeout(r, 100));
-
-          saveCurrentState();
-
-          btn.innerText = "Draft Saved!";
-          btn.style.backgroundColor = "#34C759";
-          btn.style.color = "white";
-          btn.style.borderColor = "#34C759";
-
-          const msg = document.getElementById("draft-saved-msg");
-          if (msg) msg.style.display = "block";
-
-          setTimeout(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-            btn.style.backgroundColor = "";
-            btn.style.color = "";
-            btn.style.borderColor = "";
-            if (msg) msg.style.display = "none";
-          }, 2000);
-        });
-      });
-
       const generateStorefrontBtn = document.getElementById(
         "generate-storefront-btn",
       );
@@ -3620,11 +3536,57 @@
       const chatMessagesEl = document.getElementById("chat-messages");
       let chatHistory = [];
 
+      function reviewedProducts(products) {
+        const priceText = value => {
+          if (typeof value === 'string') return value;
+          if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+          throw new Error('The reviewed product price is invalid');
+        };
+        if (!Array.isArray(products)) throw new Error('The reviewed product draft is invalid');
+        return products.map(product => {
+          if (!product || typeof product.name !== 'string' || !product.name.trim() || (product.description != null && typeof product.description !== 'string') || (product.variants != null && !Array.isArray(product.variants))) throw new Error('The reviewed product draft is invalid');
+          return { name: product.name, price: priceText(product.price), description: product.description ?? '', variants: (product.variants ?? []).map(variant => {
+            if (!variant || typeof variant.name !== 'string' || !variant.name.trim()) throw new Error('The reviewed product variant is invalid');
+            return { name: variant.name, price_modifier: priceText(variant.price_modifier) };
+          }) };
+        });
+      }
+      function unchangedIntakeDraft(snapshot) {
+        if(legacyStorageFailure){refreshLegacyPendingStatus();return false;}
+        try {
+          const currentDraft=readLegacyEntry();
+          if(currentDraft && canonicalSetup(currentDraft.state)===snapshot)return true;
+          holdLegacySession('Your draft changed in another view. Reopen setup to review the latest saved fields.',false,true);
+        }catch{
+          holdLegacySession('The saved draft could not be verified. Reopen setup before continuing.',false,true);
+        }
+        return false;
+      }
+      function isUnconfiguredIntake(status, data) {
+        return status===503 && data?.error==='onboarding_ai_unconfigured' && (data.success===undefined || data.success===false);
+      }
+      function offerManualIntake(source, prompt) {
+        const id=source+'-manual-review';document.getElementById(id)?.remove();document.getElementById(source+'-manual-unavailable')?.remove();
+        const parent=source==='chat'?chatMessagesEl:instantErrorEl.parentElement;
+        const note=document.createElement('p');note.id=source+'-manual-unavailable';note.className='manual-intake-fallback';note.setAttribute('role','status');note.textContent='AI-assisted setup is unavailable. Review and enter your business details manually.';parent.appendChild(note);
+        const button=document.createElement('button');button.type='button';button.id=id;button.className='btn-secondary manual-intake-fallback';button.textContent='Review Details Manually';parent.appendChild(button);
+        const ownerEpoch=legacyAuthEpoch;const expected=legacyOwner;
+        button.addEventListener('click',()=>{
+          if(!legacyReady || ownerEpoch!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))return;
+          let context=document.getElementById('manual-intake-context');
+          if(!context){context=document.createElement('aside');context.id='manual-intake-context';context.setAttribute('role','note');container.prepend(context);}
+          context.textContent='Your original setup notes: '+prompt;context.hidden=false;
+          document.querySelectorAll('.manual-intake-fallback').forEach(control=>control.remove());
+          goToStep('step-context');
+        });
+      }
       async function sendChatMessage() {
+        if (!legacyReady) return;
         const text = chatInputEl.value.trim();
         const chatImageEl = document.getElementById("chat-image-url");
         const imageUrl = chatImageEl ? chatImageEl.value.trim() : "";
-        if (!text && !imageUrl) return;
+        if ((!text && !imageUrl) || chatSendBtn.disabled) return;
+        const chatEpoch = setupEpoch; const chatOwnerEpoch=legacyAuthEpoch;
 
         // Append user message
         const userMsgDiv = document.createElement("div");
@@ -3657,45 +3619,33 @@
         if (imageUrl) msgObj.image_url = imageUrl;
 
         chatHistory.push(msgObj);
+        saveCurrentState(true);
+        const chatDraftSnapshot=canonicalSetup(state);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
         chatSendBtn.disabled = true;
 
         let data;
         try {
-          try {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            const res = await fetch(`${backendUrl}/api/v1/onboarding/chat`, {
+            const backendUrl = backendOrigin();
+            const res = await legacyOwnedFetch(`${backendUrl}/api/v1/onboarding/chat`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-Tenant-ID":
-                  localStorage.getItem("tenant_id") ||
-                  localStorage.getItem("tenant") ||
-                  "e2e-tenant",
-                "X-User-ID": localStorage.getItem("user_id") || "e2e-admin-user",
+
               },
               body: JSON.stringify({ messages: chatHistory }),
             });
 
-            if (!res.ok) throw new Error("Chat request failed");
             data = await res.json();
-          } catch {
-            data = {
-              reply: "I've structured your business profile and services based on your description.",
-              is_complete: true,
-              intake_data: {
-                business_name: text.length > 5 ? text.substring(0, 30) : "My Business",
-                business_type: "Service",
-                initial_products: [{ name: "Standard Service", price: "49.00" }],
-                location: "Local",
-                target_audience: "General"
-              }
-            };
+          if (chatEpoch !== setupEpoch || chatOwnerEpoch !== legacyAuthEpoch) return;
+          if(!unchangedIntakeDraft(chatDraftSnapshot))return;
+          if (!res.ok) {
+            if(isUnconfiguredIntake(res.status,data)){
+              offerManualIntake('chat',chatHistory.filter(message=>message.role==='user').map(message=>message.content).join('\n'));
+              return;
+            }
+            throw new Error("Chat request failed");
           }
 
           const asstMsgDiv = document.createElement("div");
@@ -3710,10 +3660,12 @@
           asstMsgDiv.appendChild(asstBubbleDiv);
           chatMessagesEl.appendChild(asstMsgDiv);
           chatHistory.push({ role: "assistant", content: data.reply });
+          saveCurrentState(true);
           chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
           if (data.is_complete && data.intake_data) {
             const intakeData = data.intake_data;
+            if (!intakeData.business_name || !Array.isArray(intakeData.initial_products) || !intakeData.initial_products.length) throw new Error('Setup draft is incomplete');
             const agentBadges = document.querySelectorAll(
               "#ai-agents-container .agent-badge",
             );
@@ -3732,423 +3684,194 @@
               company_description: chatHistory.map((m) => m.content).join(" "),
               selling_categories: intakeData.categories || ["physical"],
               payment_pref: "online",
-              admin_email: "admin@mybusiness.com",
-              admin_name: "Admin",
-              admin_password: "password123",
               website_template: "auto",
               first_product_name:
                 intakeData.initial_products?.[0]?.name || "First Product",
               first_product_price:
-                intakeData.initial_products?.[0]?.price || "0.00",
+                String(intakeData.initial_products?.[0]?.price ?? ""),
               domain_choice:
                 state.domain || generateSubdomain(state.business_name),
               price_type: "fixed",
               location: intakeData.location || "Local",
               target_audience: intakeData.target_audience || "General",
-              initial_products: intakeData.initial_products || [],
+              initial_products: reviewedProducts(intakeData.initial_products),
               ai_agents: selectedAgents,
               ai_auto_respond: autoRespondChecked,
             };
 
             window.pendingOnboardingReq = req;
-            let productsHtml = "";
-            if (req.initial_products && req.initial_products.length > 0) {
-              productsHtml = req.initial_products
-                .map((p) => `<li>${p.name} - ${p.price}</li>`)
-                .join("");
-            } else {
-              productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
+            const details = document.getElementById("approval-details");
+            details.replaceChildren();
+            for (const [label, value] of [
+              ["Business Name", req.company_name],
+              ["Type", req.business_type],
+              ["Products/Services", (req.initial_products.length ? req.initial_products : [{ name: req.first_product_name, price: req.first_product_price }]).map((product) => `${product.name} - ${product.price}`).join(", ")],
+            ]) {
+              const line = document.createElement("p");
+              line.textContent = `${label}: ${value}`;
+              details.appendChild(line);
             }
-
-            const summaryCard = document.createElement("div");
-            summaryCard.className = "glassmorphism";
-            summaryCard.style.cssText =
-              "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 16px 16px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);";
-
-            if (
-              window.matchMedia &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-            ) {
-              summaryCard.style.background = "rgba(22, 22, 26, 0.85)";
-              summaryCard.style.borderTop =
-                "1px solid rgba(255, 255, 255, 0.1)";
-              summaryCard.style.color = "#F5F5F7";
-            }
-
-            const oldStep5Btn = document.getElementById("approve-publish-btn");
-            if (oldStep5Btn) {
-              oldStep5Btn.id = "approve-publish-btn-hidden";
-            }
-
-            summaryCard.innerHTML = `
-                      <h1 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h1>
-                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
-                      </div>
-                      <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
-                        <button id="approve-publish-btn" data-testid="approve-publish-btn-alt" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0052cc; color: white; font-weight: 600; border: none; font-size: 16px;">Approve & Launch</button>
-                      </div>
-                  `;
-
-            document.getElementById("step-chat").style.position = "relative";
-            document.getElementById("step-chat").style.overflow = "hidden";
-            document.getElementById("step-chat").appendChild(summaryCard);
-
-            // Trigger slide up
-            requestAnimationFrame(() => {
-              summaryCard.style.transform = "translateY(0)";
-            });
-
-            const onApproveClick = async () => {
-              const btnChat = document.getElementById("approve-publish-btn-chat");
-              const btnAlt = document.getElementById("approve-publish-btn");
-              if (btnChat) {
-                btnChat.disabled = true;
-                btnChat.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
-              }
-              if (btnAlt) {
-                btnAlt.disabled = true;
-                btnAlt.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
-              }
-
-              const approvePublishBtn = document.getElementById(
-                "approve-publish-btn-hidden",
-              ) || document.getElementById("approve-publish-btn");
-              if (approvePublishBtn) {
-                approvePublishBtn.click();
-              }
-            };
-
-            const chatBtnEl = document.getElementById("approve-publish-btn-chat");
-            if (chatBtnEl) chatBtnEl.addEventListener("click", onApproveClick);
-            const altBtnEl = document.getElementById("approve-publish-btn");
-            if (altBtnEl) altBtnEl.addEventListener("click", onApproveClick);
-            // Scroll to bottom
-            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-            // Zero-click onboarding
             goToStep("step-approval");
-            const approvePublishBtnChat = document.getElementById(
-              "approve-publish-btn-chat",
-            );
-            if (approvePublishBtnChat) {
-              setTimeout(() => {
-                approvePublishBtnChat.click();
-              }, 100);
-            }
           }
         } catch (e) {
+          if(chatEpoch!==setupEpoch || chatOwnerEpoch!==legacyAuthEpoch)return;
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
         } finally {
-          chatSendBtn.disabled = false;
+          if(chatOwnerEpoch===legacyAuthEpoch)chatSendBtn.disabled = false;
         }
       }
 
-      const approvePublishBtn = document.getElementById("approve-publish-btn");
-      if (approvePublishBtn) {
-        approvePublishBtn.addEventListener("click", async () => {
-          if (!window.pendingOnboardingReq) return;
-          const req = window.pendingOnboardingReq;
-
-          approvePublishBtn.disabled = true;
-          approvePublishBtn.innerHTML =
-            '<div class="spinner"></div>Publishing...';
-
-          try {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            if (window.__TAURI__ && window.__TAURI__.core) {
-              await goToStep("step-loading");
-
-              const provisioningEl =
-                document.getElementById("step-provisioning");
-              const catalogEl = document.getElementById("step-catalog");
-              const storefrontEl = document.getElementById("step-storefront");
-
-              if (provisioningEl) {
-                provisioningEl.style.opacity = "1";
-                provisioningEl.querySelector(".loading-dot").style.background =
-                  "#0066FF";
-              }
-
-              const startData = await window.__TAURI__.core.invoke(
-                "start_onboarding",
-                { req },
-              );
-
-              if (catalogEl) {
-                catalogEl.style.opacity = "1";
-                catalogEl.querySelector(".loading-dot").style.background =
-                  "#0066FF";
-              }
-
-              if (storefrontEl) {
-                storefrontEl.style.opacity = "1";
-                storefrontEl.querySelector(".loading-dot").style.background =
-                  "#0066FF";
-              }
-
-
-              if (startData && startData.organization_id) {
-                localStorage.setItem("tenant_id", startData.organization_id);
-                localStorage.setItem("tenant", startData.organization_id);
-              }
-
-              localStorage.removeItem("onboardingState");
-              localStorage.setItem("has_onboarded", "true");
-
-              window.location.href = "dashboard.html";
-              return;
-            }
-
-            const tenantIdStr =
-              localStorage.getItem("tenant_id") ||
-              localStorage.getItem("tenant") ||
-              "e2e-tenant";
-            const userIdStr =
-              localStorage.getItem("user_id") || "e2e-admin-user";
-
-            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                business_type: req.business_type,
-                company_name: req.company_name,
-                company_description: req.company_description,
-                selling_categories: req.selling_categories,
-                payment_pref: req.payment_pref,
-                admin_email: req.admin_email,
-                website_template: req.website_template,
-                first_product_name: state.first_offer || req.first_product_name,
-                first_product_price: req.first_product_price,
-                domain_choice: req.domain_choice,
-                admin_name: req.admin_name,
-                admin_password: req.admin_password,
-                price_type: req.price_type,
-                location: state.location || req.location,
-                target_audience: state.target_audience || req.target_audience,
-                initial_products: req.initial_products,
-              }),
-            });
-
-            if (startRes.ok) {
-              const startData = await startRes.json();
-              if (startData.organization_id) {
-                localStorage.setItem("tenant_id", startData.organization_id);
-                localStorage.setItem("tenant", startData.organization_id);
-              }
-
-              localStorage.removeItem("onboardingState");
-              localStorage.setItem("has_onboarded", "true");
-
-              window.location.href = "dashboard.html";
-            } else {
-              localStorage.removeItem("onboardingState");
-              localStorage.setItem("has_onboarded", "true");
-              goToStep("step-success");
-            }
-          } catch (e) {
-            localStorage.removeItem("onboardingState");
-            localStorage.setItem("has_onboarded", "true");
-            goToStep("step-success");
-          }
-        });
+      function backendOrigin() { if(!['http:','https:'].includes(window.location.protocol))throw new Error('Authenticated transport is unavailable in this file-only page. Open setup in your signed-in workspace.'); return ''; }
+      let committedPreparation = null;
+      let committedRequest = null;
+      let unknownSetup = false;
+      let setupBusy = false;
+      const canonicalSetup = value => Array.isArray(value) ? '[' + value.map(canonicalSetup).join(',') + ']' : value && typeof value === 'object' ? '{' + Object.keys(value).sort().map(key => JSON.stringify(key)+':'+canonicalSetup(value[key])).join(',') + '}' : JSON.stringify(value);
+      function receiptOf(value) {
+        if (!value || !['prepared','launched'].includes(value.status) || !value.preparation_id || !value.organization_id || !value.user_id || !value.primary_product_id || !value.reviewed_request || !Array.isArray(value.catalog) || !value.catalog.some(product => product.product_id === value.primary_product_id)) throw new Error('Setup preparation could not be verified');
+        const ids = new Set();
+        for (const product of value.catalog) {
+          if (!product.product_id || ids.has(product.product_id) || !product.name || typeof product.price !== 'string' || !Array.isArray(product.variants)) throw new Error('Setup catalog could not be verified');
+          ids.add(product.product_id);
+          for (const variant of product.variants) if (!variant.variant_id || !variant.name || typeof variant.price_modifier !== 'string') throw new Error('Setup variant could not be verified');
+        }
+        return value;
       }
+      function preparedResult(data, prior) {
+        if (!data || data.success !== true || data.error != null) throw new Error(data && (data.error || data.message) || 'Setup preparation was not acknowledged');
+        const receipt = receiptOf(data.preparation);
+        if (prior && (receipt.organization_id !== prior.organization_id || receipt.user_id !== prior.user_id || receipt.primary_product_id !== prior.primary_product_id)) throw new Error('Setup revision identity does not match the committed preparation');
+        if (data.preparation_id !== receipt.preparation_id || data.organization_id !== receipt.organization_id || data.user_id !== receipt.user_id || data.status !== receipt.status) throw new Error('Setup preparation acknowledgement does not match');
+        return receipt;
+      }
+      async function setupRequest(path, body) {
+        const current=legacyAuthEpoch;const expected=legacyOwner;
+        const response = await legacyOwnedFetch(backendOrigin() + '/api/v1/onboarding/' + path, body === undefined ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        const data = await response.json();
+        if(current!==legacyAuthEpoch || !sameLegacyOwner(expected,legacyOwner))throw new Error('A previous session reply was ignored');
+        if (!response.ok) {const error=new Error(data.error || data.message || 'Setup request failed');error.unconfiguredIntake=isUnconfiguredIntake(response.status,data);throw error;}
+        return data;
+      }
+      function showPreparedReview(receipt) {
+        committedPreparation = receipt;
+        window.pendingOnboardingReq = receipt.reviewed_request;
+        committedRequest = canonicalSetup(window.pendingOnboardingReq);
+        const details = document.getElementById('approval-details'); details.replaceChildren();
+        for (const product of receipt.catalog) { const line = document.createElement('p'); line.textContent = product.name + ' - ' + product.price; details.appendChild(line); }
+        const status = document.createElement('p'); status.textContent = receipt.status === 'launched' ? 'Setup is already complete. Review your storefront before sharing it.' : 'Your workspace is prepared. Approve to complete local setup.'; details.appendChild(status);
+        goToStep('step-approval');
+      }
+      async function completeSetup(req, epoch) {
+        if (unknownSetup) {
+          const stateData = await setupRequest('state');
+          if (epoch !== setupEpoch) return false;
+          if (stateData.preparation) {
+            const recovered = receiptOf(stateData.preparation);
+            if (committedPreparation && (committedPreparation.preparation_id !== recovered.preparation_id || committedPreparation.organization_id !== recovered.organization_id || committedPreparation.user_id !== recovered.user_id)) throw new Error('Setup changed. Reload to review its current state.');
+            if (!committedPreparation) { showPreparedReview(recovered); unknownSetup = false; return false; }
+            committedPreparation = recovered;
+          }
+          unknownSetup = false;
+        }
+        const signature = canonicalSetup(req);
+        if (!committedPreparation || committedRequest !== signature) {
+          const payload = committedPreparation ? { ...req, replaces_preparation_id: committedPreparation.preparation_id, initial_products: committedPreparation.catalog.map(product => ({ ...product, ...(product.product_id === committedPreparation.primary_product_id ? {name:req.first_product_name, price:String(req.first_product_price)} : {}) })) } : req;
+          const data = await setupRequest('start', payload);
+          if (epoch !== setupEpoch) return false;
+          committedPreparation = preparedResult(data, committedPreparation); committedRequest = signature;
+        }
+        if (epoch !== setupEpoch) return false;
+        const receipt = committedPreparation;
+        if (receipt.status !== 'launched') {
+          const data = await setupRequest('launch', {preparation_id:receipt.preparation_id});
+          if (epoch !== setupEpoch) return false;
+          if (data.success !== true || data.error != null || data.status !== 'launched' || data.preparation_id !== receipt.preparation_id || data.organization_id !== receipt.organization_id || data.user_id !== receipt.user_id) throw new Error('Setup completion could not be verified');
+          committedPreparation = {...receipt,status:'launched'};
+        }
+        const completedKey=legacyKey('completion'); if(completedKey)localStorage.setItem(completedKey,'true');
+        window.location.href = 'dashboard.html'; return true;
+      }
+      // Read-only recovery uses a protected receipt, never mutable draft status.
+      async function restoreProtectedPreparation() {
+        if(!legacyReady)return;
+        const recoveryEpoch=setupEpoch;
+        const data=await setupRequest('state');
+        if(data.preparation && !setupBusy && recoveryEpoch===setupEpoch)showPreparedReview(receiptOf(data.preparation));
+      }
+      draftRestored.then(ready=>initialLoadEpoch===legacyAuthEpoch&&ready&&restoreProtectedPreparation()).catch(error=>{if(initialLoadEpoch===legacyAuthEpoch)legacyStatus(error.message);});
+      const approvePublishBtn = document.getElementById('approve-publish-btn');
+      if (approvePublishBtn) approvePublishBtn.addEventListener('click', async () => {
+        if (!legacyReady || !window.pendingOnboardingReq || setupBusy) return;
+        setupBusy = true; approvePublishBtn.disabled = true;
+        const epoch = setupEpoch; const ownerEpoch=legacyAuthEpoch;
+        const error = document.getElementById('approval-error'); error.textContent = '';
+        try { await completeSetup(window.pendingOnboardingReq, epoch); }
+        catch (cause) { if (epoch === setupEpoch) { unknownSetup = true; error.textContent = cause.message || 'Setup could not be confirmed'; } }
+        finally { if(ownerEpoch===legacyAuthEpoch){setupBusy = false; approvePublishBtn.disabled = false; approvePublishBtn.textContent = 'Approve & Complete Setup';} }
+      });
 
       if (chatSendBtn) {
         chatSendBtn.addEventListener("click", sendChatMessage);
       }
 
-      if (generateStorefrontBtn) {
-        generateStorefrontBtn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          if (generateStorefrontBtn.dataset.submitting) return;
-          generateStorefrontBtn.dataset.submitting = "true";
-          const bioInput = instantBioInputEl.value;
-          const imageUrlInput = document.getElementById("instant-image-url");
-          const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
-          if (!bioInput.trim()) {
-            instantErrorEl.innerText = "Please tell us about your business.";
-            instantErrorEl.style.display = "block";
-            instantErrorEl.classList.add("animate-shake");
-            instantErrorEl.style.color = "#FF3B30";
-            instantErrorEl.style.borderColor = "rgba(255, 59, 48, 0.3)";
-            instantBioInputEl.classList.add("invalid-input");
-            return;
+      if (generateStorefrontBtn) generateStorefrontBtn.addEventListener('click', async event => {
+        event.preventDefault();
+        if (!legacyReady || setupBusy) return;
+        const prompt = instantBioInputEl.value.trim();
+        if (!prompt) { instantErrorEl.textContent = 'Please tell us about your business.'; instantErrorEl.style.display = 'block'; return; }
+        setupBusy = true; generateStorefrontBtn.disabled = true; generateStorefrontBtn.dataset.submitting = 'true';
+        instantErrorEl.style.display = 'none'; goToStep('step-loading'); const epoch = setupEpoch; const ownerEpoch=legacyAuthEpoch;
+        const intakeDraftSnapshot=canonicalSetup(state);
+        try {
+          if (unknownSetup) {
+            const stateData = await setupRequest('state');
+            if (epoch !== setupEpoch) return;
+            if (stateData.preparation) { showPreparedReview(receiptOf(stateData.preparation)); unknownSetup = false; return; }
+            unknownSetup = false;
           }
-
-          instantErrorEl.style.display = "none";
-          instantErrorEl.classList.remove("animate-shake");
-          instantErrorEl.style.color = "";
-          instantErrorEl.style.borderColor = "";
-          instantBioInputEl.classList.remove("invalid-input");
-          generateStorefrontBtn.disabled = true;
-          const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
-          let loadingTextIdx = 0;
-          generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          window.generateStorefrontLoadingInterval = setInterval(() => {
-            loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
-            generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          }, 3000);
-
-
-          goToStep("step-loading");
-
+          const image = document.getElementById('instant-image-url');
+          const data = await setupRequest('start_zero_click', {prompt, image_url:image && image.value.trim() || undefined});
+          if (epoch !== setupEpoch) return;
+          showPreparedReview(preparedResult(data));
+        } catch (cause) {
+          if (epoch === setupEpoch) {
+            if(cause.unconfiguredIntake===true && !unchangedIntakeDraft(intakeDraftSnapshot)){
+              if(epoch===setupEpoch)goToStep('step-instant',false);
+              return;
+            }
+            unknownSetup = cause.unconfiguredIntake !== true;
+            goToStep('step-instant');
+            instantErrorEl.textContent = cause.unconfiguredIntake === true ? 'AI-assisted setup is unavailable.' : cause.message || 'Setup could not be confirmed';instantErrorEl.style.display='block';
+            if(cause.unconfiguredIntake===true)offerManualIntake('instant',prompt);
+          }
+        } finally { if(ownerEpoch===legacyAuthEpoch){setupBusy = false; generateStorefrontBtn.disabled = false; delete generateStorefrontBtn.dataset.submitting; generateStorefrontBtn.textContent = 'Generate My Workspace';} }
+      });
+      document.querySelectorAll('.save-draft-btn').forEach(button=>{
+        button.addEventListener('click',async event=>{
+          event.preventDefault();if(!legacyReady || button.disabled)return;
+          const ownerEpoch=legacyAuthEpoch;const expected=legacyOwner;const viewEpoch=setupEpoch;
+          const active=()=>ownerEpoch===legacyAuthEpoch && sameLegacyOwner(expected,legacyOwner);
+          saveCurrentState(true);clearTimeout(autoSaveTimer);clearTimeout(saveStateTimer);
+          const snapshot=JSON.stringify(state);button.textContent='Saving...';button.disabled=true;
           try {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            const res = await fetch(
-              `${backendUrl}/api/v1/growth/zero-click-builder/generate`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Tenant-ID": "e2e-tenant",
-                  "X-User-ID": "e2e-admin-user",
-                },
-                body: JSON.stringify({
-                  prompt: bioInput,
-                  image_url: imageUrl ? imageUrl : undefined
-                }),
-              },
-            );
-
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(
-                errData.error ||
-                  errData.message ||
-                  "Failed to generate storefront",
-              );
+            await fetchDraft(backendOrigin()+'/api/v1/onboarding/draft',{method:'POST',headers:{'Content-Type':'application/json'},body:snapshot});
+            if(!active())return;
+            button.textContent=legacyDraftPending()?'Changes pending':'Saved!';
+            const message=document.getElementById('draft-saved-msg');if(message && viewEpoch===setupEpoch && !legacyDraftPending())message.style.display='block';
+          }catch(error){if(active()){button.textContent='Error!';legacyStatus(error.message || 'Draft save could not be confirmed.');}}
+          finally {
+            if(active()){
+              button.disabled=false;
+              setTimeout(()=>{if(active()){button.innerHTML=legacyIdleControls.get(button)||'Save Draft';const message=document.getElementById('draft-saved-msg');if(message)message.style.display='none';}},3000);
             }
-
-            const data = await res.json();
-
-            if (data.organization_id) {
-              localStorage.setItem("tenant_id", data.organization_id);
-              localStorage.setItem("tenant", data.organization_id);
-            }
-            if (data.user_id) {
-              localStorage.setItem("user_id", data.user_id);
-            }
-
-            localStorage.removeItem("onboardingState");
-            localStorage.setItem("has_onboarded", "true");
-
-            if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
-            }
-
-            setTimeout(() => {
-              window.location.href = "success.html";
-            }, 1500);
-          } catch (err) {
-            console.error(err);
-            goToStep("step-instant");
-            const errorMsg = err.message || "Network Error: Failed to fetch";
-            instantErrorEl.innerText = errorMsg;
-            instantErrorEl.style.display = "block";
-            instantErrorEl.style.color = "#FF3B30";
-            instantErrorEl.style.borderColor = "rgba(255, 59, 48, 0.3)";
-            instantBioInputEl.classList.add("invalid-input");
-            generateStorefrontBtn.disabled = false;
-            delete generateStorefrontBtn.dataset.submitting;
-            if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
-            }
-            generateStorefrontBtn.innerHTML = "Generate My Workspace";
-          }
-        });
-      }
-      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          const originalText = e.target.innerText;
-          e.target.innerText = "Saving...";
-          e.target.disabled = true;
-
-          const backendUrl =
-            window.location.protocol === "file:" ||
-            ["1420", "3000", "8081"].includes(window.location.port)
-              ? "http://127.0.0.1:18789"
-              : "";
-          const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-          const userId = localStorage.getItem("user_id") || "e2e-admin-user";
-
-          const currentStepEl = document.querySelector(".step.active");
-          let currentStepIdx = 0;
-          if (currentStepEl) {
-            const steps = Array.from(document.querySelectorAll(".step"));
-            currentStepIdx = steps.indexOf(currentStepEl);
-          }
-
-          state.step = currentStepIdx;
-
-          if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
-              .then(() => {
-                e.target.innerText = "Saved!";
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                  e.target.disabled = false;
-                }, 3000);
-              })
-              .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                  e.target.disabled = false;
-                }, 3000);
-              });
-          } else {
-            fetch(`${backendUrl}/api/onboarding/draft`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Tenant-ID": tenantId,
-                "X-User-ID": userId,
-              },
-              body: JSON.stringify(state),
-            })
-              .then((res) => {
-                if (res.ok) {
-                  e.target.innerText = "Saved!";
-                  setTimeout(() => {
-                    e.target.innerText = originalText;
-                    e.target.disabled = false;
-                  }, 3000);
-                } else {
-                  throw new Error("Failed to save");
-                }
-              })
-              .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                  e.target.disabled = false;
-                }, 3000);
-              });
           }
         });
       });
 
       if (finishBtn) {
         finishBtn.addEventListener("click", () => {
+          if (!legacyReady) return;
+          if (!validateStep("step-offer")) {goToStep('step-offer');return;}
           if (validateStep("step-template")) {
             const agentBadges = document.querySelectorAll(
               "#ai-agents-container .agent-badge",
@@ -4166,110 +3889,31 @@
               business_type:
                 state.work_context || state.work_context || "Local Service",
               company_name: state.business_name,
-              company_description: state.tagline || "",
+              company_description: state.tagline || state.first_offer || state.business_name,
               selling_categories: state.categories ? [state.categories] : [],
               payment_pref: "online",
-              admin_email: state.admin_email || "admin@mybusiness.com",
-              admin_name: state.assistant_name || "Admin",
-              admin_password: state.admin_password || "password123",
               website_template: state.template_selection || "Modern",
-              first_product_name: state.first_offer || "First Offer",
-              first_product_price: "0.00",
+              first_product_name: state.first_offer,
+              first_product_price: state.firstProductPrice,
               domain_choice:
                 state.domain || generateSubdomain(state.business_name),
               price_type: "fixed",
-              location: "Local",
-              target_audience: "General",
+              location: state.location || "Local",
+              target_audience: state.target_audience || "General",
               ai_agents: selectedAgents,
               ai_auto_respond: autoRespondChecked,
             };
 
-            if (window.__TAURI__ && window.__TAURI__.core) {
-              finishBtn.disabled = true;
-              goToStep("step-loading");
-              window.__TAURI__.core
-                .invoke("start_onboarding", { req })
-                .then((startData) => {
-                  if (startData && startData.organization_id) {
-                    localStorage.setItem(
-                      "tenant_id",
-                      startData.organization_id,
-                    );
-                    localStorage.setItem("tenant", startData.organization_id);
-                  }
-
-                  localStorage.removeItem("onboardingState");
-                  localStorage.setItem("has_onboarded", "true");
-
-                  window.location.href = "dashboard.html";
-                })
-                .catch((err) => {
-                  console.error(err);
-                  const submitError = document.getElementById("submit-error");
-                  if (submitError) {
-                    submitError.style.display = "block";
-                    submitError.innerText =
-                      err && err.message
-                        ? err.message
-                        : typeof err === "string"
-                          ? err
-                          : "Failed to launch store";
-                  }
-                  goToStep("step-template");
-                  finishBtn.disabled = false;
-                  finishBtn.innerText = "Launch Store";
-                });
-            } else {
-              finishBtn.disabled = true;
-              finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-              const backendUrl =
-                window.location.protocol === "file:" ||
-                ["1420", "3000", "8081"].includes(window.location.port)
-                  ? "http://127.0.0.1:18789"
-                  : "";
-              fetch(`${backendUrl}/api/onboarding/start`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(req),
-              })
-                .then(async (response) => {
-                  if (response.ok) {
-                    const data = await response.json().catch(() => ({}));
-                    if (data && data.organization_id) {
-                      localStorage.setItem("tenant_id", data.organization_id);
-                      localStorage.setItem("tenant", data.organization_id);
-                    }
-                    localStorage.removeItem("onboardingState");
-                    localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "dashboard.html";
-                  } else {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(
-                      errData.error ||
-                        errData.message ||
-                        "Failed to start onboarding",
-                    );
-                  }
-                })
-                .catch((err) => {
-                  console.error(err);
-                  const submitError = document.getElementById("submit-error");
-                  if (submitError) {
-                    submitError.style.display = "block";
-                    submitError.innerText =
-                      err && err.message
-                        ? err.message
-                        : typeof err === "string"
-                          ? err
-                          : "Failed to launch store";
-                  }
-                  goToStep("step-template");
-                  finishBtn.disabled = false;
-                  finishBtn.innerText = "Launch Store";
-                });
-            }
+            if (setupBusy) return;
+            setupBusy = true; finishBtn.disabled = true; goToStep('step-loading');
+            const epoch = setupEpoch; const ownerEpoch=legacyAuthEpoch;
+            completeSetup(req, epoch).catch(cause => {
+              if (epoch !== setupEpoch) return;
+              unknownSetup = true;
+              const error = document.getElementById('submit-error');
+              if (error) { error.style.display = 'block'; error.textContent = cause.message || 'Setup could not be confirmed'; }
+              goToStep('step-template');
+            }).finally(() => { if(ownerEpoch===legacyAuthEpoch){setupBusy = false; finishBtn.disabled = false; finishBtn.textContent = 'Complete Setup';} });
           }
         });
       }
@@ -4295,8 +3939,9 @@
     <script>
 
       document.addEventListener("DOMContentLoaded", () => {
-        // Hybrid Setup Health Check
-        fetch("/api/onboarding/setup-health?mode=standalone")
+        // Use the authenticated same-origin v1 proxy; no file/loopback fallback.
+        if(!['http:','https:'].includes(window.location.protocol))return;
+        fetch("/api/v1/onboarding/setup-health?mode=standalone")
           .then((res) => res.json())
           .then((data) => {
             if (data.status === "error") {

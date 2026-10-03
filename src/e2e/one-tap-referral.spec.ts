@@ -20,7 +20,7 @@ test.describe('One-Tap Referral Generator', () => {
 
     // 3. Test Paywall
     const removeBrandingCheckbox = page.locator('#remove-branding');
-    await removeBrandingCheckbox.check();
+    await page.locator('label.switch').filter({ has: removeBrandingCheckbox }).click();
 
     // Verify paywall modal appears since this is a basic test tenant
     const paywallModal = page.locator('#paywall-modal');
@@ -30,6 +30,7 @@ test.describe('One-Tap Referral Generator', () => {
     // Close paywall
     await page.locator('#close-paywall').click();
     await expect(paywallModal).not.toHaveClass(/active/);
+    await expect(removeBrandingCheckbox).not.toBeChecked();
 
     // 4. Generate Embed Code
     await page.locator('#generate-btn').click();

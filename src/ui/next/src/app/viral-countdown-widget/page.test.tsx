@@ -64,10 +64,10 @@ describe('ViralCountdownWidgetPage', () => {
   });
 
   it('allows removing branding if the plan API reports pro', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+    global.fetch = vi.fn(async url => Response.json(url === '/api/v1/auth/session-identity' ? { userId: 'plan-owner', tenantId: 'plan-tenant', expiresAt: Date.now() + 60000 } : { current_plan: 'Pro' }));
 
     render(<ViralCountdownWidgetPage />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan', expect.objectContaining({ credentials: 'same-origin' })));
 
     const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/i);
     fireEvent.click(removeBrandingCheckbox);

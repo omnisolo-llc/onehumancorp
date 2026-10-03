@@ -1,9 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/onboarding_fixtures';
+import { completeReactZeroClickReview } from '../../../../e2e/react_zero_click_review';
 
 test.describe('Onboarding flows', () => {
-  test('Zero-Click Onboarding flow interactive steps', async ({ page }) => {
+  test('Zero-Click Onboarding flow interactive steps', async ({ page, onboardingOwner }, testInfo) => {
     // 1. Start at the zero-click onboarding page
-    await page.goto('http://localhost:3000/onboarding/zero-click');
+    await page.goto('/onboarding/zero-click');
     await expect(page).toHaveTitle(/OmniSolo/);
 
     // 2. Verify initial rendering and text
@@ -15,16 +16,13 @@ test.describe('Onboarding flows', () => {
     await input.fill('I sell custom sneakers in New York.');
 
     // 4. Submit the form
-    const submitBtn = page.getByRole('button', { name: /Send|Generate/i }); // Fallback regex in case button name differs
+    const submitBtn = page.getByRole('button', { name: 'Send message', exact: true });
     await expect(submitBtn).toBeEnabled();
-    await submitBtn.click();
-
-    // 5. Verify the transition state (loading or result)
-    // Wait for the resulting "Your business is live!" or equivalent transition
-    await expect(page.locator('text=Your business is live!')).toBeVisible({ timeout: 15000 });
-
-    // 6. Verify final actions
-    await expect(page.getByRole('button', { name: /Launch My Store/i })).toBeVisible();
+    const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/onboarding/chat' && response.request().method() === 'POST').then(async response => ({ status: response.status(), body: await response.json() }));
+    const [result] = await Promise.all([pending, submitBtn.click()]);
+    const mode = await completeReactZeroClickReview(page, onboardingOwner, result);
+    testInfo.annotations.push({ type: 'setup-mode', description: mode });
+    await expect(page.getByRole('button', { name: /Go to dashboard/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Share on X/i })).toBeVisible();
   });
 });

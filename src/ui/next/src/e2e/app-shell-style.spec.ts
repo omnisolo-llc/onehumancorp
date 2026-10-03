@@ -119,6 +119,10 @@ async function navigateToSettledApplicationPage(page: Page, route: string): Prom
       const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
       if (!response) throw new Error('navigation did not return a document response');
       if (response.status() < 500) {
+        if (route === '/inbox') {
+          await expect(page.getByTestId('inbox-settled')).toBeVisible();
+          await expect(page.locator('.app-main')).toHaveCount(1);
+        }
         await page.locator(route === '/healthz' ? 'main' : isPublicRoute ? '[data-auth-shell]' : '.app-main')
           .waitFor({ state: 'visible', timeout: 30_000 });
         await page.evaluate(() => new Promise<void>((resolve) => {

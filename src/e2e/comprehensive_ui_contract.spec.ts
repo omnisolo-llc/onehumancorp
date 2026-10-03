@@ -2,46 +2,17 @@ import { expect, test } from './fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
+import type { ClickEffects } from './support/ui_click_audit';
+import { ATTACHMENT, INVENTORY_TITLE, PROTOCOL, discoverAppRoutes as discoverSourceRoutes } from '../../scripts/ui-click-audit.cjs';
+import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget, clickableAuditSelector, tagClickTargets } from './support/ui_click_audit';
+import { authenticateRequest } from './authenticate';
+import { E2E_ADMIN_USER } from './identities';
+import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui_audit_navigation';
+import { createDashboardAuditCase } from './support/dashboard_audit_fixture';
+import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
 
 const appRoot = path.resolve(__dirname, '../ui/next/src/app');
-const ignoredRouteSegments = new Set(['api']);
-const dynamicRouteExamples: Record<string, string> = {
-  '[articleId]': 'getting-started-1',
-  '[tenant]': 'default',
-  '[id]': 'e2e-id',
-};
-
-function walkFiles(dir: string): string[] {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) return walkFiles(fullPath);
-    return entry.isFile() || entry.isSymbolicLink() ? [fullPath] : [];
-  });
-}
-
-function routeFromPageFile(file: string): string | null {
-  const relativeDir = path.relative(appRoot, path.dirname(file));
-  const segments = relativeDir === '' ? [] : relativeDir.split(path.sep);
-  if (segments.some((segment) => ignoredRouteSegments.has(segment) || segment.startsWith('('))) {
-    return null;
-  }
-
-  const routeSegments = segments
-    .filter((segment) => !segment.startsWith('_'))
-    .map((segment) => dynamicRouteExamples[segment] || segment);
-
-  return `/${routeSegments.join('/')}`.replace(/\/$/, '') || '/';
-}
-
-function discoverAppRoutes() {
-  return Array.from(new Set(
-    walkFiles(appRoot)
-      .filter((file) => file.endsWith(`${path.sep}page.tsx`))
-      .map(routeFromPageFile)
-      .filter((route): route is string => Boolean(route)),
-  )).sort();
-}
+function discoverAppRoutes(): string[] { return discoverSourceRoutes(path.resolve(__dirname, '../..')); }
 
 const clickableCssSelector = [
   'button:not([disabled])',
@@ -53,15 +24,7 @@ const clickableCssSelector = [
   'summary',
 ].join(', ');
 
-const clickableSelector = [
-  'button:visible:not([disabled])',
-  '[role="button"]:visible:not([aria-disabled="true"])',
-  '[onclick]:visible',
-  'input[type="button"]:visible:not([disabled])',
-  'input[type="submit"]:visible:not([disabled])',
-  'input[type="reset"]:visible:not([disabled])',
-  'summary:visible',
-].join(', ');
+const clickableSelector = clickableAuditSelector;
 
 const interactiveCssSelector = [
   'a[href]',
@@ -132,83 +95,16 @@ async function visibleText(page: Page) {
   return page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
 }
 
-async function pageSignature(page: Page) {
-  return page.evaluate(() => {
-    const body = document.body;
-    const text = body?.textContent || '';
-    const html = body?.innerHTML || '';
-    const elementCount = document.querySelectorAll('*').length;
-    const checksum = (value: string) => {
-      let hash = 0;
-      for (let index = 0; index < value.length; index += 1) {
-        hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
-      }
-      return hash;
-    };
-    return `${location.href}|${checksum(text)}|${checksum(html)}|${elementCount}`;
-  }).catch(() => page.url());
-}
+const auditBaseURL = process.env.BASE_URL || 'http://127.0.0.1:18789';
+const gotoReady = createAuditNavigation(auditBaseURL, async (page) => {
+  await authenticateRequest(page.request, {
+    username: E2E_ADMIN_USER.email,
+    password: E2E_ADMIN_USER.password,
+    organizationId: E2E_ADMIN_USER.organizationId,
+  }, new URL(auditBaseURL).origin);
+});
 
-async function waitForClickEffect(page: Page, beforeUrl: string, beforeSignature: string) {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    await page.waitForTimeout(50);
-    const afterUrl = page.url();
-    const afterSignature = await pageSignature(page);
-    if (afterUrl !== beforeUrl || afterSignature !== beforeSignature) {
-      return { afterUrl, afterSignature, changed: true };
-    }
-  }
 
-  return { afterUrl: page.url(), afterSignature: await pageSignature(page), changed: false };
-}
-
-async function gotoReady(page: Page, route: string) {
-  await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle', { timeout: 100 }).catch(() => undefined);
-  await page.waitForTimeout(100);
-  await page.evaluate(() => {
-    const controls = Array.from(document.querySelectorAll('input, textarea')) as Array<HTMLInputElement | HTMLTextAreaElement>;
-    for (const control of controls) {
-      const style = window.getComputedStyle(control);
-      const rect = control.getBoundingClientRect();
-      if (style.visibility === 'hidden' || style.display === 'none' || rect.width === 0 || rect.height === 0) continue;
-      if (control.disabled || control.readOnly || control.value) continue;
-      if (control instanceof HTMLInputElement) {
-        if (['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(control.type)) continue;
-        control.value = control.type === 'url' ? 'https://omnisolo.co' : control.type === 'number' ? '1' : 'Audit value';
-      } else {
-        control.value = 'Audit value';
-      }
-      control.dispatchEvent(new Event('input', { bubbles: true }));
-      control.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  }).catch(() => undefined);
-}
-
-async function tagClickTargets(page: Page) {
-  return page.locator(clickableSelector).evaluateAll((elements) => {
-    const visibleTargets = elements.filter((element) => {
-      const style = window.getComputedStyle(element);
-      if (element.closest('[aria-hidden="true"]')) return false;
-      if (element.closest('nextjs-portal')) return false;
-      return style.pointerEvents !== 'none' && style.opacity !== '0';
-    });
-    visibleTargets.forEach((element, index) => {
-      element.setAttribute('data-ui-audit-click-index', String(index));
-    });
-    return visibleTargets.length;
-  });
-}
-
-async function describeTaggedTarget(page: Page, index: number) {
-  return page.locator(`[data-ui-audit-click-index="${index}"]`).evaluate((element, fallbackIndex) => {
-    const aria = element.getAttribute('aria-label');
-    const text = (element.textContent || '').trim().replace(/\s+/g, ' ');
-    const id = element.id ? `#${element.id}` : '';
-    const role = element.getAttribute('role');
-    return aria || text || role || `${element.tagName.toLowerCase()}${id} #${Number(fallbackIndex) + 1}`;
-  }, index).catch(() => `click target #${index + 1}`);
-}
 
 async function auditInteractivePurposeForRoute(page: Page, route: string) {
   await gotoReady(page, route);
@@ -245,7 +141,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
     }
     if (result.tag === 'a') {
       if (!result.href.trim()) failures.push(`${target} has no href`);
-      if (result.href === '#' || result.href.startsWith('#')) failures.push(`${target} uses a placeholder hash href`);
+      if (result.href.startsWith('#') && !await page.evaluate(hasFragmentTarget, result.href)) failures.push(`${target} uses a missing or placeholder fragment href`);
       if (result.href.startsWith('javascript:')) failures.push(`${target} uses a javascript: href`);
       if (isFakeOmniSoloUrl(result.href)) failures.push(`${target} uses fake OmniSolo destination ${result.href}`);
     }
@@ -257,71 +153,106 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
   return { auditedElements: results.length, failures };
 }
 
-async function auditClickEffectsForRoute(page: Page, route: string) {
-  await gotoReady(page, route);
-  const failures: string[] = [];
-  let auditedTargets = 0;
-  const targetCount = await tagClickTargets(page);
-  auditedTargets += targetCount;
+type RouteClickAudit = {
+  protocol: number; kind: 'route'; route: string; discoveredKeys: string[];
+  observations: { key: string; completed: boolean; effect: ClickEffects | null; error: string | null }[];
+  navigations: AuditNavigationReceipt[];
+  exhausted: boolean; failures: string[]; assertionsPassed: boolean;
+  isolation?: { kind: 'case-owned-postgres'; seedDigest: string; cases: { tenantId: string; userId: string; keys: string[] }[] };
+  timings?: { phase: string; target?: string; elapsedMs: number }[];
+};
 
-  for (let index = 0; index < targetCount; index += 1) {
-    let target = page.locator(`[data-ui-audit-click-index="${index}"]`);
-    if (await target.count() === 0) {
-      await gotoReady(page, route);
-      await tagClickTargets(page);
-      target = page.locator(`[data-ui-audit-click-index="${index}"]`);
-    }
-
-    if (await target.count() === 0) {
-      break;
-    }
-
-    const isCurrentSelection = await target.evaluate((element) =>
-      element.getAttribute('aria-pressed') === 'true' ||
-      element.getAttribute('aria-current') === 'page' ||
-      element.getAttribute('aria-selected') === 'true',
-    ).catch(() => false);
-    if (isCurrentSelection) continue;
-
-    const label = await describeTaggedTarget(page, index);
-    const beforeUrl = page.url();
-    const beforeSignature = await pageSignature(page);
-    let dialogSeen = false;
-    let requestSeen = false;
-
-    const dialogPromise = page.waitForEvent('dialog', { timeout: 75 })
-      .then(async (dialog) => {
-        dialogSeen = true;
-        await dialog.dismiss().catch(() => undefined);
-      })
-      .catch(() => undefined);
-    const requestPromise = page.waitForEvent('request', { timeout: 75 })
-      .then(() => { requestSeen = true; })
-      .catch(() => undefined);
-
-    await target.evaluate((element) => {
-      (element as HTMLElement).click();
-    }, undefined, { timeout: 5000 }).catch((error) => {
-      failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
-    });
-    await Promise.all([dialogPromise, requestPromise]);
-
-    const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
-    const realEffect = requestSeen || effect.changed;
-
-    if (dialogSeen && !realEffect) {
-      failures.push(`${route}: "${label}" only opened a browser dialog`);
-    }
-    if (!realEffect) {
-      failures.push(`${route}: "${label}" produced no navigation, network request, or DOM change`);
-    }
-    if (effect.afterUrl !== beforeUrl || effect.changed) {
-      await gotoReady(page, route);
-      await tagClickTargets(page);
-    }
+async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit: RouteClickAudit) {
+  const failures = audit.failures;
+  const audited = new Set<string>();
+  const startedAt = Date.now();
+  const timed = async <T>(phase: string, operation: () => Promise<T>, target?: string): Promise<T> => {
+    const started = Date.now();
+    try { return await operation(); }
+    finally { (audit.timings ??= []).push({ phase, target, elapsedMs: Date.now() - started }); }
+  };
+  if (route === '/dashboard' || route === '/') {
+    const browser = sourcePage.context().browser();
+    if (!browser) throw new Error('Dashboard click isolation requires the real test browser');
+    let owned = await timed('seed', () => createDashboardAuditCase(browser, auditBaseURL, sourcePage.viewportSize(), test.info().outputPath('dashboard-audit-videos')));
+    try {
+      await timed('navigate', async () => { audit.navigations.push(await owned.navigate(route)); });
+      const baseline = await timed('discover', () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds));
+      audit.discoveredKeys = baseline.map(target => target.key);
+      audit.isolation = { kind: 'case-owned-postgres', seedDigest: owned.actor.sourceDigest, cases: [] };
+      // This is a finite frozen inventory, not an open-ended enumeration loop.
+      // Budget each independently seeded/authenticated case and its existing
+      // bounded lookup and gestures, rather than raising a flat route timeout.
+      const caseBudget = 30_000;
+      test.setTimeout(Math.max(120_000, (baseline.length + 2) * caseBudget));
+      for (const candidate of baseline) {
+        await test.step(`isolated dashboard control: ${candidate.label}`, async () => {
+          const current = await timed('discover', () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds));
+          assertSameClickInventory(audit.discoveredKeys, current.map(target => target.key));
+          audit.isolation!.cases.push({ tenantId: owned.actor.tenantId, userId: owned.actor.userId, keys: current.map(target => target.key) });
+          const target = await timed('resolve', () => resolveAuditTarget(owned.page, candidate.key, () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds)), candidate.label);
+          audited.add(candidate.key);
+          try {
+            const observed = await timed('observe', () => observeClickEffects(owned.page, target), candidate.label);
+            audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
+            if (!hasMeaningfulClickEffect(observed)) {
+              if (observed.dialogSeen) failures.push(`${route}: "${candidate.label}" only opened a browser dialog`);
+              failures.push(`${route}: "${candidate.label}" produced no observable user effect`);
+            }
+          } catch (error) {
+            audit.observations.push({ key: candidate.key, completed: false, effect: null, error: String(error).split('\n')[0] });
+            failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
+          }
+          await timed('retire', () => owned.close());
+          owned = await timed('seed', () => createDashboardAuditCase(browser, auditBaseURL, sourcePage.viewportSize(), test.info().outputPath('dashboard-audit-videos')));
+          await timed('navigate', async () => { audit.navigations.push(await owned.navigate(route)); });
+        }, { timeout: caseBudget });
+      }
+      // Even the final reset must preserve the full initial inventory. A
+      // destructive click cannot erase another expected target from coverage.
+      const final = await timed('discover', () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds));
+      assertSameClickInventory(audit.discoveredKeys, final.map(target => target.key));
+      audit.isolation.cases.push({ tenantId: owned.actor.tenantId, userId: owned.actor.userId, keys: final.map(target => target.key) });
+      audit.exhausted = true;
+      return { auditedTargets: audited.size, failures };
+    } catch (error) {
+      if (!owned.page.isClosed()) await test.info().attach('dashboard-isolation-failure', { body: await owned.page.screenshot({ fullPage: true }), contentType: 'image/png' });
+      throw error;
+    } finally { await owned.close(); }
   }
-
-  return { auditedTargets, failures };
+  // Restore with a committed blank document between clicks, retaining one
+  // page/video for the route and destroying delayed callbacks from the old realm.
+  let page = await sourcePage.context().newPage();
+  try {
+    await timed('navigate', async () => { audit.navigations.push(await gotoReady(page, route)); });
+    while (true) {
+      const candidates = await timed('discover', () => tagClickTargets(page));
+      for (const target of candidates) if (!audit.discoveredKeys.includes(target.key)) audit.discoveredKeys.push(target.key);
+      const candidate = candidates.find((target) => !audited.has(target.key));
+      if (!candidate) { audit.exhausted = true; break; }
+      if (Date.now() - startedAt > 90_000) {
+        throw new Error(`${route}: click target enumeration did not converge after ${audited.size} targets; next=${candidate.label}. No remaining coverage was silently skipped.`);
+      }
+      const target = await timed('resolve', () => resolveAuditTarget(page, candidate.key, () => tagClickTargets(page)), candidate.label);
+      audited.add(candidate.key);
+      try {
+        const observed = await timed('observe', () => observeClickEffects(page, target), candidate.label);
+        audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
+        if (!hasMeaningfulClickEffect(observed)) {
+          if (observed.dialogSeen) failures.push(`${route}: "${candidate.label}" only opened a browser dialog`);
+          failures.push(`${route}: "${candidate.label}" produced no observable user effect`);
+        }
+      } catch (error) {
+        audit.observations.push({ key: candidate.key, completed: false, effect: null, error: String(error).split('\n')[0] });
+        failures.push(`${route}: "${candidate.label}" click failed: ${String(error).split('\n')[0]}`);
+      }
+      page = await timed('retire', () => replaceAuditDocument(page));
+      await timed('navigate', async () => { audit.navigations.push(await gotoReady(page, route)); });
+    }
+    return { auditedTargets: audited.size, failures };
+  } finally {
+    await page.close().catch(() => undefined);
+  }
 }
 
 const generatedContractRoutes = discoverAppRoutes();
@@ -344,9 +275,15 @@ test.describe('comprehensive UI contract', () => {
 
     test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ page }) => {
       test.setTimeout(120000);
-      const audit = await auditClickEffectsForRoute(page, route);
-      console.info(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
-      expect(audit.failures).toEqual([]);
+      const audit: RouteClickAudit = { protocol: PROTOCOL, kind: 'route', route, discoveredKeys: [], observations: [], navigations: [], exhausted: false, failures: [], assertionsPassed: false };
+      try {
+        const result = await auditClickEffectsForRoute(page, route, audit);
+        console.info(`Audited ${result.auditedTargets} click targets on ${routeLabel(route)}.`);
+        expect(audit.failures).toEqual([]);
+        audit.assertionsPassed = true;
+      } finally {
+        await test.info().attach(ATTACHMENT, { body: Buffer.from(JSON.stringify(audit)), contentType: 'application/json' });
+      }
     });
   }
 
@@ -452,8 +389,8 @@ test.describe('comprehensive UI contract', () => {
           failures.push(`${target} has an empty href`);
           continue;
         }
-        if (link.href === '#' || link.href.startsWith('#')) {
-          failures.push(`${target} uses a placeholder hash href`);
+        if (link.href.startsWith('#')) {
+          if (!await page.evaluate(hasFragmentTarget, link.href)) failures.push(`${target} uses a missing or placeholder fragment href`);
           continue;
         }
         if (link.href.startsWith('javascript:')) {
@@ -486,79 +423,16 @@ test.describe('comprehensive UI contract', () => {
     expect(failures).toEqual([]);
   });
 
-  test('visible enabled click targets have an observable effect', async ({ page }) => {
-    test.setTimeout(600000);
-    const failures: string[] = [];
-    const appRoutes = discoverAppRoutes();
-    let auditedTargets = 0;
-    console.info(`Discovered ${appRoutes.length} app routes for click target audit.`);
-    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
-
-    for (const route of appRoutes) {
-      await gotoReady(page, route);
-      const targetCount = await tagClickTargets(page);
-      auditedTargets += targetCount;
-
-      for (let index = 0; index < targetCount; index += 1) {
-        let target = page.locator(`[data-ui-audit-click-index="${index}"]`);
-        if (await target.count() === 0) {
-          await gotoReady(page, route);
-          await tagClickTargets(page);
-          target = page.locator(`[data-ui-audit-click-index="${index}"]`);
-        }
-
-        if (await target.count() === 0) {
-          break;
-        }
-
-        const isCurrentSelection = await target.evaluate((element) =>
-          element.getAttribute('aria-pressed') === 'true' ||
-          element.getAttribute('aria-current') === 'page' ||
-          element.getAttribute('aria-selected') === 'true',
-        ).catch(() => false);
-        if (isCurrentSelection) continue;
-
-        const label = await describeTaggedTarget(page, index);
-        const beforeUrl = page.url();
-        const beforeSignature = await pageSignature(page);
-        let dialogSeen = false;
-        let requestSeen = false;
-
-        const dialogPromise = page.waitForEvent('dialog', { timeout: 75 })
-          .then(async (dialog) => {
-            dialogSeen = true;
-            await dialog.dismiss().catch(() => undefined);
-          })
-          .catch(() => undefined);
-        const requestPromise = page.waitForEvent('request', { timeout: 75 })
-          .then(() => { requestSeen = true; })
-          .catch(() => undefined);
-
-        await target.evaluate((element) => {
-          (element as HTMLElement).click();
-        }, undefined, { timeout: 5000 }).catch((error) => {
-          failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
-        });
-        await Promise.all([dialogPromise, requestPromise]);
-
-        const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
-        const realEffect = requestSeen || effect.changed;
-
-        if (dialogSeen && !realEffect) {
-          failures.push(`${route}: "${label}" only opened a browser dialog`);
-        }
-        if (!realEffect) {
-          failures.push(`${route}: "${label}" produced no navigation, network request, or DOM change`);
-        }
-        if (effect.afterUrl !== beforeUrl || effect.changed) {
-          await gotoReady(page, route);
-          await tagClickTargets(page);
-        }
-      }
-    }
-
-    console.info(`Audited ${auditedTargets} visible enabled click targets.`);
-    expect(failures).toEqual([]);
+  test(INVENTORY_TITLE, async () => {
+    expect(process.env.OHC_CLICK_AUDIT_CONTEXT, 'Complete coverage requires the native runner and mandatory post-run receipt verification.').toBeTruthy();
+    const routes = discoverAppRoutes();
+    expect(routes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
+    // The required post-run gate evaluates completed per-route click assertions
+    // for this exact inventory, without executing each business action twice.
+    await test.info().attach(ATTACHMENT, {
+      body: Buffer.from(JSON.stringify({ protocol: PROTOCOL, kind: 'inventory', routes, assertionsPassed: true })),
+      contentType: 'application/json',
+    });
   });
 
   test('all visible interactive elements are usable and named', async ({ page }) => {
@@ -588,6 +462,17 @@ test.describe('comprehensive UI contract', () => {
             Array.from((element as HTMLInputElement).labels || []).map((labelElement) => labelElement.textContent || '').join(' ').trim() ||
             (element.textContent || '').trim();
 
+          let hiddenAncestor: string | null = null;
+          if (rect.width < 1 || rect.height < 1) {
+            for (let ancestor: Element | null = element; ancestor; ancestor = ancestor.parentElement) {
+              const ancestorStyle = window.getComputedStyle(ancestor);
+              if (ancestor.hasAttribute('hidden') || ancestorStyle.display === 'none' || ancestorStyle.visibility === 'hidden') {
+                hiddenAncestor = `${ancestor.tagName.toLowerCase()}#${ancestor.id} ${ancestor.getAttribute('class') || ''}`.slice(0, 240);
+                break;
+              }
+            }
+          }
+
           return {
             index,
             tag,
@@ -597,6 +482,11 @@ test.describe('comprehensive UI contract', () => {
             height: rect.height,
             pointerEvents: style.pointerEvents,
             disabled: element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true',
+            id: element.id.slice(0, 120),
+            classes: (element.getAttribute('class') || '').slice(0, 240),
+            display: style.display,
+            visibility: style.visibility,
+            hiddenAncestor,
           };
         }),
       );
@@ -604,7 +494,9 @@ test.describe('comprehensive UI contract', () => {
 
       for (const result of results) {
         const target = `${route}: ${result.tag}${result.type ? `[type=${result.type}]` : ''} #${result.index + 1}`;
-        if (result.width < 1 || result.height < 1) failures.push(`${target} has no rendered hit area`);
+        if (result.width < 1 || result.height < 1) {
+          failures.push(`${target} has no rendered hit area: ${JSON.stringify({ label: result.label.slice(0, 200), id: result.id, classes: result.classes, width: result.width, height: result.height, display: result.display, visibility: result.visibility, hiddenAncestor: result.hiddenAncestor })}`);
+        }
         if (!result.disabled && result.pointerEvents === 'none') failures.push(`${target} has pointer-events disabled`);
         if (!result.disabled && !result.label) failures.push(`${target} has no accessible label/text/placeholder/title`);
       }

@@ -1,0 +1,11 @@
+{
+  "name": "ohc-publication-jcs-witness",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.22.1 <23"
+  },
+  "dependencies": {
+    "canonicalize": "5.1.0"
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 // Pricing Page Implementation
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
@@ -17,6 +17,8 @@ export default function PricingPage() {
   const [planDetails, setPlanDetails] = useState<import('@/lib/business-records').BillingPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAnnual, setIsAnnual] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const checkoutPending = useRef(false);
 
   useEffect(() => {
     const fetchPlanData = async () => {
@@ -62,6 +64,9 @@ export default function PricingPage() {
   };
 
   const handleUpgrade = async (tier: string, isAnnualSelected?: boolean) => {
+    if (checkoutPending.current) return;
+    checkoutPending.current = true;
+    setCheckoutError(null);
     try {
       const response = await fetch('/api/v1/billing/create-checkout-session', {
         method: 'POST',
@@ -71,23 +76,27 @@ export default function PricingPage() {
         body: JSON.stringify({ tier, is_subscription: true, subscription_interval: isAnnualSelected ? 'year' : 'month' }),
       });
 
-      if (!response.ok) {
+      if (!response.ok || ![200, 201].includes(response.status)) {
         throw new Error('Failed to create checkout session');
       }
 
-      const data = await response.json();
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else if (!process.env.VITEST) {
-        window.location.href = `https://checkout.stripe.com/c/pay/${tier.toLowerCase()}`;
+      const data: unknown = await response.json();
+      if (!data || typeof data !== 'object' || Array.isArray(data)
+        || ('success' in data && data.success !== true) || ('error' in data && data.error != null)
+        || !('checkout_url' in data) || typeof data.checkout_url !== 'string'
+        || data.checkout_url.trim() !== data.checkout_url || data.checkout_url.includes('\\')) {
+        throw new Error('Invalid checkout receipt');
       }
-    } catch (error) {
-      console.error('Error upgrading plan:', error);
-      if (!process.env.VITEST) {
-        window.location.href = `https://checkout.stripe.com/c/pay/${tier.toLowerCase()}`;
-      } else {
-        alert('Failed to initiate upgrade. Please try again.');
+      const checkoutUrl = new URL(data.checkout_url);
+      if (checkoutUrl.protocol !== 'https:' || checkoutUrl.hostname !== 'checkout.stripe.com'
+        || checkoutUrl.port || checkoutUrl.username || checkoutUrl.password || checkoutUrl.pathname === '/') {
+        throw new Error('Invalid checkout destination');
       }
+      window.location.href = checkoutUrl.href;
+    } catch {
+      setCheckoutError('Checkout is unavailable. Your plan has not changed. Please try again.');
+    } finally {
+      checkoutPending.current = false;
     }
   };
 
@@ -101,6 +110,7 @@ export default function PricingPage() {
       </header>
 
       <main id="pricing-screen" className="p-4 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-6">
+        {checkoutError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{checkoutError}</p>}
         <div className="text-center mb-4 md:mb-8 max-w-2xl mx-auto">
           <p className="text-base md:text-lg text-gray-600 leading-relaxed">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>

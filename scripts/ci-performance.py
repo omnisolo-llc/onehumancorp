@@ -11,6 +11,7 @@ import argparse
 from datetime import datetime
 import json
 import math
+import re
 from pathlib import Path
 import sys
 from typing import Any
@@ -49,6 +50,53 @@ def core_build_timing(rows: list[dict[str, Any]], first_start: float) -> dict[st
         "all_builds_succeeded": not incomplete and all(row["conclusion"] == "success" for row in selected),
         "missing_jobs": missing,
     }
+
+
+
+def browser_postgres_timing(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Actual wall-clock overlap, not summed shard runtimes or a speedup claim."""
+    postgres = [row for row in rows if row["name"] == "PostgreSQL tenant isolation"]
+    if len(postgres) > 1:
+        raise ValueError("Duplicate PostgreSQL scheduling identity")
+    shards: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        match = re.fullmatch(r"Native real-stack Playwright ([0-9]+)/12", row["name"])
+        if not match:
+            continue
+        index = int(match[1])
+        if not 1 <= index <= 12 or index in shards:
+            raise ValueError("Duplicate or invalid browser scheduling identity")
+        shards[index] = row
+    missing = sorted(set(range(1, 13)) - set(shards))
+    result = {
+        "measurement_complete": False, "browser_shards": len(shards), "missing_shards": missing,
+        "postgres_browser_overlap_seconds": None, "first_browser_after_postgres_seconds": None,
+        "browser_wait_after_artifacts_seconds": None,
+    }
+    if missing or not postgres or any(row["seconds"] is None for row in [*shards.values(), *postgres]):
+        return result
+    pg_start = timestamp(postgres[0]["started_at"])
+    pg_end = timestamp(postgres[0]["completed_at"])
+    first = min(timestamp(row["started_at"]) for row in shards.values())
+    intervals = sorted((max(pg_start, timestamp(row["started_at"])), min(pg_end, timestamp(row["completed_at"])))
+                       for row in shards.values())
+    overlap = 0.0
+    right = pg_start
+    for start, end in intervals:
+        left = max(start, right)
+        if end > left:
+            overlap += end - left
+            right = end
+    artifacts = [row for row in rows if row["name"] in {"Native backend binaries", "Native Next production build"}]
+    wait = None
+    if len(artifacts) == 2 and all(row["seconds"] is not None for row in artifacts):
+        wait = first - max(timestamp(row["completed_at"]) for row in artifacts)
+        if wait < 0:
+            raise ValueError("Browser job started before its artifact producers completed")
+    result.update(measurement_complete=True, postgres_browser_overlap_seconds=overlap,
+                  first_browser_after_postgres_seconds=first - pg_end,
+                  browser_wait_after_artifacts_seconds=wait)
+    return result
 
 
 def summarize(pages: Any, run_id: int, attempt: int, budget: float, cold: bool,
@@ -119,6 +167,7 @@ def summarize(pages: Any, run_id: int, attempt: int, budget: float, cold: bool,
             "cache_mode_requested": "disabled" if cold else "enabled",
             "cache_hit_proven": False, "elapsed_seconds": elapsed,
             "core_build": core_build_timing(rows, first),
+            "browser_postgres": browser_postgres_timing(rows),
             "budget_seconds": budget * 60, "within_budget": elapsed <= budget * 60,
             "all_executed_jobs_succeeded": all(row["conclusion"] == "success" for row in measured),
             "exclusions": ["queue before first job", "final reporting/upload step"],
@@ -139,6 +188,14 @@ def render(report: dict[str, Any]) -> str:
     else:
         outcome = "passed" if core["all_builds_succeeded"] else "failed"
         lines.append(f"Core builds: **{core['elapsed_seconds'] / 60:.2f} minutes**, {outcome}; provisional target: **10 minutes** (diagnostic, not a replacement gate).")
+    scheduling = report["browser_postgres"]
+    if scheduling["measurement_complete"]:
+        lines.append(f"Browser/PostgreSQL overlap: **{scheduling['postgres_browser_overlap_seconds'] / 60:.2f} minutes** across all twelve shards (union of actual execution intervals).")
+        wait = scheduling["browser_wait_after_artifacts_seconds"]
+        if wait is not None:
+            lines.append(f"Wait from ready browser artifacts to the first browser job: **{wait / 60:.2f} minutes**; this is measured scheduling time, not proof of a cache hit or speedup.")
+    else:
+        lines.append("Browser/PostgreSQL scheduling overlap: **not measured** (missing or skipped PostgreSQL/browser job).")
     lines.extend(["", "| Job | Result | Execution minutes |", "|---|---|---:|"])
     for job in report["jobs"]:
         minutes = "—" if job["seconds"] is None else f"{job['seconds'] / 60:.2f}"

@@ -1,5 +1,7 @@
 use chrono::Utc;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set, sea_query::Expr,
+};
 
 use super::{capabilities::DatabaseBackend, connection::AppDatabase, entities};
 
@@ -60,6 +62,38 @@ impl CatalogRepository {
                 metadata: row.metadata,
             })
             .collect())
+    }
+
+    pub async fn update_product(
+        &self,
+        tenant_id: &str,
+        id: &str,
+        title: &str,
+        description: &str,
+        price_cents: i64,
+    ) -> Result<bool, sea_orm::DbErr> {
+        let result = entities::product::Entity::update_many()
+            .col_expr(
+                entities::product::Column::Title,
+                Expr::value(title.to_string()),
+            )
+            .col_expr(
+                entities::product::Column::Description,
+                Expr::value(description.to_string()),
+            )
+            .col_expr(
+                entities::product::Column::PriceCents,
+                Expr::value(price_cents),
+            )
+            .col_expr(
+                entities::product::Column::UpdatedAt,
+                Expr::value(Utc::now()),
+            )
+            .filter(entities::product::Column::Id.eq(id))
+            .filter(entities::product::Column::TenantId.eq(tenant_id))
+            .exec(self.database.connection())
+            .await?;
+        Ok(result.rows_affected == 1)
     }
 
     pub async fn create_product(

@@ -1,36 +1,28 @@
 import { test, expect } from './fixtures';
+import { createDashboardAuditCase } from './support/dashboard_audit_fixture';
+import { e2eDbQuery } from './db_utils';
 
 test.describe('Proactive Operations Task Feed', () => {
-  test('Persona: Jun the Location Manager opens app and interacts with proactive ops tasks', async ({ page, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
-    await page.goto('/dashboard');
-
-    await page.waitForTimeout(2000);
-
-    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
-    await expect(feedSection).toBeVisible({ timeout: 15000 });
-
-    const proposalsTab = page.locator('button#tab-proposals');
-    if (await proposalsTab.isVisible()) {
-      await proposalsTab.click();
-    }
-
-    const checklistCard = page.locator('div[data-testid^="triage-card-"]', { hasText: 'Review Daily Prep Checklist' });
-    await expect(checklistCard).toBeVisible({ timeout: 15000 });
-
-    const supplierCard = page.locator('div[data-testid^="triage-card-"]', { hasText: 'Follow up on delayed supplier delivery from yesterday' });
-    await expect(supplierCard).toBeVisible();
-
-    const staffingCard = page.locator('div[data-testid^="triage-card-"]', { hasText: 'Staffing alert: Only 1 person scheduled for closing shift.' });
-    await expect(staffingCard).toBeVisible();
-
-    await checklistCard.locator('button', { hasText: 'Review Checklist' }).click();
-    await expect(checklistCard).not.toBeVisible({ timeout: 10000 });
-
-    await supplierCard.locator('button', { hasText: 'Assign to Staff' }).click();
-    await expect(supplierCard).not.toBeVisible({ timeout: 10000 });
-
-    await staffingCard.locator('button', { hasText: 'Draft Schedule Request' }).click();
-    await expect(staffingCard).not.toBeVisible({ timeout: 10000 });
+  test('an owner can review, assign and draft a schedule from recorded operations proposals', async ({ browser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated application URL is required');
+    const owned = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+    try {
+      await owned.navigate();
+      await expect(owned.page.getByRole('region', { name: 'Unified Agent Feed' })).toBeVisible();
+      for (const [suffix, action] of [
+        ['e2e-ops-checklist', 'Review Checklist'],
+        ['e2e-ops-supplier', 'Assign to Staff'],
+        ['e2e-ops-staffing', 'Draft Schedule Request'],
+      ]) {
+        const id = `${owned.actor.namespace}-${suffix}`;
+        const card = owned.page.getByTestId(`triage-card-${id}`);
+        await expect(card).toBeVisible();
+        const accepted = owned.page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/agent-feed/${id}` && response.request().method() === 'PUT');
+        await card.getByRole('button', { name: action, exact: true }).click();
+        expect((await accepted).status()).toBe(200);
+        await expect(card).toHaveCount(0);
+        expect(await e2eDbQuery('SELECT lifecycle_state FROM agent_feed_items WHERE id=$1 AND tenant_id=$2', [id, owned.actor.tenantId])).toEqual([{ lifecycle_state: 'APPROVED' }]);
+      }
+    } finally { await owned.close(); }
   });
 });

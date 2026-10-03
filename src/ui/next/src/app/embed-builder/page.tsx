@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
 
@@ -8,7 +9,7 @@ export default function EmbedBuilderPage() {
     const [widgetType, setWidgetType] = useState('intake');
     const [theme, setTheme] = useState('light');
     const [embedCode, setEmbedCode] = useState('');
-    const [copied, setCopied] = useState(false);
+
     const [showPaywall, setShowPaywall] = useState(false);
     const [hideBranding, setHideBranding] = useState(false);
 
@@ -40,11 +41,8 @@ export default function EmbedBuilderPage() {
         setEmbedCode(fullCode);
     }, [tenantId, widgetType, theme, hideBranding]);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(embedCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
+  const clipboard = useClipboardFeedback(embedCode);
+  const handleCopy = () => { void clipboard.copy(embedCode); };
 
     const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
@@ -103,7 +101,7 @@ export default function EmbedBuilderPage() {
                                     {['intake', 'booking', 'quote'].map((type) => (
                                         <button
                                             key={type}
-                                            onClick={() => setWidgetType(type)}
+                                            onClick={() => setWidgetType(type)} aria-pressed={widgetType === type}
                                             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all capitalize ${
                                                 widgetType === type
                                                     ? 'bg-white text-gray-900 shadow-sm'
@@ -120,7 +118,7 @@ export default function EmbedBuilderPage() {
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Theme</label>
                                 <div className="flex bg-gray-100 p-1 rounded-xl">
                                     <button
-                                        onClick={() => setTheme('light')}
+                                        onClick={() => setTheme('light')} aria-pressed={theme === 'light'}
                                         className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
                                             theme === 'light'
                                                 ? 'bg-white text-gray-900 shadow-sm'
@@ -130,7 +128,7 @@ export default function EmbedBuilderPage() {
                                         Light
                                     </button>
                                     <button
-                                        onClick={() => setTheme('dark')}
+                                        onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}
                                         className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
                                             theme === 'dark'
                                                 ? 'bg-gray-800 text-white shadow-sm'
@@ -169,9 +167,10 @@ export default function EmbedBuilderPage() {
                                 </pre>
                                 <button
                                     onClick={handleCopy}
+                disabled={clipboard.state === 'pending'}
                                     className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-[30px] saturate-[210%] transition-all opacity-0 group-hover:opacity-100 flex items-center gap-2 text-xs font-medium border border-white/10 shadow-lg"
                                 >
-                                    {copied ? (
+                                    {clipboard.state === 'copied' ? (
                                         <>
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                             Copied!
@@ -183,6 +182,7 @@ export default function EmbedBuilderPage() {
                                         </>
                                     )}
                                 </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                             </div>
                             <p className="text-xs text-gray-500 mt-4 text-center">Paste this HTML directly into your site builder (e.g., WordPress Custom HTML block, Wix HTML embed).</p>
                         </div>

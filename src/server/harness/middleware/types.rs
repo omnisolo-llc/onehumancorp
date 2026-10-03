@@ -1678,7 +1678,7 @@ mod tests {
     fn resolved_model_with_metadata(metadata: JsonMap) -> ResolvedModelSelection {
         ResolvedModelSelection {
             provider_route: "openai-compatible".to_owned(),
-            model_id: "gpt-5.6-luna".to_owned(),
+            model_id: "gpt-6-luna".to_owned(),
             reasoning_effort: Some(ReasoningEffort::Max),
             api_dialect: ModelApiDialect::OpenAiResponses,
             context_window: Some(400_000),
@@ -1868,7 +1868,7 @@ mod tests {
             ("token_count", "2000"),
             ("endpoint", "https://api.example.test/v1"),
             ("base_url", "https://api.example.test"),
-            ("model_id", "gpt-5.6-luna"),
+            ("model_id", "gpt-6-luna"),
             ("note", "max_output_token=128000"),
             ("authorization_scheme", "Bearer"),
             ("authorization_type", "oauth2"),
@@ -1895,7 +1895,7 @@ mod tests {
     fn resolved_model_selection_is_portable_and_backward_compatible() {
         let selection = ResolvedModelSelection {
             provider_route: "openai-compatible".to_owned(),
-            model_id: "gpt-5.6-luna".to_owned(),
+            model_id: "gpt-6-luna".to_owned(),
             reasoning_effort: Some(ReasoningEffort::Max),
             api_dialect: ModelApiDialect::OpenAiResponses,
             context_window: Some(400_000),

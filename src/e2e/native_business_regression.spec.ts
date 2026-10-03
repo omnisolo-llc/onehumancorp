@@ -109,11 +109,20 @@ test.describe('Native business correctness and truthful completion', () => {
     expect(saved.status).toBe(200);
     expect(saved.value.proposal.total_amount_cents).toBe(9000);
     expect(saved.value.line_items).toHaveLength(2);
+    const ownCollection = await api<{ proposals: ProposalEnvelope['proposal'][] }>(page, '/api/v1/proposals');
+    expect(ownCollection.status).toBe(200);
+    expect(ownCollection.value.proposals.find((entry) => entry.id === proposal.id)).toMatchObject({
+      id: proposal.id, status: 'DRAFT', total_amount_cents: 9000,
+    });
 
     const other = await browser.newPage({ baseURL: new URL(page.url()).origin, storageState: { cookies: [], origins: [] } });
     try {
       await loginAs(other, unlimitedAdminUser);
       expect((await api(other, `/api/v1/proposals/${proposal.id}`)).status).toBe(404);
+      const otherCollection = await api<{ proposals: ProposalEnvelope['proposal'][] }>(other,
+        `/api/v1/proposals?tenant_id=${encodeURIComponent(adminUser.organizationId)}`);
+      expect(otherCollection.status).toBe(200);
+      expect(otherCollection.value.proposals.some((entry) => entry.id === proposal.id)).toBe(false);
     } finally { await other.close(); }
   });
 

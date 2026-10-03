@@ -17,7 +17,7 @@ use uuid::Uuid;
 fn resolved_model(effort: ReasoningEffort) -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(effort),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: Some(262_144),
@@ -167,7 +167,7 @@ fn stable_config_options_are_preferred_and_select_strongest_thought_level() {
                         "currentValue": "other-model",
                         "options": [
                             {"value": "other-model", "name": "Other"},
-                            {"value": "gpt-5.6-luna", "name": "GPT 5.6 Luna"}
+                            {"value": "gpt-6-luna", "name": "GPT 5.6 Luna"}
                         ]
                     },
                     {
@@ -185,9 +185,9 @@ fn stable_config_options_are_preferred_and_select_strongest_thought_level() {
                 ],
                 "models": {
                     "availableModels": [
-                        {"modelId": "gpt-5.6-luna,thinking", "name": "Legacy"}
+                        {"modelId": "gpt-6-luna,thinking", "name": "Legacy"}
                     ],
-                    "currentModelId": "gpt-5.6-luna,thinking"
+                    "currentModelId": "gpt-6-luna,thinking"
                 }
             }),
         )
@@ -205,7 +205,7 @@ fn stable_config_options_are_preferred_and_select_strongest_thought_level() {
         json!({
             "sessionId": "kimi-session-1",
             "configId": "model",
-            "value": "gpt-5.6-luna"
+            "value": "gpt-6-luna"
         })
     );
     assert_eq!(plan.requests[1].method, "session/set_config_option");
@@ -243,7 +243,7 @@ fn stable_model_without_reasoning_option_records_maximum_effort_loss() {
                     "type": "select",
                     "currentValue": "other-model",
                     "options": [
-                        {"value": "gpt-5.6-luna", "name": "GPT 5.6 Luna"}
+                        {"value": "gpt-6-luna", "name": "GPT 5.6 Luna"}
                     ]
                 }]
             }),
@@ -283,7 +283,7 @@ fn stable_reasoning_never_upgrades_and_rejects_unknown_advertised_levels() {
                             "id": "model",
                             "category": "model",
                             "type": "select",
-                            "options": [{"value": "gpt-5.6-luna"}]
+                            "options": [{"value": "gpt-6-luna"}]
                         },
                         {
                             "id": "thinking",
@@ -322,7 +322,7 @@ fn stable_reasoning_never_upgrades_and_rejects_unknown_advertised_levels() {
                     "id": "model",
                     "category": "model",
                     "type": "select",
-                    "options": [{"value": "gpt-5.6-luna"}]
+                    "options": [{"value": "gpt-6-luna"}]
                 },
                 {
                     "id": "thinking",
@@ -351,7 +351,7 @@ fn stable_reasoning_never_upgrades_and_rejects_unknown_advertised_levels() {
                         "id": "model",
                         "category": "model",
                         "type": "select",
-                        "options": [{"value": "gpt-5.6-luna"}]
+                        "options": [{"value": "gpt-6-luna"}]
                     },
                     {
                         "id": "thinking",
@@ -424,10 +424,10 @@ fn pinned_kimi_legacy_models_enable_only_deprecated_set_model_fallback() {
                 "sessionId": "kimi-session-1",
                 "models": {
                     "availableModels": [
-                        {"modelId": "gpt-5.6-luna", "name": "GPT 5.6 Luna"},
-                        {"modelId": "gpt-5.6-luna,thinking", "name": "GPT 5.6 Luna (thinking)"}
+                        {"modelId": "gpt-6-luna", "name": "GPT 5.6 Luna"},
+                        {"modelId": "gpt-6-luna,thinking", "name": "GPT 5.6 Luna (thinking)"}
                     ],
-                    "currentModelId": "gpt-5.6-luna"
+                    "currentModelId": "gpt-6-luna"
                 }
             }),
         )
@@ -441,7 +441,7 @@ fn pinned_kimi_legacy_models_enable_only_deprecated_set_model_fallback() {
         plan.requests[0].params,
         json!({
             "sessionId": "kimi-session-1",
-            "modelId": "gpt-5.6-luna,thinking"
+            "modelId": "gpt-6-luna,thinking"
         })
     );
     assert!(
@@ -500,9 +500,9 @@ fn malformed_or_unadvertised_model_capabilities_are_rejected() {
                 "sessionId": "legacy-session",
                 "models": {
                     "availableModels": [
-                        {"modelId": "gpt-5.6-luna", "name": "GPT 5.6 Luna"}
+                        {"modelId": "gpt-6-luna", "name": "GPT 5.6 Luna"}
                     ],
-                    "currentModelId": "gpt-5.6-luna"
+                    "currentModelId": "gpt-6-luna"
                 }
             }),
         )
@@ -524,7 +524,7 @@ fn malformed_or_unadvertised_model_capabilities_are_rejected() {
                     "name": "Model",
                     "category": "model",
                     "type": "select",
-                    "currentValue": "gpt-5.6-luna",
+                    "currentValue": "gpt-6-luna",
                     "options": "not-an-array"
                 }]
             }),
@@ -674,7 +674,7 @@ fn session_updates_map_streamed_text_reasoning_and_preserve_native_payloads() {
         "update": {
             "sessionUpdate": "agent_message_chunk",
             "content": {"type": "text", "text": "hello"},
-            "_meta": {"modelId": "gpt-5.6-luna"}
+            "_meta": {"modelId": "gpt-6-luna"}
         }
     });
     let text = codec

@@ -37,7 +37,7 @@
     </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Trial Extension</title>
+    <title>Plan and Trial Availability</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -62,111 +62,30 @@
     }
 }
 </style>
+<script type="module">
+import { renderWalkthroughStep } from "./safe-help-content.mjs";
+window.renderWalkthroughStep = renderWalkthroughStep;
+</script>
 </head>
 <body class="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
     <header class="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40">
-        <h1 class="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Interactive Trial Extension</h1>
+        <h1 class="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Plan and Trial Availability</h1>
         <a href="/dashboard" class="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to Dashboard
         </a>
     </header>
 
     <main class="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center">
-        <div class="w-full glassmorphism rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-white/10 p-8 md:p-12 text-center max-w-2xl relative">
-            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#0066FF] via-indigo-500 to-[#AF52DE]"></div>
-
-            <div id="unclaimed-state" class="animate-fade-in">
-                <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
-                    ⏳
-                </div>
-                <h2 class="text-3xl font-bold font-outfit text-gray-900 mb-4">Want 7 Extra Days of Pro?</h2>
-                <p class="text-gray-600 mb-8 text-lg leading-relaxed">
-                    Unlock an additional week of our Advanced AI features, automated review generation, and smart SEO entirely for free! Just share your new storefront on X (Twitter) to claim your extension.
-                </p>
-
-                <button id="claim-btn" class="w-full md:w-auto px-8 py-4 bg-black hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 mx-auto text-lg hover:-translate-y-1">
-                    <svg class="w-6 h-6 icon-share" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                    <span id="btn-text">Share on X to Unlock 7 Days</span>
-                    <svg id="loading-spinner" class="hidden animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                </button>
-                <div class="mt-8 text-center"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" class="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ OmniSolo</a></div>
+        <section class="w-full glassmorphism rounded-2xl p-8 md:p-12 max-w-2xl">
+            <h2 class="text-2xl font-bold mb-4">Check your current plan</h2>
+            <p role="status" class="mb-4">Trial activation is unavailable because a durable grant is not verified. Sharing does not grant Pro access or extend a trial.</p>
+            <p class="mb-6">Existing account entitlements remain available through the authenticated plan screen.</p>
+            <div class="flex flex-wrap gap-4">
+                <a data-current-plan href="/trial-extension" class="glassmorphism-btn px-4 py-3 bg-indigo-600 text-white font-bold">Check current plan</a>
+                <a data-review-plans href="/pricing" class="glassmorphism-btn px-4 py-3 bg-gray-200 text-gray-900 font-bold">Review plans</a>
             </div>
-
-            <div id="claimed-state" class="hidden animate-fade-in">
-                <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
-                    🎉
-                </div>
-                <h2 class="text-3xl font-bold font-outfit text-gray-900 mb-4">Trial Extended!</h2>
-                <p class="text-gray-600 mb-8 text-lg leading-relaxed">
-                    Thank you for sharing! Your Pro trial has been successfully extended by 7 days. Enjoy the extra time to explore everything OmniSolo has to offer.
-                </p>
-                <a href="/dashboard" class="inline-block w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all hover:-translate-y-1 text-lg">
-                    Return to Dashboard
-                </a>
-                <div class="mt-8 text-center"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" class="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ OmniSolo</a></div>
-            </div>
-        </div>
+        </section>
     </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const claimBtn = document.getElementById('claim-btn');
-            const unclaimedState = document.getElementById('unclaimed-state');
-            const claimedState = document.getElementById('claimed-state');
-            const btnText = document.getElementById('btn-text');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const iconShare = document.querySelector('.icon-share');
-
-            claimBtn.addEventListener('click', async () => {
-                const message = "I just set up my AI-powered storefront using OmniSolo OneHumanCorp! 🚀 Get your own assistant-led business hub today. #OmniSolo #SmallBiz";
-                const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-                window.open(shareUrl, '_blank');
-
-                claimBtn.disabled = true;
-                claimBtn.classList.remove('hover:-translate-y-1');
-                claimBtn.classList.add('opacity-70', 'cursor-wait');
-                btnText.textContent = 'Verifying Share...';
-                loadingSpinner.classList.remove('hidden');
-                iconShare.classList.add('hidden');
-
-                try {
-                    let url = '/api/v1/growth/trial-extension/claim';
-                    if (window.__TAURI__ && window.__TAURI__.core) {
-                        url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
-                    }
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'authorization': 'Bearer ' + localStorage.getItem('omnisolo_token')
-                        }
-                    });
-
-                    if (response.ok) {
-                        unclaimedState.classList.add('hidden');
-                        claimedState.classList.remove('hidden');
-                    } else {
-                        console.error('Failed to claim trial extension');
-                        alert("Failed to claim trial extension. Please try again.");
-                    }
-                } catch (error) {
-                    console.error('Error claiming trial extension:', error);
-                    alert("Error claiming trial extension. Please try again.");
-                } finally {
-                    claimBtn.disabled = false;
-                    claimBtn.classList.add('hover:-translate-y-1');
-                    claimBtn.classList.remove('opacity-70', 'cursor-wait');
-                    btnText.textContent = 'Share on X to Unlock 7 Days';
-                    loadingSpinner.classList.add('hidden');
-                    iconShare.classList.remove('hidden');
-                }
-            });
-        });
-    </script>
 
 
 
@@ -323,21 +242,10 @@ function initWalkthrough() {
             // Find target
             const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
 
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
+            const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
                 } else {

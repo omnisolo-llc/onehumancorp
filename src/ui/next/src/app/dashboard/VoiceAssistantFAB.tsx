@@ -56,33 +56,21 @@ export function VoiceAssistantFAB() {
     setStatus("processing");
     try {
       if (!navigator.onLine) {
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          const base64Audio = reader.result as string;
-          import('../../lib/sync/SyncManager').then(({ syncManager }) => {
-            syncManager.enqueueMutation({
-              type: 'sync_event',
-              payload: {
-                entity_type: 'audio_intent',
-                entity_id: crypto.randomUUID(),
-                action_type: 'ProcessVoiceCommand',
-                payload: {
-                  audio_data: base64Audio
-                }
-              }
-            });
-          });
-          setTranscription("Audio captured. (Queued for Sync)");
-          setStatus("success");
-          if ('vibrate' in navigator) navigator.vibrate(200);
-
-          setTimeout(() => {
-            setStatus("idle");
-            setTranscription("");
-          }, 3000);
-        };
-        setIsProcessing(false);
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(reader.error ?? new Error('Audio read failed'));
+          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Audio read failed'));
+          reader.readAsDataURL(audioBlob);
+        });
+        const { syncManager } = await import('../../lib/sync/SyncManager');
+        await syncManager.enqueueMutation({
+          type: 'sync_event',
+          payload: { entity_type: 'audio_intent', entity_id: crypto.randomUUID(), action_type: 'ProcessVoiceCommand', payload: { audio_data: base64Audio } },
+        });
+        setTranscription("Audio captured. (Queued for Sync)");
+        setStatus("success");
+        if ('vibrate' in navigator) navigator.vibrate(200);
+        setTimeout(() => { setStatus("idle"); setTranscription(""); }, 3000);
         return;
       }
 

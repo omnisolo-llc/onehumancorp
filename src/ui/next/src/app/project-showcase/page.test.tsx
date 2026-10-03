@@ -40,10 +40,10 @@ describe('ProjectShowcasePage', () => {
   });
 
   it('allows pro users to remove branding after the plan API confirms pro', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+    global.fetch = vi.fn(async url => Response.json(url === '/api/v1/auth/session-identity' ? { userId: 'plan-owner', tenantId: 'plan-tenant', expiresAt: Date.now() + 60000 } : { current_plan: 'Pro' }));
     render(<ProjectShowcasePage />);
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan', expect.objectContaining({ credentials: 'same-origin' })));
     const toggle = screen.getByRole('checkbox');
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();

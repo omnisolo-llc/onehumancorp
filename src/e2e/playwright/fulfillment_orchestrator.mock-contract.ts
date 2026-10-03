@@ -26,7 +26,8 @@ test.describe('Fulfillment Orchestrator', () => {
 
     // Force refresh the feed
     await page.evaluate(() => {
-        if (window.loadUnifiedFeed) {
+        if ('loadUnifiedFeed' in window) {
+            if (typeof window.loadUnifiedFeed !== 'function') throw new Error('Feed refresh is unavailable');
             window.loadUnifiedFeed();
         }
     });

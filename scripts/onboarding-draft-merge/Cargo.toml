@@ -1,0 +1,17 @@
+[package]
+name = "ohc-onboarding-draft-merge"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+serde_json = "1"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+server_common = { path = "../../src/server/common" }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

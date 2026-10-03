@@ -1,5 +1,7 @@
 "use client";
 
+import { notifyQueueIdentityChange } from "@/lib/sync/queueIdentity";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
@@ -73,6 +75,7 @@ export default function VerifyEmailPage() {
     if (pending || registrationTicket === null) return;
     setPending(true);
     setError(null);
+    notifyQueueIdentityChange();
     try {
       const response = await fetch("/api/v1/auth/register?next=%2Fonboarding", {
         method: "POST",
@@ -92,6 +95,7 @@ export default function VerifyEmailPage() {
     } catch {
       setError("We could not create the account. Review the username and password requirements and try again.");
     } finally {
+      notifyQueueIdentityChange();
       setPending(false);
     }
   }

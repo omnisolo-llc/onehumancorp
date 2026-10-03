@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getTestDbPool } from './db_utils';
+import { db as pool } from './db_utils';
 
 test.describe('Autonomous Voice Dispatch Agent', () => {
     test('Twilio voice webhook creates booking draft and owner can approve it', async ({ page }) => {
@@ -10,7 +10,6 @@ test.describe('Autonomous Voice Dispatch Agent', () => {
         // or trigger the webhook endpoint and let it process. Since we don't have the in-memory engine populated,
         // it's easier to just insert the shared task that the webhook would create to simulate the end state.
 
-        const pool = await getTestDbPool();
 
         // Let's create the task that the Twilio webhook would create when it detects a BOOK_APPOINTMENT intent
         const taskId = 'task-' + Date.now();

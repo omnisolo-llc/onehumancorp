@@ -1,0 +1,26 @@
+[package]
+name = "ohc-stripe-webhook-security"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+chrono = { version = "0.4", features = ["serde"] }
+redis = { version = "0.27.6", features = ["tokio-comp"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+server_common = { path = "../../src/server/common" }
+async-trait = "0.1"
+[dev-dependencies]
+server_integrations_stripe = { path = "../../src/server/integrations/stripe" }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

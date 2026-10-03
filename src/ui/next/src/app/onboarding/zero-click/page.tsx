@@ -1,28 +1,62 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProPlan } from '../../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
+import { fetchForOnboardingOwner, subscribeOnboardingInvalidation } from '../draftSession';
+import { readLaunchResult, readPreparation, resultForPreparation, type PreparedResult } from '../contracts';
 import { OnboardingChatAgent } from './components/OnboardingChatAgent';
 
 export default function ZeroClickBuilderPage() {
   const router = useRouter();
-  const [generatedStore, setGeneratedStore] = useState<import("@/lib/builder-types").OnboardingResult | null>(null);
+  const [generatedStore, setGeneratedStore] = useState<PreparedResult | null>(null);
   const { hasPro } = useProPlan();
 
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const busy = useRef(false);
+  const epoch = useRef(0);
+  const unknownLaunch = useRef(false);
   useEffect(() => {
-
+    const unsubscribe = subscribeOnboardingInvalidation(() => { epoch.current += 1; busy.current = false; unknownLaunch.current = false; setPending(false); setError(''); setGeneratedStore(null); });
+    return () => { epoch.current += 1; unsubscribe(); };
   }, []);
+  const handleLaunch = async () => {
+    if (!generatedStore || busy.current) return;
+    busy.current = true; setPending(true); setError('');
+    const version = ++epoch.current;
+    try {
+      if (unknownLaunch.current) {
+        const response = await fetchForOnboardingOwner('/api/v1/onboarding/state', {}, { userId: generatedStore.user_id, tenantId: generatedStore.organization_id });
+        if (!response.ok) throw new Error('Could not check setup status. Reload before retrying.');
+        const state = await response.json();
+        if (version !== epoch.current) return;
+        const receipt = readPreparation(state.preparation);
+        if (receipt.preparation_id !== generatedStore.preparation_id || receipt.organization_id !== generatedStore.organization_id || receipt.user_id !== generatedStore.user_id) throw new Error('Setup changed. Reload to review it.');
+        if (receipt.status === 'launched') { setGeneratedStore(resultForPreparation(receipt)); unknownLaunch.current = false; return; }
+        unknownLaunch.current = false;
+      }
+      const response = await fetchForOnboardingOwner('/api/v1/onboarding/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preparation_id: generatedStore.preparation_id }) }, { userId: generatedStore.user_id, tenantId: generatedStore.organization_id });
+      if (!response.ok) throw new Error('Setup completion could not be confirmed');
+      const receipt = readLaunchResult(await response.json(), generatedStore.preparation);
+      if (version !== epoch.current) return;
+      setGeneratedStore(resultForPreparation(receipt)); localStorage.setItem('has_onboarded', 'true');
+    } catch (cause) {
+      if (version === epoch.current) { unknownLaunch.current = true; setError(cause instanceof Error ? cause.message : 'Setup completion could not be confirmed'); }
+    } finally {
+      if (version === epoch.current) { busy.current = false; setPending(false); }
+    }
+  };
 
   const handleShare = () => {
-    const shareText = `I just built my AI-powered business in 30 seconds using OmniSolo OneHumanCorp! Start your own for free: https://cloud.omnisolo.co/zero-click-builder?ref=new_store \n\n⚡ Powered by OmniSolo`;
+    const shareText = `I prepared my business workspace using OmniSolo OneHumanCorp! Start your own for free: https://cloud.omnisolo.co/zero-click-builder?ref=new_store \n\n⚡ Powered by OmniSolo`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(shareUrl, '_blank');
   };
 
   const handleChatComplete = (data: import("@/lib/builder-types").OnboardingResult) => {
-    setGeneratedStore(data);
+    setGeneratedStore(resultForPreparation(readPreparation(data.preparation)));
   };
 
   return (
@@ -36,7 +70,7 @@ export default function ZeroClickBuilderPage() {
             Tell us about your business
           </h1>
           <p className="text-lg text-[#424245] dark:text-[#A1A1A6] max-w-xl mx-auto">
-            Instantly build your storefront, product catalog, and booking system with a single prompt.
+            Prepare a business workspace and product catalog, then review before completing setup.
           </p>
         </div>
 
@@ -51,30 +85,35 @@ export default function ZeroClickBuilderPage() {
                 </svg>
               </div>
               <h2 className="text-3xl font-bold text-[#1D1D1F] dark:text-white mb-2">
-                Your business is live!
+                {generatedStore.status === 'launched' ? 'Setup complete' : 'Your workspace is prepared'}
               </h2>
               <p className="text-[#424245] dark:text-[#A1A1A6]">
-                We've configured everything you need to start selling.
+                Review your storefront and integrations before sharing or accepting orders.
               </p>
             </div>
 
             <div className="space-y-6">
+              <section aria-label="Saved catalog">
+                <h3>Saved catalog</h3>
+                <ul>{generatedStore.preparation.catalog.map(product => <li key={product.product_id}>{product.name}: {product.price}</li>)}</ul>
+                {generatedStore.status === 'prepared' && <a href="/onboarding">Review or edit setup</a>}
+              </section>
               <div className="w-full h-[500px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] rounded-[16px]">
                 <iframe
-                  src={`/builder?tenant=${generatedStore.organization_id}&preview=true`}
+                  src={`/builder?tenant=${encodeURIComponent(generatedStore.organization_id)}&preview=true`}
                   className="w-full h-full border-none"
-                  title="Live Storefront Preview"
+                  title="Storefront Preview"
                 />
               </div>
 
               <div className="flex flex-col gap-4 pt-4">
+                {error && <p role="alert">{error}</p>}
                 <button
-                  onClick={() => {
-                    router.push('/dashboard');
-                  }}
+                  disabled={pending}
+                  onClick={generatedStore.status === 'launched' ? () => router.push('/dashboard') : handleLaunch}
                   className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
                 >
-                  🚀 Launch My Store
+                  {pending ? 'Completing setup...' : generatedStore.status === 'launched' ? 'Go to dashboard' : '🚀 Launch My Store'}
                 </button>
 
                 <button

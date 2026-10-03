@@ -56,7 +56,7 @@ test.describe('Voice Assistant Command Center', () => {
 
     // Check for glassmorphism styles (backdrop-filter)
     const computedStyle = await voiceBtn.evaluate((el) => {
-        return window.getComputedStyle(el).backdropFilter || window.getComputedStyle(el).webkitBackdropFilter;
+        return window.getComputedStyle(el).backdropFilter || window.getComputedStyle(el).getPropertyValue('-webkit-backdrop-filter');
     });
     expect(computedStyle).toContain('blur');
   });

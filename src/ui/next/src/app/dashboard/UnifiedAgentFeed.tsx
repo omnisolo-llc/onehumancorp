@@ -4,7 +4,8 @@
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo, useRef } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
-import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
+import { enqueueAction, getActions } from "../utils/offlineQueue";
+import { SyncManager } from "../../lib/sync/SyncManager";
 import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
 import "./InstagramDMCard";
 import { AgentActionCard } from "../../components/feed/AgentActionCard";
@@ -24,6 +25,7 @@ import type { AgentFeedItem, AgentFeedData, ActivityItem } from '@/lib/agent-fee
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData }) {
   const decidedIdsRef = useRef<Set<string>>(new Set());
+  const pendingDecisionIdsRef = useRef<Set<string>>(new Set());
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -147,29 +149,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
     const handleOnline = async () => {
       setIsOffline(false);
-      // Sync queued offline actions
-      try {
-        const actions = await getActions();
-        for (const action of actions) {
-          if (action.type === "approve_agent_feed") {
-            await submitDecision(
-              action.payload.id,
-              action.payload.approved,
-              action.payload.modified_content,
-              action.payload.event_source,
-            );
-            await removeAction(action.id);
-            setOfflineActionsCount((prev) => Math.max(0, prev - 1));
-            setQueuedActionIds((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(action.payload.id);
-              return newSet;
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to sync offline actions", err);
-      }
+      await SyncManager.getInstance().sync();
+      await updateOfflineCount();
     };
 
     const handleOffline = () => {
@@ -424,15 +405,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
               proposed_action: safeParsePayload(item.proposed_action),
             }));
 
-            setItems(
-              parsedCombinedItems.filter(
+            setItems((previous) => [
+              ...previous.filter((item) => pendingDecisionIdsRef.current.has(item.id)),
+              ...parsedCombinedItems.filter(
                 (i) =>
                   !decidedIdsRef.current.has(i.id) &&
+                  !pendingDecisionIdsRef.current.has(i.id) &&
                   i.lifecycle_state !== "APPROVED" &&
                   i.lifecycle_state !== "DISMISSED" &&
                   i.lifecycle_state !== "PAUSED",
               ),
-            );
+            ]);
 
             // Map items for activity feed as well
             const mappedActivities = combinedItems
@@ -518,7 +501,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ triage_item_id: id, approved }),
+          body: JSON.stringify({ triage_item_id: id, approved, edited_payload: modified_content }),
         },
       );
       if (!res.ok) {
@@ -548,27 +531,34 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     approved: boolean,
     modified_content?: string,
     event_source?: string,
-  ): Promise<void> => {
-    decidedIdsRef.current.add(id);
-    setItems((prev) => prev.filter((app) => app.id !== id));
-
-    if (isOffline) {
-      // Enqueue offline action
-      await enqueueAction({
-        id: crypto.randomUUID(),
-        type: "approve_agent_feed",
-        payload: { id, approved, modified_content, event_source },
-        timestamp: Date.now(),
-      });
-      setOfflineActionsCount((prev) => prev + 1);
-      setQueuedActionIds((prev) => new Set(prev).add(id));
-      return;
-    }
-
+  ): Promise<boolean> => {
+    if (pendingDecisionIdsRef.current.has(id)) return false;
+    pendingDecisionIdsRef.current.add(id);
+    setError("");
     try {
-      await submitDecision(id, approved, modified_content, event_source);
+      if (isOffline) {
+        await enqueueAction({
+          id: crypto.randomUUID(),
+          type: "approve_agent_feed",
+          payload: { id, approved, modified_content, event_source },
+          timestamp: Date.now(),
+        });
+        setOfflineActionsCount((prev) => prev + 1);
+        setQueuedActionIds((prev) => new Set(prev).add(id));
+      } else {
+        await submitDecision(id, approved, modified_content, event_source);
+        // Preserve the card's acknowledgement animation after the server accepts
+        // the decision. A failed request must leave the proposal available.
+        if (approved) await new Promise((resolve) => window.setTimeout(resolve, 500));
+      }
+      decidedIdsRef.current.add(id);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      return true;
     } catch (err) {
-      console.error("Action submission error:", err);
+      setError(errorMessage(err, "Failed to submit decision"));
+      return false;
+    } finally {
+      pendingDecisionIdsRef.current.delete(id);
     }
   };
 
@@ -620,6 +610,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           />
           <button
             type="submit"
+            disabled={!chatInput.trim()}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
           >
             Send
@@ -644,6 +635,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       <div className="triage-tab-container mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           id="tab-proposals"
+          aria-pressed={activeTab === "proposals"}
           onClick={() => setActiveTab("proposals")}
           className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "proposals"
@@ -655,6 +647,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         </button>
         <button
           id="tab-activity"
+          aria-pressed={activeTab === "activity"}
           onClick={() => setActiveTab("activity")}
           className={`triage-tab flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "activity"

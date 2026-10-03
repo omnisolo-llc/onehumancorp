@@ -22,6 +22,6 @@ test.describe('Health Monitoring Resilience E2E', () => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'AI Departments' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
-    await expect(page.getByText('Your autonomous business team.')).toBeVisible();
+    await expect(page.getByText('Browse task templates and submit text analysis to the configured provider. Workspace actions, expert teams, skills and connectors are not executable in this view.')).toBeVisible();
   });
 });

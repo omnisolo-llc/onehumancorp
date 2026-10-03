@@ -1,79 +1,15 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useProPlan } from './useProPlan';
 
 export function ViralTrialExtensionWidget() {
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [hasClaimed, setHasClaimed] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleShareAndClaim = async () => {
-    setIsClaiming(true);
-    setError("");
-
-    const message = "I just set up my AI-powered storefront using OmniSolo OneHumanCorp! 🚀 Get your own assistant-led business hub today. #OmniSolo #SmallBiz";
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-    // Open the share window
-    window.open(shareUrl, '_blank');
-
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.ok) {
-        setHasClaimed(true);
-      } else {
-        setError("Pro activation could not be confirmed. Please try again.");
-      }
-    } catch {
-      setError("The Pro activation service is unavailable. Please try again later.");
-    } finally {
-      setIsClaiming(false);
-    }
-  };
-
-  if (hasClaimed) {
-    return (
-      <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-100 text-center animate-fade-in">
-        <div className="text-green-600 text-2xl mb-2">🎉</div>
-        <div className="font-bold text-gray-900 text-sm mb-1 font-outfit">Pro Access Activated</div>
-        <p className="text-xs text-gray-600">The backend confirmed Pro access for this account.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-100 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
-      <div className="font-bold text-gray-900 text-sm mb-2 font-outfit flex items-center gap-2">
-        <span className="text-indigo-600">🚀</span> Want Pro Access?
-      </div>
-      <p className="text-xs text-gray-600 mb-3">
-        Share on X (Twitter) to request access to advanced features.
-      </p>
-      <button
-        onClick={handleShareAndClaim}
-        disabled={isClaiming}
-        className={`w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 ${isClaiming ? 'opacity-70 cursor-wait' : ''}`}
-      >
-        {isClaiming ? (
-           <>
-             <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-             </svg>
-             Verifying...
-           </>
-        ) : (
-          "Share to Unlock"
-        )}
-      </button>
-      {error && <p className="mt-2 text-xs text-red-600" role="alert">{error}</p>}
-    </div>
-  );
+  const { currentPlan, planError, claimTrial, claimError } = useProPlan();
+  return <section className="mt-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100" aria-label="Plan and trial availability">
+    <h2 className="font-bold text-sm mb-2">Plan and trial availability</h2>
+    <p className="text-xs mb-3">{currentPlan ? `Current verified plan: ${currentPlan}.` : planError ?? 'Verifying your current plan…'}</p>
+    <p className="text-xs mb-3">Sharing does not confirm a trial grant or its duration.</p>
+    <button type="button" className="app-button" onClick={() => void claimTrial()}>Check trial availability</button>
+    {claimError && <p role="status" className="mt-2 text-xs">{claimError}</p>}
+    <a href="/pricing" className="block mt-3 text-sm">Review plans</a>
+  </section>;
 }
